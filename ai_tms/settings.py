@@ -59,7 +59,7 @@ CORS_ALLOW_HEADERS = [
 ]
 
 
-
+AUTH_USER_MODEL="auth.AiUser"
 # Application definition
 
 INSTALLED_APPS = [
