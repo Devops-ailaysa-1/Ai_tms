@@ -1,0 +1,12 @@
+db.sqlite3
+.env2
+docker-compose.yml
+file.sql
+Dockerfile
+media
+*/migrations
+*.*.pyc
+*/__pycache__/*
+dj_ailaysa_slim/config.py
+.secure
+.env2_bak
