@@ -28,9 +28,9 @@ TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 SECRET_KEY = os.getenv( "django_secret_key" )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','167.71.235.214']
+ALLOWED_HOSTS = ['localhost','167.71.235.214','127.0.0.1']
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = [
@@ -59,7 +59,7 @@ CORS_ALLOW_HEADERS = [
 ]
 
 
-AUTH_USER_MODEL="auth.AiUser"
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -72,7 +72,8 @@ INSTALLED_APPS = [
     'ai_staff',
     'rest_framework',
     'rest_framework.authtoken',
-    'corsheaders'
+    'corsheaders',
+    'ai_auth',
 ]
 
 MIDDLEWARE = [
@@ -87,6 +88,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
+AUTH_USER_MODEL="ai_auth.AiUser"
 
 TEMPLATES = [
     {
@@ -117,7 +119,7 @@ DATABASES={
         'USER':os.getenv( "psql_user" ),
         'PASSWORD':os.getenv( "psql_password" ),
         'HOST':os.getenv( "psql_host" ),
-        'PORT':'25060',
+        'PORT':os.getenv( "psql_port" ),
     }
 }
 

@@ -1,10 +1,10 @@
+
 from django.db import models
 from django.contrib.auth.models import User
-from auth.managers import CustomUserManager
+from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.db.models.query import QuerySet
 from ai_staff.models import SubjectFields,Countries,Timezones
 
 
