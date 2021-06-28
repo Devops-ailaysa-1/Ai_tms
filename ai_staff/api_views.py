@@ -16,7 +16,7 @@ from .serializer import ContentTypesSerializer, LanguagesSerializer, LocaleSeria
 
 
 class ServiceTypesView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
@@ -63,7 +63,7 @@ class ServiceTypesView(APIView):
 
 
 class CountriesView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
@@ -108,7 +108,7 @@ class CountriesView(APIView):
 
 
 class CurrenciesView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -151,7 +151,7 @@ class CurrenciesView(APIView):
 
 
 class SubjectFieldsView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -167,6 +167,7 @@ class SubjectFieldsView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
+        permission_classes = [IsAuthenticated]
         data = request.data
         print(data)
         #data['user'] = self.request.user.id
@@ -195,7 +196,7 @@ class SubjectFieldsView(APIView):
 
 
 class ContentTypesView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -240,7 +241,7 @@ class ContentTypesView(APIView):
 
 
 class MtpeEnginesView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -284,7 +285,7 @@ class MtpeEnginesView(APIView):
 
 
 class SupportFilesView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -329,7 +330,7 @@ class SupportFilesView(APIView):
 
 
 class TimezonesView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -371,7 +372,7 @@ class TimezonesView(APIView):
 
 
 class LanguagesView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -413,7 +414,7 @@ class LanguagesView(APIView):
 
 
 class LanguagesLocaleView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -456,7 +457,7 @@ class LanguagesLocaleView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class BillingunitsView(APIView):
-   # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
