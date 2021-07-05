@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits
+from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType
 from tablib import Dataset
 from .forms import UploadFileForm
 from django.http import JsonResponse
@@ -21,8 +21,8 @@ def Bulk_insert(request):
             print(imported_data)
             for data in imported_data:
                 
-                value = Billingunits(
-			unit=data[0].strip(),
+                value = AiUserType(
+			type=data[0].strip(),
 			#name=data[1].strip(),
 			#utc_offset=data[2].strip(),
 

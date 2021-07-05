@@ -5,7 +5,7 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import SubjectFields,Countries,Timezones
+from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones
 
 
 from django.contrib.auth.models import AbstractUser
@@ -31,14 +31,19 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
 class UserAttribute(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
-    user_type=models.CharField(max_length=191)
+    user_type=models.ForeignKey(AiUserType,related_name='user_attribute', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    class Meta:
+        db_table='user_attribute'
 
 class PersonalInformation(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
-    Address = models.CharField(max_length=255, blank=True, null=True)
-    country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE)
-    timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
+    timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
     phonenumber=models.CharField(max_length=255, blank=True, null=True)
+    mobilenumber=models.CharField(max_length=255, blank=True, null=True)
     linkedin=models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -62,10 +67,16 @@ class OfficialInformation(models.Model):
     class Meta:
         db_table = 'official_info'
 
+
+def user_directory_path(instance, filename):
+  
+    # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
+    return 'user_{0}/{1}'.format(instance.user.id, filename)
+
 class Professionalidentity(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
-    avatar=models.URLField(max_length = 300)
-    logo=models.URLField(max_length = 300)
+    avatar=models.ImageField(upload_to=user_directory_path,blank=True,null=True)
+    logo=models.ImageField(upload_to=user_directory_path,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     class Meta:

@@ -1,8 +1,12 @@
-from rest_framework import serializers
+
+from ai_staff.models import AiUserType, Countries, SubjectFields, Timezones
+from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from ai_auth.models import AiUser
+from ai_auth.models import AiUser,UserAttribute,PersonalInformation,OfficialInformation,Professionalidentity
+from rest_framework import status
+from ai_staff.serializer import AiUserTypeSerializer
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -34,6 +38,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
  
     def create(self, validated_data):
+
         user = AiUser.objects.create(
             email=validated_data['email'],
             fullname=validated_data['fullname'],
@@ -44,3 +49,79 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+
+
+class UserAttributeSerializer(serializers.ModelSerializer): 
+    user_type = serializers.PrimaryKeyRelatedField(queryset=AiUserType.objects.all(),many=False)
+
+    class Meta:
+        model = UserAttribute
+        fields = ( 'user_type',)
+        #read_only_fields = ('id',)
+        depth = 2
+    
+    def create(self, validated_data):
+        print("validated data",validated_data)
+        request = self.context['request']
+        user_attr = UserAttribute.objects.create(user_id=request.user.id,**validated_data)      
+        return user_attr
+    
+
+    def to_representation(self, value):
+        data = super().to_representation(value)  
+        user_type_serializer = AiUserTypeSerializer(value.user_type)
+        data['user_type'] = user_type_serializer.data
+        return data
+
+class PersonalInformationSerializer(serializers.ModelSerializer):
+    country_id = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all())
+    timezone_id = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all())
+
+    class Meta:
+        model = PersonalInformation
+        fields = ( 'address','country_id','timezone_id','mobilenumber','phonenumber','linkedin','created_at','updated_at')
+        read_only_fields = ('created_at','updated_at')
+    
+    def create(self, validated_data):
+        print("validated==>",validated_data)
+        request = self.context['request']
+        personal_info = PersonalInformation.objects.create(**validated_data,user_id=request.user.id)      
+        return  personal_info
+
+class OfficialInformationSerializer(serializers.ModelSerializer):
+    country_id = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all())
+    timezone_id = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all())
+    industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all())
+    class Meta:
+        model = OfficialInformation
+        fields = ( 'id','company_name','address','designation','industry','country_id','timezone_id','website','linkedin','billing_email','created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
+    
+    def create(self, validated_data):
+        request = self.context['request']
+        official_info = OfficialInformation.objects.create(**validated_data,user_id=request.user.id)      
+        return official_info
+
+
+
+class ProfessionalidentitySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Professionalidentity
+        fields = ( 'id','avatar','logo')
+        #read_only_fields = ('id','created_at','updated_at')
+
+
+    def create(self, validated_data):
+        request = self.context['request']
+        print("validated data ",validated_data)
+        identity = Professionalidentity.objects.create(**validated_data,user=request.user)      
+        return identity
+
+    # def save(self, *args, **kwargs):
+    #     if self.instance.avatar:
+    #         self.instance.avatar.delete()
+    #     return super().save(*args, **kwargs)
+
+

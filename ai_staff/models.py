@@ -164,3 +164,13 @@ class Billingunits(ParanoidModel):
     is_active=models.BooleanField(default=True)
     class Meta:
         db_table = 'billing_units'
+
+
+class AiUserType(ParanoidModel):
+    type =models.CharField(max_length=191)
+    #unit_code= models.CharField(max_length=191, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    #deleted_at = models.DateTimeField(blank=True, null=True))
+    class Meta:
+        db_table = 'ai_usertype'

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits
+from .models import ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType
 
 
 
@@ -171,3 +171,14 @@ class BillingunitsSerializer(serializers.ModelSerializer):
         request = self.context['request']
         unit = Billingunits.objects.create(**validated_data)      
         return unit
+
+
+
+class AiUserTypeSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AiUserType
+
+        fields = "__all__"
+        read_only_fields = ('id','created_at','updated_at')
+
