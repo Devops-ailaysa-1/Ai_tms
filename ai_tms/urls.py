@@ -26,7 +26,8 @@ from django.urls import re_path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('app/',include('ai_staff.urls')),
-    path('auth/',include('ai_auth.urls'))
+    path('auth/',include('ai_auth.urls')),
+    path('', include('django.contrib.auth.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

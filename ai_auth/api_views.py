@@ -1,9 +1,9 @@
-from ai_auth.serializers import MyTokenObtainPairSerializer, OfficialInformationSerializer, PersonalInformationSerializer, ProfessionalidentitySerializer
+from ai_auth.serializers import OfficialInformationSerializer, PersonalInformationSerializer, ProfessionalidentitySerializer,UserAttributeSerializer
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
+#from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics
 from ai_auth.models import AiUser, OfficialInformation, PersonalInformation, Professionalidentity,UserAttribute
 from django.http import Http404
@@ -12,15 +12,15 @@ from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
 
-class MyObtainTokenPairView(TokenObtainPairView):
-    permission_classes = (AllowAny,)
-    serializer_class = MyTokenObtainPairSerializer
+# class MyObtainTokenPairView(TokenObtainPairView):
+#     permission_classes = (AllowAny,)
+#     serializer_class = MyTokenObtainPairSerializer
 
 
-class RegisterView(generics.CreateAPIView):
-    queryset = AiUser.objects.all()
-    permission_classes = (AllowAny,)
-    serializer_class = RegisterSerializer
+# class RegisterView(generics.CreateAPIView):
+#     queryset = AiUser.objects.all()
+#     permission_classes = (AllowAny,)
+#     serializer_class = RegisterSerializer
 
 
 
@@ -136,14 +136,14 @@ class OfficialInformationView(APIView):
 
 
 
-class JPEGRenderer(renderers.BaseRenderer):
-    media_type = 'image/png'
-    format = 'png'
-    charset = None
-    render_style = 'binary'
+# class JPEGRenderer(renderers.BaseRenderer):
+#     media_type = 'image/png'
+#     format = 'png'
+#     charset = None
+#     render_style = 'binary'
 
-    def render(self, data, media_type=None, renderer_context=None):
-        return data
+#     def render(self, data, media_type=None, renderer_context=None):
+#         return data
 
 
 class ProfessionalidentityView(APIView):
@@ -158,7 +158,10 @@ class ProfessionalidentityView(APIView):
             raise Http404
 
     def get(self, request, format=None):
-        photo = self.get_object(request.user.id)
+        try:
+            photo = Professionalidentity.objects.get(user_id=request.user.id)
+        except Professionalidentity.DoesNotExist:
+            return Response(status=204)
         serializer = ProfessionalidentitySerializer(photo)
         return Response(serializer.data)
 
@@ -168,7 +171,10 @@ class ProfessionalidentityView(APIView):
         # print("files",request.FILES.get('logo'))
         serializer = ProfessionalidentitySerializer(data=request.data, context={'request':request})
         if serializer.is_valid():
-            serializer.save()
+            try:
+                serializer.save()
+            except IntegrityError:
+                return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
