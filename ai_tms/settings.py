@@ -41,7 +41,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000" 
+    "http://localhost:3000"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'dj_rest_auth.registration',
+    'ai_vendor',
 ]
 
 
@@ -175,7 +176,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 #         'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
 #     )
-  
+
 # }
 
 REST_USE_JWT = True
@@ -194,7 +195,7 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD =None
 
-ACCOUNT_EMAIL_VERIFICATION = 'optional'    
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 # JWT_AUTH_COOKIE = 'ailaysa-auth'
 # JWT_AUTH_REFRESH_COOKIE = 'ailaysa-refresh-token'
@@ -255,7 +256,7 @@ MEDIA_URL = '/media/'
 
 DEFAULT_FROM_EMAIL ="Ailaysa@gmail.com"
 
-OLD_PASSWORD_FIELD_ENABLED = True 
+OLD_PASSWORD_FIELD_ENABLED = True
 
 # SIMPLE_JWT = {
 #     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),

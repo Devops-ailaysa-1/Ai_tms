@@ -1,0 +1,13 @@
+<form method="POST">
+    {% csrf_token %}
+    {%for i in target%}
+    <label for="target">Translated word: </label>
+    <textarea rows="2" cols="20">
+    {{i}}
+    </textarea>
+    <br>
+    {% endfor %}
+
+    {{ form.as_p}}
+
+</form>
