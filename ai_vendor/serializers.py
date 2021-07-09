@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ai_vendor.models import VendorsInfo
+from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,TranslationSamples,MtpeSamples
 
 
 class VendorsInfoSerializer(serializers.ModelSerializer):
@@ -19,7 +19,7 @@ class VendorsInfoSerializer(serializers.ModelSerializer):
             'native_lang',
             'year_of_experience',
             'rating',
-            
+
         )
 
 
@@ -29,3 +29,25 @@ class VendorsInfoSerializer(serializers.ModelSerializer):
 
     def save_update(self):
         return super().save()
+
+
+
+class VendorLanguagePairSerializers(serializers.ModelSerializer):
+     class Meta:
+        model = VendorLanguagePair
+
+class VendorServiceTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+       model = VendorServiceTypes
+
+class TranslationSamplesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=TranslationSamples
+
+class MtpeSamplesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=MtpeSamples
+
+class VendorServiceInfoSerializers(serializers.ModelSerializer):
+    class Meta:
+       model = VendorServiceInfo
