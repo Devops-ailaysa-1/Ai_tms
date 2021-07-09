@@ -6,8 +6,8 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones
-
-
+from django.db.models.signals import post_save, pre_save
+from .signals import create_allocated_dirs
 from django.contrib.auth.models import AbstractUser
 
 
@@ -17,6 +17,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
+    from_mysql = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -26,16 +27,17 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-
-
-
 class UserAttribute(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
     user_type=models.ForeignKey(AiUserType,related_name='user_attribute', on_delete=models.CASCADE)
+    allocated_dir = models.URLField(default=None)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
     class Meta:
         db_table='user_attribute'
+
+pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
 class PersonalInformation(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
@@ -71,7 +73,7 @@ class OfficialInformation(models.Model):
 def user_directory_path(instance, filename):
   
     # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
-    return 'user_{0}/{1}'.format(instance.user.id, filename)
+    return 'user_{0}/{1}/{2}'.format(instance.user.id, "profile",filename)
 
 class Professionalidentity(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)

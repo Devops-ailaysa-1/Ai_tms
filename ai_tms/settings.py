@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'dj_rest_auth.registration',
+    'ai_workspace',
 ]
 
 
@@ -168,6 +169,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'ai_auth.authentication.MysqlBackend',
+    'django.contrib.auth.backends.ModelBackend',
+
+
+]
+
 
 # REST_FRAMEWORK = {
 
@@ -181,11 +189,16 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_USE_JWT = True
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'stephenlangtest@gmail.com'
-EMAIL_HOST_PASSWORD = 'test12314'
+EMAIL_HOST = os.getenv( "EMAIL_HOST" )
+EMAIL_PORT = int(os.getenv( "EMAIL_PORT" ))
+EMAIL_USE_TLS = (True if os.getenv( "EMAIL_TLS" ) == 'True' else False)
+EMAIL_HOST_USER = os.getenv( "EMAIL_HOST_USER" )
+EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
+
+
+
+
+
 
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ACCOUNT_AUTHENTICATION_METHOD = 'email'

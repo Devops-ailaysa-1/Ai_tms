@@ -36,7 +36,7 @@ class SendInviteForm(ResetPasswordForm):
         send_mail(
             "Password Reset",
             msg_plain,
-            None,
+            'noreply@ailaysa.com',
             [email],
             # html_message=msg_html,
         )

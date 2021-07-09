@@ -8,31 +8,33 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
 import os
+from ai_auth.models import AiUser
+from ai_staff.models import Languages
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
 from .signals import (create_allocated_dirs, create_project_dir, create_pentm_dir_of_project,
     set_pentm_dir_of_project)
 
-class AilzaUser(AbstractBaseUser):
-    email = models.EmailField(unique=True, null=False)
-    username = models.CharField(max_length=255, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    allocated_dir = models.CharField(max_length=255, null=True, blank=True)
-    # role = models.ForeignKey(Role)
+# class AilzaUser(AbstractBaseUser):
+#     email = models.EmailField(unique=True, null=False)
+#     username = models.CharField(max_length=255, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now=True)
+#     deleted_at = models.DateTimeField(null=True, blank=True)
+#     allocated_dir = models.CharField(max_length=255, null=True, blank=True)
+#     # role = models.ForeignKey(Role)
 
-    USERNAME_FIELD = "email"
-    objects = AilzaManager()
+#     USERNAME_FIELD = "email"
+#     objects = AilzaManager()
 
-    def delete(self):
-        self.deleted_at = datetime.now()
-        return self.save()
+#     def delete(self):
+#         self.deleted_at = datetime.now()
+#         return self.save()
 
-    def hard_delete(self):
-        return super(AilzaUser, self).delete()
+#     def hard_delete(self):
+#         return super(AilzaUser, self).delete()
 
-pre_save.connect(create_allocated_dirs, sender=AilzaUser)
+# pre_save.connect(create_allocated_dirs, sender=AilzaUser)
             
 class PenseiveTM(models.Model):
     penseive_tm_dir_path = models.CharField(max_length=1000, null=True, blank=True)  # Common for a project 
@@ -44,30 +46,31 @@ class Project(models.Model):
     project_name = models.CharField(max_length=50, null=False, blank=False,)
     project_dir_path = models.CharField(max_length=1000, null=True, blank=True)
     created_at = models.DateTimeField(auto_now=True)
-    ailza_user = models.ForeignKey(AilzaUser, null=False, blank=False, on_delete=models.CASCADE)
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ("project_name", "ailza_user")
+        unique_together = ("project_name", "ai_user")
 
     penseive_tm_klass = PenseiveTM
 
     def save(self, *args, **kwargs):
         try:
             return super().save(*args, **kwargs)
-        except :
+        except Exception as e:
+            print("error--->", e)
             raise ValueError("project name should be unique")
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
 
-class Language(models.Model):
-    language_name = models.CharField(max_length=50, null=False, blank=False)
-    language_code = models.CharField(max_length=20, null=False, blank=False)
+# class Language(models.Model):
+#     language_name = models.CharField(max_length=50, null=False, blank=False)
+#     language_code = models.CharField(max_length=20, null=False, blank=False)
 
 class Job(models.Model):
-    source_language = models.ForeignKey(Language, null=False, blank=False, on_delete=models.CASCADE, 
+    source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE, 
                         related_name="source_lang")
-    target_language = models.ForeignKey(Language, null=False, blank=False, on_delete=models.CASCADE, 
+    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE, 
                         related_name="target_language")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE, 
                 related_name="project_jobs_set")
@@ -120,7 +123,7 @@ class Task(models.Model):
             related_name="job_tasks_set")
     version = models.ForeignKey(Version, on_delete=models.CASCADE, null=False, blank=False,
             related_name="version_tasks_set")
-    assign_to = models.ForeignKey(AilzaUser, on_delete=models.CASCADE, null=False, blank=False,
+    assign_to = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=False, blank=False,
             related_name="user_tasks_set")
 
     class Meta:

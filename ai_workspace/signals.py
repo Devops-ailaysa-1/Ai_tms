@@ -26,7 +26,7 @@ def create_project_dir(sender, instance, *args, **kwargs):
     Creating a project directory to upload files in a specific project...
     '''
     if instance.project_dir_path == None:
-        instance.project_dir_path = os.path.join(instance.ailza_user.allocated_dir, slugify(instance.project_name))
+        instance.project_dir_path = os.path.join(instance.ai_user.userattribute.allocated_dir, slugify(instance.project_name))
         instance.project_dir_path = create_dirs_if_not_exists(instance.project_dir_path)   
 
 def create_pentm_dir_of_project(sender, instance, created, *args, **kwargs):
