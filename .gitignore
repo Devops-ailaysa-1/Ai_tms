@@ -11,3 +11,4 @@ dj_ailaysa_slim/config.py
 .secure
 .env2_bak
 *.sql
+tms

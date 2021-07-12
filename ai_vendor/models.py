@@ -43,32 +43,39 @@ class VendorSubjectFields(ParanoidModel):
     subject = models.ForeignKey(SubjectFields,related_name='vendor_subject', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    class Meta:
-        unique_together = ("user", "subject")
+    # class Meta:
+    #     unique_together = ("user", "subject")
+
+# class VendorCATsoftware(ParanoidModel):
+#     user = models.ForeignKey(AiUser,related_name='vendor_software', on_delete=models.CASCADE)
+#     software = models.ForeignKey(CATsoftware,related_name='vendor_software', on_delete=models.CASCADE)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 class VendorMemberships(ParanoidModel):
     user = models.ForeignKey(AiUser,related_name='vendor_membership', on_delete=models.CASCADE)
     membership = models.ForeignKey(VendorMemberships,related_name='vendor_membership', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    class Meta:
-        unique_together = ("user", "membership")
+    # class Meta:
+    #     unique_together = ("user", "membership")
 
 class VendorContentTypes(ParanoidModel):
     user = models.ForeignKey(AiUser,related_name='vendor_contentype', on_delete=models.CASCADE)
     contenttype = models.ForeignKey(ContentTypes,related_name='vendor_contentype', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    class Meta:
-        unique_together = ("user", "contenttype")
+    # class Meta:
+    #     unique_together = ("user", "contenttype")
 
 class VendorMtpeEngines(ParanoidModel):
     user = models.ForeignKey(AiUser,related_name='vendor_mtpe_engines', on_delete=models.CASCADE)
     mtpe_engines = models.ForeignKey(MtpeEngines,related_name='vendor_mtpe_engines', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    class Meta:
-        unique_together = ("user", "mtpe_engines")
+    # class Meta:
+    #     unique_together = ("user", "mtpe_engines")
 
 
 class VendorLanguagePair(ParanoidModel):
@@ -81,16 +88,18 @@ class VendorLanguagePair(ParanoidModel):
         unique_together = ("user", "source_lang","target_lang")
 
 class VendorServiceInfo(ParanoidModel):
-     lang_pair=models.ForeignKey(VendorLanguagePair, on_delete=models.CASCADE)
+     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
      mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
      mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
-     unit_type=models.ForeignKey(Billingunits,related_name='unit_type', on_delete=models.CASCADE)
+     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='unit_type', on_delete=models.CASCADE)
+     translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+     sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
      currency = models.ForeignKey(Currencies,related_name='vendorservice_currency', on_delete=models.CASCADE, blank=True, null=True)
 
 class VendorServiceTypes(ParanoidModel):
-    lang_pair=models.ForeignKey(VendorLanguagePair, on_delete=models.CASCADE)
+    lang_pair=models.ForeignKey(VendorLanguagePair,related_name='servicetype', on_delete=models.CASCADE)
     services=models.ForeignKey(ServiceTypes,related_name='services', on_delete=models.CASCADE)
     unit_type=models.ForeignKey(Billingunits, on_delete=models.CASCADE , blank=True, null=True)
     unit_rate=models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
@@ -98,14 +107,14 @@ class VendorServiceTypes(ParanoidModel):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-class TranslationSamples(ParanoidModel):
-    lang_pair=models.ForeignKey(VendorLanguagePair, on_delete=models.CASCADE)
-    translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-
-class MtpeSamples(ParanoidModel):
-    lang_pair=models.ForeignKey(VendorLanguagePair,on_delete=models.CASCADE)
-    sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+# class TranslationSamples(ParanoidModel):
+#     lang_pair=models.ForeignKey(VendorLanguagePair, on_delete=models.CASCADE)
+#     translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+#
+# class MtpeSamples(ParanoidModel):
+#     lang_pair=models.ForeignKey(VendorLanguagePair,on_delete=models.CASCADE)
+#     sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
