@@ -11,6 +11,7 @@ from .signals import create_allocated_dirs
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
+from ai_auth.utils import get_unique_uid
 
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
@@ -31,9 +32,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         return self.email
 
     def save(self, *args, **kwargs):
-        if self.uid == None:
+        if not self.uid:
             self.uid = get_unique_uid(AiUser)
-        super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class UserAttribute(models.Model):
