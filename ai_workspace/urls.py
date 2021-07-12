@@ -4,6 +4,7 @@ from . import api_views
 
 router = DefaultRouter() #
 router.register(r"project", api_views.ProjectView, basename="project")
+router.register(r'job', api_views.JobView, basename="job")
 
 urlpatterns = router.urls
 
