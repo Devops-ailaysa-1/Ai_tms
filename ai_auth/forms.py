@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
+from .tasks import email_send_task
 
 from django.contrib.sites.shortcuts import get_current_site
 
@@ -33,13 +34,14 @@ class SendInviteForm(ResetPasswordForm):
         }
         msg_plain = render_to_string("email/password_reset_email.txt", context)
         # msg_html = render_to_string("users/invite_with_password_reset.html", context)
-        send_mail(
+        email_send_task.delay(
             "Password Reset",
             msg_plain,
             'noreply@ailaysa.com',
             [email],
             # html_message=msg_html,
         )
+
 
     def save(self, request, **kwargs):
         email = self.cleaned_data["email"]

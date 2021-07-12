@@ -188,7 +188,10 @@ AUTHENTICATION_BACKENDS = [
 
 REST_USE_JWT = True
 
+# EMAIL_BACKEND = 'ai_auth.email_backend.AiEmailBackend'
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
 EMAIL_HOST = os.getenv( "EMAIL_HOST" )
 EMAIL_PORT = int(os.getenv( "EMAIL_PORT" ))
 EMAIL_USE_TLS = (True if os.getenv( "EMAIL_TLS" ) == 'True' else False)
@@ -200,7 +203,6 @@ EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
 
 
 
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_REQUIRED = True
@@ -224,8 +226,11 @@ PASSWORD_RESET_URL = "reset/"
 
 CLIENT_BASE_URL = "http://localhost:3000/"
 
+SIGNUP_CONFIRM_URL ="http://localhost:3000/confirm-email"
+
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
+ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
 
 
 REST_FRAMEWORK = {
@@ -266,7 +271,7 @@ MEDIA_ROOT =  os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 
-DEFAULT_FROM_EMAIL ="Ailaysa@gmail.com"
+
 
 OLD_PASSWORD_FIELD_ENABLED = True 
 
@@ -307,3 +312,20 @@ OLD_PASSWORD_FIELD_ENABLED = True
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
 # }
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+
+
+
+DEFAULT_FROM_EMAIL ="noreply@ailaysa.com"
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
