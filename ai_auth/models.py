@@ -11,6 +11,7 @@ from .signals import create_allocated_dirs
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
+from ai_auth.utils import get_unique_uid
 
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
@@ -31,9 +32,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         return self.email
 
     def save(self, *args, **kwargs):
-        if self.uid == None:
+        if not self.uid:
             self.uid = get_unique_uid(AiUser)
-        super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class UserAttribute(models.Model):
@@ -80,9 +81,9 @@ class OfficialInformation(models.Model):
     company_name = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     designation = models.CharField(max_length=255, blank=True, null=True)
-    industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE)
-    country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE)
-    timezone=models.ForeignKey(Timezones,related_name='official_info', on_delete=models.CASCADE)
+    industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
+    country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
+    timezone=models.ForeignKey(Timezones,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
     website=models.CharField(max_length=255, blank=True, null=True)
     linkedin=models.CharField(max_length=255, blank=True, null=True)
     billing_email=models.EmailField(blank=True, null=True)

@@ -7,7 +7,7 @@ def get_unique_uid(klass, iter_count=1):
 	if iter_count == max_iter:
 		# Should be logged properly if max iteration reached
 		return  None
-	uid = random.random(1, 10**6)
+	uid = random.randint(1, 10**6)
 	if not klass.objects.filter(uid=uid):
 		return "u"+ str(uid)
 	return get_unique_uid(klass, iter_count+1)
