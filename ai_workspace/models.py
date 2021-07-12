@@ -16,49 +16,42 @@ from .utils import create_dirs_if_not_exists
 from .signals import (create_allocated_dirs, create_project_dir, create_pentm_dir_of_project,
     set_pentm_dir_of_project)
 
-# class AilzaUser(AbstractBaseUser):
-#     email = models.EmailField(unique=True, null=False)
-#     username = models.CharField(max_length=255, null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now=True)
-#     deleted_at = models.DateTimeField(null=True, blank=True)
-#     allocated_dir = models.CharField(max_length=255, null=True, blank=True)
-#     # role = models.ForeignKey(Role)
-
-#     USERNAME_FIELD = "email"
-#     objects = AilzaManager()
-
-#     def delete(self):
-#         self.deleted_at = datetime.now()
-#         return self.save()
-
-#     def hard_delete(self):
-#         return super(AilzaUser, self).delete()
-
-# pre_save.connect(create_allocated_dirs, sender=AilzaUser)
+def set_pentm_dir(instance):
+    path = os.path.join(instance.project.project_dir_path, ".pentm")
+    create_dirs_if_not_exists(path)
+    return path
             
 class PenseiveTM(models.Model):
-    penseive_tm_dir_path = models.CharField(max_length=1000, null=True, blank=True)  # Common for a project 
+    penseive_tm_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
+                            blank=True, allow_folders=True, allow_files=False)  # Common for a project 
     project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.CASCADE)
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
 class Project(models.Model):
     project_name = models.CharField(max_length=50, null=False, blank=False,)
-    project_dir_path = models.CharField(max_length=1000, null=True, blank=True)
+    project_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
+                        blank=True, allow_folders=True, allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
 
+    def __str__(self):
+        return self.project_name
+
+    __repr__ = __str__
+
     penseive_tm_klass = PenseiveTM
 
-    def save(self, *args, **kwargs):
-        try:
-            return super().save(*args, **kwargs)
-        except Exception as e:
-            print("error--->", e)
-            raise ValueError("project name should be unique")
+    # def save(self, *args, **kwargs):
+    #     ''' try except block created for logging the exception '''
+    #     try:
+    #         return super().save(*args, **kwargs)
+        # except Exception as e:
+        #     print("error--->", e)
+        #     raise ValueError("project name should be unique")
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)

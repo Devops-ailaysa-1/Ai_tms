@@ -9,9 +9,12 @@ from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones
 from django.db.models.signals import post_save, pre_save
 from .signals import create_allocated_dirs
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import Permission, User
+from django.contrib.contenttypes.models import ContentType
 
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
+    uid = models.CharField(max_length=25, null=False, blank=True)
     email = models.EmailField(_('email address'), unique=True)
     fullname=models.CharField(max_length=191)
     is_staff = models.BooleanField(default=False)
@@ -27,15 +30,34 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    def save(self, *args, **kwargs):
+        if self.uid == None:
+            self.uid = get_unique_uid(AiUser)
+        super().save(*args, **kwargs)
+
+
 class UserAttribute(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
-    user_type=models.ForeignKey(AiUserType,related_name='user_attribute', on_delete=models.CASCADE)
-    allocated_dir = models.URLField(default=None)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    user_type=models.ForeignKey(AiUserType, related_name='user_attribute', on_delete=models.CASCADE)
+    allocated_dir = models.URLField(default=None, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
         db_table='user_attribute'
+        permissions = ( 
+                ("user-attribute-exist", "user attribute exist"), 
+            )
+
+    def save(self, *args, **kwargs):
+        content_type = ContentType.objects.get_for_model(UserAttribute)
+        try:
+            permission = Permission.objects.get(codename="user-attribute-exist",
+                                content_type=content_type) 
+            self.user.user_permissions.add(permission)
+        except Exception as e :
+            print(e)
+        return super().save(*args, **kwargs)
 
 pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
@@ -83,3 +105,5 @@ class Professionalidentity(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     class Meta:
         db_table = 'professional_identity'
+
+

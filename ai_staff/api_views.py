@@ -10,11 +10,6 @@ from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLoc
 from .serializer import ContentTypesSerializer, LanguagesSerializer, LocaleSerializer, MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer, TimezonesSerializer,BillingunitsSerializer
 
 
-
-
-
-
-
 class ServiceTypesView(APIView):
     permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
