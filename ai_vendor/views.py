@@ -8,6 +8,8 @@ from .models import VendorsInfo,VendorLanguagePair,VendorServiceInfo,VendorServi
 from django.shortcuts import get_object_or_404
 from django.test.client import RequestFactory
 from ai_auth.models import AiUser
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 # from rest_framework import pagination
 # from rest_framework.pagination import PageNumberPagination
 
@@ -37,6 +39,7 @@ class VendorsInfoCreateView(APIView):
 
 
 class VendorServiceListCreate(viewsets.ViewSet):
+    permission_classes =[IsAuthenticated]
     def list(self,request):
         queryset = self.get_queryset()
         serializer = VendorLanguagePairSerializer(queryset,many=True)
@@ -82,7 +85,8 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save(id=id)
-            return Response(data={"Message":"VendorExpertiseInfo Created"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.data)
+            # return Response(data={"Message":"VendorExpertiseInfo Created"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def update(self,request,pk):
         queryset = AiUser.objects.all()
