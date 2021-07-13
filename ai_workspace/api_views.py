@@ -2,12 +2,13 @@ from ai_auth.authentication import IsCustomer
 from ai_auth.models import AiUser
 from rest_framework import viewsets
 from rest_framework.response import Response
-from .serializers import ProjectSerializer, JobSerializer
+from .serializers import ProjectSerializer, JobSerializer,FileSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job
+from .models import Project, Job, File
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
+from rest_framework.parsers import MultiPartParser, FormParser
 
 class IsCustomer(permissions.BasePermission):
 
@@ -46,7 +47,16 @@ class JobView(viewsets.ModelViewSet):
             return Response(serializer.data)
 
 class FileView(viewsets.ModelViewSet):
-    pass 
+    serializer_class = FileSerializer
+    parser_classes = [MultiPartParser, FormParser]
+    def get_queryset(self):
+        return File.objects.filter(project__ai_user=self.request.user)
+
+    def create(self, request):
+        serializer = FileSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data, status=201)
 
 
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers 
-from .models import  Project, Job
+from .models import  Project, Job, File
 
 class ProjectSerializer(serializers.ModelSerializer):
 	class Meta:
@@ -15,5 +15,9 @@ class ProjectSerializer(serializers.ModelSerializer):
 class JobSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Job
-		fields = ("project", "source_language", 
-					"target_language", )
+		fields = ("project", "source_language", "target_language")
+
+class FileSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = File
+		fields = ("file_type", "file", "project")

@@ -90,6 +90,7 @@ class FileTypes(Enum):
 
 def get_file_upload_path(instance, filename):
     file_path = FileTypes(instance.file_type.lower()).get_path()
+    print("path--->", os.path.join(instance.project.project_dir_path, file_path, filename))
     return os.path.join(instance.project.project_dir_path, file_path, filename)
 
 class File(models.Model):
@@ -107,7 +108,6 @@ class Version(models.Model):
                         for version in VersionChoices], null=False, blank=False)
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE, 
                 related_name="project_versions_set")   
-
 
 class Task(models.Model):
     file = models.ForeignKey(File, on_delete=models.CASCADE, null=False, blank=False,

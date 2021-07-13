@@ -1,0 +1,19 @@
+from django import urls
+from django.urls import path,include
+from ai_vendor import views
+from rest_framework.routers import DefaultRouter
+from django.conf.urls import url
+
+router = DefaultRouter()
+router.register(r'vendorserviceinfo',views.VendorServiceListCreate,basename="vendor-service-info")
+router.register(r'vendorexpertiseinfo',views.VendorExpertiseListCreate,basename="vendor-expertise-info")
+
+urlpatterns = router.urls
+
+urlpatterns+= [
+    path('vendor_info/',views.VendorsInfoCreateView.as_view(), name='vendor-info'),
+    path('vendor_bank_info/',views.VendorsBankInfoCreateView.as_view(), name='vendor-bank-info'),
+    # path('vendor_service/',views.VendorsServiceCreateView.as_view(),name='vendor-service'),
+    path('vendor_service_info/',views.VendorServiceInfoView.as_view({'get': 'list'}),name='vendor-service-info-new'),
+    # path('vendor_service_update/<int:pk>',views.VendorServiceUpdateDeleteView.as_view(),name='vendor-servicepdate'),
+    ]

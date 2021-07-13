@@ -10,14 +10,14 @@ class ParanoidQuerySet(QuerySet):
         for obj in self:
             obj.deleted_at=timezone.now()
             obj.save()
-    
+
 
 class ParanoidManager(models.Manager):
 
     def get_queryset(self):
         return ParanoidQuerySet(self.model, using=self._db).filter(
             deleted_at__isnull=True)
-            
+
 
 class ParanoidModel(models.Model):
     class Meta:
