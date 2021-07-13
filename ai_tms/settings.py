@@ -15,7 +15,6 @@ from datetime import timedelta
 from dotenv import load_dotenv
 load_dotenv(".env2")
 from pathlib import Path
-from pathlib import Path
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,7 +25,7 @@ TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv( "django_secret_key" )
+SECRET_KEY = os.getenv("django_secret_key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -98,6 +97,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'dj_rest_auth.registration',
     'ai_vendor',
+    'ai_workspace',
 ]
 
 
@@ -138,17 +138,20 @@ WSGI_APPLICATION = 'ai_tms.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-
-DATABASES={
-    'default':{
-        'ENGINE':'django.db.backends.postgresql_psycopg2',
-        'NAME':os.getenv( "psql_database" ),
-        'USER':os.getenv( "psql_user" ),
-        'PASSWORD':os.getenv( "psql_password" ),
-        'HOST':os.getenv( "psql_host" ),
-        'PORT':os.getenv( "psql_port" ),
+try:
+    from .local_settings import DATABASES
+except Exception as e:
+    print("error--->", e)
+    DATABASES={
+        'default':{
+            'ENGINE':'django.db.backends.postgresql_psycopg2',
+            'NAME':os.getenv( "psql_database" ),
+            'USER':os.getenv( "psql_user" ),
+            'PASSWORD':os.getenv( "psql_password" ),
+            'HOST':os.getenv( "psql_host" ),
+            'PORT':os.getenv( "psql_port" ),
+        }
     }
-}
 
 
 # Password validation
@@ -169,6 +172,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'ai_auth.authentication.MysqlBackend',
+    'django.contrib.auth.backends.ModelBackend',
+
+
+]
+
 
 # REST_FRAMEWORK = {
 
@@ -181,19 +191,23 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_USE_JWT = True
 
+# if os.environ.get("email_creds_avail", False):
+# EMAIL_BACKEND = 'ai_auth.email_backend.AiEmailBackend'
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'stephenlangtest@gmail.com'
-EMAIL_HOST_PASSWORD = 'test12314'
+EMAIL_HOST = os.getenv( "EMAIL_HOST" )
+EMAIL_PORT = int(os.getenv( "EMAIL_PORT" ))
+EMAIL_USE_TLS = (True if os.getenv( "EMAIL_TLS" ) == 'True' else False)
+EMAIL_HOST_USER = os.getenv( "EMAIL_HOST_USER" )
+EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
+
 
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_USER_MODEL_USERNAME_FIELD =None
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
@@ -212,8 +226,11 @@ PASSWORD_RESET_URL = "reset/"
 
 CLIENT_BASE_URL = "http://localhost:3000/"
 
+SIGNUP_CONFIRM_URL ="http://localhost:3000/confirm-email"
+
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
+ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
 
 
 REST_FRAMEWORK = {
@@ -221,7 +238,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 }
-ACCESS_TOKEN_LIFETIME =  timedelta(minutes=15)
+
 
 # SIMPLE_JWT = {
 #     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
@@ -254,7 +271,6 @@ MEDIA_ROOT =  os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 
-DEFAULT_FROM_EMAIL ="Ailaysa@gmail.com"
 
 OLD_PASSWORD_FIELD_ENABLED = True
 
@@ -295,3 +311,20 @@ SIMPLE_JWT = {
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
 # }
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+
+
+
+DEFAULT_FROM_EMAIL ="noreply@ailaysa.com"
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}

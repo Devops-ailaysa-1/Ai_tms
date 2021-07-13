@@ -12,3 +12,6 @@ dj_ailaysa_slim/config.py
 .env2_bak
 *.sql
 tms
+*.json
+req.txt
+ai_tms/local_settings.py

@@ -6,12 +6,16 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones
-
-
+from django.db.models.signals import post_save, pre_save
+from .signals import create_allocated_dirs
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import Permission, User
+from django.contrib.contenttypes.models import ContentType
+from ai_auth.utils import get_unique_uid
 
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
+    uid = models.CharField(max_length=25, null=False, blank=True)
     email = models.EmailField(_('email address'), unique=True)
     fullname=models.CharField(max_length=191)
     is_staff = models.BooleanField(default=False)
@@ -27,13 +31,36 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    def save(self, *args, **kwargs):
+        if not self.uid:
+            self.uid = get_unique_uid(AiUser)
+        return super().save(*args, **kwargs)
+
+
 class UserAttribute(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
-    user_type=models.ForeignKey(AiUserType,related_name='user_attribute', on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    user_type=models.ForeignKey(AiUserType, related_name='user_attribute', on_delete=models.CASCADE)
+    allocated_dir = models.URLField(default=None, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+
     class Meta:
         db_table='user_attribute'
+        permissions = (
+                ("user-attribute-exist", "user attribute exist"),
+            )
+
+    def save(self, *args, **kwargs):
+        content_type = ContentType.objects.get_for_model(UserAttribute)
+        try:
+            permission = Permission.objects.get(codename="user-attribute-exist",
+                                content_type=content_type)
+            self.user.user_permissions.add(permission)
+        except Exception as e :
+            print(e)
+        return super().save(*args, **kwargs)
+
+pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
 class PersonalInformation(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
@@ -54,9 +81,9 @@ class OfficialInformation(models.Model):
     company_name = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     designation = models.CharField(max_length=255, blank=True, null=True)
-    industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE)
-    country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE)
-    timezone=models.ForeignKey(Timezones,related_name='official_info', on_delete=models.CASCADE)
+    industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
+    country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
+    timezone=models.ForeignKey(Timezones,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
     website=models.CharField(max_length=255, blank=True, null=True)
     linkedin=models.CharField(max_length=255, blank=True, null=True)
     billing_email=models.EmailField(blank=True, null=True)
@@ -67,9 +94,9 @@ class OfficialInformation(models.Model):
 
 
 def user_directory_path(instance, filename):
-  
+
     # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
-    return 'user_{0}/{1}'.format(instance.user.id, filename)
+    return 'user_{0}/{1}/{2}'.format(instance.user.id, "profile",filename)
 
 class Professionalidentity(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)

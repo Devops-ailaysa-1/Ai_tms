@@ -98,7 +98,7 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 
 
 class UserAttributeSerializer(serializers.ModelSerializer): 
-    user_type = serializers.PrimaryKeyRelatedField(queryset=AiUserType.objects.all(),many=False)
+    user_type = serializers.PrimaryKeyRelatedField(queryset=AiUserType.objects.all(),many=False,required=False)
 
     class Meta:
         model = UserAttribute
@@ -120,8 +120,8 @@ class UserAttributeSerializer(serializers.ModelSerializer):
         return data
 
 class PersonalInformationSerializer(serializers.ModelSerializer):
-    country_id = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False)
-    timezone_id = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False)
+    country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
+    timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
 
     class Meta:
         model = PersonalInformation
@@ -135,9 +135,9 @@ class PersonalInformationSerializer(serializers.ModelSerializer):
         return  personal_info
 
 class OfficialInformationSerializer(serializers.ModelSerializer):
-    country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False)
-    timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False)
-    industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all(),many=False)
+    country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
+    timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
+    industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all(),many=False,required=False)
     class Meta:
         model = OfficialInformation
         fields = ( 'id','company_name','address','designation','industry','country','timezone','website','linkedin','billing_email','created_at','updated_at')

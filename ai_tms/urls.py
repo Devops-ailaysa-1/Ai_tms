@@ -29,6 +29,7 @@ urlpatterns = [
     path('auth/',include('ai_auth.urls')),
     path('vendor/',include('ai_vendor.urls')),
     path('', include('django.contrib.auth.urls')),
+    path("workspace/", include('ai_workspace.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

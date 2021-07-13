@@ -85,8 +85,6 @@ class ContentTypes(ParanoidModel):
     class Meta:
         db_table = 'content_types'
 
-
-
 class Languages(ParanoidModel):
     #lang_code = models.CharField(max_length=191)
     language = models.CharField(max_length=191)
@@ -94,6 +92,11 @@ class Languages(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     #deleted_at = models.DateTimeField(blank=True, null=True)
     #is_active=models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.language
+        
+    __repr__ = __str__
 
     class Meta:
         db_table = 'languages'
