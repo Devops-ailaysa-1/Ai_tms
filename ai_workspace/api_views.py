@@ -1,14 +1,16 @@
+from rest_framework.views import APIView
 from ai_auth.authentication import IsCustomer
 from ai_auth.models import AiUser
 from rest_framework import viewsets
 from rest_framework.response import Response
-from .serializers import ProjectSerializer, JobSerializer,FileSerializer
+from .serializers import ProjectSerializer, JobSerializer,FileSerializer, ProjectSetupSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
+from rest_framework import status
 
 class IsCustomer(permissions.BasePermission):
 
@@ -53,6 +55,7 @@ class FileView(viewsets.ModelViewSet):
         return File.objects.filter(project__ai_user=self.request.user)
 
     def create(self, request):
+        print(request.data)
         serializer = FileSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -61,9 +64,51 @@ class FileView(viewsets.ModelViewSet):
 
 
 
+class ProjectSetupView(APIView):
+
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+ 
+
+    def post(self, request, format=None):
+        print("request DATa >>",request.data)
+        # print(request.data.get('logo'))
+        # print("files",request.FILES.get('logo'))
+        print(request.POST.dict())
+        serializer = ProjectSetupSerializer(data=request.data, context={'request':request})
+        if serializer.is_valid():
+            try:
+                serializer.save()
+            except IntegrityError:
+                return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 #  /////////////////  References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 # from django.contrib.auth.models import Permission, User
 # from django.contrib.contenttypes.models import ContentType
 # content_type = ContentType.objects.get_for_model( UserAttribute 
 # permission = Permission.objects.get( content_type = content_type , codename='user-attribute-exist')
+
+
+# class ProjectSetupView2(APIView):
+
+#     parser_classes = [MultiPartParser, FormParser, JSONParser]
+ 
+
+#     def post(self, request, format=None):
+#         print("request DATa >>",request.data)
+#         # print(request.data.get('logo'))
+#         # print("files",request.FILES.get('logo'))
+#         print(request.POST.dict())
+#         serializer = ProjectSetupSerializer(data=request.data, context={'request':request})
+#         if serializer.is_valid():
+#             try:
+#                 serializer.save()
+#             except IntegrityError:
+#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         else:
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

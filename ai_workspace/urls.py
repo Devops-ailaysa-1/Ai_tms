@@ -9,4 +9,8 @@ router.register(r'file', api_views.FileView, basename="file")
 
 urlpatterns = router.urls
 
+urlpatterns += [
+    path("project_setup", api_views.ProjectSetupView.as_view(), name="project-setup"), 
+
+]
 	
