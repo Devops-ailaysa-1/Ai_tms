@@ -54,7 +54,8 @@ class VendorServiceListCreate(viewsets.ViewSet):
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save(user_id=user_id)
-            return Response(data={"Message":"VendorServiceInfo Created"}, status=status.HTTP_201_CREATED)
+            #return Response(data={"Message":"VendorServiceInfo Created"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def update(self,request,pk):
         queryset = VendorLanguagePair.objects.all()
