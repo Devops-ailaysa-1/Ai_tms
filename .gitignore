@@ -13,5 +13,5 @@ dj_ailaysa_slim/config.py
 *.sql
 tms
 *.json
-req.txt
+req_nand.txt
 ai_tms/local_settings.py
