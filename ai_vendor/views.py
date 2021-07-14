@@ -3,15 +3,18 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework import viewsets,status
 from rest_framework.response import Response
-from .serializers import VendorsInfoSerializer,VendorLanguagePairSerializer,VendorServiceInfoSerializer,ServiceExpertiseSerializer,VendorBankDetailSerializer
+from .serializers import VendorsInfoSerializer,VendorLanguagePairSerializer,VendorServiceInfoSerializer,ServiceExpertiseSerializer,VendorBankDetailSerializer,LanguagePairSerializer
 from .models import VendorsInfo,VendorLanguagePair,VendorServiceInfo,VendorServiceTypes,VendorSubjectFields,VendorBankDetails
 from django.shortcuts import get_object_or_404
 from django.test.client import RequestFactory
 from ai_auth.models import AiUser
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-# from rest_framework import pagination
-# from rest_framework.pagination import PageNumberPagination
+from rest_framework import pagination
+from rest_framework.pagination import PageNumberPagination
+from django.conf import settings
+from django.db.models import Q
+from ai_staff.models import Languages
 
 class VendorsInfoCreateView(APIView):
 
@@ -38,25 +41,51 @@ class VendorsInfoCreateView(APIView):
             return Response(serializer.data)
 
 
-class VendorServiceListCreate(viewsets.ViewSet):
+class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
     permission_classes =[IsAuthenticated]
+    page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+    def get_custom_page_size(self, request, view):
+        try:
+            self.page_size = self.request.query_params.get('limit',10)
+            print(self.request.query_params.get('limit'))
+        except (ValueError, TypeError):
+            pass
+        return super().get_page_size(request)
+    def paginate_queryset(self, queryset, request, view=None):
+        self.page_size = self.get_custom_page_size(request, view)
+        return super().paginate_queryset(queryset, request, view)
     def list(self,request):
         queryset = self.get_queryset()
-        serializer = VendorLanguagePairSerializer(queryset,many=True)
-        return Response(serializer.data)
+        pagin_tc = self.paginate_queryset( queryset, request , view=self )
+        serializer = VendorLanguagePairSerializer(pagin_tc, many=True, context={'request': request})
+        response =self.get_paginated_response(serializer.data)
+        return  Response(response.data)
     def get_queryset(self):
+        search_word =  self.request.query_params.get('search_word',None)
+        print(search_word)
         queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        if search_word:
+            if search_word.isalpha()==True:
+                lang_id=Languages.objects.get(language__contains=search_word).id
+                print(lang_id)
+                queryset = queryset.filter(
+                            Q(source_lang=lang_id) | Q(target_lang=lang_id)
+                        )
+            else:
+                queryset = queryset.filter(
+                            Q(id=search_word))
+                print(queryset)
         return queryset
-    def create(self,request):
-        user_id = request.user.id
-        data = request.data
-        serializer = VendorLanguagePairSerializer(data=data)
-        print(serializer.is_valid())
-        if serializer.is_valid():
-            serializer.save(user_id=user_id)
-            #return Response(data={"Message":"VendorServiceInfo Created"}, status=status.HTTP_201_CREATED)
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def create(self,request):
+    #     user_id = request.user.id
+    #     data = request.data
+    #     serializer = VendorLanguagePairSerializer(data=data)
+    #     print(serializer.is_valid())
+    #     if serializer.is_valid():
+    #         serializer.save(user_id=user_id)
+    #         #return Response(data={"Message":"VendorServiceInfo Created"}, status=status.HTTP_201_CREATED)
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def update(self,request,pk):
         queryset = VendorLanguagePair.objects.all()
         vendor = get_object_or_404(queryset, pk=pk)
@@ -125,14 +154,45 @@ class VendorsBankInfoCreateView(APIView):
 
 
 
+class VendorLangPairCreate(viewsets.ViewSet):
+
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer=LanguagePairSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        return queryset
+
+    def create(self,request):
+        id = request.user.id
+        data = request.data
+        serializer = LanguagePairSerializer(data=data)
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save(user_id=id)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk):
+         queryset = VendorLanguagePair.objects.all()
+         vendor = get_object_or_404(queryset, pk=pk)
+         vendor.delete()
+         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def update(self, request, pk):
+        return
+
+
 
 # class VendorBankInfoListCreate(viewsets.ViewSet):
 #     def list(self,request):
 #         queryset = self.get_queryset()
 #         serializer = VendorLanguagePairSerializer(queryset,many=True)
 #         return Response(serializer.data)
-
-
+#
+#
 # class VendorServiceInfoView(viewsets.ViewSet):
 #     def list(self,request):
 #         context=dict(request=RequestFactory().get('/'))

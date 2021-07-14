@@ -77,7 +77,8 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
     class Meta:
         model = VendorLanguagePair
         fields=('id','user_id','source_lang','target_lang','service','servicetype',)
-        extra_kwargs = {'user_id':{"read_only":True},'id':{"read_only":True}
+        extra_kwargs = {'user_id':{"read_only":True},'id':{"read_only":True},'source_lang':{"read_only":True},
+        'target_lang':{"read_only":True}
         }
     # def save(self,user_id):
     #     data_new=self.validated_data
@@ -126,3 +127,13 @@ class VendorBankDetailSerializer(serializers.ModelSerializer):
 
     def save_update(self):
         return super().save()
+
+class LanguagePairSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
+    class Meta:
+        model = VendorLanguagePair
+        fields=('user','id','source_lang','target_lang',)
+        extra_kwargs = {'user':{"read_only":True},'id':{"read_only":True},
+        }
+    # def save(self, user_id):
+    #     vendor = VendorLanguagePair.objects.create(**self.validated_data, user_id=user_id)
+    #     return vendor
