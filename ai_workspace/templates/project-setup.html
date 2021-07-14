@@ -1,0 +1,6 @@
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+{{form1.as_p}}
+{{form2.as_p}}
+{{form3.as_p}}
+<button type="submit">Button</button>
+</form>

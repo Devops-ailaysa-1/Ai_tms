@@ -20,10 +20,10 @@ def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
     create_dirs_if_not_exists(path)
     return path
-            
+
 class PenseiveTM(models.Model):
     penseive_tm_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
-                            blank=True, allow_folders=True, allow_files=False)  # Common for a project 
+                            blank=True, allow_folders=True, allow_files=False)  # Common for a project
     project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.CASCADE)
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
@@ -61,11 +61,11 @@ post_save.connect(create_pentm_dir_of_project, sender=Project,)
 #     language_code = models.CharField(max_length=20, null=False, blank=False)
 
 class Job(models.Model):
-    source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE, 
+    source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
                         related_name="source_lang")
-    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE, 
+    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
                         related_name="target_language")
-    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE, 
+    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
                 related_name="project_jobs_set")
 
     class Meta:
@@ -84,30 +84,31 @@ class FileTypes(Enum):
             return os.path.join(self.value, sub_dir)
         if self == FileTypes.UNTRANSLATABLE:
             if not isinstance(sub_dir, FileSubTypes):
-                sub_dir = FileSubTypes.RESOURCES    
+                sub_dir = FileSubTypes.RESOURCES
                 #raise ValueError("sub directory name required!!!")
             return os.path.join(self.value, sub_dir.value)
 
 def get_file_upload_path(instance, filename):
     file_path = FileTypes(instance.file_type.lower()).get_path()
-    print("path--->", os.path.join(instance.project.project_dir_path, file_path, filename))
-    return os.path.join(instance.project.project_dir_path, file_path, filename)
+    # print("path--->", os.path.join(instance.project.project_dir_path.replace( settings.MEDIA_ROOT, ""), file_path, filename))
+    # project Directory Should be Relative Path
+    return os.path.join(instance.project.project_dir_path.replace( settings.MEDIA_ROOT, ""), file_path, filename)[1:]
 
 class File(models.Model):
-    file_type = models.CharField(max_length=100, choices=[(file_type.name, file_type.value) 
+    file_type = models.CharField(max_length=100, choices=[(file_type.name, file_type.value)
                     for file_type in FileTypes], null=False, blank=False)
     file = models.FileField(upload_to=get_file_upload_path, null=False, blank=False, max_length=1000)
-    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE, 
+    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
                 related_name="project_files_set")
 
 class VersionChoices(Enum):
     POST_EDITING = "post_editing"
 
 class Version(models.Model):
-    version_name = models.CharField(max_length=100, choices=[(version.name, version.value) 
+    version_name = models.CharField(max_length=100, choices=[(version.name, version.value)
                         for version in VersionChoices], null=False, blank=False)
-    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE, 
-                related_name="project_versions_set")   
+    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
+                related_name="project_versions_set")
 
 class Task(models.Model):
     file = models.ForeignKey(File, on_delete=models.CASCADE, null=False, blank=False,
@@ -122,13 +123,12 @@ class Task(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['file', 'job', 'version'], name=\
-                'file, job, version combination unique'), 
+                'file, job, version combination unique'),
         ]
 
 
 # /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
-# 
+#
 # from django.core.validators import EmailValidator
 # EmailValidator().validate_domain_part(".com")  ---> False
 # EmailValidator().validate_domain_part("l.com")  ---> True
-
