@@ -71,7 +71,7 @@ class ProjectSetupView(viewsets.ViewSet):
 
     def create(self, request):
         serializer = ProjectSetupSerializer(data={**request.POST.dict(),
-            "files":request.FILES.getlist('files')})
+            "files":request.FILES.getlist('files')},context={"request":request})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=201)

@@ -5,7 +5,7 @@ import json
 class ProjectSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
-		exclude = ("created_at", "ai_user")
+		exclude = ("created_at", "ai_user","ai_project_id")
 		read_only_fields = ("project_dir_path", )
 
 	def create(self, validated_data):
@@ -36,14 +36,15 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	def is_valid(self, *args, **kwargs):
 		self.initial_data['jobs'] = json.loads(self.initial_data['jobs'])
-		self.initial_data['files'] = [{"file":file, "file_type":"TRANSLATABLE"} for file in self.initial_data['files']]
+		self.initial_data['files'] = [{"file":file, "file_type":14} for file in self.initial_data['files']]
 		# self.initial_data['files'] = [{"file"}]
 		return super().is_valid(*args, **kwargs)
 
 	def create(self, validated_data):
+		ai_user = self.context["request"].user
 		project_jobs_set = validated_data.pop("project_jobs_set")
 		project_files_set = validated_data.pop("project_files_set")
-		project = Project.objects.create(**validated_data,  ai_user_id=2)
+		project = Project.objects.create(**validated_data,  ai_user=ai_user)
 		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
 		[project.project_files_set.create(**file_data) for file_data in project_files_set]
 		# project.save()
