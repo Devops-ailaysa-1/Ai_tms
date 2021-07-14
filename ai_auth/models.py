@@ -46,15 +46,15 @@ class UserAttribute(models.Model):
 
     class Meta:
         db_table='user_attribute'
-        permissions = ( 
-                ("user-attribute-exist", "user attribute exist"), 
+        permissions = (
+                ("user-attribute-exist", "user attribute exist"),
             )
 
     def save(self, *args, **kwargs):
         content_type = ContentType.objects.get_for_model(UserAttribute)
         try:
             permission = Permission.objects.get(codename="user-attribute-exist",
-                                content_type=content_type) 
+                                content_type=content_type)
             self.user.user_permissions.add(permission)
         except Exception as e :
             print(e)
@@ -94,7 +94,7 @@ class OfficialInformation(models.Model):
 
 
 def user_directory_path(instance, filename):
-  
+
     # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
     return 'user_{0}/{1}/{2}'.format(instance.user.id, "profile",filename)
 
@@ -106,5 +106,3 @@ class Professionalidentity(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     class Meta:
         db_table = 'professional_identity'
-
-

@@ -1,3 +1,4 @@
+from rest_framework.views import APIView
 from ai_auth.authentication import IsCustomer
 from ai_auth.models import AiUser
 from rest_framework import viewsets
@@ -54,6 +55,7 @@ class FileView(viewsets.ModelViewSet):
         return File.objects.filter(project__ai_user=self.request.user)
 
     def create(self, request):
+        print(request.data)
         serializer = FileSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -84,3 +86,24 @@ class ProjectSetupView(viewsets.ViewSet):
 # from django.contrib.contenttypes.models import ContentType
 # content_type = ContentType.objects.get_for_model( UserAttribute
 # permission = Permission.objects.get( content_type = content_type , codename='user-attribute-exist')
+
+
+# class ProjectSetupView2(APIView):
+
+#     parser_classes = [MultiPartParser, FormParser, JSONParser]
+ 
+
+#     def post(self, request, format=None):
+#         print("request DATa >>",request.data)
+#         # print(request.data.get('logo'))
+#         # print("files",request.FILES.get('logo'))
+#         print(request.POST.dict())
+#         serializer = ProjectSetupSerializer(data=request.data, context={'request':request})
+#         if serializer.is_valid():
+#             try:
+#                 serializer.save()
+#             except IntegrityError:
+#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         else:
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
