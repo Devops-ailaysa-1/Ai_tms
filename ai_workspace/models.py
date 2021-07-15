@@ -43,9 +43,9 @@ class TempFiles(models.Model):
 class Templangpair(models.Model):
     temp_proj = models.ForeignKey(TempProject, on_delete=models.CASCADE,
                         related_name="temp_proj_langpair")
-    temp_source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
+    temp_src_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
                         related_name="temp_source_lang")
-    temp_target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
+    temp_tar_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
                         related_name="temp_target_lang")
 
 
