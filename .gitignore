@@ -1,5 +1,6 @@
 db.sqlite3
 .env2
+.env
 docker-compose.yml
 file.sql
 Dockerfile
@@ -15,3 +16,5 @@ tms
 *.json
 req_nand.txt
 ai_tms/local_settings.py
+AiWorkspace.postman_collection.json
+AiWorkspace.postman_collection.json

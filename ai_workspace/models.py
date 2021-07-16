@@ -49,7 +49,7 @@ class Project(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.project_id:
-            # self.ai_user shoould be set before save 
+            # self.ai_user shoould be set before save
             self.project_id = self.ai_user.uid+"p"+str(Project.objects.filter(ai_user=self.ai_user).count()+1)
         if not self.project_name:
             self.project_name = self.project_id
@@ -77,8 +77,8 @@ class Job(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.job_id:
-            # self.ai_user shoould be set before save 
-            self.job_id = self.project_id+"j"+str(Job.objects.filter(project=self.project).count()+1)
+            # self.ai_user shoould be set before save
+            self.job_id = self.project.project_id+"j"+str(Job.objects.filter(project=self.project).count()+1)
         super().save()
 
 class FileSubTypes(Enum):
@@ -116,12 +116,9 @@ class File(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.fid:
-            # self.ai_user shoould be set before save 
+            # self.ai_user shoould be set before save
             self.fid = str(self.project.project_id)+"f"+str(File.objects.filter(project=self.project.id).count()+1)
         super().save()
-
-
-
 
 class VersionChoices(Enum):
     POST_EDITING = "post_editing"

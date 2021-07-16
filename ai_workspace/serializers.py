@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import  Project, Job, File
 import json
 
+
 class ProjectSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
@@ -33,6 +34,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
 		fields = ("project_name", "jobs", "files")
+		write_only_fields = ("jobs", "files")
 
 	def is_valid(self, *args, **kwargs):
 		self.initial_data['jobs'] = json.loads(self.initial_data['jobs'])

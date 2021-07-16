@@ -2,8 +2,8 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from base_test import BaseTestCase
-from management.models import AilzaUser, Project
-from management.utils import print_key_value
+from ai_workspace.models import  Project
+from ai_workspace.utils import print_key_value
 from django.db import models, IntegrityError
 import time
 from faker import Faker
@@ -47,10 +47,10 @@ class UnitTest(BaseTestCase):
 		user = AilzaUser.objects.create(**data)
 		email = user.email
 		self.assertEqual(AilzaUser.objects.filter(email=email).count(), 1)
-		user.delete() 
+		user.delete()
 		self.assertEqual(AilzaUser.objects.filter(email=email).count(), 0)
 		self.assertEqual(AilzaUser.objects.dead().filter(email=email).count(), 1)
-		
+
 	def test_user_dir_not_clashes(self):
 		data = data_provider.get_data_ailzauser_model()
 		email_data_user1 = { "email" : 'williamskirsten@hotmail.com'}
@@ -73,7 +73,6 @@ class UnitTest(BaseTestCase):
 		project2 = Project.objects.create(**dict(ailza_user=user, project_name=project_name))
 		self.assertNotEqual(project1.project_dir_path, project2.project_dir_path)
 		print_key_value(['project1.project_dir_path', 'project2.project_dir_path'],[project1.project_dir_path, project2.project_dir_path])
-	# def 
+	# def
 
 	# def tearDown(self):
-
