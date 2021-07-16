@@ -96,7 +96,7 @@ class ProjectSetupView(viewsets.ViewSet):
 class AnonymousProjectSetupView(viewsets.ViewSet):
     serializer_class = TempProjectSetupSerializer
     parser_classes = [MultiPartParser, JSONParser]
-    permission_classes = []
+    permission_classes = [AllowAny,]
 
     def get_queryset(self):
         return TempProject.objects.filter(ai_user=self.request.user)
