@@ -15,20 +15,18 @@ def Bulk_insert(request):
             #form = UploadFileForm(request.POST, request.FILES)
             dataset = Dataset()
             filedata = request.FILES.get('insertfile')
-            
+
             print("&&&&&&&&")
             imported_data = dataset.load(filedata.read(), format='xlsx')
             print(imported_data)
             for data in imported_data:
-                
-                value = AiUserType(
-			type=data[0].strip(),
+
+                value = Countries(
+			sortname =data[0].strip(),
+            name=data[1].strip(),
+            phonecode=data[2],
 			#name=data[1].strip(),
 			#utc_offset=data[2].strip(),
-
-              
-
-    
                 )
                 print(value)
                 value.save()
