@@ -121,7 +121,7 @@ class Job(models.Model):
     job_id =models.TextField(null=True, blank=True)
 
     class Meta:
-        unique_together = [("project", "source_language", "target_language"),("project", "source_language",)]
+        unique_together = [("project", "source_language", "target_language")]
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
