@@ -1,3 +1,5 @@
+import re
+from typing import KeysView
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
@@ -27,40 +29,47 @@ class FileSerializer(serializers.ModelSerializer):
 	project = serializers.IntegerField(required=False, source="project_id")
 	class Meta:
 		model = File
-		fields = ("id","usage_type", "file", "project","filename")
-		read_only_fields=("id","filename",)
+		fields = ("id","usage_type", "file", "project","filename","deleted_at")
+		read_only_fields=("filename",)
+		extra_kwargs = {
+            'id': {'required':False},
+        }
 
-class ProjectSetupSerializer(serializers.ModelSerializer):
-	jobs = JobSerializer(many=True, source="project_jobs_set")
-	files = FileSerializer(many=True, source="project_files_set")
-	project_name = serializers.CharField(required=False)
+# class ProjectSetupSerializer(serializers.ModelSerializer):
+# 	jobs = JobSerializer(many=True, source="project_jobs_set")
+# 	files = FileSerializer(many=True, source="project_files_set")
+# 	project_name = serializers.CharField(required=False)
 
-	class Meta:
-		model = Project
-		fields = ("project_name", "jobs", "files")
+# 	class Meta:
+# 		model = Project
+# 		fields = ("project_name", "jobs", "files","deleted_at")
+# 		# extra_kwargs = {
+#         #     'deleted_at': {'write_only': True},
+#         # }
 
-	def is_valid(self, *args, **kwargs):
-		# data = pickle.dumps(self.initial_data['jobs'])
-		# with open("my-data.pkl", "wb") as f:
-		# 	f.write(data)
+# 	def is_valid(self, *args, **kwargs):
+# 		# data = pickle.dumps(self.initial_data['jobs'])
+# 		# with open("my-data.pkl", "wb") as f:
+# 		# 	f.write(data)
 
-		print("type initial data-->", type(self.initial_data['jobs']))
-		print("initial data--->", self.initial_data['jobs'])
-		if not isinstance( self.initial_data['jobs'],dict ):
-			self.initial_data['jobs'] = json.loads(self.initial_data['jobs'])
-		self.initial_data['files'] = [{"file":file, "file_type":14} for file in self.initial_data['files']]
-		# self.initial_data['files'] = [{"file"}]
-		return super().is_valid(*args, **kwargs)
+# 		# print("type initial data-->", type(self.initial_data['jobs']))
+# 		# print("initial data--->", self.initial_data['jobs'])
+# 		if not isinstance( self.initial_data['jobs'],dict ):
+# 			self.initial_data['jobs'] = json.loads(self.initial_data['jobs'])
+# 		self.initial_data['files'] = [{"file":file, "file_type":14} for file in self.initial_data['files']]
+# 		# self.initial_data['files'] = [{"file"}]
+# 		return super().is_valid(*args, **kwargs)
 
-	def create(self, validated_data):
-		ai_user = self.context["request"].user
-		project_jobs_set = validated_data.pop("project_jobs_set")
-		project_files_set = validated_data.pop("project_files_set")
-		project = Project.objects.create(**validated_data,  ai_user=ai_user)
-		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
-		[project.project_files_set.create(**file_data) for file_data in project_files_set]
-		# project.save()
-		return project
+# 	def create(self, validated_data):
+# 		print("validated data",validated_data)
+# 		ai_user = self.context["request"].user
+# 		project_jobs_set = validated_data.pop("project_jobs_set")
+# 		project_files_set = validated_data.pop("project_files_set")
+# 		project = Project.objects.create(**validated_data,  ai_user=ai_user)
+# 		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
+# 		[project.project_files_set.create(**file_data) for file_data in project_files_set]
+# 		# project.save()
+# 		return project
 
 
 
@@ -71,6 +80,9 @@ class ProjectSubjectSerializer(serializers.ModelSerializer):
 		model = ProjectSubjectField
 		fields = ("id","project", "subject")
 		read_only_fields = ("id","project",)
+		# extra_kwargs = {
+        #     'deleted_at': {'write_only': True},
+        # }
 		
 
 class ProjectContentTypeSerializer(serializers.ModelSerializer):
@@ -80,6 +92,9 @@ class ProjectContentTypeSerializer(serializers.ModelSerializer):
 		model = ProjectContentType
 		fields = ("id","project", "content_type")
 		read_only_fields = ("id","project",)
+		# extra_kwargs = {
+        #     'deleted_at': {'write_only': True},
+        # }
 
 		
 
@@ -96,38 +111,63 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id","ai_project_id","project_name", "jobs", "files","contents","subjects","mt_engine")
+		fields = ("id","ai_project_id","project_name", "jobs", "files","contents","subjects","mt_engine","deleted_at")
 		read_only_fields = ("id","ai_project_id")
 		extra_kwargs = {
-			"mt_engine":{
-				"required": False
-			}
+			"mt_engine":{"required": False},
+			# 'deleted_at': {'write_only': True},
 		}
-	def run_validation(self, data):
-		print("run_validation")
-		return super().run_validation(data=data)
 
-	def is_valid(self, *args, **kwargs):
+	def json_decode_error(func):
+		def decorator(*args, **kwargs):
+			try:
+				return func(*args, **kwargs)
+			except json.JSONDecodeError:
+				raise serializers.ValidationError("data has not json serializable!!!")
+		return decorator
+
+	@json_decode_error 
+	def run_validation(self, data):
+		if self.context.get("request", None)!= None:  
+			request = self.context.get('request')
+			if ((isinstance(request, str) and (request == "post")) 
+				or (not (isinstance(request, str))and (request.method == "POST"))):
+				if isinstance( data.get('jobs',None),str ):
+					data['jobs'] = json.loads(data['jobs'])
+
+				if isinstance( self.initial_data.get('subjects', None), str ):
+					self.initial_data['subjects'] = json.loads(self.initial_data['subjects'])
+
+				if isinstance( self.initial_data.get('contents', None), str ):
+					self.initial_data['contents'] = json.loads(self.initial_data['contents'])
+				
+				self.initial_data['files'] = [{"file":file, "usage_type":1} for file in self.initial_data['files']]
+				# self.initial_data['files'] = [{"file"}]
+				return super().run_validation(data=data)
+
+		if self.context.get("request", None) != None: 
+			if ((self.context.get('request') == "put") or (self.context.get('request').method == "PUT")):
+				return data
+	def update(self, instance, validated_data):
+		
+		for file in validated_data.get("files"):
+			if "id"  not in file:
+				File.objects.create(**file)
+
+		for file in Project.objects.get(id=instance.id).project_files_set.all():
+			if file.id not in validated_data.get("files"):
+				file.delete()
+
+	# def is_valid(self, *args, **kwargs):
 		# data = pickle.dumps(self.initial_data['jobs'])
 		# with open("my-data.pkl", "wb") as f:
 		# 	f.write(data)
 
-		print("type initial data-->", type(self.initial_data['jobs']))
-		print("initial data--->", self.initial_data['jobs'])
+		# print("type initial data-->", type(self.initial_data['jobs']))
+		# print("initial data--->", self.initial_data['jobs'])
 		#print("initial data--->subjects", self.initial_data['subjects'])
 		#print("initial data--->contents", self.initial_data['contents'])
-		if not isinstance( self.initial_data['jobs'],dict ):
-			self.initial_data['jobs'] = json.loads(self.initial_data['jobs'])
-
-		if isinstance( self.initial_data.get('subjects', None), str ):
-			self.initial_data['subjects'] = json.loads(self.initial_data['subjects'])
-
-		if isinstance( self.initial_data.get('contents', None), str ):
-			self.initial_data['contents'] = json.loads(self.initial_data['contents'])
-
-		self.initial_data['files'] = [{"file":file, "usage_type":1} for file in self.initial_data['files']]
-		# self.initial_data['files'] = [{"file"}]
-		return super().is_valid(*args, **kwargs)
+		return instance
 
 	def create(self, validated_data):
 		ai_user = self.context["request"].user
@@ -140,11 +180,6 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 		if "proj_content_type" in validated_data:
 			proj_content_type = validated_data.pop("proj_content_type")
 
-		#if todel:
-
-			
-
-
 		project = Project.objects.create(**validated_data,  ai_user=ai_user)
 		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
 		[project.project_files_set.create(**file_data) for file_data in project_files_set]
@@ -155,30 +190,32 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 		# project.save()
 		return project
 
-	def update(self, instance, validated_data):
-		pk=instance.id
-		print("update pk",pk)
-		todel=self.context.get("delete",None)
-		project_jobs_set = validated_data.pop("project_jobs_set")
-		project_files_set = validated_data.pop("project_files_set")
-		proj_subject, proj_content_type = None, None 
-		if "proj_subject" in validated_data:
-			proj_subject = validated_data.pop("proj_subject")
-		if "proj_content_type" in validated_data:
-			proj_content_type = validated_data.pop("proj_content_type")
-		if todel:
-			if todel.get('subjetcs_del'):
-				[File.objects.filter(project=instance.id,**file_id).delete() for file_id in todel.get('subjetcs_del') ]
+	# def update(self, instance, validated_data):
+	# 	pk=instance.id
+	# 	print("update pk",pk)
+	# 	todel=self.context.get("delete",None)
+	# 	project_jobs_set = validated_data.pop("project_jobs_set")
+	# 	project_files_set = validated_data.pop("project_files_set")
+	# 	proj_subject, proj_content_type = None, None 
+	# 	if "proj_subject" in validated_data:
+	# 		proj_subject = validated_data.pop("proj_subject")
+	# 	if "proj_content_type" in validated_data:
+	# 		proj_content_type = validated_data.pop("proj_content_type")
+	# 	if todel:
+	# 		if todel.get('subjetcs_del'):
+	# 			[File.objects.filter(project=instance.id,**file_id).delete() for file_id in todel.get('subjetcs_del') ]
 
-		project = Project.objects.update_or_create(**validated_data,  id=instance.id)
-		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
-		[project.project_files_set.create(**file_data) for file_data in project_files_set]
-		if proj_subject:
-			[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
-		if proj_content_type:
-			[project.proj_content_type.create(**content_data) for content_data in  proj_content_type]
-		return project
+	# 	project = Project.objects.update_or_create(**validated_data,  id=instance.id)
+	# 	[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
+	# 	[project.project_files_set.create(**file_data) for file_data in project_files_set]
+	# 	if proj_subject:
+	# 		[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
+	# 	if proj_content_type:
+	# 		[project.proj_content_type.create(**content_data) for content_data in  proj_content_type]
+	# 	return project
 
+	def save_update(self):
+		return super().save()
 
 
 class TemplangpairSerializer(serializers.ModelSerializer):
@@ -225,4 +262,15 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		# project.save()
 		return temp_project
 
-
+'''
+from django.utils import timezone
+from ai_workspace.models import Project, File
+from ai_workspace.serializers import ProjectCreationSerializer
+p1 = Project.objects.last()
+ser  = ProjectCreationSerializer(p1 , data = {"files":[{"id":31, "deleted_at":True}]},partial=True, context= { "request": "put"}) 
+ser.is_valid()
+ser.validated_data 
+request = "put"; ((isinstance(request, str) and (request == "post")) 
+				or (not (isinstance(request, str))and (request.method == "POST")))
+"put" and (("put" == "put") or (self.context.get('request').method == "PUT"))
+'''

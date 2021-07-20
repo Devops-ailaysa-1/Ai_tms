@@ -6,7 +6,7 @@ from ai_auth.models import AiUser
 from rest_framework import viewsets
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
-                            ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer)
+                             ProjectSubjectSerializer, TempProjectSetupSerializer)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject
 from rest_framework import permissions
@@ -117,42 +117,42 @@ def integrity_error(func):
             return Response({'message': "integrirty error"}, 409)
     return decorator
 
-class ProjectSetupView(viewsets.ViewSet):
-    serializer_class = ProjectSetupSerializer
-    parser_classes = [MultiPartParser, JSONParser]
-    permission_classes = []
+# class ProjectSetupView(viewsets.ViewSet):
+#     serializer_class = ProjectSetupSerializer
+#     parser_classes = [MultiPartParser, JSONParser]
+#     permission_classes = []
 
-    def get_queryset(self):
-        return Project.objects.filter(ai_user=self.request.user)
+#     def get_queryset(self):
+#         return Project.objects.filter(ai_user=self.request.user)
 
-    @integrity_error
-    def create(self, request):
-        # print("metaaa>>",request.META)
-        serializer = ProjectSetupSerializer(data={**request.POST.dict(),
-            "files":request.FILES.getlist('files')},context={"request":request})
-        if serializer.is_valid(raise_exception=True):
-            #try:
-            serializer.save()
-            #except IntegrityError:
-              #  return Response(serializer.data, status=409)
+#     @integrity_error
+#     def create(self, request):
+#         # print("metaaa>>",request.META)
+#         serializer = ProjectSetupSerializer(data={**request.POST.dict(),
+#             "files":request.FILES.getlist('files')},context={"request":request})
+#         if serializer.is_valid(raise_exception=True):
+#             #try:
+#             serializer.save()
+#             #except IntegrityError:
+#               #  return Response(serializer.data, status=409)
 
-            return Response(serializer.data, status=201)
+#             return Response(serializer.data, status=201)
 
-        else:
-            return Response(serializer.errors, status=409)
+#         else:
+#             return Response(serializer.errors, status=409)
 
-    def list(self,request):
-        queryset = self.get_queryset()
-        # pagin_tc = self.paginate_queryset( queryset, request , view=self )
-        serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
-        # response =self.get_paginated_response(serializer.data)
-        return  Response(serializer.data)
+#     def list(self,request):
+#         queryset = self.get_queryset()
+#         # pagin_tc = self.paginate_queryset( queryset, request , view=self )
+#         serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
+#         # response =self.get_paginated_response(serializer.data)
+#         return  Response(serializer.data)
 
-    def retrieve(self, request, pk=None):
-        queryset = self.get_queryset()
-        project = get_object_or_404(queryset, pk=pk)
-        serializer = ProjectSetupSerializer(project)
-        return Response(serializer.data)
+#     def retrieve(self, request, pk=None):
+#         queryset = self.get_queryset()
+#         project = get_object_or_404(queryset, pk=pk)
+#         serializer = ProjectSetupSerializer(project)
+#         return Response(serializer.data)
 
 class ProjectCreateView(viewsets.ViewSet):
     serializer_class = ProjectCreationSerializer
@@ -194,27 +194,29 @@ class ProjectCreateView(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         print('pk',pk)
-        print(request.POST.dict())
-        print(type(request.POST.dict()))
-        print(type(request.POST.get('subjetcs_del')))
-        str={}
-        if request.POST.get('subjetcs_del'):
-            tmp = json.loads(request.POST.get('subjetcs_del'))
-            str['subjetcs_del']=tmp
+        # print(request.POST.dict())
+        # print(type(request.POST.dict()))
+        # print(type(request.POST.get('subjetcs_del')))
+        # str={}
+        # if request.POST.get('subjetcs_del'):
+        #     tmp = json.loads(request.POST.get('subjetcs_del'))
+        #     str['subjetcs_del']=tmp
 
-        if request.POST.get('contents_del'):
-            tmp = json.loads(request.POST.get('contents_del'))
-            str['contents_del']=tmp
+        # if request.POST.get('contents_del'):
+        #     tmp = json.loads(request.POST.get('contents_del'))
+        #     str['contents_del']=tmp
 
-        if request.POST.get('jobs_del'):
-            tmp = json.loads(request.POST.get('jobs_del'))
-            str['jobs_del']=tmp
+        # if request.POST.get('jobs_del'):
+        #     tmp = json.loads(request.POST.get('jobs_del'))
+        #     str['jobs_del']=tmp
 
-        if request.POST.get('files_del'):
-            tmp = json.loads(request.POST.get('files_del'))
-            str['files_del']=tmp
-        print('pk',str)
-        serializer = ProjectCreationSerializer(data={**request.POST.dict(),
+        # if request.POST.get('files_del'):
+        #     tmp = json.loads(request.POST.get('files_del'))
+        #     str['files_del']=tmp
+        # print('pk',str)
+
+        instance=Project.objects.get(id=pk)
+        serializer = ProjectCreationSerializer(instance=instance,data={**request.POST.dict(),
             "files":request.FILES.getlist('files')},context={"request":request,"delete":str,"pk":pk},partial=True)
 
         if serializer.is_valid(raise_exception=True):

@@ -12,7 +12,7 @@ from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
 import os
 from ai_auth.models import AiUser
-from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, ContentTypes, Languages, SubjectFields
+from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, ContentTypes, Languages, ParanoidModel, SubjectFields
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -60,7 +60,7 @@ class PenseiveTM(models.Model):
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
-class Project(models.Model):
+class Project(ParanoidModel):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
                         blank=True, allow_folders=True, allow_files=False)
@@ -119,6 +119,7 @@ class Job(models.Model):
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
                 related_name="project_jobs_set")
     job_id =models.TextField(null=True, blank=True)
+    deleted_at = models.BooleanField(default=False)
 
     class Meta:
         unique_together = [("project", "source_language", "target_language")]
@@ -184,6 +185,7 @@ class File(models.Model):
                 related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
+    deleted_at = models.BooleanField(default=False)
 
 
     def save(self, *args, **kwargs):
