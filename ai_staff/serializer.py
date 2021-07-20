@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType
+from .models import AilaysaSupportedMtpeEngines, ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType
 
 
 
@@ -182,3 +182,9 @@ class AiUserTypeSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ('id','created_at','updated_at')
 
+class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
+    project = serializers.IntegerField(required=False, source="project_id")
+    class Meta:
+        model = AilaysaSupportedMtpeEngines
+        fields = ("id","name",'created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
