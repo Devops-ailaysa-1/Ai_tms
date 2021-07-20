@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMemberships,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware
+from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
@@ -60,7 +60,7 @@ class VendorSubjectFieldSerializer(serializers.ModelSerializer):
 
 class VendorMembershipSerializer(serializers.ModelSerializer):
     class Meta:
-        model=VendorMemberships
+        model=VendorMembership
         fields=('membership',)
 
 class VendorMtpeEngineSerializer(serializers.ModelSerializer):
@@ -158,7 +158,7 @@ class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.Model
         if data.get("vendor_mtpe_engines"):
             data["vendor_mtpe_engines"] = json.loads(data["vendor_mtpe_engines"])
         if data.get("vendor_software"):
-            data["vendor_software"] = json.loads(data["vendor_software"])    
+            data["vendor_software"] = json.loads(data["vendor_software"])
         print("validated data----->",data)
         return data
 

@@ -54,7 +54,7 @@ class VendorCATsoftware(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
-class VendorMemberships(ParanoidModel):
+class VendorMembership(ParanoidModel):
     user = models.ForeignKey(AiUser,related_name='vendor_membership', on_delete=models.CASCADE)
     membership = models.ForeignKey(VendorMemberships,related_name='vendor_membership', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

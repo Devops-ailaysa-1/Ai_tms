@@ -137,7 +137,7 @@ class VendorsBankInfoCreateView(APIView):
 
     def post(self, request):
         user_id = request.user.id
-        data = request.data
+        data = request.POST.dict()
         serializer = VendorBankDetailSerializer(data=data)
         if serializer.is_valid():
             serializer.save(user_id = user_id)
@@ -145,7 +145,7 @@ class VendorsBankInfoCreateView(APIView):
 
     def put(self,request):
         user_id=request.user.id
-        data = request.data
+        data = request.POST.dict()
         vendor_bank_info = VendorBankDetails.objects.get(user_id=request.user.id)
         serializer = VendorBankDetailSerializer(vendor_bank_info,data=data,partial=True)
         if serializer.is_valid():
