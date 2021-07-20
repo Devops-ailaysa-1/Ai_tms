@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from ai_auth.models import AiUser,user_directory_path
-from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes
+from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares
 
 # Create your models here.
 class VendorsInfo(models.Model):
@@ -47,11 +47,11 @@ class VendorSubjectFields(ParanoidModel):
     # class Meta:
     #     unique_together = ("user", "subject")
 
-# class VendorCATsoftware(ParanoidModel):
-#     user = models.ForeignKey(AiUser,related_name='vendor_software', on_delete=models.CASCADE)
-#     software = models.ForeignKey(CATsoftware,related_name='vendor_software', on_delete=models.CASCADE)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+class VendorCATsoftware(ParanoidModel):
+    user = models.ForeignKey(AiUser,related_name='vendor_software', on_delete=models.CASCADE)
+    software = models.ForeignKey(CATSoftwares,related_name='vendor_software', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
 class VendorMemberships(ParanoidModel):
@@ -93,7 +93,7 @@ class VendorServiceInfo(ParanoidModel):
      mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
      mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
      mtpe_count_unit=models.ForeignKey(Billingunits,related_name='unit_type', on_delete=models.CASCADE)
-     translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+     # translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
      sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -108,14 +108,19 @@ class VendorServiceTypes(ParanoidModel):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-# class TranslationSamples(ParanoidModel):
-#     lang_pair=models.ForeignKey(VendorLanguagePair, on_delete=models.CASCADE)
-#     translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-#
-# class MtpeSamples(ParanoidModel):
-#     lang_pair=models.ForeignKey(VendorLanguagePair,on_delete=models.CASCADE)
-#     sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+class TranslationSamples(ParanoidModel):
+    lang_pair=models.ForeignKey(VendorLanguagePair,related_name='translationfile', on_delete=models.CASCADE)
+    translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+def user_directory_path(instance, filename):
+
+    # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
+    return 'user_{0}/{1}/{2}'.format(lang_pair.instance.user.id, "TranslationSamples",filename)
+
+class MtpeSamples(ParanoidModel):
+    lang_pair=models.ForeignKey(VendorLanguagePair,related_name='mtpesamples',on_delete=models.CASCADE)
+    sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

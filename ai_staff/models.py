@@ -95,7 +95,7 @@ class Languages(ParanoidModel):
 
     def __str__(self):
         return self.language
-        
+
     __repr__ = __str__
 
     class Meta:
@@ -175,7 +175,7 @@ class AiUserType(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     #deleted_at = models.DateTimeField(blank=True, null=True))
-    
+
     class Meta:
         db_table = 'ai_usertype'
 
@@ -205,4 +205,3 @@ class CATSoftwares(ParanoidModel):
     is_active=models.BooleanField(default=True)
     class Meta:
         db_table = 'cat_softwares'
-
