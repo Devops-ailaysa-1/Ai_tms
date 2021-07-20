@@ -13,7 +13,7 @@ from rest_framework import permissions
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-
+import json
 from ai_workspace import serializers
 
 class IsCustomer(permissions.BasePermission):
@@ -193,8 +193,44 @@ class ProjectCreateView(viewsets.ViewSet):
         return Response(serializer.data)    
 
     def update(self, request, pk=None):
-        pass
+        print('pk',pk)
+        print(request.POST.dict())
+        print(type(request.POST.dict()))
+        print(type(request.POST.get('subjetcs_del')))
+        str={}
+        if request.POST.get('subjetcs_del'):
+            tmp = json.loads(request.POST.get('subjetcs_del'))
+            str['subjetcs_del']=tmp
 
+        if request.POST.get('contents_del'):
+            tmp = json.loads(request.POST.get('contents_del'))
+            str['contents_del']=tmp
+
+        if request.POST.get('jobs_del'):
+            tmp = json.loads(request.POST.get('jobs_del'))
+            str['jobs_del']=tmp
+
+        if request.POST.get('files_del'):
+            tmp = json.loads(request.POST.get('files_del'))
+            str['files_del']=tmp
+        print('pk',str)
+        serializer = ProjectCreationSerializer(data={**request.POST.dict(),
+            "files":request.FILES.getlist('files')},context={"request":request,"delete":str,"pk":pk},partial=True)
+
+        if serializer.is_valid(raise_exception=True):
+            #try:
+            serializer.save()
+            #except IntegrityError:
+              #  return Response(serializer.data, status=409)
+
+            return Response(serializer.data, status=201)
+        else:
+            return Response(serializer.errors, status=400)
+
+        #return Response({"message":"hi","string":str})
+
+    # def destroy(self, request, pk=None):
+    #     pass
          
 
 

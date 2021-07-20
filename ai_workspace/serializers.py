@@ -131,6 +131,7 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 
 	def create(self, validated_data):
 		ai_user = self.context["request"].user
+		todel=self.context.get("delete",None)
 		project_jobs_set = validated_data.pop("project_jobs_set")
 		project_files_set = validated_data.pop("project_files_set")
 		proj_subject, proj_content_type = None, None 
@@ -138,6 +139,10 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 			proj_subject = validated_data.pop("proj_subject")
 		if "proj_content_type" in validated_data:
 			proj_content_type = validated_data.pop("proj_content_type")
+
+		#if todel:
+
+			
 
 
 		project = Project.objects.create(**validated_data,  ai_user=ai_user)
@@ -148,6 +153,30 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 		if proj_content_type:
 			[project.proj_content_type.create(**content_data) for content_data in  proj_content_type]
 		# project.save()
+		return project
+
+	def update(self, instance, validated_data):
+		pk=instance.id
+		print("update pk",pk)
+		todel=self.context.get("delete",None)
+		project_jobs_set = validated_data.pop("project_jobs_set")
+		project_files_set = validated_data.pop("project_files_set")
+		proj_subject, proj_content_type = None, None 
+		if "proj_subject" in validated_data:
+			proj_subject = validated_data.pop("proj_subject")
+		if "proj_content_type" in validated_data:
+			proj_content_type = validated_data.pop("proj_content_type")
+		if todel:
+			if todel.get('subjetcs_del'):
+				[File.objects.filter(project=instance.id,**file_id).delete() for file_id in todel.get('subjetcs_del') ]
+
+		project = Project.objects.update_or_create(**validated_data,  id=instance.id)
+		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
+		[project.project_files_set.create(**file_data) for file_data in project_files_set]
+		if proj_subject:
+			[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
+		if proj_content_type:
+			[project.proj_content_type.create(**content_data) for content_data in  proj_content_type]
 		return project
 
 
