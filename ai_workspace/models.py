@@ -1,3 +1,4 @@
+from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_auth.utils import get_unique_pid
 from django.db import models, IntegrityError
 from django.contrib.auth.models import AbstractBaseUser
@@ -11,6 +12,7 @@ from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
 import os
 from ai_auth.models import AiUser
+from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, ContentTypes, Languages, SubjectFields
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document
 
@@ -68,6 +70,7 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now=True)
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
     ai_project_id = models.TextField()
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.CASCADE,related_name="proj_mt_engine",default=1)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -97,17 +100,17 @@ post_save.connect(create_pentm_dir_of_project, sender=Project,)
 #     language_code = models.CharField(max_length=20, null=False, blank=False)
 
 
-class ProjectContenType(models.Model):
+class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
                         related_name="proj_content_type")
     content_type = models.ForeignKey(ContentTypes, on_delete=models.CASCADE,
-                        related_name="proj_content_type")
+                        related_name="proj_content_type_name")
 
 class ProjectSubjectField(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
                         related_name="proj_subject")
     subject = models.ForeignKey(SubjectFields, on_delete=models.CASCADE,
-                        related_name="proj_subject")
+                        related_name="proj_sub_name")
 
 
 
@@ -121,7 +124,7 @@ class Job(models.Model):
     job_id =models.TextField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("project", "source_language", "target_language")
+        unique_together = [("project", "source_language", "target_language")]
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
@@ -166,21 +169,23 @@ class FileTypes(models.Model):
     #         return os.path.join(self.value, sub_dir.value)
 
 def get_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,instance.file_type.file_type_path)
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,instance.usage_type.type_path)
     print("file_path",file_path,instance.project.project_dir_path)
+    instance.filename = filename
     # print("path--->", os.path.join(instance.project.project_dir_path.replace( settings.MEDIA_ROOT, ""), file_path, filename))
     # project Directory Should be Relative Path
     print("full path",os.path.join(instance.project.project_dir_path.replace( settings.MEDIA_ROOT, ""), file_path, filename)[1:])
     return os.path.join(file_path, filename)
 
 class File(models.Model):
-     # choices=[(file_type.name, file_type.value) for file_type in FileTypes],
-    # file_type = models.CharField(max_length=100, null=False, blank=False)
-    file_type = models.ForeignKey(FileTypes,null=False, blank=False, on_delete=models.CASCADE,
-                related_name="project_files_type")
+    # file_type = models.CharField(max_length=100, choices=[(file_type.name, file_type.value)
+    #                 for file_type in FileTypes], null=False, blank=False)
+    usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False, on_delete=models.CASCADE,
+                related_name="project_usage_type")
     file = models.FileField(upload_to=get_file_upload_path, null=False, blank=False, max_length=1000)
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
                 related_name="project_files_set")
+    filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
 
 

@@ -95,7 +95,7 @@ class Languages(ParanoidModel):
 
     def __str__(self):
         return self.language
-        
+
     __repr__ = __str__
 
     class Meta:
@@ -175,7 +175,7 @@ class AiUserType(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     #deleted_at = models.DateTimeField(blank=True, null=True))
-    
+
     class Meta:
         db_table = 'ai_usertype'
 
@@ -206,3 +206,25 @@ class CATSoftwares(ParanoidModel):
     class Meta:
         db_table = 'cat_softwares'
 
+
+class AilaysaSupportedMtpeEngines(ParanoidModel):
+    name = models.CharField(max_length=191)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    #deleted_at = models.DateTimeField(blank=True, null=True)
+    is_active=models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'ailaysa_mtpe_engines'
+
+
+class AssetUsageTypes(ParanoidModel):
+    use_type = models.CharField(max_length=190)
+    type_path = models.CharField(max_length=250)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    #deleted_at = models.DateTimeField(blank=True, null=True)
+    is_active=models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'asset_usage_types'

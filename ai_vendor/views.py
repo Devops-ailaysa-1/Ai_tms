@@ -25,7 +25,7 @@ class VendorsInfoCreateView(APIView):
 
     def post(self, request):
         user_id = request.user.id
-        data = request.data
+        data = request.POST.dict()
         serializer = VendorsInfoSerializer(data=data)
         if serializer.is_valid():
             serializer.save(user_id = user_id)
@@ -33,7 +33,7 @@ class VendorsInfoCreateView(APIView):
 
     def put(self,request):
         user_id=request.user.id
-        data = request.data
+        data = request.POST.dict()
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
         serializer = VendorsInfoSerializer(vendor_info,data=data,partial=True)
         if serializer.is_valid():
@@ -76,20 +76,20 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
                             Q(id=search_word))
                 print(queryset)
         return queryset
-    # def create(self,request):
-    #     user_id = request.user.id
-    #     data = request.data
-    #     serializer = VendorLanguagePairSerializer(data=data)
-    #     print(serializer.is_valid())
-    #     if serializer.is_valid():
-    #         serializer.save(user_id=user_id)
-    #         #return Response(data={"Message":"VendorServiceInfo Created"}, status=status.HTTP_201_CREATED)
-    #         return Response(serializer.data)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def create(self,request):
+        user_id = request.user.id
+        # data = request.data
+        serializer = VendorLanguagePairSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save(user_id=user_id)
+            #return Response(data={"Message":"VendorServiceInfo Created"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def update(self,request,pk):
         queryset = VendorLanguagePair.objects.all()
         vendor = get_object_or_404(queryset, pk=pk)
-        ser=VendorLanguagePairSerializer(vendor,data=request.data,partial=True)
+        ser=VendorLanguagePairSerializer(vendor,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
             ser.save()
             # ser.save(user_id=request.user.id)
@@ -110,8 +110,8 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
         return queryset
     def create(self,request):
         id = request.user.id
-        data = request.data
-        serializer = ServiceExpertiseSerializer(data=data)
+        # data = request.data
+        serializer = ServiceExpertiseSerializer(data={**request.POST.dict()})
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save(id=id)
@@ -121,7 +121,7 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
     def update(self,request,pk):
         queryset = AiUser.objects.all()
         User = get_object_or_404(queryset, pk=pk)
-        ser= ServiceExpertiseSerializer(User,data=request.data,partial=True)
+        ser= ServiceExpertiseSerializer(User,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
             ser.save()
             # ser.update(vendor,validated_data=request.data)
@@ -137,7 +137,7 @@ class VendorsBankInfoCreateView(APIView):
 
     def post(self, request):
         user_id = request.user.id
-        data = request.data
+        data = request.POST.dict()
         serializer = VendorBankDetailSerializer(data=data)
         if serializer.is_valid():
             serializer.save(user_id = user_id)
@@ -145,7 +145,7 @@ class VendorsBankInfoCreateView(APIView):
 
     def put(self,request):
         user_id=request.user.id
-        data = request.data
+        data = request.POST.dict()
         vendor_bank_info = VendorBankDetails.objects.get(user_id=request.user.id)
         serializer = VendorBankDetailSerializer(vendor_bank_info,data=data,partial=True)
         if serializer.is_valid():
