@@ -206,3 +206,12 @@ class VendorLangPairCreate(viewsets.ViewSet):
 class VendorServiceInfoView(viewsets.ModelViewSet):
     queryset = VendorServiceInfo.objects.all()
     serializer_class = VendorServiceInfoSerializer
+
+
+# @api_view(['GET','POST',])
+# def SpellCheckerApiCheck(request):
+#     doc_id = request.POST.get('doc_id')
+#     result=requests.get(f"http://157.245.99.128:8005/api/getLangName/{doc_id}/")
+#     content=result.json()
+#     targetLanguage=content.get("TargetLanguage")
+#     if targetLanguage in
