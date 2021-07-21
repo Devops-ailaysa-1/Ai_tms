@@ -18,3 +18,11 @@ req_nand.txt
 ai_tms/local_settings.py
 AiWorkspace.postman_collection.json
 AiWorkspace.postman_collection.json
+Workspace Editor.pptx
+
+.idea/.gitignore
+.idea/Ai_TMS.iml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml

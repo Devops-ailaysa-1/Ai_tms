@@ -12,11 +12,13 @@ from django.contrib.auth import settings
 import os
 from ai_auth.models import AiUser
 from ai_staff.models import ContentTypes, Languages, SubjectFields
+from ai_workspace_okapi.models import Document
+
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
 from .signals import (create_allocated_dirs, create_project_dir, create_pentm_dir_of_project,
-    set_pentm_dir_of_project)
+    set_pentm_dir_of_project, check_job_file_version_has_same_project)
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -80,7 +82,7 @@ class Project(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.ai_project_id:
-            # self.ai_user shoould be set before save 
+            # self.ai_user shoould be set before save
             self.ai_project_id = self.ai_user.uid+"p"+str(Project.objects.filter(ai_user=self.ai_user).count()+1)
         if not self.project_name:
             self.project_name = self.ai_project_id
@@ -124,7 +126,7 @@ class Job(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.job_id:
-            # self.ai_user shoould be set before save 
+            # self.ai_user shoould be set before save
             self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project).count()+1)
         super().save()
 
@@ -172,8 +174,8 @@ def get_file_upload_path(instance, filename):
     return os.path.join(file_path, filename)
 
 class File(models.Model):
-    # file_type = models.CharField(max_length=100, choices=[(file_type.name, file_type.value)
-    #                 for file_type in FileTypes], null=False, blank=False)
+     # choices=[(file_type.name, file_type.value) for file_type in FileTypes],
+    # file_type = models.CharField(max_length=100, null=False, blank=False)
     file_type = models.ForeignKey(FileTypes,null=False, blank=False, on_delete=models.CASCADE,
                 related_name="project_files_type")
     file = models.FileField(upload_to=get_file_upload_path, null=False, blank=False, max_length=1000)
@@ -185,14 +187,16 @@ class File(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.fid:
-            # self.ai_user shoould be set before save 
+            # self.ai_user shoould be set before save
             self.fid = str(self.project.ai_project_id)+"f"+str(File.objects.filter(project=self.project.id).count()+1)
         super().save()
 
-class VersionChoices(Enum):
+class VersionChoices(Enum):# '''need to discuss with senthil sir, what are the choices?'''
+
     POST_EDITING = "post_editing"
 
 class Version(models.Model):
+    # 'n' number versions can be set to a specific project...it cannot be a job specific or file specific
     version_name = models.CharField(max_length=100, choices=[(version.name, version.value)
                         for version in VersionChoices], null=False, blank=False)
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
@@ -207,6 +211,7 @@ class Task(models.Model):
             related_name="version_tasks_set")
     assign_to = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=False, blank=False,
             related_name="user_tasks_set")
+    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
 
     class Meta:
         constraints = [
@@ -214,9 +219,13 @@ class Task(models.Model):
                 'file, job, version combination unique'),
         ]
 
+pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
 # /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
 #
 # from django.core.validators import EmailValidator
 # EmailValidator().validate_domain_part(".com")  ---> False
 # EmailValidator().validate_domain_part("l.com")  ---> True
+# p1 = Project.objects.last()
+# In [8]: p1.penseivetm.penseive_tm_dir_path
+# Out[8]: '/ai_home/media/user_2/p14/.pentm'

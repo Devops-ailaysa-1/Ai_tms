@@ -29,7 +29,7 @@ class ProjectSetupDjView(views.View):
         if job_form.is_valid() and file_form.is_valid() and project_form.is_valid():
             res = requests.post("http://localhost:8000/workspace/project_setup/",
                         data = {**project_form.cleaned_data,
-                        "jobs": [{"source_language":1, "target_language":2}]
+                        "jobs": job_form.cleaned_data,
                         }, files= [ value["file"] for  value in file_form.cleaned_data], headers={"Content-Type": "multipart/form-data;"})
             if res.status_code in [200, 201]:
                 return JsonResponse(res.json(), safe=False)

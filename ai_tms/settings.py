@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
+    "ai_workspace_okapi",
 ]
 
 
