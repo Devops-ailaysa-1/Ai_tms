@@ -6,8 +6,6 @@ from ai_staff.models import (Billingunits, CATSoftwares, ContentTypes,
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 
-
-# Create your models here.
 class VendorsInfo(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
     vendor_unique_id = models.CharField(max_length=191, blank=True, null=True)
