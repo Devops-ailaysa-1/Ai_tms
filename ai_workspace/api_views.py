@@ -59,7 +59,7 @@ class ProjectSubjectView(viewsets.ModelViewSet):
     def get_queryset(self):
         project_id = self.request.query_params.get('project_id')
         return ProjectSubjectField.objects.filter(project__id=project_id)
-    
+
 
     def list(self,request):
         queryset = self.get_queryset()
@@ -80,7 +80,7 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
     def get_queryset(self):
         project_id = self.request.query_params.get('project_id')
         return ProjectContentType.objects.filter(project__id=project_id)
-    
+
 
     def list(self,request):
         queryset = self.get_queryset()
@@ -113,8 +113,10 @@ def integrity_error(func):
     def decorator(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except IntegrityError:
+        except IntegrityError as e:
+            print("error---->", e)
             return Response({'message': "integrirty error"}, 409)
+        
     return decorator
 
 class ProjectSetupView(viewsets.ViewSet):
@@ -183,19 +185,19 @@ class ProjectCreateView(viewsets.ViewSet):
         # pagin_tc = self.paginate_queryset( queryset, request , view=self )
         serializer = ProjectCreationSerializer(queryset, many=True, context={'request': request})
         # response =self.get_paginated_response(serializer.data)
-        return  Response(serializer.data)  
+        return  Response(serializer.data)
 
 
     def retrieve(self, request, pk=None):
         queryset = self.get_queryset()
         project = get_object_or_404(queryset, pk=pk)
         serializer = ProjectCreationSerializer(project)
-        return Response(serializer.data)    
+        return Response(serializer.data)
 
     def update(self, request, pk=None):
         pass
 
-         
+
 
 
 class AnonymousProjectSetupView(viewsets.ViewSet):
@@ -232,7 +234,7 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
 # class ProjectSetupView2(APIView):
 
 #     parser_classes = [MultiPartParser, FormParser, JSONParser]
- 
+
 
 #     def post(self, request, format=None):
 #         print("request DATa >>",request.data)

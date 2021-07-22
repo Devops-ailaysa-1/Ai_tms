@@ -1,3 +1,4 @@
+from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
 
 
 class DebugVariables(object): # For Class Functions only to use
@@ -18,3 +19,20 @@ class DebugVariables(object): # For Class Functions only to use
 
             return  out
         return wrappee
+
+
+def get_file_extension(file_path):
+    return  (os.path.splitext(file_path)[-1]
+            if len(os.path.splitext(file_path))>=1
+            else None)
+
+def get_processor_name(file_ext):  # Full File Path Assumed
+    if file_ext:
+        for key in afemap.keys():
+            if file_ext in key:
+                # print ( os.path.splitext(  value.name  )[-1] )
+                return {"processor_name": afemap.get(key, "")}
+        else:
+            return {"processor_name": ""}
+    else:
+        raise ValueError("File extension cannot be null and empty!!!")

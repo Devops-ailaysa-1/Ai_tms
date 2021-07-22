@@ -99,6 +99,8 @@ INSTALLED_APPS = [
     'ai_vendor',
     'ai_workspace',
     "ai_workspace_okapi",
+    'django_extensions',
+    'sqlite3',
 ]
 
 
@@ -274,7 +276,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT =  os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
-
+# ------------------------------------------------
+NOTEBOOK_ARGUMENTS = [
+    "--ip",
+    "0.0.0.0",
+    "--port",
+    "8888",
+    "--allow-root",
+    "--no-browser",
+]
+# ------------------------------------------------
 
 OLD_PASSWORD_FIELD_ENABLED = True
 

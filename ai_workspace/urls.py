@@ -18,8 +18,6 @@ urlpatterns = router.urls
 urlpatterns += [
 
 ]
-
-
 # views urls adding for local testing
 
 urlpatterns += [

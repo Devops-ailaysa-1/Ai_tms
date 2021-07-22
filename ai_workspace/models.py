@@ -15,6 +15,7 @@ from ai_auth.models import AiUser
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, ContentTypes, Languages, SubjectFields
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document
+from ai_staff.models import ParanoidModel
 
 
 from .manager import AilzaManager
@@ -52,10 +53,6 @@ class Templangpair(models.Model):
     temp_tar_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
                         related_name="temp_target_lang")
 
-
-
-
-
 class PenseiveTM(models.Model):
     penseive_tm_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
                             blank=True, allow_folders=True, allow_files=False)  # Common for a project
@@ -63,14 +60,14 @@ class PenseiveTM(models.Model):
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
-class Project(models.Model):
+class Project(ParanoidModel):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
                         blank=True, allow_folders=True, allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
     ai_project_id = models.TextField()
-    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.CASCADE,related_name="proj_mt_engine",default=1)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.CASCADE,related_name="proj_mt_engine")
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -112,16 +109,15 @@ class ProjectSubjectField(models.Model):
     subject = models.ForeignKey(SubjectFields, on_delete=models.CASCADE,
                         related_name="proj_sub_name")
 
-
-
 class Job(models.Model):
     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
-                        related_name="source_lang")
+                        related_name="source_language") # Correction [Following same style of naming convention]
     target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
                         related_name="target_language")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
                 related_name="project_jobs_set")
     job_id =models.TextField(null=True, blank=True)
+    deleted_at = models.BooleanField(default=False)
 
     class Meta:
         unique_together = [("project", "source_language", "target_language")]
@@ -132,10 +128,7 @@ class Job(models.Model):
             # self.ai_user shoould be set before save
             self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project).count()+1)
         super().save()
-
-
 class FileTypes(models.Model):
-
     TERMBASE = "termbase"
     QA_UNTRANSLATABLE = "untranslatable"
     QA_BLOCKEDTEXT= "blockedtext"
@@ -150,31 +143,17 @@ class FileTypes(models.Model):
         (QA_UNTRANSLATABLE, 'qa_UT'),
         (TERMBASE, 'TB'),
     ]
-
     file_type_name = models.CharField(
     max_length=100,
     choices=FILETYPES,
     )
     file_type_path = models.CharField(max_length=100)
 
-
-
-    # def get_path(self, sub_dir=""):
-    #     if self == FileTypes.TRANSLATABLE:
-    #         return os.path.join(self.value, sub_dir)
-    #     if self == FileTypes.UNTRANSLATABLE:
-    #         if not isinstance(sub_dir, FileSubTypes):
-    #             sub_dir = FileSubTypes.RESOURCES
-    #             #raise ValueError("sub directory name required!!!")
-    #         return os.path.join(self.value, sub_dir.value)
-
 def get_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,instance.usage_type.type_path)
-    print("file_path",file_path,instance.project.project_dir_path)
     instance.filename = filename
     # print("path--->", os.path.join(instance.project.project_dir_path.replace( settings.MEDIA_ROOT, ""), file_path, filename))
     # project Directory Should be Relative Path
-    print("full path",os.path.join(instance.project.project_dir_path.replace( settings.MEDIA_ROOT, ""), file_path, filename)[1:])
     return os.path.join(file_path, filename)
 
 class File(models.Model):
@@ -187,7 +166,7 @@ class File(models.Model):
                 related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
-
+    deleted_at = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
@@ -223,6 +202,7 @@ class Task(models.Model):
             models.UniqueConstraint(fields=['file', 'job', 'version'], name=\
                 'file, job, version combination unique'),
         ]
+        managed = False
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 

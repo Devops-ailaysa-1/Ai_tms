@@ -51,7 +51,8 @@ class FileSerializer(serializers.ModelSerializer):
 		read_only_fields=("id","filename",)
 
 class ProjectSetupSerializer(serializers.ModelSerializer):
-	jobs = JobSerializer(many=True, source="project_jobs_set", allowed_fields=("source_language",))
+	jobs = JobSerializer(many=True, source="project_jobs_set",
+                allowed_fields=("source_language","target_language"))
 	files = FileSerializer(many=True, source="project_files_set")
 	project_name = serializers.CharField(required=False)
 
@@ -60,18 +61,38 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		fields = ("project_name", "jobs", "files")
 		write_only_fields = ("jobs", "files")
 
+	# def validate_jobs(self, data):
+	# 	print("valiate jobs")
+	# 	return True
+
+	# def to_internal_value(self, data):
+	# 	print("to-internal-value---->", data)
+	# 	return super().to_internal_value(data)
+
+	def json_decode_error(func):
+		def decorator(data, key, match_type, original_type):
+			if isinstance(data.get(key, None), match_type):
+				data_pkl = pickle.dumps(data)
+				with open("data.pkl" ,"wb") as f:
+					f.write(data_pkl)
+				try:
+					data[key] = json.loads(data[key].replace("'", '"'))
+					return data
+				except json.JSONDecodeError:
+					raise ValueError("data contains key does not json loadable & data is {data[key]}")
+			if isinstance(data.get(key, None), original_type):
+				return data
+			raise ValueError("something went wrong!!!!")
+		return decorator
+
+	@json_decode_error
+	def func(data, key, match_type, original_type):
+		pass
+
 	def run_validation(self, data):
-			# data = pickle.dumps(self.initial_data['jobs'])
-			# with open("my-data.pkl", "wb") as f:
-			# 	f.write(data)
-		# if not isinstance(data['jobs'],dict ):
-		# 	try:
-		# 		data['jobs'] = json.loads(data['jobs'])
-		# 	except:
-		# 		raise serializers.ValidationError("jobs is not json loaded type!!!")
-		# data['files'] = [{"file":file, "file_type":14} for file in data['files']]
-			# self.initial_data['files'] = [{"file"}]
-		return data
+		ProjectSetupSerializer.func(data, 'jobs', str, list)
+		data['files'] = [{"file":file, "usage_type":1} for file in data['files']]
+		return super().run_validation(data=data)
 
 	def create(self, validated_data):
 		ai_user = self.context["request"].user
@@ -83,16 +104,12 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		# project.save()
 		return project
 
-
-
 class ProjectSubjectSerializer(serializers.ModelSerializer):
-	#project = serializers.PrimaryKeyRelatedField(many=True,read_only = True)
-	#subject = serializers.PrimaryKeyRelatedField(many=True,read_only = True)
 	class Meta:
 		model = ProjectSubjectField
 		fields = ("id","project", "subject")
 		read_only_fields = ("id","project",)
-		
+
 
 class ProjectContentTypeSerializer(serializers.ModelSerializer):
 	# project = serializers.PrimaryKeyRelatedField()
@@ -102,7 +119,7 @@ class ProjectContentTypeSerializer(serializers.ModelSerializer):
 		fields = ("id","project", "content_type")
 		read_only_fields = ("id","project",)
 
-		
+
 
 
 
@@ -154,7 +171,7 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 		ai_user = self.context["request"].user
 		project_jobs_set = validated_data.pop("project_jobs_set")
 		project_files_set = validated_data.pop("project_files_set")
-		proj_subject, proj_content_type = None, None 
+		proj_subject, proj_content_type = None, None
 		if "proj_subject" in validated_data:
 			proj_subject = validated_data.pop("proj_subject")
 		if "proj_content_type" in validated_data:
