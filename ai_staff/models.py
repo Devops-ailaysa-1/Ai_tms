@@ -238,16 +238,14 @@ class AssetUsageTypes(ParanoidModel):
     class Meta:
         db_table = 'asset_usage_types'
 
-
-
 class Spellcheckers(ParanoidModel):
     spellchecker_name = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_active=models.BooleanField(default=True)
+
     class Meta:
         db_table = 'spellcheckers'
-
 
 class SpellcheckerLanguages(ParanoidModel):
     language = models.ForeignKey(Languages, related_name="spellcheck_language", on_delete=models.CASCADE)

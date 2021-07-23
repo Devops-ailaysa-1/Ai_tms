@@ -25,7 +25,6 @@ class VendorsInfo(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-
 class VendorBankDetails(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
     paypal_email = models.EmailField(max_length=191, blank=True, null=True)
@@ -95,9 +94,8 @@ class VendorLanguagePair(ParanoidModel):
     target_lang=models.ForeignKey(Languages,blank=True, null=True, related_name='vendor_target_lang', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-
-    # class Meta:
-    #     unique_together = ("user", "source_lang","target_lang")
+    class Meta:
+        unique_together = ("user", "source_lang","target_lang")
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
@@ -106,7 +104,6 @@ class VendorServiceInfo(ParanoidModel):
      mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='unit_type', on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-     # currency = models.ForeignKey(Currencies,related_name='vendorservice_currency', on_delete=models.CASCADE, blank=True, null=True)
 
 class VendorServiceTypes(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='servicetype', on_delete=models.CASCADE)
