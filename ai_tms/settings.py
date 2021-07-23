@@ -141,7 +141,7 @@ WSGI_APPLICATION = 'ai_tms.wsgi.application'
 try:
     from .local_settings import DATABASES
 except Exception as e:
-    print("error--->", e)
+    # print("error--->", e)
     DATABASES={
         'default':{
             'ENGINE':'django.db.backends.postgresql_psycopg2',
