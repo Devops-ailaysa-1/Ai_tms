@@ -67,7 +67,7 @@ class Project(ParanoidModel):
     created_at = models.DateTimeField(auto_now=True)
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
     ai_project_id = models.TextField()
-    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.CASCADE,related_name="proj_mt_engine")
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.CASCADE, related_name="proj_mt_engine")
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -175,6 +175,10 @@ class File(models.Model):
             self.fid = str(self.project.ai_project_id)+"f"+str(File.objects.filter(project=self.project.id).count()+1)
         super().save()
 
+    def __str__(self):
+        return self.file.path
+
+
 class VersionChoices(Enum):# '''need to discuss with senthil sir, what are the choices?'''
 
     POST_EDITING = "post_editing"
@@ -202,7 +206,6 @@ class Task(models.Model):
             models.UniqueConstraint(fields=['file', 'job', 'version'], name=\
                 'file, job, version combination unique'),
         ]
-        managed = False
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 

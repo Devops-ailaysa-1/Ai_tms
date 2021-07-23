@@ -28,14 +28,13 @@ class ProjectSetupDjView(views.View):
         project_form = ProjectForm(request.POST or None)
         if job_form.is_valid() and file_form.is_valid() and project_form.is_valid():
             headers = {
-                'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjI2OTcyODgzLCJqdGkiOiJkNTE3MTVmM2ZlNTQ0MzE2OTI2MzZjZDgzZjM2YTRkMSIsInVzZXJfaWQiOjE0Nn0.YvP9nyFCqAfUgtlPlXOZCKbur2JFwo2Yri0rzkSsgsI',}
+                'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjI3MDUzNzMxLCJqdGkiOiI3MjIzOTQxNDFjYmQ0ZTgyYmY5MDA1ZWJkYWVlMzk4MyIsInVzZXJfaWQiOjh9.xgKd808exSkuTEeqkZGgW7DwrXkH62HxGlpCmo9paoE',}
             # res = requests.post("http://localhost:8000/workspace/project_setup/",
             jobs = []
             for job in job_form:
                 job.cleaned_data["source_language"] = job.cleaned_data["source_language"].id
                 job.cleaned_data["target_language"] = job.cleaned_data["target_language"].id
                 jobs.append(job.cleaned_data)
-            print("jobs sent---->", jobs)
             data = {**project_form.cleaned_data, "jobs":[jobs],}
             files= [ ("files", value["file"]) for  value in file_form.cleaned_data]
             res = requests.request("POST", url="http://localhost:8000/workspace/project_setup/", headers=headers, data = data, files = files)

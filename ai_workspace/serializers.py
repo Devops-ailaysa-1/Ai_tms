@@ -1,9 +1,11 @@
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
-from ai_workspace.models import  Project, Job, File, ProjectContentType, ProjectSubjectField, TempFiles, TempProject, Templangpair
+from ai_workspace.models import  Project, Job, File, ProjectContentType, \
+		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task
 import json
 import pickle
+from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -233,3 +235,34 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		[temp_project.temp_proj_file.create(**file_data) for file_data in tempfiles]
 		# project.save()
 		return temp_project
+
+
+######################################## nandha ##########################################
+
+class TaskSerializer(serializers.ModelSerializer):
+	source_file_path = serializers.SerializerMethodField("get_source_file_path")
+	source_language = serializers.SerializerMethodField("get_source_language")
+	target_language = serializers.SerializerMethodField("get_target_language")
+	class Meta:
+		model = Task
+		fields = ("source_file_path", "source_language",
+				  "target_language")
+
+	def get_source_file_path(self, obj):
+		# print(obj.file.path)
+		return obj.file.file.path
+
+	def get_source_language(self, obj):
+		return (obj.job.source_language.locale.first().locale_code)
+
+	def get_target_language(self, obj):
+		return (obj.job.target_language.locale.first().locale_code)
+
+	def to_representation(self, instance):
+		representation = super().to_representation(instance)
+		representation["extension"] = get_file_extension(instance.file.file.path)
+		representation["processor_name"] = get_processor_name(instance.file.file.path)\
+											.get("processor_name", None)
+		return representation
+
+######################################## nandha ##########################################

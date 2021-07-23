@@ -31,3 +31,7 @@ Untitled.ipynb
 data.pkl
 db2.sqlite3
 db_gen.py
+TestFiles/*
+dbv3.sqlite3
+readme.md
+
