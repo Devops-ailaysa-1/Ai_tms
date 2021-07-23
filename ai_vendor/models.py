@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from ai_auth.models import AiUser,user_directory_path
-from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares
+from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 
 # Create your models here.
 class VendorsInfo(models.Model):
@@ -92,19 +92,18 @@ class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
      mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
      mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
-     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='unit_type', on_delete=models.CASCADE)
-     # translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
-     sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='unit_type', on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-     currency = models.ForeignKey(Currencies,related_name='vendorservice_currency', on_delete=models.CASCADE, blank=True, null=True)
+     # currency = models.ForeignKey(Currencies,related_name='vendorservice_currency', on_delete=models.CASCADE, blank=True, null=True)
 
 class VendorServiceTypes(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='servicetype', on_delete=models.CASCADE)
     services=models.ForeignKey(ServiceTypes,related_name='services', on_delete=models.CASCADE)
-    unit_type=models.ForeignKey(Billingunits, on_delete=models.CASCADE , blank=True, null=True)
+    unit_type=models.ForeignKey(ServiceTypeunits, on_delete=models.CASCADE , blank=True, null=True)
     unit_rate=models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
     hourly_rate=models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
+    minute_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
@@ -115,7 +114,6 @@ class TranslationSamples(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 def user_directory_path(instance, filename):
-
     # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
     return 'user_{0}/{1}/{2}'.format(lang_pair.instance.user.id, "TranslationSamples",filename)
 

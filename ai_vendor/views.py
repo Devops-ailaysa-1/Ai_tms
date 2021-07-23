@@ -15,6 +15,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.conf import settings
 from django.db.models import Q
 from ai_staff.models import Languages
+import json
 
 class VendorsInfoCreateView(APIView):
 
@@ -78,8 +79,9 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
         return queryset
     def create(self,request):
         user_id = request.user.id
+        data={**request.POST.dict()}
         # data = request.data
-        serializer = VendorLanguagePairSerializer(data={**request.POST.dict()})
+        serializer = VendorLanguagePairSerializer(data={**request.POST.dict()},context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save(user_id=user_id)

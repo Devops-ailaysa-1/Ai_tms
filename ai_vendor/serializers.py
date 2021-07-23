@@ -92,11 +92,17 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
      class Meta:
          model = VendorLanguagePair
          fields=('id','user_id','source_lang_id','target_lang_id','service','servicetype','translationfile','mtpesamples',)
-         extra_kwargs = {'id':{"read_only":True},'translationfile':{'read_only':True},'MtpeSamples':{'read_only':True},
+         extra_kwargs = {'translationfile':{'read_only':True},'MtpeSamples':{'read_only':True},
          }#'source_lang':{"read_only":True},'target_lang':{"read_only":True},'user_id':{"read_only":True},
+
+
      def run_validation(self, data):
          if data.get("source_lang_id"):
              data["source_lang_id"]=json.loads(data["source_lang_id"])
+         if data.get("apply_for_reverse"):
+             data["apply_for_reverse"]=json.loads(data["apply_for_reverse"])
+         if data.get("existing_lang_pair_id"):
+             data["existing_lang_pair_id"]=json.loads(data["existing_lang_pair_id"])
          if data.get("target_lang_id"):
              data["target_lang_id"]=json.loads(data["target_lang_id"])
          if data.get('service'):
@@ -108,6 +114,57 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
         # data["translationfile"] = [{'translation_file': file} for file in data["translation_files"]]
         # data["MtpeSamples"] = [{"sample_file":file} for file in data["mtpe_samples"]]
 
+
+     def create(self,validated_data):
+         user_id=self.context["request"].user.id
+         print("user_id---->",user_id)
+         data_new=validated_data
+         if validated_data.get("existing_lang_pair_id"):
+             existing_lang_pair_id=validated_data.pop('existing_lang_pair_id')
+         if validated_data.get('servicetype'):
+             service_type_data=validated_data.pop('servicetype')
+         if validated_data.get("service"):
+             service_data =validated_data.pop('service')
+         if validated_data.get("apply_for_reverse"):
+             reverse =validated_data.pop('apply_for_reverse')
+         print("NEW---->",validated_data)
+         try:
+             if bool(int(reverse)):
+                 source_new=validated_data.get("target_lang_id")
+                 target_new=validated_data.get("source_lang_id")
+                 data_new={"source_lang_id":source_new,"target_lang_id":target_new,"user_id":user_id}
+                 lang_reverse = VendorLanguagePair.objects.create(**data_new)
+                 lang= VendorLanguagePair.objects.create(**validated_data)
+         except:
+             lang = VendorLanguagePair.objects.create(**validated_data)
+         print("langId---->",lang.id)
+         try:
+             if service_type_data:
+                     for j in service_type_data:
+                         VendorServiceTypes.objects.create(lang_pair_id=lang.id,**j)
+                         if lang_reverse:
+                             VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j)
+         except:
+              servicetype_datas=VendorServiceTypes.objects.filter(lang_pair_id=existing_lang_pair_id)
+              print(servicetype_datas)
+              for data in servicetype_datas:
+                  data.pk=None
+                  data.lang_pair_id=lang.id
+                  data.save()
+         try:
+             if service_data:
+                 for i in service_data:
+                     VendorServiceInfo.objects.create(lang_pair_id=lang.id,**i)
+                     if lang_reverse:
+                         VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**i)
+         except:
+             service_datas=VendorServiceInfo.objects.filter(lang_pair_id=existing_lang_pair_id)
+             print(service_datas)
+             for i in service_datas:
+                 i.pk=None
+                 i.lang_pair_id=lang.id
+                 i.save()
+         return data_new
 
 
 
