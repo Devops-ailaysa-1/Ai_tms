@@ -72,6 +72,8 @@ class PersonalInformation(models.Model):
     linkedin=models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    # created_at = models.CharField(max_length=200,blank=True, null=True)
+    # updated_at = models.CharField(max_length=200,blank=True, null=True)
     class Meta:
         db_table = 'personal_info'
 

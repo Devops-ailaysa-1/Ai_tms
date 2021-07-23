@@ -16,13 +16,10 @@ from rest_framework import renderers
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
 
-
 # class RegisterView(generics.CreateAPIView):
 #     queryset = AiUser.objects.all()
 #     permission_classes = (AllowAny,)
 #     serializer_class = RegisterSerializer
-
-
 
 class UserAttributeView(APIView):
     permission_classes = [IsAuthenticated]

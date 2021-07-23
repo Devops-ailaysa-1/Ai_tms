@@ -88,6 +88,7 @@ class ContentTypes(ParanoidModel):
 class Languages(ParanoidModel):
     #lang_code = models.CharField(max_length=191)
     language = models.CharField(max_length=191)
+    native_script = models.CharField(max_length=200, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     #deleted_at = models.DateTimeField(blank=True, null=True)
@@ -103,8 +104,8 @@ class Languages(ParanoidModel):
 
 class LanguagesLocale(ParanoidModel):
     language = models.ForeignKey(Languages,related_name='locale', on_delete=models.CASCADE)
-    language_locale_name=models.CharField(max_length=191)
-    locale_code = models.CharField(max_length=191)
+    language_locale_name=models.CharField(max_length=191, blank=True, null=True)
+    locale_code = models.CharField(max_length=191, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     #deleted_at = models.DateTimeField(blank=True, null=True)

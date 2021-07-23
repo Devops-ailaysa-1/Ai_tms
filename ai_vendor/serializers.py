@@ -22,7 +22,6 @@ class VendorsInfoSerializer(serializers.ModelSerializer):
             'native_lang',
             'year_of_experience',
             'rating',
-
         )
         extra_kwargs = {'id':{"read_only":True},}
 
