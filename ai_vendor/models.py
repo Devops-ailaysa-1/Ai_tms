@@ -94,7 +94,7 @@ class VendorServiceInfo(ParanoidModel):
      mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2 , blank=True, null=True)
      mtpe_count_unit=models.ForeignKey(Billingunits,related_name='unit_type', on_delete=models.CASCADE)
      # translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
-     sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+    #  sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
      currency = models.ForeignKey(Currencies,related_name='vendorservice_currency', on_delete=models.CASCADE, blank=True, null=True)
