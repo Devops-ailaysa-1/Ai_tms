@@ -18,16 +18,13 @@ class VendorsInfo(models.Model):
     token = models.CharField(max_length=191, blank=True, null=True)
     skype = models.CharField(max_length=191, blank=True, null=True)
     proz_link = models.CharField(max_length=191, blank=True, null=True)
-    # cv_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
-    cv_file = models.CharField(max_length=191, blank=True, null=True)
+    cv_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
     native_lang = models.ForeignKey(Languages,blank=True, null=True, related_name='native_lang', on_delete=models.CASCADE)
     year_of_experience = models.DecimalField(max_digits=5,decimal_places=1 , blank=True, null=True)
     rating = models.IntegerField(blank=True, null=True)
-    # memberships = models.CharField(max_length=191, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+
 
 class VendorBankDetails(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
@@ -44,8 +41,7 @@ class VendorBankDetails(models.Model):
     other_bank_details = models.CharField(max_length=191,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+
 
 
 class VendorSubjectFields(ParanoidModel):
@@ -53,8 +49,7 @@ class VendorSubjectFields(ParanoidModel):
     subject = models.ForeignKey(SubjectFields,blank=True, null=True, related_name='vendor_subject', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+
     # class Meta:
     #     unique_together = ("user", "subject")
 
@@ -63,8 +58,7 @@ class VendorCATsoftware(ParanoidModel):
     software = models.ForeignKey(CATSoftwares,blank=True, null=True, related_name='vendor_software', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+
 
 
 class VendorMembership(ParanoidModel):
@@ -72,8 +66,7 @@ class VendorMembership(ParanoidModel):
     membership = models.ForeignKey(VendorMemberships,blank=True, null=True, related_name='vendor_membership', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+
     # class Meta:
     #     unique_together = ("user", "membership")
 
@@ -82,9 +75,7 @@ class VendorContentTypes(ParanoidModel):
     contenttype = models.ForeignKey(ContentTypes, blank=True, null=True, related_name='vendor_contentype', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
-    deleted_at = models.CharField(max_length=200,blank=True, null=True)
+    # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     # class Meta:
     #     unique_together = ("user", "contenttype")
 
@@ -93,8 +84,7 @@ class VendorMtpeEngines(ParanoidModel):
     mtpe_engines = models.ForeignKey(MtpeEngines,blank=True, null=True, related_name='vendor_mtpe_engines', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+
     # class Meta:
     #     unique_together = ("user", "mtpe_engines")
 
@@ -105,8 +95,7 @@ class VendorLanguagePair(ParanoidModel):
     target_lang=models.ForeignKey(Languages,blank=True, null=True, related_name='vendor_target_lang', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+
     # class Meta:
     #     unique_together = ("user", "source_lang","target_lang")
 
@@ -134,20 +123,16 @@ class TranslationSamples(ParanoidModel):
     translation_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
-    # deleted_at = models.CharField(max_length=200,blank=True, null=True)
+    # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
-    return 'user_{0}/{1}/{2}'.format(lang_pair.instance.user.id, "TranslationSamples",filename)
+    return '{0}/{1}/{2}'.format(lang_pair.instance.user.uid, "TranslationSamples",filename)
 
 class MtpeSamples(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='mtpesamples',on_delete=models.CASCADE)
     sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    # created_at = models.CharField(max_length=200,blank=True, null=True)
-    # updated_at = models.CharField(max_length=200,blank=True, null=True)
-    deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)

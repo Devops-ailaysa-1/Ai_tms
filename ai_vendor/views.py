@@ -14,8 +14,11 @@ from rest_framework import pagination
 from rest_framework.pagination import PageNumberPagination
 from django.conf import settings
 from django.db.models import Q
-from ai_staff.models import Languages
-import json
+from ai_staff.models import Languages,Spellcheckers,SpellcheckerLanguages
+
+import json,requests
+from django.http import JsonResponse
+
 
 class VendorsInfoCreateView(APIView):
 
@@ -210,10 +213,17 @@ class VendorServiceInfoView(viewsets.ModelViewSet):
     serializer_class = VendorServiceInfoSerializer
 
 
-# @api_view(['GET','POST',])
-# def SpellCheckerApiCheck(request):
-#     doc_id = request.POST.get('doc_id')
-#     result=requests.get(f"http://157.245.99.128:8005/api/getLangName/{doc_id}/")
-#     content=result.json()
-#     targetLanguage=content.get("TargetLanguage")
-#     if targetLanguage in
+@api_view(['GET','POST',])
+def SpellCheckerApiCheck(request):
+    doc_id= request.POST.get("doc_id")
+    result=requests.get(f"http://157.245.99.128:8005/api/getLangName/{doc_id}/")
+    content=result.json()
+    targetLanguage=content.get("TargetLanguage")
+    target_lang_id=Languages.objects.get(language=targetLanguage).id
+    try:
+        spellchecker_id=SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
+        print(spellchecker_id)
+        data="spellchecker Available"
+    except:
+        data="spellchecker Not Available"
+    return JsonResponse({"out":data}, safe = False)
