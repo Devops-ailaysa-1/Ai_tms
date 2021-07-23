@@ -34,4 +34,5 @@ db_gen.py
 TestFiles/*
 dbv3.sqlite3
 readme.md
+*.pkl
 
