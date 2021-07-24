@@ -19,7 +19,7 @@ from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,
                           VendorLanguagePairSerializer,
                           VendorServiceInfoSerializer, VendorsInfoSerializer)
-from ai_staff.models import Languages,Spellcheckers,SpellcheckerLanguages
+from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages, VendorLegalCategories, CATSoftwares, VendorMemberships)
 
 import json,requests
 from django.http import JsonResponse
@@ -232,3 +232,24 @@ def SpellCheckerApiCheck(request):
     except:
         data="spellchecker Not Available"
     return JsonResponse({"out":data}, safe = False)
+
+@api_view(['GET',])
+def vendor_legal_categories_list(request):
+    out=[]
+    for i in VendorLegalCategories.objects.all():
+        out.append({"label":i.name,"value":i.id})
+    return JsonResponse({"out":out},safe = False)
+
+@api_view(['GET',])
+def cat_softwares_list(request):
+    out=[]
+    for i in CATSoftwares.objects.all():
+        out.append({"label":i.name,"value":i.id})
+    return JsonResponse({"out":out},safe = False)
+
+@api_view(['GET',])
+def vendor_membership_list(request):
+    out=[]
+    for i in VendorMemberships.objects.all():
+        out.append({"label":i.membership,"value":i.id})
+    return JsonResponse({"out":out},safe = False)
