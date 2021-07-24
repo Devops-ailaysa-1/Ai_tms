@@ -16,5 +16,6 @@ urlpatterns+= [
     path('vendor_info/',views.VendorsInfoCreateView.as_view(), name='vendor-info'),
     path('vendor_bank_info/',views.VendorsBankInfoCreateView.as_view(), name='vendor-bank-info'),
     path('vendor_service_info/',views.VendorServiceInfoView.as_view({'get': 'list'}),name='vendor-service-info-new'),
+    path('spellcheck_availability/',views.SpellCheckerApiCheck,name="spellcheck-availability"),
     # path('vendor_service_update/<int:pk>',views.VendorServiceUpdateDeleteView.as_view(),name='vendor-servicepdate'),
     ]
