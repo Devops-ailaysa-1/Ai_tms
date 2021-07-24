@@ -1,21 +1,25 @@
-from django.shortcuts import render
-from rest_framework.views import APIView
-from rest_framework.decorators import api_view
-from rest_framework import viewsets,status
-from rest_framework.response import Response
-from .serializers import VendorsInfoSerializer,VendorLanguagePairSerializer,VendorServiceInfoSerializer,ServiceExpertiseSerializer,VendorBankDetailSerializer,LanguagePairSerializer
-from .models import VendorsInfo,VendorLanguagePair,VendorServiceInfo,VendorServiceTypes,VendorSubjectFields,VendorBankDetails
-from django.shortcuts import get_object_or_404
-from django.test.client import RequestFactory
+import json
+
 from ai_auth.models import AiUser
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import pagination
-from rest_framework.pagination import PageNumberPagination
+from ai_staff.models import Languages
 from django.conf import settings
 from django.db.models import Q
-from ai_staff.models import Languages
-import json
+from django.shortcuts import get_object_or_404, render
+from django.test.client import RequestFactory
+from rest_framework import pagination, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
+                     VendorServiceTypes, VendorsInfo, VendorSubjectFields)
+from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
+                          VendorBankDetailSerializer,
+                          VendorLanguagePairSerializer,
+                          VendorServiceInfoSerializer, VendorsInfoSerializer)
+
 
 class VendorsInfoCreateView(APIView):
 
