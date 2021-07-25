@@ -6,13 +6,14 @@ from ai_auth.models import AiUser
 from rest_framework import viewsets
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
-                            ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer)
+                            ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject
 from rest_framework import permissions
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from .models import Task
 
 from ai_workspace import serializers
 
@@ -122,7 +123,7 @@ def integrity_error(func):
 class ProjectSetupView(viewsets.ViewSet):
     serializer_class = ProjectSetupSerializer
     parser_classes = [MultiPartParser, JSONParser]
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Project.objects.filter(ai_user=self.request.user)
@@ -135,9 +136,6 @@ class ProjectSetupView(viewsets.ViewSet):
         if serializer.is_valid(raise_exception=True):
             #try:
             serializer.save()
-            #except IntegrityError:
-              #  return Response(serializer.data, status=409)
-
             return Response(serializer.data, status=201)
 
         else:
@@ -197,9 +195,6 @@ class ProjectCreateView(viewsets.ViewSet):
     def update(self, request, pk=None):
         pass
 
-
-
-
 class AnonymousProjectSetupView(viewsets.ViewSet):
     serializer_class = TempProjectSetupSerializer
     parser_classes = [MultiPartParser, JSONParser]
@@ -223,6 +218,32 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
 
         else:
             return Response(serializer.errors, status=409)
+
+class TaskView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = TaskSerializer
+
+    def get_queryset(self):
+        task_queryset = Task.objects.all()
+        tasks = get_list_or_404(task_queryset, file__project__ai_user_id=self.request.user.id)
+        return  tasks
+
+    def list(self, request):
+        tasks = self.get_queryset()
+        tasks_serlzr = TaskSerializer(tasks, many=True)
+        return Response(tasks_serlzr.data, status=200)
+
+    def create(self, request):
+        task_serlzr = TaskSerializer(data=request.data)
+        print("initial data---->", task_serlzr.initial_data)
+        if task_serlzr.is_valid(raise_exception=True):
+            task_serlzr.save()
+            return Response({"msg": task_serlzr.data}, status=200)
+
+        else:
+            return Response({"msg": task_serlzr.errors}, status=400)
+
+    # def
 
 #  /////////////////  References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 # from django.contrib.auth.models import Permission, User

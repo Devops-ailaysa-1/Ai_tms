@@ -6,6 +6,7 @@ from ai_workspace.models import  Project, Job, File, ProjectContentType, \
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
+from django.shortcuts import reverse
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -63,14 +64,6 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		fields = ("project_name", "jobs", "files")
 		write_only_fields = ("jobs", "files")
 
-	# def validate_jobs(self, data):
-	# 	print("valiate jobs")
-	# 	return True
-
-	# def to_internal_value(self, data):
-	# 	print("to-internal-value---->", data)
-	# 	return super().to_internal_value(data)
-
 	def json_decode_error(func):
 		def decorator(data, key, match_type, original_type):
 			if isinstance(data.get(key, None), match_type):
@@ -91,10 +84,17 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 	def func(data, key, match_type, original_type):
 		pass
 
-	def run_validation(self, data):
-		ProjectSetupSerializer.func(data, 'jobs', str, list)
-		data['files'] = [{"file":file, "usage_type":1} for file in data['files']]
-		return super().run_validation(data=data)
+	def to_internal_value(self, data):
+		# if self.instance:
+		source_language = json.loads(data.pop("source_language", "0"))
+		target_languages = json.loads(data.pop("target_languages", "[]"))
+		if source_language and target_languages:
+			data["jobs"] = [{"source_language": source_language, "target_language": target_language}
+							for target_language in target_languages]
+		else:
+			raise ValueError("source or target values could not json loadable!!!")
+		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
+		return super().to_internal_value(data=data)
 
 	def create(self, validated_data):
 		ai_user = self.context["request"].user
@@ -120,11 +120,6 @@ class ProjectContentTypeSerializer(serializers.ModelSerializer):
 		model = ProjectContentType
 		fields = ("id","project", "content_type")
 		read_only_fields = ("id","project",)
-
-
-
-
-
 
 class ProjectCreationSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set")
@@ -239,30 +234,62 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 
 ######################################## nandha ##########################################
 
+
 class TaskSerializer(serializers.ModelSerializer):
-	source_file_path = serializers.SerializerMethodField("get_source_file_path")
-	source_language = serializers.SerializerMethodField("get_source_language")
-	target_language = serializers.SerializerMethodField("get_target_language")
+	source_file_path = serializers.CharField(source="get_source_file_path", read_only=True)
+	source_language = serializers.CharField(source="source_language_code", read_only=True)
+	target_language = serializers.CharField(source="target_language_code", read_only=True)
+	document_url = serializers.URLField(source="get_document_url", read_only=True)
+	filename = serializers.CharField(source="get_file_name", read_only=True)
+
 	class Meta:
 		model = Task
 		fields = ("source_file_path", "source_language",
-				  "target_language")
+				  "target_language", "document_url","filename",
+				  "file", "job", "version", "assign_to",
+				  )
 
-	def get_source_file_path(self, obj):
-		# print(obj.file.path)
-		return obj.file.file.path
-
-	def get_source_language(self, obj):
-		return (obj.job.source_language.locale.first().locale_code)
-
-	def get_target_language(self, obj):
-		return (obj.job.target_language.locale.first().locale_code)
+		extra_kwargs = {
+			"file":{"write_only": True},
+			"job": {"write_only": True},
+			"version": {"write_only": True},
+			"assign_to": {"write_only": True},
+		}
 
 	def to_representation(self, instance):
 		representation = super().to_representation(instance)
-		representation["extension"] = get_file_extension(instance.file.file.path)
-		representation["processor_name"] = get_processor_name(instance.file.file.path)\
-											.get("processor_name", None)
+		if self.instance:
+			representation["extension"] = get_file_extension(instance.file.file.path)
+			representation["processor_name"] = get_processor_name(instance.file.file.path)\
+												.get("processor_name", None)
 		return representation
 
+
+
+# class TaskSerializer(serializers.ModelSerializer):
+# 	source_file_path = serializers.SerializerMethodField("get_source_file_path")
+# 	source_language = serializers.SerializerMethodField("get_source_language")
+# 	target_language = serializers.SerializerMethodField("get_target_language")
+# 	class Meta:
+# 		model = Task
+# 		fields = ("source_file_path", "source_language",
+# 				  "target_language")
+#
+# 	def get_source_file_path(self, obj):
+# 		# print(obj.file.path)
+# 		return obj.file.file.path
+#
+# 	def get_source_language(self, obj):
+# 		return (obj.job.source_language.locale.first().locale_code)
+#
+# 	def get_target_language(self, obj):
+# 		return (obj.job.target_language.locale.first().locale_code)
+#
+# 	def to_representation(self, instance):
+# 		representation = super().to_representation(instance)
+# 		representation["extension"] = get_file_extension(instance.file.file.path)
+# 		representation["processor_name"] = get_processor_name(instance.file.file.path)\
+# 											.get("processor_name", None)
+# 		return representation
+#  {'source_file_path': '/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u98163/u98163p2/source/test1.txt', 'source_language': 'af', 'target_language': 'hy', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
 ######################################## nandha ##########################################

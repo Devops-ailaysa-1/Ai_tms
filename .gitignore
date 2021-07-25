@@ -35,4 +35,7 @@ TestFiles/*
 dbv3.sqlite3
 readme.md
 *.pkl
+server.log
+project management and workspace apis .postman_collection
+my-data.pkl
 

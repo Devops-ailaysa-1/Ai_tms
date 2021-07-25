@@ -50,13 +50,6 @@ class ServiceTypesView(APIView):
         service_t.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-
-
-
-
-
-
 class CountriesView(APIView):
     permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]

@@ -16,7 +16,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, Conten
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document
 from ai_staff.models import ParanoidModel
-
+from django.shortcuts import reverse
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -206,6 +206,30 @@ class Task(models.Model):
             models.UniqueConstraint(fields=['file', 'job', 'version'], name=\
                 'file, job, version combination unique'),
         ]
+
+    @property
+    def owner(self):
+        return self.file.project.ai_user # created by
+
+    @property
+    def source_language_code(self):
+        return self.job.source_language.locale.first().locale_code
+
+    @property
+    def target_language_code(self):
+        return self.job.target_language.locale.first().locale_code
+
+    @property
+    def get_source_file_path(self):
+        return self.file.file.path
+
+    @property
+    def get_document_url(self):
+        return reverse("document", kwargs={"task_id": self.id})
+
+    @property
+    def get_file_name(self):
+        return self.file.filename
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 

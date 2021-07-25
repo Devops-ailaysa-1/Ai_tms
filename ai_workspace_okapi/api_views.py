@@ -14,6 +14,11 @@ from django.db.models import F
 import requests
 import json
 import pickle
+import logging
+from rest_framework.exceptions import APIException
+from rest_framework.pagination import PageNumberPagination
+
+logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 
 class IsUserCompletedInitialSetup(permissions.BasePermission):
 
@@ -22,7 +27,15 @@ class IsUserCompletedInitialSetup(permissions.BasePermission):
         if request.user.user_permissions.filter(codename="user-attribute-exist").first():
             return True
 
-class DocumentView(views.APIView):
+class ServiceUnavailable(APIException):
+    status_code = 503
+    default_detail = 'Service temporarily unavailable, try again later.'
+
+
+
+class DocumentViewByTask(views.APIView, PageNumberPagination):
+    PAGE_SIZE = page_size =  20
+
     def get_object(self):
         tasks = Task.objects.all()
         return tasks
@@ -51,13 +64,14 @@ class DocumentView(views.APIView):
                     task.document = document
                     task.save()
             else:
-                raise ValueError("Something went wrong in okapi file processing!!!")
+                logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                raise  ValueError("Something went wrong in okapi file processing!!!")
 
-        if not document:
+        elif (not document):
             document = Document.objects.get(job=task.job, file=task.file)
             task.document = document
             task.save()
-
-        segments_ser = SegmentSerializer(document.segments, many=True)
-        return Response(segments_ser.data, status=201)
+        page_segments = self.paginate_queryset(document.segments, request, view=self)
+        segments_ser = SegmentSerializer(page_segments, many=True)
+        return self.get_paginated_response(segments_ser.data)
 

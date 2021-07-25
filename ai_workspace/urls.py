@@ -11,6 +11,7 @@ router.register(r"temp_project_setup", api_views.AnonymousProjectSetupView, base
 router.register(r"project-setup-sub", api_views.ProjectSubjectView, basename="project_setup__sub")
 router.register(r"project-setup-content", api_views.ProjectContentTypeView, basename="project_setup__content")
 router.register(r"project-create", api_views.ProjectCreateView, basename="project_create")
+router.register(r"tasks", api_views.TaskView, basename="tasks")
 
 urlpatterns = router.urls
 
@@ -22,6 +23,10 @@ urlpatterns += [
 
 urlpatterns += [
 	path("project_setup-dj", views.ProjectSetupDjView.as_view(), name="project_setup-dj-view"),
+	path("login", views.LoginView.as_view(), name="my-login"),
+	path("session_test", views.session_test, name="session-test"),
+	path("tasks_dj", views.TasksListViewDj.as_view(), name="tasks-dj"),
+	path("task_create_dj", views.TaskCreateViewDj.as_view(), name="task-create-dj"),
 	# path("project-setup-sub", api_views.projectSubjectView.as_view(), name="project_setup__sub"),
 
 ]
