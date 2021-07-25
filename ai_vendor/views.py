@@ -16,7 +16,9 @@ from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,
                           VendorLanguagePairSerializer,
                           VendorServiceInfoSerializer, VendorsInfoSerializer)
-from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages, VendorLegalCategories, CATSoftwares, VendorMemberships)
+from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
+                            VendorLegalCategories, CATSoftwares, VendorMemberships,
+                            MtpeEngines, SubjectFields)
 
 import json,requests
 from django.http import JsonResponse
@@ -249,4 +251,18 @@ def vendor_membership_list(request):
     out=[]
     for i in VendorMemberships.objects.all():
         out.append({"label":i.membership,"value":i.id})
+    return JsonResponse({"out":out},safe = False)
+
+@api_view(['GET',])
+def vendor_mtpe_engines_list(request):
+    out=[]
+    for i in MtpeEngines.objects.all():
+        out.append({"label":i.name,"value":i.id})
+    return JsonResponse({"out":out},safe = False)
+
+@api_view(['GET',])
+def vendor_subject_matter_list(request):
+    out=[]
+    for i in SubjectFields.objects.all():
+        out.append({"label":i.name,"value":i.id})
     return JsonResponse({"out":out},safe = False)

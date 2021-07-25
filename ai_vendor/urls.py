@@ -20,8 +20,7 @@ urlpatterns+= [
     path('vendor_legal_categories/',views.vendor_legal_categories_list,name="vendor-legal-categories-list"),
     path('cat_softwares/',views.cat_softwares_list, name="cat-softwares-list"),
     path('membership_list/',views.vendor_membership_list, name="vendor-membership-list"),
+    path('subject_matter_list/',views.vendor_subject_matter_list, name="vendor-subject-matter-list"),
+    path('mtpe_engines_list/',views.vendor_mtpe_engines_list, name="vendor-mtpe-engines-list"),
     # path('vendor_service_update/<int:pk>',views.VendorServiceUpdateDeleteView.as_view(),name='vendor-servicepdate'),
-    path('vendor_legal_categories/',views.vendor_legal_categories_list,name="vendor-legal-categories-list"),
-    path('cat_softwares/',views.cat_softwares_list, name="cat-softwares-list"),
-    path('membership_list/',views.vendor_membership_list, name="vendor-membership-list"),
     ]
