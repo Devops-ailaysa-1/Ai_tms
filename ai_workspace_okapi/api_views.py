@@ -40,13 +40,39 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         tasks = Task.objects.all()
         return tasks
 
+    def exact_required_fields_for_okapi_get_document(self):
+        # {'source_file_path': '/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u98163/u98163p2/source/test1.txt',
+        #  'source_language': 'sq', 'target_language': 'hy', 'document_url': '/workspace_okapi/document/4/',
+        #  'filename': 'test1.txt', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
+        fields = ['source_file_path', 'source_language', 'target_language',
+                     'extension', 'processor_name']
+        return fields
+
+    erfogd = exact_required_fields_for_okapi_get_document
+
+    def correct_fields(self, data):
+        check_fields = self.erfogd()
+        remove_keys = []
+        for i in data.keys():
+            if i in check_fields:
+                check_fields.remove(i)
+            else:
+                remove_keys.append(i)
+        print("remove keys--->", remove_keys)
+        [data.pop(i) for i in remove_keys]
+        if check_fields != []:
+            raise ValueError("OKAPI request fields not setted correctly!!!")
+
     def get(self, request, task_id, format=None):
         tasks = self.get_object()
         task = get_object_or_404(tasks, id=task_id)
         document = task.document
         if (not document) and  (not Document.objects.filter(job=task.job, file=task.file).all()):
             ser = TaskSerializer(task)
-            params_data = {**ser.data, "output_type": None}
+            data = ser.data
+            self.correct_fields(data)
+            print("data--->", data)
+            params_data = {**data, "output_type": None}
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None
                          }

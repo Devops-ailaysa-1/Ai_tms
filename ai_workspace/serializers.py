@@ -39,12 +39,12 @@ class ProjectSerializer(serializers.ModelSerializer):
 		project = Project.objects.create(**validated_data, ai_user=ai_user)
 		return project
 
-class JobSerializer(DynamicFieldsModelSerializer):
+class JobSerializer(serializers.ModelSerializer):
 	project = serializers.IntegerField(required=False, source="project_id")
 	class Meta:
 		model = Job
-		fields = ("id","project", "source_language", "target_language")
-		read_only_fields=("id",)
+		fields = ("id","project", "source_language", "target_language", "source_target_pair", "source_target_pair_names")
+		read_only_fields = ("id","source_target_pair", "source_target_pair_names")
 
 class FileSerializer(serializers.ModelSerializer):
 	project = serializers.IntegerField(required=False, source="project_id")
@@ -54,15 +54,17 @@ class FileSerializer(serializers.ModelSerializer):
 		read_only_fields=("id","filename",)
 
 class ProjectSetupSerializer(serializers.ModelSerializer):
-	jobs = JobSerializer(many=True, source="project_jobs_set",
-                allowed_fields=("source_language","target_language"))
-	files = FileSerializer(many=True, source="project_files_set")
+	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
+	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False)
 
 	class Meta:
 		model = Project
-		fields = ("project_name", "jobs", "files")
-		write_only_fields = ("jobs", "files")
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url")
+		# extra_kwargs = {
+		# 	"jobs": {"write_only": True},
+		# 	"files":  {"write_only": True},
+		# }
 
 	def json_decode_error(func):
 		def decorator(data, key, match_type, original_type):
@@ -255,6 +257,10 @@ class TaskSerializer(serializers.ModelSerializer):
 			"version": {"write_only": True},
 			"assign_to": {"write_only": True},
 		}
+	def to_internal_value(self, data):
+		data["version"] = 1
+		data["assign_to"] = self.context.get("assign_to", None)
+		return super().to_internal_value(data=data)
 
 	def to_representation(self, instance):
 		representation = super().to_representation(instance)

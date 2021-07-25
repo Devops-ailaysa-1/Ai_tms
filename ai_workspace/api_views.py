@@ -219,22 +219,48 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
         else:
             return Response(serializer.errors, status=409)
 
-class TaskView(viewsets.ModelViewSet):
+# class TaskView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = TaskSerializer
+#
+#     def get_queryset(self):
+#         task_queryset = Task.objects.all()
+#         tasks = get_list_or_404(task_queryset, file__project__ai_user_id=self.request.user.id)
+#         return  tasks
+#
+#     def list(self, request):
+#         tasks = self.get_queryset()
+#         tasks_serlzr = TaskSerializer(tasks, many=True)
+#         return Response(tasks_serlzr.data, status=200)
+#
+#     def create(self, request, project_id):
+#         task_serlzr = TaskSerializer(data=request.data)
+#         print("initial data---->", task_serlzr.initial_data)
+#         if task_serlzr.is_valid(raise_exception=True):
+#             task_serlzr.save()
+#             return Response({"msg": task_serlzr.data}, status=200)
+#
+#         else:
+#             return Response({"msg": task_serlzr.errors}, status=400)
+
+
+class TaskView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TaskSerializer
 
-    def get_queryset(self):
-        task_queryset = Task.objects.all()
-        tasks = get_list_or_404(task_queryset, file__project__ai_user_id=self.request.user.id)
+    def get_queryset(self,):
+        tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
+                    for task in project.get_tasks
+                  ]
         return  tasks
 
-    def list(self, request):
+    def get(self, request):
         tasks = self.get_queryset()
         tasks_serlzr = TaskSerializer(tasks, many=True)
         return Response(tasks_serlzr.data, status=200)
 
-    def create(self, request):
-        task_serlzr = TaskSerializer(data=request.data)
+    def post(self, request):
+        task_serlzr = TaskSerializer(data=request.POST.dict(), context={"assign_to": self.request.user.id})
         print("initial data---->", task_serlzr.initial_data)
         if task_serlzr.is_valid(raise_exception=True):
             task_serlzr.save()
@@ -242,6 +268,26 @@ class TaskView(viewsets.ModelViewSet):
 
         else:
             return Response({"msg": task_serlzr.errors}, status=400)
+
+class Files_Jobs_List(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self, project_id):
+        project = get_object_or_404(Project.objects.all(), id=project_id,
+                        ai_user=self.request.user)
+        jobs = project.project_jobs_set.all()
+        files = project.project_files_set.filter(usage_type__use_type="source").all()
+        return jobs, files
+
+    def get(self, request, project_id):
+        jobs, files = self.get_queryset(project_id)
+        jobs = JobSerializer(jobs, many=True)
+        files = FileSerializer(files, many=True)
+        return Response({"files":files.data, "jobs": jobs.data}, status=200)
+
+# class AssignTaskView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class =
 
     # def
 

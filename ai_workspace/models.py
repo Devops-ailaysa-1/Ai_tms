@@ -88,8 +88,19 @@ class Project(ParanoidModel):
             self.project_name = self.ai_project_id
         super().save()
 
+    @property
+    def _assign_tasks_url(self):
+        return reverse("", kwargs={"project_id":self.id})
+
+    @property
+    def get_tasks(self):
+        return [task for job in self.project_jobs_set.all() for task in job.job_tasks_set.all()]
+
+    @property
+    def files_jobs_choice_url(self):
+        return reverse("get-files-jobs-by-project_id", kwargs={"project_id": self.id})
+
 pre_save.connect(create_project_dir, sender=Project)
-#post_save.connect(create_pentm_dir_of_project, sender=Project,)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
 
 # class Language(models.Model):
@@ -128,6 +139,19 @@ class Job(models.Model):
             # self.ai_user shoould be set before save
             self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project).count()+1)
         super().save()
+
+    @property
+    def source_target_pair(self): # code repr
+        return "%s-%s"%(self.source_language.locale.first().locale_code,
+                        self.target_language.locale.first().locale_code)
+
+    @property
+    def source_target_pair_names(self):
+        return "%s->%s"%(
+            self.source_language.language,
+            self.target_language.language
+        )
+
 class FileTypes(models.Model):
     TERMBASE = "termbase"
     QA_UNTRANSLATABLE = "untranslatable"
@@ -178,6 +202,9 @@ class File(models.Model):
     def __str__(self):
         return self.file.path
 
+    @property
+    def use_type(self):
+        return self.usage_type.use_type
 
 class VersionChoices(Enum):# '''need to discuss with senthil sir, what are the choices?'''
 
@@ -210,6 +237,10 @@ class Task(models.Model):
     @property
     def owner(self):
         return self.file.project.ai_user # created by
+
+    @property
+    def project(self):
+        return self.file.project
 
     @property
     def source_language_code(self):
