@@ -27,9 +27,13 @@ from django.http import JsonResponse
 class VendorsInfoCreateView(APIView):
 
     def get(self, request):
-        queryset = VendorsInfo.objects.get(user_id=request.user.id)
-        serializer = VendorsInfoSerializer(queryset)
-        return Response(serializer.data)
+        try:
+            queryset = VendorsInfo.objects.get(user_id=request.user.id)
+            serializer = VendorsInfoSerializer(queryset)
+            return Response(serializer.data)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
 
     def post(self, request):
         user_id = request.user.id
@@ -142,9 +146,12 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
 class VendorsBankInfoCreateView(APIView):
 
     def get(self, request):
-        queryset = VendorBankDetails.objects.get(user_id=request.user.id)
-        serializer = VendorBankDetailSerializer(queryset)
-        return Response(serializer.data)
+        try:
+            queryset = VendorBankDetails.objects.get(user_id=request.user.id)
+            serializer = VendorBankDetailSerializer(queryset)
+            return Response(serializer.data)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
         user_id = request.user.id
