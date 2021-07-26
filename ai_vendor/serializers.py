@@ -3,6 +3,7 @@ from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServ
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
+ 
 
 class VendorsInfoSerializer(serializers.ModelSerializer):
 
@@ -204,16 +205,18 @@ class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.Model
         fields=('id','vendor_subject','vendor_membership','vendor_contentype','vendor_mtpe_engines','vendor_software')
         extra_kwargs = {'id':{"read_only":True},
         }
+
     def run_validation(self, data):
-        if data.get("vendor_subject"):
+
+        if data.get("vendor_subject") and isinstance( data.get("vendor_subject"), str):
             data["vendor_subject"]=json.loads(data["vendor_subject"])
-        if data.get("vendor_membership"):
+        if data.get("vendor_membership") and isinstance( data.get("vendor_membership"), str):
             data["vendor_membership"]=json.loads(data["vendor_membership"])
-        if data.get('vendor_contentype'):
+        if data.get('vendor_contentype') and isinstance( data.get("vendor_contentype"), str):
             data["vendor_contentype"] = json.loads(data["vendor_contentype"])
-        if data.get("vendor_mtpe_engines"):
+        if data.get("vendor_mtpe_engines") and isinstance( data.get("vendor_mtpe_engines"), str):
             data["vendor_mtpe_engines"] = json.loads(data["vendor_mtpe_engines"])
-        if data.get("vendor_software"):
+        if data.get("vendor_software") and isinstance( data.get("vendor_software"), str):
             data["vendor_software"] = json.loads(data["vendor_software"])
         print("validated data----->",data)
         return data
