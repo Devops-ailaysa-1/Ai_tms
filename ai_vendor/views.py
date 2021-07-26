@@ -27,23 +27,30 @@ from django.http import JsonResponse
 class VendorsInfoCreateView(APIView):
 
     def get(self, request):
-        queryset = VendorsInfo.objects.get(user_id=request.user.id)
-        serializer = VendorsInfoSerializer(queryset)
-        return Response(serializer.data)
+        try:
+            queryset = VendorsInfo.objects.get(user_id=request.user.id)
+            serializer = VendorsInfoSerializer(queryset)
+            return Response(serializer.data)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
+        print("cv_file---->",request.FILES.get('cv_file'))
+        cv_file=request.FILES.get('cv_file')
         user_id = request.user.id
-        data = request.POST.dict()
-        serializer = VendorsInfoSerializer(data=data)
+        # data = request.POST.dict()
+        serializer = VendorsInfoSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save(user_id = user_id)
             return Response(serializer.data)
 
     def put(self,request):
         user_id=request.user.id
-        data = request.POST.dict()
+        print("cv_file---->",request.FILES.get('cv_file'))
+        cv_file=request.FILES.get('cv_file')
+        # data = request.POST.dict()
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
-        serializer = VendorsInfoSerializer(vendor_info,data=data,partial=True)
+        serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data)
@@ -127,9 +134,9 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
             return Response(serializer.data)
             # return Response(data={"Message":"VendorExpertiseInfo Created"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    def update(self,request,pk):
+    def update(self,request,pk=None):
         queryset = AiUser.objects.all()
-        User = get_object_or_404(queryset, pk=pk)
+        User = get_object_or_404(queryset, pk=request.user.id)
         ser= ServiceExpertiseSerializer(User,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
             ser.save()
@@ -140,16 +147,19 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
 class VendorsBankInfoCreateView(APIView):
 
     def get(self, request):
-        queryset = VendorBankDetails.objects.get(user_id=request.user.id)
-        serializer = VendorBankDetailSerializer(queryset)
-        return Response(serializer.data)
+        try:
+            queryset = VendorBankDetails.objects.get(user_id=request.user.id)
+            serializer = VendorBankDetailSerializer(queryset)
+            return Response(serializer.data)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
         user_id = request.user.id
         data = request.POST.dict()
-        serializer = VendorBankDetailSerializer(data=data)
+        serializer = VendorBankDetailSerializer(data=data)#,context={'request':request})
         if serializer.is_valid():
-            serializer.save(user_id = user_id)
+            serializer.save(user_id=user_id)
             return Response(serializer.data)
 
     def put(self,request):

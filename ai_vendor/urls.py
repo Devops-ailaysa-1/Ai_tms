@@ -22,5 +22,7 @@ urlpatterns+= [
     path('membership_list/',views.vendor_membership_list, name="vendor-membership-list"),
     path('subject_matter_list/',views.vendor_subject_matter_list, name="vendor-subject-matter-list"),
     path('mtpe_engines_list/',views.vendor_mtpe_engines_list, name="vendor-mtpe-engines-list"),
+    # path('vendorexpertiseinfo/',views.VendorExpertiseListCreate.as_view({'get': 'list'})),
+    # path('vendorexpertiseinfo/update/',views.VendorExpertiseListCreate.as_view({'put':'update'})),
     # path('vendor_service_update/<int:pk>',views.VendorServiceUpdateDeleteView.as_view(),name='vendor-servicepdate'),
     ]
