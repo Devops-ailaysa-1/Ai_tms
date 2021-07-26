@@ -135,6 +135,8 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
             ser.save()
             # ser.update(vendor,validated_data=request.data)
             return Response(ser.data)
+        else:
+            return Response(ser.errors)
 
 
 class VendorsBankInfoCreateView(APIView):
