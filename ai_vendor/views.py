@@ -50,7 +50,10 @@ class VendorsInfoCreateView(APIView):
         cv_file=request.FILES.get('cv_file')
         # data = request.POST.dict()
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
-        serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
+        if cv_file:
+            serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
+        else:
+            serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data)
@@ -239,9 +242,9 @@ def SpellCheckerApiCheck(request):
     try:
         spellchecker_id=SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
         print(spellchecker_id)
-        data="spellchecker Available"
+        data=1
     except:
-        data="spellchecker Not Available"
+        data=0
     return JsonResponse({"out":data}, safe = False)
 
 @api_view(['GET',])
