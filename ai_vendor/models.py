@@ -94,8 +94,8 @@ class VendorLanguagePair(ParanoidModel):
     target_lang=models.ForeignKey(Languages,blank=True, null=True, related_name='vendor_target_lang', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    class Meta:
-        unique_together = ("user", "source_lang","target_lang")
+    #class Meta:
+     #   unique_together = ("user", "source_lang","target_lang")
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
@@ -114,6 +114,9 @@ class VendorServiceTypes(ParanoidModel):
     minute_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    class Meta:
+        managed = False
 
 class TranslationSamples(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='translationfile', on_delete=models.CASCADE)
