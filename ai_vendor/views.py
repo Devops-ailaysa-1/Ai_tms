@@ -11,7 +11,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
-                     VendorServiceTypes, VendorsInfo, VendorSubjectFields)
+                     VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
+                     VendorMtpeEngines)
 from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,
                           VendorLanguagePairSerializer,
@@ -19,7 +20,7 @@ from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields)
-
+from ai_auth.models import PersonalInformation, AiUser, OfficialInformation, Professionalidentity
 import json,requests
 from django.http import JsonResponse
 
@@ -35,10 +36,10 @@ class VendorsInfoCreateView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
-        print("cv_file---->",request.FILES.get('cv_file'))
         cv_file=request.FILES.get('cv_file')
         user_id = request.user.id
         # data = request.POST.dict()
+        print("cv_file------->",cv_file)
         serializer = VendorsInfoSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save(user_id = user_id)
@@ -281,3 +282,141 @@ def vendor_subject_matter_list(request):
     for i in SubjectFields.objects.all():
         out.append({"label":i.name,"value":i.id})
     return JsonResponse({"out":out},safe = False)
+
+
+
+@api_view(['POST',])
+def get_vendor_list(request):
+    source_lang_id=request.POST.get('source_lang_id')
+    target_lang_id=request.POST.get('target_lang_id')
+    res=VendorLanguagePair.objects.filter(Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id)).all()
+    out=[]
+    for i in res:
+       final_dict={}
+       res1 = AiUser.objects.get(id=i.user_id)
+       res2 = PersonalInformation.objects.get(user_id=i.user_id)
+       res3 = VendorsInfo.objects.get(user_id=i.user_id)
+       final_dict={"Name":res1.fullname,"Country":res2.country_id,"LegalCatagories":res3.type_id,"Vendor_id":res1.uid}
+       try:
+           res4 = VendorServiceInfo.objects.get(lang_pair_id=i.id)
+           a_dict={"MTPE_Unit_Rate":res4.mtpe_rate,"Currency":res3.currency_id}
+           final_dict.update(a_dict)
+       except:
+           final_dict
+       try:
+           res5 = Professionalidentity.objects.get(user_id=i.user_id)
+           image=res5.avatar
+           b_dict={"Avatar":image.url}
+           final_dict.update(b_dict)
+       except:
+           final_dict
+       out.append(final_dict)
+    return JsonResponse({"out":out},safe=False)
+
+
+@api_view(['POST',])
+def get_vendor_detail(request):
+    source_lang_id=request.POST.get('source_lang_id')
+    target_lang_id=request.POST.get('target_lang_id')
+    uid=request.POST.get('vendor_id')
+    user_id=AiUser.objects.get(uid=uid).id
+    result={}
+    lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)))
+    res1 = AiUser.objects.get(uid=uid)
+    res2 = PersonalInformation.objects.get(user_id=res1.id)
+    res3 = OfficialInformation.objects.get(user_id=res1.id)
+    res4 = VendorsInfo.objects.get(user_id=res1.id)
+    result["PrimaryInfo"]={"Name":res1.fullname,"CompanyName":res3.company_name,"LegalCatagories":res4.type_id,"currency":res4.currency_id,"proz_link":res4.proz_link,"native_lang":res4.native_lang_id,"YearOfExperience":res4.year_of_experience}
+    new_serv=[]
+    try:
+        res5 = VendorServiceInfo.objects.get(lang_pair_id=lang.id)
+        out=[{"MtpeUnitRate":res5.mtpe_rate,"MtpeHourlyRate":res5.mtpe_hourly_rate,"CountUnit":res5.mtpe_count_unit_id}]
+        new_serv.extend(out)
+        result["service"]=new_serv
+    except:
+        result["service"]=[]
+    try:
+        res7=VendorSubjectFields.objects.filter(user_id=user_id).all()
+        sub=[]
+        for k in res7:
+            out4=[{"subject":k.subject_id}]
+            sub.extend(out4)
+        result["Subject-Matter"]=sub
+    except:
+        result["Subject-Matter"]=[]
+    try:
+        res8=VendorContentTypes.objects.filter(user_id=user_id).all()
+        content=[]
+        for l in res8:
+            out5=[{"contenttype":l.contenttype_id}]
+            content.extend(out5)
+        result["Content-Type"]=content
+    except:
+        result["Content-Type"]=[]
+    return JsonResponse({"out":result},safe=False)
+
+# @api_view(['POST',])
+# def get_vendor_detail_admin(request):
+#     source_lang_id=request.POST.get('source_lang_id')
+#     target_lang_id=request.POST.get('target_lang_id')
+#     uid=request.POST.get('vendor_id')
+#     user_id=AiUser.objects.get(uid=uid).id
+#     result={}
+#     lang=VendorLanguagePair.objects.filter((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)) | (Q(source_lang_id=target_lang_id) & Q(target_lang_id=source_lang_id) & Q(user_id=user_id))).all()
+#     res1 = AiUser.objects.get(uid=uid)
+#     res2 = PersonalInformation.objects.get(user_id=res1.id)
+#     res3 = OfficialInformation.objects.get(user_id=res1.id)
+#     res4 = VendorsInfo.objects.get(user_id=res1.id)
+#     result["PrimaryInfo"]={"Name":res1.fullname,"Email":res1.email,"Address":res2.address,"CompanyName":res3.company_name,"LegalCatagories":res4.type_id,"currency":res4.currency_id,"proz_link":res4.proz_link,"native_lang":res4.native_lang_id,"YearOfExperience":res4.year_of_experience}
+#     new_serv=[]
+#     new_serv_type=[]
+#     for i in lang:
+#         try:
+#            res5 = VendorServiceInfo.objects.get(lang_pair_id=i.id)
+#            out=[{"source_lang_id":i.source_lang_id,"target_lang_id":i.target_lang_id,"MtpeUnitRate":res5.mtpe_rate,"MtpeHourlyRate":res5.mtpe_hourly_rate,"CountUnit":res5.mtpe_count_unit_id}]
+#            new_serv.extend(out)
+#            result["service"]=new_serv
+#         except:
+#            result["service"]=[]
+#
+#         try:
+#            res6=VendorServiceTypes.objects.filter(lang_pair_id=i.id).all()
+#            if res6:
+#                new1=[{"source_lang_id":i.source_lang_id,"target_lang_id":i.target_lang_id}]
+#                for j in res6:
+#                    out3=[{"serviceType":j.services_id,"hourlyrate":j.hourly_rate,"Unitrate":j.unit_rate,"unit_type":j.unit_type_id,"minuterate":j.minute_rate}]
+#                    new1.extend(out3)
+#            new_serv_type.append(new1)
+#            result["service-types"]=new_serv_type
+#         except:
+#            result["service-types"]=[]
+#     try:
+#         res7=VendorSubjectFields.objects.filter(user_id=user_id).all()
+#         sub=[]
+#         for k in res7:
+#             out4=[{"subject":k.subject_id}]
+#             sub.extend(out4)
+#         result["Subject-Matter"]=sub
+#     except:
+#         result["Subject-Matter"]=[]
+#
+#     try:
+#        res8=VendorContentTypes.objects.filter(user_id=user_id).all()
+#        content=[]
+#        for l in res8:
+#            out5=[{"contenttype":l.contenttype_id}]
+#            content.extend(out5)
+#        result["Content-Type"]=content
+#     except:
+#        result["Content-Type"]=[]
+#
+#     try:
+#         res9=VendorMtpeEngines.objects.filter(user_id=user_id).all()
+#         mtpe=[]
+#         for m in res9:
+#             out6=[{"mtpe-engines":m.mtpe_engines_id}]
+#             mtpe.extend(out6)
+#         result["MT-Engines"]=mtpe
+#     except:
+#         result["MT-Engines"]=[]
+#     return JsonResponse({"out":result},safe=False)

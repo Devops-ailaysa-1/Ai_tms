@@ -9,6 +9,9 @@ from ai_auth.models import AiUser,UserAttribute,PersonalInformation,OfficialInfo
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer
+from django.contrib.auth import get_user_model
+from django.conf import settings
+UserModel = get_user_model()
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -81,7 +84,7 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 #             'fullname': {'required': True}
 #         }
 
- 
+
 #     def create(self, validated_data):
 
 #         user = AiUser.objects.create(
@@ -89,7 +92,7 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 #             fullname=validated_data['fullname'],
 #         )
 
-        
+
 #         user.set_password(validated_data['password'])
 #         user.save()
 
@@ -97,7 +100,7 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 
 
 
-class UserAttributeSerializer(serializers.ModelSerializer): 
+class UserAttributeSerializer(serializers.ModelSerializer):
     user_type = serializers.PrimaryKeyRelatedField(queryset=AiUserType.objects.all(),many=False,required=False)
 
     class Meta:
@@ -105,16 +108,16 @@ class UserAttributeSerializer(serializers.ModelSerializer):
         fields = ( 'user_type',)
         #read_only_fields = ('id',)
         depth = 2
-    
+
     def create(self, validated_data):
         print("validated data",validated_data)
         request = self.context['request']
-        user_attr = UserAttribute.objects.create(user_id=request.user.id,**validated_data)      
+        user_attr = UserAttribute.objects.create(user_id=request.user.id,**validated_data)
         return user_attr
-    
+
 
     def to_representation(self, value):
-        data = super().to_representation(value)  
+        data = super().to_representation(value)
         user_type_serializer = AiUserTypeSerializer(value.user_type)
         data['user_type'] = user_type_serializer.data
         return data
@@ -127,11 +130,11 @@ class PersonalInformationSerializer(serializers.ModelSerializer):
         model = PersonalInformation
         fields = ( 'address','country','timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
         read_only_fields = ('created_at','updated_at')
-    
+
     def create(self, validated_data):
         print("validated==>",validated_data)
         request = self.context['request']
-        personal_info = PersonalInformation.objects.create(**validated_data,user_id=request.user.id)      
+        personal_info = PersonalInformation.objects.create(**validated_data,user_id=request.user.id)
         return  personal_info
 
 class OfficialInformationSerializer(serializers.ModelSerializer):
@@ -142,10 +145,10 @@ class OfficialInformationSerializer(serializers.ModelSerializer):
         model = OfficialInformation
         fields = ( 'id','company_name','address','designation','industry','country','timezone','website','linkedin','billing_email','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
-    
+
     def create(self, validated_data):
         request = self.context['request']
-        official_info = OfficialInformation.objects.create(**validated_data,user_id=request.user.id)      
+        official_info = OfficialInformation.objects.create(**validated_data,user_id=request.user.id)
         return official_info
 
 
@@ -161,7 +164,7 @@ class ProfessionalidentitySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context['request']
         print("validated data ",validated_data)
-        identity = Professionalidentity.objects.create(**validated_data,user=request.user)      
+        identity = Professionalidentity.objects.create(**validated_data,user=request.user)
         return identity
 
     # def save(self, *args, **kwargs):
@@ -169,4 +172,37 @@ class ProfessionalidentitySerializer(serializers.ModelSerializer):
     #         self.instance.avatar.delete()
     #     return super().save(*args, **kwargs)
 
-
+class AiUserDetailsSerializer(serializers.ModelSerializer):
+    """
+    User model w/o password
+    """
+    @staticmethod
+    def validate_username(username):
+        if 'allauth.account' not in settings.INSTALLED_APPS:
+            # We don't need to call the all-auth
+            # username validator unless its installed
+            return username
+        from allauth.account.adapter import get_adapter
+        username = get_adapter().clean_username(username)
+        return username
+    class Meta:
+        extra_fields = []
+        # see https://github.com/iMerica/dj-rest-auth/issues/181
+        # UserModel.XYZ causing attribute error while importing other
+        # classes from `serializers.py`. So, we need to check whether the auth model has
+        # the attribute or not
+        if hasattr(UserModel, 'USERNAME_FIELD'):
+            extra_fields.append(UserModel.USERNAME_FIELD)
+        if hasattr(UserModel, 'EMAIL_FIELD'):
+            extra_fields.append(UserModel.EMAIL_FIELD)
+        if hasattr(UserModel, 'first_name'):
+            extra_fields.append('first_name')
+        if hasattr(UserModel, 'last_name'):
+            extra_fields.append('last_name')
+        if hasattr(UserModel, 'last_name'):
+            extra_fields.append('last_name')
+        if hasattr(UserModel, 'fullname'):
+            extra_fields.append('fullname')
+        model = UserModel
+        fields = ('pk', *extra_fields)
+        read_only_fields = ('email',)

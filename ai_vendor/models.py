@@ -8,6 +8,11 @@ from django.db.models.constraints import UniqueConstraint
 from ai_auth.models import AiUser,user_directory_path
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 
+
+def vendor_directory_path(instance, filename):
+    return '{0}/{1}/{2}/{3}'.format(instance.user.uid, "vendor","cv_file",filename)
+
+
 class VendorsInfo(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
     vendor_unique_id = models.CharField(max_length=191, blank=True, null=True)
@@ -18,12 +23,13 @@ class VendorsInfo(models.Model):
     token = models.CharField(max_length=191, blank=True, null=True)
     skype = models.CharField(max_length=191, blank=True, null=True)
     proz_link = models.CharField(max_length=191, blank=True, null=True)
-    cv_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+    cv_file = models.FileField(upload_to=vendor_directory_path, blank=True, null=True)
     native_lang = models.ForeignKey(Languages,blank=True, null=True, related_name='native_lang', on_delete=models.CASCADE)
     year_of_experience = models.DecimalField(max_digits=5,decimal_places=1 , blank=True, null=True)
     rating = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 class VendorBankDetails(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
@@ -114,9 +120,13 @@ class VendorServiceTypes(ParanoidModel):
     minute_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    
+
     class Meta:
         managed = False
+
+
+def user_directory_path(instance, filename):
+    return '{0}/{1}/{2}/{3}'.format(lang_pair.instance.user.uid, "vendor","TranslationSamples",filename)
 
 class TranslationSamples(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='translationfile', on_delete=models.CASCADE)
@@ -125,14 +135,12 @@ class TranslationSamples(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-
-def user_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
-    return '{0}/{1}/{2}'.format(lang_pair.instance.user.uid, "TranslationSamples",filename)
+def user_directory_path_1(instance, filename):
+    return '{0}/{1}/{2}/{3}'.format(lang_pair.instance.user.uid, "vendor","MtpeSamples",filename)
 
 class MtpeSamples(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='mtpesamples',on_delete=models.CASCADE)
-    sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+    sample_file = models.FileField(upload_to=user_directory_path_1, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
