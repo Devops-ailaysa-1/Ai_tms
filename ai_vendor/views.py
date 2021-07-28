@@ -240,9 +240,9 @@ def SpellCheckerApiCheck(request):
     try:
         spellchecker_id=SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
         print(spellchecker_id)
-        data="spellchecker Available"
+        data=1
     except:
-        data="spellchecker Not Available"
+        data=0
     return JsonResponse({"out":data}, safe = False)
 
 @api_view(['GET',])
