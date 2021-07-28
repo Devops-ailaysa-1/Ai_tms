@@ -51,7 +51,10 @@ class VendorsInfoCreateView(APIView):
         cv_file=request.FILES.get('cv_file')
         # data = request.POST.dict()
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
-        serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
+        if cv_file:
+            serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
+        else:
+            serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data)
