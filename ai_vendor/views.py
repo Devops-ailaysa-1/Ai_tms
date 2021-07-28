@@ -44,6 +44,7 @@ class VendorsInfoCreateView(APIView):
         if serializer.is_valid():
             serializer.save(user_id = user_id)
             return Response(serializer.data)
+        print("errors", serializer.errors)
 
     def put(self,request):
         user_id=request.user.id
