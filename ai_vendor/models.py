@@ -100,8 +100,8 @@ class VendorLanguagePair(ParanoidModel):
     target_lang=models.ForeignKey(Languages,blank=True, null=True, related_name='vendor_target_lang', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    #class Meta:
-     #   unique_together = ("user", "source_lang","target_lang")
+    class Meta:
+       unique_together = ("user", "source_lang","target_lang","deleted_at")
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)

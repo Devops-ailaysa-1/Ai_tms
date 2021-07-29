@@ -67,7 +67,7 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
     def get_custom_page_size(self, request, view):
         try:
             self.page_size = self.request.query_params.get('limit',10)
-            print(self.request.query_params.get('limit'))
+            print("limit--->",self.request.query_params.get('limit'))
         except (ValueError, TypeError):
             pass
         return super().get_page_size(request)
@@ -303,14 +303,16 @@ def get_vendor_list(request):
            a_dict={"MTPE_Unit_Rate":res4.mtpe_rate,"Currency":res3.currency_id}
            final_dict.update(a_dict)
        except:
-           final_dict
+           a_dict={"MTPE_Unit_Rate":"","Currency":""}
+           final_dict.update(a_dict)
        try:
            res5 = Professionalidentity.objects.get(user_id=i.user_id)
            image=res5.avatar
            b_dict={"Avatar":image.url}
            final_dict.update(b_dict)
        except:
-           final_dict
+           b_dict={"Avatar":""}
+           final_dict.update(b_dict)
        out.append(final_dict)
     return JsonResponse({"out":out},safe=False)
 
