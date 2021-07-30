@@ -56,7 +56,13 @@ class Templangpair(models.Model):
 class PenseiveTM(models.Model):
     penseive_tm_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
                             blank=True, allow_folders=True, allow_files=False)  # Common for a project
-    project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.CASCADE)
+    source_tmx_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
+                            blank=True, allow_folders=True, allow_files=False)
+    project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.CASCADE,
+                                   related_name="project_penseivetm")
+
+    class Meta:
+        managed = False
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
@@ -68,9 +74,11 @@ class Project(ParanoidModel):
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.CASCADE, related_name="proj_mt_engine")
+    test = models.TextField(null=True, blank=True)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
+        managed = False
 
     def __str__(self):
         return self.project_name
@@ -89,6 +97,13 @@ class Project(ParanoidModel):
         super().save()
 
     @property
+    def files_and_jobs_set(self):
+        return  ( # jobs will not exceed 100nos, and files will not exceed 10nos, so all() functionality used...
+            self.project_jobs_set.all(),
+            self.project_files_set.all()
+        )
+
+    @property
     def _assign_tasks_url(self):
         return reverse("", kwargs={"project_id":self.id})
 
@@ -99,6 +114,12 @@ class Project(ParanoidModel):
     @property
     def files_jobs_choice_url(self):
         return reverse("get-files-jobs-by-project_id", kwargs={"project_id": self.id})
+
+    @property
+    def source_language(self):
+        return self.project_jobs_set.first().source_language_code
+
+
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -126,7 +147,7 @@ class Job(models.Model):
     target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
                         related_name="target_language")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
-                related_name="project_jobs_set")
+                related_name="project_jobs_set",)
     job_id =models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
 
@@ -151,6 +172,18 @@ class Job(models.Model):
             self.source_language.language,
             self.target_language.language
         )
+
+    @property
+    def source_language_code(self):
+        return self.source_language.locale.first().locale_code
+
+    @property
+    def target_language_code(self):
+        return self.target_language.locale.first().locale_code
+
+    def __str__(self):
+        return self.source_language.language+"->"+self.target_language.language
+
 
 class FileTypes(models.Model):
     TERMBASE = "termbase"
@@ -200,11 +233,36 @@ class File(models.Model):
         super().save()
 
     def __str__(self):
-        return self.file.path
+        return self.filename
 
     @property
     def use_type(self):
         return self.usage_type.use_type
+
+    @property
+    def owner(self):
+        return self.project.ai_user # created by
+
+    @property
+    def get_source_file_path(self):
+        return self.file.path
+
+    @property
+    def get_file_name(self):
+        return self.filename
+
+    @property
+    def get_source_tmx_path(self):
+        prefix, ext = os.path.splitext(self.filename)
+        return os.path.join(self.project.project_penseivetm.source_tmx_dir_path, prefix+".tmx")
+
+    @property
+    def source_language(self):
+        return self.project.source_language
+
+    @property
+    def target_language(self):
+        return "ta"
 
 class VersionChoices(Enum):# '''need to discuss with senthil sir, what are the choices?'''
 
@@ -214,8 +272,11 @@ class Version(models.Model):
     # 'n' number versions can be set to a specific project...it cannot be a job specific or file specific
     version_name = models.CharField(max_length=100, choices=[(version.name, version.value)
                         for version in VersionChoices], null=False, blank=False)
-    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
-                related_name="project_versions_set")
+    # project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
+    #             related_name="project_versions_set")
+
+    def __str__(self):
+        return self.version_name
 
 class Task(models.Model):
     file = models.ForeignKey(File, on_delete=models.CASCADE, null=False, blank=False,
@@ -235,32 +296,11 @@ class Task(models.Model):
         ]
 
     @property
-    def owner(self):
-        return self.file.project.ai_user # created by
-
-    @property
-    def project(self):
-        return self.file.project
-
-    @property
-    def source_language_code(self):
-        return self.job.source_language.locale.first().locale_code
-
-    @property
-    def target_language_code(self):
-        return self.job.target_language.locale.first().locale_code
-
-    @property
-    def get_source_file_path(self):
-        return self.file.file.path
-
-    @property
     def get_document_url(self):
         return reverse("document", kwargs={"task_id": self.id})
 
-    @property
-    def get_file_name(self):
-        return self.file.filename
+    def __str__(self):
+        return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 

@@ -4,6 +4,7 @@ from django.contrib.auth import settings
 from django.utils.text import slugify
 import os
 import random
+from django.db import IntegrityError
 
 from .utils import create_dirs_if_not_exists
 
@@ -37,7 +38,12 @@ def set_pentm_dir_of_project(sender, instance, *args, **kwargs):
     if instance.penseive_tm_dir_path == None:
         instance.penseive_tm_dir_path = os.path.join(instance.project.project_dir_path, ".pentm")
         create_dirs_if_not_exists(instance.penseive_tm_dir_path)
+        instance.source_tmx_dir_path = os.path.join(instance.project.project_dir_path, "source_tmx")
+        create_dirs_if_not_exists(instance.source_tmx_dir_path)
 
 def check_job_file_version_has_same_project(sender, instance, *args, **kwargs):
-    print(sender)
+    if (instance.file!=None) and (instance.job!=None) :
+        if not (instance.file.project == instance.job.project):
+            raise IntegrityError("Project of a file and job should same!!!")
+
     # if instance.job.project

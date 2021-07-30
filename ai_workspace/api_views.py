@@ -6,7 +6,8 @@ from ai_auth.models import AiUser
 from rest_framework import viewsets
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
-                            ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer)
+                            ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer,
+                          FileSerializerv2, FileSerializerv3)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject
 from rest_framework import permissions
@@ -14,7 +15,8 @@ from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Task
-
+from django.http import JsonResponse
+import requests, json
 from ai_workspace import serializers
 
 class IsCustomer(permissions.BasePermission):
@@ -284,6 +286,63 @@ class Files_Jobs_List(APIView):
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
         return Response({"files":files.data, "jobs": jobs.data}, status=200)
+
+class TmxFilesOfProject(APIView):
+    def get_queryset(self, project_id):
+        project_qs = Project.objects.all()
+        project = get_object_or_404(project_qs, id=project_id, ai_user=self.request.user)
+        files = project.project_files_set.all()
+        return files
+
+    def post(self, request, project_id):
+        files = self.get_queryset(project_id=project_id)
+        res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
+                     "fprm_file_path": None}
+        data = []
+        for file in files:
+            params_data = FileSerializerv2(file).data
+            print("params data---->", params_data)
+            res = requests.post(
+                "http://localhost:8080/source/createTmx",
+                data={
+                    "doc_req_params": json.dumps(params_data),
+                    "doc_req_res_params": json.dumps(res_paths)
+                }
+            )
+
+            # if res.status_code in [200, 201]:
+            data.append(res.text)
+        return JsonResponse({"results":data}, safe=False)
+
+class ProjectReportAnalysis(APIView):
+    def get_queryset(self, project_id):
+        project_qs = Project.objects.all()
+        project = get_object_or_404(project_qs, id=project_id, ai_user=self.request.user)
+        files = project.project_files_set.all()
+        return files
+
+    def post(self, request, project_id):
+        data = dict(
+            pentm_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/.pentm/",
+            report_output_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/tt/report.html",
+            srx_file_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/okapi_resources/okapi_default_icu4j.srx"
+        )
+        files = self.get_queryset(project_id)
+        batches_data =  FileSerializerv3(files, many=True).data
+        data = {
+            **data,
+            **dict(batches=batches_data)
+        }
+        print("data---->", data)
+        res = requests.post(
+            "http://localhost:8080/project/report-analysis",
+            data = {"report_params": json.dumps(data)}
+        )
+        if res.status_code in [200, 201]:
+            return JsonResponse({"msg": res.text}, safe=False)
+        else:
+            return JsonResponse({"msg": "something went to wrong"}, safe=False)
+
 
 # class AssignTaskView(viewsets.ModelViewSet):
 #     permission_classes = [IsAuthenticated]

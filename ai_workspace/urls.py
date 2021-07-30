@@ -19,24 +19,22 @@ urlpatterns = router.urls
 urlpatterns += [
 	path("tasks/", api_views.TaskView.as_view(), name="tasks"),
 	path("files_jobs/<int:project_id>/", api_views.Files_Jobs_List.as_view(), name="get-files-jobs-by-project_id"),
+	path("source_tmx/<int:project_id>/", api_views.TmxFilesOfProject.as_view(), name="source-tmx-files"),
+	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(), name="project-report-analysis")
 ]
 # views urls adding for local testing
 
 
-
-
-
-
-
-
-
 urlpatterns += [
-	path("project_setup-dj", views.ProjectSetupDjView.as_view(), name="project_setup-dj-view"),
-	path("login", views.LoginView.as_view(), name="my-login"),
-	path("session_test", views.session_test, name="session-test"),
-	path("tasks_dj", views.TasksListViewDj.as_view(), name="tasks-dj"),
-	path("task_create_dj", views.TaskCreateViewDj.as_view(), name="task-create-dj"),
+	path("project_setup-dj", views.ProjectSetupDjView.as_view(), name="project_setup-dj-view"),# Project Create
+	path("dj/login", views.LoginView.as_view(), name="dj-login"),
+	path("dj/logout", views.LoginOutView.as_view(), name="dj-logout"),
+	path("tasks_dj/<int:project_id>/", views.TaskCreateViewDj.as_view(), name="task-create-dj"),
+	path("tasks/dj", views.TaskListView.as_view(), name="task-list-dj"),
+	# path("document/<int:project_id>/dj", views.DocumentView.as_view(), name="document-view"), # Segments will be listed here
 
+	# path("source_tmx", )
 	# path("project-setup-sub", api_views.projectSubjectView.as_view(), name="project_setup__sub"),
-
 ]
+
+

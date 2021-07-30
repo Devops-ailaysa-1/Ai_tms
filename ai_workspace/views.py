@@ -1,54 +1,25 @@
 from django.shortcuts import render, redirect, reverse
 from django.http import HttpResponse, JsonResponse
 from django import views
-from .forms import JobForm, FileForm, ProjectForm, LoginForm, TaskForm
+from .forms import (JobForm, FileForm, ProjectForm, LoginForm, TaskForm, ProjectFormv2,
+                TaskListForm)
 from .models import Job, File
 from django.forms import modelform_factory
 from django.forms import formset_factory
 import requests, json
 import requests
+from .serializers import ProjectSetupSerializer, TaskSerializer, TaskSerializerv2
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import authenticate, login, logout
+from ai_workspace_okapi.api_views import DocumentViewByTask
+from ai_workspace_okapi.serializers import DocumentSerializerV2
 
 # JobForm = modelform_factory(Job, fields=("source_language", "target_language"))
 # Create your views here.
 
-class ProjectSetupDjView(views.View):
-    def get(self, request):
-        formset_job = formset_factory(JobForm, extra=1)
-        job_form = formset_job()
-        formset_file = formset_factory(FileForm, extra=1)
-        file_form = formset_file()
-        project_form = ProjectForm()
-        return render(request, "project-setup.html", context={
-                "form1":job_form, "form2":file_form, "form3":project_form})
-
-    def post(self, request):
-        formset_job = formset_factory(JobForm, extra=1)
-        job_form = formset_job(request.POST or None)
-        formset_file = formset_factory(FileForm, extra=1)
-        file_form = formset_file(request.POST, request.FILES)
-        project_form = ProjectForm(request.POST or None)
-        if job_form.is_valid() and file_form.is_valid() and project_form.is_valid():
-            bearer_token = request.session.get("access_token", "")
-            headers = {
-                'Authorization': f'Bearer {bearer_token}',}
-            # res = requests.post("http://localhost:8000/workspace/project_setup/",
-            jobs = []
-            for job in job_form:
-                job.cleaned_data["source_language"] = job.cleaned_data["source_language"].id
-                job.cleaned_data["target_language"] = job.cleaned_data["target_language"].id
-                jobs.append(job.cleaned_data)
-            data = {**project_form.cleaned_data, "jobs":[jobs],}
-            files= [ ("files", value["file"]) for  value in file_form.cleaned_data]
-            res = requests.request("POST", url="http://localhost:8000/workspace/project_setup/", headers=headers, data = data, files = files)
-            if res.status_code in [200, 201]:
-                return redirect("/workspace/tasks_dj")
-            else:
-                return JsonResponse({"message": res.text}, safe=False)
-            # return render(request, "project-setup.html", context={"form":job_form})
-        else:
-            print("errors--->", job_form.errors)
-        return render(request, "project-setup.html", context={
-                "form1":job_form, "form2":file_form, "form3": project_form})
+class LoginRequiredMixin(LoginRequiredMixin):
+    login_url = "dj/login"
+    redirect_field_name = "redirect_to"
 
 class LoginView(views.View):
     def get(self, request):
@@ -58,31 +29,75 @@ class LoginView(views.View):
     def post(self, request):
         form = LoginForm(request.POST)
         if form.is_valid():
-            res = requests.post("http://localhost:8000/auth/dj-rest-auth/login/", data=form.cleaned_data)
-            print("status code---->", res.status_code)
-            if res.status_code == 200:
-                request.session["access_token"] = res.json().get("access_token", "")
-                return redirect("/workspace/project_setup-dj")
-        else:
-            print("errors---->", form.errors )
+            user = authenticate(request, **form.cleaned_data)
+            if user is not None:
+                login(request, user)
+                return redirect(request.GET.get("redirect_to"))
         return render(request, "login.html", context={"form": form})
 
-def session_test(request):
-    print("session---->", request.session.get("access_token"))
-    return HttpResponse(f"<h1>{request.session.get('access_token')}</h1>")
+class LoginOutView(views.View):
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        return redirect(reverse("dj-login"))
 
-class TasksListViewDj(views.View):
-    def get(self, request):
-        bearer_token = request.session.get("access_token", "")
-        res = requests.get("http://localhost:8000/workspace/tasks", headers = {
-            'Authorization': f'Bearer {bearer_token}',}
-        )
-        if res.status_code in [200, 201]:
-            return render(request, "tasks.html", context={"data": res.json()})
-        return JsonResponse({"msg": "Something went to wrong!!!"}, safe=False)
+class ProjectSetupDjView(LoginRequiredMixin, views.View):
 
-class TaskCreateViewDj(views.View):
     def get(self, request):
+        print("user--->", request.user)
+        project_form = ProjectFormv2()
+        return render(request, "project-setup.html", context={"project_form":project_form})
+
+    def post(self, request):
+        project_form = ProjectFormv2(request.POST or None, request.FILES)
+        if project_form.is_valid():
+            project_serlzr = ProjectSetupSerializer(data=project_form.cleaned_data,
+                                context={"request": request})
+            if project_serlzr.is_valid(raise_exception=True):
+                project_serlzr.save()
+                return redirect(reverse("task-create-dj", kwargs={"project_id": project_serlzr.instance.id}))
+        else:
+            return render(request, "project-setup.html", context={"project_form":project_form})
+
+class TaskCreateViewDj(LoginRequiredMixin, views.View):
+
+    def get(self, request, project_id):
         form = TaskForm()
-        return render(request, "task-create.html", context={"form": form})
+        form.fields["file"].queryset = form.fields["file"].queryset.filter(project_id=project_id).all()
+        form.fields["job"].queryset = form.fields["job"].queryset.filter(project_id=project_id).all()
+        return render(
+            request, "task-create.html",
+            {"form": form}
+        )
 
+    def post(self, request, project_id):
+        form = TaskForm(request.POST)
+        if form.is_valid():
+            print("data--->", form.cleaned_data)
+            task_serlzr = TaskSerializerv2(data=form.cleaned_data)
+            if task_serlzr.is_valid(raise_exception=True):
+                task_serlzr.save()
+                return redirect(
+                    reverse("task-list-dj")
+                )
+        else:
+            return render(
+                request, "task-create.html",
+                {"form": form}
+            )
+
+class TaskListView(LoginRequiredMixin, views.View):
+    # showing all tasks created by user
+    def get(self, request):
+        form = TaskListForm()
+        form.fields["tasks"].queryset =  (
+            form.fields["tasks"].queryset.filter(file__project__ai_user= request.user)
+        ).all()
+        return render(request, "task-list-view.html", context={"form": form})
+
+    # opening the document of a speciific task
+    def post(self, request):
+        form = TaskListForm(request.POST or None)
+        if form.is_valid():
+            task = form.cleaned_data.get("tasks") # Single Task returned
+            document = DocumentViewByTask.create_document_for_task_if_not_exists(task, request)
+            return redirect(reverse("ws_okapi:document-list"))

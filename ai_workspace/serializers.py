@@ -43,15 +43,43 @@ class JobSerializer(serializers.ModelSerializer):
 	project = serializers.IntegerField(required=False, source="project_id")
 	class Meta:
 		model = Job
-		fields = ("id","project", "source_language", "target_language", "source_target_pair", "source_target_pair_names")
+		fields = ("id","project", "source_language", "target_language", "source_target_pair",
+				  "source_target_pair_names", "source_language_code", "target_language_code")
 		read_only_fields = ("id","source_target_pair", "source_target_pair_names")
 
 class FileSerializer(serializers.ModelSerializer):
 	project = serializers.IntegerField(required=False, source="project_id")
 	class Meta:
 		model = File
-		fields = ("id","usage_type", "file", "project","filename")
+		fields = ("id","usage_type", "file", "project","filename", "get_source_file_path",
+				  "get_file_name")
 		read_only_fields=("id","filename",)
+
+class FileSerializerv2(FileSerializer): # TmX output set
+	output_file_path = serializers.CharField(source="get_source_tmx_path")
+	source_file_path = serializers.CharField(source="get_source_file_path")
+	class Meta(FileSerializer.Meta):
+		fields = (
+			"output_file_path", "source_language", "source_file_path", "target_language"
+		)
+	def to_representation(self, instance):
+		representation = super().to_representation(instance)
+		if self.instance:
+			representation["extension"] = get_file_extension(instance.file.path)
+			representation["processor_name"] = get_processor_name(instance.file.path)\
+												.get("processor_name", None)
+		return representation
+
+class FileSerializerv3(FileSerializer):
+	file_path = serializers.CharField(source="get_source_tmx_path")
+	source_language_code = serializers.CharField(source="source_language")
+	target_language_code = serializers.CharField(source="target_language")
+
+	class Meta:
+		model = File
+		fields = (
+			"file_path", "source_language_code", "target_language_code"
+		)
 
 class ProjectSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
@@ -184,10 +212,7 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 			[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
 		if proj_content_type:
 			[project.proj_content_type.create(**content_data) for content_data in  proj_content_type]
-		# project.save()
 		return project
-
-
 
 class TemplangpairSerializer(serializers.ModelSerializer):
 	project = serializers.CharField(required=False,source="temp_proj_langpair")
@@ -200,8 +225,6 @@ class TempFileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = TempFiles
 		fields = ("project", "files_temp")
-
-
 
 
 class TempProjectSetupSerializer(serializers.ModelSerializer):
@@ -238,11 +261,11 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
-	source_file_path = serializers.CharField(source="get_source_file_path", read_only=True)
-	source_language = serializers.CharField(source="source_language_code", read_only=True)
-	target_language = serializers.CharField(source="target_language_code", read_only=True)
+	source_file_path = serializers.CharField(source="file.get_source_file_path", read_only=True)
+	source_language = serializers.CharField(source="job.source_language_code", read_only=True)
+	target_language = serializers.CharField(source="job.target_language_code", read_only=True)
 	document_url = serializers.URLField(source="get_document_url", read_only=True)
-	filename = serializers.CharField(source="get_file_name", read_only=True)
+	filename = serializers.CharField(source="file.get_file_name", read_only=True)
 
 	class Meta:
 		model = Task
@@ -270,6 +293,11 @@ class TaskSerializer(serializers.ModelSerializer):
 												.get("processor_name", None)
 		return representation
 
+class TaskSerializerv2(TaskSerializer):
+	class Meta(TaskSerializer.Meta):
+		pass
+	def to_internal_value(self, data):
+		return super(TaskSerializer, self).to_internal_value(data=data)
 
 
 # class TaskSerializer(serializers.ModelSerializer):

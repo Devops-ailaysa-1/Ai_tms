@@ -26,3 +26,8 @@ ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
      ('.csv', '.tsv'): 'csv-processor',
      ('.strings',): 'strings-processor'
  }
+
+
+CURRENT_SUPPORT_FILE_EXTENSIONS_LIST = [
+    ".txt", ".html", ".tsv", ".csv"
+]

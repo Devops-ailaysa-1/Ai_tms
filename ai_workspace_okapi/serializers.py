@@ -21,6 +21,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
                 self.fields.pop(field_name)
 
 class SegmentSerializer(serializers.ModelSerializer):
+    segment_id = serializers.IntegerField(read_only=True, source="id")
     class Meta:
         model = Segment
         fields = (
@@ -31,13 +32,13 @@ class SegmentSerializer(serializers.ModelSerializer):
             "coded_ids_sequence",
             "tagged_source",
             "target_tags",
-            "id"
+            "segment_id",
         )
 
         read_only_fields = (
             "tagged_source",
             "target_tags",
-            "id"
+            # "id",
         )
 
         extra_kwargs = {
@@ -48,8 +49,17 @@ class SegmentSerializer(serializers.ModelSerializer):
         }
 
     def to_internal_value(self, data):
+        # print(self)
         data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
         return super().to_internal_value(data=data)
+
+class SegmentSerializerV2(SegmentSerializer):
+    class Meta(SegmentSerializer.Meta):
+        fields = ("target", "id")
+
+    def to_internal_value(self, data):
+        return super(SegmentSerializer, self).to_internal_value(data=data)
+
 
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)
@@ -69,7 +79,7 @@ class TextUnitSerializer(serializers.ModelSerializer):
         [(data["okapi_ref_translation_unit_id"], data["segment_ser"])] = list(data.items())
         return super().to_internal_value(data=data)
 
-class DocumentSerializer(serializers.ModelSerializer):
+class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
     text_unit_ser = TextUnitSerializer(many=True,  write_only=True)
 
     class Meta:
@@ -91,7 +101,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             {key:value} for key, value in data.pop("text", {}).items()
         ]
         data["created_by"] = 8
-        data["total_word_count"] = data["total_char_count"] = data["total_segment_count"] = 0
+        # data["total_word_count"] = data["total_char_count"] = 0; #data["total_segment_count"] = 0
         return super().to_internal_value(data=data)
 
 
@@ -106,4 +116,21 @@ class DocumentSerializer(serializers.ModelSerializer):
                 print("seg data---->", seg)
                 seg = Segment.objects.create(**seg, text_unit=text_unit)
         return document
+
+class DocumentSerializerV2(DocumentSerializer):
+    document_id = serializers.IntegerField(source="id", read_only=True)
+
+    def to_internal_value(self, data):
+        data["text_unit_ser"] = [
+            {key:value} for key, value in data.pop("text", {}).items()
+        ]
+        data["created_by"] = (self.context.get("request").user.id \
+                              if self.context.get("request", None)\
+                              else None)
+        return super(DocumentSerializer, self).to_internal_value(data=data)
+
+    class Meta(DocumentSerializer.Meta):
+        fields = ("text_unit_ser", "file", "job",
+                  "total_word_count", "total_char_count",
+                  "total_segment_count", "created_by", "document_id")
 

@@ -32,10 +32,17 @@ class Segment(models.Model):
     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name="text_unit_segment_set")
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
+    # segment_count = models.TextField(null=True, blank=True)
 
     @property
     def coded_ids_aslist(self):
         return json.loads(self.coded_ids_sequence)
+
+    class Meta:
+        managed = False
+    #
+    # def segment_count(self):
+    #     return self.text_unit
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 
