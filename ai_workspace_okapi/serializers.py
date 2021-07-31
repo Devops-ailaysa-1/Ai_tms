@@ -21,6 +21,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
                 self.fields.pop(field_name)
 
 class SegmentSerializer(serializers.ModelSerializer):
+    segment_id = serializers.IntegerField(read_only=True, source="id")
     class Meta:
         model = Segment
         fields = (
@@ -31,13 +32,13 @@ class SegmentSerializer(serializers.ModelSerializer):
             "coded_ids_sequence",
             "tagged_source",
             "target_tags",
-            "id"
+            "segment_id"
         )
 
         read_only_fields = (
             "tagged_source",
             "target_tags",
-            "id"
+#            "id"
         )
 
         extra_kwargs = {
@@ -50,6 +51,14 @@ class SegmentSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
         return super().to_internal_value(data=data)
+
+class SegmentSerializerV2(SegmentSerializer):
+#    segment_id = serializers.IntegerField(read_only=True, source="id")
+    class Meta(SegmentSerializer.Meta):
+        fields = ("target", "id")
+
+    def to_internal_value(self, data):
+        return super(SegmentSerializer, self).to_internal_value(data=data)
 
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)

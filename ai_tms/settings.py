@@ -28,19 +28,19 @@ TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 SECRET_KEY = os.getenv("django_secret_key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = not False
+DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117']
+ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117', "157.245.99.128"]
 
 
-CORS_ORIGIN_ALLOW_ALL= True
+CORS_ORIGIN_ALLOW_ALL= False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000"
+    "http://localhost:3000", "http://157.245.99.128:3000", 
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -53,29 +53,39 @@ CORS_ALLOW_CREDENTIALS = True
 #     "http://localhost:3000" , "http://167.71.235.214:3000","http://157.245.99.128:3010","http://157.245.99.128:3020"
 # ]
 # CORS_ALLOWED_ORIGINS = ["http://localhost:3000" , "http://167.71.235.214","http://157.245.99.128:3010","http://157.245.99.128:3020" ]
-# CORS_ALLOW_METHODS = [
-#     'DELETE',
-#     'GET',
-#     'OPTIONS',
-#     'PATCH',
-#     'POST',
-#     'PUT',
-# ]
-# CORS_ALLOW_HEADERS = [
-#     'accept',
-#     'accept-encoding',
-#     'authorization',
-#     'content-type',
-#     'dnt',
-#     'origin',
-#     'user-agent',
-#     'x-csrftoken',
-#     'x-requested-with',
-#     'Access-Control-Allow-Origin'
-# ]
+
+CORS_ALLOW_METHODS = [
+     'DELETE',
+     'GET',
+     'OPTIONS',
+     'PATCH',
+     'POST',
+     'PUT',
+]
 
 
+CORS_ALLOW_HEADERS = [
+     'accept',
+     'accept-encoding',
+     'authorization',
+     'content-type',
+     'dnt',
+     'origin',
+     'user-agent',
+     'x-csrftoken',
+     'x-requested-with',
+     'Access-Control-Allow-Origin',
+     'Access-Control-Allow-Credentials',
+     'cache',
+     'cookie',
+]
 
+CSRF_TRUSTED_ORIGINS = [
+ "http://localhost:3000",
+]
+
+#SESSION_COOKIE_SAMESITE = None
+#CSRF_COOKIE_SAMESITE = None
 # Application definition
 
 INSTALLED_APPS = [
@@ -112,6 +122,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'corsheaders.middleware.CorsPostCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -183,9 +194,9 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
-# REST_FRAMEWORK = {
+#REST_FRAMEWORK = {
 
-#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#    'DEFAULT_AUTHENTICATION_CLASSES': (
 
 #         'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
 #     )
@@ -214,8 +225,10 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
-# JWT_AUTH_COOKIE = 'ailaysa-auth'
-# JWT_AUTH_REFRESH_COOKIE = 'ailaysa-refresh-token'
+JWT_AUTH_COOKIE = 'ailaysa-auth'
+JWT_AUTH_REFRESH_COOKIE = 'ailaysa-refresh-token'
+
+#JWT_AUTH_SAMESITE = None
 
 REST_AUTH_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'ai_auth.serializers.UserRegistrationSerializer',
@@ -238,7 +251,8 @@ ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+          'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
+        #'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',

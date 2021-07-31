@@ -1,6 +1,6 @@
-from .serializers import DocumentSerializer, SegmentSerializer
+from .serializers import DocumentSerializer, SegmentSerializer, SegmentSerializerV2
 from ai_workspace.serializers import TaskSerializer
-from .models import Document
+from .models import Document, Segment
 from rest_framework import viewsets
 from rest_framework import views
 from django.shortcuts import get_object_or_404
@@ -76,7 +76,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None
                          }
-            doc = requests.post(url="http://localhost:8080/getDocument/", data={
+            doc = requests.post(url="http://spring-service2:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
@@ -97,7 +97,40 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             document = Document.objects.get(job=task.job, file=task.file)
             task.document = document
             task.save()
-        page_segments = self.paginate_queryset(document.segments, request, view=self)
+  #      page_segments = self.paginate_queryset(document.segments, request, view=self)
+ #       segments_ser = SegmentSerializer(page_segments, many=True)
+#        return self.get_paginated_response(segments_ser.data)
+        return Response(DocumentSerializer(document).data, status=201)
+
+class SegmentsView(views.APIView, PageNumberPagination):
+    PAGE_SIZE = page_size =  20
+
+    def get_object(self, document_id):
+        document = get_object_or_404(
+            Document.objects.all(), id=document_id
+        )
+        return document
+
+    def get(self, request, document_id):
+        document = self.get_object(document_id=document_id)
+        segments = document.segments
+        len_segments = segments.count()
+        page_len = self.paginate_queryset(range(1,len_segments+1), request)
+        print(page_len)
+        page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
+        [i.update({"segment_count":j}) for i,j in  zip(segments_ser.data, page_len)]
         return self.get_paginated_response(segments_ser.data)
 
+class SegmentsUpdateView(viewsets.ViewSet):
+    def get_object(self, segment_id):
+        qs = Segment.objects.all()
+        segment = get_object_or_404(qs, id = segment_id)
+        return segment
+
+    def update(self, request, segment_id):
+        segment = self.get_object(segment_id)
+        segment_serlzr =  SegmentSerializerV2(segment, data=request.data, partial=True, context={"request": request})
+        if segment_serlzr.is_valid(raise_exception=True):
+            segment_serlzr.save()
+            return Response(segment_serlzr.data, status=201)
