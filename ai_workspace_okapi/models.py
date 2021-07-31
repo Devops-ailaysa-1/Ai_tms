@@ -13,7 +13,7 @@ class TextUnit(models.Model):
     document = models.ForeignKey("Document", on_delete=models.CASCADE, related_name="document_text_unit_set")
 
 class MT_Engine(models.Model):
-    ''''''
+    engine_name = models.CharField(max_length=25,)
 
 class TranslationStatus(models.Model):
     status_name = models.CharField(max_length=25)
@@ -40,6 +40,10 @@ class Segment(models.Model):
 
     class Meta:
         managed = False
+
+    @property
+    def target_language_code(self):
+        return self.text_unit.document.job.target_language_code
     #
     # def segment_count(self):
     #     return self.text_unit
@@ -48,9 +52,13 @@ post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 
 class MT_RawTranslation(models.Model):
 
-    segment = models.ForeignKey(Segment, null=True, blank=True, on_delete=models.SET_NULL)
+    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
     mt_engine = models.ForeignKey(MT_Engine, null=True, blank=True, on_delete=models.SET_NULL)
     mt_raw = models.TextField()
+
+    @property
+    def target_language(self):
+        return self.segment.text_unit.document.job.target_language_code
 
 class Comment(models.Model):
     comment = models.TextField()

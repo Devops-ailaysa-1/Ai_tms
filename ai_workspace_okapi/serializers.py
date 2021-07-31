@@ -1,6 +1,9 @@
 from rest_framework import serializers
-from .models import Document, Segment, TextUnit
+from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine
 import json
+from google.cloud import translate_v2 as translate
+
+client = translate.Client()
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -133,4 +136,30 @@ class DocumentSerializerV2(DocumentSerializer):
         fields = ("text_unit_ser", "file", "job",
                   "total_word_count", "total_char_count",
                   "total_segment_count", "created_by", "document_id")
+
+class MT_RawSerializer(serializers.ModelSerializer):
+    mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
+
+    class Meta:
+        model = MT_RawTranslation
+        fields = (
+            "segment", 'mt_engine', 'mt_raw', "mt_engine_name", "target_language"
+        )
+
+        extra_kwargs = {
+            "mt_raw": {"required": False},
+        }
+
+    def to_internal_value(self, data):
+        # print("data--->", data)
+        data["mt_engine"] = data.get("mt_engine", 1)
+        return super().to_internal_value(data=data)
+
+    def create(self, validated_data):
+        segment = validated_data["segment"]
+        validated_data["mt_raw"]= client.translate(segment.source,
+                                    target_language=segment.target_language_code)\
+                                    .get("translatedText")
+        instance = MT_RawTranslation.objects.create(**validated_data)
+        return instance
 

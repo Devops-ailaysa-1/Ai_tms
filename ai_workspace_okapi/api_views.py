@@ -1,6 +1,6 @@
-from .serializers import DocumentSerializer, SegmentSerializer, DocumentSerializerV2, SegmentSerializerV2
+from .serializers import DocumentSerializer, SegmentSerializer, DocumentSerializerV2, SegmentSerializerV2, MT_RawSerializer
 from ai_workspace.serializers import TaskSerializer
-from .models import Document, Segment
+from .models import Document, Segment, MT_RawTranslation
 from rest_framework import viewsets
 from rest_framework import views
 from django.shortcuts import get_object_or_404
@@ -157,4 +157,20 @@ class SegmentsUpdateView(viewsets.ViewSet):
         if segment_serlzr.is_valid(raise_exception=True):
             segment_serlzr.save()
             return Response(segment_serlzr.data, status=201)
+
+class MT_RawView(views.APIView):
+    def get_object(self, segment_id):
+        mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
+        return mt_raw
+
+    def get(self, request, segment_id):
+        mt_raw = self.get_object(segment_id)
+        if mt_raw:
+            return Response(MT_RawSerializer(mt_raw).data, status=200)
+
+        mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id}, context={"request": request})
+        if mt_raw_serlzr.is_valid(raise_exception=True):
+            # mt_raw_serlzr.validated_data[""]
+            mt_raw_serlzr.save()
+            return Response(mt_raw_serlzr.data, status=201)
 
