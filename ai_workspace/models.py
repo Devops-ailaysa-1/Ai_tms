@@ -297,7 +297,7 @@ class Task(models.Model):
 
     @property
     def get_document_url(self):
-        return reverse("document", kwargs={"task_id": self.id})
+        return reverse("ws_okapi:document", kwargs={"task_id": self.id})
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)

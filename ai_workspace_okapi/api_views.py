@@ -12,7 +12,7 @@ from ai_workspace.models import Task
 from rest_framework.response import  Response
 from django.db.models import F
 import requests
-import json
+import json, os
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -22,6 +22,8 @@ from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from rest_framework.permissions import IsAuthenticated
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
+
+spring_host = os.environ.get("SPRING_HOST")
 
 class IsUserCompletedInitialSetup(permissions.BasePermission):
 
@@ -81,7 +83,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None
                          }
-            doc = requests.post(url="http://spring-service2:8080/getDocument/", data={
+            doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
