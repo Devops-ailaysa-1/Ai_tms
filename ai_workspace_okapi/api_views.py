@@ -81,7 +81,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None
                          }
-            doc = requests.post(url="http://localhost:8080/getDocument/", data={
+            doc = requests.post(url="http://spring-service2:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
