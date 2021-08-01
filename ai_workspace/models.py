@@ -74,7 +74,7 @@ class Project(ParanoidModel):
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.CASCADE, related_name="proj_mt_engine")
-    test = models.TextField(null=True, blank=True)
+#    test = models.TextField(null=True, blank=True)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
