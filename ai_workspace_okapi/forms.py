@@ -11,13 +11,25 @@ class DocumentListForm(forms.Form):
             "documents",
         )
 
-class SegmentListForm(forms.Form):
+class SegmentListForm(forms.ModelForm):
     segment = forms.ModelChoiceField(
         queryset=Segment.objects.all()
     )
 
 
     class Meta:
+        model = Segment
         fields = (
-            "segment"
+            "segment",
         )
+
+class SegmentForm(forms.ModelForm):
+    mt_raw = forms.CharField(widget=forms.Textarea(attrs={"readonly": True}))
+    class Meta:
+        model = Segment
+        fields = (
+            "coded_source", "target", "id"
+        )
+        widgets = {
+            "coded_source": forms.Textarea(attrs={"readonly": True})
+        }

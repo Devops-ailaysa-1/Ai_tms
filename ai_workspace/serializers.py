@@ -262,6 +262,7 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 
 class TaskSerializer(serializers.ModelSerializer):
 	source_file_path = serializers.CharField(source="file.get_source_file_path", read_only=True)
+	output_file_path = serializers.CharField(source="file.output_file_path", read_only=True)
 	source_language = serializers.CharField(source="job.source_language_code", read_only=True)
 	target_language = serializers.CharField(source="job.target_language_code", read_only=True)
 	document_url = serializers.URLField(source="get_document_url", read_only=True)
@@ -271,7 +272,7 @@ class TaskSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = ("source_file_path", "source_language",
 				  "target_language", "document_url","filename",
-				  "file", "job", "version", "assign_to",
+				  "file", "job", "version", "assign_to", 'output_file_path'
 				  )
 
 		extra_kwargs = {

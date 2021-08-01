@@ -1,4 +1,5 @@
-from .serializers import DocumentSerializer, SegmentSerializer, DocumentSerializerV2, SegmentSerializerV2, MT_RawSerializer
+from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
+                          SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3)
 from ai_workspace.serializers import TaskSerializer
 from .models import Document, Segment, MT_RawTranslation
 from rest_framework import viewsets
@@ -20,6 +21,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.http import  HttpResponse, JsonResponse
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from rest_framework.permissions import IsAuthenticated
+from django.http import  FileResponse
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 
@@ -52,7 +54,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         #  'source_language': 'sq', 'target_language': 'hy', 'document_url': '/workspace_okapi/document/4/',
         #  'filename': 'test1.txt', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
         fields = ['source_file_path', 'source_language', 'target_language',
-                     'extension', 'processor_name']
+                     'extension', 'processor_name', 'output_file_path']
         return fields
 
     erfogd = exact_required_fields_for_okapi_get_document
@@ -148,31 +150,106 @@ class SourceTMXFilesCreate(views.APIView):
         jobs, files = self.get_queryset(project_id=project_id)
         
 class SegmentsUpdateView(viewsets.ViewSet):
-    def get_object(self, segment_id):
+    @staticmethod
+    def get_object(segment_id):
         qs = Segment.objects.all()
         segment = get_object_or_404(qs, id = segment_id)
         return segment
 
-    def update(self, request, segment_id):
-        segment = self.get_object(segment_id)
-        segment_serlzr =  SegmentSerializerV2(segment, data=request.data, partial=True, context={"request": request})
+    @staticmethod
+    def get_update(segment, data,request):
+        segment_serlzr =  SegmentSerializerV2(segment, data=data, partial=True, context={"request": request})
         if segment_serlzr.is_valid(raise_exception=True):
             segment_serlzr.save()
-            return Response(segment_serlzr.data, status=201)
+            return segment_serlzr
+
+    def update(self, request, segment_id):
+        segment = self.get_object(segment_id)
+        segment_serlzr = self.get_update(segment, request.data, request)
+        return Response(segment_serlzr.data, status=201)
 
 class MT_RawView(views.APIView):
-    def get_object(self, segment_id):
-        mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
-        return mt_raw
 
-    def get(self, request, segment_id):
-        mt_raw = self.get_object(segment_id)
+    @staticmethod
+    def get_data(request, segment_id):
+        mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
-            return Response(MT_RawSerializer(mt_raw).data, status=200)
+            return MT_RawSerializer(mt_raw), 200
 
         mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id}, context={"request": request})
         if mt_raw_serlzr.is_valid(raise_exception=True):
             # mt_raw_serlzr.validated_data[""]
             mt_raw_serlzr.save()
-            return Response(mt_raw_serlzr.data, status=201)
+            return mt_raw_serlzr, 201
+
+    def get(self, request, segment_id):
+        data, status_code = self.get_data(request, segment_id)
+        return Response(data.data, status=status_code)
+
+class DocumentToFile(views.APIView):
+    permission_classes = [IsAuthenticated]
+    @staticmethod
+    def get_object(document_id):
+        qs = Document.objects.all()
+        document = get_object_or_404(qs, id=document_id)
+        return  document
+
+    def get(self, request, document_id):
+        res = self.document_data_to_file(request, document_id)
+        if res.status_code in [200, 201]:
+            file_path = res.text
+            if os.path.isfile(res.text):
+                if os.path.exists(file_path):
+                    with open(file_path, 'rb') as fh:
+                        response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
+                        response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+                        return response
+            # return JsonResponse({"output_file_path": res.text}, status=201)
+        return JsonResponse({"msg": "something went to wrong in okapi file processing"}, status=409)
+
+    @staticmethod
+    def document_data_to_file(request, document_id):
+        output_type = request.GET.get("output_type", "")
+        document = DocumentToFile.get_object(document_id)
+        doc_serlzr = DocumentSerializerV3(document)
+        data = doc_serlzr.data
+        if 'fileProcessed' not in data:
+            data['fileProcessed'] = True
+        if 'numberOfWords' not in data: # we can remove this duplicate field in future
+            data['numberOfWords'] = 0
+        task = document.task_set.first()
+        ser = TaskSerializer(task)
+        task_data = ser.data
+        DocumentViewByTask.correct_fields(task_data)
+        output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
+
+        pre, ext = os.path.splitext(task_data["output_file_path"])
+        if output_type == "XLIFF":
+            ext = ".xliff"
+        if output_type == "TMX":
+            ext = ".tmx"
+        task_data["output_file_path"] = pre + ext
+
+        params_data = {**task_data, "output_type": output_type}
+        res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+                     "fprm_file_path": None
+                     }
+        res = requests.post(
+            f'http://{spring_host}:8080/getTranslatedAsFile/',
+            data={
+                'document-json-dump': json.dumps(data),
+                "doc_req_res_params": json.dumps(res_paths),
+                "doc_req_params": json.dumps(params_data),
+            }
+        )
+        return res
+
+OUTPUT_TYPES = dict(
+    ORIGINAL = "ORIGINAL",
+    XLIFF = "XLIFF",
+    TMX = "TMX",
+)
+
+def output_types(request):
+    return JsonResponse(OUTPUT_TYPES, safe=False)
 

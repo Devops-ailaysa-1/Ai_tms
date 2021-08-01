@@ -1,7 +1,7 @@
 
 
 ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
-    ('.txt',): 'plain-text-processor',
+     ('.txt',): 'plain-text-processor',
      ('.odt', '.odp', '.ods'): 'openoffice-file-processor',
      ('.html', '.htm', '.xhtml'): 'html-processor',
      ('.tmx',): 'tmx-processor',

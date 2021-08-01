@@ -90,7 +90,7 @@ class TaskListView(LoginRequiredMixin, views.View):
     def get(self, request):
         form = TaskListForm()
         form.fields["tasks"].queryset =  (
-            form.fields["tasks"].queryset.filter(file__project__ai_user= request.user)
+            form.fields["tasks"].queryset.filter(file__project__ai_user=request.user)
         ).all()
         return render(request, "task-list-view.html", context={"form": form})
 

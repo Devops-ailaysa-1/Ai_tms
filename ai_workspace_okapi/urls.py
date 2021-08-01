@@ -10,6 +10,8 @@ urlpatterns= [
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
     path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put":"update"}), name="segment-update"),
     path("mt_raw/<int:segment_id>", api_views.MT_RawView.as_view(), name="mt-raw"),
+    path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(), name="document-convert-to-file"),
+    path("outputtypes", api_views.output_types, name="output-types"),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
@@ -17,5 +19,7 @@ urlpatterns = format_suffix_patterns(urlpatterns)
 urlpatterns+=[
     path("document_list/dj", views.DocumentListView.as_view(), name="document-list"),
     path("segment_list/dj/<int:document_id>", views.SegmentListView.as_view(), name="segments-list"),
+    path("segment/update/dj/<int:segment_id>", views.SegmentUpdateView.as_view(), name="segment-update-dj"),
+    path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file")
 
 ]

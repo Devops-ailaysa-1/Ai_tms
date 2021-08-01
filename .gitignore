@@ -40,3 +40,5 @@ project management and workspace apis .postman_collection
 my-data.pkl
 sqlalchemy_models.py
 references.md
+Source.aux
+Source.log

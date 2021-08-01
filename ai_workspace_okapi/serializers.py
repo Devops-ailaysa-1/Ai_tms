@@ -38,23 +38,25 @@ class SegmentSerializer(serializers.ModelSerializer):
             "segment_id",
         )
 
-        read_only_fields = (
-            "tagged_source",
-            "target_tags",
-            # "id",
-        )
-
         extra_kwargs = {
             "source": {"write_only": True},
             "coded_source": {"write_only": True},
             "coded_brace_pattern": {"write_only": True},
             "coded_ids_sequence": {"write_only": True},
+            "tagged_source": {"read_only": True},
+            "target_tags": {"read_only": True},
+            # "id",
         }
 
     def to_internal_value(self, data):
         # print(self)
         data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
         return super().to_internal_value(data=data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # print("-------------------------> called")
+        return representation
 
 class SegmentSerializerV2(SegmentSerializer):
     class Meta(SegmentSerializer.Meta):
@@ -63,6 +65,16 @@ class SegmentSerializerV2(SegmentSerializer):
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
+class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
+    class Meta:
+        # pass
+        model = Segment
+        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
+        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
+        return ret
 
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)
@@ -82,6 +94,22 @@ class TextUnitSerializer(serializers.ModelSerializer):
         [(data["okapi_ref_translation_unit_id"], data["segment_ser"])] = list(data.items())
         return super().to_internal_value(data=data)
 
+class TextUnitSerializerV2(serializers.ModelSerializer):
+    segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
+
+    class Meta:
+        model = TextUnit
+        fields = (
+            "segment_ser","okapi_ref_translation_unit_id"
+        )
+
+    def to_representation(self, instance):
+        ret = super(TextUnitSerializerV2, self).to_representation(instance=instance)
+        ret[ret.pop("okapi_ref_translation_unit_id")] = (
+            ret.pop("segment_ser")
+        )
+        return ret
+
 class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
     text_unit_ser = TextUnitSerializer(many=True,  write_only=True)
 
@@ -95,7 +123,8 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             "file": {"write_only": True},
             "job": {"write_only": True},
             "created_by": {"write_only": True},
-            "id": {"read_only": True}
+            "id": {"read_only": True, "source": "get_user_email"},
+            # "text_unit_ser": dict(source="document_text_unit_set", write_only=True)
         }
 
     def to_internal_value(self, data):
@@ -137,6 +166,23 @@ class DocumentSerializerV2(DocumentSerializer):
                   "total_word_count", "total_char_count",
                   "total_segment_count", "created_by", "document_id")
 
+class DocumentSerializerV3(DocumentSerializerV2):
+    text = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set")
+    filename = serializers.CharField(read_only=True, source="file.filename")
+    class Meta(DocumentSerializerV2.Meta):
+        model = Document
+        fields = (
+            "text",  'total_word_count', 'total_char_count', 'total_segment_count', "filename"
+        )
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance=instance)
+        coll = {}
+        for itr in ret.pop("text", []):
+            coll.update(itr)
+        ret["text"] = coll
+        return ret
+
 class MT_RawSerializer(serializers.ModelSerializer):
     mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
 
@@ -162,4 +208,54 @@ class MT_RawSerializer(serializers.ModelSerializer):
                                     .get("translatedText")
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
+
+# //////////////////////////////////// References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+
+# DocumentSerializer(<Document: Document object (19)>):
+#     text_unit_ser = TextUnitSerializer(many=True, source='document_text_unit_set'):
+#         okapi_ref_translation_unit_id = CharField(style={'base_template': 'textarea.html'})
+#         document = PrimaryKeyRelatedField(queryset=Document.objects.all(), required=False, write_only=True)
+#         segment_ser = SegmentSerializer(many=True, write_only=True):
+#             source = CharField(style={'base_template': 'textarea.html'}, write_only=True)
+#             target = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'})
+#             coded_source = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
+#             coded_brace_pattern = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
+#             coded_ids_sequence = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
+#             tagged_source = CharField(read_only=True, style={'base_template': 'textarea.html'})
+#             target_tags = CharField(read_only=True, style={'base_template': 'textarea.html'})
+#             segment_id = IntegerField(read_only=True, source='id')
+#     file = PrimaryKeyRelatedField(queryset=File.objects.all(), write_only=True)
+#     job = PrimaryKeyRelatedField(queryset=Job.objects.all(), write_only=True)
+#     total_word_count = IntegerField()
+#     total_char_count = IntegerField()
+#     total_segment_count = IntegerField()
+#     created_by = PrimaryKeyRelatedField(allow_null=True, queryset=AiUser.objects.all(), required=False, write_only=True)
+#     id = IntegerField(label='ID', read_only=True)
+
+
+# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ ////////////////////////////////////////////////////////
+#
+# DocumentSerializer(<Document: Document object (19)>):
+#     text_unit_ser = TextUnitSerializer(many=True, source='document_text_unit_set', write_only=True):
+#         okapi_ref_translation_unit_id = CharField(style={'base_template': 'textarea.html'})
+#         document = PrimaryKeyRelatedField(queryset=Document.objects.all(), required=False, write_only=True)
+#         segment_ser = SegmentSerializer(many=True, write_only=True):
+#             source = CharField(style={'base_template': 'textarea.html'}, write_only=True)
+#             target = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'})
+#             coded_source = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
+#             coded_brace_pattern = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
+#             coded_ids_sequence = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
+#             tagged_source = CharField(read_only=True, style={'base_template': 'textarea.html'})
+#             target_tags = CharField(read_only=True, style={'base_template': 'textarea.html'})
+#             segment_id = IntegerField(read_only=True, source='id')
+#     file = PrimaryKeyRelatedField(queryset=File.objects.all(), write_only=True)
+#     job = PrimaryKeyRelatedField(queryset=Job.objects.all(), write_only=True)
+#     total_word_count = IntegerField()
+#     total_char_count = IntegerField()
+#     total_segment_count = IntegerField()
+#     created_by = PrimaryKeyRelatedField(allow_null=True, queryset=AiUser.objects.all(), required=False, write_only=True)
+#     id = IntegerField(label='ID', read_only=True)
+
 
