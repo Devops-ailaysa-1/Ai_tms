@@ -131,7 +131,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         segments = document.segments
         len_segments = segments.count()
         page_len = self.paginate_queryset(range(1,len_segments+1), request)
-        print(page_len)
+        # print(page_len)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
         [i.update({"segment_count":j}) for i,j in  zip(segments_ser.data, page_len)]

@@ -22,6 +22,7 @@ class TranslationStatus(models.Model):
 class Segment(models.Model):
     source = models.TextField()
     target = models.TextField(null=True, blank=True)
+    temp_target = models.TextField(null=True, blank=True)
     coded_source = models.TextField(null=True, blank=True)
     tagged_source = models.TextField(null=True, blank=True)
     coded_brace_pattern = models.TextField(null=True, blank=True)
@@ -44,11 +45,25 @@ class Segment(models.Model):
     @property
     def target_language_code(self):
         return self.text_unit.document.job.target_language_code
-    #
-    # def segment_count(self):
-    #     return self.text_unit
+
+    @property
+    def get_temp_target(self):
+        return '' if self.temp_target == None else self.temp_target
+
+    def save(self, *args, **kwargs):
+        print("save")
+        return super(Segment, self).save(*args, **kwargs)
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
+
+# class TempTargetSave(models.Model):
+#     segment = models.OneToOneField(Segment, null=True, on_delete=models.CASCADE,
+#                                    related_name="segment_temp_target")
+#     target = models.TextField(null=True, blank=True)
+#
+#     @property
+#     def get_target(self):
+#         return '' if self.target == None else self.target
 
 class MT_RawTranslation(models.Model):
 

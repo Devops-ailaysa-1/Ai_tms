@@ -25,6 +25,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 
 class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
+    temp_target = serializers.CharField(read_only=True, source="get_temp_target")
     class Meta:
         model = Segment
         fields = (
@@ -36,6 +37,7 @@ class SegmentSerializer(serializers.ModelSerializer):
             "tagged_source",
             "target_tags",
             "segment_id",
+            "temp_target",
         )
 
         extra_kwargs = {
@@ -59,11 +61,20 @@ class SegmentSerializer(serializers.ModelSerializer):
         return representation
 
 class SegmentSerializerV2(SegmentSerializer):
+    temp_target = serializers.CharField()
     class Meta(SegmentSerializer.Meta):
-        fields = ("target", "id")
+        fields = ("target", "id", "temp_target")
+        #
 
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
+
+    def update(self, instance, validated_data):
+        print(validated_data)
+        if "target" in validated_data:
+            instance.temp_target = instance.target
+        # print(instance.target)
+        return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
     class Meta:
