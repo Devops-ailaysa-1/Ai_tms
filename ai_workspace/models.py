@@ -181,6 +181,14 @@ class Job(models.Model):
     def target_language_code(self):
         return self.target_language.locale.first().locale_code
 
+    @property
+    def source__language(self):
+        return self.source_language.locale.first().language
+
+    @property
+    def target__language(self):
+        return self.target_language.locale.first().language
+
     def __str__(self):
         return self.source_language.language+"->"+self.target_language.language
 
