@@ -9,14 +9,16 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
-                     VendorMtpeEngines)
+                     VendorMtpeEngines, AssignedVendors)
 from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,
-                          VendorLanguagePairSerializer,
-                          VendorServiceInfoSerializer, VendorsInfoSerializer)
+                          VendorLanguagePairSerializer,AssignedVendorSerializer,
+                          VendorServiceInfoSerializer, VendorsInfoSerializer,
+                          Jobboard_detailSerializer)
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields)
@@ -211,24 +213,6 @@ class VendorLangPairCreate(viewsets.ViewSet):
         return
 
 
-
-# class VendorBankInfoListCreate(viewsets.ViewSet):
-#     def list(self,request):
-#         queryset = self.get_queryset()
-#         serializer = VendorLanguagePairSerializer(queryset,many=True)
-#         return Response(serializer.data)
-#
-#
-# class VendorServiceInfoView(viewsets.ViewSet):
-#     def list(self,request):
-#         context=dict(request=RequestFactory().get('/'))
-#         queryset=self.get_queryset()
-#         serializer = VendorServiceInfoSerializer(queryset,many=True,context=context)
-#         return Response(serializer.data)
-#     def get_queryset(self):
-#         queryset=VendorServiceInfo.objects.all()
-#         return queryset
-
 class VendorServiceInfoView(viewsets.ModelViewSet):
     queryset = VendorServiceInfo.objects.all()
     serializer_class = VendorServiceInfoSerializer
@@ -357,6 +341,69 @@ def get_vendor_detail(request):
     except:
         result["Content-Type"]=[]
     return JsonResponse({"out":result},safe=False)
+
+
+
+@api_view(['POST',])
+def assign_vendor_to_customer(request):
+    uid=request.POST.get('vendor_id')
+    vendor_id=AiUser.objects.get(uid=uid).id
+    print(vendor_id)
+    customer_id=request.user.id
+    serializer=AssignedVendorSerializer(data={"vendor":vendor_id,"customer":customer_id})
+    if serializer.is_valid():
+        serializer.save()
+        return Response(data={"Message":"Vendor Assigned to User Successfully"})
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST',])
+def post_job_primary_details(request):
+    project_id=request.POST.get('project_id')
+    jobslist=Job.objects.filter(project_id = project_id).all()
+    out=[]
+    result={}
+    for i in jobslist:
+        jobs=[]
+        sl=Job.objects.get(id=i.id).source_language_id
+        tl=Job.objects.get(id=i.id).target_language_id
+        jobs=[{"source_lang":sl,"target_lang":tl}]
+        out.extend(jobs)
+    result["lang-pair"]=out
+    subject_field=ProjectSubjectField.objects.get(project_id=project_id).subject_id
+    result["subject_field"]=subject_field
+    content_type=ProjectContentType.objects.get(project_id=project_id).content_type_id
+    result["content_type"]=content_type
+    return JsonResponse({"res":result},safe=False)
+
+
+class JobPostInfoCreateView(APIView):
+
+    def get(self, request,id):
+        try:
+            queryset = jobboard_details.objects.get(job_id=id)
+            serializer = Jobboard_detailSerializer(queryset)
+            return Response(serializer.data)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def post(self, request,id):
+        # data = request.POST.dict()
+        print({**request.POST.dict(),'job':id})
+        serializer = Jobboard_detailSerializer(data={**request.POST.dict(),'job':id})#,context={'request':request})
+        print(serializer.is_valid())
+        print(serializer.errors)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+    def put(self,request):
+        # data = request.POST.dict()
+        job_info = jobboard_details.objects.get(job_id=id)
+        serializer = Jobboard_detailSerializer(job_info,data={**request.POST.dict(),'job':id},partial=True)
+        if serializer.is_valid():
+            serializer.save_update()
+            return Response(serializer.data)
+
 
 # @api_view(['POST',])
 # def get_vendor_detail_admin(request):

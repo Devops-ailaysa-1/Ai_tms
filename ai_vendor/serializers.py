@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware
+from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware,AssignedVendors,jobboard_details
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
@@ -141,22 +141,31 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          try:
              if service_type_data:
                  for j in service_type_data:
+                     print(j)
                      VendorServiceTypes.objects.create(lang_pair_id=lang.id,**j)
-                     if lang_reverse:
-                         VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j)
+                     try:
+                         if lang_reverse:
+                             VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j)
+                     except Exception as error:
+                         print("Error",error)
+
          except:
-              servicetype_datas=VendorServiceTypes.objects.filter(lang_pair_id=existing_lang_pair_id)
-              print(servicetype_datas)
-              for data in servicetype_datas:
-                  data.pk=None
-                  data.lang_pair_id=lang.id
-                  data.save()
+             servicetype_datas=VendorServiceTypes.objects.filter(lang_pair_id=existing_lang_pair_id)
+             print(servicetype_datas)
+             for data in servicetype_datas:
+               data.pk=None
+               data.lang_pair_id=lang.id
+               data.save()
          try:
              if service_data:
                  for i in service_data:
                      VendorServiceInfo.objects.create(lang_pair_id=lang.id,**i)
-                     if lang_reverse:
-                         VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**i)
+                     try:
+                         if lang_reverse:
+                             VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**j)
+                     except Exception as error:
+                         print("Error",error)
+
          except:
              service_datas=VendorServiceInfo.objects.filter(lang_pair_id=existing_lang_pair_id)
              print(service_datas)
@@ -253,7 +262,21 @@ class LanguagePairSerializer(serializers.ModelSerializer):
     #     vendor = VendorLanguagePair.objects.create(**self.validated_data, user_id=user_id)
     #     return vendor
 
-# class User_List_Serializer(serializers.ModelSerializer):
-#     class Meta:
-#         model=AiUser
-#         fields=('id','uid','email','fullname',)
+
+class AssignedVendorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model= AssignedVendors
+        fields="__all__"
+
+
+class Jobboard_detailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=jobboard_details
+        fields="__all__"
+
+    def save(self):
+        job_detail = jobboard_details.objects.create(**self.validated_data)
+        return job_detail
+
+    def save_update(self):
+        return super().save()
