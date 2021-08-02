@@ -84,7 +84,6 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
         project_id = self.request.query_params.get('project_id')
         return ProjectContentType.objects.filter(project__id=project_id)
 
-
     def list(self,request):
         queryset = self.get_queryset()
         # pagin_tc = self.paginate_queryset( queryset, request , view=self )
@@ -261,9 +260,19 @@ class TaskView(APIView):
         tasks_serlzr = TaskSerializer(tasks, many=True)
         return Response(tasks_serlzr.data, status=200)
 
+    @staticmethod
+    def get_object(data):
+        obj = Task.objects.filter(**data).first()
+        return obj
+
     def post(self, request):
-        task_serlzr = TaskSerializer(data=request.POST.dict(), context={"assign_to": self.request.user.id})
-        print("initial data---->", task_serlzr.initial_data)
+        obj = self.get_object({**request.POST.dict(), "assign_to": self.request.user.id})
+        if obj:
+            task_ser = TaskSerializer(obj)
+            return Response(task_ser.data, status=200)
+
+        task_serlzr = TaskSerializer(data=request.POST.dict(), context={# Self assign
+            "assign_to": self.request.user.id})
         if task_serlzr.is_valid(raise_exception=True):
             task_serlzr.save()
             return Response({"msg": task_serlzr.data}, status=200)

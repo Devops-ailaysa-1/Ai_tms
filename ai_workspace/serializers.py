@@ -7,6 +7,7 @@ import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from django.shortcuts import reverse
+from rest_framework.validators import UniqueTogetherValidator
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -281,6 +282,14 @@ class TaskSerializer(serializers.ModelSerializer):
 			"version": {"write_only": True},
 			"assign_to": {"write_only": True},
 		}
+
+		validators = [
+			UniqueTogetherValidator(
+				queryset=Task.objects.all(),
+				fields=['file', 'job', 'version']
+			)
+		]
+
 	def to_internal_value(self, data):
 		data["version"] = 1
 		data["assign_to"] = self.context.get("assign_to", None)
@@ -293,6 +302,8 @@ class TaskSerializer(serializers.ModelSerializer):
 			representation["processor_name"] = get_processor_name(instance.file.file.path)\
 												.get("processor_name", None)
 		return representation
+
+
 
 class TaskSerializerv2(TaskSerializer):
 	class Meta(TaskSerializer.Meta):
