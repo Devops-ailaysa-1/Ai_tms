@@ -12,6 +12,7 @@ urlpatterns= [
     path("mt_raw/<int:segment_id>", api_views.MT_RawView.as_view(), name="mt-raw"),
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(), name="document-convert-to-file"),
     path("outputtypes", api_views.output_types, name="output-types"),
+    path("translation_status/list", api_views.TranslationStatusList.as_view(), name="translation-status-list"),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

@@ -1,7 +1,8 @@
 from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
-                          SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3)
+                          SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
+                          TranslationStatusSerializer)
 from ai_workspace.serializers import TaskSerializer
-from .models import Document, Segment, MT_RawTranslation
+from .models import Document, Segment, MT_RawTranslation, TranslationStatus
 from rest_framework import viewsets
 from rest_framework import views
 from django.shortcuts import get_object_or_404
@@ -253,3 +254,8 @@ OUTPUT_TYPES = dict(
 def output_types(request):
     return JsonResponse(OUTPUT_TYPES, safe=False)
 
+class TranslationStatusList(views.APIView):
+    def get(self, request):
+        qs = TranslationStatus.objects.all()
+        ser = TranslationStatusSerializer(qs, many=True)
+        return Response(ser.data, status=200)

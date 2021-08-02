@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine
+from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus
 import json
 from google.cloud import translate_v2 as translate
 
@@ -26,6 +26,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
     temp_target = serializers.CharField(read_only=True, source="get_temp_target")
+    status = serializers.CharField(read_only=True, source="status.status_name")
     class Meta:
         model = Segment
         fields = (
@@ -38,6 +39,7 @@ class SegmentSerializer(serializers.ModelSerializer):
             "target_tags",
             "segment_id",
             "temp_target",
+            "status",
         )
 
         extra_kwargs = {
@@ -62,8 +64,9 @@ class SegmentSerializer(serializers.ModelSerializer):
 
 class SegmentSerializerV2(SegmentSerializer):
     temp_target = serializers.CharField()
+    status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
     class Meta(SegmentSerializer.Meta):
-        fields = ("target", "id", "temp_target")
+        fields = ("target", "id", "temp_target", "status")
         #
 
     def to_internal_value(self, data):
@@ -219,6 +222,11 @@ class MT_RawSerializer(serializers.ModelSerializer):
                                     .get("translatedText")
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
+
+class TranslationStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TranslationStatus
+        fields = "__all__"
 
 # //////////////////////////////////// References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
