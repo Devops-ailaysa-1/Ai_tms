@@ -79,8 +79,7 @@ class MT_RawTranslation(models.Model):
 
 class Comment(models.Model):
     comment = models.TextField()
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE)
-
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_comments_set")
 
 class Document(models.Model):
     file = models.ForeignKey("ai_workspace.File", on_delete=models.CASCADE, related_name="file_document_set")
