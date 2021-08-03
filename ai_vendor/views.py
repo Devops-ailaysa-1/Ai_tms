@@ -9,6 +9,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import IntegrityError
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
@@ -26,6 +27,15 @@ from ai_auth.models import PersonalInformation, AiUser, OfficialInformation, Pro
 import json,requests
 from django.http import JsonResponse
 
+
+
+def integrity_error(func):
+    def decorator(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except IntegrityError:
+            return Response({'message': "Integrity error"}, 409)
+    return decorator
 
 class VendorsInfoCreateView(APIView):
 
@@ -98,6 +108,7 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
                             Q(id=search_word))
                 print(queryset)
         return queryset
+    @integrity_error
     def create(self,request):
         user_id = request.user.id
         data={**request.POST.dict()}
@@ -221,9 +232,13 @@ class VendorServiceInfoView(viewsets.ModelViewSet):
 @api_view(['GET','POST',])
 def SpellCheckerApiCheck(request):
     doc_id= request.POST.get("doc_id")
-    result=requests.get(f"http://157.245.99.128:8005/api/getLangName/{doc_id}/")
+    result=requests.get(f"http://157.245.99.128:8086/workspace/getLangName/{doc_id}/")
     content=result.json()
-    targetLanguage=content.get("TargetLanguage")
+    targetLanguage=content.get("target_lang")
+    print("TARGET LANGUAGE--->", targetLanguage)
+    # result=requests.get(f"http://157.245.99.128:8005/api/getLangName/{doc_id}/")
+    # content=result.json()
+    # targetLanguage=content.get("TargetLanguage")
     target_lang_id=Languages.objects.get(language=targetLanguage).id
     try:
         spellchecker_id=SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
