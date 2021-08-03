@@ -8,6 +8,7 @@ from django.db.models.constraints import UniqueConstraint
 from ai_auth.models import AiUser,user_directory_path
 from ai_workspace.models import Job
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
+from django.db.models import Q
 
 
 def vendor_directory_path(instance, filename):
@@ -101,8 +102,13 @@ class VendorLanguagePair(ParanoidModel):
     target_lang=models.ForeignKey(Languages,blank=True, null=True, related_name='vendor_target_lang', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
     class Meta:
-       unique_together = ("user", "source_lang","target_lang","deleted_at")
+
+       constraints = [
+            UniqueConstraint(fields=['user', 'source_lang', 'target_lang'], condition=Q(deleted_at=None), name='unique_if_not_deleted')
+        ]
+    
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)

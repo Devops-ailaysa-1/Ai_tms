@@ -114,7 +114,6 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
         # data["translationfile"] = [{'translation_file': file} for file in data["translation_files"]]
         # data["MtpeSamples"] = [{"sample_file":file} for file in data["mtpe_samples"]]
 
-
      def create(self,validated_data):
          user_id=self.context["request"].user.id
          print("user_id---->",user_id)
@@ -129,15 +128,27 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
              reverse =validated_data.pop('apply_for_reverse')
          print("NEW---->",validated_data)
          try:
-             if reverse:
-                 source_new=validated_data.get("target_lang_id")
-                 target_new=validated_data.get("source_lang_id")
-                 data_new={"source_lang_id":source_new,"target_lang_id":target_new,"user_id":user_id}
-                 lang_reverse = VendorLanguagePair.objects.create(**data_new)
-                 lang= VendorLanguagePair.objects.create(**validated_data)
+             if bool(int(reverse)):
+                 try:
+                     if validated_data.get("source_lang_id"):
+                         source_new=validated_data.get("target_lang_id")
+                         target_new=validated_data.get("source_lang_id")
+                         data_new={"source_lang_id":source_new,"target_lang_id":target_new,"user_id":user_id}
+                         lang_reverse = VendorLanguagePair.objects.create(**data_new)
+                         lang= VendorLanguagePair.objects.create(**validated_data)
+                 except Exception as error:
+                     return Response({'message': error}, 409)
+                 try:
+                     if existing_lang_pair_id:
+                         print(existing_lang_pair_id)
+                         source_lang_id=VendorLanguagePair.objects.get(id=existing_lang_pair_id).source_lang_id
+                         target_lang_id=VendorLanguagePair.objects.get(id=existing_lang_pair_id).target_lang_id
+                         data_new = {"source_lang_id":target_lang_id,"target_lang_id":source_lang_id,"user_id":user_id}
+                         lang = VendorLanguagePair.objects.create(**data_new)
+                 except Exception as error1:
+                     return Response({'message': error1}, 409)
          except:
              lang = VendorLanguagePair.objects.create(**validated_data)
-         print("langId---->",lang.id)
          try:
              if service_type_data:
                  for j in service_type_data:
@@ -146,25 +157,25 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
                      try:
                          if lang_reverse:
                              VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j)
-                     except Exception as error:
-                         print("Error",error)
-
+                     except Exception as error3:
+                         print("Error3---->",error3)
          except:
-             servicetype_datas=VendorServiceTypes.objects.filter(lang_pair_id=existing_lang_pair_id)
-             print(servicetype_datas)
-             for data in servicetype_datas:
-               data.pk=None
-               data.lang_pair_id=lang.id
-               data.save()
+             if existing_lang_pair_id:
+                  servicetype_datas=VendorServiceTypes.objects.filter(lang_pair_id=existing_lang_pair_id)
+                  print(servicetype_datas)
+                  for data in servicetype_datas:
+                    data.pk=None
+                    data.lang_pair_id=lang.id
+                    data.save()
          try:
              if service_data:
                  for i in service_data:
                      VendorServiceInfo.objects.create(lang_pair_id=lang.id,**i)
                      try:
                          if lang_reverse:
-                             VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**j)
-                     except Exception as error:
-                         print("Error",error)
+                             VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**i)
+                     except Exception as error4:
+                         print("Error4--->",error4)
 
          except:
              service_datas=VendorServiceInfo.objects.filter(lang_pair_id=existing_lang_pair_id)
