@@ -236,10 +236,8 @@ def SpellCheckerApiCheck(request):
     content=result.json()
     targetLanguage=content.get("target_lang")
     print("TARGET LANGUAGE--->", targetLanguage)
-    # result=requests.get(f"http://157.245.99.128:8005/api/getLangName/{doc_id}/")
-    # content=result.json()
-    # targetLanguage=content.get("TargetLanguage")
     target_lang_id=Languages.objects.get(language=targetLanguage).id
+    print(target_lang_id)
     try:
         spellchecker_id=SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
         print(spellchecker_id)
