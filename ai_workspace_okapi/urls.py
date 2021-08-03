@@ -13,6 +13,10 @@ urlpatterns= [
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(), name="document-convert-to-file"),
     path("outputtypes", api_views.output_types, name="output-types"),
     path("translation_status/list", api_views.TranslationStatusList.as_view(), name="translation-status-list"),
+    path("source/segments/filter/<int:document_id>", api_views.SourceSegmentsListView.as_view({"post": "post"}), name="seg-filter"),
+    path("target/segments/filter/<int:document_id>", api_views.TargetSegmentsListAndUpdateView.as_view({"post": "post", "put":"update"}), name="seg-filter"),
+    path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
+    path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

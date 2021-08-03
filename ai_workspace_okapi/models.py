@@ -4,6 +4,8 @@ from django.db import models
 from django.db.models.signals import post_save, pre_save
 from .signals import set_segment_tags_in_source_and_target
 import json
+from ai_auth.models import AiUser
+from ai_staff.models import Languages
 
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
@@ -104,3 +106,10 @@ class Document(models.Model):
     @property
     def segments(self):
         return self.get_segments()
+
+class FontSize(models.Model):
+    ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,
+                                   related_name="user_font_size_set")
+    font_size = models.IntegerField()
+    language = models.ForeignKey(Languages, on_delete=models.CASCADE,
+                                 related_name="language_font_size_set")

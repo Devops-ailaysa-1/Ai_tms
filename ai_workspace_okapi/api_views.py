@@ -1,8 +1,8 @@
 from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
-                          TranslationStatusSerializer)
+                          TranslationStatusSerializer, FontSizeSerializer)
 from ai_workspace.serializers import TaskSerializer
-from .models import Document, Segment, MT_RawTranslation, TranslationStatus
+from .models import Document, Segment, MT_RawTranslation, TranslationStatus, FontSize
 from rest_framework import viewsets
 from rest_framework import views
 from django.shortcuts import get_object_or_404
@@ -14,7 +14,7 @@ from ai_workspace.models import Task
 from rest_framework.response import  Response
 from django.db.models import F
 import requests
-import json, os
+import json, os, re
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -22,6 +22,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.http import  HttpResponse, JsonResponse
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import JSONParser
 from django.http import  FileResponse
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -38,8 +39,6 @@ class IsUserCompletedInitialSetup(permissions.BasePermission):
 class ServiceUnavailable(APIException):
     status_code = 503
     default_detail = 'Service temporarily unavailable, try again later.'
-
-
 
 class DocumentViewByTask(views.APIView, PageNumberPagination):
     permission_classes = [IsAuthenticated]
@@ -259,3 +258,139 @@ class TranslationStatusList(views.APIView):
         qs = TranslationStatus.objects.all()
         ser = TranslationStatusSerializer(qs, many=True)
         return Response(ser.data, status=200)
+
+
+class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
+    PAGE_SIZE = page_size = 20
+    lookup_field = "source"
+
+    @staticmethod
+    def get_queryset(request, data, document_id, lookup_field):
+        qs = Document.objects.all()
+        document = get_object_or_404(qs, id=document_id)
+        segments_all = segments = document.segments
+        status_list = data.get("status_list", [])
+        if status_list:
+            segments = segments.filter(status__status_id__in=status_list).all()
+            if not segments:
+                return segments_all, 422
+
+        search_word = data.get("search_word", None)
+        if search_word in [None, '']:
+            return segments_all, 422
+
+        match_case = data.get("match_case", False)
+        exact_word = data.get("exact_word", False)
+
+        if match_case and exact_word:
+            segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w){search_word}(?!\w)'})
+        elif not(match_case or exact_word):
+            segments = segments.filter(**{f'{lookup_field}__contains':f'{search_word}'})
+        elif match_case:
+            segments = segments.filter(**{f'{lookup_field}__regex':f'{search_word}'})
+        elif exact_word:
+            segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
+
+        if not segments:
+            return segments_all, 422
+        return segments, 200
+
+    def post(self, request, document_id):
+        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
+        page_segments = self.paginate_queryset(segments, request, view=self)
+        segments_ser = SegmentSerializer(page_segments, many=True)
+        res = self.get_paginated_response(segments_ser.data)
+        res.status_code = status
+        return res
+
+class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
+    lookup_field = "target"
+
+    def paginate_response(self, segments, request, status):
+        page_segments = self.paginate_queryset(segments, request, view=self)
+        segments_ser = SegmentSerializer(page_segments, many=True)
+        res = self.get_paginated_response(segments_ser.data)
+        res.status_code = status
+        return res
+
+    def post(self, request, document_id):
+        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
+        return self.paginate_response(segments, request, status)
+
+    @staticmethod
+    def update_segments(request, data, segments):
+        status_list = data.get("status_list",[])
+        search_word = data.get('search_word', '')
+        replace_word = data.get('replace_word', '')
+        match_case = data.get('match_case', False)
+        exact_word = data.get('exact_word', False)
+
+        if exact_word:
+            if match_case:
+                regex = re.compile(f'(?<!\w){search_word}(?!\w)')
+            else:
+                regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
+        else:
+            if match_case:
+                regex = re.compile(search_word)
+            else:
+                regex = re.compile(r'((?i)' + search_word + r')')
+
+        for instance in segments:
+            instance.temp_target = re.sub(regex, replace_word, instance.temp_target)
+            instance.save()
+        return segments, 200
+
+    def update(self, request, document_id):
+        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
+        if status != 422:
+            segments, status = self.update_segments(request, request.data, segments)
+        return self.paginate_response(segments, request, status)
+
+class ProgressView(views.APIView):
+    confirm_list = [102, 104]
+
+    @staticmethod
+    def get_object(document_id):
+        document = get_object_or_404(
+            Document.objects.all(), id=document_id
+        )
+        return document
+
+    @staticmethod
+    def get_progress(document, confirm_list):
+        total_segment_count = document.total_segment_count
+        segments_confirmed_count = document.segments.filter(
+            status__status_id__in=confirm_list
+        ).count()
+        return total_segment_count, segments_confirmed_count
+
+    def get(self, request, document_id):
+        document = self.get_object(document_id)
+        total_segment_count, segments_confirmed_count = self.get_progress(document, self.confirm_list)
+        return JsonResponse(
+            dict(total_segment_count=total_segment_count,
+                 segments_confirmed_count=segments_confirmed_count), safe=False
+        )
+
+class FontSizeView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    @staticmethod
+    def get_object(data, request):
+        obj = FontSize.objects.filter(ai_user_id=request.user.id, language_id=data.get("language", None)).first()
+        return  obj
+
+    def post(self, request):
+        obj = self.get_object(request.POST.dict(), request)
+        if obj is not None:
+            ser = FontSizeSerializer(instance=obj, data={**request.POST.dict(), "ai_user": request.user.id})
+            if ser.is_valid(raise_exception=True):
+                ser.save()
+                return Response(ser.data, status=202)
+
+        ser = FontSizeSerializer(data={**request.POST.dict(), "ai_user": request.user.id})
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=201)
+
