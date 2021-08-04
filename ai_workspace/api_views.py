@@ -7,9 +7,9 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
                             ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer,
-                          FileSerializerv2, FileSerializerv3)
+                          FileSerializerv2, FileSerializerv3, TmxFileSerializer, PentmWriteSerializer)
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject
+from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -351,6 +351,39 @@ class ProjectReportAnalysis(APIView):
             return JsonResponse({"msg": res.text}, safe=False)
         else:
             return JsonResponse({"msg": "something went to wrong"}, safe=False)
+
+class TmxFileView(viewsets.ViewSet):
+
+    @staticmethod
+    def TmxToPenseiveWrite(data):
+        if len(data)==0:
+            return
+        project_id = data[0]["project"]
+        project = Project.objects.get(id=project_id)
+        data = PentmWriteSerializer(project).data
+
+        res = requests.post("http://localhost:8080/project/pentm/create",
+                            data={"pentm_params": json.dumps(data)})
+        if res.status_code == 200:
+            for tmx_data in res.json():
+                instance = project.project_tmx_files.filter(tmx_file=tmx_data.pop('tmx_file','')).first()
+                ser = TmxFileSerializer(instance, data=tmx_data, partial=True)
+                if ser.is_valid(raise_exception=True):
+                    ser.save()
+            return JsonResponse(res.json(), safe=False)
+        else:
+            return JsonResponse({"msg": "Something went to wrong in tmx to pentm processing"}, status=res.status_code)
+
+    def create(self, request):
+        data = {**request.POST.dict(), "tmx_files": request.FILES.getlist("tmx_files")}
+        ser_data = TmxFileSerializer.prepare_data(data)
+        ser = TmxFileSerializer(data=ser_data, many=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return self.TmxToPenseiveWrite(ser.data)
+
+
+
 
 
 # class AssignTaskView(viewsets.ModelViewSet):

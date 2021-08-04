@@ -17,6 +17,7 @@ from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document
 from ai_staff.models import ParanoidModel
 from django.shortcuts import reverse
+from django.core.validators import FileExtensionValidator
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -119,7 +120,25 @@ class Project(ParanoidModel):
     def source_language(self):
         return self.project_jobs_set.first().source_language_code
 
+    @property
+    def source_language_code(self):
+        return self.project_jobs_set.first().source_language_code
 
+    @property
+    def target_language_codes(self):
+        return [job.target_language_code for job in self.project_jobs_set.all()]
+
+    @property
+    def pentm_path(self):
+        return self.project_penseivetm.penseive_tm_dir_path
+
+    @property
+    def tmx_files_path(self):
+        return [tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.all()]
+
+    @property
+    def tmx_files_path_not_processed(self):
+        return [tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.filter(is_processed=False).all()]
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -315,6 +334,18 @@ class Task(models.Model):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
+
+class TmxFile(models.Model):
+
+    def tmx_file_path(instance, filename):
+        return os.path.join(instance.project.project_dir_path, "tmx", filename)
+
+    tmx_file = models.FileField(upload_to=tmx_file_path,
+                    validators=[FileExtensionValidator(allowed_extensions=["tmx"])])
+    project = models.ForeignKey(Project, on_delete=models.CASCADE,
+                related_name="project_tmx_files")
+    is_processed = models.BooleanField(default=False)
+    is_failed = models.BooleanField(default=False)
 
 # /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
 #

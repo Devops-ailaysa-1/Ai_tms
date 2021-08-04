@@ -223,6 +223,16 @@ class MT_RawSerializer(serializers.ModelSerializer):
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
 
+class TM_FetchSerializer(serializers.ModelSerializer):
+    pentm_dir_path = serializers.CharField(source="text_unit.document.job.project.pentm_path", read_only=True)
+    search_source_string = serializers.CharField(source="source", read_only=True)
+
+    class Meta:
+        model = Segment
+        fields = (
+            "pentm_dir_path", "search_source_string", "target_language_code"
+        )
+
 class TranslationStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = TranslationStatus

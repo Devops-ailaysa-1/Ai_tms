@@ -1,6 +1,7 @@
 from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
-                          TranslationStatusSerializer, FontSizeSerializer, CommentSerializer)
+                          TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
+                          TM_FetchSerializer)
 from ai_workspace.serializers import TaskSerializer
 from .models import Document, Segment, MT_RawTranslation, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets
@@ -168,7 +169,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment_serlzr = self.get_update(segment, request.data, request)
         return Response(segment_serlzr.data, status=201)
 
-class MT_RawView(views.APIView):
+class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_data(request, segment_id):
@@ -182,9 +183,22 @@ class MT_RawView(views.APIView):
             mt_raw_serlzr.save()
             return mt_raw_serlzr, 201
 
+    @staticmethod
+    def get_tm_data(request, segment_id):
+        segment = Segment.objects.filter(id=segment_id).first()
+        if segment:
+            tm_ser = TM_FetchSerializer(segment)
+            res = requests.post( 'http://localhost:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser.data) })
+            if res.status_code == 200:
+                return res.json()
+            else:
+                return []
+        return []
+
     def get(self, request, segment_id):
         data, status_code = self.get_data(request, segment_id)
-        return Response(data.data, status=status_code)
+        tm_data = self.get_tm_data(request, segment_id)
+        return Response({**data.data, "tm":tm_data}, status=status_code)
 
 class DocumentToFile(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -394,6 +408,19 @@ class FontSizeView(views.APIView):
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=status)
+
+    def get(self, request):
+        try:
+            source_id = int(request.GET.get('source', '0'))
+            target_id = int(request.GET.get('target', '0'))
+        except:
+            return JsonResponse({"msg": "input data is wrong"}, status=422)
+        objs = FontSize.objects.filter(ai_user=request.user).filter(
+            language_id__in=[source_id, target_id]
+        ).all()
+        ser = FontSizeSerializer(objs, many=True)
+        return Response(ser.data, status=200)
+
 
 class CommentView(viewsets.ViewSet):
     @staticmethod

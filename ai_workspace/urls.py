@@ -11,6 +11,7 @@ router.register(r"temp_project_setup", api_views.AnonymousProjectSetupView, base
 router.register(r"project-setup-sub", api_views.ProjectSubjectView, basename="project_setup__sub")
 router.register(r"project-setup-content", api_views.ProjectContentTypeView, basename="project_setup__content")
 router.register(r"project-create", api_views.ProjectCreateView, basename="project_create")
+router.register(r"tmx_file", api_views.TmxFileView, basename="tmx-file")
 # router.register(r"tasks", api_views.TaskView, basename="tasks")
 
 urlpatterns = router.urls
