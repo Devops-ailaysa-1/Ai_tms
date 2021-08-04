@@ -20,7 +20,8 @@ urlpatterns += [
 	path("tasks/", api_views.TaskView.as_view(), name="tasks"),
 	path("files_jobs/<int:project_id>/", api_views.Files_Jobs_List.as_view(), name="get-files-jobs-by-project_id"),
 	path("source_tmx/<int:project_id>/", api_views.TmxFilesOfProject.as_view(), name="source-tmx-files"),
-	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(), name="project-report-analysis")
+	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(), name="project-report-analysis"),
+        path("getLangName/<int:id>/", api_views.getLanguageName, name="get-language-name"),
 ]
 # views urls adding for local testing
 

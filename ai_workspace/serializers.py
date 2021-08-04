@@ -268,12 +268,15 @@ class TaskSerializer(serializers.ModelSerializer):
 	target_language = serializers.CharField(source="job.target__language", read_only=True)
 	document_url = serializers.URLField(source="get_document_url", read_only=True)
 	filename = serializers.CharField(source="file.get_file_name", read_only=True)
+	source_language_id = serializers.IntegerField(source="job.source_language.id", read_only=True)
+	target_language_id = serializers.IntegerField(source="job.target_language.id", read_only=True)
 
 	class Meta:
 		model = Task
 		fields = ("source_file_path", "source_language",
 				  "target_language", "document_url","filename",
-				  "file", "job", "version", "assign_to", 'output_file_path'
+				  "file", "job", "version", "assign_to", 'output_file_path',
+                                  "source_language_id", "target_language_id", 
 				  )
 
 		extra_kwargs = {

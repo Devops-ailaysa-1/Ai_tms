@@ -28,7 +28,7 @@ TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 SECRET_KEY = os.getenv("django_secret_key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = not False
+DEBUG = True
 
 ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117', "157.245.99.128"]
 

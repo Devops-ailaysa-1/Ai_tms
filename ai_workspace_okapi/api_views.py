@@ -394,3 +394,15 @@ class FontSizeView(views.APIView):
             ser.save()
             return Response(ser.data, status=201)
 
+    def get(self, request):
+        try:
+            source_id = int(request.GET.get('source', '0'))
+            target_id = int(request.GET.get('target', '0'))
+        except:
+            return JsonResponse({"msg": "input data is wrong"}, status=422)
+        objs = FontSize.objects.filter(ai_user=request.user).filter(
+            language_id__in=[source_id, target_id]
+        ).all()
+        ser = FontSizeSerializer(objs, many=True)
+        return Response(ser.data, status=200)
+
