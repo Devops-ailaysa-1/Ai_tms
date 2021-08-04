@@ -475,3 +475,4 @@ class CommentView(viewsets.ViewSet):
         obj = self.get_object(comment_id=pk)
         obj.delete()
         return  Response({},204)
+

@@ -18,6 +18,10 @@ from .models import Task
 from django.http import JsonResponse
 import requests, json
 from ai_workspace import serializers
+from ai_workspace_okapi.models import Document
+from ai_staff.models import LanguagesLocale, Languages
+from rest_framework.decorators import api_view
+from django.http import JsonResponse
 
 class IsCustomer(permissions.BasePermission):
 
@@ -418,3 +422,14 @@ class TmxFileView(viewsets.ViewSet):
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
 #         else:
 #             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET',])
+def getLanguageName(request,id):
+      job_id=Document.objects.get(id=id).job_id
+      src_id=Job.objects.get(id=job_id).source_language_id
+      src_name=Languages.objects.get(id=src_id).language
+      tar_id=Job.objects.get(id=job_id).target_language_id
+      tar_name=Languages.objects.get(id=tar_id).language
+      src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name).locale_code
+      tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name).locale_code
+      return JsonResponse({"source_lang":src_name,"target_lang":tar_name,"src_code":src_lang_code,"tar_code":tar_lang_code})
