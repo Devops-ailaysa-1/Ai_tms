@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize
+from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize, Comment
 import json
 from google.cloud import translate_v2 as translate
 
@@ -231,6 +231,11 @@ class TranslationStatusSerializer(serializers.ModelSerializer):
 class FontSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FontSize
+        fields = "__all__"
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
         fields = "__all__"
 
 # //////////////////////////////////// References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\

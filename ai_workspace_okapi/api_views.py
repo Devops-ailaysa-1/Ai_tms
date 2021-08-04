@@ -1,8 +1,8 @@
 from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
-                          TranslationStatusSerializer, FontSizeSerializer)
+                          TranslationStatusSerializer, FontSizeSerializer, CommentSerializer)
 from ai_workspace.serializers import TaskSerializer
-from .models import Document, Segment, MT_RawTranslation, TranslationStatus, FontSize
+from .models import Document, Segment, MT_RawTranslation, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets
 from rest_framework import views
 from django.shortcuts import get_object_or_404
@@ -385,24 +385,67 @@ class FontSizeView(views.APIView):
         obj = self.get_object(request.POST.dict(), request)
         if obj is not None:
             ser = FontSizeSerializer(instance=obj, data={**request.POST.dict(), "ai_user": request.user.id})
-            if ser.is_valid(raise_exception=True):
-                ser.save()
-                return Response(ser.data, status=202)
+            status = 202
 
-        ser = FontSizeSerializer(data={**request.POST.dict(), "ai_user": request.user.id})
+        else:
+            ser = FontSizeSerializer(data={**request.POST.dict(), "ai_user": request.user.id})
+            status = 201
+
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=status)
+
+class CommentView(viewsets.ViewSet):
+    @staticmethod
+    def get_object(comment_id):
+        qs = Comment.objects.all()
+        obj = get_object_or_404(qs, id=comment_id)
+        return obj
+
+    @staticmethod
+    def get_list_of_objects(request):
+        by = request.GET.get("by", "")
+        id = request.GET.get("id", 0)
+
+        try:id=int(id)
+        except:id=0
+
+        if by=="segment":
+            segment = get_object_or_404(Segment.objects.all(), id=id)
+            return segment.segment_comments_set.all()
+
+        if by=="document":
+            document = get_object_or_404(Document.objects.all(), id=id)
+            return [ comment
+                for segment in document.segments.all()
+                for comment in segment.segment_comments_set.all()
+            ]
+        return Comment.objects.none()
+
+    def list(self, request):
+        objs = self.get_list_of_objects(request)
+        ser = CommentSerializer(objs, many=True)
+        return Response(ser.data, status=200)
+
+    def create(self, request):
+        ser = CommentSerializer(data=request.POST.dict(), )
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=201)
 
-    def get(self, request):
-        try:
-            source_id = int(request.GET.get('source', '0'))
-            target_id = int(request.GET.get('target', '0'))
-        except:
-            return JsonResponse({"msg": "input data is wrong"}, status=422)
-        objs = FontSize.objects.filter(ai_user=request.user).filter(
-            language_id__in=[source_id, target_id]
-        ).all()
-        ser = FontSizeSerializer(objs, many=True)
-        return Response(ser.data, status=200)
+    def retrieve(self, request, pk=None):
+        obj = self.get_object(comment_id=pk)
+        return Response(CommentSerializer(obj).data, status=200)
+
+    def update(self, request, pk=None):
+        obj = self.get_object(comment_id=pk)
+        ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=202)
+
+    def destroy(self, request, pk=None):
+        obj = self.get_object(comment_id=pk)
+        obj.delete()
+        return  Response({},204)
 

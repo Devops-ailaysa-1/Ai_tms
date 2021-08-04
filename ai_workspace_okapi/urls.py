@@ -1,9 +1,16 @@
 from django.urls import path, include
 from . import api_views, views
 from rest_framework.urlpatterns import format_suffix_patterns
-
+from rest_framework import routers
 app_name = "ws_okapi"
-urlpatterns= [
+
+router = routers.DefaultRouter()
+
+router.register(r"comment", api_views.CommentView, basename="comment")
+
+urlpatterns = router.urls
+
+urlpatterns+=[
     # path("task/", TaskView.as_view(), name = "tasks"),
     path("document/<int:task_id>/", api_views.DocumentViewByTask.as_view(), name="document"),
     path("file_extensions/", api_views.get_supported_file_extensions, name="get-file-extensions"),
@@ -17,9 +24,9 @@ urlpatterns= [
     path("target/segments/filter/<int:document_id>", api_views.TargetSegmentsListAndUpdateView.as_view({"post": "post", "put":"update"}), name="seg-filter"),
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
+    # path("comments", api_views)
 ]
 
-urlpatterns = format_suffix_patterns(urlpatterns)
 
 urlpatterns+=[
     path("document_list/dj", views.DocumentListView.as_view(), name="document-list"),
