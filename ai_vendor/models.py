@@ -114,8 +114,8 @@ class VendorLanguagePair(ParanoidModel):
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
-     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2)
-     mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2)
+     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,null=True,blank=True)
+     mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,null=True,blank=True)
      mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='unit_type', on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
