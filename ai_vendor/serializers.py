@@ -138,6 +138,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
                          source_new=validated_data.get("target_lang_id")
                          target_new=validated_data.get("source_lang_id")
                          data_new={"source_lang_id":source_new,"target_lang_id":target_new,"user_id":user_id}
+                         print(data_new)
                          lang_reverse = VendorLanguagePair.objects.create(**data_new)
                          lang= VendorLanguagePair.objects.create(**validated_data)
                          print(type(lang))

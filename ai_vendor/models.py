@@ -102,6 +102,8 @@ class VendorLanguagePair(ParanoidModel):
     target_lang=models.ForeignKey(Languages,blank=True, null=True, related_name='vendor_target_lang', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    # created_at = models.CharField(max_length=100)
+    # updated_at = models.CharField(max_length=100)
 
     class Meta:
         constraints = [
