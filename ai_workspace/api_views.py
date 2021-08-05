@@ -1,3 +1,4 @@
+from ai_workspace_okapi.models import Document
 from django.conf import settings
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
@@ -7,7 +8,7 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
                             ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer,
-                          FileSerializerv2, FileSerializerv3)
+                          FileSerializerv2, FileSerializerv3, TbxUploadSerializer)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject
 from rest_framework import permissions
@@ -351,6 +352,22 @@ class ProjectReportAnalysis(APIView):
             return JsonResponse({"msg": res.text}, safe=False)
         else:
             return JsonResponse({"msg": "something went to wrong"}, safe=False)
+
+class TbxUploadView(APIView):
+    def post(self, request):
+        tbx_file = request.FILES.get('tbx_file')
+        project_id = request.POST.get('project_id', 0)
+        doc_id = request.POST.get('doc_id', 0)
+        if doc_id != 0:
+            job_id = Document.objects.get(id=doc_id).job_id
+            project_id = Job.objects.get(id=job_id).project_id
+        serializer = TbxUploadSerializer(data={'tbx_files':tbx_file,'project':project_id})
+        # print("SER VALIDITY-->", serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
 
 
 # class AssignTaskView(viewsets.ModelViewSet):

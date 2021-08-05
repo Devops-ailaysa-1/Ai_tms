@@ -324,3 +324,11 @@ pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 # p1 = Project.objects.last()
 # In [8]: p1.penseivetm.penseive_tm_dir_path
 # Out[8]: '/ai_home/media/user_2/p14/.pentm'
+
+def tbx_file_upload_path(instance, filename):
+    file_path = os.path.join(instance.project.project_dir_path,"tbx",filename)
+    return file_path
+
+class Tbxfiles(models.Model):
+    tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False, blank=False, max_length=1000)  # Common for a project
+    project = models.ForeignKey("Project", null=False, blank=False, on_delete=models.CASCADE)

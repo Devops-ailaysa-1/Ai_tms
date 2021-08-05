@@ -2,7 +2,7 @@ from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from ai_workspace.models import  Project, Job, File, ProjectContentType, \
-		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task
+		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, Tbxfiles
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -311,6 +311,10 @@ class TaskSerializerv2(TaskSerializer):
 	def to_internal_value(self, data):
 		return super(TaskSerializer, self).to_internal_value(data=data)
 
+class TbxUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tbxfiles
+        fields = "__all__"
 
 # class TaskSerializer(serializers.ModelSerializer):
 # 	source_file_path = serializers.SerializerMethodField("get_source_file_path")
