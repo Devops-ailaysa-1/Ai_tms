@@ -33,14 +33,14 @@ DEBUG = True
 ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117']
 
 
-CORS_ORIGIN_ALLOW_ALL= True
+CORS_ORIGIN_ALLOW_ALL= False
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "http://localhost:3000","http://143.244.140.71",
 ]
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000"
+    "http://localhost:3000","http://143.244.140.71"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -53,14 +53,14 @@ CORS_ALLOW_CREDENTIALS = True
 #     "http://localhost:3000" , "http://167.71.235.214:3000","http://157.245.99.128:3010","http://157.245.99.128:3020"
 # ]
 # CORS_ALLOWED_ORIGINS = ["http://localhost:3000" , "http://167.71.235.214","http://157.245.99.128:3010","http://157.245.99.128:3020" ]
-# CORS_ALLOW_METHODS = [
-#     'DELETE',
-#     'GET',
-#     'OPTIONS',
-#     'PATCH',
-#     'POST',
-#     'PUT',
-# ]
+CORS_ALLOW_METHODS = [
+     'DELETE',
+     'GET',
+     'OPTIONS',
+     'PATCH',
+     'POST',
+     'PUT',
+]
 # CORS_ALLOW_HEADERS = [
 #     'accept',
 #     'accept-encoding',
@@ -74,6 +74,25 @@ CORS_ALLOW_CREDENTIALS = True
 #     'Access-Control-Allow-Origin'
 # ]
 
+CORS_ALLOW_HEADERS = [
+     'accept',
+     'accept-encoding',
+     'authorization',
+     'content-type',
+     'dnt',
+     'origin',
+     'user-agent',
+     'x-csrftoken',
+     'x-requested-with',
+     'Access-Control-Allow-Origin',
+     'Access-Control-Allow-Credentials',
+     'cache',
+     'cookie',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+ "http://localhost:3000",
+]
 
 
 # Application definition
