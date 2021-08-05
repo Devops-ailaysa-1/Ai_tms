@@ -13,7 +13,7 @@ from rest_framework import permissions
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-
+from rest_framework.viewsets import ModelViewSet
 from ai_workspace import serializers
 
 class IsCustomer(permissions.BasePermission):
@@ -59,7 +59,7 @@ class ProjectSubjectView(viewsets.ModelViewSet):
     def get_queryset(self):
         project_id = self.request.query_params.get('project_id')
         return ProjectSubjectField.objects.filter(project__id=project_id)
-    
+
 
     def list(self,request):
         queryset = self.get_queryset()
@@ -80,7 +80,7 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
     def get_queryset(self):
         project_id = self.request.query_params.get('project_id')
         return ProjectContentType.objects.filter(project__id=project_id)
-    
+
 
     def list(self,request):
         queryset = self.get_queryset()
@@ -183,19 +183,19 @@ class ProjectCreateView(viewsets.ViewSet):
         # pagin_tc = self.paginate_queryset( queryset, request , view=self )
         serializer = ProjectCreationSerializer(queryset, many=True, context={'request': request})
         # response =self.get_paginated_response(serializer.data)
-        return  Response(serializer.data)  
+        return  Response(serializer.data)
 
 
     def retrieve(self, request, pk=None):
         queryset = self.get_queryset()
         project = get_object_or_404(queryset, pk=pk)
         serializer = ProjectCreationSerializer(project)
-        return Response(serializer.data)    
+        return Response(serializer.data)
 
     def update(self, request, pk=None):
         pass
 
-         
+
 
 
 class AnonymousProjectSetupView(viewsets.ViewSet):
@@ -222,6 +222,12 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
         else:
             return Response(serializer.errors, status=409)
 
+
+
+
+
+
+
 #  /////////////////  References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 # from django.contrib.auth.models import Permission, User
 # from django.contrib.contenttypes.models import ContentType
@@ -232,7 +238,7 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
 # class ProjectSetupView2(APIView):
 
 #     parser_classes = [MultiPartParser, FormParser, JSONParser]
- 
+
 
 #     def post(self, request, format=None):
 #         print("request DATa >>",request.data)

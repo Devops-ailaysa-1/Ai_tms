@@ -60,6 +60,10 @@ class PenseiveTM(models.Model):
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
+
+
+
+
 class Project(models.Model):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
@@ -79,10 +83,11 @@ class Project(models.Model):
 
     penseive_tm_klass = PenseiveTM
 
+
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.ai_project_id:
-            # self.ai_user shoould be set before save 
+            # self.ai_user shoould be set before save
             self.ai_project_id = self.ai_user.uid+"p"+str(Project.objects.filter(ai_user=self.ai_user).count()+1)
         if not self.project_name:
             self.project_name = self.ai_project_id
@@ -91,6 +96,7 @@ class Project(models.Model):
 pre_save.connect(create_project_dir, sender=Project)
 #post_save.connect(create_pentm_dir_of_project, sender=Project,)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
+
 
 # class Language(models.Model):
 #     language_name = models.CharField(max_length=50, null=False, blank=False)
@@ -126,7 +132,7 @@ class Job(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.job_id:
-            # self.ai_user shoould be set before save 
+            # self.ai_user shoould be set before save
             self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project).count()+1)
         super().save()
 
@@ -189,7 +195,7 @@ class File(models.Model):
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.fid:
-            # self.ai_user shoould be set before save 
+            # self.ai_user shoould be set before save
             self.fid = str(self.project.ai_project_id)+"f"+str(File.objects.filter(project=self.project.id).count()+1)
         super().save()
 

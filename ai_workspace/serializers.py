@@ -71,7 +71,7 @@ class ProjectSubjectSerializer(serializers.ModelSerializer):
 		model = ProjectSubjectField
 		fields = ("id","project", "subject")
 		read_only_fields = ("id","project",)
-		
+
 
 class ProjectContentTypeSerializer(serializers.ModelSerializer):
 	# project = serializers.PrimaryKeyRelatedField()
@@ -81,7 +81,7 @@ class ProjectContentTypeSerializer(serializers.ModelSerializer):
 		fields = ("id","project", "content_type")
 		read_only_fields = ("id","project",)
 
-		
+
 
 
 
@@ -133,7 +133,7 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 		ai_user = self.context["request"].user
 		project_jobs_set = validated_data.pop("project_jobs_set")
 		project_files_set = validated_data.pop("project_files_set")
-		proj_subject, proj_content_type = None, None 
+		proj_subject, proj_content_type = None, None
 		if "proj_subject" in validated_data:
 			proj_subject = validated_data.pop("proj_subject")
 		if "proj_content_type" in validated_data:
@@ -195,5 +195,3 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		[temp_project.temp_proj_file.create(**file_data) for file_data in tempfiles]
 		# project.save()
 		return temp_project
-
-
