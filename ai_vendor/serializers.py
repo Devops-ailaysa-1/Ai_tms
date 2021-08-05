@@ -3,6 +3,7 @@ from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServ
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
+from rest_framework.response import Response
 
 
 class VendorsInfoSerializer(serializers.ModelSerializer):
@@ -84,6 +85,7 @@ class MtpeSampleSerializer(serializers.ModelSerializer):
         fields=('sample_file',)
 
 
+
 class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):#WritableNestedModelSerializer,
      service=VendorServiceInfoSerializer(many=True,required=False)
      servicetype=VendorServiceTypeSerializer(many=True,required=False)
@@ -127,65 +129,84 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          if validated_data.get("apply_for_reverse"):
              reverse =validated_data.pop('apply_for_reverse')
          print("NEW---->",validated_data)
+         lang=0
          try:
              if bool(int(reverse)):
                  try:
                      if validated_data.get("source_lang_id"):
+                         print("@@@@@")
                          source_new=validated_data.get("target_lang_id")
                          target_new=validated_data.get("source_lang_id")
                          data_new={"source_lang_id":source_new,"target_lang_id":target_new,"user_id":user_id}
                          lang_reverse = VendorLanguagePair.objects.create(**data_new)
                          lang= VendorLanguagePair.objects.create(**validated_data)
-                 except Exception as error:
-                     return Response({'message': error}, 409)
+                         print(type(lang))
+                 except unique_if_not_deleted as error:
+                     print("Error---->",error)
                  try:
                      if existing_lang_pair_id:
-                         print(existing_lang_pair_id)
+                         print("ExistingLangPairId---->",existing_lang_pair_id)
                          source_lang_id=VendorLanguagePair.objects.get(id=existing_lang_pair_id).source_lang_id
                          target_lang_id=VendorLanguagePair.objects.get(id=existing_lang_pair_id).target_lang_id
-                         data_new = {"source_lang_id":target_lang_id,"target_lang_id":source_lang_id,"user_id":user_id}
-                         lang = VendorLanguagePair.objects.create(**data_new)
-                 except Exception as error1:
-                     return Response({'message': error1}, 409)
+                         data_new_1 = {"source_lang_id":target_lang_id,"target_lang_id":source_lang_id,"user_id":user_id}
+                         lang = VendorLanguagePair.objects.create(**data_new_1)
+                         print(lang)
+                 except unique_if_not_deleted as error1:
+                     print("Error1---->",error1)
          except:
-             lang = VendorLanguagePair.objects.create(**validated_data)
-         try:
-             if service_type_data:
-                 for j in service_type_data:
-                     print(j)
-                     VendorServiceTypes.objects.create(lang_pair_id=lang.id,**j)
-                     try:
-                         if lang_reverse:
-                             VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j)
-                     except Exception as error3:
-                         print("Error3---->",error3)
-         except:
-             if existing_lang_pair_id:
-                  servicetype_datas=VendorServiceTypes.objects.filter(lang_pair_id=existing_lang_pair_id)
-                  print(servicetype_datas)
-                  for data in servicetype_datas:
-                    data.pk=None
-                    data.lang_pair_id=lang.id
-                    data.save()
-         try:
-             if service_data:
-                 for i in service_data:
-                     VendorServiceInfo.objects.create(lang_pair_id=lang.id,**i)
-                     try:
-                         if lang_reverse:
-                             VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**i)
-                     except Exception as error4:
-                         print("Error4--->",error4)
+             try:
+                 if not (bool(int(reverse))):
+                     lang = VendorLanguagePair.objects.create(**validated_data)
+             except:
+                 if not lang:
+                    print("######")
+                    print(validated_data)
+                    lang = VendorLanguagePair.objects.create(**validated_data)
+                    print(lang)
+         if lang:
+             try:
+                 if service_data:
+                     for i in service_data:
+                         VendorServiceInfo.objects.create(lang_pair_id=lang.id,**i)
+                         try:
+                             if lang_reverse:
+                                 VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**i)
+                         except Exception as error4:
+                             print("Error4--->",error4)
 
-         except:
-             service_datas=VendorServiceInfo.objects.filter(lang_pair_id=existing_lang_pair_id)
-             print(service_datas)
-             for i in service_datas:
-                 i.pk=None
-                 i.lang_pair_id=lang.id
-                 i.save()
+             except:
+                 service_datas=VendorServiceInfo.objects.filter(lang_pair_id=existing_lang_pair_id)
+                 print(service_datas)
+                 for i in service_datas:
+                     i.pk=None
+                     i.lang_pair_id=lang.id
+                     i.save()
+             try:
+                 if service_type_data:
+                     for j in service_type_data:
+                         print(j)
+                         VendorServiceTypes.objects.create(lang_pair_id=lang.id,**j)
+                         try:
+                             if lang_reverse:
+                                 VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j)
+                         except Exception as error3:
+                             print("Error3---->",error3)
+             except Exception as error:
+                 print(error)
+             try:
+                 if existing_lang_pair_id:
+                      servicetype_datas=VendorServiceTypes.objects.filter(lang_pair_id=existing_lang_pair_id)
+                      print(servicetype_datas)
+                      for data in servicetype_datas:
+                          data.pk=None
+                          data.lang_pair_id=lang.id
+                          data.save()
+             except Exception as error:
+                 print(error)
+         else:
+             print("No langpair")
+             raise serializers.ValidationError("Lang_pair already exists")
          return data_new
-
 
 
     # def create(self,validated_data):
