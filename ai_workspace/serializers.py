@@ -89,7 +89,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url")
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url", "id")
 		# extra_kwargs = {
 		# 	"jobs": {"write_only": True},
 		# 	"files":  {"write_only": True},
@@ -330,19 +330,16 @@ class TmxFileSerializer(serializers.ModelSerializer):
 			{"project": project, "tmx_file": tmx_file} for tmx_file in data["tmx_files"]
 		]
 
-
-
 class PentmWriteSerializer(serializers.ModelSerializer):
 	penseive_tm_write_path = serializers.CharField(source="pentm_path", read_only=True)
-	tmx_files_path = serializers.ListField(source="tmx_files_path_not_processed", read_only=True)
+	tmx_data = serializers.JSONField(source="tmx_files_path_not_processed", read_only=True)
 
 	class Meta:
 		model = Project
 		fields = (
 			"source_language_code", "target_language_codes",
-			"penseive_tm_write_path", "tmx_files_path",
+			"penseive_tm_write_path", "tmx_data",
 		)
-
 
 # class TaskSerializer(serializers.ModelSerializer):
 # 	source_file_path = serializers.SerializerMethodField("get_source_file_path")

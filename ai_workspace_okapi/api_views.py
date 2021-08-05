@@ -211,6 +211,28 @@ class MT_RawAndTM_View(views.APIView):
         tm_data = self.get_tm_data(request, segment_id)
         return Response({**data.data, "tm":tm_data}, status=status_code)
 
+class ConcordanceSearchView(views.APIView):
+
+    @staticmethod
+    def get_concordance_data(request, segment_id, search_string):
+        segment = Segment.objects.filter(id=segment_id).first()
+        if segment:
+            tm_ser_data = TM_FetchSerializer(segment).data
+            tm_ser_data.update({'search_source_string':search_string, "max_hits":20, "threshold": 10})
+            res = requests.post( 'http://localhost:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser_data) })
+            if res.status_code == 200:
+                return res.json()
+            else:
+                return []
+        return []
+
+    def get(self, request, segment_id):
+        search_string = request.GET.get("string", None)
+        concordance = []
+        if search_string:
+            concordance = self.get_concordance_data(request, segment_id, search_string)
+        return Response(concordance, status=200)
+
 class DocumentToFile(views.APIView):
     permission_classes = [IsAuthenticated]
     @staticmethod
@@ -290,6 +312,15 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     lookup_field = "source"
 
     @staticmethod
+    def prepare_data(data):
+        for i in data:
+            try:
+                data[i] = json.loads(data[i])
+            except:
+                pass
+        return data
+
+    @staticmethod
     def get_queryset(request, data, document_id, lookup_field):
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
@@ -321,9 +352,8 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         return segments, 200
 
     def post(self, request, document_id):
-        print("filter data--->", request.POST.dict())
-
-        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
+        data = self.prepare_data(request.POST.dict())
+        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
         res = self.get_paginated_response(segments_ser.data)
@@ -341,7 +371,8 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         return res
 
     def post(self, request, document_id):
-        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
+        data = self.prepare_data(request.POST.dict())
+        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
         return self.paginate_response(segments, request, status)
 
     @staticmethod
@@ -369,9 +400,10 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         return segments, 200
 
     def update(self, request, document_id):
-        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
+        data = self.prepare_data(request.POST.dict())
+        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
         if status != 422:
-            segments, status = self.update_segments(request, request.data, segments)
+            segments, status = self.update_segments(request, data, segments)
         return self.paginate_response(segments, request, status)
 
 class ProgressView(views.APIView):

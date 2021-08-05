@@ -370,7 +370,8 @@ class TmxFileView(viewsets.ViewSet):
                             data={"pentm_params": json.dumps(data)})
         if res.status_code == 200:
             for tmx_data in res.json():
-                instance = project.project_tmx_files.filter(tmx_file=tmx_data.pop('tmx_file','')).first()
+                print("res--->", res.json())
+                instance = project.project_tmx_files.filter(id=tmx_data.get('tmx_id','')).first()
                 ser = TmxFileSerializer(instance, data=tmx_data, partial=True)
                 if ser.is_valid(raise_exception=True):
                     ser.save()

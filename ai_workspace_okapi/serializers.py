@@ -229,11 +229,14 @@ class MT_RawSerializer(serializers.ModelSerializer):
 class TM_FetchSerializer(serializers.ModelSerializer):
     pentm_dir_path = serializers.CharField(source="text_unit.document.job.project.pentm_path", read_only=True)
     search_source_string = serializers.CharField(source="source", read_only=True)
+    threshold =  serializers.IntegerField(default=85, read_only=True)
+    max_hits = serializers.IntegerField(default=5, read_only=True)
 
     class Meta:
         model = Segment
         fields = (
-            "pentm_dir_path", "search_source_string", "target_language_code"
+            "pentm_dir_path", "search_source_string", "target_language_code",
+            "threshold", "max_hits"
         )
 
 class TranslationStatusSerializer(serializers.ModelSerializer):

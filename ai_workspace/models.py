@@ -138,7 +138,7 @@ class Project(ParanoidModel):
 
     @property
     def tmx_files_path_not_processed(self):
-        return [tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.filter(is_processed=False).all()]
+        return {tmx_file.id:tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.filter(is_processed=False).all()}
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
