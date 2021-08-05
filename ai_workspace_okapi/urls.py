@@ -13,6 +13,7 @@ urlpatterns = router.urls
 urlpatterns+=[
     # path("task/", TaskView.as_view(), name = "tasks"),
     path("document/<int:task_id>/", api_views.DocumentViewByTask.as_view(), name="document"),
+    path("document_by_doc_id/<int:document_id>", api_views.DocumentViewByDocumentId.as_view(), name="document-by-document-id"),
     path("file_extensions/", api_views.get_supported_file_extensions, name="get-file-extensions"),
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
     path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put":"update"}), name="segment-update"),

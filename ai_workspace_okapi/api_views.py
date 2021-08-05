@@ -118,6 +118,17 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # return self.get_paginated_response(segments_ser.data)
         return Response(DocumentSerializerV2(document).data, status=201)
 
+class DocumentViewByDocumentId(views.APIView):
+    @staticmethod
+    def get_object(document_id):
+        docs = Document.objects.all()
+        document = get_object_or_404(docs, id=document_id)
+        return  document
+
+    def get(self, request, document_id):
+        document = self.get_object(document_id)
+        return Response(DocumentSerializerV2(document).data, status=200)
+
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
 
@@ -310,6 +321,8 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         return segments, 200
 
     def post(self, request, document_id):
+        print("filter data--->", request.POST.dict())
+
         segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
