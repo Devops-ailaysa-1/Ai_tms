@@ -1,6 +1,6 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from . import api_views, views
+from . import api_views, views, tbx_read
 
 router = DefaultRouter() #
 router.register(r"project", api_views.ProjectView, basename="project")
@@ -23,6 +23,9 @@ urlpatterns += [
 	path("source_tmx/<int:project_id>/", api_views.TmxFilesOfProject.as_view(), name="source-tmx-files"),
 	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(), name="project-report-analysis"),
     path("getLangName/<int:id>/", api_views.getLanguageName, name="get-language-name"),
+	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(), name="project-report-analysis"),
+	path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
+	path("tbx_read", tbx_read.TermSearch, name='tbx-read'),
 ]
 # views urls adding for local testing
 

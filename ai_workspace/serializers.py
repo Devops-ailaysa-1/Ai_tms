@@ -2,7 +2,7 @@ from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from ai_workspace.models import  Project, Job, File, ProjectContentType, \
-		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile
+		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile, Tbxfiles
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -340,6 +340,10 @@ class PentmWriteSerializer(serializers.ModelSerializer):
 			"source_language_code", "target_language_codes",
 			"penseive_tm_write_path", "tmx_data",
 		)
+class TbxUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tbxfiles
+        fields = "__all__"
 
 # class TaskSerializer(serializers.ModelSerializer):
 # 	source_file_path = serializers.SerializerMethodField("get_source_file_path")
