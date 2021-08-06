@@ -322,34 +322,30 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
 
     @staticmethod
     def get_queryset(request, data, document_id, lookup_field):
-        print("input data--->", data)
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
         segments_all = segments = document.segments
         status_list = data.get("status_list", [])
+
         if status_list:
             segments = segments.filter(status__status_id__in=status_list).all()
-            if not segments:
-                return segments_all, 422
 
         search_word = data.get("search_word", None)
-        if search_word in [None, '']:
-            return segments_all, 422
 
-        match_case = data.get("match_case", False)
-        exact_word = data.get("exact_word", False)
+        if search_word not in [None, '']:
 
-        if match_case and exact_word:
-            segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w){search_word}(?!\w)'})
-        elif not(match_case or exact_word):
-            segments = segments.filter(**{f'{lookup_field}__contains':f'{search_word}'})
-        elif match_case:
-            segments = segments.filter(**{f'{lookup_field}__regex':f'{search_word}'})
-        elif exact_word:
-            segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
+            match_case = data.get("match_case", False)
+            exact_word = data.get("exact_word", False)
 
-        if not segments:
-            return segments_all, 422
+            if match_case and exact_word:
+                segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w){search_word}(?!\w)'})
+            elif not(match_case or exact_word):
+                segments = segments.filter(**{f'{lookup_field}__contains':f'{search_word}'})
+            elif match_case:
+                segments = segments.filter(**{f'{lookup_field}__regex':f'{search_word}'})
+            elif exact_word:
+                segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
+
         return segments, 200
 
     def post(self, request, document_id):
@@ -378,7 +374,6 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
 
     @staticmethod
     def update_segments(request, data, segments):
-        status_list = data.get("status_list",[])
         search_word = data.get('search_word', '')
         replace_word = data.get('replace_word', '')
         match_case = data.get('match_case', False)
@@ -398,17 +393,17 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         for instance in segments:
             instance.temp_target = re.sub(regex, replace_word, instance.temp_target)
             instance.save()
+
         return segments, 200
 
     def update(self, request, document_id):
         data = self.prepare_data(request.POST.dict())
         segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
-        if status != 422:
-            segments, status = self.update_segments(request, data, segments)
+        segments, status = self.update_segments(request, data, segments)
         return self.paginate_response(segments, request, status)
 
 class ProgressView(views.APIView):
-    confirm_list = [102, 104]
+    confirm_list = [102, 104, 106]
 
     @staticmethod
     def get_object(document_id):

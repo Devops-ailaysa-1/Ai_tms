@@ -29,5 +29,7 @@ ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
 
 
 CURRENT_SUPPORT_FILE_EXTENSIONS_LIST = [
-    ".txt", ".html", ".tsv", ".csv"
+    ".txt", ".html", ".tsv", ".csv", ".odp", ".ods", ".odt", ".json",
+    ".properties", ".po", ".docx", ".xlsx", ".pptx", ".dotx", ".xliff", ".xlf",
+    ".idml", ".srt", ".strings"
 ]
