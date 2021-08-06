@@ -35,6 +35,7 @@ urlpatterns += [
      path('languagelocale/<int:pk>', api_views.LanguagesLocaleView.as_view(), name='languagelocale_pk'),
      path('billunits/', api_views.BillingunitsView.as_view(), name='billunits'),
      path('billunits/<int:pk>', api_views.BillingunitsView.as_view(), name='billunits_pk'),
+     path('servicetypeunits/', api_views.ServiceTypeunitsView.as_view(), name='billunits'),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
     path('insert',views.Bulk_insert)
 

@@ -14,18 +14,22 @@ from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectFie
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
-                     VendorMtpeEngines, AssignedVendors)
+                     VendorMtpeEngines, AssignedVendors,ProjectboardDetails,ProjectPostJobDetails)
 from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,
                           VendorLanguagePairSerializer,AssignedVendorSerializer,
                           VendorServiceInfoSerializer, VendorsInfoSerializer,
-                          Jobboard_detailSerializer)
+                          ProjectPostSerializer)
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
-                            MtpeEngines, SubjectFields)
+                            MtpeEngines, SubjectFields,ServiceTypeunits)
 from ai_auth.models import PersonalInformation, AiUser, OfficialInformation, Professionalidentity
 import json,requests
 from django.http import JsonResponse
+from django.core.mail import EmailMessage
+from django.template import Context
+from django.template.loader import get_template
+from django.template.loader import render_to_string
 
 
 
@@ -386,9 +390,9 @@ def post_job_primary_details(request):
         jobs=[]
         sl=Job.objects.get(id=i.id).source_language_id
         tl=Job.objects.get(id=i.id).target_language_id
-        jobs=[{"source_lang":sl,"target_lang":tl}]
+        jobs=[{"src_lang":sl,"tar_lang":tl}]
         out.extend(jobs)
-    result["lang-pair"]=out
+    result["projectpost_jobs"]=out
     subject_field=ProjectSubjectField.objects.get(project_id=project_id).subject_id
     result["subject_field"]=subject_field
     content_type=ProjectContentType.objects.get(project_id=project_id).content_type_id
@@ -396,20 +400,20 @@ def post_job_primary_details(request):
     return JsonResponse({"res":result},safe=False)
 
 
-class JobPostInfoCreateView(APIView):
+class ProjectPostInfoCreateView(APIView):
 
     def get(self, request,id):
         try:
-            queryset = jobboard_details.objects.get(job_id=id)
-            serializer = Jobboard_detailSerializer(queryset)
+            queryset = ProjectboardDetails.objects.get(id=id)
+            serializer = ProjectPostSerializer(queryset)
             return Response(serializer.data)
         except:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request,id):
         # data = request.POST.dict()
-        print({**request.POST.dict(),'job':id})
-        serializer = Jobboard_detailSerializer(data={**request.POST.dict(),'job':id})#,context={'request':request})
+        print({**request.POST.dict(),'project_id':id})
+        serializer = ProjectPostSerializer(data={**request.POST.dict(),'project_id':id})#,context={'request':request})
         print(serializer.is_valid())
         print(serializer.errors)
         if serializer.is_valid():
@@ -418,13 +422,43 @@ class JobPostInfoCreateView(APIView):
 
     def put(self,request):
         # data = request.POST.dict()
-        job_info = jobboard_details.objects.get(job_id=id)
-        serializer = Jobboard_detailSerializer(job_info,data={**request.POST.dict(),'job':id},partial=True)
+        job_info = ProjectboardDetails.objects.get(id=id)
+        serializer = ProjectPostSerializer(job_info,data={**request.POST.dict(),'project':id},partial=True)
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data)
 
-
+@api_view(['POST',])
+def shortlisted_vendor_list_send_email(request):
+    projectpost_id=request.POST.get('projectpost_id')
+    new=[]
+    jobs=ProjectPostJobDetails.objects.filter(projectpost_id=projectpost_id).all()
+    out=[]
+    for i in jobs:
+        job_id=i.id
+        source_lang_id=i.src_lang_id
+        target_lang_id=i.tar_lang_id
+        res=VendorLanguagePair.objects.filter(Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id)).all()
+        for j in res:
+            email=AiUser.objects.get(id=j.user_id).email
+            print(email)
+            user=AiUser.objects.get(id=j.user_id).fullname
+            src_lang=Languages.objects.get(id=source_lang_id).language
+            tar_lang=Languages.objects.get(id=target_lang_id).language
+            out=[{"src_lang":src_lang,"tar_lang":tar_lang,"job_id":job_id}]
+            new.extend(out)
+            template = 'email.html'
+            # context = Context({'user': user, 'other_info': out})
+            context = {'user': user, 'other_info': out}
+            content = render_to_string(html_template, { 'context': context, })
+            # content = template.render(context)
+            subject='Regarding Available jobs'
+            if not email:
+                raise BadHeaderError('No email address given for {0}'.format(user))
+            msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,])
+            msg.content_subtype = 'html'
+            msg.send()
+    return JsonResponse({"message":"Email Successfully Sent"},safe=False)
 # @api_view(['POST',])
 # def get_vendor_detail_admin(request):
 #     source_lang_id=request.POST.get('source_lang_id')

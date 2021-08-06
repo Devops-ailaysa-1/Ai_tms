@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware,AssignedVendors,jobboard_details
+from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware,AssignedVendors,ProjectboardDetails,ProjectPostJobDetails
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
@@ -301,15 +301,29 @@ class AssignedVendorSerializer(serializers.ModelSerializer):
         model= AssignedVendors
         fields="__all__"
 
-
-class Jobboard_detailSerializer(serializers.ModelSerializer):
+class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
     class Meta:
-        model=jobboard_details
-        fields="__all__"
+        model=ProjectPostJobDetails
+        fields=('src_lang','tar_lang',)
 
-    def save(self):
-        job_detail = jobboard_details.objects.create(**self.validated_data)
-        return job_detail
+class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
+    projectpost_jobs=ProjectPostJobDetailSerializer(many=True)
+    class Meta:
+        model=ProjectboardDetails
+        fields=('id','project_id','service','steps','sub_field','content_type','proj_name','proj_desc',
+                 'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
+                 'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
+                 'unit','milestone','projectpost_jobs')
 
-    def save_update(self):
-        return super().save()
+    def run_validation(self, data):
+        if data.get("projectpost_jobs") and isinstance( data.get("projectpost_jobs"), str):
+            data["projectpost_jobs"]=json.loads(data["projectpost_jobs"])
+        return data
+
+
+    # def save(self):
+    #     project_detail = projectboard_details.objects.create(**self.validated_data)
+    #     return project_detail
+    #
+    # def save_update(self):
+    #     return super().save()

@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from django.http import Http404
-from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits
-from .serializer import ContentTypesSerializer, LanguagesSerializer, LocaleSerializer, MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer, TimezonesSerializer,BillingunitsSerializer
+from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits,ServiceTypeunits
+from .serializer import ContentTypesSerializer, LanguagesSerializer, LocaleSerializer, MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer, TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer
 
 
 class ServiceTypesView(APIView):
@@ -34,7 +34,7 @@ class ServiceTypesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         service_t = self.get_object(pk)
         serializer = ServiceTypesSerializer(service_t,
@@ -74,7 +74,7 @@ class CountriesView(APIView):
             raise Http404
 
     def post(self, request):
-        data = request.data     
+        data = request.data
         data['user'] = self.request.user.id
         serializer = CountriesSerializer(data=data, context={'request':request})
         if serializer.is_valid():
@@ -82,7 +82,7 @@ class CountriesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         countrie = self.get_object(pk)
         serializer = CountriesSerializer(countrie,
@@ -127,7 +127,7 @@ class CurrenciesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         currency = self.get_object(pk)
         serializer = CurrenciesSerializer(currency,
@@ -173,7 +173,7 @@ class SubjectFieldsView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         subject = self.get_object(pk)
         serializer = SubjectFieldsSerializer(subject,
@@ -217,7 +217,7 @@ class ContentTypesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         content = self.get_object(pk)
         serializer = ContentTypesSerializer(content,
@@ -261,7 +261,7 @@ class MtpeEnginesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         engine = self.get_object(pk)
         serializer = MtpeEnginesSerializer(engine,
@@ -306,7 +306,7 @@ class SupportFilesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         format = self.get_object(pk)
         serializer = SupportFilesSerializer(format,
@@ -342,7 +342,7 @@ class TimezonesView(APIView):
 
     def post(self, request):
         data = request.data
-   
+
         #data['user'] = self.request.user.id
         #print(">>>>>>>AFTER",data)
         serializer = TimezonesSerializer(data=data, context={'request':request})
@@ -351,7 +351,7 @@ class TimezonesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         t_zone = self.get_object(pk)
         serializer = TimezonesSerializer(t_zone, data=request.data,partial=True)
@@ -392,7 +392,7 @@ class LanguagesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         lang = self.get_object(pk)
         serializer = LanguagesSerializer(lang, data=request.data,partial=True)
@@ -423,7 +423,7 @@ class LanguagesLocaleView(APIView):
         if langid :
             queryset = LanguagesLocale.objects.filter(language_id=langid)
         else:
-            queryset = LanguagesLocale.objects.all() 
+            queryset = LanguagesLocale.objects.all()
         serializer = LocaleSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -437,7 +437,7 @@ class LanguagesLocaleView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         locale = self.get_object(pk)
         serializer = LocaleSerializer(locale, data=request.data,partial=True)
@@ -477,7 +477,7 @@ class BillingunitsView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         unit = self.get_object(pk)
         serializer = BillingunitsSerializer(unit, data=request.data,partial=True)
@@ -490,6 +490,15 @@ class BillingunitsView(APIView):
         unit = self.get_object(pk)
         unit.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ServiceTypeunitsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        queryset = ServiceTypeunits.objects.all()
+        serializer = ServiceTypeUnitsSerializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 
 for klass in [LanguagesView]:
