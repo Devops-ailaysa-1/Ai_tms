@@ -318,7 +318,7 @@ class TmxFilesOfProject(APIView):
             params_data = FileSerializerv2(file).data
             print("params data---->", params_data)
             res = requests.post(
-                "http://localhost:8080/source/createTmx",
+                f"http://{spring_host}:8080/source/createTmx",
                 data={
                     "doc_req_params": json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
@@ -350,7 +350,7 @@ class ProjectReportAnalysis(APIView):
         }
         print("data---->", data)
         res = requests.post(
-            "http://localhost:8080/project/report-analysis",
+            f"http://{spring_host}:8080/project/report-analysis",
             data = {"report_params": json.dumps(data)}
         )
         if res.status_code in [200, 201]:
