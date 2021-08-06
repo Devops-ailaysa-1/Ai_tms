@@ -219,7 +219,7 @@ class ConcordanceSearchView(views.APIView):
         if segment:
             tm_ser_data = TM_FetchSerializer(segment).data
             tm_ser_data.update({'search_source_string':search_string, "max_hits":20, "threshold": 10})
-            res = requests.post( 'http://localhost:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser_data) })
+            res = requests.post( f'http://{spring_host}:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser_data) })
             if res.status_code == 200:
                 return res.json()
             else:
