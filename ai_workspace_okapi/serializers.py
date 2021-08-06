@@ -76,8 +76,11 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print(validated_data)
         if "target" in validated_data:
+            res = super().update(instance, validated_data)
             instance.temp_target = instance.target
+            instance.save()
         # print(instance.target)
+            return res
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
