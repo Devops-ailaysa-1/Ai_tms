@@ -6,7 +6,7 @@ from ai_staff.models import (Billingunits, CATSoftwares, ContentTypes,
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from ai_auth.models import AiUser,user_directory_path
-from ai_workspace.models import Job
+from ai_workspace.models import Job,Project
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
 
@@ -110,12 +110,12 @@ class VendorLanguagePair(ParanoidModel):
        constraints = [
             UniqueConstraint(fields=['user', 'source_lang', 'target_lang'], condition=Q(deleted_at=None), name='unique_if_not_deleted')
         ]
-    
+
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
-     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2)
-     mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2)
+     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+     mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
      mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='unit_type', on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -165,12 +165,10 @@ class AssignedVendors(ParanoidModel):
 
 
 
-class jobboard_details(models.Model):
-    job=models.ForeignKey(Job, on_delete=models.CASCADE,related_name="job_detail")
+class ProjectboardDetails(models.Model):
+    project=models.ForeignKey(Project, on_delete=models.CASCADE,related_name="proj_detail")
     service = models.CharField(max_length=191,blank=True, null=True)
     steps = models.CharField(max_length=191,blank=True, null=True)
-    # src_lang = models.CharField(max_length=191,blank=True, null=True)
-    # tar_lang = models.CharField(max_length=191,blank=True, null=True)
     sub_field = models.CharField(max_length=191,blank=True, null=True)
     content_type = models.CharField(max_length=191,blank=True, null=True)
     proj_name = models.CharField(max_length=191,blank=True, null=True)
@@ -194,6 +192,10 @@ class jobboard_details(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+class ProjectPostJobDetails(models.Model):
+     src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
+     tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE)
+     projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
 # class vendor_bid_details(models.Model):
 #     proj_id=models.ForeignKey(jobboard_projdetails, on_delete=models.CASCADE)
 #     bid_amount=models.DecimalField(
