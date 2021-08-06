@@ -338,7 +338,7 @@ pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 class TmxFile(models.Model):
 
     def tmx_file_path(instance, filename):
-        return os.path.join(instance.project.project_dir_path, "tmx", filename)
+        return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tmx", filename)
 
     tmx_file = models.FileField(upload_to=tmx_file_path,
                     validators=[FileExtensionValidator(allowed_extensions=["tmx"])])

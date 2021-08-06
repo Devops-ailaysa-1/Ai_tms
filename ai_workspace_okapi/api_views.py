@@ -118,6 +118,17 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # return self.get_paginated_response(segments_ser.data)
         return Response(DocumentSerializerV2(document).data, status=201)
 
+class DocumentViewByDocumentId(views.APIView):
+    @staticmethod
+    def get_object(document_id):
+        docs = Document.objects.all()
+        document = get_object_or_404(docs, id=document_id)
+        return  document
+
+    def get(self, request, document_id):
+        document = self.get_object(document_id)
+        return Response(DocumentSerializerV2(document).data, status=200)
+
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
 
@@ -188,7 +199,7 @@ class MT_RawAndTM_View(views.APIView):
         segment = Segment.objects.filter(id=segment_id).first()
         if segment:
             tm_ser = TM_FetchSerializer(segment)
-            res = requests.post( 'http://localhost:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser.data) })
+            res = requests.post( f'http://{spring_host}:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser.data) })
             if res.status_code == 200:
                 return res.json()
             else:
@@ -280,6 +291,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
 
     @staticmethod
     def get_queryset(request, data, document_id, lookup_field):
+        print("input data--->", data)
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
         segments_all = segments = document.segments

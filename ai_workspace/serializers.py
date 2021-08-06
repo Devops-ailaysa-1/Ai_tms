@@ -89,7 +89,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url")
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url", "id")
 		# extra_kwargs = {
 		# 	"jobs": {"write_only": True},
 		# 	"files":  {"write_only": True},

@@ -26,7 +26,8 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
     temp_target = serializers.CharField(read_only=True, source="get_temp_target")
-    status = serializers.CharField(read_only=True, source="status.status_name")
+    status = serializers.IntegerField(read_only=True, source="status.status_id")
+
     class Meta:
         model = Segment
         fields = (
@@ -131,7 +132,8 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         model = Document
         fields = ("text_unit_ser", "file", "job",
                   "total_word_count", "total_char_count",
-                  "total_segment_count", "created_by", "id")
+                  "total_segment_count", "created_by", "id",)
+
 
         extra_kwargs = {
             "file": {"write_only": True},
@@ -176,9 +178,12 @@ class DocumentSerializerV2(DocumentSerializer):
         return super(DocumentSerializer, self).to_internal_value(data=data)
 
     class Meta(DocumentSerializer.Meta):
-        fields = ("text_unit_ser", "file", "job",
+        fields = ("text_unit_ser", "file", "job", "project", 
                   "total_word_count", "total_char_count",
-                  "total_segment_count", "created_by", "document_id")
+                  "total_segment_count", "created_by", "document_id",
+                  "source_language", "target_language", "source_language_id",
+                  "target_language_id", "source_language_code", "target_language_code"
+                  )
 
 class DocumentSerializerV3(DocumentSerializerV2):
     text = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set")
