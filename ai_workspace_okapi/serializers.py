@@ -27,6 +27,7 @@ class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
     temp_target = serializers.CharField(read_only=True, source="get_temp_target")
     status = serializers.IntegerField(read_only=True, source="status.status_id")
+
     class Meta:
         model = Segment
         fields = (
@@ -131,7 +132,8 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         model = Document
         fields = ("text_unit_ser", "file", "job",
                   "total_word_count", "total_char_count",
-                  "total_segment_count", "created_by", "id")
+                  "total_segment_count", "created_by", "id",)
+
 
         extra_kwargs = {
             "file": {"write_only": True},

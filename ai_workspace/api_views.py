@@ -16,12 +16,14 @@ from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Task
 from django.http import JsonResponse
-import requests, json
+import requests, json, os
 from ai_workspace import serializers
 from ai_workspace_okapi.models import Document
 from ai_staff.models import LanguagesLocale, Languages
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
+
+spring_host = os.environ.get("SPRING_HOST")
 
 class IsCustomer(permissions.BasePermission):
 
@@ -366,7 +368,7 @@ class TmxFileView(viewsets.ViewSet):
         project = Project.objects.get(id=project_id)
         data = PentmWriteSerializer(project).data
 
-        res = requests.post("http://localhost:8080/project/pentm/create",
+        res = requests.post(f"http://{spring_host}:8080/project/pentm/create",
                             data={"pentm_params": json.dumps(data)})
         if res.status_code == 200:
             for tmx_data in res.json():
