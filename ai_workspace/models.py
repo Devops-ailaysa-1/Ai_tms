@@ -330,5 +330,6 @@ def tbx_file_upload_path(instance, filename):
     return file_path
 
 class Tbxfiles(models.Model):
-    tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False, blank=False, max_length=1000)  # Common for a project
+    # tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False, blank=False, max_length=1000)  # Common for a project
+    tbx_files = models.FileField(upload_to="uploaded_tbx_files", null=False, blank=False, max_length=1000)  # Common for a project
     project = models.ForeignKey("Project", null=False, blank=False, on_delete=models.CASCADE)
