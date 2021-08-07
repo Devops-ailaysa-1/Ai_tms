@@ -76,8 +76,12 @@ CORS_ALLOW_HEADERS = [
      'x-requested-with',
      'Access-Control-Allow-Origin',
      'Access-Control-Allow-Credentials',
+     'Access-Control-Allow-Headers',
      'cache',
      'cookie',
+     'access-control-expose-headers',
+     'responseType',
+     'redirect',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
