@@ -18,6 +18,7 @@ from ai_workspace_okapi.models import Document
 from ai_staff.models import ParanoidModel
 from django.shortcuts import reverse
 from django.core.validators import FileExtensionValidator
+from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -329,6 +330,14 @@ class Task(models.Model):
     @property
     def get_document_url(self):
         return reverse("ws_okapi:document", kwargs={"task_id": self.id})
+
+    @property
+    def extension(self):
+        return get_file_extension(self.file.file.path)
+
+    @property
+    def processor_name(self):
+        return  get_processor_name(self.file.file.path).get("processor_name", None)
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)

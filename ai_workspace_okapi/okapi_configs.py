@@ -23,7 +23,7 @@ ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
      ('.sdlxliff',): 'sdl-package-processor',
      ('.resx',): 'resx-processor',
      ('.srt',): 'srt-processor',
-     ('.csv', '.tsv'): 'csv-processor',
+     ('.csv', '.tsv'): 'table-processor',
      ('.strings',): 'strings-processor'
  }
 

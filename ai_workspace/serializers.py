@@ -276,7 +276,7 @@ class TaskSerializer(serializers.ModelSerializer):
 		fields = ("source_file_path", "source_language",
 				  "target_language", "document_url","filename",
 				  "file", "job", "version", "assign_to", 'output_file_path',
-				  "source_language_id", "target_language_id"
+				  "source_language_id", "target_language_id", "extension", "processor_name"
 				  )
 
 		extra_kwargs = {
@@ -300,10 +300,6 @@ class TaskSerializer(serializers.ModelSerializer):
 
 	def to_representation(self, instance):
 		representation = super().to_representation(instance)
-		if self.instance:
-			representation["extension"] = get_file_extension(instance.file.file.path)
-			representation["processor_name"] = get_processor_name(instance.file.file.path)\
-												.get("processor_name", None)
 		return representation
 
 class TaskSerializerv2(TaskSerializer):
