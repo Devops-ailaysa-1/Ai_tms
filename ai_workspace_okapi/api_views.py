@@ -250,6 +250,9 @@ class DocumentToFile(views.APIView):
                     with open(file_path, 'rb') as fh:
                         response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
                         response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(file_path)
+                        response["Access-Control-Allow-Origin"] = "*"
+                        response["Access-Control-Allow-Headers"] = "*"
+                        print("response headers---->",  response.headers) 
                         return response
             # return JsonResponse({"output_file_path": res.text}, status=201)
         return JsonResponse({"msg": "something went to wrong in okapi file processing"}, status=409)
