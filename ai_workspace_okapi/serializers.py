@@ -26,7 +26,8 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
     temp_target = serializers.CharField(read_only=True, source="get_temp_target")
-    status = serializers.CharField(read_only=True, source="status.status_name")
+    status = serializers.IntegerField(read_only=True, source="status.status_id")
+
     class Meta:
         model = Segment
         fields = (
@@ -75,8 +76,11 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print(validated_data)
         if "target" in validated_data:
+            res = super().update(instance, validated_data)
             instance.temp_target = instance.target
+            instance.save()
         # print(instance.target)
+            return res
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
@@ -131,7 +135,8 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         model = Document
         fields = ("text_unit_ser", "file", "job",
                   "total_word_count", "total_char_count",
-                  "total_segment_count", "created_by", "id")
+                  "total_segment_count", "created_by", "id",)
+
 
         extra_kwargs = {
             "file": {"write_only": True},
@@ -176,9 +181,12 @@ class DocumentSerializerV2(DocumentSerializer):
         return super(DocumentSerializer, self).to_internal_value(data=data)
 
     class Meta(DocumentSerializer.Meta):
-        fields = ("text_unit_ser", "file", "job",
+        fields = ("text_unit_ser", "file", "job", "project",
                   "total_word_count", "total_char_count",
-                  "total_segment_count", "created_by", "document_id")
+                  "total_segment_count", "created_by", "document_id",
+                  "source_language", "target_language", "source_language_id",
+                  "target_language_id", "source_language_code", "target_language_code"
+                  )
 
 class DocumentSerializerV3(DocumentSerializerV2):
     text = TextUnitSerializerV2(many=True,  read_only=True, source="document_text_unit_set")
@@ -223,6 +231,19 @@ class MT_RawSerializer(serializers.ModelSerializer):
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
 
+class TM_FetchSerializer(serializers.ModelSerializer):
+    pentm_dir_path = serializers.CharField(source="text_unit.document.job.project.pentm_path", read_only=True)
+    search_source_string = serializers.CharField(source="source", read_only=True)
+    threshold =  serializers.IntegerField(default=85, read_only=True)
+    max_hits = serializers.IntegerField(default=5, read_only=True)
+
+    class Meta:
+        model = Segment
+        fields = (
+            "pentm_dir_path", "search_source_string", "target_language_code",
+            "threshold", "max_hits"
+        )
+
 class TranslationStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = TranslationStatus
@@ -237,6 +258,15 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = "__all__"
+
+class FilterSerializer(serializers.Serializer):
+    status_list = serializers.JSONField(
+        required=False
+    )
+
+    class Meta:
+        fields = ( "status_list", )
+
 
 # //////////////////////////////////// References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 

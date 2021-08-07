@@ -5,7 +5,7 @@ from .serializers import DocumentSerializerV2
 from django.http import JsonResponse, HttpResponse
 from .models import  Segment
 from .serializers import SegmentSerializer, MT_RawSerializer
-from .api_views import MT_RawView, SegmentsUpdateView, DocumentToFile
+from .api_views import MT_RawAndTM_View, SegmentsUpdateView, DocumentToFile
 import os
 # Create your views here.
 

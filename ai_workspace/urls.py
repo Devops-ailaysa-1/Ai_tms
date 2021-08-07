@@ -11,6 +11,7 @@ router.register(r"temp_project_setup", api_views.AnonymousProjectSetupView, base
 router.register(r"project-setup-sub", api_views.ProjectSubjectView, basename="project_setup__sub")
 router.register(r"project-setup-content", api_views.ProjectContentTypeView, basename="project_setup__content")
 router.register(r"project-create", api_views.ProjectCreateView, basename="project_create")
+router.register(r"tmx_file", api_views.TmxFileView, basename="tmx-file")
 # router.register(r"tasks", api_views.TaskView, basename="tasks")
 
 urlpatterns = router.urls
@@ -20,6 +21,8 @@ urlpatterns += [
 	path("tasks/", api_views.TaskView.as_view(), name="tasks"),
 	path("files_jobs/<int:project_id>/", api_views.Files_Jobs_List.as_view(), name="get-files-jobs-by-project_id"),
 	path("source_tmx/<int:project_id>/", api_views.TmxFilesOfProject.as_view(), name="source-tmx-files"),
+	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(), name="project-report-analysis"),
+    path("getLangName/<int:id>/", api_views.getLanguageName, name="get-language-name"),
 	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(), name="project-report-analysis"),
 	path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
 	path("tbx_read", tbx_read.TermSearch, name='tbx-read'),

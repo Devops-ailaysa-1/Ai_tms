@@ -2,7 +2,7 @@ from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from ai_workspace.models import  Project, Job, File, ProjectContentType, \
-		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, Tbxfiles
+		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile, Tbxfiles
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -89,7 +89,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url")
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url", "id")
 		# extra_kwargs = {
 		# 	"jobs": {"write_only": True},
 		# 	"files":  {"write_only": True},
@@ -268,12 +268,15 @@ class TaskSerializer(serializers.ModelSerializer):
 	target_language = serializers.CharField(source="job.target__language", read_only=True)
 	document_url = serializers.URLField(source="get_document_url", read_only=True)
 	filename = serializers.CharField(source="file.get_file_name", read_only=True)
+	source_language_id = serializers.IntegerField(source="job.source_language.id", read_only=True)
+	target_language_id = serializers.IntegerField(source="job.target_language.id", read_only=True)
 
 	class Meta:
 		model = Task
 		fields = ("source_file_path", "source_language",
 				  "target_language", "document_url","filename",
-				  "file", "job", "version", "assign_to", 'output_file_path'
+				  "file", "job", "version", "assign_to", 'output_file_path',
+				  "source_language_id", "target_language_id"
 				  )
 
 		extra_kwargs = {
@@ -303,14 +306,40 @@ class TaskSerializer(serializers.ModelSerializer):
 												.get("processor_name", None)
 		return representation
 
-
-
 class TaskSerializerv2(TaskSerializer):
 	class Meta(TaskSerializer.Meta):
 		pass
 	def to_internal_value(self, data):
 		return super(TaskSerializer, self).to_internal_value(data=data)
 
+class TmxFileSerializer(serializers.ModelSerializer):
+	# serializers.FileField(man)
+	is_processed = serializers.BooleanField(required=False, write_only=True)
+	is_failed = serializers.BooleanField(required=False, write_only=True)
+
+	class Meta:
+		model = TmxFile
+		fields = ("project", "tmx_file", "is_processed", "is_failed")
+
+	@staticmethod
+	def prepare_data(data):
+		if not (("project" in data) and ("tmx_files" in data)) :
+			raise serializers.ValidationError("required fields missing!!!")
+		project = data["project"]
+		return [
+			{"project": project, "tmx_file": tmx_file} for tmx_file in data["tmx_files"]
+		]
+
+class PentmWriteSerializer(serializers.ModelSerializer):
+	penseive_tm_write_path = serializers.CharField(source="pentm_path", read_only=True)
+	tmx_data = serializers.JSONField(source="tmx_files_path_not_processed", read_only=True)
+
+	class Meta:
+		model = Project
+		fields = (
+			"source_language_code", "target_language_codes",
+			"penseive_tm_write_path", "tmx_data",
+		)
 class TbxUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tbxfiles

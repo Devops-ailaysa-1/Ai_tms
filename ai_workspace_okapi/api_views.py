@@ -1,6 +1,7 @@
 from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
-                          TranslationStatusSerializer, FontSizeSerializer, CommentSerializer)
+                          TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
+                          TM_FetchSerializer)
 from ai_workspace.serializers import TaskSerializer
 from .models import Document, Segment, MT_RawTranslation, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets
@@ -117,6 +118,17 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # return self.get_paginated_response(segments_ser.data)
         return Response(DocumentSerializerV2(document).data, status=201)
 
+class DocumentViewByDocumentId(views.APIView):
+    @staticmethod
+    def get_object(document_id):
+        docs = Document.objects.all()
+        document = get_object_or_404(docs, id=document_id)
+        return  document
+
+    def get(self, request, document_id):
+        document = self.get_object(document_id)
+        return Response(DocumentSerializerV2(document).data, status=200)
+
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
 
@@ -168,7 +180,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment_serlzr = self.get_update(segment, request.data, request)
         return Response(segment_serlzr.data, status=201)
 
-class MT_RawView(views.APIView):
+class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_data(request, segment_id):
@@ -182,9 +194,44 @@ class MT_RawView(views.APIView):
             mt_raw_serlzr.save()
             return mt_raw_serlzr, 201
 
+    @staticmethod
+    def get_tm_data(request, segment_id):
+        segment = Segment.objects.filter(id=segment_id).first()
+        if segment:
+            tm_ser = TM_FetchSerializer(segment)
+            res = requests.post( f'http://{spring_host}:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser.data) })
+            if res.status_code == 200:
+                return res.json()
+            else:
+                return []
+        return []
+
     def get(self, request, segment_id):
         data, status_code = self.get_data(request, segment_id)
-        return Response(data.data, status=status_code)
+        tm_data = self.get_tm_data(request, segment_id)
+        return Response({**data.data, "tm":tm_data}, status=status_code)
+
+class ConcordanceSearchView(views.APIView):
+
+    @staticmethod
+    def get_concordance_data(request, segment_id, search_string):
+        segment = Segment.objects.filter(id=segment_id).first()
+        if segment:
+            tm_ser_data = TM_FetchSerializer(segment).data
+            tm_ser_data.update({'search_source_string':search_string, "max_hits":20, "threshold": 10})
+            res = requests.post( f'http://{spring_host}:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser_data) })
+            if res.status_code == 200:
+                return res.json()
+            else:
+                return []
+        return []
+
+    def get(self, request, segment_id):
+        search_string = request.GET.get("string", None)
+        concordance = []
+        if search_string:
+            concordance = self.get_concordance_data(request, segment_id, search_string)
+        return Response(concordance, status=200)
 
 class DocumentToFile(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -265,38 +312,45 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     lookup_field = "source"
 
     @staticmethod
+    def prepare_data(data):
+        for i in data:
+            try:
+                data[i] = json.loads(data[i])
+            except:
+                pass
+        return data
+
+    @staticmethod
     def get_queryset(request, data, document_id, lookup_field):
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
         segments_all = segments = document.segments
         status_list = data.get("status_list", [])
+
         if status_list:
             segments = segments.filter(status__status_id__in=status_list).all()
-            if not segments:
-                return segments_all, 422
 
         search_word = data.get("search_word", None)
-        if search_word in [None, '']:
-            return segments_all, 422
 
-        match_case = data.get("match_case", False)
-        exact_word = data.get("exact_word", False)
+        if search_word not in [None, '']:
 
-        if match_case and exact_word:
-            segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w){search_word}(?!\w)'})
-        elif not(match_case or exact_word):
-            segments = segments.filter(**{f'{lookup_field}__contains':f'{search_word}'})
-        elif match_case:
-            segments = segments.filter(**{f'{lookup_field}__regex':f'{search_word}'})
-        elif exact_word:
-            segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
+            match_case = data.get("match_case", False)
+            exact_word = data.get("exact_word", False)
 
-        if not segments:
-            return segments_all, 422
+            if match_case and exact_word:
+                segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w){search_word}(?!\w)'})
+            elif not(match_case or exact_word):
+                segments = segments.filter(**{f'{lookup_field}__contains':f'{search_word}'})
+            elif match_case:
+                segments = segments.filter(**{f'{lookup_field}__regex':f'{search_word}'})
+            elif exact_word:
+                segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
+
         return segments, 200
 
     def post(self, request, document_id):
-        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
+        data = self.prepare_data(request.POST.dict())
+        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
         res = self.get_paginated_response(segments_ser.data)
@@ -314,12 +368,12 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         return res
 
     def post(self, request, document_id):
-        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
+        data = self.prepare_data(request.POST.dict())
+        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
         return self.paginate_response(segments, request, status)
 
     @staticmethod
     def update_segments(request, data, segments):
-        status_list = data.get("status_list",[])
         search_word = data.get('search_word', '')
         replace_word = data.get('replace_word', '')
         match_case = data.get('match_case', False)
@@ -339,16 +393,17 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         for instance in segments:
             instance.temp_target = re.sub(regex, replace_word, instance.temp_target)
             instance.save()
+
         return segments, 200
 
     def update(self, request, document_id):
-        segments, status = self.get_queryset(request, request.data, document_id, self.lookup_field)
-        if status != 422:
-            segments, status = self.update_segments(request, request.data, segments)
+        data = self.prepare_data(request.POST.dict())
+        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
+        segments, status = self.update_segments(request, data, segments)
         return self.paginate_response(segments, request, status)
 
 class ProgressView(views.APIView):
-    confirm_list = [102, 104]
+    confirm_list = [102, 104, 106]
 
     @staticmethod
     def get_object(document_id):
@@ -394,6 +449,19 @@ class FontSizeView(views.APIView):
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=status)
+
+    def get(self, request):
+        try:
+            source_id = int(request.GET.get('source', '0'))
+            target_id = int(request.GET.get('target', '0'))
+        except:
+            return JsonResponse({"msg": "input data is wrong"}, status=422)
+        objs = FontSize.objects.filter(ai_user=request.user).filter(
+            language_id__in=[source_id, target_id]
+        ).all()
+        ser = FontSizeSerializer(objs, many=True)
+        return Response(ser.data, status=200)
+
 
 class CommentView(viewsets.ViewSet):
     @staticmethod
@@ -448,3 +516,4 @@ class CommentView(viewsets.ViewSet):
         obj = self.get_object(comment_id=pk)
         obj.delete()
         return  Response({},204)
+

@@ -8,17 +8,24 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
                             ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer,
-                          FileSerializerv2, FileSerializerv3, TbxUploadSerializer)
+                          FileSerializerv2, FileSerializerv3, TmxFileSerializer, PentmWriteSerializer, TbxUploadSerializer)
+                        
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject
+from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Task
 from django.http import JsonResponse
-import requests, json
+import requests, json, os
 from ai_workspace import serializers
+from ai_workspace_okapi.models import Document
+from ai_staff.models import LanguagesLocale, Languages
+from rest_framework.decorators import api_view
+from django.http import JsonResponse
+
+spring_host = os.environ.get("SPRING_HOST")
 
 class IsCustomer(permissions.BasePermission):
 
@@ -313,7 +320,7 @@ class TmxFilesOfProject(APIView):
             params_data = FileSerializerv2(file).data
             print("params data---->", params_data)
             res = requests.post(
-                "http://localhost:8080/source/createTmx",
+                f"http://{spring_host}:8080/source/createTmx",
                 data={
                     "doc_req_params": json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
@@ -345,13 +352,47 @@ class ProjectReportAnalysis(APIView):
         }
         print("data---->", data)
         res = requests.post(
-            "http://localhost:8080/project/report-analysis",
+            f"http://{spring_host}:8080/project/report-analysis",
             data = {"report_params": json.dumps(data)}
         )
         if res.status_code in [200, 201]:
             return JsonResponse({"msg": res.text}, safe=False)
         else:
             return JsonResponse({"msg": "something went to wrong"}, safe=False)
+
+class TmxFileView(viewsets.ViewSet):
+
+    @staticmethod
+    def TmxToPenseiveWrite(data):
+        if len(data)==0:
+            return
+        project_id = data[0]["project"]
+        project = Project.objects.get(id=project_id)
+        data = PentmWriteSerializer(project).data
+
+        res = requests.post(f"http://{spring_host}:8080/project/pentm/create",
+                            data={"pentm_params": json.dumps(data)})
+        if res.status_code == 200:
+            for tmx_data in res.json():
+                print("res--->", res.json())
+                instance = project.project_tmx_files.filter(id=tmx_data.get('tmx_id','')).first()
+                ser = TmxFileSerializer(instance, data=tmx_data, partial=True)
+                if ser.is_valid(raise_exception=True):
+                    ser.save()
+            return JsonResponse(res.json(), safe=False)
+        else:
+            return JsonResponse({"msg": "Something went to wrong in tmx to pentm processing"}, status=res.status_code)
+
+    def create(self, request):
+        data = {**request.POST.dict(), "tmx_files": request.FILES.getlist("tmx_files")}
+        ser_data = TmxFileSerializer.prepare_data(data)
+        ser = TmxFileSerializer(data=ser_data, many=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return self.TmxToPenseiveWrite(ser.data)
+
+
+
 
 class TbxUploadView(APIView):
     def post(self, request):
@@ -402,3 +443,14 @@ class TbxUploadView(APIView):
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
 #         else:
 #             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET',])
+def getLanguageName(request,id):
+      job_id=Document.objects.get(id=id).job_id
+      src_id=Job.objects.get(id=job_id).source_language_id
+      src_name=Languages.objects.get(id=src_id).language
+      tar_id=Job.objects.get(id=job_id).target_language_id
+      tar_name=Languages.objects.get(id=tar_id).language
+      src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name).locale_code
+      tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name).locale_code
+      return JsonResponse({"source_lang":src_name,"target_lang":tar_name,"src_code":src_lang_code,"tar_code":tar_lang_code})
