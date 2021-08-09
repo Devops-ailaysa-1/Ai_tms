@@ -239,7 +239,6 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER':'ai_auth.serializers.AiPasswordResetSerializer',
     'USER_DETAILS_SERIALIZER': 'ai_auth.serializers.AiUserDetailsSerializer',
-
 }
 
 PASSWORD_RESET_URL = "reset/"

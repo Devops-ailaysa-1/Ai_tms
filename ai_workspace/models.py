@@ -75,7 +75,10 @@ class Project(ParanoidModel):
     created_at = models.DateTimeField(auto_now=True)
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
     ai_project_id = models.TextField()
-    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.CASCADE, related_name="proj_mt_engine")
+    mt_engine = models \
+        .ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
+        on_delete=models.CASCADE, related_name="proj_mt_engine")
+
 #    test = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -144,10 +147,6 @@ class Project(ParanoidModel):
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
 
-# class Language(models.Model):
-#     language_name = models.CharField(max_length=50, null=False, blank=False)
-#     language_code = models.CharField(max_length=20, null=False, blank=False)
-
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -163,7 +162,7 @@ class ProjectSubjectField(models.Model):
 
 class Job(models.Model):
     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
-                        related_name="source_language") # Correction [Following same style of naming convention]
+                        related_name="source_language")
     target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
                         related_name="target_language")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
@@ -211,7 +210,6 @@ class Job(models.Model):
 
     def __str__(self):
         return self.source_language.language+"->"+self.target_language.language
-
 
 class FileTypes(models.Model):
     TERMBASE = "termbase"
