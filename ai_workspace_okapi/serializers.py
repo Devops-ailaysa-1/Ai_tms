@@ -170,6 +170,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
 class DocumentSerializerV2(DocumentSerializer):
     document_id = serializers.IntegerField(source="id", read_only=True)
+    filename = serializers.CharField(source="file.filename", read_only=True)
 
     def to_internal_value(self, data):
         data["text_unit_ser"] = [
@@ -181,7 +182,7 @@ class DocumentSerializerV2(DocumentSerializer):
         return super(DocumentSerializer, self).to_internal_value(data=data)
 
     class Meta(DocumentSerializer.Meta):
-        fields = ("text_unit_ser", "file", "job", "project",
+        fields = ("text_unit_ser", "file", "job", "project", "filename",
                   "total_word_count", "total_char_count",
                   "total_segment_count", "created_by", "document_id",
                   "source_language", "target_language", "source_language_id",
