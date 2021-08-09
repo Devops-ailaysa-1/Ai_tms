@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from django.http import Http404
-from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits
-from .serializer import ContentTypesSerializer, LanguagesSerializer, LocaleSerializer, MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer, TimezonesSerializer,BillingunitsSerializer
+from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits,ServiceTypeunits
+from .serializer import ContentTypesSerializer, LanguagesSerializer, LocaleSerializer, MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer, TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer
 
 
 class ServiceTypesView(APIView):
@@ -483,6 +483,15 @@ class BillingunitsView(APIView):
         unit = self.get_object(pk)
         unit.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ServiceTypeunitsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        queryset = ServiceTypeunits.objects.all()
+        serializer = ServiceTypeUnitsSerializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 
 for klass in [LanguagesView]:

@@ -92,6 +92,7 @@ class Project(ParanoidModel):
 
     penseive_tm_klass = PenseiveTM
 
+
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.ai_project_id:

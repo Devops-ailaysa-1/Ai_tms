@@ -19,7 +19,7 @@ from pathlib import Path
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
-
+TEMPLATE_DIR_2 = os.path.join(BASE_DIR,'ai_vendor','templates')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
@@ -36,11 +36,12 @@ ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.2
 CORS_ORIGIN_ALLOW_ALL= False
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000", "http://workspacestaging.ailaysa.com"
+    "http://localhost:3000","http://143.244.140.71", "http://workspacestaging.ailaysa.com", "http://workspace.ailaysa.com"
 ]
 
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000", "http://157.245.99.128:3000",  "http://workspacestaging.ailaysa.com", 
+    "http://143.244.140.71", "http://workspace.ailaysa.com"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -138,7 +139,7 @@ AUTH_USER_MODEL="ai_auth.AiUser"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_DIR],
+        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -159,7 +160,7 @@ WSGI_APPLICATION = 'ai_tms.wsgi.application'
 try:
     from .local_settings import DATABASES
 except Exception as e:
-    print("error--->", e)
+    # print("error--->", e)
     DATABASES={
         'default':{
             'ENGINE':'django.db.backends.postgresql_psycopg2',

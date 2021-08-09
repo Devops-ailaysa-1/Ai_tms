@@ -72,6 +72,8 @@ class PersonalInformation(models.Model):
     linkedin=models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    # created_at = models.CharField(max_length=200,blank=True, null=True)
+    # updated_at = models.CharField(max_length=200,blank=True, null=True)
     class Meta:
         db_table = 'personal_info'
 
@@ -96,7 +98,7 @@ class OfficialInformation(models.Model):
 def user_directory_path(instance, filename):
 
     # file will be uploaded to MEDIA_ROOT / user_<id>/<filename>
-    return 'user_{0}/{1}/{2}'.format(instance.user.id, "profile",filename)
+    return '{0}/{1}/{2}'.format(instance.user.uid, "profile",filename)
 
 class Professionalidentity(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
@@ -106,3 +108,4 @@ class Professionalidentity(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     class Meta:
         db_table = 'professional_identity'
+#pre_save.connect(create_allocated_dirs, sender=UserAttribute)

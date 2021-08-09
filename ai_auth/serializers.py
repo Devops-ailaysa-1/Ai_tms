@@ -83,7 +83,7 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 #             'fullname': {'required': True}
 #         }
 
- 
+
 #     def create(self, validated_data):
 
 #         user = AiUser.objects.create(
@@ -91,7 +91,7 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 #             fullname=validated_data['fullname'],
 #         )
 
-        
+
 #         user.set_password(validated_data['password'])
 #         user.save()
 
@@ -99,7 +99,7 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 
 
 
-class UserAttributeSerializer(serializers.ModelSerializer): 
+class UserAttributeSerializer(serializers.ModelSerializer):
     user_type = serializers.PrimaryKeyRelatedField(queryset=AiUserType.objects.all(),many=False,required=False)
 
     class Meta:
@@ -107,16 +107,16 @@ class UserAttributeSerializer(serializers.ModelSerializer):
         fields = ( 'user_type',)
         #read_only_fields = ('id',)
         depth = 2
-    
+
     def create(self, validated_data):
         print("validated data",validated_data)
         request = self.context['request']
-        user_attr = UserAttribute.objects.create(user_id=request.user.id,**validated_data)      
+        user_attr = UserAttribute.objects.create(user_id=request.user.id,**validated_data)
         return user_attr
-    
+
 
     def to_representation(self, value):
-        data = super().to_representation(value)  
+        data = super().to_representation(value)
         user_type_serializer = AiUserTypeSerializer(value.user_type)
         data['user_type'] = user_type_serializer.data
         return data
@@ -129,11 +129,11 @@ class PersonalInformationSerializer(serializers.ModelSerializer):
         model = PersonalInformation
         fields = ( 'address','country','timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
         read_only_fields = ('created_at','updated_at')
-    
+
     def create(self, validated_data):
         print("validated==>",validated_data)
         request = self.context['request']
-        personal_info = PersonalInformation.objects.create(**validated_data,user_id=request.user.id)      
+        personal_info = PersonalInformation.objects.create(**validated_data,user_id=request.user.id)
         return  personal_info
 
 class OfficialInformationSerializer(serializers.ModelSerializer):
@@ -144,10 +144,10 @@ class OfficialInformationSerializer(serializers.ModelSerializer):
         model = OfficialInformation
         fields = ( 'id','company_name','address','designation','industry','country','timezone','website','linkedin','billing_email','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
-    
+
     def create(self, validated_data):
         request = self.context['request']
-        official_info = OfficialInformation.objects.create(**validated_data,user_id=request.user.id)      
+        official_info = OfficialInformation.objects.create(**validated_data,user_id=request.user.id)
         return official_info
 
 
@@ -163,7 +163,7 @@ class ProfessionalidentitySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context['request']
         print("validated data ",validated_data)
-        identity = Professionalidentity.objects.create(**validated_data,user=request.user)      
+        identity = Professionalidentity.objects.create(**validated_data,user=request.user)
         return identity
 
     # def save(self, *args, **kwargs):

@@ -1,10 +1,19 @@
-from django.shortcuts import render
-from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType
-from tablib import Dataset
-from .forms import UploadFileForm
-from django.http import JsonResponse
-# Create your views here.
+from types import GetSetDescriptorType
 
+from ai_auth.models import OfficialInformation, PersonalInformation
+from ai_vendor.models import (VendorBankDetails, VendorCATsoftware,
+                              VendorContentTypes, VendorLanguagePair,
+                              VendorMembership, VendorMtpeEngines,
+                              VendorServiceInfo, VendorServiceTypes,
+                              VendorsInfo, VendorSubjectFields, TranslationSamples, MtpeSamples)
+from django.http import JsonResponse
+from django.shortcuts import render
+from tablib import Dataset
+
+from .forms import UploadFileForm
+from .models import (AiUserType, Billingunits, ContentTypes, Countries,
+                     Currencies, Languages, LanguagesLocale, MtpeEngines,
+                     ServiceTypes, SubjectFields, SupportFiles, Timezones)
 
 
 def Bulk_insert(request):
@@ -18,17 +27,42 @@ def Bulk_insert(request):
 
             print("&&&&&&&&")
             imported_data = dataset.load(filedata.read(), format='xlsx')
-            print(imported_data)
+            # print(imported_data)
             for data in imported_data:
 
-                value = Countries(
-			sortname =data[0].strip(),
-            name=data[1].strip(),
-            phonecode=data[2],
-			#name=data[1].strip(),
-			#utc_offset=data[2].strip(),
+                value = MtpeSamples(
+			lang_pair_id =data[1],
+            sample_file = data[2],
+            #unit_type_id=data[2],
+            #unit_rate=data[3],
+            #hourly_rate=data[4],
+            #minute_rate = data[5],		
+            #currency = data[3],
+            #vm_status = data[4],
+            #status = data[5],
+            #token = data[6],
+            #skype = data[7],
+            #proz_link = data[8],
+            #cv_file = data[9],
+            #native_lang_id = data[10],
+            #year_of_experience = data[11],
+            #rating = data[12],
+            created_at = data[3],              
+            updated_at = data[4],
+            deleted_at = data[5],
+            # updated_at = data[13],            
+            # updated_at = data[14].strip(),            
+            # locale_code = data[2].strip(),
+
+            # id =data[0],
+            # user_id = data[1],
+            # source_lang_id = data[2],		
+            # target_lang_id = data[3],
+            # created_at = data[3],
+            # updated_at = data[4],
+            # deleted_at = data[5],
                 )
-                print(value)
+                # print(value)
                 value.save()
             print("$$$ END  $$$")
             return JsonResponse({'message':'success'})
