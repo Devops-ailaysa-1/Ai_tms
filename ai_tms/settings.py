@@ -36,11 +36,11 @@ ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.2
 CORS_ORIGIN_ALLOW_ALL= False
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000","http://143.244.140.71",
+    "http://localhost:3000","http://143.244.140.71", "http://workspacestaging.ailaysa.com", "http://workspace.ailaysa.com"
 ]
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000","http://143.244.140.71"
+    "http://localhost:3000","http://143.244.140.71", "http://workspacestaging.ailaysa.com", "http://workspace.ailaysa.com"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
