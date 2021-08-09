@@ -22,7 +22,7 @@ class TranslationStatus(models.Model):
     status_id = models.IntegerField()
 
 class Segment(models.Model):
-    source = models.TextField()
+    source = models.TextField(blank=True)
     target = models.TextField(null=True, blank=True)
     temp_target = models.TextField(null=True, blank=True)
     coded_source = models.TextField(null=True, blank=True)

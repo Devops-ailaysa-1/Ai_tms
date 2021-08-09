@@ -234,7 +234,7 @@ class ConcordanceSearchView(views.APIView):
         return Response(concordance, status=200)
 
 class DocumentToFile(views.APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()

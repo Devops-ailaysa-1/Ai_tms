@@ -333,7 +333,9 @@ class Task(models.Model):
 
     @property
     def extension(self):
-        return get_file_extension(self.file.file.path)
+        try:ret=get_file_extension(self.file.file.path)
+        except:ret=''
+        return ret 
 
     @property
     def processor_name(self):
