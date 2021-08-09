@@ -361,7 +361,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         return res
 
 class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
-    lookup_field = "target"
+    lookup_field = "temp_target"
 
     def paginate_response(self, segments, request, status):
         page_segments = self.paginate_queryset(segments, request, view=self)
@@ -404,6 +404,37 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
         segments, status = self.update_segments(request, data, segments)
         return self.paginate_response(segments, request, status)
+
+class FindAndReplaceTargetBySegment(SourceSegmentsListView):
+
+    @staticmethod
+    def get_object(segment_id):
+        segments = Segment.objects.all()
+        obj = get_object_or_404(segments, id=segment_id)
+        return  obj
+
+    def put(self, request, segment_id):
+        segment = self.get_object(segment_id)
+        data = self.prepare_data(request.POST.dict())
+        search_word = data.get('search_word', '')
+        replace_word = data.get('replace_word', '')
+        match_case = data.get('match_case', False)
+        exact_word = data.get('exact_word', False)
+
+        if exact_word:
+            if match_case:
+                regex = re.compile(f'(?<!\w){search_word}(?!\w)')
+            else:
+                regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
+        else:
+            if match_case:
+                regex = re.compile(search_word)
+            else:
+                regex = re.compile(r'((?i)' + search_word + r')')
+        segment.temp_target = re.sub(regex, replace_word, segment.temp_target)
+        segment.save()
+
+        return  Response(SegmentSerializer(segment).data, status=204)
 
 class ProgressView(views.APIView):
     confirm_list = [102, 104, 106]

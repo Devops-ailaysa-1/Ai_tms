@@ -23,6 +23,7 @@ urlpatterns+=[
     path("translation_status/list", api_views.TranslationStatusList.as_view(), name="translation-status-list"),
     path("source/segments/filter/<int:document_id>", api_views.SourceSegmentsListView.as_view({"post": "post"}), name="seg-filter"),
     path("target/segments/filter/<int:document_id>", api_views.TargetSegmentsListAndUpdateView.as_view({"post": "post", "put":"update"}), name="seg-filter"),
+    path("target/segment/filter/update/<int:segment_id>", api_views.FindAndReplaceTargetBySegment.as_view({"put":"put"}), name="seg-find-&-replace"),
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
