@@ -363,6 +363,13 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
 class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
     lookup_field = "temp_target"
 
+    @staticmethod
+    def unconfirm_status(segment):
+        segment.status_id = {102:101, 104:103, 106:105}.get(
+            segment.status_id, segment.status_id
+        )
+
+
     def paginate_response(self, segments, request, status):
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
@@ -376,7 +383,7 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         return self.paginate_response(segments, request, status)
 
     @staticmethod
-    def update_segments(request, data, segments):
+    def update_segments(request, data, segments, self):
         search_word = data.get('search_word', '')
         replace_word = data.get('replace_word', '')
         match_case = data.get('match_case', False)
@@ -395,6 +402,7 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
 
         for instance in segments:
             instance.temp_target = re.sub(regex, replace_word, instance.temp_target)
+            self.update_segments(instance)
             instance.save()
 
         return segments, 200
@@ -402,10 +410,10 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
     def update(self, request, document_id):
         data = self.prepare_data(request.POST.dict())
         segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
-        segments, status = self.update_segments(request, data, segments)
+        segments, status = self.update_segments(request, data, segments, self=self)
         return self.paginate_response(segments, request, status)
 
-class FindAndReplaceTargetBySegment(SourceSegmentsListView):
+class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
 
     @staticmethod
     def get_object(segment_id):
@@ -431,7 +439,9 @@ class FindAndReplaceTargetBySegment(SourceSegmentsListView):
                 regex = re.compile(search_word)
             else:
                 regex = re.compile(r'((?i)' + search_word + r')')
+
         segment.temp_target = re.sub(regex, replace_word, segment.temp_target)
+        self.unconfirm_status(segment)
         segment.save()
 
         return  Response(SegmentSerializer(segment).data, status=204)
