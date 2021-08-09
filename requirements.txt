@@ -12,14 +12,17 @@ Django==3.2.3
 django-allauth==0.44.0
 django-cors-headers==3.7.0
 django-crispy-forms==1.11.2
+django-extensions
 djangorestframework==3.12.4
 djangorestframework-simplejwt==4.7.1
 drf-writable-nested==0.6.3
 et-xmlfile==1.1.0
+google-cloud-translate==3.2.0
 idna==2.10
 ipython==7.23.1
 ipython-genutils==0.2.0
 jedi==0.18.0
+jupyter
 matplotlib-inline==0.1.2
 oauthlib==3.1.1
 openpyxl==3.0.7
@@ -44,3 +47,6 @@ tablib==3.0.0
 traitlets==5.0.5
 urllib3==1.26.6
 wcwidth==0.2.5
+et-xmlfile==1.1.0
+regex==2021.4.4
+nltk==3.5

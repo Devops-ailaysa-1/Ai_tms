@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv("django_secret_key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117']
+ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117', "157.245.99.128"]
 
 
 CORS_ORIGIN_ALLOW_ALL= False
@@ -40,7 +40,8 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000","http://143.244.140.71", "http://workspacestaging.ailaysa.com", "http://workspace.ailaysa.com"
+    "http://localhost:3000", "http://157.245.99.128:3000",  "http://workspacestaging.ailaysa.com", 
+    "http://143.244.140.71", "http://workspace.ailaysa.com"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -53,6 +54,7 @@ CORS_ALLOW_CREDENTIALS = True
 #     "http://localhost:3000" , "http://167.71.235.214:3000","http://157.245.99.128:3010","http://157.245.99.128:3020"
 # ]
 # CORS_ALLOWED_ORIGINS = ["http://localhost:3000" , "http://167.71.235.214","http://157.245.99.128:3010","http://157.245.99.128:3020" ]
+
 CORS_ALLOW_METHODS = [
      'DELETE',
      'GET',
@@ -61,18 +63,7 @@ CORS_ALLOW_METHODS = [
      'POST',
      'PUT',
 ]
-# CORS_ALLOW_HEADERS = [
-#     'accept',
-#     'accept-encoding',
-#     'authorization',
-#     'content-type',
-#     'dnt',
-#     'origin',
-#     'user-agent',
-#     'x-csrftoken',
-#     'x-requested-with',
-#     'Access-Control-Allow-Origin'
-# ]
+
 
 CORS_ALLOW_HEADERS = [
      'accept',
@@ -86,15 +77,20 @@ CORS_ALLOW_HEADERS = [
      'x-requested-with',
      'Access-Control-Allow-Origin',
      'Access-Control-Allow-Credentials',
+     'Access-Control-Allow-Headers',
      'cache',
      'cookie',
+     'access-control-expose-headers',
+     'responseType',
+     'redirect',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
  "http://localhost:3000",
 ]
 
-
+#SESSION_COOKIE_SAMESITE = None
+#CSRF_COOKIE_SAMESITE = None
 # Application definition
 
 INSTALLED_APPS = [
@@ -117,6 +113,9 @@ INSTALLED_APPS = [
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
+    "ai_workspace_okapi",
+    'django_extensions',
+    'sqlite3',
 ]
 
 
@@ -128,6 +127,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'corsheaders.middleware.CorsPostCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -171,8 +171,6 @@ except Exception as e:
             'PORT':os.getenv( "psql_port" ),
         }
     }
-
-
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
@@ -199,9 +197,9 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
-# REST_FRAMEWORK = {
+#REST_FRAMEWORK = {
 
-#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#    'DEFAULT_AUTHENTICATION_CLASSES': (
 
 #         'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
 #     )
@@ -230,8 +228,10 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
-# JWT_AUTH_COOKIE = 'ailaysa-auth'
-# JWT_AUTH_REFRESH_COOKIE = 'ailaysa-refresh-token'
+JWT_AUTH_COOKIE = 'ailaysa-auth'
+JWT_AUTH_REFRESH_COOKIE = 'ailaysa-refresh-token'
+
+#JWT_AUTH_SAMESITE = None
 
 REST_AUTH_REGISTER_SERIALIZERS = {
     'REGISTER_SERIALIZER': 'ai_auth.serializers.UserRegistrationSerializer',
@@ -239,7 +239,7 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 
 REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER':'ai_auth.serializers.AiPasswordResetSerializer',
-    'USER_DETAILS_SERIALIZER':'ai_auth.serializers.AiUserDetailsSerializer',
+    'USER_DETAILS_SERIALIZER': 'ai_auth.serializers.AiUserDetailsSerializer',
 }
 
 PASSWORD_RESET_URL = "reset/"
@@ -255,7 +255,8 @@ ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+          'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
+        #'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
@@ -293,7 +294,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT =  os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
-
+# ------------------------------------------------
+NOTEBOOK_ARGUMENTS = [
+    "--ip",
+    "0.0.0.0",
+    "--port",
+    "8888",
+    "--allow-root",
+    "--no-browser",
+]
+# ------------------------------------------------
 
 OLD_PASSWORD_FIELD_ENABLED = True
 

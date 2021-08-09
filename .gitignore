@@ -1,5 +1,6 @@
-db.sqlite3
+*.sqlite3
 .env2
+.env
 docker-compose.yml
 file.sql
 Dockerfile
@@ -16,3 +17,29 @@ tmsenv
 *.json
 req_nand.txt
 ai_tms/local_settings.py
+AiWorkspace.postman_collection.json
+AiWorkspace.postman_collection.json
+Workspace Editor.pptx
+
+.idea/.gitignore
+.idea/Ai_TMS.iml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.ipynb_checkpoints/
+Untitled.ipynb
+data.pkl
+db2.sqlite3
+db_gen.py
+TestFiles/*
+dbv3.sqlite3
+readme.md
+*.pkl
+server.log
+project management and workspace apis .postman_collection
+my-data.pkl
+sqlalchemy_models.py
+references.md
+Source.aux
+Source.log

@@ -13,7 +13,6 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 UserModel = get_user_model()
 
-
 class UserRegistrationSerializer(serializers.ModelSerializer):
     # email=serializers.EmailField()
     # fullname= serializers.CharField(required=True)
@@ -171,6 +170,7 @@ class ProfessionalidentitySerializer(serializers.ModelSerializer):
     #     if self.instance.avatar:
     #         self.instance.avatar.delete()
     #     return super().save(*args, **kwargs)
+
 
 class AiUserDetailsSerializer(serializers.ModelSerializer):
     """

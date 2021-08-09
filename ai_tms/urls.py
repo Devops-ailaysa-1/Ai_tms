@@ -30,6 +30,7 @@ urlpatterns = [
     path('vendor/',include('ai_vendor.urls')),
     path('', include('django.contrib.auth.urls')),
     path("workspace/", include('ai_workspace.urls')),
+    path("workspace_okapi/", include("ai_workspace_okapi.urls")),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
