@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware,AssignedVendors,ProjectboardDetails,ProjectPostJobDetails
+from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware,AvailableVendors,ProjectboardDetails,ProjectPostJobDetails
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
@@ -296,9 +296,9 @@ class LanguagePairSerializer(serializers.ModelSerializer):
     #     return vendor
 
 
-class AssignedVendorSerializer(serializers.ModelSerializer):
+class AvailableVendorSerializer(serializers.ModelSerializer):
     class Meta:
-        model= AssignedVendors
+        model= AvailableVendors
         fields="__all__"
 
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):

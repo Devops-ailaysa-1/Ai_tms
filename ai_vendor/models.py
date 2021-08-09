@@ -159,7 +159,7 @@ class MtpeSamples(ParanoidModel):
     #updated_at = models.CharField(max_length=100, null=True, blank=True)
     # deleted_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-class AssignedVendors(ParanoidModel):
+class AvailableVendors(ParanoidModel):
     customer= models.ForeignKey(AiUser,related_name='customer',on_delete=models.CASCADE)
     vendor =  models.ForeignKey(AiUser,related_name='vendor',on_delete=models.CASCADE)
 

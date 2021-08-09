@@ -14,10 +14,10 @@ from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectFie
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
-                     VendorMtpeEngines, AssignedVendors,ProjectboardDetails,ProjectPostJobDetails)
+                     VendorMtpeEngines, AvailableVendors,ProjectboardDetails,ProjectPostJobDetails)
 from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,
-                          VendorLanguagePairSerializer,AssignedVendorSerializer,
+                          VendorLanguagePairSerializer,AvailableVendorSerializer,
                           VendorServiceInfoSerializer, VendorsInfoSerializer,
                           ProjectPostSerializer)
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
@@ -369,12 +369,12 @@ def get_vendor_detail(request):
 
 
 @api_view(['POST',])
-def assign_vendor_to_customer(request):
+def assign_available_vendor_to_customer(request):
     uid=request.POST.get('vendor_id')
     vendor_id=AiUser.objects.get(uid=uid).id
     print(vendor_id)
     customer_id=request.user.id
-    serializer=AssignedVendorSerializer(data={"vendor":vendor_id,"customer":customer_id})
+    serializer=AvailableVendorSerializer(data={"vendor":vendor_id,"customer":customer_id})
     if serializer.is_valid():
         serializer.save()
         return Response(data={"Message":"Vendor Assigned to User Successfully"})
