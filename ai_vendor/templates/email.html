@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{%load static%}
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -7,8 +8,11 @@
   </head>
   <body>
     Hello {{user}},
-
-    <p>Job Available for LanguagePair {{out.src_lang}}--->{{out.tar_lang}}</p>
+    {% for i in lang %}
+      <p>Job Available for LanguagePair : {{i.src_lang}}---->{{i.tar_lang}}</p>
+    {% endfor %}
+    <p>Bid available only till : {{bid_deadline}}</p>
+    <p>Project Deadline : {{proj_deadline}}</p>
     <p>(<a href="https://ailaysa.com/vendor/login">Click here</a> to bid for job)</p>
 
     <p>Thanks,<br />Ailaysa Team</p>

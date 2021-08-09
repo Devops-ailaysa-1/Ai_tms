@@ -432,33 +432,41 @@ class ProjectPostInfoCreateView(APIView):
 def shortlisted_vendor_list_send_email(request):
     projectpost_id=request.POST.get('projectpost_id')
     new=[]
+    userslist=[]
     jobs=ProjectPostJobDetails.objects.filter(projectpost_id=projectpost_id).all()
-    out=[]
+    project_deadline=ProjectboardDetails.objects.get(id=projectpost_id).proj_deadline
+    bid_deadline=ProjectboardDetails.objects.get(id=projectpost_id).bid_deadline
     for i in jobs:
-        job_id=i.id
-        source_lang_id=i.src_lang_id
-        target_lang_id=i.tar_lang_id
-        res=VendorLanguagePair.objects.filter(Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id)).all()
+        res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id)).all()
         for j in res:
-            email=AiUser.objects.get(id=j.user_id).email
-            print(email)
-            user=AiUser.objects.get(id=j.user_id).fullname
-            src_lang=Languages.objects.get(id=source_lang_id).language
-            tar_lang=Languages.objects.get(id=target_lang_id).language
-            out=[{"src_lang":src_lang,"tar_lang":tar_lang,"job_id":job_id}]
-            new.extend(out)
-            template = 'email.html'
-            # context = Context({'user': user, 'other_info': out})
-            context = {'user': user, 'other_info': out}
-            content = render_to_string(html_template, { 'context': context, })
-            # content = template.render(context)
-            subject='Regarding Available jobs'
-            if not email:
-                raise BadHeaderError('No email address given for {0}'.format(user))
-            msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,])
-            msg.content_subtype = 'html'
-            msg.send()
+            out=[]
+            src_lang=Languages.objects.get(id=i.src_lang_id).language
+            tar_lang=Languages.objects.get(id=i.tar_lang_id).language
+            user_id=VendorLanguagePair.objects.get(id=j.id).user_id
+            out=[{"lang":[{"src_lang":src_lang,"tar_lang":tar_lang}],"user_id":user_id}]
+            if user_id not in userslist:
+                new.extend(out)
+                userslist.append(user_id)
+            else:
+                for k in new:
+                    if k.get("user_id")==user_id:
+                        k.get("lang").extend(out[0].get("lang"))
+    for data in new:
+        user_id=data.get('user_id')
+        user=AiUser.objects.get(id=user_id).fullname
+        email=AiUser.objects.get(id=user_id).email
+        print(email)
+        template = 'email.html'
+        context = {'user': user, 'lang':data.get('lang'),'proj_deadline':project_deadline,'bid_deadline':bid_deadline}
+        content = render_to_string(template, context)
+        subject='Regarding Available jobs'
+        msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,])
+        msg.content_subtype = 'html'
+        msg.send()
     return JsonResponse({"message":"Email Successfully Sent"},safe=False)
+
+
+
 # @api_view(['POST',])
 # def get_vendor_detail_admin(request):
 #     source_lang_id=request.POST.get('source_lang_id')

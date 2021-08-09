@@ -196,11 +196,17 @@ class ProjectPostJobDetails(models.Model):
      src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
      tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE)
      projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
-# class vendor_bid_details(models.Model):
-#     proj_id=models.ForeignKey(jobboard_projdetails, on_delete=models.CASCADE)
+
+
+# class AvailableBids(models.Model):
+#     projectpostjob_id=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="projpostjob_details")
+#     vendor=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#
+# class VendorBidDetails(models.Model):
+#     projpostjob_id=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE)
 #     bid_amount=models.DecimalField(
 #                          max_digits = 5,
 #                          decimal_places = 2,blank=True, null=True)
-#     vendor= models.ForeignKey(User, on_delete=models.CASCADE)
+#     vendor= models.ForeignKey(AiUser, on_delete=models.CASCADE)
 #     created = models.DateTimeField(auto_now_add=True)
 #     ven_bid_msg = models.CharField(max_length=1000,blank=True, null=True)
