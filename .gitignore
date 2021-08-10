@@ -43,3 +43,5 @@ sqlalchemy_models.py
 references.md
 Source.aux
 Source.log
+*.secure
+.secure

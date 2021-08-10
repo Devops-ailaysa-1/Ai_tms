@@ -63,8 +63,8 @@ class PenseiveTM(models.Model):
     project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.CASCADE,
                                    related_name="project_penseivetm")
 
-    class Meta:
-        managed = False
+    # class Meta:
+    #     managed = False
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
@@ -83,7 +83,7 @@ class Project(ParanoidModel):
 
     class Meta:
         unique_together = ("project_name", "ai_user")
-        managed = False
+        # managed = False
 
     def __str__(self):
         return self.project_name

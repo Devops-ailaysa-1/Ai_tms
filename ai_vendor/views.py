@@ -296,8 +296,9 @@ def vendor_subject_matter_list(request):
 
 @api_view(['POST',])
 def get_vendor_list(request):
-    source_lang_id=request.POST.get('source_lang_id')
-    target_lang_id=request.POST.get('target_lang_id')
+    job_id=request.POST.get('job_id')
+    source_lang_id=Job.objects.get(id=job_id).source_language_id
+    target_lang_id=Job.objects.get(id=job_id).target_language_id
     res=VendorLanguagePair.objects.filter(Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id)).all()
     out=[]
     for i in res:
@@ -327,8 +328,9 @@ def get_vendor_list(request):
 
 @api_view(['POST',])
 def get_vendor_detail(request):
-    source_lang_id=request.POST.get('source_lang_id')
-    target_lang_id=request.POST.get('target_lang_id')
+    job_id=request.POST.get('job_id')
+    source_lang_id=Job.objects.get(id=job_id).source_language_id
+    target_lang_id=Job.objects.get(id=job_id).target_language_id
     uid=request.POST.get('vendor_id')
     user_id=AiUser.objects.get(uid=uid).id
     result={}
