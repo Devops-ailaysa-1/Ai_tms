@@ -168,10 +168,15 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
              try:
                  if service_data:
                      for i in service_data:
-                         VendorServiceInfo.objects.create(lang_pair_id=lang.id,**i)
+                         print("Before--->",i)
+                         print(i["mtpe_count_unit"])
+                         count_unit=i.pop("mtpe_count_unit")
+                         print("count_unit-->",count_unit)
+                         print("AFTER---->",i)
+                         VendorServiceInfo.objects.create(lang_pair_id=lang.id,**i,mtpe_count_unit_id=count_unit)
                          try:
                              if lang_reverse:
-                                 VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**i)
+                                 VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**i,mtpe_count_unit_id=count_unit)
                          except Exception as error4:
                              print("Error4--->",error4)
 
@@ -186,10 +191,17 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
                  if service_type_data:
                      for j in service_type_data:
                          print(j)
-                         VendorServiceTypes.objects.create(lang_pair_id=lang.id,**j)
+                         if j.get('services'):
+                             services_id=j.pop('services')
+                             if j.get('unit_type'):
+                                 unit_type_id=j.pop('unit_type')
+                             else:
+                                 unit_type_id=None
+                         print("After ---->",j)
+                         VendorServiceTypes.objects.create(lang_pair_id=lang.id,**j,services_id=services_id,unit_type_id=unit_type_id)
                          try:
                              if lang_reverse:
-                                 VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j)
+                                 VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j,services_id=services_id,unit_type_id=unit_type_id)
                          except Exception as error3:
                              print("Error3---->",error3)
              except Exception as error:
