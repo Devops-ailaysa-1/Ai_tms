@@ -132,7 +132,7 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def update(self,request,pk):
-        queryset = VendorLanguagePair.objects.all()
+        queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
         ser=VendorLanguagePairSerializer(vendor,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
@@ -140,7 +140,7 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
             # ser.save(user_id=request.user.id)
             return Response(ser.data)
     def delete(self,request,pk):
-        queryset = VendorLanguagePair.objects.all()
+        queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
         vendor.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
