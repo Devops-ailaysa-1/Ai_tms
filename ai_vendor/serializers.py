@@ -120,12 +120,10 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          print("validated data----->",data)
          return super().run_validation(data)
      def create(self, data):
-         print("Data2---->",data)
          user_id = data.get("user_id")
          service_data = data.pop('service', [])
          service_type_data=data.pop('servicetype', [])
          existing_lang_pair_id = data.pop("existing_lang_pair_id", None)
-         print("Data-->",data)
          apply_for_reverse = data.pop("apply_for_reverse", None)
          print("Reverse--->",apply_for_reverse)
          lang_reverse = None
@@ -162,139 +160,6 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
                  m.save()
 
          return lang
-     # def create(self,validated_data):
-     #     print("ValidatedData--->",validated_data)
-     #     user_id=self.context["request"].user.id
-     #     print("user_id---->",user_id)
-     #     data_new=validated_data
-         # if validated_data.get("existing_lang_pair_id"):
-         #     existing_lang_pair_id=validated_data.pop('existing_lang_pair_id')
-         # if validated_data.get('servicetype'):
-         #     service_type_data=validated_data.pop('servicetype')
-         # if validated_data.get("service"):
-         #     service_data =validated_data.pop('service')
-         # if validated_data.get("apply_for_reverse"):
-         #     reverse =validated_data.pop('apply_for_reverse')
-
-
-     #     print("NEW---->",validated_data)
-     #     lang=0
-     #     try:
-     #         if bool(int(reverse)):
-     #             try:
-     #                 if validated_data.get("source_lang_id"):
-     #                     print("@@@@@")
-     #                     source_new=validated_data.get("target_lang_id")
-     #                     target_new=validated_data.get("source_lang_id")
-     #                     data_new={"source_lang_id":source_new,"target_lang_id":target_new,"user_id":user_id}
-     #                     print(data_new)
-     #                     lang_reverse = VendorLanguagePair.objects.create(**data_new)
-     #                     lang= VendorLanguagePair.objects.create(**validated_data)
-     #                     print(type(lang))
-     #             except unique_if_not_deleted as error:
-     #                 print("Error---->",error)
-     #             try:
-     #                 if existing_lang_pair_id:
-     #                     print("ExistingLangPairId---->",existing_lang_pair_id)
-     #                     source_lang_id=VendorLanguagePair.objects.get(id=existing_lang_pair_id).source_lang_id
-     #                     target_lang_id=VendorLanguagePair.objects.get(id=existing_lang_pair_id).target_lang_id
-     #                     data_new_1 = {"source_lang_id":target_lang_id,"target_lang_id":source_lang_id,"user_id":user_id}
-     #                     lang = VendorLanguagePair.objects.create(**data_new_1)
-     #                     print(lang)
-     #             except unique_if_not_deleted as error1:
-     #                 print("Error1---->",error1)
-     #     except:
-     #         try:
-     #             if not (bool(int(reverse))):
-     #                 lang = VendorLanguagePair.objects.create(**validated_data)
-     #         except:
-     #             if not lang:
-     #                print("######")
-     #                print(validated_data)
-     #                lang = VendorLanguagePair.objects.create(**validated_data)
-     #                print(lang)
-     #     if lang:
-     #         try:
-     #             if service_data:
-     #                 for i in service_data:
-     #                     print("Before--->",i)
-     #                     print(i["mtpe_count_unit"])
-     #                     count_unit=i.pop("mtpe_count_unit")
-     #                     print("count_unit-->",count_unit)
-     #                     print("AFTER---->",i)
-     #                     VendorServiceInfo.objects.create(lang_pair_id=lang.id,**i,mtpe_count_unit_id=count_unit)
-     #                     try:
-     #                         if lang_reverse:
-     #                             VendorServiceInfo.objects.create(lang_pair_id=lang_reverse.id,**i,mtpe_count_unit_id=count_unit)
-     #                     except Exception as error4:
-     #                         print("Error4--->",error4)
-     #
-     #         except:
-     #             service_datas=VendorServiceInfo.objects.filter(lang_pair_id=existing_lang_pair_id)
-     #             print(service_datas)
-     #             for i in service_datas:
-     #                 i.pk=None
-     #                 i.lang_pair_id=lang.id
-     #                 i.save()
-     #         try:
-     #             if service_type_data:
-     #                 for j in service_type_data:
-     #                     print(j)
-     #                     if j.get('services'):
-     #                         services_id=j.pop('services')
-     #                         if j.get('unit_type'):
-     #                             unit_type_id=j.pop('unit_type')
-     #                         else:
-     #                             unit_type_id=None
-     #                     print("After ---->",j)
-     #                     VendorServiceTypes.objects.create(lang_pair_id=lang.id,**j,services_id=services_id,unit_type_id=unit_type_id)
-     #                     try:
-     #                         if lang_reverse:
-     #                             VendorServiceTypes.objects.create(lang_pair_id=lang_reverse.id,**j,services_id=services_id,unit_type_id=unit_type_id)
-     #                     except Exception as error3:
-     #                         print("Error3---->",error3)
-     #         except Exception as error:
-     #             print(error)
-     #         try:
-     #             if existing_lang_pair_id:
-     #                  servicetype_datas=VendorServiceTypes.objects.filter(lang_pair_id=existing_lang_pair_id)
-     #                  print(servicetype_datas)
-     #                  for data in servicetype_datas:
-     #                      data.pk=None
-     #                      data.lang_pair_id=lang.id
-     #                      data.save()
-     #         except Exception as error:
-     #             print(error)
-     #     else:
-     #         print("No langpair")
-     #         raise serializers.ValidationError("Lang_pair already exists")
-     #     return data_new
-
-
-    # def create(self,validated_data):
-    #     user_id=self.context["request"].user.id
-    #     print(user_id)
-    #     data_new=validated_data
-    #     service_data = validated_data.pop('service')
-    # def save(self,user_id):
-    #     data_new=self.validated_data
-    #     service_data = self.validated_data.pop('service')
-    #     print("service--->",service_data)
-    #     service_type_data=self.validated_data.pop('servicetype')
-    #     lang = VendorLanguagePair.objects.create(**self.validated_data,user_id=user_id)
-    #     for i in service_data:
-    #         VendorServiceInfo.objects.create(lang_pair=lang,**i)
-    #     for j in service_type_data:
-    #         VendorServiceTypes.objects.create(lang_pair=lang,**j)
-    #     return data_new
-    #
-    # def update(self, instance, validated_data):
-    #     print(instance)
-    #     services=instance.service
-    #     # print(service.id)
-    #     for item, service in zip(validated_data['service'], services.all()):
-    #         VendorServiceInfo.objects.update_or_create(**item)
-
 
 class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     vendor_subject=VendorSubjectFieldSerializer(many=True,required=False)
