@@ -32,7 +32,7 @@ class SendInviteForm(ResetPasswordForm):
             "user":user,
             "current_site": current_site,
         }
-        msg_plain = render_to_string("email/password_reset_email.txt", context)
+        msg_plain = render_to_string("account/email/password_reset_email.txt", context)
         # msg_html = render_to_string("users/invite_with_password_reset.html", context)
         email_send_task.delay(
             "Password Reset",
