@@ -127,12 +127,12 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
         serializer = VendorLanguagePairSerializer(data={**request.POST.dict()},context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
-            serializer.save(user_id=user_id)
+            serializer.save()
             #return Response(data={"Message":"VendorServiceInfo Created"}, status=status.HTTP_201_CREATED)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def update(self,request,pk):
-        queryset = VendorLanguagePair.objects.all()
+        queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
         ser=VendorLanguagePairSerializer(vendor,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
@@ -140,7 +140,7 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
             # ser.save(user_id=request.user.id)
             return Response(ser.data)
     def delete(self,request,pk):
-        queryset = VendorLanguagePair.objects.all()
+        queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
         vendor.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -164,7 +164,7 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
             # return Response(data={"Message":"VendorExpertiseInfo Created"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def update(self,request,pk=None):
-        queryset = AiUser.objects.all()
+        queryset = AiUser.objects.filter(id=self.request.user.id).all()
         User = get_object_or_404(queryset, pk=request.user.id)
         ser= ServiceExpertiseSerializer(User,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
