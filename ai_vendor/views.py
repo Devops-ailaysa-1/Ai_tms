@@ -15,8 +15,8 @@ from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectFie
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines, AvailableVendors,ProjectboardDetails,ProjectPostJobDetails)
-from .serializers import (LanguagePairSerializer, ServiceExpertiseSerializer,
-                          VendorBankDetailSerializer,
+from .serializers import (ServiceExpertiseSerializer,
+                          VendorBankDetailSerializer,VendorLanguagePairCloneSerializer,
                           VendorLanguagePairSerializer,AvailableVendorSerializer,
                           VendorServiceInfoSerializer, VendorsInfoSerializer,
                           ProjectPostSerializer)
@@ -119,6 +119,7 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
     def get_queryset(self):
         queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         return queryset
+
     @integrity_error
     def create(self,request):
         user_id = request.user.id
@@ -131,19 +132,36 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
             #return Response(data={"Message":"VendorServiceInfo Created"}, status=status.HTTP_201_CREATED)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @integrity_error
     def update(self,request,pk):
         queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
-        ser=VendorLanguagePairSerializer(vendor,data={**request.POST.dict()},partial=True)
+        ser=VendorLanguagePairSerializer(vendor,data={**request.POST.dict()},context={'request':request},partial=True)
+        print(ser.is_valid())
+        print(ser.errors)
         if ser.is_valid():
             ser.save()
-            # ser.save(user_id=request.user.id)
             return Response(ser.data)
+        return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def delete(self,request,pk):
         queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         vendor = get_object_or_404(queryset, pk=pk)
         vendor.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST',])
+def clone_lang_pair(request):
+    existing_lang_pair_id=request.POST.get("existing_lang_pair_id")
+    queryset=VendorLanguagePair.objects.filter(Q(user_id=request.user.id)&Q(id=existing_lang_pair_id)).all()
+    if queryset:
+        serializer = VendorLanguagePairCloneSerializer(queryset,many=True)
+        return Response(serializer.data)
+    else:
+        return Response({"message":"No such lang_pair_id exists"})
+
 
 class VendorExpertiseListCreate(viewsets.ViewSet):
     def list(self,request):
@@ -201,43 +219,6 @@ class VendorsBankInfoCreateView(APIView):
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data)
-
-
-
-class VendorLangPairCreate(viewsets.ViewSet):
-
-    def list(self,request):
-        queryset = self.get_queryset()
-        serializer=LanguagePairSerializer(queryset,many=True)
-        return Response(serializer.data)
-
-    def get_queryset(self):
-        queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
-        return queryset
-
-    def create(self,request):
-        id = request.user.id
-        data = request.data
-        serializer = LanguagePairSerializer(data=data)
-        print(serializer.is_valid())
-        if serializer.is_valid():
-            serializer.save(user_id=id)
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self,request,pk):
-         queryset = VendorLanguagePair.objects.all()
-         vendor = get_object_or_404(queryset, pk=pk)
-         vendor.delete()
-         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def update(self, request, pk):
-        return
-
-
-class VendorServiceInfoView(viewsets.ModelViewSet):
-    queryset = VendorServiceInfo.objects.all()
-    serializer_class = VendorServiceInfoSerializer
 
 
 @api_view(['GET','POST',])
@@ -466,7 +447,6 @@ def shortlisted_vendor_list_send_email(request):
         msg.content_subtype = 'html'
         msg.send()
     return JsonResponse({"message":"Email Successfully Sent"},safe=False)
-
 
 
 # @api_view(['POST',])

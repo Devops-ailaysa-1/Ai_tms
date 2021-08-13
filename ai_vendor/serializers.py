@@ -34,11 +34,6 @@ class VendorsInfoSerializer(serializers.ModelSerializer):
     def save_update(self):
         return super().save()
 
-class VendorLanguagePairSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VendorLanguagePair
-        fields='__all__'
-
 class VendorServiceTypeSerializer(serializers.ModelSerializer):
     class Meta:
        model = VendorServiceTypes
@@ -84,7 +79,12 @@ class MtpeSampleSerializer(serializers.ModelSerializer):
         model=MtpeSamples
         fields=('sample_file',)
 
-
+class VendorLanguagePairCloneSerializer(serializers.ModelSerializer):
+    service=VendorServiceInfoSerializer(many=True,required=False)
+    servicetype=VendorServiceTypeSerializer(many=True,required=False)
+    class Meta:
+        model = VendorLanguagePair
+        fields=('service','servicetype',)
 
 class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):#WritableNestedModelSerializer,
      service=VendorServiceInfoSerializer(many=True,required=False)
@@ -104,11 +104,12 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
             "target_lang": {"required": False}
          }
 
+
      def run_validation(self, data):
-         if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
-            or ((("existing_lang_pair_id") in data) and (((("source_lang") in data) and(("target_lang") in data))\
-            or("apply_for_reverse") in data))):
-             raise serializers.ValidationError({"msg":"any one field is required"})
+         if self.context['request']._request.method == 'POST':
+             if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
+                or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
+                 raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
          if "source_lang" in data:
              if data.get('source_lang')==data.get('target_lang'):
                  raise serializers.ValidationError({"message":"source and target language should not be same"})
@@ -119,6 +120,8 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
              data["servicetype"] = json.loads(data["servicetype"])
          print("validated data----->",data)
          return super().run_validation(data)
+
+
      def create(self, data):
          user_id = data.get("user_id")
          service_data = data.pop('service', [])
@@ -160,6 +163,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
                  m.save()
 
          return lang
+
 
 class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     vendor_subject=VendorSubjectFieldSerializer(many=True,required=False)
@@ -211,16 +215,6 @@ class VendorBankDetailSerializer(serializers.ModelSerializer):
     def save_update(self):
         return super().save()
 
-class LanguagePairSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VendorLanguagePair
-        fields=('user','id','source_lang','target_lang',)
-        extra_kwargs = {'user':{"read_only":True},'id':{"read_only":True},
-        }
-    # def save(self, user_id):
-    #     vendor = VendorLanguagePair.objects.create(**self.validated_data, user_id=user_id)
-    #     return vendor
-
 
 class AvailableVendorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -241,10 +235,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                  'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
                  'unit','milestone','projectpost_jobs')
 
-    def run_validation(self, data):
-        if data.get("projectpost_jobs") and isinstance( data.get("projectpost_jobs"), str):
-            data["projectpost_jobs"]=json.loads(data["projectpost_jobs"])
-        return data
+
 
 
     # def save(self):
