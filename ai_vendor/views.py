@@ -152,9 +152,9 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['POST',])
-def clone_lang_pair(request):
-    existing_lang_pair_id=request.POST.get("existing_lang_pair_id")
+@api_view(['GET',])
+def clone_lang_pair(request,id):
+    existing_lang_pair_id=id
     queryset=VendorLanguagePair.objects.filter(Q(user_id=request.user.id)&Q(id=existing_lang_pair_id)).all()
     if queryset:
         serializer = VendorLanguagePairCloneSerializer(queryset,many=True)

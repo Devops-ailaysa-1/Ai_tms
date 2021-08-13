@@ -27,7 +27,7 @@ urlpatterns+= [
     path('post_job_primary_details/',views.post_job_primary_details,name="post-job-primary-details"),
     path('post_job/<int:id>/',views.ProjectPostInfoCreateView.as_view(),name='job-post'),
     path('send_email/',views.shortlisted_vendor_list_send_email,name='send-email'),
-    path('clone/',views.clone_lang_pair,name='clone'),
+    path('clone/<int:id>/',views.clone_lang_pair,name='clone'),
     # path('vendorexpertiseinfo/',views.VendorExpertiseListCreate.as_view({'get': 'list'})),
     # path('vendorexpertiseinfo/update/',views.VendorExpertiseListCreate.as_view({'put':'update'})),
     # path('vendor_service_update/<int:pk>',views.VendorServiceUpdateDeleteView.as_view(),name='vendor-servicepdate'),
