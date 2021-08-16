@@ -40,7 +40,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000", "http://157.245.99.128:3000",  "http://workspacestaging.ailaysa.com", 
+    "http://localhost:3000", "http://157.245.99.128:3000",  "http://workspacestaging.ailaysa.com",
     "http://143.244.140.71", "http://workspace.ailaysa.com"
 ]
 
@@ -116,6 +116,7 @@ INSTALLED_APPS = [
     "ai_workspace_okapi",
     'django_extensions',
     'sqlite3',
+    'ai_marketplace',
 ]
 
 

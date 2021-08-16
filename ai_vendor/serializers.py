@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware,AvailableVendors,ProjectboardDetails,ProjectPostJobDetails
+from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
@@ -106,6 +106,9 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
 
 
      def run_validation(self, data):
+         # if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
+         #    or ((("existing_lang_pair_id") in data) and (((("source_lang") in data) and(("target_lang") in data))\
+         #    or("apply_for_reverse") in data))):
          if self.context['request']._request.method == 'POST':
              if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
                 or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
@@ -216,25 +219,25 @@ class VendorBankDetailSerializer(serializers.ModelSerializer):
         return super().save()
 
 
-class AvailableVendorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model= AvailableVendors
-        fields="__all__"
-
-class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=ProjectPostJobDetails
-        fields=('src_lang','tar_lang',)
-
-class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
-    projectpost_jobs=ProjectPostJobDetailSerializer(many=True)
-    class Meta:
-        model=ProjectboardDetails
-        fields=('id','project_id','service','steps','sub_field','content_type','proj_name','proj_desc',
-                 'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
-                 'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
-                 'unit','milestone','projectpost_jobs')
-
+# class AvailableVendorSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model= AvailableVendors
+#         fields="__all__"
+#
+# class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model=ProjectPostJobDetails
+#         fields=('src_lang','tar_lang',)
+#
+# class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
+#     projectpost_jobs=ProjectPostJobDetailSerializer(many=True)
+#     class Meta:
+#         model=ProjectboardDetails
+#         fields=('id','project_id','service','steps','sub_field','content_type','proj_name','proj_desc',
+#                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
+#                  'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
+#                  'unit','milestone','projectpost_jobs')
+#
 
 
 
