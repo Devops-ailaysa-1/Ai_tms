@@ -165,15 +165,14 @@ class ProjectSetupView(viewsets.ViewSet):
 
 class ProjectCreateView(viewsets.ViewSet):
     serializer_class = ProjectCreationSerializer
-    parser_classes = [MultiPartParser, JSONParser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     permission_classes = []
 
     def get_queryset(self):
-        return Project.objects.filter(ai_user=self.request.user)
+        return Project.objects.filter(ai_user_id=8)
 
-   #@integrity_error
     def create(self, request):
-        # print("metaaa>>",request.META)
+        print("data---->",request.data)
         serializer = ProjectCreationSerializer(data={**request.POST.dict(),
             "files":request.FILES.getlist('files')},context={"request":request})
         if serializer.is_valid(raise_exception=True):
@@ -227,30 +226,6 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
 
         else:
             return Response(serializer.errors, status=409)
-
-# class TaskView(viewsets.ModelViewSet):
-#     permission_classes = [IsAuthenticated]
-#     serializer_class = TaskSerializer
-#
-#     def get_queryset(self):
-#         task_queryset = Task.objects.all()
-#         tasks = get_list_or_404(task_queryset, file__project__ai_user_id=self.request.user.id)
-#         return  tasks
-#
-#     def list(self, request):
-#         tasks = self.get_queryset()
-#         tasks_serlzr = TaskSerializer(tasks, many=True)
-#         return Response(tasks_serlzr.data, status=200)
-#
-#     def create(self, request, project_id):
-#         task_serlzr = TaskSerializer(data=request.data)
-#         print("initial data---->", task_serlzr.initial_data)
-#         if task_serlzr.is_valid(raise_exception=True):
-#             task_serlzr.save()
-#             return Response({"msg": task_serlzr.data}, status=200)
-#
-#         else:
-#             return Response({"msg": task_serlzr.errors}, status=400)
 
 
 class TaskView(APIView):

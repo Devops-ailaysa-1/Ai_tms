@@ -38,7 +38,6 @@ def get_processor_name(file_path):  # Full File Path Assumed
     else:
         raise ValueError("File extension cannot be null and empty!!!")
 
-
 def get_runs_and_ref_ids(format_pattern, run_reference_ids):
     coll = []
     start_series = 57616
@@ -65,6 +64,7 @@ def set_ref_tags_to_runs(text_content, runs_and_ref_ids):
     return (text_content, run_tags, ''.join(run_id_tags))
 
 def set_runs_to_ref_tags(text_content, runs_and_ref_ids):
+    if not text_content: return text_content
     for run, ref_id in runs_and_ref_ids:
         if "\ue101" in run:
             run_id_tag = "<"+str(ref_id)+">"

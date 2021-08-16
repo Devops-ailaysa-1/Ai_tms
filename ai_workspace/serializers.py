@@ -90,33 +90,8 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
 		fields = ("project_name","jobs", "files", "files_jobs_choice_url", "id")
-		# extra_kwargs = {
-		# 	"jobs": {"write_only": True},
-		# 	"files":  {"write_only": True},
-		# }
-
-	def json_decode_error(func):
-		def decorator(data, key, match_type, original_type):
-			if isinstance(data.get(key, None), match_type):
-				data_pkl = pickle.dumps(data)
-				with open("data.pkl" ,"wb") as f:
-					f.write(data_pkl)
-				try:
-					data[key] = json.loads(data[key].replace("'", '"'))
-					return data
-				except json.JSONDecodeError:
-					raise ValueError("data contains key does not json loadable & data is {data[key]}")
-			if isinstance(data.get(key, None), original_type):
-				return data
-			raise ValueError("something went wrong!!!!")
-		return decorator
-
-	@json_decode_error
-	def func(data, key, match_type, original_type):
-		pass
 
 	def to_internal_value(self, data):
-		# if self.instance:
 		source_language = json.loads(data.pop("source_language", "0"))
 		target_languages = json.loads(data.pop("target_languages", "[]"))
 		if source_language and target_languages:
@@ -153,16 +128,17 @@ class ProjectContentTypeSerializer(serializers.ModelSerializer):
 		read_only_fields = ("id","project",)
 
 class ProjectCreationSerializer(serializers.ModelSerializer):
-	jobs = JobSerializer(many=True, source="project_jobs_set")
+	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
+	source_language = serializers.DictField(read_only=True, source="_source_language")
+	target_languages = serializers.ListField(read_only=True, source="_target_languages")
 	files = FileSerializer(many=True, source="project_files_set")
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False)
 	project_name = serializers.CharField(required=False)
-	# proj_mt_engine = serializers.PrimaryKeyRelatedField(queryset =AilaysaSupportedMtpeEngines.objects.all(),required=False)
 
 	class Meta:
 		model = Project
-		fields = ("id","ai_project_id","project_name", "jobs", "files","contents","subjects","mt_engine")
+		fields = ("id","ai_project_id","project_name", "jobs", "files","contents","subjects","mt_engine", "source_language", "target_languages")
 		read_only_fields = ("id","ai_project_id")
 		extra_kwargs = {
 			"mt_engine":{
@@ -173,15 +149,16 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 		print("run_validation")
 		return super().run_validation(data=data)
 
-	def is_valid(self, *args, **kwargs):
-		# data = pickle.dumps(self.initial_data['jobs'])
-		# with open("my-data.pkl", "wb") as f:
-		# 	f.write(data)
+	def to_representation(self, instance):
+		ret = super().to_representation(instance)
+		ret["jobs"] = {
+			"source_language": ret.pop("source_language"),
+			"target_languages": ret.pop("target_languages")
+		}
+		return  ret
 
-		print("type initial data-->", type(self.initial_data['jobs']))
-		print("initial data--->", self.initial_data['jobs'])
-		#print("initial data--->subjects", self.initial_data['subjects'])
-		#print("initial data--->contents", self.initial_data['contents'])
+	def is_valid(self, *args, **kwargs):
+
 		if not isinstance( self.initial_data['jobs'],dict ):
 			self.initial_data['jobs'] = json.loads(self.initial_data['jobs'])
 

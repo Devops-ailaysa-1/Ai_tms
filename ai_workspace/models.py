@@ -126,6 +126,15 @@ class Project(ParanoidModel):
         return self.project_jobs_set.first().source_language_code
 
     @property
+    def _source_language(self):
+        lang = self.project_jobs_set.first().source__language
+        return {"id": lang.id, "language": lang.language}
+
+    @property
+    def _target_languages(self):
+        return [{"id":job.target__language.id, "language": job.target__language.language} for job in self.project_jobs_set.all()]
+
+    @property
     def source_language_code(self):
         return self.project_jobs_set.first().source_language_code
 

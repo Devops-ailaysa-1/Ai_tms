@@ -139,7 +139,9 @@ class CurrenciesView(APIView):
 
 
 class SubjectFieldsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        # IsAuthenticated
+    ]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -166,7 +168,6 @@ class SubjectFieldsView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-
     def patch(self, request, pk, format=None):
         subject = self.get_object(pk)
         serializer = SubjectFieldsSerializer(subject,
@@ -184,7 +185,9 @@ class SubjectFieldsView(APIView):
 
 
 class ContentTypesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        # IsAuthenticated
+    ]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 

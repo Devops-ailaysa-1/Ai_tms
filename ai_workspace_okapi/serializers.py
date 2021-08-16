@@ -84,6 +84,7 @@ class SegmentSerializerV2(SegmentSerializer):
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
+    target = serializers.CharField(read_only=True, source="coded_target")
     class Meta:
         # pass
         model = Segment

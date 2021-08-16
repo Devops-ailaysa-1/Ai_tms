@@ -62,7 +62,7 @@ class SegmentUpdateView(views.View):
 
     def get(self, request, segment_id):
         segment = self.get_instance(segment_id)
-        mt_raw = MT_RawView.get_data(request, segment_id)[0].data["mt_raw"]
+        mt_raw = MT_RawAndTM_View.get_data(request, segment_id)[0].data["mt_raw"]
         form = SegmentForm(instance=segment, initial={"mt_raw": mt_raw})
         return render(request, "segment-update.html", context={"form": form})
 

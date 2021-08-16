@@ -43,3 +43,6 @@ sqlalchemy_models.py
 references.md
 Source.aux
 Source.log
+data.txt
+data2.txt
+test.txt
