@@ -51,9 +51,6 @@ class CountriesSerializer(serializers.ModelSerializer):
     #     instance.is_active = validated_data.get('is_active', instance.is_active)
     #     return instance
 
-
-
-
 class SubjectFieldsSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -67,8 +64,6 @@ class SubjectFieldsSerializer(serializers.ModelSerializer):
         subject = SubjectFields.objects.create(**validated_data)
         return subject
 
-
-
 class ContentTypesSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -81,7 +76,6 @@ class ContentTypesSerializer(serializers.ModelSerializer):
         request = self.context['request']
         content = ContentTypes.objects.create(**validated_data)
         return content
-
 
 class MtpeEnginesSerializer(serializers.ModelSerializer):
 
@@ -109,7 +103,6 @@ class SupportFilesSerializer(serializers.ModelSerializer):
         extension = SupportFiles.objects.create(**validated_data)
         return extension
 
-
 class TimezonesSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -135,9 +128,6 @@ class LanguagesSerializer(serializers.ModelSerializer):
         request = self.context['request']
         lang = Languages.objects.create(**validated_data)
         return lang
-
-
-
 
 class LocaleSerializer(serializers.ModelSerializer):
     # language_detail=LanguagesSerializer(read_only=True)

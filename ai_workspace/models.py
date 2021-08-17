@@ -12,7 +12,8 @@ from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
 import os
 from ai_auth.models import AiUser
-from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, ContentTypes, Languages, SubjectFields
+from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
+    ContentTypes, Languages, SubjectFields
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document
 from ai_staff.models import ParanoidModel
@@ -22,8 +23,11 @@ from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
-from .signals import (create_allocated_dirs, create_project_dir, create_pentm_dir_of_project,
-    set_pentm_dir_of_project, check_job_file_version_has_same_project)
+from .signals import (create_allocated_dirs, create_project_dir, \
+    create_pentm_dir_of_project,set_pentm_dir_of_project, \
+    check_job_file_version_has_same_project)
+from .manager import ProjectManager, FileManager, JobManager,\
+    TaskManager
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -39,29 +43,31 @@ class TempProject(models.Model):
         return super().save(*args, **kwargs)
 
 def get_temp_file_upload_path(instance, filename):
-    file_path = os.path.join("temp_projects",instance.temp_proj.temp_proj_id,"source")
+    file_path = os.path.join("temp_projects",instance.temp_proj.temp_proj_id,\
+            "source")
     return os.path.join(file_path, filename)
 
 class TempFiles(models.Model):
     temp_proj = models.ForeignKey(TempProject, on_delete=models.CASCADE,
-                    related_name="temp_proj_file")
-    files_temp = models.FileField(upload_to=get_temp_file_upload_path, null=False, blank=False, max_length=1000)
+        related_name="temp_proj_file")
+    files_temp = models.FileField(upload_to=get_temp_file_upload_path,\
+        null=False, blank=False, max_length=1000)
 
 class Templangpair(models.Model):
     temp_proj = models.ForeignKey(TempProject, on_delete=models.CASCADE,
                         related_name="temp_proj_langpair")
-    temp_src_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
-                        related_name="temp_source_lang")
-    temp_tar_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
-                        related_name="temp_target_lang")
+    temp_src_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=\
+        models.CASCADE, related_name="temp_source_lang")
+    temp_tar_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=\
+        models.CASCADE, related_name="temp_target_lang")
 
 class PenseiveTM(models.Model):
-    penseive_tm_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
-                            blank=True, allow_folders=True, allow_files=False)  # Common for a project
-    source_tmx_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
-                            blank=True, allow_folders=True, allow_files=False)
-    project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.CASCADE,
-                                   related_name="project_penseivetm")
+    penseive_tm_dir_path = models.FilePathField(max_length=1000, null=True,\
+        path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
+    source_tmx_dir_path = models.FilePathField(max_length=1000, null=True, \
+        path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
+    project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.\
+        CASCADE, related_name="project_penseivetm")
 
     class Meta:
         managed = False
@@ -70,20 +76,19 @@ pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
 class Project(ParanoidModel):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
-    project_dir_path = models.FilePathField(max_length=1000, null=True, path=settings.MEDIA_ROOT, \
-                        blank=True, allow_folders=True, allow_files=False)
+    project_dir_path = models.FilePathField(max_length=1000, null=True,\
+        path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
     ai_project_id = models.TextField()
-    mt_engine = models \
-        .ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
         on_delete=models.CASCADE, related_name="proj_mt_engine")
-
-#    test = models.TextField(null=True, blank=True)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
         managed = False
+
+    objects = ProjectManager()
 
     def __str__(self):
         return self.project_name
@@ -97,17 +102,20 @@ class Project(ParanoidModel):
         ''' try except block created for logging the exception '''
         if not self.ai_project_id:
             # self.ai_user shoould be set before save
-            self.ai_project_id = self.ai_user.uid+"p"+str(Project.objects.filter(ai_user=self.ai_user).count()+1)
+            self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
+            objects.filter(ai_user=self.ai_user).count()+1)
         if not self.project_name:
             self.project_name = self.ai_project_id
         super().save()
 
     @property
     def files_and_jobs_set(self):
-        return  ( # jobs will not exceed 100nos, and files will not exceed 10nos, so all() functionality used...
+        return  \
+            ( # jobs will not exceed 100nos, and files will not exceed 10nos,
+            # so all() functionality used...
             self.project_jobs_set.all(),
             self.project_files_set.all()
-        )
+            )
 
     @property
     def _assign_tasks_url(self):
@@ -115,7 +123,9 @@ class Project(ParanoidModel):
 
     @property
     def get_tasks(self):
-        return [task for job in self.project_jobs_set.all() for task in job.job_tasks_set.all()]
+        return [task for job in self.project_jobs_set.all() for task \
+            in job.job_tasks_set.all()\
+                ]
 
     @property
     def files_jobs_choice_url(self):
@@ -132,7 +142,8 @@ class Project(ParanoidModel):
 
     @property
     def _target_languages(self):
-        return [{"id":job.target__language.id, "language": job.target__language.language} for job in self.project_jobs_set.all()]
+        return [{"id":job.target__language.id, "language": job.target__language.language} \
+            for job in self.project_jobs_set.all()]
 
     @property
     def source_language_code(self):
@@ -152,7 +163,9 @@ class Project(ParanoidModel):
 
     @property
     def tmx_files_path_not_processed(self):
-        return {tmx_file.id:tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.filter(is_processed=False).all()}
+        return {tmx_file.id:tmx_file.tmx_file.path for tmx_file in self.project_tmx_files\
+            .filter(is_processed=False).all()\
+                }
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -171,29 +184,32 @@ class ProjectSubjectField(models.Model):
                         related_name="proj_sub_name")
 
 class Job(models.Model):
-    source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
-                        related_name="source_language")
-    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,
-                        related_name="target_language")
-    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
-                related_name="project_jobs_set",)
+    source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,\
+        related_name="source_language")
+    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,\
+        related_name="target_language")
+    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,\
+        related_name="project_jobs_set",)
     job_id =models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
 
     class Meta:
         unique_together = [("project", "source_language", "target_language")]
 
+    objects = JobManager()
+
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.job_id:
             # self.ai_user shoould be set before save
-            self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project).count()+1)
+            self.job_id = self.project.ai_project_id+"j"+str(Job.objects.filter(project=self.project)\
+                .count()+1)
         super().save()
 
     @property
     def source_target_pair(self): # code repr
-        return "%s-%s"%(self.source_language.locale.first().locale_code,
-                        self.target_language.locale.first().locale_code)
+        return "%s-%s"%(self.source_language.locale.first().locale_code,\
+            self.target_language.locale.first().locale_code)
 
     @property
     def source_target_pair_names(self):
@@ -252,11 +268,12 @@ def get_file_upload_path(instance, filename):
 class File(models.Model):
     # file_type = models.CharField(max_length=100, choices=[(file_type.name, file_type.value)
     #                 for file_type in FileTypes], null=False, blank=False)
-    usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False, on_delete=models.CASCADE,
-                related_name="project_usage_type")
-    file = models.FileField(upload_to=get_file_upload_path, null=False, blank=False, max_length=1000)
-    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,
-                related_name="project_files_set")
+    usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
+                on_delete=models.CASCADE, related_name="project_usage_type")
+    file = models.FileField(upload_to=get_file_upload_path, null=False,\
+                blank=False, max_length=1000)
+    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
+                CASCADE, related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
@@ -265,8 +282,11 @@ class File(models.Model):
         ''' try except block created for logging the exception '''
         if not self.fid:
             # self.ai_user shoould be set before save
-            self.fid = str(self.project.ai_project_id)+"f"+str(File.objects.filter(project=self.project.id).count()+1)
+            self.fid = str(self.project.ai_project_id)+"f"+str(File.objects\
+                .filter(project=self.project.id).count()+1)
         super().save()
+
+    objects = FileManager()
 
     def __str__(self):
         return self.filename
@@ -335,6 +355,8 @@ class Task(models.Model):
                 'file, job, version combination unique'),
         ]
 
+    objects = TaskManager()
+
     @property
     def get_document_url(self):
         return reverse("ws_okapi:document", kwargs={"task_id": self.id})
@@ -348,6 +370,16 @@ class Task(models.Model):
     @property
     def processor_name(self):
         return  get_processor_name(self.file.file.path).get("processor_name", None)
+
+    @property
+    def get_progress(self):
+        confirm_list = [102, 104, 106]
+        total_segment_count = self.document.total_segment_count
+        segments_confirmed_count = self.document.segments.filter(
+            status__status_id__in=confirm_list
+        ).count()
+        return {"total_segments":total_segment_count,\
+                "confirmed_segements":segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)

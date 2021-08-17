@@ -1,8 +1,8 @@
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
-from ai_workspace.models import  Project, Job, File, ProjectContentType, \
-		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile, Tbxfiles
+from ai_workspace.models import  Project, Job, File, ProjectContentType, Tbxfiles,\
+		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -95,8 +95,8 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		source_language = json.loads(data.pop("source_language", "0"))
 		target_languages = json.loads(data.pop("target_languages", "[]"))
 		if source_language and target_languages:
-			data["jobs"] = [{"source_language": source_language, "target_language": target_language}
-							for target_language in target_languages]
+			data["jobs"] = [{"source_language": source_language, "target_language": \
+				target_language} for target_language in target_languages]
 		else:
 			raise ValueError("source or target values could not json loadable!!!")
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
@@ -133,12 +133,14 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 	target_languages = serializers.ListField(read_only=True, source="_target_languages")
 	files = FileSerializer(many=True, source="project_files_set")
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
-	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False)
+	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",\
+		required=False)
 	project_name = serializers.CharField(required=False)
 
 	class Meta:
 		model = Project
-		fields = ("id","ai_project_id","project_name", "jobs", "files","contents","subjects","mt_engine", "source_language", "target_languages")
+		fields = ("id","ai_project_id","project_name", "jobs", "files","contents","subjects",\
+				  "mt_engine", "source_language", "target_languages")
 		read_only_fields = ("id","ai_project_id")
 		extra_kwargs = {
 			"mt_engine":{
@@ -168,7 +170,8 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 		if isinstance( self.initial_data.get('contents', None), str ):
 			self.initial_data['contents'] = json.loads(self.initial_data['contents'])
 
-		self.initial_data['files'] = [{"file":file, "usage_type":1} for file in self.initial_data['files']]
+		self.initial_data['files'] = [{"file":file, "usage_type":1} for file in self.\
+			initial_data['files']]
 		# self.initial_data['files'] = [{"file"}]
 		return super().is_valid(*args, **kwargs)
 
@@ -189,7 +192,8 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 		if proj_subject:
 			[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
 		if proj_content_type:
-			[project.proj_content_type.create(**content_data) for content_data in  proj_content_type]
+			[project.proj_content_type.create(**content_data) for content_data in \
+			 proj_content_type]
 		return project
 
 class TemplangpairSerializer(serializers.ModelSerializer):
@@ -218,7 +222,8 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 	def is_valid(self, *args, **kwargs):
 		print("intial-->",self.initial_data )
 		self.initial_data['langpair'] = json.loads(self.initial_data['langpair'])
-		self.initial_data['tempfiles'] = [{"files_temp":file} for file in self.initial_data['tempfiles']]
+		self.initial_data['tempfiles'] = [{"files_temp":file} for file in self.initial_data\
+			['tempfiles']]
 		# self.initial_data['files'] = [{"file"}]
 		print("Aftre intial-->",self.initial_data )
 		return super().is_valid(*args, **kwargs)
@@ -239,14 +244,17 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
-	source_file_path = serializers.CharField(source="file.get_source_file_path", read_only=True)
+	source_file_path = serializers.CharField(source="file.get_source_file_path", \
+		read_only=True)
 	output_file_path = serializers.CharField(source="file.output_file_path", read_only=True)
 	source_language = serializers.CharField(source="job.source__language", read_only=True)
 	target_language = serializers.CharField(source="job.target__language", read_only=True)
 	document_url = serializers.URLField(source="get_document_url", read_only=True)
 	filename = serializers.CharField(source="file.get_file_name", read_only=True)
-	source_language_id = serializers.IntegerField(source="job.source_language.id", read_only=True)
-	target_language_id = serializers.IntegerField(source="job.target_language.id", read_only=True)
+	source_language_id = serializers.IntegerField(source="job.source_language.id",\
+		read_only=True)
+	target_language_id = serializers.IntegerField(source="job.target_language.id",\
+		read_only=True)
 
 	class Meta:
 		model = Task
@@ -345,3 +353,48 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 # 		return representation
 #  {'source_file_path': '/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u98163/u98163p2/source/test1.txt', 'source_language': 'af', 'target_language': 'hy', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
 ######################################## nandha ##########################################
+
+class ProjectQuickSetupSerializer(serializers.ModelSerializer):
+	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
+	files = FileSerializer(many=True, source="project_files_set", write_only=True)
+	project_name = serializers.CharField(required=False)
+
+	class Meta:
+		model = Project
+		fields = ("project_name", "jobs", "files")
+
+	def to_internal_value(self, data):
+
+		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
+			target_language} for target_language in data.get("target_languages", [])]
+
+		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
+
+		return super().to_internal_value(data=data)
+
+	def create(self, validated_data):
+		ai_user = self.context.get("request", None).user
+		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
+			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", f_klass=File,\
+			j_klass=Job, ai_user=ai_user
+		)
+		tasks = Task.objects.create_tasks_of_files_and_jobs(
+			files=files, jobs=jobs, project=project, klass=Task  # For self assign quick setup run
+		)
+		return  project
+
+class VendorDashBoardSerializer(serializers.ModelSerializer):
+	filename = serializers.CharField(read_only=True, source="file.filename")
+	source_language = serializers.CharField(read_only=True, source="job.source__language.language")
+	target_language = serializers.CharField(read_only=True, source="job.target__language.language")
+	project_name = serializers.CharField(read_only=True, source="file.project.project_name")
+	document_url = serializers.CharField(read_only=True, source="get_document_url")
+	progress = serializers.DictField(source="get_progress", read_only=True)
+
+	class Meta:
+		model = Task
+		fields = (
+			"filename", "source_language", "target_language", "project_name", "document_url", \
+			"progress"
+		)
+

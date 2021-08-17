@@ -6,9 +6,12 @@ from ai_auth.authentication import IsCustomer
 from ai_auth.models import AiUser
 from rest_framework import viewsets
 from rest_framework.response import Response
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
-                            ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer,
-                          FileSerializerv2, FileSerializerv3, TmxFileSerializer, PentmWriteSerializer, TbxUploadSerializer)
+from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+    ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
+    ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
+    TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
+    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer,\
+    VendorDashBoardSerializer)
                         
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile
@@ -426,6 +429,35 @@ def getLanguageName(request,id):
       src_name=Languages.objects.get(id=src_id).language
       tar_id=Job.objects.get(id=job_id).target_language_id
       tar_name=Languages.objects.get(id=tar_id).language
-      src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name).locale_code
-      tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name).locale_code
-      return JsonResponse({"source_lang":src_name,"target_lang":tar_name,"src_code":src_lang_code,"tar_code":tar_lang_code})
+      src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name)\
+          .locale_code
+      tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name)\
+          .locale_code
+      return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
+            "src_code":src_lang_code,"tar_code":tar_lang_code})
+
+class QuickProjectSetupView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    def create(self, request):
+        serlzr = ProjectQuickSetupSerializer(data=\
+            {**request.data, "files": request.FILES.getlist("files")},
+            context={"request": request})
+        if serlzr.is_valid(raise_exception=True):
+            serlzr.save()
+            return Response(serlzr.data, status=201)
+
+class VendorDashBoardView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+
+    def get_object(self):
+        tasks = Task.objects.order_by("-id").all()
+        tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
+        return tasks
+
+    def list(self, request, *args, **kwargs):
+        tasks = self.get_object()
+        pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
+        serlzr = VendorDashBoardSerializer(pagin_queryset, many=True)
+        return self.get_paginated_response(serlzr.data)
