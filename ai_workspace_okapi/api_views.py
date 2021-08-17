@@ -443,8 +443,8 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
         segment.temp_target = re.sub(regex, replace_word, segment.temp_target)
         self.unconfirm_status(segment)
         segment.save()
-
-        return  Response(SegmentSerializer(segment).data, status=204)
+        print("segment---->", segment)
+        return  Response(SegmentSerializer(segment).data, status=200)
 
 class ProgressView(views.APIView):
     confirm_list = [102, 104, 106]

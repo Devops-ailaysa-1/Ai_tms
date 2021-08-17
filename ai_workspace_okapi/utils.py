@@ -65,6 +65,7 @@ def set_ref_tags_to_runs(text_content, runs_and_ref_ids):
 
 def set_runs_to_ref_tags(text_content, runs_and_ref_ids):
     if not text_content: return text_content
+
     for run, ref_id in runs_and_ref_ids:
         if "\ue101" in run:
             run_id_tag = "<"+str(ref_id)+">"
