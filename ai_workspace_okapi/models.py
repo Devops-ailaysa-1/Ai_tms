@@ -6,6 +6,8 @@ from .signals import set_segment_tags_in_source_and_target
 import json
 from ai_auth.models import AiUser
 from ai_staff.models import Languages
+from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
+
 
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
@@ -51,6 +53,12 @@ class Segment(models.Model):
     @property
     def get_temp_target(self):
         return '' if self.temp_target == None else self.temp_target
+
+    @property
+    def coded_target(self):
+        return  set_runs_to_ref_tags( self.target, get_runs_and_ref_ids( \
+            self.coded_brace_pattern, self.coded_ids_aslist ) )
+
 
     def save(self, *args, **kwargs):
         print("save")
