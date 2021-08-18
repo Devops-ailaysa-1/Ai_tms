@@ -425,7 +425,6 @@ class TbxUploadView(APIView):
 @api_view(['GET',])
 def getLanguageName(request,id):
       job_id=Document.objects.get(id=id).job_id
-      print("JOB ID--->", job_id)
       src_id=Job.objects.get(id=job_id).source_language_id
       src_name=Languages.objects.get(id=src_id).language
       tar_id=Job.objects.get(id=job_id).target_language_id

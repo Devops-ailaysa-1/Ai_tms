@@ -63,19 +63,31 @@ def set_ref_tags_to_runs(text_content, runs_and_ref_ids):
         text_content = text_content.replace(run, run_id_tag)
     return (text_content, run_tags, ''.join(run_id_tags))
 
-def set_runs_to_ref_tags(text_content, runs_and_ref_ids):
+def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
     if not text_content: return text_content
+    print("text_content---->", text_content)
+    print("runs_and_ref_ids", runs_and_ref_ids)
+    missed_ref_ids = []
 
     for run, ref_id in runs_and_ref_ids:
+
         if "\ue101" in run:
             run_id_tag = "<"+str(ref_id)+">"
-            if not run in text_content:
+            if not run in source_content:
                 run = run.replace("\ue101", "\ue103")
         else:
             run_id_tag = "</"+str(ref_id)+">"
-            if not run in text_content:
+            if not run in source_content:
                 run = run.replace("\ue102", "\ue103")
-        text_content = text_content.replace(run_id_tag, run)
+
+        if ref_id in missed_ref_ids:
+            run = ""
+
+        if not run_id_tag not in text_content:
+            missed_ref_ids.append(ref_id)
+        else:
+            text_content = text_content.replace(run_id_tag, run)
+
     return text_content
 
 
