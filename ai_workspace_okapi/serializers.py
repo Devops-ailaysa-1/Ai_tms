@@ -74,12 +74,10 @@ class SegmentSerializerV2(SegmentSerializer):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
     def update(self, instance, validated_data):
-        print(validated_data)
         if "target" in validated_data:
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
-        # print(instance.target)
             return res
         return super().update(instance, validated_data)
 

@@ -170,7 +170,8 @@ class SegmentsUpdateView(viewsets.ViewSet):
 
     @staticmethod
     def get_update(segment, data,request):
-        segment_serlzr =  SegmentSerializerV2(segment, data=data, partial=True, context={"request": request})
+        segment_serlzr = SegmentSerializerV2(segment, data=data, partial=True,\
+            context={"request": request})
         if segment_serlzr.is_valid(raise_exception=True):
             segment_serlzr.save()
             return segment_serlzr
@@ -388,6 +389,7 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         replace_word = data.get('replace_word', '')
         match_case = data.get('match_case', False)
         exact_word = data.get('exact_word', False)
+        do_confirm = data.get("do_confirm", False)
 
         if exact_word:
             if match_case:
@@ -401,9 +403,18 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
                 regex = re.compile(r'((?i)' + search_word + r')')
 
         for instance in segments:
-            instance.temp_target = re.sub(regex, replace_word, instance.temp_target)
-            self.update_segments(instance)
-            instance.save()
+            self.unconfirm_status(instance)
+            if do_confirm:
+                segment_serlzr = SegmentSerializerV2(instance, data={"target":\
+                        re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
+                        partial=True, context={"request": request})
+            else:
+                segment_serlzr = SegmentSerializerV2(instance, data={"temp_target":\
+                        re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
+                        partial=True, context={"request": request})
+
+            if segment_serlzr.is_valid(raise_exception=True):
+                segment_serlzr.save()
 
         return segments, 200
 
@@ -428,6 +439,7 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
         replace_word = data.get('replace_word', '')
         match_case = data.get('match_case', False)
         exact_word = data.get('exact_word', False)
+        do_confirm = data.get("do_confirm", False)
 
         if exact_word:
             if match_case:

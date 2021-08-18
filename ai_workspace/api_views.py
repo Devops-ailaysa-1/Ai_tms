@@ -461,3 +461,6 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
         serlzr = VendorDashBoardSerializer(pagin_queryset, many=True)
         return self.get_paginated_response(serlzr.data)
+
+
+

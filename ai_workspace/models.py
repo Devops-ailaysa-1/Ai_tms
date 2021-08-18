@@ -379,7 +379,7 @@ class Task(models.Model):
             status__status_id__in=confirm_list
         ).count()
         return {"total_segments":total_segment_count,\
-                "confirmed_segements":segments_confirmed_count}
+                "confirmed_segments":segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
