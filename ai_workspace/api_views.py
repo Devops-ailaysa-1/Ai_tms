@@ -425,6 +425,7 @@ class TbxUploadView(APIView):
 @api_view(['GET',])
 def getLanguageName(request,id):
       job_id=Document.objects.get(id=id).job_id
+      print("JOB ID--->", job_id)
       src_id=Job.objects.get(id=job_id).source_language_id
       src_name=Languages.objects.get(id=src_id).language
       tar_id=Job.objects.get(id=job_id).target_language_id
@@ -439,6 +440,7 @@ def getLanguageName(request,id):
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def create(self, request):
+        print("data---->", request.data, request.POST.dict(), request.FILES) 
         serlzr = ProjectQuickSetupSerializer(data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request})
@@ -461,3 +463,22 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
         serlzr = VendorDashBoardSerializer(pagin_queryset, many=True)
         return self.get_paginated_response(serlzr.data)
+
+
+
+class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+
+    def get_object(self, project_id):
+        
+        tasks = Task.objects.filter(job__project_id=project_id).all()
+        tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
+        return tasks
+
+    def list(self, request, project_id, *args, **kwargs):
+        tasks = self.get_object(project_id)
+        # pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
+        serlzr = VendorDashBoardSerializer(tasks, many=True)
+        return Response(serlzr.data, status=200)
