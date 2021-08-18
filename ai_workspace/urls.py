@@ -21,9 +21,6 @@ router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 # router.register(r"tasks", api_views.TaskView, basename="tasks")
 
-router.register(r"vendor/dashboard-proj-based", api_views.VendorProjectBasedDashBoardView,\
-				basename="vendor-dashboard-project-based")
-
 urlpatterns = router.urls
 
 # api_views urls
@@ -40,7 +37,8 @@ urlpatterns += [
 		 name="project-report-analysis"),
 	path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
 	path("tbx_read", tbx_read.TermSearch, name='tbx-read'),
-	# path()
+        path("vendor_dashboard_proj_based/<int:project_id>/", api_views.VendorProjectBasedDashBoardView.as_view({"get":"list"}),\
+		 name="vendor-dashboard-proj-based"),
 ]
 # views urls adding for local testing
 
