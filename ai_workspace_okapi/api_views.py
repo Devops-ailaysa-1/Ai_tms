@@ -370,7 +370,6 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
             segment.status_id, segment.status_id
         )
 
-
     def paginate_response(self, segments, request, status):
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
@@ -406,12 +405,12 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
             self.unconfirm_status(instance)
             if do_confirm:
                 segment_serlzr = SegmentSerializerV2(instance, data={"target":\
-                        re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
-                        partial=True, context={"request": request})
+                    re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
+                    partial=True, context={"request": request})
             else:
                 segment_serlzr = SegmentSerializerV2(instance, data={"temp_target":\
-                        re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
-                        partial=True, context={"request": request})
+                    re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
+                    partial=True, context={"request": request})
 
             if segment_serlzr.is_valid(raise_exception=True):
                 segment_serlzr.save()
@@ -455,7 +454,6 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
         segment.temp_target = re.sub(regex, replace_word, segment.temp_target)
         self.unconfirm_status(segment)
         segment.save()
-        print("segment---->", segment)
         return  Response(SegmentSerializer(segment).data, status=200)
 
 class ProgressView(views.APIView):
@@ -572,4 +570,21 @@ class CommentView(viewsets.ViewSet):
         obj = self.get_object(comment_id=pk)
         obj.delete()
         return  Response({},204)
+
+class GetPageIndexWithFilterApplied(views.APIView):
+    def get_queryset(self, document_id, status_list):
+        doc = get_object_or_404(Document.objects.all(), id=document_id)
+        # status_list = data.get("status_list")
+        segments = segments.filter(status__status_id__in=status_list).all()
+        return  segments
+
+    def get(self, request, document_id, segment_id):
+        status_list = request.data.get("status_list")[0]
+        segments = self.get_queryset(document_id, status_list)
+        ids = [
+            segment.id for segment in segments
+        ]
+        return  Response(
+            {"page_id": (ids.index(segment_id)//20)+1}, 200
+        )
 
