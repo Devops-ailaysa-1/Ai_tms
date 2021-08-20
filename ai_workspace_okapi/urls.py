@@ -27,6 +27,7 @@ urlpatterns+=[
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
+    path("project_status/<int:project_id>", api_views.ProjectStatusView.as_view(), name="project-status"),
     # path("comments", api_views)
 ]
 
