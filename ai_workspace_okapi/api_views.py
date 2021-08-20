@@ -171,7 +171,8 @@ class SegmentsUpdateView(viewsets.ViewSet):
 
     @staticmethod
     def get_update(segment, data,request):
-        segment_serlzr =  SegmentSerializerV2(segment, data=data, partial=True, context={"request": request})
+        segment_serlzr = SegmentSerializerV2(segment, data=data, partial=True,\
+            context={"request": request})
         if segment_serlzr.is_valid(raise_exception=True):
             segment_serlzr.save()
             return segment_serlzr
@@ -370,7 +371,6 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
             segment.status_id, segment.status_id
         )
 
-
     def paginate_response(self, segments, request, status):
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
@@ -389,6 +389,7 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         replace_word = data.get('replace_word', '')
         match_case = data.get('match_case', False)
         exact_word = data.get('exact_word', False)
+        do_confirm = data.get("do_confirm", False)
 
         if exact_word:
             if match_case:
@@ -402,9 +403,18 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
                 regex = re.compile(r'((?i)' + search_word + r')')
 
         for instance in segments:
-            instance.temp_target = re.sub(regex, replace_word, instance.temp_target)
-            self.update_segments(instance)
-            instance.save()
+            self.unconfirm_status(instance)
+            if do_confirm:
+                segment_serlzr = SegmentSerializerV2(instance, data={"target":\
+                    re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
+                    partial=True, context={"request": request})
+            else:
+                segment_serlzr = SegmentSerializerV2(instance, data={"temp_target":\
+                    re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
+                    partial=True, context={"request": request})
+
+            if segment_serlzr.is_valid(raise_exception=True):
+                segment_serlzr.save()
 
         return segments, 200
 
@@ -429,6 +439,7 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
         replace_word = data.get('replace_word', '')
         match_case = data.get('match_case', False)
         exact_word = data.get('exact_word', False)
+        do_confirm = data.get("do_confirm", False)
 
         if exact_word:
             if match_case:
@@ -444,7 +455,6 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
         segment.temp_target = re.sub(regex, replace_word, segment.temp_target)
         self.unconfirm_status(segment)
         segment.save()
-        print("segment---->", segment)
         return  Response(SegmentSerializer(segment).data, status=200)
 
 class ProgressView(views.APIView):
@@ -580,4 +590,21 @@ class ProjectStatusView(APIView):
             return JsonResponse({"res" : "100% COMPLETE"}, safe=False)
         else:
             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
+            
+class GetPageIndexWithFilterApplied(views.APIView):
+    def get_queryset(self, document_id, status_list):
+        doc = get_object_or_404(Document.objects.all(), id=document_id)
+        # status_list = data.get("status_list")
+        segments = segments.filter(status__status_id__in=status_list).all()
+        return  segments
+
+    def get(self, request, document_id, segment_id):
+        status_list = request.data.get("status_list")[0]
+        segments = self.get_queryset(document_id, status_list)
+        ids = [
+            segment.id for segment in segments
+        ]
+        return  Response(
+            {"page_id": (ids.index(segment_id)//20)+1}, 200
+        )
 

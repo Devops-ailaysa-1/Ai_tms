@@ -21,6 +21,8 @@ router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 # router.register(r"tasks", api_views.TaskView, basename="tasks")
 
+router.register(r"vendor/dashboard-proj-based", api_views.VendorProjectBasedDashBoardView,\
+				basename="vendor-dashboard-project-based")
 
 urlpatterns = router.urls
 

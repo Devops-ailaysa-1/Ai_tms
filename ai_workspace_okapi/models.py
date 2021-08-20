@@ -55,7 +55,7 @@ class Segment(models.Model):
 
     @property
     def coded_target(self):
-        return  set_runs_to_ref_tags( self.target, get_runs_and_ref_ids( \
+        return  set_runs_to_ref_tags( self.coded_source, self.target, get_runs_and_ref_ids( \
             self.coded_brace_pattern, self.coded_ids_aslist ) )
 
 

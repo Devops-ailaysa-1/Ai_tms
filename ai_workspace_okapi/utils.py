@@ -63,19 +63,44 @@ def set_ref_tags_to_runs(text_content, runs_and_ref_ids):
         text_content = text_content.replace(run, run_id_tag)
     return (text_content, run_tags, ''.join(run_id_tags))
 
-def set_runs_to_ref_tags(text_content, runs_and_ref_ids):
-    if not text_content: return text_content
+def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
+    if not text_content:
+        return text_content
+
+    ids_list = [id for run, id in runs_and_ref_ids]; ids_set = set(ids_list)
+
+    ids_dict =  { id:ids_list.count(id) for id in ids_set}
+
+    for id, count in ids_dict.items():
+        if count == 2:
+            open_tag = "<"+str(id)+">"
+            close_tag = "</"+str(id)+">"
+
+            if ((
+                not(
+                    (open_tag in text_content) and \
+                    (close_tag in text_content)\
+                    )\
+                ) or \
+                (text_content.index(open_tag)>text_content\
+                .index(close_tag))):
+                text_content = open_tag+close_tag+text_content
+
+    missed_ref_ids = []
 
     for run, ref_id in runs_and_ref_ids:
+
         if "\ue101" in run:
             run_id_tag = "<"+str(ref_id)+">"
-            if not run in text_content:
+            if not run in source_content:
                 run = run.replace("\ue101", "\ue103")
         else:
             run_id_tag = "</"+str(ref_id)+">"
-            if not run in text_content:
+            if not run in source_content:
                 run = run.replace("\ue102", "\ue103")
+
         text_content = text_content.replace(run_id_tag, run)
+
     return text_content
 
 

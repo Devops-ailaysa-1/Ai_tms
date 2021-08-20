@@ -439,6 +439,7 @@ def getLanguageName(request,id):
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def create(self, request):
+        print("data---->", request.data, request.POST.dict(), request.FILES) 
         serlzr = ProjectQuickSetupSerializer(data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request})
@@ -461,6 +462,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
         serlzr = VendorDashBoardSerializer(pagin_queryset, many=True)
         return self.get_paginated_response(serlzr.data)
+
+
 
 class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

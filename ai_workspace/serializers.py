@@ -364,7 +364,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		fields = ("project_name", "jobs", "files")
 
 	def to_internal_value(self, data):
-
+		data["project_name"] = data.get("project_name", [None])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
 

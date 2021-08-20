@@ -379,7 +379,7 @@ class Task(models.Model):
             status__status_id__in=confirm_list
         ).count()
         return {"total_segments":total_segment_count,\
-                "confirmed_segements":segments_confirmed_count}
+                "confirmed_segments":segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
@@ -413,5 +413,7 @@ def tbx_file_upload_path(instance, filename):
 
 class Tbxfiles(models.Model):
     # tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False, blank=False, max_length=1000)  # Common for a project
-    tbx_files = models.FileField(upload_to="uploaded_tbx_files", null=False, blank=False, max_length=1000)  # Common for a project
-    project = models.ForeignKey("Project", null=False, blank=False, on_delete=models.CASCADE)
+    tbx_files = models.FileField(upload_to="uploaded_tbx_files", null=False,\
+            blank=False, max_length=1000)  # Common for a project
+    project = models.ForeignKey("Project", null=False, blank=False,\
+            on_delete=models.CASCADE)
