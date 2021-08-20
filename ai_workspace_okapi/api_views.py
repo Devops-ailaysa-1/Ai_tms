@@ -25,6 +25,7 @@ from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser
 from django.http import  FileResponse
+from rest_framework.views import APIView
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 
