@@ -364,8 +364,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
-STRIPE_TEST_SECRET_KEY = "sk_test_51JGK4lSAQeQ4W2LNFRocpq3XBHK6z31shJg2cf0ONQIkgn7JoodLed37ucktm9r5ROxTh2ew5VkeEswcncz0ZhCh00m9m6tmvL"
-STRIPE_LIVE_MODE = False  # Change to True in production
-DJSTRIPE_WEBHOOK_SECRET = 'whsec_VZEagiADqwi29smcnfO8im1ntDsQSXRG'  # Get it from the section in the Stripe dashboard where you added the webhook endpoint
+STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
+STRIPE_LIVE_MODE = (True if os.getenv( "STRIPE_LIVE_MODE" ) == 'True' else False)  # Change to True in production
+DJSTRIPE_WEBHOOK_SECRET = os.getenv( "DJSTRIPE_WEBHOOK_SECRET" )  # Get it from the section in the Stripe dashboard where you added the webhook endpoint
 DJSTRIPE_USE_NATIVE_JSONFIELD = True  # We recommend setting to True for new installations
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
