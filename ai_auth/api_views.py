@@ -1,17 +1,17 @@
-from ai_auth.serializers import OfficialInformationSerializer, PersonalInformationSerializer, ProfessionalidentitySerializer,UserAttributeSerializer
+from ai_auth.serializers import OfficialInformationSerializer, PersonalInformationSerializer, ProfessionalidentitySerializer,UserAttributeSerializer,UserProfileSerializer
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
-from rest_framework import generics
-from ai_auth.models import AiUser, OfficialInformation, PersonalInformation, Professionalidentity,UserAttribute
+from rest_framework import generics , viewsets
+from ai_auth.models import AiUser, OfficialInformation, PersonalInformation, Professionalidentity,UserAttribute,UserProfile
 from django.http import Http404
 from rest_framework import status
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
-
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -45,7 +45,7 @@ class UserAttributeView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, format=None):
         user_type = UserAttribute.objects.get(user_id=request.user.id)
         serializer = UserAttributeSerializer(user_type,
@@ -83,7 +83,7 @@ class PersonalInformationView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, format=None):
         print(request.data)
         personal_info = PersonalInformation.objects.get(user_id=request.user.id)
@@ -120,7 +120,7 @@ class OfficialInformationView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, format=None):
         officaial_info = OfficialInformation.objects.get(user_id=request.user.id)
         serializer = OfficialInformationSerializer(officaial_info,
@@ -187,3 +187,33 @@ class ProfessionalidentityView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserProfileCreateView(viewsets.ViewSet):
+    def list(self,request):
+        try:
+            queryset = UserProfile.objects.get(user_id = self.request.user.id)
+            print(queryset)
+            serializer = UserProfileSerializer(queryset)
+            return Response(serializer.data)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # def get_queryset(self):
+    #     queryset=UserProfile.objects.filter(user_id=self.request.user.id).all()
+    #     return queryset
+
+    def create(self,request):
+        id = request.user.id
+        serializer = UserProfileSerializer(data={**request.POST.dict(),'user':id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response({'msg':'description already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk=None):
+        queryset = UserProfile.objects.get(user_id=self.request.user.id)
+        serializer= UserProfileSerializer(queryset,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
