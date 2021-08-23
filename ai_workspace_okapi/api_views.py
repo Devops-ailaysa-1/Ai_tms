@@ -576,12 +576,17 @@ class GetPageIndexWithFilterApplied(views.APIView):
     def get_queryset(self, document_id, status_list):
         doc = get_object_or_404(Document.objects.all(), id=document_id)
         # status_list = data.get("status_list")
-        segments = segments.filter(status__status_id__in=status_list).all()
+        segments = doc.segments.filter(status__status_id__in=status_list).all()
         return  segments
 
-    def get(self, request, document_id, segment_id):
-        status_list = request.data.get("status_list")[0]
+    def post(self, request, document_id, segment_id):
+        print( "data---->", request.data ) 
+        status_list = request.data.get("status_list", [])
+        print("status list", status_list + [] ) 
         segments = self.get_queryset(document_id, status_list)
+        print("segments---->", segments)
+        if not segments:
+            return Response( {"detail": "No segment found"}, 404 )
         ids = [
             segment.id for segment in segments
         ]
