@@ -5,7 +5,7 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones
+from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones,SupportType
 from django.db.models.signals import post_save, pre_save
 from .signals import create_allocated_dirs
 from django.contrib.auth.models import AbstractUser
@@ -109,3 +109,17 @@ class Professionalidentity(models.Model):
     class Meta:
         db_table = 'professional_identity'
 #pre_save.connect(create_allocated_dirs, sender=UserAttribute)
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
+    description = models.TextField(max_length=1000, blank=True, null=True)
+
+class CustomerSupport(models.Model):
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    support_type = models.ForeignKey(SupportType,on_delete=models.CASCADE)
+    description = models.TextField(max_length=1000, blank=True, null=True)
+
+class Contact(models.Model):
+    name = models.CharField(max_length=200, blank=True, null=True)
+    email = models.EmailField()
+    description = models.TextField(max_length=1000, blank=True, null=True)
