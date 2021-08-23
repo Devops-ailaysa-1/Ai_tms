@@ -12,7 +12,7 @@ from dj_rest_auth.views import PasswordResetConfirmView
 
 router = DefaultRouter()
 router.register(r'userprofile',api_views.UserProfileCreateView,basename="user-profile-info")
-
+router.register(r'customersupport',api_views.CustomerSupportCreateView,basename="user-profile-info")
 urlpatterns = router.urls
 
 urlpatterns+= [

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import AilaysaSupportedMtpeEngines, ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType,ServiceTypeunits
+from .models import AilaysaSupportedMtpeEngines, ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType,ServiceTypeunits,SupportType
 
 
 
@@ -179,6 +179,13 @@ class ServiceTypeUnitsSerializer(serializers.ModelSerializer):
 
         fields = ( 'id', 'unit','is_active','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
+
+class SupportTypeSerializer(serializers.ModelSerializer):
+
+        class Meta:
+            model = SupportType
+            fields = ('id', 'support_type','created_at','updated_at')
+            read_only_fields = ('id','created_at','updated_at')
 
 class AiUserTypeSerializer(serializers.ModelSerializer):
 

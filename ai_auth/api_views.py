@@ -1,4 +1,4 @@
-from ai_auth.serializers import OfficialInformationSerializer, PersonalInformationSerializer, ProfessionalidentitySerializer,UserAttributeSerializer,UserProfileSerializer
+from ai_auth.serializers import OfficialInformationSerializer, PersonalInformationSerializer, ProfessionalidentitySerializer,UserAttributeSerializer,UserProfileSerializer,CustomerSupportSerializer
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -6,7 +6,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import AiUser, OfficialInformation, PersonalInformation, Professionalidentity,UserAttribute,UserProfile
+from ai_auth.models import AiUser, OfficialInformation, PersonalInformation, Professionalidentity,UserAttribute,UserProfile,CustomerSupport
 from django.http import Http404
 from rest_framework import status
 from django.db import IntegrityError
@@ -197,10 +197,6 @@ class UserProfileCreateView(viewsets.ViewSet):
         except:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # def get_queryset(self):
-    #     queryset=UserProfile.objects.filter(user_id=self.request.user.id).all()
-    #     return queryset
-
     def create(self,request):
         id = request.user.id
         serializer = UserProfileSerializer(data={**request.POST.dict(),'user':id})
@@ -217,3 +213,21 @@ class UserProfileCreateView(viewsets.ViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+
+
+class CustomerSupportCreateView(viewsets.ViewSet):
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = CustomerSupportSerializer(queryset,many=True)
+        return Response(serializer.data)
+    def get_queryset(self):
+        queryset= CustomerSupport.objects.filter(user_id=self.request.user.id).all()
+        return queryset
+
+    def create(self,request):
+        id = request.user.id
+        serializer = CustomerSupportSerializer(data={**request.POST.dict(),'user':id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
