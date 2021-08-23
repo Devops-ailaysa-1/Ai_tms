@@ -32,6 +32,7 @@ urlpatterns = [
     path("workspace/", include('ai_workspace.urls')),
     path("workspace_okapi/", include("ai_workspace_okapi.urls")),
     path('marketplace/',include('ai_marketplace.urls')),
+    path("stripe/", include("djstripe.urls", namespace="djstripe")),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
