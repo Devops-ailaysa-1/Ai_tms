@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from datetime import datetime
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,AvailableBidSerializer,BidChatSerializer)
@@ -226,6 +227,15 @@ def shortlisted_vendor_list_send_email(request):
 
 class BidChatView(APIView):
 
+    def get_object(self,projectpostjob):
+        projectpost_id=ProjectPostJobDetails.objects.get(id=projectpostjob).projectpost_id
+        bid_deadline=ProjectboardDetails.objects.get(id=projectpost_id).bid_deadline
+        present = datetime.now()
+        if present.strftime('%Y-%m-%d %H:%M:%S') <= bid_deadline.strftime('%Y-%m-%d %H:%M:%S'):
+            return True
+        else:
+            return False
+
     def get(self, request, sender=None):
         try:
             projectpostjob_id=self.request.POST.get('projectpost_jobs')
@@ -237,17 +247,36 @@ class BidChatView(APIView):
 
     def post(self, request,sender=None):
         print(request.user.id)
-        #data = request.POST.dict()
-        serializer = BidChatSerializer(data={**request.POST.dict(),'sender':request.user.id})
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=201)
-        return JsonResponse(serializer.errors, status=400)
+        projectpostjob=request.POST.get('projectpost_jobs')
+        allow_bidpost=self.get_object(projectpostjob)
+        if allow_bidpost:
+            serializer = BidChatSerializer(data={**request.POST.dict(),'sender':request.user.id})
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data, status=201)
+            else:
+                return JsonResponse(serializer.errors, status=400)
+        else:
+            return JsonResponse({"message":"BidDeadline Crossed"},status=400,safe=False)
 
     def put(self,request,id):
         data = request.POST.dict()
-        chat_info = BidChat.objects.get(id=id)
-        serializer = BidChatSerializer(chat_info,data=data,partial=True)
-        if serializer.is_valid():
-            serializer.save_update()
-            return Response(serializer.data)
+        projectpostjob=request.POST.get('projectpost_jobs')
+        allow_bidpost=self.get_object(projectpostjob)
+        if allow_bidpost:
+            queryset = BidChat.objects.filter(sender_id=self.request.user.id).all()
+            chat_info = get_object_or_404(queryset, pk=id)
+            serializer = BidChatSerializer(chat_info,data=data,partial=True)
+            if serializer.is_valid():
+                serializer.save_update()
+                return Response(serializer.data)
+            else:
+                return JsonResponse(serializer.errors, status=400)
+        else:
+            return JsonResponse({"message":"BidDeadline Crossed"},status=400,safe=False)
+
+    def delete(self,request,id):
+        queryset = BidChat.objects.filter(sender_id=self.request.user.id).all()
+        message = get_object_or_404(queryset, pk=id)
+        message.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

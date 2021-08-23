@@ -50,6 +50,13 @@ class ProjectPostJobDetails(models.Model):
      projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
 
 
+# class BidProposalDetails(models.Model):
+#     projectpost_jobs = models.ForeignKey(ProjectPostJobDetails,related_name='bidding_job',on_delete=models.CASCADE)
+#     vendor
+#     rates
+#     completion date
+
+
 class BidChat(models.Model):
     message = models.TextField()
     sender = models.ForeignKey(AiUser,related_name='message_creator',on_delete=models.CASCADE,blank=True, null=True)
