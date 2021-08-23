@@ -117,6 +117,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
+    'djstripe',
 ]
 
 
@@ -362,3 +363,9 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
+
+STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
+STRIPE_LIVE_MODE = (True if os.getenv( "STRIPE_LIVE_MODE" ) == 'True' else False)  # Change to True in production
+DJSTRIPE_WEBHOOK_SECRET = os.getenv( "DJSTRIPE_WEBHOOK_SECRET" )  # Get it from the section in the Stripe dashboard where you added the webhook endpoint
+DJSTRIPE_USE_NATIVE_JSONFIELD = True  # We recommend setting to True for new installations
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
