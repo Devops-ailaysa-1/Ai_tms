@@ -11,7 +11,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer,\
-    VendorDashBoardSerializer)
+    VendorDashBoardSerializer, TbxFileSerializer)
                         
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile
@@ -19,14 +19,14 @@ from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Task
+from .models import Task, TbxFile
 from django.http import JsonResponse
 import requests, json, os
 from ai_workspace import serializers
 from ai_workspace_okapi.models import Document
 from ai_staff.models import LanguagesLocale, Languages
 from rest_framework.decorators import api_view
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -491,3 +491,40 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
         # pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
         serlzr = VendorDashBoardSerializer(tasks, many=True)
         return Response(serlzr.data, status=200)
+
+class TbxFileListCreateView(APIView):
+
+    def get(self, request, project_id):
+        files = TbxFile.objects.filter(project_id=project_id).all()
+        serializer = TbxFileSerializer(files, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, project_id):
+        data = {**request.POST.dict(), "tbx_file" : request.FILES.get('tbx_file')}
+        data["project_id"] = project_id
+        ser_data = TbxFileSerializer.prepare_data(data)
+        serializer = TbxFileSerializer(ser_data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(serializer.data, status=201)
+    
+class TbxFileDetail(APIView):
+
+    def get_object(self, id):
+        try:
+            return TbxFile.objects.get(id=id)
+        except TbxFile.DoesNotExist:
+            return HttpResponse(status=404)
+
+    def put(self, request, id):
+        tbx_asset = self.get_object(id)
+        tbx_file = request.FILES.get('tbx_file')
+        serializer = TbxFileSerializer(tbx_asset, data={**request.POST.dict(), 'tbx_file' : tbx_file}, partial=True)
+        if serializer.is_valid():
+            serializer.save_update()
+            return Response(serializer.data, status=200)
+
+    def delete(self, request, id):
+        tbx_asset = self.get_object(id)
+        tbx_asset.delete()
+        return Response(data={"Message": "Removed Terminology asset"}, status=204)

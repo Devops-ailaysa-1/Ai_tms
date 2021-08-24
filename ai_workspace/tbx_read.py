@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 import requests
 import regex as re
-from .models import Tbxfiles,Project,Job
+from .models import Tbxfiles,Project,Job, TbxFile
 from ai_workspace_okapi.models import Document
 from ai_staff.models import Languages,LanguagesLocale
 from django.shortcuts import get_object_or_404
@@ -65,25 +65,29 @@ def getLanguageName(id):
 
 @api_view(['POST',])
 def TermSearch(request):
-    punctuation='''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
-    out1=[]
-    data=request.POST.dict()
-    user_input=data.get("user_input")
+    punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+    out1 = []
+    data = request.POST.dict()
+    user_input = data.get("user_input")
     text_tokens = word_tokenize(user_input)
     tokens_new = [word for word in text_tokens if word not in punctuation]
-    unigram=ngrams(tokens_new,1)
-    single_words=list(" ".join(i) for i in unigram)
+    unigram = ngrams(tokens_new,1)
+    single_words = list(" ".join(i) for i in unigram)
     bigrams = ngrams(tokens_new,2)
-    double_words=list(" ".join(i) for i in bigrams)
-    doc_id=data.get("doc_id")
-    LangName=getLanguageName(doc_id)
-    codesrc=LangName.get("src_code")
-    code=LangName.get("tar_code")
+    double_words = list(" ".join(i) for i in bigrams)
+    doc_id = data.get("doc_id")
+    LangName = getLanguageName(doc_id)
+    codesrc = LangName.get("src_code")
+    code = LangName.get("tar_code")
     # print(codesrc)
     # print(code)
-    job_id=Document.objects.get(id=doc_id).job_id
-    project=Job.objects.get(id=job_id).project_id
-    files=Tbxfiles.objects.filter(project_id=project).all()
+    job_id = Document.objects.get(id=doc_id).job_id
+    project_id = Job.objects.get(id=job_id).project_id
+    try:
+        files = TbxFile.objects.filter(job_id=job_id).all()
+    except Exception as e:
+        print("ASSIGNED FOR ALL JOBS", e)
+        files = TbxFile.objects.filter(project_id=project_id).all()
     # print(files)
     for i in range(len(files)):
         file_id=files[i].id
