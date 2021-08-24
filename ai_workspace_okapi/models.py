@@ -107,11 +107,16 @@ class Document(models.Model):
         return self.created_by.email
 
     def get_segments(self):
-        return Segment.objects.filter(text_unit__document__id = self.id)
+        return Segment.objects.filter(text_unit__document__id=self.id)
+
+    @property
+    def segments_without_blank(self):
+        return self.get_segments().exclude(source__exact='')
 
     @property
     def segments(self):
         return self.get_segments()
+
     @property
     def source_language(self):
         return self.job.source__language.language
