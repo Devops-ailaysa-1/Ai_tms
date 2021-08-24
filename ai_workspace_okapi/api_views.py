@@ -26,6 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser
 from django.http import  FileResponse
 from rest_framework.views import APIView
+from django.db.models import Q
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -337,7 +338,11 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         status_list = data.get("status_list", [])
 
         if status_list:
-            segments = segments.filter(status__status_id__in=status_list).all()
+            if '0' in status_list:
+                segments = segments.filter(Q(status=None) | \
+                        Q(status__status_id__in=status_list)).all()
+            else:
+                segments = segments.filter(status__status_id__in=status_list).all()
 
         search_word = data.get("search_word", None)
 
@@ -581,7 +586,11 @@ class GetPageIndexWithFilterApplied(views.APIView):
     def get_queryset(self, document_id, status_list):
         doc = get_object_or_404(Document.objects.all(), id=document_id)
         # status_list = data.get("status_list")
-        segments = doc.segments.filter(status__status_id__in=status_list).all()
+        if '0' in status_list:
+            segments = doc.segments.filter(Q(status=None)|\
+                        Q(status__status_id__in=status_list)).all()
+        else:
+            segments = doc.segments.filter(status__status_id__in=status_list).all()
         return  segments
 
     def post(self, request, document_id, segment_id):
@@ -595,9 +604,13 @@ class GetPageIndexWithFilterApplied(views.APIView):
         ids = [
             segment.id for segment in segments
         ]
-        return  Response(
-            {"page_id": (ids.index(segment_id)//20)+1}, 200
-        )
+
+        try:
+            res = ({"page_id": (ids.index(segment_id)//20)+1}, 200)
+        except:
+            res = ({"page_id": None}, 404)
+
+        return  Response(res)
 
 class ProjectStatusView(APIView):
     permission_classes = [IsAuthenticated]

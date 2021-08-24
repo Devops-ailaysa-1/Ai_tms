@@ -89,7 +89,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url", "id")
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url", "id", "progress")
 
 	def to_internal_value(self, data):
 		source_language = json.loads(data.pop("source_language", "0"))
