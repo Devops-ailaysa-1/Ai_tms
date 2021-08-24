@@ -110,6 +110,10 @@ class Document(models.Model):
         return Segment.objects.filter(text_unit__document__id = self.id)
 
     @property
+    def segments_without_blank(self):
+        return self.get_segments().exclude(source__exact='')
+
+    @property
     def segments(self):
         return self.get_segments()
     @property

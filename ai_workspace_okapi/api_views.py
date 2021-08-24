@@ -141,7 +141,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
-        segments = document.segments
+        segments = document.segments_without_blank
         len_segments = segments.count()
         page_len = self.paginate_queryset(range(1,len_segments+1), request)
         # print(page_len)
