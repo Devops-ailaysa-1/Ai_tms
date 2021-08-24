@@ -424,17 +424,27 @@ class TbxUploadView(APIView):
 
 @api_view(['GET',])
 def getLanguageName(request,id):
-      job_id=Document.objects.get(id=id).job_id
-      src_id=Job.objects.get(id=job_id).source_language_id
-      src_name=Languages.objects.get(id=src_id).language
-      tar_id=Job.objects.get(id=job_id).target_language_id
-      tar_name=Languages.objects.get(id=tar_id).language
-      src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name)\
-          .locale_code
-      tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name)\
-          .locale_code
-      return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
-            "src_code":src_lang_code,"tar_code":tar_lang_code})
+      
+    job_id=Document.objects.get(id=id).job_id
+    print("INSIDE")
+    src_id=Job.objects.get(id=job_id).source_language_id
+    print("SRC ID-->", src_id)
+    src_name=Languages.objects.get(id=src_id).language
+    tar_id=Job.objects.get(id=job_id).target_language_id
+    print("TAR ID-->", tar_id)
+    tar_name=Languages.objects.get(id=tar_id).language
+    print("GOT LANGUAGES")
+    try:
+        src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name)\
+                     .locale_code
+        tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name)\
+                     .locale_code
+        return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
+                     "src_code":src_lang_code,"tar_code":tar_lang_code})
+    except Exception as E:
+        print("Exception-->", E)
+        return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
+                     "src_code":0,"tar_code":0})
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

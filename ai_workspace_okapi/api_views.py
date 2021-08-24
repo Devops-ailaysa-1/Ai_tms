@@ -13,7 +13,7 @@ from ai_staff.models import AiUserType
 from django.http import HttpResponse
 from ai_workspace.models import Task
 from rest_framework.response import  Response
-from django.db.models import F
+from django.db.models import F, Q
 import requests
 import json, os, re, time
 import pickle
@@ -25,6 +25,7 @@ from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser
 from django.http import  FileResponse
+from rest_framework.views import APIView
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -583,9 +584,14 @@ class GetPageIndexWithFilterApplied(views.APIView):
         segments = doc.segments.filter(status__status_id__in=status_list).all()
         return  segments
 
-    def get(self, request, document_id, segment_id):
-        status_list = request.data.get("status_list")[0]
+    def post(self, request, document_id, segment_id):
+        print( "data---->", request.data ) 
+        status_list = request.data.get("status_list", [])
+        print("status list", status_list + [] ) 
         segments = self.get_queryset(document_id, status_list)
+        print("segments---->", segments)
+        if not segments:
+            return Response( {"detail": "No segment found"}, 404 )
         ids = [
             segment.id for segment in segments
         ]
@@ -593,3 +599,21 @@ class GetPageIndexWithFilterApplied(views.APIView):
             {"page_id": (ids.index(segment_id)//20)+1}, 200
         )
 
+class ProjectStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id):
+        docs = Document.objects.filter(job__project_id=project_id).all()
+        total_segments = 0
+        if not docs:
+            return JsonResponse({"res" : "YET TO START"}, safe=False)        
+        else:
+            for doc in docs:
+                total_segments+=doc.total_segment_count
+
+        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) & 
+            Q(status_id__in=[102,104,106])).all().count()
+        if total_segments == status_count:
+            return JsonResponse({"res" : "COMPLETED"}, safe=False)
+        else:
+            return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
