@@ -1,7 +1,11 @@
 from rest_framework import serializers
-from .models import AilaysaSupportedMtpeEngines, ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType,ServiceTypeunits,SupportType
-
-
+from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries,
+                    Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies,
+                    SubjectFields, SupportFiles, Timezones,Billingunits,
+                    AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
+                    SubscriptionFeatures)
+import json
+from drf_writable_nested import WritableNestedModelSerializer
 
 class ServiceTypesSerializer(serializers.ModelSerializer):
 
@@ -201,3 +205,13 @@ class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
         model = AilaysaSupportedMtpeEngines
         fields = ("id","name",'created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
+
+class SubscriptionPricingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPricing
+        fields = ('id','stripe_product_id','stripe_price_id','plan','price','discount','currency',)
+
+class SubscriptionFeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionFeatures
+        fields = ('id','features','subscriptionplan',)

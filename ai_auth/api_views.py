@@ -249,7 +249,7 @@ class ContactPricingCreateView(viewsets.ViewSet):
         if user_id:
             name = AiUser.objects.get(id=user_id).fullname
             email = AiUser.objects.get(id=user_id).email
-            return JsonResponse({"Name":name,"Email":email},safe=False)
+            return JsonResponse({"name":name,"email":email},safe=False)
         else:
             return Response({"message":"user is not authorized"})
 
