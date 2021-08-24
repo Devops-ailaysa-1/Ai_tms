@@ -93,12 +93,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
-
-                start = time.time()
-                with open("test.out.json", "w") as f:
-                    f.write(json.dumps(doc_data))
-                print("finished in secs:--->"+ str(time.time()-start))
-                print("doc_data---- from okapi", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -586,7 +580,7 @@ class GetPageIndexWithFilterApplied(views.APIView):
     def get_queryset(self, document_id, status_list):
         doc = get_object_or_404(Document.objects.all(), id=document_id)
         # status_list = data.get("status_list")
-        segments = segments.filter(status__status_id__in=status_list).all()
+        segments = doc.segments.filter(status__status_id__in=status_list).all()
         return  segments
 
     def get(self, request, document_id, segment_id):
