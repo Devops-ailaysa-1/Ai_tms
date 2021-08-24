@@ -263,7 +263,7 @@ class SupportType(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class SubscriptionPricing(ParanoidModel):
-    plan_name = models.CharField(max_length=100, null=True, blank=True)
+    plan = models.CharField(max_length=100, null=True, blank=True)
     price = models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
     currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

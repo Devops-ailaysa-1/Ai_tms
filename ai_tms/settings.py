@@ -20,7 +20,8 @@ from pathlib import Path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 TEMPLATE_DIR_2 = os.path.join(BASE_DIR,'ai_vendor','templates')
-
+TEMPLATE_DIR_3 = os.path.join(BASE_DIR,'ai_marketplace','templates')
+TEMPLATE_DIR_4 = os.path.join(BASE_DIR,'ai_auth','templates')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
@@ -141,7 +142,7 @@ AUTH_USER_MODEL="ai_auth.AiUser"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,],
+        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,TEMPLATE_DIR_3,TEMPLATE_DIR_4],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

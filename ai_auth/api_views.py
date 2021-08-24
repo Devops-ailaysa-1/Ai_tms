@@ -1,4 +1,6 @@
-from ai_auth.serializers import OfficialInformationSerializer, PersonalInformationSerializer, ProfessionalidentitySerializer,UserAttributeSerializer,UserProfileSerializer,CustomerSupportSerializer
+from ai_auth.serializers import (OfficialInformationSerializer, PersonalInformationSerializer,
+                                ProfessionalidentitySerializer,UserAttributeSerializer,
+                                UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -6,12 +8,19 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import AiUser, OfficialInformation, PersonalInformation, Professionalidentity,UserAttribute,UserProfile,CustomerSupport
-from django.http import Http404
+from ai_auth.models import (AiUser, OfficialInformation, PersonalInformation, Professionalidentity,
+                            UserAttribute,UserProfile,CustomerSupport,ContactPricing)
+from django.http import Http404,JsonResponse
 from rest_framework import status
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
+from django.core.mail import EmailMessage
+from django.template import Context
+from django.template.loader import get_template
+from django.template.loader import render_to_string
+from datetime import datetime
+from django.conf import settings
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -231,3 +240,41 @@ class CustomerSupportCreateView(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class ContactPricingCreateView(viewsets.ViewSet):
+    def list(self,request):
+        user_id = request.user.id
+        if user_id:
+            name = AiUser.objects.get(id=user_id).fullname
+            email = AiUser.objects.get(id=user_id).email
+            return JsonResponse({"Name":name,"Email":email},safe=False)
+        else:
+            return Response({"message":"user is not authorized"})
+
+    def create(self,request):
+        name = request.POST.get("name")
+        description = request.POST.get("description")
+        email = request.POST.get("email")
+        timestamp = datetime.now()
+        serializer = ContactPricingSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            send_email_contact_pricing(name,description,email,timestamp)
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def send_email_contact_pricing(name,description,email,timestamp):
+    template = 'contact_pricing_email.html'
+    if name:
+        context = {'user': name, 'description':description,'timestamp':timestamp}
+    else:
+        context = {'user': email, 'description':description,'timestamp':timestamp}
+    content = render_to_string(template, context)
+    subject='Regarding Contact-Us Pricing'
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['thenmozhivijay20@gmail.com',])#to emailaddress need to change
+    msg.content_subtype = 'html'
+    msg.send()
+    return JsonResponse({"message":"Email Successfully Sent"},safe=False)

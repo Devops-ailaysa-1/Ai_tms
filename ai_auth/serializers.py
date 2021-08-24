@@ -5,7 +5,8 @@ from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from ai_auth.models import AiUser,UserAttribute,PersonalInformation,OfficialInformation,Professionalidentity,UserProfile,CustomerSupport
+from ai_auth.models import (AiUser,UserAttribute,PersonalInformation,OfficialInformation,
+                            Professionalidentity,UserProfile,CustomerSupport,ContactPricing)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer
@@ -219,3 +220,9 @@ class CustomerSupportSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerSupport
         fields  = "__all__"
+
+
+class ContactPricingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactPricing
+        fields = "__all__"
