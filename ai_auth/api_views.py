@@ -1,6 +1,7 @@
 from ai_auth.serializers import (OfficialInformationSerializer, PersonalInformationSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
-                                UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer)
+                                UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
+                                TempPricingPreferenceSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -9,7 +10,8 @@ from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, OfficialInformation, PersonalInformation, Professionalidentity,
-                            UserAttribute,UserProfile,CustomerSupport,ContactPricing)
+                            UserAttribute,UserProfile,CustomerSupport,ContactPricing,
+                            TempPricingPreference)
 from django.http import Http404,JsonResponse
 from rest_framework import status
 from django.db import IntegrityError
@@ -260,8 +262,8 @@ class ContactPricingCreateView(viewsets.ViewSet):
         timestamp = datetime.now()
         serializer = ContactPricingSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
-            send_email_contact_pricing(name,description,email,timestamp)
             serializer.save()
+            send_email_contact_pricing(name,description,email,timestamp)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -278,3 +280,13 @@ def send_email_contact_pricing(name,description,email,timestamp):
     msg.content_subtype = 'html'
     msg.send()
     return JsonResponse({"message":"Email Successfully Sent"},safe=False)
+
+
+class TempPricingPreferenceCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        serializer = TempPricingPreferenceSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -14,6 +14,7 @@ router = DefaultRouter()
 router.register(r'userprofile',api_views.UserProfileCreateView,basename="user-profile-info")
 router.register(r'customersupport',api_views.CustomerSupportCreateView,basename="user-profile-info")
 router.register(r'contact_us',api_views.ContactPricingCreateView,basename="contact-us")
+router.register(r'temp_pricing_preference',api_views.TempPricingPreferenceCreateView,basename="temp-pricing-preference")
 urlpatterns = router.urls
 
 urlpatterns+= [
