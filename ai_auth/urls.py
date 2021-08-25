@@ -12,6 +12,8 @@ from dj_rest_auth.views import PasswordResetConfirmView
 
 router = DefaultRouter()
 router.register(r'userprofile',api_views.UserProfileCreateView,basename="user-profile-info")
+router.register(r'usersubscribe',api_views.UserSubscriptionCreateView,basename="user-subscribe")
+
 
 urlpatterns = router.urls
 

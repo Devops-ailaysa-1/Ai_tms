@@ -12,6 +12,9 @@ from rest_framework import status
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
+from djstripe.models import Customer,Price
+import stripe
+from django.conf import settings
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -217,3 +220,139 @@ class UserProfileCreateView(viewsets.ViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+
+
+def create_checkout_session(user,price_id):
+    domain_url = settings.CLIENT_BASE_URL
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+
+    stripe.api_key = api_key
+
+    checkout_session = stripe.checkout.Session.create(
+        client_reference_id=user.id,
+        success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url=domain_url + 'cancel/',
+        payment_method_types=['card'],
+        mode='subscription',
+        line_items=[
+            {
+                'price': price_id,
+                'quantity': 1,
+            }
+        ]
+    )
+    return checkout_session
+
+
+def create_checkout_session_addon(user,price_id):
+    domain_url = settings.CLIENT_BASE_URL
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+
+    stripe.api_key = api_key
+
+    checkout_session = stripe.checkout.Session.create(
+        client_reference_id=user.id,
+        success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url=domain_url + 'cancel/',
+        payment_method_types=['card'],
+        mode='payment',
+        customer = 'cus_K66n5FtHzVSLw0',
+        line_items=[
+            {
+                'price': price_id,
+                'quantity': 1,
+            }
+        ]
+    )
+    return checkout_session
+        # except Exception as e:
+        #     return JsonResponse({'error': str(e)})
+
+
+class UserSubscriptionCreateView(viewsets.ViewSet):
+    # def list(self,request):
+    #     try:
+    #         queryset = UserProfile.objects.get(user_id = self.request.user.id)
+    #         print(queryset)
+    #         serializer = UserProfileSerializer(queryset)
+    #         return Response(serializer.data)
+    #     except:
+    #         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # def get_queryset(self):
+    #     queryset=UserProfile.objects.filter(user_id=self.request.user.id).all()
+    #     return queryset
+
+    # def generate_subscription_checkout(self):
+    #     customer = Customer.objects.get(subscriber=request.user)
+    #     stripe.api_key = STRIPE_SECRET_KEY
+    #     session = stripe.checkout.Session.create(
+    #         customer=customer.id,
+    #         payment_method_types=['card'],
+    #         subscription_data={
+    #         'items': [{
+    #         'plan': request.data["plan"],
+    #         }],
+    #         },
+    #         success_url='http://example.com/success',
+    #         cancel_url='http://example.com/cancelled',
+    #     )
+
+    #     data = {
+    #     "session_id": session.id
+    #     }
+    #     return Response(data, status=200)
+
+
+
+
+
+
+    def create(self,request):
+        # user = request.user.id
+        #customer = Customer.objects.get(subscriber=request.user)
+        #serializer = UserProfileSerializer(data={**request.POST.dict(),'user':id})
+        #price = Price.objects.get(id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
+        price = Price.objects.get(id="price_1JKwJ9SAQeQ4W2LN9ua8GgzM")
+        #customer = Customer.get_or_create(subscriber=request.user)
+        user=request.user
+        session = create_checkout_session(user=user,price_id="price_1JKwJ9SAQeQ4W2LN9ua8GgzM")
+        #print(customer)
+        #customer = Customer.objects.first()
+        #customer[0].subscribe(price=price)
+        
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data)
+        return Response({'stripe_url':session.url}, status=201)
+        #return Response({'msg':'Successfully created'}, status=201)
+
+    # def update(self,request,pk=None):
+    #     queryset = UserProfile.objects.get(user_id=self.request.user.id)
+    #     serializer= UserProfileSerializer(queryset,data={**request.POST.dict()},partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     else:
+    #         return Response(serializer.errors)
+
+
+# class UserSubscriptionChoiceView(viewsets.ViewSet):
+#     def create(self,request):
+#         price = Price.objects.get(id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
+#         #price = Price.objects.get(id="price_1JKwJ9SAQeQ4W2LN9ua8GgzM")
+#         customer = Customer.get_or_create(subscriber=request.user)
+#         print(customer)
+#         #customer = Customer.objects.first()
+#         customer[0].subscribe(price=price)
+        
+#         # if serializer.is_valid():
+#         #     serializer.save()
+#         #     return Response(serializer.data)
+#         return Response({'msg':'Successfully created'}, status=201)

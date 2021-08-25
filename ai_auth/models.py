@@ -123,3 +123,7 @@ class Contact(models.Model):
     name = models.CharField(max_length=200, blank=True, null=True)
     email = models.EmailField()
     description = models.TextField(max_length=1000, blank=True, null=True)
+
+# class UserCredits(models.Model):
+#     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
+#     total_credits
