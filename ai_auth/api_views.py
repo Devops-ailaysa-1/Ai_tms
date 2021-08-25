@@ -17,12 +17,14 @@ from rest_framework import status
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
+from rest_framework.decorators import api_view,permission_classes
 from django.core.mail import EmailMessage
 from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime
 from django.conf import settings
+from djstripe.models import Customer,Invoice
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -291,3 +293,33 @@ class TempPricingPreferenceCreateView(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET',])
+@permission_classes((IsAuthenticated, ))
+def get_payment_details(request):
+    user,user_invoice_details=None,None
+    try:
+        user = Customer.objects.get(subscriber_id = request.user.id).id
+        user_invoice_details=Invoice.objects.filter(customer_id = user).all()
+        print(user_invoice_details)
+    except Exception as error:
+        print(error)
+    if user_invoice_details:
+        out=[]
+        for i in user_invoice_details:
+            new={}
+            Invoice_number = Invoice.objects.get(id = i.id).number
+            Invoice_value = Invoice.objects.get(id=i.id).amount_paid
+            Invoice_date = Invoice.objects.get(id = i.id).created
+            status =  Invoice.objects.get(id = i.id).status
+            pdf_download_link = Invoice.objects.get(id = i.id).invoice_pdf
+            view_invoice_url = Invoice.objects.get(id =i.id).hosted_invoice_url
+            output={"Invoice_number":Invoice_number,"Invoice_value":Invoice_value,"Invoice_date":Invoice_date,
+                    "Status":status,"Invoice_Pdf_download_link":pdf_download_link,
+                    "Invoice_view_URL":view_invoice_url}
+            new.update(output)
+            out.append(new)
+    else:
+        out = "No invoice details Exists"
+    return JsonResponse({"out":out},safe=False)

@@ -10,6 +10,7 @@ from django.urls import path,include
 router = routers.DefaultRouter()
 router.register(r'subscriptionpricing', api_views.SubscriptionPricingCreateView,basename='subscription-pricing')
 router.register(r'subscriptionfeatures', api_views.SubscriptionFeaturesCreateView,basename='subscription-features')
+router.register(r'addon_details',api_views.CreditsAddonsCreateView,basename='addon-details')
 urlpatterns = router.urls
 
 urlpatterns += [
