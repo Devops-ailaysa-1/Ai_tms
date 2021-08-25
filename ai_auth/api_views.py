@@ -1,4 +1,7 @@
-from ai_auth.serializers import OfficialInformationSerializer, PersonalInformationSerializer, ProfessionalidentitySerializer,UserAttributeSerializer,UserProfileSerializer
+from ai_auth.serializers import (OfficialInformationSerializer, PersonalInformationSerializer,
+                                ProfessionalidentitySerializer,UserAttributeSerializer,
+                                UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
+                                TempPricingPreferenceSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -6,12 +9,19 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import AiUser, OfficialInformation, PersonalInformation, Professionalidentity,UserAttribute,UserProfile
-from django.http import Http404
+from ai_auth.models import (AiUser, OfficialInformation, PersonalInformation, Professionalidentity,
+                            UserAttribute,UserProfile,CustomerSupport,ContactPricing,
+                            TempPricingPreference)
+from django.http import Http404,JsonResponse
 from rest_framework import status
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
+from django.core.mail import EmailMessage
+from django.template import Context
+from django.template.loader import get_template
+from django.template.loader import render_to_string
+from datetime import datetime
 from djstripe.models import Customer,Price
 import stripe
 from django.conf import settings
@@ -191,18 +201,14 @@ class ProfessionalidentityView(APIView):
 
 
 class UserProfileCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         try:
-            queryset = UserProfile.objects.get(user_id = self.request.user.id)
-            print(queryset)
+            queryset = UserProfile.objects.get(user_id = request.user.id)
             serializer = UserProfileSerializer(queryset)
             return Response(serializer.data)
         except:
             return Response(status=status.HTTP_204_NO_CONTENT)
-
-    # def get_queryset(self):
-    #     queryset=UserProfile.objects.filter(user_id=self.request.user.id).all()
-    #     return queryset
 
     def create(self,request):
         id = request.user.id
@@ -212,9 +218,10 @@ class UserProfileCreateView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response({'msg':'description already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self,request,pk=None):
-        queryset = UserProfile.objects.get(user_id=self.request.user.id)
-        serializer= UserProfileSerializer(queryset,data={**request.POST.dict()},partial=True)
+    def update(self,request,pk):
+        queryset = UserProfile.objects.filter(user_id=self.request.user.id).all()
+        user = get_object_or_404(queryset, pk=pk)
+        serializer= UserProfileSerializer(user,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -222,6 +229,70 @@ class UserProfileCreateView(viewsets.ViewSet):
             return Response(serializer.errors)
 
 
+class CustomerSupportCreateView(viewsets.ViewSet):
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = CustomerSupportSerializer(queryset,many=True)
+        return Response(serializer.data)
+    def get_queryset(self):
+        queryset= CustomerSupport.objects.filter(user_id=self.request.user.id).all()
+        return queryset
+
+    def create(self,request):
+        id = request.user.id
+        serializer = CustomerSupportSerializer(data={**request.POST.dict(),'user':id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class ContactPricingCreateView(viewsets.ViewSet):
+    def list(self,request):
+        user_id = request.user.id
+        if user_id:
+            name = AiUser.objects.get(id=user_id).fullname
+            email = AiUser.objects.get(id=user_id).email
+            return JsonResponse({"name":name,"email":email},safe=False)
+        else:
+            return Response({"message":"user is not authorized"})
+
+    def create(self,request):
+        name = request.POST.get("name")
+        description = request.POST.get("description")
+        email = request.POST.get("email")
+        timestamp = datetime.now()
+        serializer = ContactPricingSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            serializer.save()
+            send_email_contact_pricing(name,description,email,timestamp)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def send_email_contact_pricing(name,description,email,timestamp):
+    template = 'contact_pricing_email.html'
+    if name:
+        context = {'user': name, 'description':description,'timestamp':timestamp}
+    else:
+        context = {'user': email, 'description':description,'timestamp':timestamp}
+    content = render_to_string(template, context)
+    subject='Regarding Contact-Us Pricing'
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['thenmozhivijay20@gmail.com',])#to emailaddress need to change
+    msg.content_subtype = 'html'
+    msg.send()
+    return JsonResponse({"message":"Email Successfully Sent"},safe=False)
+
+
+class TempPricingPreferenceCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        serializer = TempPricingPreferenceSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 def create_checkout_session(user,price_id):
     domain_url = settings.CLIENT_BASE_URL
     if settings.STRIPE_LIVE_MODE == True :

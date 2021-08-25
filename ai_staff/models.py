@@ -263,8 +263,11 @@ class SupportType(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class SubscriptionPricing(ParanoidModel):
-    plan_name = models.CharField(max_length=100, null=True, blank=True)
+    stripe_product_id = models.CharField(max_length=200,null=True,blank=True)
+    stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
+    plan = models.CharField(max_length=100, null=True, blank=True)
     price = models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+    discount = models.CharField(max_length=100,null=True,blank=True)
     currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -273,9 +276,10 @@ class SubscriptionFeatures(ParanoidModel):
     features = models.TextField(max_length=1000)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE,related_name='subscription_plan')
 
-class Ai_Features(ParanoidModel):
-    subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE)
-    features = models.ForeignKey(SubscriptionFeatures,on_delete = models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+# class Ai_Features(ParanoidModel):
+#     subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE)
+#     features = models.ForeignKey(SubscriptionFeatures,on_delete = models.CASCADE)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
