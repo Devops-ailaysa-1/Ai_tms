@@ -216,9 +216,10 @@ class UserProfileCreateView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response({'msg':'description already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self,request,pk=None):
-        queryset = UserProfile.objects.get(user_id=self.request.user.id)
-        serializer= UserProfileSerializer(queryset,data={**request.POST.dict()},partial=True)
+    def update(self,request,pk):
+        queryset = UserProfile.objects.filter(user_id=self.request.user.id).all()
+        user = get_object_or_404(queryset, pk=pk)
+        serializer= UserProfileSerializer(user,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
