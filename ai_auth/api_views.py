@@ -199,10 +199,10 @@ class ProfessionalidentityView(APIView):
 
 
 class UserProfileCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         try:
-            queryset = UserProfile.objects.get(user_id = self.request.user.id)
-            print(queryset)
+            queryset = UserProfile.objects.get(user_id = request.user.id)
             serializer = UserProfileSerializer(queryset)
             return Response(serializer.data)
         except:
