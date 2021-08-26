@@ -609,8 +609,7 @@ class GetPageIndexWithFilterApplied(views.APIView):
             res = ({"page_id": (ids.index(segment_id)//20)+1}, 200)
         except:
             res = ({"page_id": None}, 404)
-
-        return  Response(res)
+        return  Response(*res)
 
 class ProjectStatusView(APIView):
     permission_classes = [IsAuthenticated]
