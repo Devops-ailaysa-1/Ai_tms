@@ -398,3 +398,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			"progress"
 		)
 
+class ProjectSerializerV2(serializers.ModelSerializer):
+	class Meta:
+		model = Project
+		fields = ("threshold", "max_hits", "id")

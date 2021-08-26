@@ -11,7 +11,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer,\
-    VendorDashBoardSerializer)
+    VendorDashBoardSerializer, ProjectSerializerV2)
                         
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile
@@ -500,3 +500,18 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
         # pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
         serlzr = VendorDashBoardSerializer(tasks, many=True)
         return Response(serlzr.data, status=200)
+
+class TM_FetchConfigsView(viewsets.ViewSet):
+    def get_object(self, pk):
+        project = get_object_or_404(
+            Project.objects.all(), id=pk
+        )
+        return project
+
+    def update(self, request, pk, format=None):
+        project = self.get_object(pk)
+        ser = ProjectSerializerV2(project, data=request.data, partial=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=201)
+

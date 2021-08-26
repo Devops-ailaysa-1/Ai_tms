@@ -21,6 +21,7 @@ from django.shortcuts import reverse
 from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from django.db.models import Q
+from django.utils.functional import cached_property
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -84,6 +85,8 @@ class Project(ParanoidModel):
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
         on_delete=models.CASCADE, related_name="proj_mt_engine")
+    threshold = models.IntegerField(default=85)
+    max_hits = models.IntegerField(default=5)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -97,7 +100,6 @@ class Project(ParanoidModel):
     __repr__ = __str__
 
     penseive_tm_klass = PenseiveTM
-
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
@@ -190,7 +192,6 @@ class Project(ParanoidModel):
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
 
-
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
                         related_name="proj_content_type")
@@ -246,12 +247,14 @@ class Job(models.Model):
     def target_language_code(self):
         return self.target_language.locale.first().locale_code
 
-    @property
+    @cached_property
     def source__language(self):
+        print("called first time!!!")
         return self.source_language.locale.first().language
 
     @property
     def target__language(self):
+        print("called every time!!!")
         return self.target_language.locale.first().language
 
     def __str__(self):
@@ -432,7 +435,9 @@ def tbx_file_upload_path(instance, filename):
     return file_path
 
 class Tbxfiles(models.Model):
-    # tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False, blank=False, max_length=1000)  # Common for a project
+    # tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False,\
+    # blank=False, max_length=1000)  # Common for a project
+
     tbx_files = models.FileField(upload_to="uploaded_tbx_files", null=False,\
             blank=False, max_length=1000)  # Common for a project
     project = models.ForeignKey("Project", null=False, blank=False,\
