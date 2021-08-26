@@ -215,6 +215,9 @@ class SubscriptionFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionFeatures
         fields = ('id','features','subscriptionplan','description')
+        extra_kwargs = {
+		 	"subscriptionplan": {"write_only": True}
+            }
 
 class CreditsAddonSerializer(serializers.ModelSerializer):
     class Meta:
