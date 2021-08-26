@@ -588,9 +588,9 @@ def get_plan_details(request):
          features =  SubscriptionFeatures.objects.filter(subscriptionplan_id=plan.id).all()
          for feature in features:
              serializer2 = SubscriptionFeatureSerializer(feature)
-             # feature = serializer2.data
-             # output.append(feature)
-         result["features"]=serializer2.data
+             feature = serializer2.data
+             output.append(feature)
+         result["features"]=output
          out.append(result)
     return JsonResponse({"plans":out},safe=False)
 
