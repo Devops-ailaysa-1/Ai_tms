@@ -132,10 +132,11 @@ def integrity_error(func):
         
     return decorator
 
-class ProjectSetupView(viewsets.ViewSet):
+class ProjectSetupView(viewsets.ViewSet, PageNumberPagination):
     serializer_class = ProjectSetupSerializer
     parser_classes = [MultiPartParser, JSONParser]
     permission_classes = [IsAuthenticated]
+    page_size = 20
 
     def get_queryset(self):
         return Project.objects.filter(ai_user=self.request.user)
@@ -155,10 +156,10 @@ class ProjectSetupView(viewsets.ViewSet):
 
     def list(self,request):
         queryset = self.get_queryset()
-        # pagin_tc = self.paginate_queryset( queryset, request , view=self )
-        serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
-        # response =self.get_paginated_response(serializer.data)
-        return  Response(serializer.data)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ProjectSetupSerializer(pagin_tc, many=True, context={'request': request})
+        response = self.get_paginated_response(serializer.data)
+        return  response
 
     def retrieve(self, request, pk=None):
         queryset = self.get_queryset()
@@ -462,6 +463,11 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     paginator = PageNumberPagination()
     paginator.page_size = 20
 
+    def get_tasks_by_projectid(self, pk):
+        project = get_object_or_404(Project.objects.all(),
+                    id=pk)
+        return project.get_tasks
+
     def get_object(self):
         tasks = Task.objects.order_by("-id").all()
         tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
@@ -473,7 +479,10 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         serlzr = VendorDashBoardSerializer(pagin_queryset, many=True)
         return self.get_paginated_response(serlzr.data)
 
-
+    def retrieve(self, request, pk, format=None):
+        tasks = self.get_tasks_by_projectid(pk=pk)
+        serlzr = VendorDashBoardSerializer(tasks, many=True)
+        return Response(serlzr.data, status=200)
 
 class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

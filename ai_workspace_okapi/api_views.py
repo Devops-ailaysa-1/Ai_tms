@@ -15,7 +15,7 @@ from ai_workspace.models import Task
 from rest_framework.response import  Response
 from django.db.models import F, Q
 import requests
-import json, os, re
+import json, os, re, time
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -26,6 +26,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser
 from django.http import  FileResponse
 from rest_framework.views import APIView
+from django.db.models import Q
+
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 
@@ -93,7 +95,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
-                print("doc_data---->", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -134,14 +135,13 @@ class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
 
     def get_object(self, document_id):
-        document = get_object_or_404(
-            Document.objects.all(), id=document_id
-        )
+        document = get_object_or_404(\
+            Document.objects.all(), id=document_id)
         return document
 
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
-        segments = document.segments
+        segments = document.segments_without_blank
         len_segments = segments.count()
         page_len = self.paginate_queryset(range(1,len_segments+1), request)
         # print(page_len)
@@ -190,7 +190,8 @@ class MT_RawAndTM_View(views.APIView):
         if mt_raw:
             return MT_RawSerializer(mt_raw), 200
 
-        mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id}, context={"request": request})
+        mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
+                        context={"request": request})
         if mt_raw_serlzr.is_valid(raise_exception=True):
             # mt_raw_serlzr.validated_data[""]
             mt_raw_serlzr.save()
@@ -201,7 +202,8 @@ class MT_RawAndTM_View(views.APIView):
         segment = Segment.objects.filter(id=segment_id).first()
         if segment:
             tm_ser = TM_FetchSerializer(segment)
-            res = requests.post( f'http://{spring_host}:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser.data) })
+            res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+                    data = {'pentmsearchparams': json.dumps( tm_ser.data) })
             if res.status_code == 200:
                 return res.json()
             else:
@@ -220,8 +222,10 @@ class ConcordanceSearchView(views.APIView):
         segment = Segment.objects.filter(id=segment_id).first()
         if segment:
             tm_ser_data = TM_FetchSerializer(segment).data
-            tm_ser_data.update({'search_source_string':search_string, "max_hits":20, "threshold": 10})
-            res = requests.post( f'http://{spring_host}:8080/pentm/source/search', data = {'pentmsearchparams': json.dumps( tm_ser_data) })
+            tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
+                    "threshold": 10})
+            res = requests.post( f'http://{spring_host}:8080/pentm/source/search', \
+                    data = {'pentmsearchparams': json.dumps( tm_ser_data) })
             if res.status_code == 200:
                 return res.json()
             else:
@@ -251,7 +255,8 @@ class DocumentToFile(views.APIView):
                 if os.path.exists(file_path):
                     with open(file_path, 'rb') as fh:
                         response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
-                        response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(file_path)
+                        response['Content-Disposition'] = 'attachment; filename='\
+                                    + os.path.basename(file_path)
                         response["Access-Control-Allow-Origin"] = "*"
                         response["Access-Control-Allow-Headers"] = "*"
                         # print("response headers---->",  response.headers)
@@ -333,7 +338,11 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         status_list = data.get("status_list", [])
 
         if status_list:
-            segments = segments.filter(status__status_id__in=status_list).all()
+            if '0' in status_list:
+                segments = segments.filter(Q(status=None) | \
+                        Q(status__status_id__in=status_list)).all()
+            else:
+                segments = segments.filter(status__status_id__in=status_list).all()
 
         search_word = data.get("search_word", None)
 
@@ -573,21 +582,35 @@ class CommentView(viewsets.ViewSet):
         return  Response({},204)
 
 class GetPageIndexWithFilterApplied(views.APIView):
+
     def get_queryset(self, document_id, status_list):
         doc = get_object_or_404(Document.objects.all(), id=document_id)
         # status_list = data.get("status_list")
-        segments = segments.filter(status__status_id__in=status_list).all()
+        if '0' in status_list:
+            segments = doc.segments.filter(Q(status=None)|\
+                        Q(status__status_id__in=status_list)).all()
+        else:
+            segments = doc.segments.filter(status__status_id__in=status_list).all()
         return  segments
 
-    def get(self, request, document_id, segment_id):
-        status_list = request.data.get("status_list")[0]
+    def post(self, request, document_id, segment_id):
+        print( "data---->", request.data ) 
+        status_list = request.data.get("status_list", [])
+        print("status list", status_list + [] ) 
         segments = self.get_queryset(document_id, status_list)
+        print("segments---->", segments)
+        if not segments:
+            return Response( {"detail": "No segment found"}, 404 )
         ids = [
             segment.id for segment in segments
         ]
-        return  Response(
-            {"page_id": (ids.index(segment_id)//20)+1}, 200
-        )
+
+        try:
+            res = ({"page_id": (ids.index(segment_id)//20)+1}, 200)
+        except:
+            res = ({"page_id": None}, 404)
+
+        return  Response(res)
 
 class ProjectStatusView(APIView):
     permission_classes = [IsAuthenticated]
