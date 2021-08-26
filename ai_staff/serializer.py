@@ -209,12 +209,12 @@ class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
 class SubscriptionPricingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionPricing
-        fields = ('id','stripe_product_id','stripe_price_id','plan','price','discount','currency',)
+        fields = ('id','stripe_product_id','stripe_price_id','plan','monthly_price','annual_price','discount','currency',)
 
 class SubscriptionFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionFeatures
-        fields = ('id','features','subscriptionplan',)
+        fields = ('id','features','subscriptionplan','description')
 
 class CreditsAddonSerializer(serializers.ModelSerializer):
     class Meta:
