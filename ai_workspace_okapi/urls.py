@@ -29,8 +29,10 @@ urlpatterns+=[
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
     path("project_status/<int:project_id>", api_views.ProjectStatusView.as_view(), name="project-status"),
     path("segment/get/page/filter/<int:document_id>/<int:segment_id>", api_views.GetPageIndexWithFilterApplied.as_view(),\
-         name="get-page-id-of-segment-on-apply-filter")
+         name="get-page-id-of-segment-on-apply-filter"),
     # path("comments", api_views)
+    path("project_progress/<int:project_id>", api_views.ProjectStatusView.as_view(),\
+         name="project-status")
 ]
 
 

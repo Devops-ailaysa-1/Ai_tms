@@ -15,11 +15,12 @@ from ai_auth.models import AiUser
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields
 from ai_staff.models import ContentTypes, Languages, SubjectFields
-from ai_workspace_okapi.models import Document
+from ai_workspace_okapi.models import Document, Segment
 from ai_staff.models import ParanoidModel
 from django.shortcuts import reverse
 from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
+from django.db.models import Q
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -107,6 +108,25 @@ class Project(ParanoidModel):
         if not self.project_name:
             self.project_name = self.ai_project_id
         super().save()
+
+    @property
+    def progress(self):
+        docs = Document.objects.filter(job__project_id=self.id).all()
+        total_segments = 0
+        if not docs:
+            return "Yet to start"
+        else:
+            for doc in docs:
+                total_segments+=doc.total_segment_count
+
+        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
+            Q(status_id__in=[102,104,106])).all().count()
+
+        if total_segments == status_count:
+            return "Completed"
+
+        else:
+            return "In Progress"
 
     @property
     def files_and_jobs_set(self):
