@@ -7,6 +7,8 @@ import json
 from ai_auth.models import AiUser
 from ai_staff.models import Languages
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
+from django.utils.functional import cached_property
+
 
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
@@ -39,6 +41,11 @@ class Segment(models.Model):
     # segment_count = models.TextField(null=True, blank=True)
 
     @property
+    def get_id(self):
+        print("called!!!")
+        return self.id
+
+    @property
     def coded_ids_aslist(self):
         return json.loads(self.coded_ids_sequence)
 
@@ -48,6 +55,10 @@ class Segment(models.Model):
     @property
     def target_language_code(self):
         return self.text_unit.document.job.target_language_code
+
+    @property
+    def tm_fetch_configs(self):
+        return self.text_unit.document.tm_fetch_configs
 
     @property
     def get_temp_target(self):
@@ -86,11 +97,14 @@ class MT_RawTranslation(models.Model):
 
 class Comment(models.Model):
     comment = models.TextField()
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_comments_set")
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name=\
+        "segment_comments_set")
 
 class Document(models.Model):
-    file = models.ForeignKey("ai_workspace.File", on_delete=models.CASCADE, related_name="file_document_set")
-    job = models.ForeignKey("ai_workspace.Job", on_delete=models.CASCADE, related_name="file_job_set")
+    file = models.ForeignKey("ai_workspace.File", on_delete=models.CASCADE, related_name=\
+        "file_document_set")
+    job = models.ForeignKey("ai_workspace.Job", on_delete=models.CASCADE, related_name=\
+        "file_job_set")
     total_word_count = models.IntegerField()
     total_char_count = models.IntegerField()
     total_segment_count = models.IntegerField()
@@ -99,7 +113,7 @@ class Document(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=("file", "job"), name= \
+            models.UniqueConstraint(fields=("file", "job"), name=\
                 "file + job combination should be unique")
         ]
 
@@ -148,6 +162,11 @@ class Document(models.Model):
     @property
     def project(self):
         return self.job.project.id
+
+    @cached_property
+    def tm_fetch_configs(self):
+        return dict(threshold=self.job.project.threshold,\
+            max_hits=self.job.project.max_hits)
 
     @property
     def source_language(self):

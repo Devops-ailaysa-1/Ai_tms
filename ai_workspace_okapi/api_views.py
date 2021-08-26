@@ -203,7 +203,7 @@ class MT_RawAndTM_View(views.APIView):
         if segment:
             tm_ser = TM_FetchSerializer(segment)
             res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                    data = {'pentmsearchparams': json.dumps( tm_ser.data) })
+                    data = {'pentmsearchparams': json.dumps(tm_ser.data)})
             if res.status_code == 200:
                 return res.json()
             else:
@@ -224,7 +224,7 @@ class ConcordanceSearchView(views.APIView):
             tm_ser_data = TM_FetchSerializer(segment).data
             tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
                     "threshold": 10})
-            res = requests.post( f'http://{spring_host}:8080/pentm/source/search', \
+            res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
                     data = {'pentmsearchparams': json.dumps( tm_ser_data) })
             if res.status_code == 200:
                 return res.json()
@@ -254,15 +254,15 @@ class DocumentToFile(views.APIView):
             if os.path.isfile(res.text):
                 if os.path.exists(file_path):
                     with open(file_path, 'rb') as fh:
-                        response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
+                        response = HttpResponse(fh.read(), content_type=\
+                            "application/vnd.ms-excel")
                         response['Content-Disposition'] = 'attachment; filename='\
                                     + os.path.basename(file_path)
                         response["Access-Control-Allow-Origin"] = "*"
                         response["Access-Control-Allow-Headers"] = "*"
-                        # print("response headers---->",  response.headers)
                         return response
-            # return JsonResponse({"output_file_path": res.text}, status=201)
-        return JsonResponse({"msg": "something went to wrong in okapi file processing"}, status=409)
+        return JsonResponse({"msg": "something went to wrong in okapi file processing"},\
+                    status=409)
 
     @staticmethod
     def document_data_to_file(request, document_id):

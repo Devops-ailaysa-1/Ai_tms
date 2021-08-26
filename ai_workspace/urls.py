@@ -37,11 +37,11 @@ urlpatterns += [
 		 name="project-report-analysis"),
 	path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
 	path("tbx_read", tbx_read.TermSearch, name='tbx-read'),
-        path("vendor_dashboard_proj_based/<int:project_id>/", api_views.VendorProjectBasedDashBoardView.as_view({"get":"list"}),\
-		 name="vendor-dashboard-proj-based"),
+	path("vendor_dashboard_proj_based/<int:project_id>/", api_views.VendorProjectBasedDashBoardView\
+		 .as_view({"get":"list"}), name="vendor-dashboard-proj-based"),
+	path("tm/configs/<int:pk>", api_views.TM_FetchConfigsView.as_view({"put":"update"}), name="tm-configs"),
 ]
 # views urls adding for local testing
-
 
 urlpatterns += [
 	path("project_setup-dj", views.ProjectSetupDjView.as_view(), name="project_setup-dj-view"),# Project Create
