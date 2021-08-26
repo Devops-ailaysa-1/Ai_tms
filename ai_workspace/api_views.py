@@ -501,7 +501,8 @@ class TbxFileListCreateView(APIView):
 
     def post(self, request, project_id):
         data = {**request.POST.dict(), "tbx_file" : request.FILES.get('tbx_file')}
-        data["project_id"] = project_id
+        # data["project_id"] = project_id
+        data.update({'project_id': project_id})
         ser_data = TbxFileSerializer.prepare_data(data)
         serializer = TbxFileSerializer(ser_data)
         if serializer.is_valid():
