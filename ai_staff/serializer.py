@@ -222,4 +222,4 @@ class SubscriptionFeatureSerializer(serializers.ModelSerializer):
 class CreditsAddonSerializer(serializers.ModelSerializer):
     class Meta:
         model = CreditsAddons
-        fields = ('id','pack','price','currency','credits','discount','stripe_product_id','stripe_price_id',)
+        fields = ('id','pack','price','currency','credits','description','discount','stripe_product_id','stripe_price_id',)

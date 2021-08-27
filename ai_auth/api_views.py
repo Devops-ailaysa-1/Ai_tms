@@ -25,6 +25,7 @@ from django.template.loader import render_to_string
 from datetime import datetime
 from django.conf import settings
 from djstripe.models import Customer,Invoice
+from ai_staff.models import SupportType
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -230,6 +231,7 @@ class UserProfileCreateView(viewsets.ViewSet):
 
 
 class CustomerSupportCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = self.get_queryset()
         serializer = CustomerSupportSerializer(queryset,many=True)
@@ -240,9 +242,18 @@ class CustomerSupportCreateView(viewsets.ViewSet):
 
     def create(self,request):
         id = request.user.id
+        email = AiUser.objects.get(id=id).email
+        support_type = request.POST.get("support_type")
+        support_type_name = SupportType.objects.get(id=support_type).support_type
+        description = request.POST.get("description")
+        timestamp = datetime.now()
         serializer = CustomerSupportSerializer(data={**request.POST.dict(),'user':id})
+        subject='Regarding Customer Support'
+        template = 'customer_support_email.html'
+        context = {'user': email,'support_type_name': support_type_name,'description':description,'timestamp':timestamp}
         if serializer.is_valid():
             serializer.save()
+            send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -261,28 +272,25 @@ class ContactPricingCreateView(viewsets.ViewSet):
     def create(self,request):
         name = request.POST.get("name")
         description = request.POST.get("description")
-        email = request.POST.get("email")
+        email = request.POST.get("business_email")
         timestamp = datetime.now()
+        template = 'contact_pricing_email.html'
+        subject='Regarding Contact-Us Pricing'
+        context = {'user': email,'name':name,'description':description,'timestamp':timestamp}
         serializer = ContactPricingSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
             serializer.save()
-            send_email_contact_pricing(name,description,email,timestamp)
+            send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-def send_email_contact_pricing(name,description,email,timestamp):
-    template = 'contact_pricing_email.html'
-    if name:
-        context = {'user': name, 'description':description,'timestamp':timestamp}
-    else:
-        context = {'user': email, 'description':description,'timestamp':timestamp}
+def send_email(subject,template,context):
     content = render_to_string(template, context)
-    subject='Regarding Contact-Us Pricing'
     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['thenmozhivijay20@gmail.com',])#to emailaddress need to change
     msg.content_subtype = 'html'
     msg.send()
-    return JsonResponse({"message":"Email Successfully Sent"},safe=False)
+    # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
 
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):

@@ -286,6 +286,7 @@ class CreditsAddons(ParanoidModel):
     pack = models.CharField(max_length=200,null=True,blank=True)
     price =  models.IntegerField(blank=True, null=True)
     currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
+    description = models.TextField(max_length=1000, blank=True, null=True)
     credits = models.CharField(max_length=200,null=True,blank=True)
     discount = models.CharField(max_length=100,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
