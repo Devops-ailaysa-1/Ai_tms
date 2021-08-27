@@ -284,7 +284,7 @@ class CreditsAddons(ParanoidModel):
     stripe_product_id = models.CharField(max_length=200,null=True,blank=True)
     stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
     pack = models.CharField(max_length=200,null=True,blank=True)
-    price = models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+    price =  models.IntegerField(blank=True, null=True)
     currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
     credits = models.CharField(max_length=200,null=True,blank=True)
     discount = models.CharField(max_length=100,null=True,blank=True)
