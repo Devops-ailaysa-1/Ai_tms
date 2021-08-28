@@ -448,3 +448,7 @@ class ReferenceFiles(models.Model):
             blank=False,)  # Common for a project
     project = models.ForeignKey("Project", null=False, blank=False,\
             related_name="project_ref_files_set", on_delete=models.CASCADE)
+
+    @property
+    def filename(self):
+        return  os.path.basename(self.ref_files.file.name)
