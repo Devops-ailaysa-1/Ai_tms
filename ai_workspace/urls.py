@@ -19,7 +19,8 @@ router.register(r"project/quick/setup", api_views.QuickProjectSetupView,\
 				basename="project-quick-setup")
 router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
-# router.register(r"tasks", api_views.TaskView, basename="tasks")
+router.register(r'project/reference/files', api_views.ReferenceFilesView,\
+				basename="project-reference-files")
 
 urlpatterns = router.urls
 
@@ -42,7 +43,6 @@ urlpatterns += [
 	path("tm/configs/<int:pk>", api_views.TM_FetchConfigsView.as_view({"put":"update"}), name="tm-configs"),
 ]
 # views urls adding for local testing
-
 urlpatterns += [
 	path("project_setup-dj", views.ProjectSetupDjView.as_view(), name="project_setup-dj-view"),# Project Create
 	path("dj/login", views.LoginView.as_view(), name="dj-login"),

@@ -11,10 +11,11 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2)
+    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer)
                         
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile
+from .models import Project, Job, File, ProjectContentType, ProjectSubjectField,\
+    TempProject, TmxFile, ReferenceFiles
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -26,7 +27,7 @@ from ai_workspace import serializers
 from ai_workspace_okapi.models import Document
 from ai_staff.models import LanguagesLocale, Languages
 from rest_framework.decorators import api_view
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -370,9 +371,6 @@ class TmxFileView(viewsets.ViewSet):
             ser.save()
             return self.TmxToPenseiveWrite(ser.data)
 
-
-
-
 class TbxUploadView(APIView):
     def post(self, request):
         tbx_file = request.FILES.get('tbx_file')
@@ -497,20 +495,55 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
 
     def list(self, request, project_id, *args, **kwargs):
         tasks = self.get_object(project_id)
-        # pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
+        # pagin_queryset = self.paginator.paginate_queryset(tasks, request,
+        # view=self)
         serlzr = VendorDashBoardSerializer(tasks, many=True)
         return Response(serlzr.data, status=200)
 
 class TM_FetchConfigsView(viewsets.ViewSet):
     def get_object(self, pk):
         project = get_object_or_404(
-            Project.objects.all(), id=pk
-        )
+            Project.objects.all(), id=pk)
         return project
 
     def update(self, request, pk, format=None):
         project = self.get_object(pk)
         ser = ProjectSerializerV2(project, data=request.data, partial=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=201)
+
+
+class ReferenceFilesView(viewsets.ModelViewSet):
+
+    serializer_class = ReferenceFileSerializer
+    permission_classes = [IsAuthenticated]
+    # https://www.django-rest-framework.org/api-guide/filtering/
+
+    def get_project(self, project_id):
+        try:
+            project = get_object_or_404(Project.objects.all(),\
+                        id=project_id)
+        except:
+            raise Http404("project_id should be int type!!!")
+        return project
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get("project", None)
+        project = self.get_project(project_id)
+        ref_files = ReferenceFiles.objects.none()
+        if project:
+            ref_files = project.ref_files
+        return ref_files
+
+    def create(self, request):
+
+        files = request.FILES.getlist('ref_files')
+        project_id = request.data.get("project", None)
+        project = self.get_project(project_id)
+        data = \
+          [{"project": project_id, "ref_files": file} for file in files]
+        ser = ReferenceFileSerializer(data=data, many=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=201)
