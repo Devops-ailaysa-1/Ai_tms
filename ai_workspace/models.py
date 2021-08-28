@@ -90,7 +90,7 @@ class Project(ParanoidModel):
 
     class Meta:
         unique_together = ("project_name", "ai_user")
-        managed = False
+        #managed = False
 
     objects = ProjectManager()
 
