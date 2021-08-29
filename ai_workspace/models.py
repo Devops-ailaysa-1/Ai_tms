@@ -453,9 +453,3 @@ class ReferenceFiles(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.ref_files.file.name)
-
-class TestFilePathField(models.Model):
-    file_path = models.FilePathField(path="test-path/", allow_folders=True)
-    # models.FileField(default="")
-    # models.FileField()
-

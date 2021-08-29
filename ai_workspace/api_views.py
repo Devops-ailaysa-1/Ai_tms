@@ -574,26 +574,9 @@ class ReferenceFilesView(viewsets.ModelViewSet):
     pagination_class = None
     # https://www.django-rest-framework.org/api-guide/filtering/
 
-    def get_object(self, many=False):
-        objs = []
-        obj = None
-        if not many:
-            try:
-                obj = get_object_or_404(ReferenceFiles.objects.all(),\
-                    id=self.kwargs.get("pk"))
-            except:
-                raise Http404
-            return  obj
-
-        objs_ids_list =  self.kwargs.get("ids").split(",")
-
-        for obj_id in objs_ids_list:
-            try:
-                objs.append(get_object_or_404(ReferenceFiles.objects.all(),\
-                    id=obj_id))
-            except:
-                raise Http404
-        return objs
+    def get_object(self):
+        return get_object_or_404(ReferenceFiles.objects.all(),
+            id=self.kwargs.get("pk"))
 
     def get_project(self, project_id):
         try:
