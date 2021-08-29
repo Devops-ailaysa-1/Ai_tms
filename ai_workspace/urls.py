@@ -41,6 +41,7 @@ urlpatterns += [
 	path("vendor_dashboard_proj_based/<int:project_id>/", api_views.VendorProjectBasedDashBoardView\
 		 .as_view({"get":"list"}), name="vendor-dashboard-proj-based"),
 	path("tm/configs/<int:pk>", api_views.TM_FetchConfigsView.as_view({"put":"update"}), name="tm-configs"),
+	path("test/internal/call", api_views.test_internal_call, name="test-internal-call"),
 ]
 # views urls adding for local testing
 urlpatterns += [

@@ -293,7 +293,7 @@ class File(models.Model):
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="project_usage_type")
     file = models.FileField(upload_to=get_file_upload_path, null=False,\
-                blank=False, max_length=1000)
+                blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
@@ -440,7 +440,8 @@ class Tbxfiles(models.Model):
             on_delete=models.CASCADE)
 
 def reference_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.project.project_dir_path,"references", filename)
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
+            "references", filename)
     return file_path
 
 class ReferenceFiles(models.Model):
@@ -452,3 +453,9 @@ class ReferenceFiles(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.ref_files.file.name)
+
+class TestFilePathField(models.Model):
+    file_path = models.FilePathField(path="test-path/", allow_folders=True)
+    # models.FileField(default="")
+    # models.FileField()
+

@@ -35,13 +35,19 @@ class ProjectManager(models.Manager):
         files_data = data.pop(files_key)
         jobs_data = data.pop(jobs_key)
         project = self.create(**data, ai_user=ai_user)
+        return self.create_and_jobs_files_bulk_create_for_project(
+            project, files_data, jobs_data, f_klass, j_klass
+        )
+
+    def create_and_jobs_files_bulk_create_for_project(self, project, files_data,\
+        jobs_data, f_klass, j_klass):
+
         files = f_klass.objects.bulk_create_of_project(
             files_data, project, f_klass
         )
         jobs = j_klass.objects.bulk_create_of_project(
             jobs_data, project, j_klass
         )
-
         return project, files, jobs
 
 class FileManager(models.Manager):
@@ -68,6 +74,6 @@ class TaskManager(models.Manager):
                              "object or assign_to user")
                                                                     # POSTEDIT
         tasks = [self.create(file=file, job=job, assign_to=assign_to, version_id=1)
-            for file in files for job in jobs
-        ]
+            for file in files for job in jobs]
+
         return tasks

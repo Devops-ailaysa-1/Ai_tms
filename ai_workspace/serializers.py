@@ -377,28 +377,42 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def create(self, validated_data):
 		ai_user = self.context.get("request", None).user
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
-			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", f_klass=File,\
-			j_klass=Job, ai_user=ai_user
-		)
+			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
+			f_klass=File,j_klass=Job, ai_user=ai_user)
+
 		tasks = Task.objects.create_tasks_of_files_and_jobs(
-			files=files, jobs=jobs, project=project, klass=Task  # For self assign quick setup run
-		)
+			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
+		return  project
+
+	def update(self, instance, validated_data):
+
+		files_data = validated_data.pop("project_files_set")
+		jobs_data = validated_data.pop("project_jobs_set")
+
+		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
+			files_data, jobs_data, f_klass=File, j_klass=Job)
+
+		tasks = Task.objects.create_tasks_of_files_and_jobs(
+			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
+
 		return  project
 
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
-	source_language = serializers.CharField(read_only=True, source="job.source__language.language")
-	target_language = serializers.CharField(read_only=True, source="job.target__language.language")
-	project_name = serializers.CharField(read_only=True, source="file.project.project_name")
+	source_language = serializers.CharField(read_only=True, source=\
+		"job.source__language.language")
+	target_language = serializers.CharField(read_only=True, source=\
+		"job.target__language.language")
+	project_name = serializers.CharField(read_only=True, source=\
+		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
 
 	class Meta:
 		model = Task
-		fields = (
-			"filename", "source_language", "target_language", "project_name", "document_url", \
-			"progress"
-		)
+		fields = \
+			("filename", "source_language", "target_language", "project_name",\
+			"document_url", "progress")
 
 class ProjectSerializerV2(serializers.ModelSerializer):
 	class Meta:
@@ -408,8 +422,10 @@ class ProjectSerializerV2(serializers.ModelSerializer):
 class ReferenceFileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = ReferenceFiles
-		fields = ("project", "ref_files", "filename")
+		fields = ("project", "ref_files", "filename", "id")
 		extra_kwargs = {
 			"ref_files": {"write_only": True}
 		}
+
+
 
