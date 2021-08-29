@@ -408,7 +408,7 @@ class ProjectSerializerV2(serializers.ModelSerializer):
 class ReferenceFileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = ReferenceFiles
-		fields = ("project", "ref_files", "filename")
+		fields = ("project", "ref_files", "filename", "id")
 		extra_kwargs = {
 			"ref_files": {"write_only": True}
 		}

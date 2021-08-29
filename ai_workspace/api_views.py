@@ -518,7 +518,12 @@ class ReferenceFilesView(viewsets.ModelViewSet):
 
     serializer_class = ReferenceFileSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     # https://www.django-rest-framework.org/api-guide/filtering/
+
+    def get_object(self):
+        return get_object_or_404(ReferenceFiles.objects.all(),
+            id=self.kwargs.get("pk"))
 
     def get_project(self, project_id):
         try:

@@ -440,7 +440,8 @@ class Tbxfiles(models.Model):
             on_delete=models.CASCADE)
 
 def reference_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.project.project_dir_path,"references", filename)
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
+            "references", filename)
     return file_path
 
 class ReferenceFiles(models.Model):
