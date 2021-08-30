@@ -16,7 +16,7 @@ def vendor_directory_path(instance, filename):
 
 
 class VendorsInfo(models.Model):
-    user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='vendor_info')
     vendor_unique_id = models.CharField(max_length=191, blank=True, null=True)
     type = models.ForeignKey(VendorLegalCategories,related_name='vendor_legal_type', on_delete=models.CASCADE)
     currency = models.ForeignKey(Currencies,related_name='vendor_currency', on_delete=models.CASCADE)

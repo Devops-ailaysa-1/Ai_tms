@@ -331,3 +331,26 @@ def get_payment_details(request):
     else:
         out = "No invoice details Exists"
     return JsonResponse({"out":out},safe=False)
+
+
+@api_view(['GET',])
+@permission_classes((IsAuthenticated, ))
+def get_addon_details(request):
+    try:
+        user = Customer.objects.get(subscriber_id = request.user.id).id
+        add_on_list = Session.objects.filter(Q(customer_id=user) & Q(mode = "payment")).all()
+    except Exception as error:
+        print(error)
+    if add_on_list:
+        out=[]
+        for i in add_on_list:
+            new={}
+            add_on=Charge.objects.get(payment_intent_id=i.payment_intent_id)
+            amount = add_on.amount_captured
+            receipt = add_on.receipt_url
+            output ={"Amount":amount,"Receipt":receipt}
+            new.update(output)
+            out.append(new)
+    else:
+        out = "No Add-on details Exists"
+    return JsonResponse({"out":out},safe=False)

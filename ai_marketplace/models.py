@@ -9,7 +9,7 @@ from ai_auth.models import AiUser,user_directory_path
 from ai_workspace.models import Job,Project
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
-
+from django.contrib.auth import get_user_model
 # Create your models here.
 class AvailableVendors(ParanoidModel):
     customer= models.ForeignKey(AiUser,related_name='customer',on_delete=models.CASCADE)
@@ -18,6 +18,7 @@ class AvailableVendors(ParanoidModel):
 
 class ProjectboardDetails(models.Model):
     project=models.ForeignKey(Project, on_delete=models.CASCADE,related_name="proj_detail")
+    customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
     steps = models.CharField(max_length=191,blank=True, null=True)
     sub_field = models.ForeignKey(SubjectFields,blank=True, null=True, related_name='project_sub_field', on_delete=models.CASCADE)
@@ -50,13 +51,6 @@ class ProjectPostJobDetails(models.Model):
      projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
 
 
-# class BidProposalDetails(models.Model):
-#     projectpost_jobs = models.ForeignKey(ProjectPostJobDetails,related_name='bidding_job',on_delete=models.CASCADE)
-#     vendor
-#     rates
-#     completion date
-
-
 class BidChat(models.Model):
     message = models.TextField()
     sender = models.ForeignKey(AiUser,related_name='message_creator',on_delete=models.CASCADE,blank=True, null=True)
@@ -70,3 +64,52 @@ class BidChat(models.Model):
 class AvailableBids(models.Model):
     projectpostjob=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="projpostjob_details")
     vendor=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+
+
+def user_directory_path(instance, filename):
+    return '{0}/{1}/{2}/{3}'.format(instance.vendor.uid,"BidDetails","Samplefiles",filename)
+
+
+class BidPropasalDetails(models.Model):
+    projectpostjob =  models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="Bidjob_details")
+    vendor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name="bid_sent_vendor")
+    proposed_completion_date = models.DateTimeField(blank=True,null=True)
+    description = models.TextField(blank=True,null=True)
+    sample_file_upload = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+
+class BidProposalServicesRates(models.Model):
+    bid =  models.ForeignKey(BidPropasalDetails, on_delete=models.CASCADE,related_name="service_and_rates")
+    mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+    mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+    mtpe_count_unit=models.ForeignKey(ServiceTypeunits,on_delete=models.CASCADE,related_name='bid_job_mtpe_unit_type',blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+
+
+User = get_user_model()
+
+class ThreadManager(models.Manager):
+    def by_user(self, **kwargs):
+        user = kwargs.get('user')
+        lookup = Q(first_person=user) | Q(second_person=user)
+        qs = self.get_queryset().filter(lookup).distinct()
+        return qs
+
+
+class Thread(models.Model):
+    first_person = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True, blank=True, related_name='thread_first_person')
+    second_person = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True, blank=True,
+                                     related_name='thread_second_person')
+    bid = models.ForeignKey(BidPropasalDetails,on_delete=models.CASCADE, null=True, blank=True,related_name='thread_bid')
+    updated = models.DateTimeField(auto_now=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    objects = ThreadManager()
+    class Meta:
+        unique_together = ['first_person', 'second_person','bid']
+
+
+class ChatMessage(models.Model):
+    thread = models.ForeignKey(Thread, null=True, blank=True, on_delete=models.CASCADE, related_name='chatmessage_thread')
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)

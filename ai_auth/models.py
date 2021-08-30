@@ -63,7 +63,7 @@ class UserAttribute(models.Model):
 pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
 class PersonalInformation(models.Model):
-    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True)
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='personal_info')
     address = models.CharField(max_length=255, blank=True, null=True)
     country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
     timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
@@ -79,7 +79,7 @@ class PersonalInformation(models.Model):
 
 
 class OfficialInformation(models.Model):
-    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True)
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='official_info')
     company_name = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     designation = models.CharField(max_length=255, blank=True, null=True)
@@ -101,7 +101,7 @@ def user_directory_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "profile",filename)
 
 class Professionalidentity(models.Model):
-    user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name="professional_identity_info")
     avatar=models.ImageField(upload_to=user_directory_path,blank=True,null=True)
     logo=models.ImageField(upload_to=user_directory_path,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
