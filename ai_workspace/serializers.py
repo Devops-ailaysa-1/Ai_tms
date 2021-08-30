@@ -47,7 +47,8 @@ class JobSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Job
 		fields = ("id","project", "source_language", "target_language", "source_target_pair",
-				  "source_target_pair_names", "source_language_code", "target_language_code")
+				  "source_target_pair_names", "source_language_code", "target_language_code",\
+				  "can_delete")
 		read_only_fields = ("id","source_target_pair", "source_target_pair_names")
 
 class FileSerializer(serializers.ModelSerializer):
@@ -55,7 +56,7 @@ class FileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = File
 		fields = ("id","usage_type", "file", "project","filename", "get_source_file_path",
-				  "get_file_name")
+				  "get_file_name", "can_delete")
 		read_only_fields=("id","filename",)
 
 class FileSerializerv2(FileSerializer): # TmX output set

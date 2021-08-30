@@ -230,6 +230,10 @@ class Job(models.Model):
         super().save()
 
     @property
+    def can_delete(self):
+        return  self. file_job_set.all().__len__() == 0
+
+    @property
     def source_target_pair(self): # code repr
         return "%s-%s"%(self.source_language.locale.first().locale_code,\
             self.target_language.locale.first().locale_code)
@@ -312,6 +316,9 @@ class File(models.Model):
 
     def __str__(self):
         return self.filename
+
+    def can_delete(self):
+        return self.file_document_set.all().__len__() == 0
 
     @property
     def use_type(self):

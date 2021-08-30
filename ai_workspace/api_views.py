@@ -331,15 +331,16 @@ class Files_Jobs_List(APIView):
     def get_queryset(self, project_id):
         project = get_object_or_404(Project.objects.all(), id=project_id,
                         ai_user=self.request.user)
+        project_name = project.project_name
         jobs = project.project_jobs_set.all()
         files = project.project_files_set.filter(usage_type__use_type="source").all()
-        return jobs, files
+        return jobs, files, project_name
 
     def get(self, request, project_id):
-        jobs, files = self.get_queryset(project_id)
+        jobs, files, project_name = self.get_queryset(project_id)
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
-        return Response({"files":files.data, "jobs": jobs.data}, status=200)
+        return Response({"files":files.data, "jobs": jobs.data, "project_name": project_name}, status=200)
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):
@@ -493,7 +494,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
         job_delete_ids = self.request.query_params.get(\
-            "delete_job_ids", [])
+            "job_delete_ids", [])
         if file_delete_ids:
             file_res = FileView.as_view({"destroy": "delete"})(request=request._request, \
                         pk='0', many="true", ids=file_delete_ids)
