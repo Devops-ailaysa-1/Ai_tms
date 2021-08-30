@@ -43,7 +43,7 @@ def get_vendor_list(request):
     source_lang_id=Job.objects.get(id=job_id).source_language_id
     target_lang_id=Job.objects.get(id=job_id).target_language_id
     vendor_list = AiUser.objects.select_related('personal_info','vendor_info','vendor_lang_pair','professional_identity_info')\
-                  .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id))\
+                  .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None))\
                   .values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info__avatar')
     out=[]
     for i in vendor_list:

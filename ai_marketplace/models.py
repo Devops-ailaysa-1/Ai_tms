@@ -76,6 +76,7 @@ class BidPropasalDetails(models.Model):
     proposed_completion_date = models.DateTimeField(blank=True,null=True)
     description = models.TextField(blank=True,null=True)
     sample_file_upload = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
 class BidProposalServicesRates(models.Model):
     bid =  models.ForeignKey(BidPropasalDetails, on_delete=models.CASCADE,related_name="service_and_rates")
