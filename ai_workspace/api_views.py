@@ -653,8 +653,17 @@ class TbxFileListCreateView(APIView):
             #print("***VALID***")
             serializer.save()
             #print("AFTER SAVE", serializer.data)
+        if data["job_id"]:
+            sl_id = Job.objects.get(id=data["job_id"]).source_language_id
+            tl_id = Job.objects.get(id=data["job_id"]).target_language_id
+            source_language = Languages.objects.get(id=sl_id).language
+            target_language = Languages.objects.get(id=tl_id).language
+        else:
+            source_language = ""
+            target_language = ""
+        serializer.data.update({"source_language":source_language, "target_language": target_language})
         return Response(serializer.data, status=201)
-    
+
 class TbxFileDetail(APIView):
 
     def get_object(self, id):
