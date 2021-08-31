@@ -19,7 +19,8 @@ router.register(r"project/quick/setup", api_views.QuickProjectSetupView,\
 				basename="project-quick-setup")
 router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
-# router.register(r"tasks", api_views.TaskView, basename="tasks")
+router.register(r'project/reference/files', api_views.ReferenceFilesView,\
+				basename="project-reference-files")
 
 urlpatterns = router.urls
 
@@ -37,12 +38,14 @@ urlpatterns += [
 		 name="project-report-analysis"),
 	path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
 	path("tbx_read", tbx_read.TermSearch, name='tbx-read'),
-        path("vendor_dashboard_proj_based/<int:project_id>/", api_views.VendorProjectBasedDashBoardView.as_view({"get":"list"}),\
-		 name="vendor-dashboard-proj-based"),
+	path("vendor_dashboard_proj_based/<int:project_id>/", api_views.VendorProjectBasedDashBoardView\
+		 .as_view({"get":"list"}), name="vendor-dashboard-proj-based"),
+	path("tm/configs/<int:pk>", api_views.TM_FetchConfigsView.as_view({"put":"update"}), name="tm-configs"),
+	path("test/internal/call", api_views.test_internal_call, name="test-internal-call"),
+	path("tbx_list_create/<int:project_id>", api_views.TbxFileListCreateView.as_view(), name='tbx-list-create'),
+	path("tbx_detail/<int:id>", api_views.TbxFileDetail.as_view(), name='tbx-detail'),
 ]
 # views urls adding for local testing
-
-
 urlpatterns += [
 	path("project_setup-dj", views.ProjectSetupDjView.as_view(), name="project_setup-dj-view"),# Project Create
 	path("dj/login", views.LoginView.as_view(), name="dj-login"),

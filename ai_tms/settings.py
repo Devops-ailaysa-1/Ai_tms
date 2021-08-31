@@ -191,8 +191,6 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = [
     'ai_auth.authentication.MysqlBackend',
     'django.contrib.auth.backends.ModelBackend',
-
-
 ]
 
 

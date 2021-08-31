@@ -2,12 +2,14 @@ from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from ai_workspace.models import  Project, Job, File, ProjectContentType, Tbxfiles,\
-		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile
+		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
+		ReferenceFiles, TbxFile
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
+
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -45,7 +47,8 @@ class JobSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Job
 		fields = ("id","project", "source_language", "target_language", "source_target_pair",
-				  "source_target_pair_names", "source_language_code", "target_language_code")
+				  "source_target_pair_names", "source_language_code", "target_language_code",\
+				  "can_delete")
 		read_only_fields = ("id","source_target_pair", "source_target_pair_names")
 
 class FileSerializer(serializers.ModelSerializer):
@@ -53,7 +56,7 @@ class FileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = File
 		fields = ("id","usage_type", "file", "project","filename", "get_source_file_path",
-				  "get_file_name")
+				  "get_file_name", "can_delete")
 		read_only_fields=("id","filename",)
 
 class FileSerializerv2(FileSerializer): # TmX output set
@@ -375,26 +378,74 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def create(self, validated_data):
 		ai_user = self.context.get("request", None).user
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
-			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", f_klass=File,\
-			j_klass=Job, ai_user=ai_user
-		)
+			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
+			f_klass=File,j_klass=Job, ai_user=ai_user)
+
 		tasks = Task.objects.create_tasks_of_files_and_jobs(
-			files=files, jobs=jobs, project=project, klass=Task  # For self assign quick setup run
-		)
+			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
+		return  project
+
+	def update(self, instance, validated_data):
+
+		files_data = validated_data.pop("project_files_set")
+		jobs_data = validated_data.pop("project_jobs_set")
+
+		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
+			files_data, jobs_data, f_klass=File, j_klass=Job)
+
+		tasks = Task.objects.create_tasks_of_files_and_jobs(
+			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
+
 		return  project
 
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
-	source_language = serializers.CharField(read_only=True, source="job.source__language.language")
-	target_language = serializers.CharField(read_only=True, source="job.target__language.language")
-	project_name = serializers.CharField(read_only=True, source="file.project.project_name")
+	source_language = serializers.CharField(read_only=True, source=\
+		"job.source__language.language")
+	target_language = serializers.CharField(read_only=True, source=\
+		"job.target__language.language")
+	project_name = serializers.CharField(read_only=True, source=\
+		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
 
 	class Meta:
 		model = Task
-		fields = (
-			"filename", "source_language", "target_language", "project_name", "document_url", \
-			"progress"
-		)
+		fields = \
+			("filename", "source_language", "target_language", "project_name",\
+			"document_url", "progress")
 
+class ProjectSerializerV2(serializers.ModelSerializer):
+	class Meta:
+		model = Project
+		fields = ("threshold", "max_hits", "id")
+
+class ReferenceFileSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = ReferenceFiles
+		fields = ("project", "ref_files", "filename", "id")
+		extra_kwargs = {
+			"ref_files": {"write_only": True}
+		}
+
+
+
+class TbxFileSerializer(serializers.ModelSerializer):
+
+	class Meta:
+		model = TbxFile
+		fields = ("project", "tbx_file", "job")
+	
+	def save_update(self):
+			return super().save()
+
+	@staticmethod
+	def prepare_data(data):
+		if not (("project_id" in data) and ("tbx_file" in data)) :
+			raise serializers.ValidationError("Required fields missing!!!")
+		project = data["project_id"]
+		job = data.get("job_id", None)
+		tbx_file = data.get("tbx_file")
+		return [
+			{"project": project, "job": job, "tbx_file": tbx_file}
+		]

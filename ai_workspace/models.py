@@ -21,6 +21,7 @@ from django.shortcuts import reverse
 from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from django.db.models import Q
+from django.utils.functional import cached_property
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -84,10 +85,12 @@ class Project(ParanoidModel):
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
         on_delete=models.CASCADE, related_name="proj_mt_engine")
+    threshold = models.IntegerField(default=85)
+    max_hits = models.IntegerField(default=5)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
-        managed = False
+        #managed = False
 
     objects = ProjectManager()
 
@@ -98,7 +101,6 @@ class Project(ParanoidModel):
 
     penseive_tm_klass = PenseiveTM
 
-
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
         if not self.ai_project_id:
@@ -108,6 +110,10 @@ class Project(ParanoidModel):
         if not self.project_name:
             self.project_name = self.ai_project_id
         super().save()
+
+    @property
+    def ref_files(self):
+        return self.project_ref_files_set.all()
 
     @property
     def progress(self):
@@ -144,8 +150,7 @@ class Project(ParanoidModel):
     @property
     def get_tasks(self):
         return [task for job in self.project_jobs_set.all() for task \
-            in job.job_tasks_set.all()\
-                ]
+            in job.job_tasks_set.all()]
 
     @property
     def files_jobs_choice_url(self):
@@ -184,12 +189,10 @@ class Project(ParanoidModel):
     @property
     def tmx_files_path_not_processed(self):
         return {tmx_file.id:tmx_file.tmx_file.path for tmx_file in self.project_tmx_files\
-            .filter(is_processed=False).all()\
-                }
+            .filter(is_processed=False).all()}
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
-
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -227,6 +230,10 @@ class Job(models.Model):
         super().save()
 
     @property
+    def can_delete(self):
+        return  self. file_job_set.all().__len__() == 0
+
+    @property
     def source_target_pair(self): # code repr
         return "%s-%s"%(self.source_language.locale.first().locale_code,\
             self.target_language.locale.first().locale_code)
@@ -246,12 +253,14 @@ class Job(models.Model):
     def target_language_code(self):
         return self.target_language.locale.first().locale_code
 
-    @property
+    @cached_property
     def source__language(self):
+        print("called first time!!!")
         return self.source_language.locale.first().language
 
     @property
     def target__language(self):
+        print("called every time!!!")
         return self.target_language.locale.first().language
 
     def __str__(self):
@@ -272,26 +281,23 @@ class FileTypes(models.Model):
         (QA_UNTRANSLATABLE, 'qa_UT'),
         (TERMBASE, 'TB'),
     ]
-    file_type_name = models.CharField(
-    max_length=100,
-    choices=FILETYPES,
-    )
+    file_type_name = models.CharField(\
+        max_length=100,\
+        choices=FILETYPES,)
+
     file_type_path = models.CharField(max_length=100)
 
 def get_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,instance.usage_type.type_path)
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
+            instance.usage_type.type_path)
     instance.filename = filename
-    # print("path--->", os.path.join(instance.project.project_dir_path.replace( settings.MEDIA_ROOT, ""), file_path, filename))
-    # project Directory Should be Relative Path
     return os.path.join(file_path, filename)
 
 class File(models.Model):
-    # file_type = models.CharField(max_length=100, choices=[(file_type.name, file_type.value)
-    #                 for file_type in FileTypes], null=False, blank=False)
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="project_usage_type")
     file = models.FileField(upload_to=get_file_upload_path, null=False,\
-                blank=False, max_length=1000)
+                blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
@@ -310,6 +316,9 @@ class File(models.Model):
 
     def __str__(self):
         return self.filename
+
+    def can_delete(self):
+        return self.file_document_set.all().__len__() == 0
 
     @property
     def use_type(self):
@@ -409,8 +418,8 @@ pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 class TmxFile(models.Model):
 
     def tmx_file_path(instance, filename):
-        return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tmx", filename)
-
+        return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
+            "tmx", filename)
     tmx_file = models.FileField(upload_to=tmx_file_path,
                     validators=[FileExtensionValidator(allowed_extensions=["tmx"])])
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -418,22 +427,48 @@ class TmxFile(models.Model):
     is_processed = models.BooleanField(default=False)
     is_failed = models.BooleanField(default=False)
 
-# /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
-#
-# from django.core.validators import EmailValidator
-# EmailValidator().validate_domain_part(".com")  ---> False
-# EmailValidator().validate_domain_part("l.com")  ---> True
-# p1 = Project.objects.last()
-# In [8]: p1.penseivetm.penseive_tm_dir_path
-# Out[8]: '/ai_home/media/user_2/p14/.pentm'
+    # /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
+    #
+    # from django.core.validators import EmailValidator
+    # EmailValidator().validate_domain_part(".com")  ---> False
+    # EmailValidator().validate_domain_part("l.com")  ---> True
+    # p1 = Project.objects.last()
+    # In [8]: p1.penseivetm.penseive_tm_dir_path
+    # Out[8]: '/ai_home/media/user_2/p14/.pentm'
 
 def tbx_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.project_dir_path,"tbx",filename)
     return file_path
 
 class Tbxfiles(models.Model):
-    # tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False, blank=False, max_length=1000)  # Common for a project
-    tbx_file = models.FileField(upload_to="uploaded_tbx_files", null=False,\
+    tbx_files = models.FileField(upload_to="uploaded_tbx_files", null=False,\
             blank=False, max_length=1000)  # Common for a project
     project = models.ForeignKey("Project", null=False, blank=False,\
             on_delete=models.CASCADE)
+
+def reference_file_upload_path(instance, filename):
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
+            "references", filename)
+    return file_path
+
+class ReferenceFiles(models.Model):
+    ref_files = models.FileField(upload_to=reference_file_upload_path, null=False,\
+            blank=False,)  # Common for a project
+    project = models.ForeignKey("Project", null=False, blank=False,\
+            related_name="project_ref_files_set", on_delete=models.CASCADE)
+
+    @property
+    def filename(self):
+        return  os.path.basename(self.ref_files.file.name)
+
+def tbx_file_path(instance, filename):
+    return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx", filename)
+
+class TbxFile(models.Model):
+    project = models.ForeignKey(Project, null=False, blank=False, related_name="project_tbx_file", 
+                                on_delete=models.CASCADE) 
+    # In case when "Apply to all jobs" is selected, then Project ID will be passed
+    job = models.ForeignKey(Job, null=True, blank=True, related_name="job_tbx_file", on_delete=models.CASCADE) 
+    # When TBX assigned to particular job
+    tbx_file = models.FileField(upload_to=tbx_file_path, 
+                            validators=[FileExtensionValidator(allowed_extensions=["tbx"])])
