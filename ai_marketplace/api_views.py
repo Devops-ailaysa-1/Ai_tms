@@ -44,11 +44,14 @@ def get_vendor_list(request):
     target_lang_id=Job.objects.get(id=job_id).target_language_id
     vendor_list = AiUser.objects.select_related('personal_info','vendor_info','vendor_lang_pair','professional_identity_info')\
                   .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None))\
-                  .values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info__avatar')
+                  .values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info')
     out=[]
     for i in vendor_list:
+        pk= i.get('professional_identity_info')
+        image = Professionalidentity.objects.get(id = pk).avatar if pk else None
+        url = image.url if image else None
         final_dict={"Name":i.get('fullname'),"Country":i.get('personal_info__country'),"LegalCatagories":i.get('vendor_info__type_id'),"Vendor_id":i.get('uid'),
-                    "currency":i.get('vendor_info__currency'),"mtpe_rate":i.get("vendor_lang_pair__service__mtpe_rate"),"Avatar":i.get('professional_identity_info__avatar')}
+                    "currency":i.get('vendor_info__currency'),"mtpe_rate":i.get("vendor_lang_pair__service__mtpe_rate"),"Avatar":url}
         out.append(final_dict)
     return JsonResponse({'out':out},safe=False)
 
