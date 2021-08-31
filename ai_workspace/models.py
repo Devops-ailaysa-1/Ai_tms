@@ -472,3 +472,7 @@ class TbxFile(models.Model):
     # When TBX assigned to particular job
     tbx_file = models.FileField(upload_to=tbx_file_path, 
                             validators=[FileExtensionValidator(allowed_extensions=["tbx"])])
+    
+    @property
+    def filename(self):
+        return  os.path.basename(self.tbx_file.file.name)

@@ -434,7 +434,7 @@ class TbxFileSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = TbxFile
-		fields = ("id", "project", "tbx_file", "job")
+		fields = ("id", "project", "tbx_file", "job", "filename")
 	
 	def save_update(self):
 			return super().save()
