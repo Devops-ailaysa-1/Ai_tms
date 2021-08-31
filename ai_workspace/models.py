@@ -460,3 +460,15 @@ class ReferenceFiles(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.ref_files.file.name)
+
+def tbx_file_path(instance, filename):
+    return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx", filename)
+
+class TbxFile(models.Model):
+    project = models.ForeignKey(Project, null=False, blank=False, related_name="project_tbx_file", 
+                                on_delete=models.CASCADE) 
+    # In case when "Apply to all jobs" is selected, then Project ID will be passed
+    job = models.ForeignKey(Job, null=True, blank=True, related_name="job_tbx_file", on_delete=models.CASCADE) 
+    # When TBX assigned to particular job
+    tbx_file = models.FileField(upload_to=tbx_file_path, 
+                            validators=[FileExtensionValidator(allowed_extensions=["tbx"])])

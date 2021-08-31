@@ -3,7 +3,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from ai_workspace.models import  Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles
+		ReferenceFiles, , TbxFile
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -430,3 +430,22 @@ class ReferenceFileSerializer(serializers.ModelSerializer):
 
 
 
+class TbxFileSerializer(serializers.ModelSerializer):
+
+	class Meta:
+		model = TbxFile
+		fields = ("project", "tbx_file", "job")
+	
+	def save_update(self):
+			return super().save()
+
+	@staticmethod
+	def prepare_data(data):
+		if not (("project_id" in data) and ("tbx_file" in data)) :
+			raise serializers.ValidationError("Required fields missing!!!")
+		project = data["project_id"]
+		job = data.get("job_id", None)
+		tbx_file = data.get("tbx_file")
+		return [
+			{"project": project, "job": job, "tbx_file": tbx_file}
+		]

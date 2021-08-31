@@ -42,6 +42,8 @@ urlpatterns += [
 		 .as_view({"get":"list"}), name="vendor-dashboard-proj-based"),
 	path("tm/configs/<int:pk>", api_views.TM_FetchConfigsView.as_view({"put":"update"}), name="tm-configs"),
 	path("test/internal/call", api_views.test_internal_call, name="test-internal-call"),
+	path("tbx_list_create/<int:project_id>", api_views.TbxFileListCreateView.as_view(), name='tbx-list-create'),
+	path("tbx_detail/<int:id>", api_views.TbxFileDetail.as_view(), name='tbx-detail'),
 ]
 # views urls adding for local testing
 urlpatterns += [
