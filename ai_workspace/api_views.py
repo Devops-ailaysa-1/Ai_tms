@@ -666,7 +666,9 @@ class TbxFileDetail(APIView):
     def put(self, request, id):
         tbx_asset = self.get_object(id)
         tbx_file = request.FILES.get('tbx_file')
-        serializer = TbxFileSerializer(tbx_asset, data={**request.POST.dict(), 'tbx_file' : tbx_file}, partial=True)
+        job_id = request.POST.get("job_id", None)
+        serializer = TbxFileSerializer(tbx_asset, data={"job_id" : job_id, 'tbx_file' : tbx_file}, partial=True)
+        print("SER VALIDITY-->", serializer.is_valid()) 
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data, status=200)
