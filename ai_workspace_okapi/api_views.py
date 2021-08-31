@@ -13,10 +13,7 @@ from ai_staff.models import AiUserType
 from django.http import HttpResponse
 from ai_workspace.models import Task
 from rest_framework.response import  Response
-<<<<<<< HEAD
 from rest_framework.views import APIView
-=======
->>>>>>> origin/nand_dev
 from django.db.models import F, Q
 import requests
 import json, os, re, time

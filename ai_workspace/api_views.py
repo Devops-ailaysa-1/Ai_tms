@@ -644,10 +644,15 @@ class TbxFileListCreateView(APIView):
         data = {**request.POST.dict(), "tbx_file" : request.FILES.get('tbx_file')}
         # data["project_id"] = project_id
         data.update({'project_id': project_id})
+        #print("########", data)
         ser_data = TbxFileSerializer.prepare_data(data)
-        serializer = TbxFileSerializer(ser_data)
-        if serializer.is_valid():
+        #print("$$$$$$", ser_data)
+        serializer = TbxFileSerializer(data=ser_data)
+        #print("%%%%%%%%%%", serializer.is_valid())
+        if serializer.is_valid(raise_exception=True):
+            #print("***VALID***")
             serializer.save()
+            #print("AFTER SAVE", serializer.data)
         return Response(serializer.data, status=201)
     
 class TbxFileDetail(APIView):
