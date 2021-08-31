@@ -11,9 +11,9 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer,\
-    VendorDashBoardSerializer, TbxFileSerializer)
-                        
+    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer)
+
+import copy
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField,\
     TempProject, TmxFile, ReferenceFiles
@@ -73,8 +73,9 @@ class JobView(viewsets.ModelViewSet):
         objs_ids_list =  self.kwargs.get("ids").split(",")
 
         for obj_id in objs_ids_list:
+            print("obj id--->", obj_id)
             try:
-                objs.append(get_object_or_404(ReferenceFiles.objects.all(),\
+                objs.append(get_object_or_404(Job.objects.all(),\
                     id=obj_id))
             except:
                 raise Http404
@@ -90,6 +91,7 @@ class JobView(viewsets.ModelViewSet):
             return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
+        print("ak---->", args, kwargs)
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
             for obj in objs:
@@ -157,8 +159,9 @@ class FileView(viewsets.ModelViewSet):
         objs_ids_list =  self.kwargs.get("ids").split(",")
 
         for obj_id in objs_ids_list:
+            print("obj id--->", obj_id)
             try:
-                objs.append(get_object_or_404(ReferenceFiles.objects.all(),\
+                objs.append(get_object_or_404(File.objects.all(),\
                     id=obj_id))
             except:
                 raise Http404
@@ -492,17 +495,24 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def update(self, request, pk, format=None):
         instance = self.get_object()
+        print("qp--->",  self.request.query_params)
+        req_copy = copy.copy( request._request)
+        req_copy.method = "DELETE"
+
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
         job_delete_ids = self.request.query_params.get(\
             "job_delete_ids", [])
         if file_delete_ids:
-            file_res = FileView.as_view({"destroy": "delete"})(request=request._request, \
+            file_res = FileView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
+            print("file_res--->", file_res)
+
         if job_delete_ids:
-            job_res = JobView.as_view({"destroy": "delete"})(request=request._request, \
+            job_res = JobView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=job_delete_ids)
 
+        print("ids---->", file_delete_ids)
         serlzr = ProjectQuickSetupSerializer(instance, data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request}, partial=True)
