@@ -675,3 +675,10 @@ class TbxFileDetail(APIView):
         tbx_asset = self.get_object(id)
         tbx_asset.delete()
         return Response(data={"Message": "Removed Terminology asset"}, status=204)
+
+class TmxList(APIView):
+
+    def get(self, request, project_id):
+        files = TmxFile.objects.filter(project_id=project_id).all()
+        serializer = TmxFileSerializer(files, many=True)
+        return Response(serializer.data)
