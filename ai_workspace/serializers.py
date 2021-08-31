@@ -3,7 +3,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from ai_workspace.models import  Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, , TbxFile
+		ReferenceFiles, TbxFile
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
