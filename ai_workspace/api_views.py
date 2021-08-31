@@ -10,7 +10,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
-    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer,\
+    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer)
 
 import copy
