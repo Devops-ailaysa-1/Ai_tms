@@ -119,7 +119,7 @@ INSTALLED_APPS = [
     'sqlite3',
     'ai_marketplace',
     'djstripe',
-    'channels',
+    # 'channels',
 ]
 
 
