@@ -64,7 +64,7 @@ class BidChat(models.Model):
 class AvailableBids(models.Model):
     projectpostjob=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="projpostjob_details")
     vendor=models.ForeignKey(AiUser, on_delete=models.CASCADE)
-
+    projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost')
 
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}/{3}'.format(instance.vendor.uid,"BidDetails","Samplefiles",filename)

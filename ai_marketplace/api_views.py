@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from datetime import datetime
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
-from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,Thread,BidPropasalDetails)
+from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,Thread,BidPropasalDetails,AvailableBids)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
                         AvailableBidSerializer,BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer)
@@ -106,7 +106,7 @@ class ProjectPostInfoCreateView(APIView):
 
     def get(self, request,project_id):
         try:
-            queryset = ProjectboardDetails.objects.filter(project_id=project_id).all()
+            queryset = ProjectboardDetails.objects.filter(Q(project_id=project_id) & Q(customer_id = request.user.id)).all()
             serializer = ProjectPostSerializer(queryset,many=True)
             return Response(serializer.data)
         except:
@@ -133,10 +133,17 @@ class ProjectPostInfoCreateView(APIView):
 @api_view(['GET',])
 def user_projectpost_list(request):
     customer_id = request.user.id
+    new=[]
     try:
         queryset = ProjectboardDetails.objects.filter(customer_id=customer_id).all()
-        serializer = ProjectPostSerializer(queryset,many=True)
-        return Response(serializer.data)
+        print(queryset)
+        for i in queryset:
+            jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
+            projects = ProjectboardDetails.objects.get(id = i.id ).proj_name
+            bids = AvailableBids.objects.filter(projectpost_id = i.id).count()
+            out=[{'jobs':jobs,'projects':projects,'bids':bids}]
+            new.extend(out)
+        return JsonResponse({'out':new},safe=False)
     except:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -155,7 +162,7 @@ def shortlisted_vendor_list_send_email(request):
             out=[]
             print(i.id)
             print(j.user_id)
-            serializer=AvailableBidSerializer(data={'projectpostjob':i.id,'vendor':j.user_id})
+            serializer=AvailableBidSerializer(data={'projectpostjob':i.id,'vendor':j.user_id,'projectpost':projectpost_id})
             if serializer.is_valid():
                 serializer.save()
             print(serializer.errors)
