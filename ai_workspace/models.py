@@ -427,6 +427,10 @@ class TmxFile(models.Model):
     is_processed = models.BooleanField(default=False)
     is_failed = models.BooleanField(default=False)
 
+    @property
+    def filename(self):
+        return  os.path.basename(self.tmx_file.file.name)
+
     # /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
     #
     # from django.core.validators import EmailValidator

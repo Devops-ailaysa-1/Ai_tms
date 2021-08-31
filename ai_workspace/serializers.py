@@ -303,7 +303,7 @@ class TmxFileSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = TmxFile
-		fields = ("id", "project", "tmx_file", "is_processed", "is_failed")
+		fields = ("id", "project", "tmx_file", "is_processed", "is_failed", "filename")
 
 	@staticmethod
 	def prepare_data(data):
