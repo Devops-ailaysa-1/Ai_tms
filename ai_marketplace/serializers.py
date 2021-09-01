@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
-                    AvailableBids,BidChat,BidPropasalDetails,BidProposalServicesRates,
+                    AvailableJobs,BidChat,BidPropasalDetails,BidProposalServicesRates,
                     Thread)
 from ai_auth.models import AiUser,OfficialInformation
 from django.db.models import Q
@@ -13,36 +13,15 @@ from ai_auth.serializers import ProfessionalidentitySerializer,OfficialInformati
 from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo
 
-class AvailableBidSerializer(serializers.ModelSerializer):
+class AvailableJobSerializer(serializers.ModelSerializer):
     class Meta:
-        model=AvailableBids
+        model=AvailableJobs
         fields="__all__"
 
 class AvailableVendorSerializer(serializers.ModelSerializer):
     class Meta:
         model= AvailableVendors
         fields="__all__"
-
-class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=ProjectPostJobDetails
-        fields=('src_lang','tar_lang',)
-
-class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
-    projectpost_jobs=ProjectPostJobDetailSerializer(many=True)
-    project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True),write_only=True)
-    customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
-    class Meta:
-        model=ProjectboardDetails
-        fields=('id','project_id','customer_id','service','steps','sub_field','content_type','proj_name','proj_desc',
-                 'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
-                 'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
-                 'unit','milestone','projectpost_jobs')
-
-    def run_validation(self, data):
-        if data.get("projectpost_jobs") and isinstance( data.get("projectpost_jobs"), str):
-            data["projectpost_jobs"]=json.loads(data["projectpost_jobs"])
-        return super().run_validation(data)
 
 
 class BidChatSerializer(serializers.ModelSerializer):
@@ -67,10 +46,11 @@ class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
 class BidPropasalDetailSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
     projectpostjob_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectPostJobDetails.objects.all().values_list('pk', flat=True),write_only=True)
-    vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
+    projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True),write_only=True)
+    vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
     class Meta:
         model = BidPropasalDetails
-        fields = ('id','projectpostjob_id','vendor_id','service_and_rates','proposed_completion_date','description','sample_file_upload',)
+        fields = ('id','projectpostjob_id','projectpost_id','vendor_id','service_and_rates','proposed_completion_date','description','sample_file_upload',)
 
     def run_validation(self, data):
         if data.get("service_and_rates") and isinstance( data.get("service_and_rates"), str):
@@ -120,3 +100,32 @@ class GetVendorDetailSerializer(serializers.Serializer):
     vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
     vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True)
     vendor_info = VendorSerializer(read_only=True)
+
+
+class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
+    bid_count = serializers.SerializerMethodField()
+    bidjob_details = BidPropasalDetailSerializer(many=True,read_only=True)
+    class Meta:
+        model=ProjectPostJobDetails
+        fields=('src_lang','tar_lang','bid_count','bidjob_details',)
+
+    def get_bid_count(self, obj):
+        print(obj.bidjob_details )
+        return obj.bidjob_details.count()
+
+
+class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
+    projectpost_jobs=ProjectPostJobDetailSerializer(many=True)
+    project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True),write_only=True)
+    customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
+    class Meta:
+        model=ProjectboardDetails
+        fields=('id','project_id','customer_id','service','steps','sub_field','content_type','proj_name','proj_desc',
+                 'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
+                 'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
+                 'unit','milestone','projectpost_jobs')
+
+    def run_validation(self, data):
+        if data.get("projectpost_jobs") and isinstance( data.get("projectpost_jobs"), str):
+            data["projectpost_jobs"]=json.loads(data["projectpost_jobs"])
+        return super().run_validation(data)

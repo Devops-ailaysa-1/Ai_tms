@@ -12,9 +12,9 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
-from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,Thread,BidPropasalDetails,AvailableBids)
+from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,Thread,BidPropasalDetails,AvailableJobs)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
-                        AvailableBidSerializer,BidChatSerializer,BidPropasalDetailSerializer,
+                        AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer)
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -156,7 +156,7 @@ def user_projectpost_list(request):
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
             project = i.proj_name
             project_id=i.id
-            bids = AvailableBids.objects.filter(projectpost_id = i.id).count()
+            bids = BidPropasalDetails.objects.filter(projectpost_id = i.id).count()
             out=[{'jobs':jobs,'project':project,'bids':bids,'project_id':project_id}]
             new.extend(out)
         return JsonResponse({'out':new},safe=False)
@@ -179,7 +179,7 @@ def shortlisted_vendor_list_send_email(request):
             out=[]
             print(i.id)
             print(j.user_id)
-            serializer=AvailableBidSerializer(data={'projectpostjob':i.id,'vendor':j.user_id,'projectpost':projectpost_id})
+            serializer=AvailableJobSerializer(data={'projectpostjob':i.id,'vendor':j.user_id})
             if serializer.is_valid():
                 serializer.save()
             print(serializer.errors)
@@ -243,9 +243,10 @@ class BidPostInfoCreateView(APIView):
 
     def post(self, request,id):
         print(id)
+        projectpost_id = ProjectPostJobDetails.objects.get(id=id).projectpost_id
         sample_file=request.FILES.get('sample_file')
         print({**request.POST.dict(),'projectpostjob_id':id,'vendor_id':request.user.id,'sample_file_upload':sample_file})
-        serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpostjob_id':id,'vendor_id':request.user.id,'sample_file_upload':sample_file})#,context={'request':request})
+        serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpostjob_id':id,'vendor_id':request.user.id,'projectpost_id':projectpost_id,'sample_file_upload':sample_file})#,context={'request':request})
         print(serializer.is_valid())
         print(serializer.errors)
         if serializer.is_valid():

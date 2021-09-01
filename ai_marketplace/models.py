@@ -61,17 +61,18 @@ class BidChat(models.Model):
     class Meta:
         ordering = ('timestamp',)
 
-class AvailableBids(models.Model):
+class AvailableJobs(models.Model):
     projectpostjob=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="projpostjob_details")
     vendor=models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost')
+    # projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost')
 
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}/{3}'.format(instance.vendor.uid,"BidDetails","Samplefiles",filename)
 
 
 class BidPropasalDetails(models.Model):
-    projectpostjob =  models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="Bidjob_details")
+    projectpostjob =  models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="bidjob_details")
+    projectpost = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,related_name="bidproject_details")
     vendor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name="bid_sent_vendor")
     proposed_completion_date = models.DateTimeField(blank=True,null=True)
     description = models.TextField(blank=True,null=True)
