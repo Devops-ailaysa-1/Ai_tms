@@ -83,19 +83,17 @@ def TermSearch(request):
     # print(code)
     job_id = Document.objects.get(id=doc_id).job_id
     project_id = Job.objects.get(id=job_id).project_id
-    try:
-        files = TbxFile.objects.filter(job_id=job_id).all()
-    except Exception as e:
-        print("ASSIGNED FOR ALL JOBS", e)
+    files = TbxFile.objects.filter(job_id=job_id).all()
+    if not files.exists():
         files = TbxFile.objects.filter(project_id=project_id).all()
     # print(files)
     for i in range(len(files)):
         file_id=files[i].id
         print("****",file_id)
-        queryset = Tbxfiles.objects.all()
+        queryset = TbxFile.objects.all()
         file = get_object_or_404(queryset, pk=file_id)
         # print(file.tbx_files)
-        tree = ET.parse(file.tbx_files.path)
+        tree = ET.parse(file.tbx_file.path)
         root=tree.getroot()
         remove_namespace(root, u"iso.org/ns/tbx/2016")
         remove_namespace(root, u"urn:iso:std:iso:30042:ed-2")
