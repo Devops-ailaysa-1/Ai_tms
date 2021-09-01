@@ -92,10 +92,10 @@ def TermSearch(request):
     for i in range(len(files)):
         file_id=files[i].id
         print("****",file_id)
-        queryset = Tbxfile.objects.all()
+        queryset = TbxFile.objects.all()
         file = get_object_or_404(queryset, pk=file_id)
         # print(file.tbx_files)
-        tree = ET.parse(file.tbx_files.path)
+        tree = ET.parse(file.tbx_file.path)
         root=tree.getroot()
         remove_namespace(root, u"iso.org/ns/tbx/2016")
         remove_namespace(root, u"urn:iso:std:iso:30042:ed-2")
