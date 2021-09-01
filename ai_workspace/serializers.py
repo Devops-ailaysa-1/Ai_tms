@@ -387,6 +387,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def update(self, instance, validated_data):
 
+		instance.project_name = validated_data.get("project_name",\
+								instance.project_name)
+		instance.save()
+
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
 

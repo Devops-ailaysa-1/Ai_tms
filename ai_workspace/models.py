@@ -103,13 +103,26 @@ class Project(ParanoidModel):
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
+
         if not self.ai_project_id:
             # self.ai_user shoould be set before save
             self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
             objects.filter(ai_user=self.ai_user).count()+1)
+
         if not self.project_name:
             self.project_name = self.ai_project_id
-        super().save()
+
+        if self.id:
+            project_count = Project.objects.filter(project_name=self.project_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+        else:
+            project_count = Project.objects.filter(project_name=self.project_name, \
+                            ai_user=self.ai_user,).count()
+
+        if project_count != 0:
+            self.project_name = self.project_name + "(" + str(project_count) + ")"
+
+        return super().save()
 
     @property
     def ref_files(self):
