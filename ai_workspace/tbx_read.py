@@ -92,7 +92,7 @@ def TermSearch(request):
     for i in range(len(files)):
         file_id=files[i].id
         print("****",file_id)
-        queryset = Tbxfiles.objects.all()
+        queryset = Tbxfile.objects.all()
         file = get_object_or_404(queryset, pk=file_id)
         # print(file.tbx_files)
         tree = ET.parse(file.tbx_files.path)
