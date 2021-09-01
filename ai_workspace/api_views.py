@@ -10,7 +10,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
-    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer,\
+    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer)
 
 import copy
@@ -641,12 +641,17 @@ class TbxFileListCreateView(APIView):
         data = {**request.POST.dict(), "tbx_file" : request.FILES.get('tbx_file')}
         # data["project_id"] = project_id
         data.update({'project_id': project_id})
+        #print("########", data)
         ser_data = TbxFileSerializer.prepare_data(data)
-        serializer = TbxFileSerializer(ser_data)
-        if serializer.is_valid():
+        #print("$$$$$$", ser_data)
+        serializer = TbxFileSerializer(data=ser_data)
+        #print("%%%%%%%%%%", serializer.is_valid())
+        if serializer.is_valid(raise_exception=True):
+            #print("***VALID***")
             serializer.save()
+            #print("AFTER SAVE", serializer.data)
         return Response(serializer.data, status=201)
-    
+
 class TbxFileDetail(APIView):
 
     def get_object(self, id):
@@ -658,7 +663,9 @@ class TbxFileDetail(APIView):
     def put(self, request, id):
         tbx_asset = self.get_object(id)
         tbx_file = request.FILES.get('tbx_file')
-        serializer = TbxFileSerializer(tbx_asset, data={**request.POST.dict(), 'tbx_file' : tbx_file}, partial=True)
+        job_id = request.POST.get("job_id", None)
+        serializer = TbxFileSerializer(tbx_asset, data={"job" : job_id}, partial=True)
+        print("SER VALIDITY-->", serializer.is_valid()) 
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data, status=200)
@@ -667,3 +674,10 @@ class TbxFileDetail(APIView):
         tbx_asset = self.get_object(id)
         tbx_asset.delete()
         return Response(data={"Message": "Removed Terminology asset"}, status=204)
+
+class TmxList(APIView):
+
+    def get(self, request, project_id):
+        files = TmxFile.objects.filter(project_id=project_id).all()
+        serializer = TmxFileSerializer(files, many=True)
+        return Response(serializer.data)

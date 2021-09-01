@@ -13,6 +13,7 @@ from ai_staff.models import AiUserType
 from django.http import HttpResponse
 from ai_workspace.models import Task
 from rest_framework.response import  Response
+from rest_framework.views import APIView
 from django.db.models import F, Q
 import requests
 import json, os, re, time
@@ -581,6 +582,25 @@ class CommentView(viewsets.ViewSet):
         obj.delete()
         return  Response({},204)
 
+class ProjectStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id):
+        docs = Document.objects.filter(job__project_id=project_id).all()
+        total_segments = 0
+        if not docs:
+            return JsonResponse({"res" : "YET TO START"}, safe=False)        
+        else:
+            for doc in docs:
+                total_segments+=doc.total_segment_count
+
+        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) & 
+            Q(status_id__in=[102,104,106])).all().count()
+        if total_segments == status_count:
+            return JsonResponse({"res" : "100% COMPLETE"}, safe=False)
+        else:
+            return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
+            
 class GetPageIndexWithFilterApplied(views.APIView):
 
     def get_queryset(self, document_id, status_list):

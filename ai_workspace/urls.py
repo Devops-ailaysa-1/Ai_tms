@@ -44,6 +44,7 @@ urlpatterns += [
 	path("test/internal/call", api_views.test_internal_call, name="test-internal-call"),
 	path("tbx_list_create/<int:project_id>", api_views.TbxFileListCreateView.as_view(), name='tbx-list-create'),
 	path("tbx_detail/<int:id>", api_views.TbxFileDetail.as_view(), name='tbx-detail'),
+	path("tmx_list/<int:project_id>", api_views.TmxList.as_view(), name='tmx-list'),
 ]
 # views urls adding for local testing
 urlpatterns += [

@@ -303,7 +303,7 @@ class TmxFileSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = TmxFile
-		fields = ("project", "tmx_file", "is_processed", "is_failed")
+		fields = ("id", "project", "tmx_file", "is_processed", "is_failed", "filename")
 
 	@staticmethod
 	def prepare_data(data):
@@ -437,11 +437,11 @@ class ReferenceFileSerializer(serializers.ModelSerializer):
 class TbxFileSerializer(serializers.ModelSerializer):
 
 	class Meta:
-		model = TbxFile
-		fields = ("project", "tbx_file", "job")
+	    model = TbxFile
+	    fields = ("id", "project", "tbx_file", "job", "filename")
 	
 	def save_update(self):
-			return super().save()
+	    return super().save()
 
 	@staticmethod
 	def prepare_data(data):
@@ -450,6 +450,5 @@ class TbxFileSerializer(serializers.ModelSerializer):
 		project = data["project_id"]
 		job = data.get("job_id", None)
 		tbx_file = data.get("tbx_file")
-		return [
-			{"project": project, "job": job, "tbx_file": tbx_file}
-		]
+		return {"project": project, "job": job, "tbx_file": tbx_file}
+		
