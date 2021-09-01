@@ -83,10 +83,8 @@ def TermSearch(request):
     # print(code)
     job_id = Document.objects.get(id=doc_id).job_id
     project_id = Job.objects.get(id=job_id).project_id
-    try:
-        files = TbxFile.objects.filter(job_id=job_id).all()
-    except Exception as e:
-        print("ASSIGNED FOR ALL JOBS", e)
+    files = TbxFile.objects.filter(job_id=job_id).all()
+    if not files.exists():
         files = TbxFile.objects.filter(project_id=project_id).all()
     # print(files)
     for i in range(len(files)):
