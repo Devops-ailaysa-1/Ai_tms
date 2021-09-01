@@ -26,4 +26,5 @@ urlpatterns+= [
     path('bid_proposal_update/<int:bid_proposal_id>/',api_views.BidPostInfoCreateView.as_view(),name='bid-proposal-update'),
     path('getting_bidpost_primary_details/',api_views.post_bid_primary_details),
     path('project_posts_list/',api_views.user_projectpost_list),
+    path('availablejobs/',api_views.get_available_job_details),
     ]

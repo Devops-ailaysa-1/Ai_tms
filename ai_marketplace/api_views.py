@@ -179,7 +179,7 @@ def shortlisted_vendor_list_send_email(request):
             out=[]
             print(i.id)
             print(j.user_id)
-            serializer=AvailableJobSerializer(data={'projectpostjob':i.id,'vendor':j.user_id})
+            serializer=AvailableJobSerializer(data={'projectpostjob':i.id,'vendor':j.user_id,'projectpost':projectpost_id})
             if serializer.is_valid():
                 serializer.save()
             print(serializer.errors)
@@ -279,4 +279,17 @@ def post_bid_primary_details(request):
         out=[{"mtpe_rate":service_details[0].get('service__mtpe_rate'),"mtpe_hourly_rate":service_details[0].get('service__mtpe_hourly_rate'),"mtpe_count_unit":service_details[0].get('service__mtpe_count_unit')}]
     else:
         out = "No service details exists"
+    return JsonResponse({'out':out},safe=False)
+
+
+@permission_classes((IsAuthenticated, ))
+@api_view(['GET',])
+def get_available_job_details(request):
+    # available_jobs = AvailableJobs.objects.filter(vendor_id = request.user.id).all()
+    out=[]
+    available_jobs_details = AvailableJobs.objects.select_related('projectpostjob','projectpost')\
+                            .filter(vendor_id = request.user.id).values('projectpost__proj_desc','projectpost__proj_deadline','projectpostjob')
+    for i in available_jobs_details:
+        res={"job_id":i.get('projectpostjob'),"job_desc":i.get('projectpost__proj_desc'),"deadline":i.get('projectpost__proj_deadline')}
+        out.append(res)
     return JsonResponse({'out':out},safe=False)

@@ -110,7 +110,6 @@ class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
         fields=('src_lang','tar_lang','bid_count','bidjob_details',)
 
     def get_bid_count(self, obj):
-        print(obj.bidjob_details )
         return obj.bidjob_details.count()
 
 
