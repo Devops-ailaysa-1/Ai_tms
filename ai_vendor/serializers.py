@@ -42,7 +42,7 @@ class VendorServiceTypeSerializer(serializers.ModelSerializer):
 class VendorServiceInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model=VendorServiceInfo
-        exclude=('lang_pair',)
+        exclude=('lang_pair','created_at','updated_at','deleted_at')
 
 class VendorCATsoftwareSerializer(serializers.ModelSerializer):
     class Meta:
@@ -217,33 +217,3 @@ class VendorBankDetailSerializer(serializers.ModelSerializer):
 
     def save_update(self):
         return super().save()
-
-
-# class AvailableVendorSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model= AvailableVendors
-#         fields="__all__"
-#
-# class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model=ProjectPostJobDetails
-#         fields=('src_lang','tar_lang',)
-#
-# class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
-#     projectpost_jobs=ProjectPostJobDetailSerializer(many=True)
-#     class Meta:
-#         model=ProjectboardDetails
-#         fields=('id','project_id','service','steps','sub_field','content_type','proj_name','proj_desc',
-#                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
-#                  'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
-#                  'unit','milestone','projectpost_jobs')
-#
-
-
-
-    # def save(self):
-    #     project_detail = projectboard_details.objects.create(**self.validated_data)
-    #     return project_detail
-    #
-    # def save_update(self):
-    #     return super().save()

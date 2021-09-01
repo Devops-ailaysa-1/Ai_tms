@@ -65,8 +65,11 @@ def get_vendor_list(request):
 def get_vendor_detail(request):
     out=[]
     job_id=request.POST.get('job_id')
-    source_lang_id=Job.objects.get(id=job_id).source_language_id
-    target_lang_id=Job.objects.get(id=job_id).target_language_id
+    source_lang_id=request.POST.get('source_lang_id')
+    target_lang_id=request.POST.get('target_lang_id')
+    if job_id:
+        source_lang_id=Job.objects.get(id=job_id).source_language_id
+        target_lang_id=Job.objects.get(id=job_id).target_language_id
     uid=request.POST.get('vendor_id')
     user=AiUser.objects.get(uid=uid)
     user_id = user.id
@@ -112,9 +115,11 @@ def post_job_primary_details(request):
 
 class ProjectPostInfoCreateView(APIView):
     permission_classes = [IsAuthenticated]
-    def get(self, request,project_id):
+    def get(self, request,projectpost_id):
         try:
-            queryset = ProjectboardDetails.objects.filter(Q(project_id=project_id) & Q(customer_id = request.user.id)).all()
+            print(request.user.id)
+            queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id)).all()
+            print(queryset)
             serializer = ProjectPostSerializer(queryset,many=True)
             return Response(serializer.data)
         except:
@@ -149,10 +154,10 @@ def user_projectpost_list(request):
         print(queryset)
         for i in queryset:
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
-            project = ProjectboardDetails.objects.get(id = i.id ).proj_name
-            project_id:ProjectboardDetails.objects.get(id = i.id ).id
+            project = i.proj_name
+            project_id=i.id
             bids = AvailableBids.objects.filter(projectpost_id = i.id).count()
-            out=[{'jobs':jobs,'projects':project,'bids':bids,'project_id':project_id}]
+            out=[{'jobs':jobs,'project':project,'bids':bids,'project_id':project_id}]
             new.extend(out)
         return JsonResponse({'out':new},safe=False)
     except:
