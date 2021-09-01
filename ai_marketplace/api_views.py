@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,Thread,BidPropasalDetails,AvailableBids)
@@ -36,12 +37,15 @@ from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 # Create your views here.
 
-
+@permission_classes((IsAuthenticated, ))
 @api_view(['POST',])
 def get_vendor_list(request):
     job_id=request.POST.get('job_id')
-    source_lang_id=Job.objects.get(id=job_id).source_language_id
-    target_lang_id=Job.objects.get(id=job_id).target_language_id
+    source_lang_id=request.POST.get('source_lang_id')
+    target_lang_id=request.POST.get('target_lang_id')
+    if job_id:
+        source_lang_id=Job.objects.get(id=job_id).source_language_id
+        target_lang_id=Job.objects.get(id=job_id).target_language_id
     vendor_list = AiUser.objects.select_related('personal_info','vendor_info','vendor_lang_pair','professional_identity_info')\
                   .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None))\
                   .values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info')
@@ -56,6 +60,7 @@ def get_vendor_list(request):
     return JsonResponse({'out':out},safe=False)
 
 
+@permission_classes((IsAuthenticated, ))
 @api_view(['POST',])
 def get_vendor_detail(request):
     out=[]
@@ -73,6 +78,7 @@ def get_vendor_detail(request):
     return Response({"out":out})
 
 
+@permission_classes((IsAuthenticated, ))
 @api_view(['POST',])
 def assign_available_vendor_to_customer(request):
     uid=request.POST.get('vendor_id')
@@ -85,6 +91,8 @@ def assign_available_vendor_to_customer(request):
         return Response(data={"Message":"Vendor Assigned to User Successfully"})
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+@permission_classes((IsAuthenticated, ))
 @api_view(['POST',])
 def post_job_primary_details(request):
     project_id=request.POST.get('project_id')
@@ -96,14 +104,14 @@ def post_job_primary_details(request):
         out.extend(jobs)
     result["projectpost_jobs"]=out
     proj_detail = Project.objects.select_related('proj_subject','proj_content_type').filter(id=1)\
-                  .values('proj_content_type__content_type_id', 'proj_subject__subject_id')
-    proj_detail={"subject":proj_detail[0].get('proj_subject__subject_id'),"content_type":proj_detail[0].get('proj_content_type__content_type_id')}
+                  .values('proj_content_type__content_type_id', 'proj_subject__subject_id','project_name')
+    proj_detail={"project_name":proj_detail[0].get('project_name'),"subject":proj_detail[0].get('proj_subject__subject_id'),"content_type":proj_detail[0].get('proj_content_type__content_type_id')}
     result["projectpost_detail"]=proj_detail
     return JsonResponse({"res":result},safe=False)
 
 
 class ProjectPostInfoCreateView(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self, request,project_id):
         try:
             queryset = ProjectboardDetails.objects.filter(Q(project_id=project_id) & Q(customer_id = request.user.id)).all()
@@ -130,6 +138,8 @@ class ProjectPostInfoCreateView(APIView):
             serializer.save()
             return Response(serializer.data)
 
+
+@permission_classes((IsAuthenticated, ))
 @api_view(['GET',])
 def user_projectpost_list(request):
     customer_id = request.user.id
@@ -139,15 +149,17 @@ def user_projectpost_list(request):
         print(queryset)
         for i in queryset:
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
-            projects = ProjectboardDetails.objects.get(id = i.id ).proj_name
+            project = ProjectboardDetails.objects.get(id = i.id ).proj_name
+            project_id:ProjectboardDetails.objects.get(id = i.id ).id
             bids = AvailableBids.objects.filter(projectpost_id = i.id).count()
-            out=[{'jobs':jobs,'projects':projects,'bids':bids}]
+            out=[{'jobs':jobs,'projects':project,'bids':bids,'project_id':project_id}]
             new.extend(out)
         return JsonResponse({'out':new},safe=False)
     except:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@permission_classes((IsAuthenticated, ))
 @api_view(['POST',])
 def shortlisted_vendor_list_send_email(request):
     projectpost_id=request.POST.get('projectpost_id')
@@ -192,6 +204,8 @@ def shortlisted_vendor_list_send_email(request):
     return JsonResponse({"message":"Email Successfully Sent"},safe=False)
 
 
+
+@permission_classes((IsAuthenticated, ))
 @api_view(['POST',])
 def addingthread(request):
     user1=request.user.id
@@ -212,6 +226,7 @@ def addingthread(request):
 
 
 class BidPostInfoCreateView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request,id):
         try:
             print(request.user.id)
@@ -244,6 +259,7 @@ class BidPostInfoCreateView(APIView):
             return Response(serializer.data)
 
 
+@permission_classes((IsAuthenticated, ))
 @api_view(['POST',])
 def post_bid_primary_details(request):
     projectpostjob = request.POST.get('projectpostjob')
