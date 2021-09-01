@@ -199,16 +199,16 @@ class ProfessionalidentityView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def put(self,request,pk):
-        user = Professionalidentity.objects.get(user_id=pk)
-        # user = get_object_or_404(queryset, pk=pk)
-        serializer= ProfessionalidentitySerializer(user,data=request.data,partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors)
+    # 
+    # def put(self,request,pk):
+    #     user = Professionalidentity.objects.get(user_id=pk)
+    #     # user = get_object_or_404(queryset, pk=pk)
+    #     serializer= ProfessionalidentitySerializer(user,data=request.data,partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     else:
+    #         return Response(serializer.errors)
 
 
 class UserProfileCreateView(viewsets.ViewSet):
