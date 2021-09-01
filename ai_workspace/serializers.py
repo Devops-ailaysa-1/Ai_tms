@@ -432,8 +432,6 @@ class ReferenceFileSerializer(serializers.ModelSerializer):
 			"ref_files": {"write_only": True}
 		}
 
-
-
 class TbxFileSerializer(serializers.ModelSerializer):
 
 	class Meta:
@@ -451,4 +449,3 @@ class TbxFileSerializer(serializers.ModelSerializer):
 		job = data.get("job_id", None)
 		tbx_file = data.get("tbx_file")
 		return {"project": project, "job": job, "tbx_file": tbx_file}
-		

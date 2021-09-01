@@ -153,8 +153,7 @@ class Project(ParanoidModel):
             ( # jobs will not exceed 100nos, and files will not exceed 10nos,
             # so all() functionality used...
             self.project_jobs_set.all(),
-            self.project_files_set.all()
-            )
+            self.project_files_set.all())
 
     @property
     def _assign_tasks_url(self):

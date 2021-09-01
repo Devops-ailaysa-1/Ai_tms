@@ -15,7 +15,8 @@ class TaskStatus(models.Model):
 
 class TextUnit(models.Model):
     okapi_ref_translation_unit_id = models.TextField()
-    document = models.ForeignKey("Document", on_delete=models.CASCADE, related_name="document_text_unit_set")
+    document = models.ForeignKey("Document", on_delete=models.CASCADE, related_name=\
+        "document_text_unit_set")
 
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)
@@ -34,11 +35,17 @@ class Segment(models.Model):
     coded_ids_sequence = models.TextField(null=True, blank=True)
     target_tags = models.TextField(null=True, blank=True)
     okapi_ref_segment_id = models.CharField(max_length=50)
-    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL)
-    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name="text_unit_segment_set")
+    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=\
+        models.SET_NULL)
+    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name=\
+        "text_unit_segment_set")
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
     # segment_count = models.TextField(null=True, blank=True)
+
+    @property
+    def has_comment(self):
+        return self.segment_comments_set.all().count()>0
 
     @property
     def get_id(self):
@@ -66,12 +73,11 @@ class Segment(models.Model):
 
     @property
     def coded_target(self):
-        return  set_runs_to_ref_tags( self.coded_source, self.target, get_runs_and_ref_ids( \
+        return  set_runs_to_ref_tags( self.coded_source, self.target, get_runs_and_ref_ids(\
             self.coded_brace_pattern, self.coded_ids_aslist ) )
 
 
     def save(self, *args, **kwargs):
-        print("save")
         return super(Segment, self).save(*args, **kwargs)
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)

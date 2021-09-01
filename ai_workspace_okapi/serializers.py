@@ -41,6 +41,7 @@ class SegmentSerializer(serializers.ModelSerializer):
             "segment_id",
             "temp_target",
             "status",
+            "has_comment"
         )
 
         extra_kwargs = {
