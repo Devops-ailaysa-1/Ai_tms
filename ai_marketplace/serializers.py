@@ -125,6 +125,12 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                  'unit','milestone','projectpost_jobs')
 
     def run_validation(self, data):
-        if data.get("projectpost_jobs") and isinstance( data.get("projectpost_jobs"), str):
-            data["projectpost_jobs"]=json.loads(data["projectpost_jobs"])
+        if data.get("jobs") and isinstance( data.get("jobs"), str):
+            jobs=json.loads(data["jobs"])
+            source_language = jobs[0].get("src_lang")
+            target_languages = jobs[0].get("tar_lang")
+            if source_language and target_languages:
+                data["projectpost_jobs"] = [{"src_lang": source_language, "tar_lang": target_language}
+                                            for target_language in target_languages]
+        print("data---->",data["projectpost_jobs"])
         return super().run_validation(data)

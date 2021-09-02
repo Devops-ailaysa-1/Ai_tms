@@ -100,12 +100,13 @@ def assign_available_vendor_to_customer(request):
 def post_job_primary_details(request):
     project_id=request.POST.get('project_id')
     jobslist=Job.objects.filter(project_id=project_id).values('source_language_id','target_language_id')
-    out=[]
     result={}
+    tar_lang=[]
     for i in jobslist:
-        jobs=[{"src_lang":i.get('source_language_id'),"tar_lang":i.get('target_language_id')}]
-        out.extend(jobs)
-    result["projectpost_jobs"]=out
+        lang=i.get('target_language_id')
+        tar_lang.append(lang)
+    jobs=[{"src_lang":i.get('source_language_id'),"tar_lang":tar_lang}]
+    result["jobs"]=jobs
     proj_detail = Project.objects.select_related('proj_subject','proj_content_type').filter(id=1)\
                   .values('proj_content_type__content_type_id', 'proj_subject__subject_id','project_name')
     proj_detail={"project_name":proj_detail[0].get('project_name'),"subject":proj_detail[0].get('proj_subject__subject_id'),"content_type":proj_detail[0].get('proj_content_type__content_type_id')}
@@ -126,7 +127,7 @@ class ProjectPostInfoCreateView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request,project_id):
-        print(id)
+        print(project_id)
         customer = request.user.id
         print({**request.POST.dict(),'project_id':project_id})
         serializer = ProjectPostSerializer(data={**request.POST.dict(),'project_id':project_id,'customer_id':customer})#,context={'request':request})
