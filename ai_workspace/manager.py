@@ -73,7 +73,14 @@ class TaskManager(models.Manager):
             raise ValueError("You should send parameter either project " 
                              "object or assign_to user")
                                                                     # POSTEDIT
-        tasks = [self.create(file=file, job=job, assign_to=assign_to, version_id=1)
-            for file in files for job in jobs]
+        tasks = [self.get_or_create(file=file, job=job, assign_to=assign_to,\
+                    version_id=1) for file in files for job in jobs]
 
         return tasks
+
+    def create_tasks_of_files_and_jobs_by_project(self, project):
+        files = project.project_files_set.all()
+        jobs = project.project_jobs_set.all()
+        return self.create_tasks_of_files_and_jobs(
+            files=files, jobs=jobs, klass=None, project=project
+        )
