@@ -247,6 +247,7 @@ class TM_FetchSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret = {**ret, **ret.pop("tm_fetch_configs")}
+        ret.pop("tm_fetch_configs", None)
         return ret
 
 class TranslationStatusSerializer(serializers.ModelSerializer):

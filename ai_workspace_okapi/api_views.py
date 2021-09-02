@@ -337,9 +337,9 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         document = get_object_or_404(qs, id=document_id)
         segments_all = segments = document.segments
         status_list = data.get("status_list", [])
-
+        print("status_list--->", status_list)
         if status_list:
-            if '0' in status_list:
+            if 0 in status_list:
                 segments = segments.filter(Q(status=None) | \
                         Q(status__status_id__in=status_list)).all()
             else:
