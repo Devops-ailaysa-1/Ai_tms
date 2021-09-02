@@ -73,11 +73,14 @@ def get_vendor_detail(request):
     uid=request.POST.get('vendor_id')
     user=AiUser.objects.get(uid=uid)
     user_id = user.id
-    lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)))
-    serializer1= VendorServiceSerializer(lang)
-    out.append(serializer1.data)
-    serializer = GetVendorDetailSerializer(user)
-    out.append(serializer.data)
+    try:
+        lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)))
+        serializer1= VendorServiceSerializer(lang)
+        out.append(serializer1.data)
+        serializer = GetVendorDetailSerializer(user)
+        out.append(serializer.data)
+    except:
+        out = "Matching details does not exist"
     return Response({"out":out})
 
 
@@ -107,10 +110,20 @@ def post_job_primary_details(request):
         tar_lang.append(lang)
     jobs=[{"src_lang":i.get('source_language_id'),"tar_lang":tar_lang}]
     result["jobs"]=jobs
-    proj_detail = Project.objects.select_related('proj_subject','proj_content_type').filter(id=1)\
-                  .values('proj_content_type__content_type_id', 'proj_subject__subject_id','project_name')
-    proj_detail={"project_name":proj_detail[0].get('project_name'),"subject":proj_detail[0].get('proj_subject__subject_id'),"content_type":proj_detail[0].get('proj_content_type__content_type_id')}
-    result["projectpost_detail"]=proj_detail
+    subjectfield = ProjectSubjectField.objects.filter(project_id=project_id).all()
+    subjects=[]
+    for i in subjectfield:
+        subjects.append({'subject':i.subject_id})
+    result["subjects"]=subjects
+    content_type = ProjectContentType.objects.filter(project_id=project_id).all()
+    contents=[]
+    for j in content_type:
+        contents.append({'content_type':j.content_type_id})
+    result["contents"]=contents
+    # proj_detail = Project.objects.select_related('proj_subject','proj_content_type').filter(id=1)\
+    #               .values('proj_content_type__content_type_id', 'proj_subject__subject_id','project_name')
+    # proj_detail={"project_name":proj_detail[0].get('project_name'),"subject":proj_detail[0].get('proj_subject__subject_id'),"content_type":proj_detail[0].get('proj_content_type__content_type_id')}
+    # result["projectpost_detail"]=proj_detail
     return JsonResponse({"res":result},safe=False)
 
 

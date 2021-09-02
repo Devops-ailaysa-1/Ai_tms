@@ -21,8 +21,8 @@ class ProjectboardDetails(models.Model):
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
     steps = models.CharField(max_length=191,blank=True, null=True)
-    sub_field = models.ForeignKey(SubjectFields,blank=True, null=True, related_name='project_sub_field', on_delete=models.CASCADE)
-    content_type = models.ForeignKey(ContentTypes,blank=True, null=True, related_name='project_content_type', on_delete=models.CASCADE)
+    # sub_field = models.ForeignKey(SubjectFields,blank=True, null=True, related_name='project_sub_field', on_delete=models.CASCADE)
+    # content_type = models.ForeignKey(ContentTypes,blank=True, null=True, related_name='project_content_type', on_delete=models.CASCADE)
     proj_name = models.CharField(max_length=191,blank=True, null=True)
     proj_desc = models.CharField(max_length=1000,blank=True, null=True)
     bid_deadline = models.DateTimeField(blank=True, null=True)
@@ -49,6 +49,20 @@ class ProjectPostJobDetails(models.Model):
      src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
      tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE)
      projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
+
+
+class ProjectPostContentType(models.Model):
+    project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
+                        related_name="projectpost_content_type")
+    content_type = models.ForeignKey(ContentTypes, on_delete=models.CASCADE,
+                        related_name="projectpost_content_type")
+
+class ProjectPostSubjectField(models.Model):
+    project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
+                        related_name="projectpost_subject")
+    subject = models.ForeignKey(SubjectFields, on_delete=models.CASCADE,
+                        related_name="projectpost_subject")
+
 
 
 class BidChat(models.Model):

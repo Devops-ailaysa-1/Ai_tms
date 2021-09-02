@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
                     AvailableJobs,BidChat,BidPropasalDetails,BidProposalServicesRates,
-                    Thread)
+                    Thread,ProjectPostContentType,ProjectPostSubjectField)
 from ai_auth.models import AiUser,OfficialInformation
 from django.db.models import Q
 from ai_workspace.models import Project
@@ -112,19 +112,38 @@ class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
     def get_bid_count(self, obj):
         return obj.bidjob_details.count()
 
+class ProjectPostContentTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectPostContentType
+        fields = ('content_type',)
+
+class ProjectPostSubjectFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectPostSubjectField
+        fields = ('subject',)
+
+
 
 class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
-    projectpost_jobs=ProjectPostJobDetailSerializer(many=True)
+    projectpost_jobs=ProjectPostJobDetailSerializer(many=True,required=False)
+    projectpost_content_type=ProjectPostContentTypeSerializer(many=True,required=False)
+    projectpost_subject=ProjectPostSubjectFieldSerializer(many=True,required=False)
     project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True),write_only=True)
     customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
     class Meta:
         model=ProjectboardDetails
-        fields=('id','project_id','customer_id','service','steps','sub_field','content_type','proj_name','proj_desc',
+        fields=('id','project_id','customer_id','service','steps','proj_name','proj_desc',
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
-                 'unit','milestone','projectpost_jobs')
+                 'unit','milestone','projectpost_jobs','projectpost_content_type','projectpost_subject',)
 
     def run_validation(self, data):
+        if data.get('contents') and isinstance( data.get("contents"), str):
+            data["projectpost_content_type"] = json.loads(data['contents'])
+
+        if data.get('subjects') and isinstance( data.get("subjects"), str):
+            data["projectpost_subject"] = json.loads(data['subjects'])
+
         if data.get("jobs") and isinstance( data.get("jobs"), str):
             jobs=json.loads(data["jobs"])
             source_language = jobs[0].get("src_lang")
