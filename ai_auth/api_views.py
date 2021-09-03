@@ -505,7 +505,7 @@ def buy_addon(request):
     except KeyError :
          return Response({'msg':'Invalid price'}, status=406)
 
-    cust=Customer.objects.get(subscriber=user.id)
+    cust=Customer.objects.get(subscriber=user)
     tax_rate=['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi']
     response = create_invoice_one_time(price,cust,tax_rate,quantity)
     #request.POST.get('')
