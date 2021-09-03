@@ -3,7 +3,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries,
                     Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies,
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
-                    SubscriptionFeatures)
+                    SubscriptionFeatures,CreditsAddons)
 import json
 from drf_writable_nested import WritableNestedModelSerializer
 
@@ -209,9 +209,17 @@ class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
 class SubscriptionPricingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionPricing
-        fields = ('id','stripe_product_id','stripe_price_id','plan','price','discount','currency',)
+        fields = ('id','stripe_product_id','stripe_price_id','plan','monthly_price','annual_price','discount','currency',)
 
 class SubscriptionFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionFeatures
-        fields = ('id','features','subscriptionplan',)
+        fields = ('id','features','subscriptionplan','description')
+        extra_kwargs = {
+		 	"subscriptionplan": {"write_only": True}
+            }
+
+class CreditsAddonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CreditsAddons
+        fields = ('id','pack','price','currency','credits','description','discount','stripe_product_id','stripe_price_id',)

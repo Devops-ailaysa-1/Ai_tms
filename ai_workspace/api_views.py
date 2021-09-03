@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
                             ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer,
                           FileSerializerv2, FileSerializerv3, TmxFileSerializer, PentmWriteSerializer, TbxUploadSerializer)
-                        
+
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile
 from rest_framework import permissions
@@ -17,6 +17,7 @@ from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Task
+from ai_marketplace.models import AvailableVendors
 from django.http import JsonResponse
 import requests, json, os
 from ai_workspace import serializers
@@ -126,7 +127,7 @@ def integrity_error(func):
         except IntegrityError as e:
             print("error---->", e)
             return Response({'message': "integrirty error"}, 409)
-        
+
     return decorator
 
 class ProjectSetupView(viewsets.ViewSet):
@@ -265,6 +266,7 @@ class TaskView(APIView):
 
     def get(self, request):
         tasks = self.get_queryset()
+        print(tasks)
         tasks_serlzr = TaskSerializer(tasks, many=True)
         return Response(tasks_serlzr.data, status=200)
 
@@ -454,3 +456,43 @@ def getLanguageName(request,id):
       src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name).locale_code
       tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name).locale_code
       return JsonResponse({"source_lang":src_name,"target_lang":tar_name,"src_code":src_lang_code,"tar_code":tar_lang_code})
+
+
+
+# #############Tasks Assign to vendor#################
+# class TaskView(APIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = TaskSerializer
+#
+#     def get_queryset(self,):
+#         tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
+#                     for task in project.get_tasks
+#                   ]
+#         return  tasks
+#
+#     def get(self, request):
+#         tasks = self.get_queryset()
+#         print(tasks)
+#         tasks_serlzr = TaskSerializer(tasks, many=True)
+#         return Response(tasks_serlzr.data, status=200)
+#
+#     @staticmethod
+#     def get_object(data):
+#         obj = Task.objects.filter(**data).first()
+#         return obj
+#
+#     def post(self, request):
+#         print(self.request.POST.dict())
+#         obj = self.get_object({**request.POST.dict()})
+#         if obj:
+#             task_ser = TaskSerializer(obj)
+#             return Response(task_ser.data, status=200)
+#
+#         task_serlzr = TaskSerializer(data=request.POST.dict(), context={"request":request,
+#             "assign_to": self.request.POST.get('assign_to'),"customer":self.request.user.id})
+#         if task_serlzr.is_valid(raise_exception=True):
+#             task_serlzr.save()
+#             return Response({"msg": task_serlzr.data}, status=200)
+#
+#         else:
+#             return Response({"msg": task_serlzr.errors}, status=400)

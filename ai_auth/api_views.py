@@ -17,18 +17,17 @@ from rest_framework import status
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
+from rest_framework.decorators import api_view,permission_classes
 from django.core.mail import EmailMessage
 from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime
-from djstripe.models import Customer,Price,Subscription,InvoiceItem
+from djstripe.models import Price,Subscription,InvoiceItem
 import stripe
 from django.conf import settings
-from rest_framework.decorators import api_view
-from ai_staff.models import SubscriptionPricing
-from ai_auth.models import CreditPack
-from rest_framework.decorators import api_view, permission_classes
+from djstripe.models import Customer,Invoice
+from ai_staff.models import SupportType
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -202,6 +201,16 @@ class ProfessionalidentityView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # 
+    # def put(self,request,pk):
+    #     user = Professionalidentity.objects.get(user_id=pk)
+    #     # user = get_object_or_404(queryset, pk=pk)
+    #     serializer= ProfessionalidentitySerializer(user,data=request.data,partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     else:
+    #         return Response(serializer.errors)
 
 
 class UserProfileCreateView(viewsets.ViewSet):
@@ -234,6 +243,7 @@ class UserProfileCreateView(viewsets.ViewSet):
 
 
 class CustomerSupportCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = self.get_queryset()
         serializer = CustomerSupportSerializer(queryset,many=True)
@@ -244,9 +254,18 @@ class CustomerSupportCreateView(viewsets.ViewSet):
 
     def create(self,request):
         id = request.user.id
+        email = AiUser.objects.get(id=id).email
+        support_type = request.POST.get("support_type")
+        support_type_name = SupportType.objects.get(id=support_type).support_type
+        description = request.POST.get("description")
+        timestamp = datetime.now()
         serializer = CustomerSupportSerializer(data={**request.POST.dict(),'user':id})
+        subject='Regarding Customer Support'
+        template = 'customer_support_email.html'
+        context = {'user': email,'support_type_name': support_type_name,'description':description,'timestamp':timestamp}
         if serializer.is_valid():
             serializer.save()
+            send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -265,28 +284,25 @@ class ContactPricingCreateView(viewsets.ViewSet):
     def create(self,request):
         name = request.POST.get("name")
         description = request.POST.get("description")
-        email = request.POST.get("email")
+        email = request.POST.get("business_email")
         timestamp = datetime.now()
+        template = 'contact_pricing_email.html'
+        subject='Regarding Contact-Us Pricing'
+        context = {'user': email,'name':name,'description':description,'timestamp':timestamp}
         serializer = ContactPricingSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
             serializer.save()
-            send_email_contact_pricing(name,description,email,timestamp)
+            send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-def send_email_contact_pricing(name,description,email,timestamp):
-    template = 'contact_pricing_email.html'
-    if name:
-        context = {'user': name, 'description':description,'timestamp':timestamp}
-    else:
-        context = {'user': email, 'description':description,'timestamp':timestamp}
+def send_email(subject,template,context):
     content = render_to_string(template, context)
-    subject='Regarding Contact-Us Pricing'
     msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['thenmozhivijay20@gmail.com',])#to emailaddress need to change
     msg.content_subtype = 'html'
     msg.send()
-    return JsonResponse({"message":"Email Successfully Sent"},safe=False)
+    # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
 
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):
@@ -299,6 +315,57 @@ class TempPricingPreferenceCreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET',])
+@permission_classes((IsAuthenticated, ))
+def get_payment_details(request):
+    user,user_invoice_details=None,None
+    try:
+        user = Customer.objects.get(subscriber_id = request.user.id).id
+        user_invoice_details=Invoice.objects.filter(customer_id = user).all()
+        print(user_invoice_details)
+    except Exception as error:
+        print(error)
+    if user_invoice_details:
+        out=[]
+        for i in user_invoice_details:
+            new={}
+            Invoice_number = Invoice.objects.get(id = i.id).number
+            Invoice_value = Invoice.objects.get(id=i.id).amount_paid
+            Invoice_date = Invoice.objects.get(id = i.id).created
+            status =  Invoice.objects.get(id = i.id).status
+            pdf_download_link = Invoice.objects.get(id = i.id).invoice_pdf
+            view_invoice_url = Invoice.objects.get(id =i.id).hosted_invoice_url
+            output={"Invoice_number":Invoice_number,"Invoice_value":Invoice_value,"Invoice_date":Invoice_date,
+                    "Status":status,"Invoice_Pdf_download_link":pdf_download_link,
+                    "Invoice_view_URL":view_invoice_url}
+            new.update(output)
+            out.append(new)
+    else:
+        out = "No invoice details Exists"
+    return JsonResponse({"out":out},safe=False)
+
+
+@api_view(['GET',])
+@permission_classes((IsAuthenticated, ))
+def get_addon_details(request):
+    try:
+        user = Customer.objects.get(subscriber_id = request.user.id).id
+        add_on_list = Session.objects.filter(Q(customer_id=user) & Q(mode = "payment")).all()
+    except Exception as error:
+        print(error)
+    if add_on_list:
+        out=[]
+        for i in add_on_list:
+            new={}
+            add_on=Charge.objects.get(payment_intent_id=i.payment_intent_id)
+            amount = add_on.amount_captured
+            receipt = add_on.receipt_url
+            output ={"Amount":amount,"Receipt":receipt}
+            new.update(output)
+            out.append(new)
+    else:
+        out = "No Add-on details Exists"
+    return JsonResponse({"out":out},safe=False)
 def create_checkout_session(user,price,customer=None):
     
     domain_url = settings.CLIENT_BASE_URL

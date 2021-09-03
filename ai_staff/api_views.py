@@ -10,13 +10,13 @@ from django.http import Http404,JsonResponse
 from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
-                    SupportType,SubscriptionPricing,SubscriptionFeatures)
+                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer,
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
-                         SubscriptionFeatureSerializer)
+                         SubscriptionFeatureSerializer,CreditsAddonSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -514,6 +514,7 @@ for klass in [LanguagesView]:
 
 
 class SubscriptionPricingCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = SubscriptionPricing.objects.all()
         serializer = SubscriptionPricingSerializer(queryset,many=True)
@@ -544,6 +545,7 @@ class SubscriptionPricingCreateView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class SubscriptionFeaturesCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = SubscriptionFeatures.objects.all()
         serializer = SubscriptionFeatureSerializer(queryset,many=True)
@@ -576,7 +578,6 @@ class SubscriptionFeaturesCreateView(viewsets.ViewSet):
 
 @api_view(['GET',])
 def get_plan_details(request):
-    result={}
     plans = SubscriptionPricing.objects.all()
     out=[]
     for plan in plans:
@@ -587,8 +588,40 @@ def get_plan_details(request):
          features =  SubscriptionFeatures.objects.filter(subscriptionplan_id=plan.id).all()
          for feature in features:
              serializer2 = SubscriptionFeatureSerializer(feature)
-             feature = serializer2.data.get("features")
+             feature = serializer2.data
              output.append(feature)
          result["features"]=output
          out.append(result)
     return JsonResponse({"plans":out},safe=False)
+
+
+class CreditsAddonsCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = CreditsAddons.objects.all()
+        serializer = CreditsAddonSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = CreditsAddonSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = CreditsAddons.objects.all()
+        pack = get_object_or_404(queryset, pk=pk)
+        serializer= CreditsAddonSerializer(pack,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = CreditsAddons.objects.all()
+        pack = get_object_or_404(queryset, pk=pk)
+        pack.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
