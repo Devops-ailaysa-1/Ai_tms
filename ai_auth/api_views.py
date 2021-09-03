@@ -479,25 +479,25 @@ def generate_portal_session(customer):
     return session
 
 
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def buy_addon(request):
+#     user = request.user
+#     quantity=request.POST.get('quantity',1)
+#     try:
+#         price = Price.objects.get(id=request.POST.get('price'))
+#     except KeyError :
+#          return Response({'msg':'Invalid price'}, status=406)
+
+#     cust=Customer.objects.get(subscriber=user.id)
+#     session=create_checkout_session_addon(user,price,cust,quantity)
+#     #request.POST.get('')
+#     return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def buy_addon(request):
-    user = request.user
-    quantity=request.POST.get('quantity',1)
-    try:
-        price = Price.objects.get(id=request.POST.get('price'))
-    except KeyError :
-         return Response({'msg':'Invalid price'}, status=406)
-
-    cust=Customer.objects.get(subscriber=user.id)
-    session=create_checkout_session_addon(user,price,cust,quantity)
-    #request.POST.get('')
-    return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def buy_addon2(request):
     user = request.user
     quantity=request.POST.get('quantity',1)
     try:
@@ -536,7 +536,7 @@ def check_subscription(request):
         customer = Customer.objects.get(subscriber=request.user)
         subscription = Subscription.objects.filter(customer=customer).last()
        # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
-        sub_name = CreditPack.objects.get(price_id=subscription.plan.djstripe_id).name
+        sub_name = CreditPack.objects.get(price__id=subscription.plan.id).name
         return Response({'subscription_name':sub_name}, status=200)
     if is_active == (False,False):
         return Response({'msg':'Not Found in stripe'}, status=200)

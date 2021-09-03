@@ -38,7 +38,7 @@ urlpatterns+= [
      path('check-subscription/',api_views.check_subscription),
      path('stripe-customer-portal/',api_views.customer_portal_session),
      path('buy-addon/',api_views.buy_addon),
-     path('buy-addon2/',api_views.buy_addon2),
+     #path('buy-addon2/',api_views.buy_addon2),
      path('buy-subscription/',api_views.buy_subscription)
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
