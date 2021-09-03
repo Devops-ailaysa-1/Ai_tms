@@ -83,7 +83,8 @@ def TermSearch(request):
     # print(codesrc)
     # print(code)
     job_id = Document.objects.get(id=doc_id).job_id
-    files =  TbxFile.objects.filter(Q(job_id=job_id) & Q(job_id=None)).all()
+    files =  TbxFile.objects.filter(Q(job_id=job_id) | Q(job_id=None)).all()
+    #print("FILES-->", files)
     for i in range(len(files)):
         file_id=files[i].id
         print("****",file_id)
