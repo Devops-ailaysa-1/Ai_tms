@@ -495,7 +495,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def update(self, request, pk, format=None):
         instance = self.get_object()
-        print("qp--->",  self.request.query_params)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -506,13 +505,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if file_delete_ids:
             file_res = FileView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
-            print("file_res--->", file_res)
 
         if job_delete_ids:
             job_res = JobView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=job_delete_ids)
 
-        print("ids---->", file_delete_ids)
         serlzr = ProjectQuickSetupSerializer(instance, data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request}, partial=True)

@@ -387,14 +387,18 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def update(self, instance, validated_data):
 
+		instance.project_name = validated_data.get("project_name",\
+								instance.project_name)
+		instance.save()
+
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
 
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
 			files_data, jobs_data, f_klass=File, j_klass=Job)
 
-		tasks = Task.objects.create_tasks_of_files_and_jobs(
-			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
+		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
+			project=project)  # For self assign quick setup run)
 
 		return  project
 
@@ -428,8 +432,6 @@ class ReferenceFileSerializer(serializers.ModelSerializer):
 			"ref_files": {"write_only": True}
 		}
 
-
-
 class TbxFileSerializer(serializers.ModelSerializer):
 
 	class Meta:
@@ -447,4 +449,3 @@ class TbxFileSerializer(serializers.ModelSerializer):
 		job = data.get("job_id", None)
 		tbx_file = data.get("tbx_file")
 		return {"project": project, "job": job, "tbx_file": tbx_file}
-		

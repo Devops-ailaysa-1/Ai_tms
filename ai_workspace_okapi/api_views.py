@@ -337,9 +337,9 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         document = get_object_or_404(qs, id=document_id)
         segments_all = segments = document.segments
         status_list = data.get("status_list", [])
-
+        print("status_list--->", status_list)
         if status_list:
-            if '0' in status_list:
+            if 0 in status_list:
                 segments = segments.filter(Q(status=None) | \
                         Q(status__status_id__in=status_list)).all()
             else:
@@ -378,8 +378,12 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
     @staticmethod
     def unconfirm_status(segment):
         segment.status_id = {102:101, 104:103, 106:105}.get(
-            segment.status_id, segment.status_id
-        )
+            segment.status_id, segment.status_id)
+
+    @staticmethod
+    def confirm_status(segment):
+        segment.status_id = {101:102, 103:104, 105:106}.get(
+            segment.status_id, segment.status_id)
 
     def paginate_response(self, segments, request, status):
         page_segments = self.paginate_queryset(segments, request, view=self)
@@ -415,10 +419,12 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         for instance in segments:
             self.unconfirm_status(instance)
             if do_confirm:
+                self.confirm_status(instance)
                 segment_serlzr = SegmentSerializerV2(instance, data={"target":\
                     re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
                     partial=True, context={"request": request})
             else:
+                self.unconfirm_status(instance)
                 segment_serlzr = SegmentSerializerV2(instance, data={"temp_target":\
                     re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
                     partial=True, context={"request": request})
@@ -464,6 +470,9 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
 
         segment.temp_target = re.sub(regex, replace_word, segment.temp_target)
         self.unconfirm_status(segment)
+        if do_confirm:
+            segment.target = segment.temp_target
+            self.confirm_status(segment)
         segment.save()
         return  Response(SegmentSerializer(segment).data, status=200)
 
