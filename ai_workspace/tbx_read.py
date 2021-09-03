@@ -13,6 +13,7 @@ import json
 nltk.download('punkt')
 from nltk import word_tokenize
 from nltk.util import ngrams
+from django.db.models import F, Q
 
 
 def remove_namespace(doc, namespace):
@@ -82,11 +83,7 @@ def TermSearch(request):
     # print(codesrc)
     # print(code)
     job_id = Document.objects.get(id=doc_id).job_id
-    project_id = Job.objects.get(id=job_id).project_id
-    files = TbxFile.objects.filter(job_id=job_id).all()
-    if not files.exists():
-        files = TbxFile.objects.filter(project_id=project_id).all()
-    # print(files)
+    files =  TbxFile.objects.filter(Q(job_id=job_id) & Q(job_id=None)).all()
     for i in range(len(files)):
         file_id=files[i].id
         print("****",file_id)
