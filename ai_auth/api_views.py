@@ -438,7 +438,7 @@ def create_invoice_one_time(price_id,Aicustomer,tax_rate,quantity=1):
     )
 
     data2=stripe.Invoice.create(
-    customer='cus_K953vDLcHUni6F',
+    customer=Aicustomer.id,
     auto_advance=True # auto-finalize this draft after ~1 hour
     )
     response = stripe.Invoice.finalize_invoice(
