@@ -12,6 +12,9 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
+from djstripe.models import Customer,Subscription,PaymentIntent,Invoice,Price,Product,Charge
+from ai_auth import Aiwebhooks 
+# from djstripe import webhooks
 
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
@@ -134,6 +137,27 @@ class TempPricingPreference(models.Model):
     email = models.EmailField()
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
-# class UserCredits(models.Model):
-#     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
-#     total_credits
+
+class UserCredits(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    stripe_cust_id=  models.ForeignKey(Customer, on_delete=models.CASCADE)
+    price_id = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    Buyed_credits = models.IntegerField()
+    credits_left =models.IntegerField()
+    expiry = models.DateTimeField(blank=True, null=True)
+    invoice = models.ForeignKey(Invoice,on_delete=models.CASCADE,blank=True, null=True)
+    
+
+
+class CreditPack(models.Model):
+    name = models.CharField(max_length=200)
+    #product = models.OneToOneField(Product, on_delete=models.CASCADE)
+    price = models.OneToOneField(Price, on_delete=models.CASCADE)
+    type = models.CharField(max_length=200)
+    credits = models.IntegerField(default=0)
+
+# @webhooks.handler("payment_intent.succeeded")
+# def my_handler(event, **kwargs):
+#     print(event)
+#     print("We should probably notify the user at this point")

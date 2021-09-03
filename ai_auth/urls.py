@@ -31,7 +31,12 @@ urlpatterns+= [
      path('dj-rest-auth/', include('dj_rest_auth.urls')),
      path('dj-rest-auth/registration/', include('dj_rest_auth.registration.urls')),
      path('dj-rest-auth/registration/account-confirm-email/', VerifyEmailView.as_view(), name='account_email_verification_sent') ,
-     path('userprofile/update/',api_views.UserProfileCreateView.as_view({'put':'update'}))
+     path('userprofile/update/',api_views.UserProfileCreateView.as_view({'put':'update'})),
+     path('check-subscription/',api_views.check_subscription),
+     path('stripe-customer-portal/',api_views.customer_portal_session),
+     path('buy-addon/',api_views.buy_addon),
+     path('buy-addon2/',api_views.buy_addon2),
+     path('buy-subscription/',api_views.buy_subscription)
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
 ]

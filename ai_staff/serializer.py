@@ -215,16 +215,3 @@ class SubscriptionFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionFeatures
         fields = ('id','features','subscriptionplan',)
-
-# class UserSubscriptionChoiceSerializer(serializers.ModelSerializer):
-
-#     class Meta:
-#         model = UserSubscriptionChoice
-
-#         fields = ( 'id', 'unit','is_active','created_at','updated_at')
-#         read_only_fields = ('id','created_at','updated_at')
-
-#     def create(self, validated_data):
-#         request = self.context['request']
-#         unit = Billingunits.objects.create(**validated_data)
-#         return unit
