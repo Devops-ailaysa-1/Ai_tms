@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, OfficialInformation, PersonalInformation, Professionalidentity,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference)
+                            TempPricingPreference,CreditPack)
 from django.http import Http404,JsonResponse
 from rest_framework import status
 from django.db import IntegrityError
