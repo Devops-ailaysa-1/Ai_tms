@@ -15,6 +15,9 @@ router.register(r'userprofile',api_views.UserProfileCreateView,basename="user-pr
 router.register(r'customersupport',api_views.CustomerSupportCreateView,basename="user-profile-info")
 router.register(r'contact_us',api_views.ContactPricingCreateView,basename="contact-us")
 router.register(r'temp_pricing_preference',api_views.TempPricingPreferenceCreateView,basename="temp-pricing-preference")
+router.register(r'usersubscribe',api_views.UserSubscriptionCreateView,basename="user-subscribe")
+
+
 urlpatterns = router.urls
 
 urlpatterns+= [
@@ -32,6 +35,11 @@ urlpatterns+= [
      path('get_payment_details/',api_views.get_payment_details),
      path('get_addon_details/',api_views.get_addon_details),
      # path('profile-images/<int:pk>/', api_views.ProfessionalidentityView.as_view(), name='pro_identity'),
+     path('check-subscription/',api_views.check_subscription),
+     path('stripe-customer-portal/',api_views.customer_portal_session),
+     path('buy-addon/',api_views.buy_addon),
+     #path('buy-addon2/',api_views.buy_addon2),
+     path('buy-subscription/',api_views.buy_subscription)
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
 ]

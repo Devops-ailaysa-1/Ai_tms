@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, OfficialInformation, PersonalInformation, Professionalidentity,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference)
+                            TempPricingPreference,CreditPack)
 from django.http import Http404,JsonResponse
 from rest_framework import status
 from django.db import IntegrityError
@@ -23,6 +23,8 @@ from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime
+from djstripe.models import Price,Subscription,InvoiceItem
+import stripe
 from django.conf import settings
 from djstripe.models import Customer,Invoice
 from ai_staff.models import SupportType
@@ -364,3 +366,225 @@ def get_addon_details(request):
     else:
         out = "No Add-on details Exists"
     return JsonResponse({"out":out},safe=False)
+def create_checkout_session(user,price,customer=None):
+    
+    domain_url = settings.CLIENT_BASE_URL
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+
+    stripe.api_key = api_key
+
+    checkout_session = stripe.checkout.Session.create(
+        client_reference_id=user.id,
+        success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url=domain_url + 'cancel/',
+        payment_method_types=['card'],
+        customer =customer.id,
+        #customer_email=user.email,
+        mode='subscription',
+        line_items=[
+            {
+                'price': price,
+                'quantity': 1,
+            }
+        ]
+    )
+    return checkout_session
+
+
+def create_checkout_session_addon(user,price,Aicustomer,quantity=1):
+    domain_url = settings.CLIENT_BASE_URL
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+
+    stripe.api_key = api_key
+
+    checkout_session = stripe.checkout.Session.create(
+        client_reference_id=user.id,
+        success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url=domain_url + 'cancel/',
+        payment_method_types=['card'],
+        mode='payment',
+        customer = Aicustomer.id,
+        line_items=[
+            {
+                'price': price.id,
+                'quantity': quantity,
+                'tax_rates':['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi'],
+            },
+        ],
+        payment_intent_data={
+            'metadata' : {'product_name':'credit pack 1','price':price.id,'quantity':quantity}, }
+    )
+    return checkout_session
+
+
+def create_invoice_one_time(price_id,Aicustomer,tax_rate,quantity=1):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+    print(tax_rate)
+    stripe.api_key = api_key
+    data1=stripe.InvoiceItem.create(
+    customer=Aicustomer.id,
+    price=price_id.id,
+    quantity=quantity,
+    tax_rates=tax_rate
+    )
+
+    data2=stripe.Invoice.create(
+    customer=Aicustomer.id,
+    auto_advance=True # auto-finalize this draft after ~1 hour
+    )
+    response = stripe.Invoice.finalize_invoice(
+        data2['id'], )
+    return response
+
+
+
+def is_active_subscription(user):
+    '''check customer exist and he has active subscription'''
+    #(F,F)-->(No active subscription,Customer not exist)
+    #(F,T)-->(No active subscription,Customer exist)
+    try:
+        customer = Customer.objects.get(subscriber=user)
+    except Customer.DoesNotExist:
+        return False,False
+    subscription = Subscription.objects.filter(customer=customer).last()
+    if subscription != None and subscription.status == 'active':
+        is_active = (True, True)
+    else:
+        is_active = (False, True)
+
+    return is_active
+
+
+def generate_portal_session(customer):
+    domain_url = settings.CLIENT_BASE_URL
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+
+    stripe.api_key = api_key
+    session = stripe.billing_portal.Session.create(
+        customer=customer.id,
+        return_url=domain_url,
+    )
+    return session
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def buy_addon(request):
+#     user = request.user
+#     quantity=request.POST.get('quantity',1)
+#     try:
+#         price = Price.objects.get(id=request.POST.get('price'))
+#     except KeyError :
+#          return Response({'msg':'Invalid price'}, status=406)
+
+#     cust=Customer.objects.get(subscriber=user.id)
+#     session=create_checkout_session_addon(user,price,cust,quantity)
+#     #request.POST.get('')
+#     return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def buy_addon(request):
+    user = request.user
+    quantity=request.POST.get('quantity',1)
+    try:
+        price = Price.objects.get(id=request.POST.get('price'))
+    except KeyError :
+         return Response({'msg':'Invalid price'}, status=406)
+
+    cust=Customer.objects.get(subscriber=user)
+    tax_rate=['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi']
+    response = create_invoice_one_time(price,cust,tax_rate,quantity)
+    #request.POST.get('')
+    return Response({'msg':'Invoice Generated ','invoice_url':response["hosted_invoice_url"]}, status=200)
+
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def customer_portal_session(request):
+    user = request.user
+    try:
+        customer = Customer.objects.get(subscriber=user)
+        session=generate_portal_session(customer)
+    except Customer.DoesNotExist:
+        return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
+    return Response({'msg':'Customer Portal Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_subscription(request):
+    is_active = is_active_subscription(request.user)
+    if is_active == (False,True):
+        return Response({'msg':'User has No active Subscription'}, status=404)
+    if is_active == (True,True):
+        customer = Customer.objects.get(subscriber=request.user)
+        subscription = Subscription.objects.filter(customer=customer).last()
+       # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
+        sub_name = CreditPack.objects.get(price__id=subscription.plan.id).name
+        return Response({'subscription_name':sub_name}, status=200)
+    if is_active == (False,False):
+        return Response({'msg':'Not Found in stripe'}, status=200)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def buy_subscription(request):
+    user = request.user
+    try:
+        price = Price.objects.get(id=request.POST.get('price'))
+    except (KeyError,Price.DoesNotExist) :
+        return Response({'msg':'Invalid price'}, status=406)
+    is_active = is_active_subscription(user)
+    if not is_active == (False,False):
+        customer= Customer.objects.get(subscriber=user)
+        session=create_checkout_session(user=user,price=price,customer=customer)   
+        return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
+    else:
+        return Response({'msg':'No Stripe Account Found'}, status=404)
+
+
+
+class UserSubscriptionCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        user=request.user
+        is_active = is_active_subscription(user=request.user)
+        if is_active == (False,False):
+            try:
+                # check user is from pricing page
+                pre_price = TempPricingPreference.objects.get(email=user.email).price_id
+                price = Price.objects.get(pre_price)
+                customer = Customer.get_or_create(subscriber=user)
+                session = create_checkout_session(user=user,price=price,customer=customer[0])
+                return Response({'msg':'Payment Needed','stripe_url':session.url}, status=200)
+            except TempPricingPreference.DoesNotExist:
+                price = Price.objects.get(id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
+                customer = Customer.get_or_create(subscriber=user)
+                customer[0].subscribe(price=price)
+                return Response({'msg':'User Successfully created'}, status=201)
+        elif is_active == (False,True):
+            customer = Customer.objects.get(subscriber=request.user)
+            subscription = Subscription.objects.filter(customer=customer).last()
+            if subscription == None:
+                price = Price.objects.get(id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
+                customer.subscribe(price=price)
+                #session = create_checkout_session(user=user,price_id="price_1JQWziSAQeQ4W2LNzgKUjrIS")  
+            return Response({'msg':'User already exist in stripe'}, status=400)
+            
+
