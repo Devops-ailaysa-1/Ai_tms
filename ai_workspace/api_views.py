@@ -1,30 +1,35 @@
 from ai_workspace_okapi.models import Document
 from django.conf import settings
+from django.core.files import File as DJFile
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from ai_auth.authentication import IsCustomer
+from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_auth.models import AiUser
 from rest_framework import viewsets
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,
                             ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, TaskSerializer,
-                          FileSerializerv2, FileSerializerv3, TmxFileSerializer, PentmWriteSerializer, TbxUploadSerializer)
+                          FileSerializerv2, FileSerializerv3, TmxFileSerializer, PentmWriteSerializer, TbxUploadSerializer,TbxTemplateUploadSerializer)
 
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile
+from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile,TbxTemplateUploadFiles,TermsModel
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Task
+from .models import Task,Tbxfiles
+from lxml import etree as ET
 from ai_marketplace.models import AvailableVendors
-from django.http import JsonResponse
-import requests, json, os
+from django.http import JsonResponse,HttpResponse
+import requests, json, os,mimetypes
 from ai_workspace import serializers
 from ai_workspace_okapi.models import Document
 from ai_staff.models import LanguagesLocale, Languages
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
+from tablib import Dataset
+import shutil
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -398,13 +403,13 @@ class TmxFileView(viewsets.ViewSet):
 
 class TbxUploadView(APIView):
     def post(self, request):
-        tbx_file = request.FILES.get('tbx_file')
-        project_id = request.POST.get('project_id', 0)
+        tbx_files = request.FILES.get('tbx_files')
+        project_id = request.POST.get('project', 0)
         doc_id = request.POST.get('doc_id', 0)
         if doc_id != 0:
             job_id = Document.objects.get(id=doc_id).job_id
             project_id = Job.objects.get(id=job_id).project_id
-        serializer = TbxUploadSerializer(data={'tbx_files':tbx_file,'project':project_id})
+        serializer = TbxUploadSerializer(data={'tbx_files':tbx_files,'project':project_id})
         # print("SER VALIDITY-->", serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
@@ -458,6 +463,133 @@ def getLanguageName(request,id):
       return JsonResponse({"source_lang":src_name,"target_lang":tar_name,"src_code":src_lang_code,"tar_code":tar_lang_code})
 
 
+
+@api_view(['GET',])
+def glossary_template_lite(request):
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=Glossary_Lite.xlsx'
+    xlsx_data = WriteToExcel_lite()
+    response.write(xlsx_data)
+    return response
+
+
+class TbxTemplateUploadView(APIView):
+    def post(self, request,id):
+        project_id =id
+        tbx_file=request.FILES.get('tbx_template_file')
+        # project_id=request.POST.get('project_id',0)
+        job_id=request.POST.get('job_id',0)
+        print(job_id)
+        serializer = TbxTemplateUploadSerializer(data={'tbx_template_file':tbx_file,'project':project_id,'job':job_id})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            saved_data=serializer.data
+            file_id = saved_data.get("id")
+            upload_template_data_to_db(file_id,job_id)
+            tbx_file= user_tbx_write(job_id,project_id)
+            fl = open(tbx_file, 'rb')
+            file_obj1 = DJFile(fl)#,name=os.path.basename(tbx_file))
+            serializer2 = TbxUploadSerializer(data={'tbx_files':file_obj1,'project':project_id,'job':job_id})
+            if serializer2.is_valid():
+                serializer2.save()
+            else:
+                print(serializer2.errors)
+            fl.close()
+            os.remove(os.path.abspath(tbx_file))
+            return Response({'msg':"Template File uploaded and TBX created and uploaded","data":serializer.data})#,"tbx_file":tbx_file})
+        else:
+            return Response(serializer.errors)
+
+
+def upload_template_data_to_db(file_id,job_id):
+    print(file_id)
+    uploadfile =TbxTemplateUploadFiles.objects.get(id=file_id).tbx_template_file
+    print("Uploaded file==>",uploadfile)
+    dataset = Dataset()
+    imported_data = dataset.load(uploadfile.read(), format='xlsx')
+    print("Imported data-->", imported_data)
+    for data in imported_data:
+        value = TermsModel(
+                # data[0],          #Blank column
+                data[1],            #Autoincremented in the model
+                sl_term = data[2].strip(),    #SL term column
+                tl_term = data[3].strip()    #TL term column
+        )
+        value.job_id = job_id
+        value.file_id = file_id
+        value.save()
+
+# def tbx_file_upload_path(project):
+#     file_path = os.path.join(project.ai_user.uid,project.ai_project_id,"tbx")
+#     return file_path
+################Tbx write####################
+
+def user_tbx_write(job_id,project_id):
+    try:
+        project = Project.objects.get(id = project_id)
+        sl_lang=Job.objects.select_related('locale').filter(id=job_id).values('source_language__locale__locale_code')
+        ta_lang=Job.objects.select_related('locale').filter(id=job_id).values('target_language__locale__locale_code')
+        sl_code = sl_lang[0].get('source_language__locale__locale_code')
+        tl_code = ta_lang[0].get('target_language__locale__locale_code')
+        objs = TermsModel.objects.filter(job_id = job_id)
+        # objs = UserTerms.objects.filter(user_id=id)
+        root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
+                                nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
+        tbxHeader = ET.Element("tbxHeader")
+        root.append (tbxHeader)
+        Filedesc=ET.SubElement(tbxHeader,"fileDesc")
+        TitleStmt=ET.SubElement(Filedesc,"titleStmt")
+        Title=ET.SubElement(TitleStmt,"title")
+        Title.text=Project.objects.get(id=project_id).project_name
+        SourceDesc=ET.SubElement(Filedesc,"sourceDesc")
+        Info=ET.SubElement(SourceDesc,"p")
+        Info.text="TBX created from " + Project.objects.get(id=project_id).project_name
+        EncodingDesc=ET.SubElement(tbxHeader,"encodingDesc")
+        EncodingInfo=ET.SubElement(EncodingDesc,"p",type="XCSURI")
+        EncodingInfo.text="TBXXCSV02.xcs"
+        Text= ET.Element("text")
+        root.append(Text)
+        Body=ET.SubElement(Text,"body")
+        for obj in objs:
+            conceptEntry    = ET.SubElement(Body,"conceptEntry",id="c"+str(obj.id))
+            langSec         = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code})
+            Termsec         = ET.SubElement(langSec,"termSec")
+            Term = ET.SubElement(Termsec,"term")
+            Term.text = obj.sl_term.strip()
+            langSec1 = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": tl_code})
+            termSec1 = ET.SubElement(langSec1,"termSec")
+            Term1 = ET.SubElement(termSec1,"term")
+            Term1.text = obj.tl_term.strip()
+        out_file=Project.objects.get(id=project_id).project_name
+        out_fileName=out_file+"_out.tbx"
+        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True, pretty_print=True)
+        return out_fileName
+
+    except Exception as e:
+        print("Exception1-->", e)
+        return Response(data={"Message":"TBX file Not ready"})
+
+
+@api_view(['GET',])
+def tbx_write(request,file_id):
+    out_fileName = Tbxfiles.objects.get(id=file_id).tbx_files
+    print(out_fileName.path)
+    fl_path = out_fileName.path
+    print(fl_path)
+    filename=os.path.basename(fl_path)
+    print(os.path.dirname(fl_path))
+    fl = open(fl_path, 'rb')
+    mime_type, _ = mimetypes.guess_type(fl_path)
+    response = HttpResponse(fl, content_type=mime_type)
+    response['Content-Disposition'] = "attachment; filename=%s" % filename
+    return response
+
+@api_view(['GET',])
+def get_tbx_files(request,project_id):
+    queryset = Tbxfiles.objects.filter(project_id=project_id)
+    serializer = TbxUploadSerializer(queryset,many=True)
+    return Response(serializer.data)
 
 # #############Tasks Assign to vendor#################
 # class TaskView(APIView):
