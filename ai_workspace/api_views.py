@@ -476,11 +476,11 @@ def glossary_template_lite(request):
 class TbxTemplateUploadView(APIView):
     def post(self, request,id):
         project_id =id
-        tbx_file=request.FILES.get('tbx_template_file')
+        tbx_template_file=request.FILES.get('tbx_template_file')
         # project_id=request.POST.get('project_id',0)
         job_id=request.POST.get('job_id',0)
         print(job_id)
-        serializer = TbxTemplateUploadSerializer(data={'tbx_template_file':tbx_file,'project':project_id,'job':job_id})
+        serializer = TbxTemplateUploadSerializer(data={'tbx_template_file':tbx_template_file,'project':project_id,'job':job_id})
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
@@ -488,6 +488,7 @@ class TbxTemplateUploadView(APIView):
             file_id = saved_data.get("id")
             upload_template_data_to_db(file_id,job_id)
             tbx_file= user_tbx_write(job_id,project_id)
+            print(tbx_file)
             fl = open(tbx_file, 'rb')
             file_obj1 = DJFile(fl)#,name=os.path.basename(tbx_file))
             serializer2 = TbxUploadSerializer(data={'tbx_files':file_obj1,'project':project_id,'job':job_id})
@@ -503,12 +504,9 @@ class TbxTemplateUploadView(APIView):
 
 
 def upload_template_data_to_db(file_id,job_id):
-    print(file_id)
     uploadfile =TbxTemplateUploadFiles.objects.get(id=file_id).tbx_template_file
-    print("Uploaded file==>",uploadfile)
     dataset = Dataset()
     imported_data = dataset.load(uploadfile.read(), format='xlsx')
-    print("Imported data-->", imported_data)
     for data in imported_data:
         value = TermsModel(
                 # data[0],          #Blank column
@@ -551,8 +549,9 @@ def user_tbx_write(job_id,project_id):
         Text= ET.Element("text")
         root.append(Text)
         Body=ET.SubElement(Text,"body")
-        for obj in objs:
-            conceptEntry    = ET.SubElement(Body,"conceptEntry",id="c"+str(obj.id))
+        for i,obj in enumerate(objs):
+            i=i+1
+            conceptEntry    = ET.SubElement(Body,"conceptEntry",id="c"+str(i))
             langSec         = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code})
             Termsec         = ET.SubElement(langSec,"termSec")
             Term = ET.SubElement(Termsec,"term")
@@ -561,7 +560,7 @@ def user_tbx_write(job_id,project_id):
             termSec1 = ET.SubElement(langSec1,"termSec")
             Term1 = ET.SubElement(termSec1,"term")
             Term1.text = obj.tl_term.strip()
-        out_file=Project.objects.get(id=project_id).project_name
+        out_file=Project.objects.get(id=project_id).project_name+"j"+str(Job.objects.filter(project=1).count()+ 1)
         out_fileName=out_file+"_out.tbx"
         ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True, pretty_print=True)
         return out_fileName
