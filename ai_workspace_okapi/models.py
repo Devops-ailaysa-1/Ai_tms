@@ -9,7 +9,6 @@ from ai_staff.models import Languages
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
 from django.utils.functional import cached_property
 
-
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
 
@@ -114,14 +113,18 @@ class Document(models.Model):
     total_word_count = models.IntegerField()
     total_char_count = models.IntegerField()
     total_segment_count = models.IntegerField()
+    google_api_cost_est = models.IntegerField(null=True) #Estimation
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=("file", "job"), name=\
-                "file + job combination should be unique")
-        ]
+        constraints = [ models.UniqueConstraint(fields=("file", "job"),\
+                name="file + job combination should be unique") ]
+
+    def save(self, *args, **kwargs):
+        if self.google_api_cost_est == None:
+            self.google_api_cost_est = round(self.total_char_count * (20 / 1000000), 3)
+        return super().save(*args, **kwargs)
 
     def get_user_email(self):
         return self.created_by.email

@@ -125,7 +125,6 @@ class ServiceTypes(ParanoidModel):
     class Meta:
         db_table = 'service_types'
 
-
 class MtpeEngines(ParanoidModel):
     name = models.CharField(max_length=191)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

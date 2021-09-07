@@ -280,7 +280,7 @@ class DocumentToFile(views.APIView):
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
-
+        print("task_data---->", task_data)
         pre, ext = os.path.splitext(task_data["output_file_path"])
         if output_type == "XLIFF":
             ext = ".xliff"
@@ -292,6 +292,7 @@ class DocumentToFile(views.APIView):
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None
                      }
+        print("params data--->", params_data)
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
             data={
@@ -658,3 +659,5 @@ class ProjectStatusView(APIView):
             return JsonResponse({"res" : "COMPLETED"}, safe=False)
         else:
             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
+
+
