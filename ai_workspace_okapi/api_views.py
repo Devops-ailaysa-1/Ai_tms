@@ -119,7 +119,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # page_segments = self.paginate_queryset(document.segments, request, view=self)
         # segments_ser = SegmentSerializer(page_segments, many=True)
         # return self.get_paginated_response(segments_ser.data)
-        return Response(DocumentSerializerV2(document).data, status=201)
+        if True:
+            return Response(DocumentSerializerV2(document).data, status=201)
+        else:
+            return HttpResponse('<h1>No Sufficient balance</h1>')
 
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
