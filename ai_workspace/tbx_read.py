@@ -36,15 +36,12 @@ def termIdentify(root,t1,ls,datanew,codesrc,code):
                     lang = term_lang.get('{http://www.w3.org/XML/1998/namespace}lang')
                     if lang.split('-')[0]==codesrc:
                             for item in term_lang.iter('term'):
-                                #print("*****",item.text)
                                 if word.strip()==item.text.strip():
                                     match=1
                                     source=item.text
-                                    for j in term.iter(ls):
-                                        lang = j.get('{http://www.w3.org/XML/1998/namespace}lang')
-                                        if lang.split('-')[0]==code:
-                                            for t in j.iter('term'):
-                                                target.append(t.text)
+                                    for j in term.iter('term'):
+                                        if j.text != source:
+                                            target.append(j.text)
                                     out=[{'source':source,'target':target}]
                                     res1.extend(out)
             #print(match)
