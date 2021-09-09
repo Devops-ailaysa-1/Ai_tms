@@ -36,15 +36,12 @@ def termIdentify(root,t1,ls,datanew,codesrc,code):
                     lang = term_lang.get('{http://www.w3.org/XML/1998/namespace}lang')
                     if lang.split('-')[0]==codesrc:
                             for item in term_lang.iter('term'):
-                                #print("*****",item.text)
                                 if word.strip()==item.text.strip():
                                     match=1
                                     source=item.text
-                                    for j in term.iter(ls):
-                                        lang = j.get('{http://www.w3.org/XML/1998/namespace}lang')
-                                        if lang.split('-')[0]==code:
-                                            for t in j.iter('term'):
-                                                target.append(t.text)
+                                    for j in term.iter('term'):
+                                        if j.text != source:
+                                            target.append(j.text)
                                     out=[{'source':source,'target':target}]
                                     res1.extend(out)
             #print(match)
@@ -75,6 +72,10 @@ def TermSearch(request):
     single_words=list(" ".join(i) for i in unigram)
     bigrams = ngrams(tokens_new,2)
     double_words=list(" ".join(i) for i in bigrams)
+    trigrams = ngrams(tokens_new,3)
+    triple_words=list(" ".join(i) for i in trigrams)
+    fourgrams = ngrams(tokens_new,4)
+    four_words=list(" ".join(i) for i in fourgrams)
     doc_id=data.get("doc_id")
     LangName=getLanguageName(doc_id)
     codesrc=LangName.get("src_code")
@@ -105,8 +106,12 @@ def TermSearch(request):
             ls='langSec'
         result=termIdentify(root,t1,ls,single_words,codesrc,code).get("res")
         result1=termIdentify(root,t1,ls,double_words,codesrc,code).get("res")
+        result2=termIdentify(root,t1,ls,triple_words,codesrc,code).get("res")
+        result3=termIdentify(root,t1,ls,four_words,codesrc,code).get("res")
         out1.extend(result)
         out1.extend(result1)
+        out1.extend(result2)
+        out1.extend(result3)
     print("^^^^^",out1)
     output=[]
     [output.append(x) for x in out1 if x not in output]

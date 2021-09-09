@@ -41,14 +41,28 @@ from django.views.decorators.csrf import csrf_exempt
 @api_view(['POST',])
 def get_vendor_list(request):
     job_id=request.POST.get('job_id')
+    content_type = request.POST.get('content_type')
+    subject_field =request.POST.get('subject_field')
     source_lang_id=request.POST.get('source_lang_id')
     target_lang_id=request.POST.get('target_lang_id')
+    status = 200
+    Match=1
     if job_id:
         source_lang_id=Job.objects.get(id=job_id).source_language_id
         target_lang_id=Job.objects.get(id=job_id).target_language_id
-    vendor_list = AiUser.objects.select_related('personal_info','vendor_info','vendor_lang_pair','professional_identity_info')\
-                  .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None))\
-                  .values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info')
+    queryset= queryset_all= AiUser.objects.select_related('personal_info','vendor_info','vendor_lang_pair','professional_identity_info')\
+                  .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None)).all()
+    if content_type:
+        queryset = queryset.filter(Q(vendor_contentype = content_type)).all()
+    if subject_field:
+        queryset = queryset.filter(Q(vendor_subject = subject_field)).all()
+    if content_type and subject_field:
+        queryset = queryset.filter(Q(vendor_contentype = content_type) & Q(vendor_subject = subject_field)).all()
+    if not queryset.values():
+        queryset = queryset_all
+        status = 422
+        Match=0
+    vendor_list = queryset.values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info')
     out=[]
     for i in vendor_list:
         pk= i.get('professional_identity_info')
@@ -57,7 +71,7 @@ def get_vendor_list(request):
         final_dict={"Name":i.get('fullname'),"Country":i.get('personal_info__country'),"LegalCatagories":i.get('vendor_info__type_id'),"Vendor_id":i.get('uid'),
                     "currency":i.get('vendor_info__currency'),"mtpe_rate":i.get("vendor_lang_pair__service__mtpe_rate"),"Avatar":url}
         out.append(final_dict)
-    return JsonResponse({'out':out},safe=False)
+    return Response({'out':out,'Match':Match},status = status)
 
 
 @permission_classes((IsAuthenticated, ))

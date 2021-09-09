@@ -365,10 +365,35 @@ class TmxFile(models.Model):
 # Out[8]: '/ai_home/media/user_2/p14/.pentm'
 
 def tbx_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.project.project_dir_path,"tbx",filename)
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,"tbx",filename)
     return file_path
+
 
 class Tbxfiles(models.Model):
     # tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False, blank=False, max_length=1000)  # Common for a project
-    tbx_files = models.FileField(upload_to="uploaded_tbx_files", null=False, blank=False, max_length=1000)  # Common for a project
-    project = models.ForeignKey("Project", null=False, blank=False, on_delete=models.CASCADE)
+    tbx_files = models.FileField(upload_to=tbx_file_upload_path, null=False, blank=False, max_length=1000)  # Common for a project
+    job = models.ForeignKey(Job, null=True, blank=True, related_name="job_tbx_file", on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE)
+
+
+def tbx_template_file_upload_path(instance, filename):
+    return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx_template", filename)
+
+class TbxTemplateUploadFiles(models.Model):
+    project    = models.ForeignKey(Project, on_delete=models.CASCADE ,null=True, blank=True)
+    job = models.ForeignKey(Job, on_delete=models.CASCADE ,null=True, blank=True)
+    tbx_template_file  = models.FileField(upload_to=tbx_template_file_upload_path, null=False, blank=False)
+    upload_date = models.DateTimeField(auto_now_add=True)
+    #
+    def __str__(self):
+        return self.tbx_template_file
+
+
+class TermsModel(models.Model):
+    file = models.ForeignKey(TbxTemplateUploadFiles, on_delete=models.CASCADE ,null=True, blank=True)
+    job  =  models.ForeignKey(Job, on_delete=models.CASCADE ,null=True, blank=True)
+    sl_term         = models.CharField(max_length=200, null=True, blank=True)
+    tl_term         = models.CharField(max_length=200, null=True, blank=True)
+
+    def __str__(self):
+        return self.sl_term

@@ -26,6 +26,11 @@ urlpatterns += [
 	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(), name="project-report-analysis"),
 	path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
 	path("tbx_read", tbx_read.TermSearch, name='tbx-read'),
+	path('template_lite/', api_views.glossary_template_lite, name='template_lite'),
+	path('template_upload/<int:id>/',api_views.TbxTemplateUploadView.as_view()),
+	path('tbx_write/<int:file_id>/',api_views.tbx_write),
+	path('tbx_files/<int:project_id>/',api_views.get_tbx_files),
+	# path('tbx_download/',api_views.user_tbx_write),
 ]
 # views urls adding for local testing
 
@@ -41,5 +46,3 @@ urlpatterns += [
 	# path("source_tmx", )
 	# path("project-setup-sub", api_views.projectSubjectView.as_view(), name="project_setup__sub"),
 ]
-
-
