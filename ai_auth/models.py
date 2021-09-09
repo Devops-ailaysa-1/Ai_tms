@@ -147,18 +147,16 @@ class UserCredits(models.Model):
     Buyed_credits = models.IntegerField()
     credits_left =models.IntegerField()
     expiry = models.DateTimeField(blank=True, null=True)
-    invoice = models.ForeignKey(Invoice,on_delete=models.CASCADE,blank=True, null=True)
+    invoice = models.CharField(max_length=200,blank=True, null=True)
+    paymentintent = models.CharField(max_length=200,blank=True, null=True)
     
 
 
 class CreditPack(models.Model):
     name = models.CharField(max_length=200)
     #product = models.OneToOneField(Product, on_delete=models.CASCADE)
-    price = models.OneToOneField(Price, on_delete=models.CASCADE)
+    #price = models.OneToOneField(Price, on_delete=models.CASCADE)
+    product =models.OneToOneField(Product,on_delete=models.CASCADE)
     type = models.CharField(max_length=200)
     credits = models.IntegerField(default=0)
 
-# @webhooks.handler("payment_intent.succeeded")
-# def my_handler(event, **kwargs):
-#     print(event)
-#     print("We should probably notify the user at this point")

@@ -263,12 +263,18 @@ class SupportType(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class SubscriptionPricing(ParanoidModel):
-    stripe_product_id = models.CharField(max_length=200,null=True,blank=True)
-    stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
+    stripe_product_id =  models.CharField(max_length=200,blank=True, null=True)
     plan = models.CharField(max_length=100, null=True, blank=True)
+    #currency = models.ForeignKey(Currencies,on_delete=models.CASCADE,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class SubscriptionPricingPrices(ParanoidModel):
+    subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE,related_name='subscription_price')
     monthly_price = models.IntegerField(blank=True, null=True)
+    montly_price_id=models.CharField(max_length=200,null=True,blank=True)
     annual_price = models.IntegerField(blank=True, null=True)
-    discount = models.CharField(max_length=100,null=True,blank=True)
+    annual_price_id=models.CharField(max_length=200,null=True,blank=True)
     currency = models.ForeignKey(Currencies,on_delete=models.CASCADE,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -278,19 +284,23 @@ class SubscriptionFeatures(ParanoidModel):
     description = models.TextField(max_length=1000,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-    subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE,related_name='subscription_plan')
+    subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE,related_name='subscription_feature')
 
 class CreditsAddons(ParanoidModel):
     stripe_product_id = models.CharField(max_length=200,null=True,blank=True)
-    stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
-    pack = models.CharField(max_length=200,null=True,blank=True)
-    price =  models.IntegerField(blank=True, null=True)
-    currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
+    pack = models.CharField(max_length=200,null=True,blank=True) 
     description = models.TextField(max_length=1000, blank=True, null=True)
-    credits = models.CharField(max_length=200,null=True,blank=True)
+    credits = models.IntegerField(blank=True, null=True)
     discount = models.CharField(max_length=100,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class CreditAddonPrice(ParanoidModel):
+    pack = models.ForeignKey(CreditsAddons,on_delete = models.CASCADE,related_name='credit_addon_price')
+    price =  models.IntegerField(blank=True, null=True)
+    currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
+    stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
+
 
 # class Ai_Features(ParanoidModel):
 #     subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE)
