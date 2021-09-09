@@ -11,9 +11,9 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer)
+    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer)
 
-import copy
+import copy, os, mimetypes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField,\
     TempProject, TmxFile, ReferenceFiles
@@ -29,6 +29,9 @@ from ai_workspace_okapi.models import Document
 from ai_staff.models import LanguagesLocale, Languages
 from rest_framework.decorators import api_view
 from django.http import JsonResponse, Http404, HttpResponse
+from ai_workspace.excel_utils import WriteToExcel_lite
+from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
+from django.core.files import File as DJFile
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -681,3 +684,53 @@ class TmxList(APIView):
         files = TmxFile.objects.filter(project_id=project_id).all()
         serializer = TmxFileSerializer(files, many=True)
         return Response(serializer.data)
+
+@api_view(['GET',])
+def glossary_template_lite(request):
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=Glossary_Lite.xlsx'
+    xlsx_data = WriteToExcel_lite()
+    response.write(xlsx_data)
+    return response
+
+class TbxTemplateUploadView(APIView):
+
+    def post(self, request, project_id):
+    
+        data = {**request.POST.dict(), "tbx_template_file" : request.FILES.get('tbx_template_file')}
+        data.update({'project_id': project_id})
+        prep_data = TbxTemplateSerializer.prepare_data(data)
+
+        serializer = TbxTemplateSerializer(data=prep_data)
+        print("SER VALIDITY-->", serializer.is_valid())
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            saved_data = serializer.data
+            file_id = saved_data.get("id")
+            job_id = prep_data["job"]
+            upload_template_data_to_db(file_id, job_id)
+            tbx_file = user_tbx_write(job_id, project_id)
+            print("WRITTEN TBX FILE--->", tbx_file)
+            fl = open(tbx_file, 'rb')
+            file_obj1 = DJFile(fl) #,name=os.path.basename(tbx_file))
+            serializer2 = TbxUploadSerializer(data={'tbx_file':file_obj1,'project':project_id,'job':job_id})
+            if serializer2.is_valid(raise_exception=True):
+                serializer2.save()
+            fl.close()
+            os.remove(os.path.abspath(tbx_file))
+            return Response({'msg':"Template File uploaded and TBX created & uploaded","data":serializer.data})#,"tbx_file":tbx_file})
+        else:
+            return Response(serializer.errors)
+
+@api_view(['GET',])
+def tbx_download(request,file_id):
+    tbx_asset = TbxFile.objects.get(id=file_id).tbx_file
+    print("TBX asset file path-->", tbx_asset.path)
+    fl_path = tbx_asset.path
+    filename = os.path.basename(fl_path)
+    print(os.path.dirname(fl_path))
+    fl = open(fl_path, 'rb')
+    mime_type, _ = mimetypes.guess_type(fl_path)
+    response = HttpResponse(fl, content_type=mime_type)
+    response['Content-Disposition'] = "attachment; filename=%s" % filename
+    return response
