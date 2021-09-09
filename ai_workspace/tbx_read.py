@@ -79,6 +79,10 @@ def TermSearch(request):
     single_words = list(" ".join(i) for i in unigram)
     bigrams = ngrams(tokens_new,2)
     double_words = list(" ".join(i) for i in bigrams)
+    trigrams = ngrams(tokens_new,3)
+    triple_words=list(" ".join(i) for i in trigrams)
+    fourgrams = ngrams(tokens_new,4)
+    four_words=list(" ".join(i) for i in fourgrams)
     doc_id = data.get("doc_id")
     LangName = getLanguageName(doc_id)
     codesrc = LangName.get("src_code")
@@ -109,8 +113,12 @@ def TermSearch(request):
             ls='langSec'
         result=termIdentify(root,t1,ls,single_words,codesrc,code).get("res")
         result1=termIdentify(root,t1,ls,double_words,codesrc,code).get("res")
+        result2=termIdentify(root,t1,ls,triple_words,codesrc,code).get("res")
+        result3=termIdentify(root,t1,ls,four_words,codesrc,code).get("res")
         out1.extend(result)
         out1.extend(result1)
+        out1.extend(result2)
+        out1.extend(result3)
     print("^^^^^",out1)
     output=[]
     [output.append(x) for x in out1 if x not in output]
