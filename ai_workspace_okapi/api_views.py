@@ -488,7 +488,7 @@ class ProgressView(views.APIView):
 
     @staticmethod
     def get_progress(document, confirm_list):
-        total_segment_count = document.total_segment_count
+        total_segment_count = document.total_segment_count - document.segments_with_blank.count()
         segments_confirmed_count = document.segments.filter(
             status__status_id__in=confirm_list
         ).count()
