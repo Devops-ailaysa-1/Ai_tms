@@ -216,7 +216,7 @@ EMAIL_HOST_USER = os.getenv( "EMAIL_HOST_USER" )
 EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
 
 
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_REQUIRED = True

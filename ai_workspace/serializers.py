@@ -405,9 +405,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
 	source_language = serializers.CharField(read_only=True, source=\
-		"job.source__language.language")
+		"job.source_language.language")
 	target_language = serializers.CharField(read_only=True, source=\
-		"job.target__language.language")
+		"job.target_language.language")
 	project_name = serializers.CharField(read_only=True, source=\
 		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
