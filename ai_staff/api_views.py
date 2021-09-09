@@ -1,3 +1,4 @@
+import ai_staff
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status,viewsets
@@ -8,12 +9,12 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from django.http import Http404,JsonResponse
 from .models import (ContentTypes, Countries, Currencies, Languages,
-                    LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields,
+                    LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
-                         CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer,
+                         CountriesSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer)
@@ -594,6 +595,18 @@ def get_plan_details(request):
          out.append(result)
     return JsonResponse({"plans":out},safe=False)
 
+
+@api_view(['GET',])
+def get_pricing_details(request):
+    plans = SubscriptionPricing.objects.all()
+    serializer = SubscriptionPricingPageSerializer(plans,many=True)
+    return JsonResponse({"plans":serializer.data},safe=False)
+
+@api_view(['GET',])
+def get_addons_details(request):
+    addons = CreditsAddons.objects.all()
+    serializer = CreditsAddonSerializer(addons,many=True)
+    return JsonResponse({"addons":serializer.data},safe=False)
 
 class CreditsAddonsCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]

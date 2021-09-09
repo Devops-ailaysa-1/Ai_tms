@@ -1,9 +1,10 @@
+from django.db.models.fields import IntegerField
 from rest_framework import serializers
 from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries,
                     Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies,
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
-                    SubscriptionFeatures,CreditsAddons)
+                    SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,CreditAddonPrice)
 import json
 from drf_writable_nested import WritableNestedModelSerializer
 
@@ -209,7 +210,17 @@ class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
 class SubscriptionPricingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionPricing
-        fields = ('id','stripe_product_id','stripe_price_id','plan','monthly_price','annual_price','discount','currency',)
+        fields = ('id','stripe_product_id',)
+
+
+class SubscriptionPricingPriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPricingPrices
+        fields = ('id','subscriptionplan','monthly_price','montly_price_id','annual_price','annual_price_id','currency',)
+        extra_kwargs = {
+        "subscriptionplan": {"write_only": True}
+        }
+
 
 class SubscriptionFeatureSerializer(serializers.ModelSerializer):
     class Meta:
@@ -219,10 +230,26 @@ class SubscriptionFeatureSerializer(serializers.ModelSerializer):
 		 	"subscriptionplan": {"write_only": True}
             }
 
+
+class CreditAddonPriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CreditAddonPrice
+        fields = ('id','pack','price','currency','stripe_price_id',)
+
 class CreditsAddonSerializer(serializers.ModelSerializer):
+    addon_price = CreditAddonPriceSerializer(many=True,read_only=True,source='credit_addon_price')
     class Meta:
         model = CreditsAddons
-        fields = ('id','pack','price','currency','credits','description','discount','stripe_product_id','stripe_price_id',)
+        fields = ('id','pack','credits','description','discount','stripe_product_id','addon_price')
 
 
-# class SubscriptionSerializer(serializers.Serializer):
+
+class SubscriptionPricingPageSerializer(serializers.Serializer):
+    #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
+    id = serializers.IntegerField()
+    plan = serializers.CharField(max_length=200)
+    stripe_product_id = serializers.CharField(max_length=200)
+    subscription_price=SubscriptionPricingPriceSerializer(many=True,read_only=True)
+    subscription_feature=SubscriptionFeatureSerializer(many=True,read_only=True)
+    # class Meta:
+    #     fields = ('subscriptionplan','prices','features')

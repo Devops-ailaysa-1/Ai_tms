@@ -329,20 +329,21 @@ def get_payment_details(request):
         out=[]
         for i in user_invoice_details:
             new={}
-            Invoice_number = Invoice.objects.get(id = i.id).number
-            Invoice_value = Invoice.objects.get(id=i.id).amount_paid
-            Invoice_date = Invoice.objects.get(id = i.id).created
-            status =  Invoice.objects.get(id = i.id).status
-            pdf_download_link = Invoice.objects.get(id = i.id).invoice_pdf
-            view_invoice_url = Invoice.objects.get(id =i.id).hosted_invoice_url
+            Invoice_number = i.number
+            Invoice_value = i.amount_paid
+            Invoice_date = i.created
+            status =  i.status
+            pdf_download_link = i.invoice_pdf
+            view_invoice_url = i.hosted_invoice_url
+            purchase_type = "Addon" if i.billing_reason == "manual" else "Subscription"
             output={"Invoice_number":Invoice_number,"Invoice_value":Invoice_value,"Invoice_date":Invoice_date,
                     "Status":status,"Invoice_Pdf_download_link":pdf_download_link,
-                    "Invoice_view_URL":view_invoice_url}
+                    "Invoice_view_URL":view_invoice_url,"Purchase_Type":purchase_type}
             new.update(output)
             out.append(new)
     else:
         out = "No invoice details Exists"
-    return JsonResponse({"out":out},safe=False)
+    return JsonResponse({"Payments":out},safe=False)
 
 
 @api_view(['GET',])
@@ -366,6 +367,7 @@ def get_addon_details(request):
     else:
         out = "No Add-on details Exists"
     return JsonResponse({"out":out},safe=False)
+
 def create_checkout_session(user,price,customer=None):
     
     domain_url = settings.CLIENT_BASE_URL
@@ -394,7 +396,7 @@ def create_checkout_session(user,price,customer=None):
     return checkout_session
 
 
-def create_checkout_session_addon(user,price,Aicustomer,quantity=1):
+def create_checkout_session_addon(price,Aicustomer,tax_rate=None,quantity=1):
     domain_url = settings.CLIENT_BASE_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -404,7 +406,7 @@ def create_checkout_session_addon(user,price,Aicustomer,quantity=1):
     stripe.api_key = api_key
 
     checkout_session = stripe.checkout.Session.create(
-        client_reference_id=user.id,
+        client_reference_id=Aicustomer.subscriber,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
         cancel_url=domain_url + 'cancel/',
         payment_method_types=['card'],
@@ -414,11 +416,11 @@ def create_checkout_session_addon(user,price,Aicustomer,quantity=1):
             {
                 'price': price.id,
                 'quantity': quantity,
-                'tax_rates':['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi'],
+                #'tax_rates':['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi'],
             },
         ],
         payment_intent_data={
-            'metadata' : {'product_name':'credit pack 1','price':price.id,'quantity':quantity}, }
+            'metadata' : {'price':price.id,'quantity':quantity,'type':'Addon'}, }
     )
     return checkout_session
 
@@ -502,14 +504,16 @@ def buy_addon(request):
     quantity=request.POST.get('quantity',1)
     try:
         price = Price.objects.get(id=request.POST.get('price'))
-    except KeyError :
+    except (KeyError,Price.DoesNotExist) :
          return Response({'msg':'Invalid price'}, status=406)
 
     cust=Customer.objects.get(subscriber=user)
-    tax_rate=['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi']
-    response = create_invoice_one_time(price,cust,tax_rate,quantity)
+    #tax_rate=['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi']
+    tax_rate=None
+    response = create_checkout_session_addon(price,cust,tax_rate,quantity)
+    
     #request.POST.get('')
-    return Response({'msg':'Invoice Generated ','invoice_url':response["hosted_invoice_url"]}, status=200)
+    return Response({'msg':'Invoice Generated ','invoice_url':response.url}, status=200)
 
 
 
@@ -523,7 +527,7 @@ def customer_portal_session(request):
         session=generate_portal_session(customer)
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
-    return Response({'msg':'Customer Portal Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
+    return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
 
 
 @api_view(['GET'])
@@ -531,15 +535,18 @@ def customer_portal_session(request):
 def check_subscription(request):
     is_active = is_active_subscription(request.user)
     if is_active == (False,True):
-        return Response({'msg':'User has No active Subscription'}, status=404)
+        customer = Customer.objects.get(subscriber=request.user)
+        subscriptions = Subscription.objects.filter(customer=customer).last()
+        sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id).name
+        return Response({'msg':'User have No Active Subscription','prev_subscription':sub_name,'prev_sub_price_id':subscriptions.plan.id,'prev_sub_status':subscriptions.status}, status=402)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user)
         subscription = Subscription.objects.filter(customer=customer).last()
        # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
-        sub_name = CreditPack.objects.get(price__id=subscription.plan.id).name
-        return Response({'subscription_name':sub_name}, status=200)
+        sub_name = CreditPack.objects.get(product__id=subscription.plan.product_id).name
+        return Response({'subscription_name':sub_name,'sub_status':subscription.status}, status=200)
     if is_active == (False,False):
-        return Response({'msg':'Not Found in stripe'}, status=200)
+        return Response({'msg':'Not a Stripe Customer'}, status=206)
 
 
 @api_view(['GET'])
@@ -569,20 +576,22 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
             try:
                 # check user is from pricing page
                 pre_price = TempPricingPreference.objects.get(email=user.email).price_id
-                price = Price.objects.get(pre_price)
+                price = Price.objects.get(id=pre_price)
                 customer = Customer.get_or_create(subscriber=user)
                 session = create_checkout_session(user=user,price=price,customer=customer[0])
-                return Response({'msg':'Payment Needed','stripe_url':session.url}, status=200)
+                return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except TempPricingPreference.DoesNotExist:
-                price = Price.objects.get(id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
+                free=CreditPack.objects.get(name='Free')
+                price = Price.objects.filter(product_id=free.product).last()
                 customer = Customer.get_or_create(subscriber=user)
                 customer[0].subscribe(price=price)
-                return Response({'msg':'User Successfully created'}, status=201)
+                return Response({'msg':'User Successfully created','subscription':'Free'}, status=201)
         elif is_active == (False,True):
             customer = Customer.objects.get(subscriber=request.user)
             subscription = Subscription.objects.filter(customer=customer).last()
             if subscription == None:
-                price = Price.objects.get(id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
+                free=CreditPack.objects.get(name='Free')
+                price = Price.objects.filter(product_id=free.product).last()
                 customer.subscribe(price=price)
                 #session = create_checkout_session(user=user,price_id="price_1JQWziSAQeQ4W2LNzgKUjrIS")  
             return Response({'msg':'User already exist in stripe'}, status=400)
