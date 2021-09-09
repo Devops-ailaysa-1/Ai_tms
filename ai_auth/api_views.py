@@ -513,7 +513,7 @@ def buy_addon(request):
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
     
     #request.POST.get('')
-    return Response({'msg':'Invoice Generated ','invoice_url':response.url}, status=200)
+    return Response({'msg':'Invoice Generated ','invoice_url':response.url}, status=307)
 
 
 
@@ -527,7 +527,7 @@ def customer_portal_session(request):
         session=generate_portal_session(customer)
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
-    return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
+    return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
 
 
 @api_view(['GET'])
@@ -549,7 +549,7 @@ def check_subscription(request):
         return Response({'msg':'Not a Stripe Customer'}, status=206)
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def buy_subscription(request):
     user = request.user
@@ -561,7 +561,7 @@ def buy_subscription(request):
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)
         session=create_checkout_session(user=user,price=price,customer=customer)   
-        return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=200)
+        return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
     else:
         return Response({'msg':'No Stripe Account Found'}, status=404)
 

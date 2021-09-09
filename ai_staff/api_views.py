@@ -600,13 +600,13 @@ def get_plan_details(request):
 def get_pricing_details(request):
     plans = SubscriptionPricing.objects.all()
     serializer = SubscriptionPricingPageSerializer(plans,many=True)
-    return JsonResponse({"plans":serializer.data},safe=False)
+    return JsonResponse({"plans":serializer.data},safe=False,status=200)
 
 @api_view(['GET',])
 def get_addons_details(request):
     addons = CreditsAddons.objects.all()
     serializer = CreditsAddonSerializer(addons,many=True)
-    return JsonResponse({"addons":serializer.data},safe=False)
+    return JsonResponse({"addons":serializer.data},safe=False,status=200)
 
 class CreditsAddonsCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
