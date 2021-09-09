@@ -56,13 +56,14 @@ function newMessage(message, sent_by_id, thread_id) {
 		return false;
 	}
 	let message_element;
+  var currentTime= new Date().toLocaleTimeString();
 	let chat_id = 'chat_' + thread_id
 	if(sent_by_id == USER_ID){
 	    message_element = `
 			<div class="d-flex mb-4 replied">
 				<div class="msg_cotainer_send">
 					${message}
-					<span class="msg_time_send">8:55 AM, Today</span>
+					<span class="msg_time_send">${currentTime}</span>
 				</div>
 			</div>
 	    `
@@ -72,7 +73,7 @@ function newMessage(message, sent_by_id, thread_id) {
            <div class="d-flex mb-4 received">
               <div class="msg_cotainer">
                  ${message}
-              <span class="msg_time">8:40 AM, Today</span>
+              <span class="msg_time">${currentTime}</span>
               </div>
            </div>
         `

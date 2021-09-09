@@ -477,7 +477,6 @@ class TbxTemplateUploadView(APIView):
     def post(self, request,id):
         project_id =id
         tbx_template_file=request.FILES.get('tbx_template_file')
-        # project_id=request.POST.get('project_id',0)
         job_id=request.POST.get('job_id',0)
         print(job_id)
         serializer = TbxTemplateUploadSerializer(data={'tbx_template_file':tbx_template_file,'project':project_id,'job':job_id})
@@ -488,7 +487,6 @@ class TbxTemplateUploadView(APIView):
             file_id = saved_data.get("id")
             upload_template_data_to_db(file_id,job_id)
             tbx_file= user_tbx_write(job_id,project_id)
-            print(tbx_file)
             fl = open(tbx_file, 'rb')
             file_obj1 = DJFile(fl)#,name=os.path.basename(tbx_file))
             serializer2 = TbxUploadSerializer(data={'tbx_files':file_obj1,'project':project_id,'job':job_id})
