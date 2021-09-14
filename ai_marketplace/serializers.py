@@ -68,6 +68,8 @@ class ThreadSerializer(serializers.ModelSerializer):
         first_person = data.get('first_person')
         second_person = data.get('second_person')
         bid = data.get('bid')
+        if first_person == second_person:
+            raise serializers.ValidationError({"msg":"Thread between same person cannot be created"})
         lookup1 = Q(first_person=first_person) & Q(second_person=second_person) & Q(bid=bid)
         lookup2 = Q(first_person=second_person) & Q(second_person=first_person) & Q(bid=bid)
         lookup = Q(lookup1 | lookup2)
