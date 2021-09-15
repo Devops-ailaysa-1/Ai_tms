@@ -181,7 +181,8 @@ def user_tbx_write(job_id,project_id):
             Term1.text = obj.tl_term.strip()
         out_file=Project.objects.get(id=project_id).project_name+"j"+str(Job.objects.filter(project=1).count()+ 1)
         out_fileName=out_file+"_out.tbx"
-        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True, pretty_print=True)
+        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
+        print("type in write--->", type(out_fileName))
         return out_fileName
 
     except Exception as e:

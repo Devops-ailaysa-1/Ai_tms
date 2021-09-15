@@ -503,7 +503,7 @@ class TbxTemplateFiles(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE ,null=False, blank=False)
     tbx_template_file = models.FileField(upload_to=tbx_template_file_upload_path, 
                                     validators=[FileExtensionValidator(allowed_extensions=["xlsx"])])
-    upload_date = models.DateTimeField(auto_now_add=True)
+    # upload_date = models.DateTimeField(auto_now_add=True)
 
     @property
     def filename(self):

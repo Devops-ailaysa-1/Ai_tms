@@ -711,11 +711,15 @@ class TbxTemplateUploadView(APIView):
             upload_template_data_to_db(file_id, job_id)
             tbx_file = user_tbx_write(job_id, project_id)
             print("WRITTEN TBX FILE--->", tbx_file)
+            print("TYPE--->", type(tbx_file))
             fl = open(tbx_file, 'rb')
             file_obj1 = DJFile(fl) #,name=os.path.basename(tbx_file))
-            serializer2 = TbxUploadSerializer(data={'tbx_file':file_obj1,'project':project_id,'job':job_id})
-            if serializer2.is_valid(raise_exception=True):
+            serializer2 = TbxFileSerializer(data={'tbx_file':file_obj1,'project':project_id,'job':job_id})
+            print("TBX serializer---->", serializer2.is_valid())
+            if serializer2.is_valid():
                 serializer2.save()
+            else:
+                return Response(serializer2.errors)
             fl.close()
             os.remove(os.path.abspath(tbx_file))
             return Response({'msg':"Template File uploaded and TBX created & uploaded","data":serializer.data})#,"tbx_file":tbx_file})
