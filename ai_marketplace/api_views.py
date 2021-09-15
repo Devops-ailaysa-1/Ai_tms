@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,Thread,BidPropasalDetails,AvailableJobs)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
@@ -29,6 +30,7 @@ from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
 from ai_auth.models import PersonalInformation, AiUser, OfficialInformation, Professionalidentity
 from ai_auth.serializers import OfficialInformationSerializer,PersonalInformationSerializer
 import json,requests
+from django.db.models import Count
 from django.http import JsonResponse
 from django.core.mail import EmailMessage
 from django.template import Context
@@ -41,8 +43,8 @@ from django.views.decorators.csrf import csrf_exempt
 @api_view(['POST',])
 def get_vendor_list(request):
     job_id=request.POST.get('job_id')
-    content_type = request.POST.get('content_type')
-    subject_field =request.POST.get('subject_field')
+    content_type = request.POST.get("content_type")
+    subject_field = request.POST.get("subject_field")
     source_lang_id=request.POST.get('source_lang_id')
     target_lang_id=request.POST.get('target_lang_id')
     status = 200
@@ -53,16 +55,29 @@ def get_vendor_list(request):
     queryset= queryset_all= AiUser.objects.select_related('personal_info','vendor_info','vendor_lang_pair','professional_identity_info')\
                   .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None)).all()
     if content_type:
-        queryset = queryset.filter(Q(vendor_contentype = content_type)).all()
+        content_type_list=json.loads(content_type)
+        queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=content_type_list)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
     if subject_field:
-        queryset = queryset.filter(Q(vendor_subject = subject_field)).all()
+        subject_field_list=json.loads(subject_field)
+        queryset = queryset.filter(Q(vendor_subject__subject_id__in = subject_field_list)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
     if content_type and subject_field:
-        queryset = queryset.filter(Q(vendor_contentype = content_type) & Q(vendor_subject = subject_field)).all()
+        queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=content_type_list)|Q(vendor_subject__subject_id__in=subject_field_list)).annotate(num_of_match=Count(('vendor_contentype__contenttype_id'),distinct=True)+Count(('vendor_subject__subject_id'),distinct=True)).order_by('-num_of_match').distinct()
     if not queryset.values():
         queryset = queryset_all
         status = 422
         Match=0
-    vendor_list = queryset.values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info')
+        num_of_pages=0
+    paginator = Paginator(queryset, 30)
+    num_of_pages = paginator.num_pages
+    page = request.POST.get('page')
+    try:
+        dataqs = paginator.page(page)
+    except PageNotAnInteger:
+        dataqs = paginator.page(1)
+    except EmptyPage:
+        dataqs = paginator.page(paginator.num_pages)
+
+    vendor_list = dataqs.object_list.values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info')
     out=[]
     for i in vendor_list:
         pk= i.get('professional_identity_info')
@@ -71,7 +86,7 @@ def get_vendor_list(request):
         final_dict={"Name":i.get('fullname'),"Country":i.get('personal_info__country'),"LegalCatagories":i.get('vendor_info__type_id'),"Vendor_id":i.get('uid'),
                     "currency":i.get('vendor_info__currency'),"mtpe_rate":i.get("vendor_lang_pair__service__mtpe_rate"),"Avatar":url}
         out.append(final_dict)
-    return Response({'out':out,'Match':Match},status = status)
+    return Response({'out':out,'pages':num_of_pages,'Match':Match},status = status)
 
 
 @permission_classes((IsAuthenticated, ))
