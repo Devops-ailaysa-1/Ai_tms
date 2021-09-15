@@ -253,3 +253,10 @@ class SubscriptionPricingPageSerializer(serializers.Serializer):
     subscription_feature=SubscriptionFeatureSerializer(many=True,read_only=True)
     # class Meta:
     #     fields = ('subscriptionplan','prices','features')
+
+
+
+class IndianStatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAppPreference
+        fields  = "__all__"

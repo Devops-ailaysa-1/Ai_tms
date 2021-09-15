@@ -1,3 +1,4 @@
+from ai_auth.serializers import IndianStatesSerializer
 import ai_staff
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -644,5 +645,5 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
 class IndianStatesView(viewsets.ViewSet):
     def list(self,request):
         queryset = IndianStates.objects.all()
-        serializer = CreditsAddonSerializer(queryset,many=True)
+        serializer = IndianStatesSerializer(queryset,many=True)
         return Response(serializer.data)
