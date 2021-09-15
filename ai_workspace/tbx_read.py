@@ -2,8 +2,8 @@ from django.http import JsonResponse
 from rest_framework.response import Response
 import requests
 import regex as re
-from .models import Tbxfiles,Project,Job, TbxFile, TemplateTermsModel
-from ai_workspace_okapi.models import Document, TbxTemplateFiles
+from .models import Tbxfiles,Project,Job, TbxFile, TemplateTermsModel, TbxTemplateFiles
+from ai_workspace_okapi.models import Document
 from ai_staff.models import Languages,LanguagesLocale
 from django.shortcuts import get_object_or_404
 import xml.etree.ElementTree as ET

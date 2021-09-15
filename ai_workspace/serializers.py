@@ -456,11 +456,11 @@ class TbxTemplateSerializer(serializers.ModelSerializer):
         model = TbxTemplateFiles
         fields = ("id", "project", "job", "tbx_template_file")
     
-	@staticmethod
-	def prepare_data(data):
+    @staticmethod
+    def prepare_data(data):
         if not (("project_id" in data) and ("job_id" in data) and ("tbx_template_file" in data)):
             raise serializers.ValidationError("Required fields missing!!!")
-		project = data["project_id"]		
-		job = data.get("job_id")
-		tbx_template_file = data.get("tbx_template_file")
-		return {"project": project, "job": job, "tbx_template_file": tbx_template_file}	
+        project = data["project_id"]		
+        job = data.get("job_id")
+        tbx_template_file = data.get("tbx_template_file")
+        return {"project": project, "job": job, "tbx_template_file": tbx_template_file}	
