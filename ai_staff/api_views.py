@@ -11,7 +11,7 @@ from django.http import Http404,JsonResponse
 from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
-                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons)
+                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,IndianStates)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -61,7 +61,7 @@ class ServiceTypesView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CountriesView(APIView):
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
@@ -638,3 +638,11 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
         pack = get_object_or_404(queryset, pk=pk)
         pack.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class IndianStatesView(viewsets.ViewSet):
+    def list(self,request):
+        queryset = IndianStates.objects.all()
+        serializer = CreditsAddonSerializer(queryset,many=True)
+        return Response(serializer.data)
