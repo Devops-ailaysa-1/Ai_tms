@@ -1,8 +1,9 @@
 from django.http import JsonResponse
+from rest_framework.response import Response
 import requests
 import regex as re
-from .models import Tbxfiles,Project,Job, TbxFile
-from ai_workspace_okapi.models import Document
+from .models import Tbxfiles,Project,Job, TbxFile, TemplateTermsModel
+from ai_workspace_okapi.models import Document, TbxTemplateFiles
 from ai_staff.models import Languages,LanguagesLocale
 from django.shortcuts import get_object_or_404
 import xml.etree.ElementTree as ET
@@ -14,6 +15,7 @@ nltk.download('punkt')
 from nltk import word_tokenize
 from nltk.util import ngrams
 from django.db.models import F, Q
+from tablib import Dataset
 
 
 def remove_namespace(doc, namespace):
@@ -124,3 +126,64 @@ def TermSearch(request):
     [output.append(x) for x in out1 if x not in output]
     print("@@@@@@@@@@@@@",output)
     return JsonResponse({"out":output},safe = False,json_dumps_params={'ensure_ascii':False})
+
+def upload_template_data_to_db(file_id, job_id):
+    template_file =TbxTemplateFiles.objects.get(id=file_id).tbx_template_file
+    dataset = Dataset()
+    imported_data = dataset.load(template_file.read(), format='xlsx')
+    for data in imported_data:
+        value = TemplateTermsModel(
+                # data[0],          #Blank column
+                data[1],            #Autoincremented in the model
+                sl_term = data[2].strip(),    #SL term column
+                tl_term = data[3].strip()    #TL term column
+        )
+        value.job_id = job_id
+        value.file_id = file_id
+        value.save()
+
+def user_tbx_write(job_id,project_id):
+    try:
+        project = Project.objects.get(id = project_id)
+        sl_lang = Job.objects.select_related('locale').filter(id=job_id).values('source_language__locale__locale_code')
+        ta_lang = Job.objects.select_related('locale').filter(id=job_id).values('target_language__locale__locale_code')
+        sl_code = sl_lang[0].get('source_language__locale__locale_code')
+        tl_code = ta_lang[0].get('target_language__locale__locale_code')
+        objs = TemplateTermsModel.objects.filter(job_id = job_id)
+        # objs = UserTerms.objects.filter(user_id=id)
+        root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
+                                nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
+        tbxHeader = ET.Element("tbxHeader")
+        root.append (tbxHeader)
+        Filedesc=ET.SubElement(tbxHeader,"fileDesc")
+        TitleStmt=ET.SubElement(Filedesc,"titleStmt")
+        Title=ET.SubElement(TitleStmt,"title")
+        Title.text=Project.objects.get(id=project_id).project_name
+        SourceDesc=ET.SubElement(Filedesc,"sourceDesc")
+        Info=ET.SubElement(SourceDesc,"p")
+        Info.text="TBX created from " + Project.objects.get(id=project_id).project_name
+        EncodingDesc=ET.SubElement(tbxHeader,"encodingDesc")
+        EncodingInfo=ET.SubElement(EncodingDesc,"p",type="XCSURI")
+        EncodingInfo.text="TBXXCSV02.xcs"
+        Text= ET.Element("text")
+        root.append(Text)
+        Body=ET.SubElement(Text,"body")
+        for i,obj in enumerate(objs):
+            i=i+1
+            conceptEntry    = ET.SubElement(Body,"conceptEntry",id="c"+str(i))
+            langSec         = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code})
+            Termsec         = ET.SubElement(langSec,"termSec")
+            Term = ET.SubElement(Termsec,"term")
+            Term.text = obj.sl_term.strip()
+            langSec1 = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": tl_code})
+            termSec1 = ET.SubElement(langSec1,"termSec")
+            Term1 = ET.SubElement(termSec1,"term")
+            Term1.text = obj.tl_term.strip()
+        out_file=Project.objects.get(id=project_id).project_name+"j"+str(Job.objects.filter(project=1).count()+ 1)
+        out_fileName=out_file+"_out.tbx"
+        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True, pretty_print=True)
+        return out_fileName
+
+    except Exception as e:
+        print("Exception1-->", e)
+        return Response(data={"Message":"TBX file Not ready"})
