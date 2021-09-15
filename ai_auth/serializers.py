@@ -260,8 +260,3 @@ class BillingInfoSerializer(serializers.Serializer):
     class Meta:
         fields = ('id','fullname','tax','address')
 
-
-class IndianStatesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserAppPreference
-        fields  = "__all__"

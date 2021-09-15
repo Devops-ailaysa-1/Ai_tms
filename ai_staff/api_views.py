@@ -1,4 +1,3 @@
-from ai_auth.serializers import IndianStatesSerializer
 import ai_staff
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -18,7 +17,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          CountriesSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
-                         SubscriptionFeatureSerializer,CreditsAddonSerializer)
+                         SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer)
 
 
 class ServiceTypesView(APIView):
