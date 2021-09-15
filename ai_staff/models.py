@@ -304,8 +304,8 @@ class CreditAddonPrice(ParanoidModel):
 
 class IndianStates(ParanoidModel):
     state_name = models.CharField(max_length=200,null=True,blank=True)
-    state_code = models.IntegerField(blank=True, null=True)
-    tin_num=models.CharField(max_length=200,null=True,blank=True)
+    state_code=models.CharField(max_length=200,null=True,blank=True)
+    tin_num= models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_active=models.BooleanField(default=True)

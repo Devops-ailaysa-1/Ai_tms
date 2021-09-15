@@ -5,7 +5,7 @@ from ai_vendor.models import (VendorBankDetails, VendorCATsoftware,
                               VendorContentTypes, VendorLanguagePair,
                               VendorMembership, VendorMtpeEngines,
                               VendorServiceInfo, VendorServiceTypes,
-                              VendorsInfo, VendorSubjectFields, TranslationSamples, MtpeSamples,IndianStates)
+                              VendorsInfo, VendorSubjectFields, TranslationSamples, MtpeSamples)
 from django.http import JsonResponse
 from django.shortcuts import render
 from tablib import Dataset
@@ -13,7 +13,7 @@ from tablib import Dataset
 from .forms import UploadFileForm
 from .models import (AiUserType, Billingunits, ContentTypes, Countries,
                      Currencies, Languages, LanguagesLocale, MtpeEngines,
-                     ServiceTypes, SubjectFields, SupportFiles, Timezones)
+                     ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates)
 
 
 def Bulk_insert(request):
