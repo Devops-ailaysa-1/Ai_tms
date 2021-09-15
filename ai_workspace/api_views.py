@@ -727,8 +727,8 @@ class TbxTemplateUploadView(APIView):
             return Response(serializer.errors)
 
 @api_view(['GET',])
-def tbx_download(request,file_id):
-    tbx_asset = TbxFile.objects.get(id=file_id).tbx_file
+def tbx_download(request,tbx_file_id):
+    tbx_asset = TbxFile.objects.get(id=tbx_file_id).tbx_file
     print("TBX asset file path-->", tbx_asset.path)
     fl_path = tbx_asset.path
     filename = os.path.basename(fl_path)
