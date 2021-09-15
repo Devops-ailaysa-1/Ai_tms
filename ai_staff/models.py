@@ -303,8 +303,9 @@ class CreditAddonPrice(ParanoidModel):
     stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
 
 class IndianStates(ParanoidModel):
-    name = models.CharField(max_length=200,null=True,blank=True)
-    code = models.IntegerField(blank=True, null=True)
+    state_name = models.CharField(max_length=200,null=True,blank=True)
+    state_code = models.IntegerField(blank=True, null=True)
+    tin_num=models.CharField(max_length=200,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_active=models.BooleanField(default=True)

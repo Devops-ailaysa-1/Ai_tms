@@ -5,7 +5,7 @@ from ai_vendor.models import (VendorBankDetails, VendorCATsoftware,
                               VendorContentTypes, VendorLanguagePair,
                               VendorMembership, VendorMtpeEngines,
                               VendorServiceInfo, VendorServiceTypes,
-                              VendorsInfo, VendorSubjectFields, TranslationSamples, MtpeSamples)
+                              VendorsInfo, VendorSubjectFields, TranslationSamples, MtpeSamples,IndianStates)
 from django.http import JsonResponse
 from django.shortcuts import render
 from tablib import Dataset
@@ -30,10 +30,10 @@ def Bulk_insert(request):
             # print(imported_data)
             for data in imported_data:
 
-                value = MtpeSamples(
-			lang_pair_id =data[1],
-            sample_file = data[2],
-            #unit_type_id=data[2],
+                value = IndianStates(
+			state_name =data[1],
+            tin_num = data[2],
+            state_code=data[3],
             #unit_rate=data[3],
             #hourly_rate=data[4],
             #minute_rate = data[5],		
@@ -47,9 +47,9 @@ def Bulk_insert(request):
             #native_lang_id = data[10],
             #year_of_experience = data[11],
             #rating = data[12],
-            created_at = data[3],              
-            updated_at = data[4],
-            deleted_at = data[5],
+            # created_at = data[3],              
+            # updated_at = data[4],
+            # deleted_at = data[5],
             # updated_at = data[13],            
             # updated_at = data[14].strip(),            
             # locale_code = data[2].strip(),
