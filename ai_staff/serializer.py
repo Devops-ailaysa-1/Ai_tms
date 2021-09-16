@@ -1,6 +1,6 @@
 from django.db.models.fields import IntegerField
 from rest_framework import serializers
-from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries,
+from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, IndianStates,
                     Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies,
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
@@ -253,3 +253,11 @@ class SubscriptionPricingPageSerializer(serializers.Serializer):
     subscription_feature=SubscriptionFeatureSerializer(many=True,read_only=True)
     # class Meta:
     #     fields = ('subscriptionplan','prices','features')
+
+
+
+class IndianStatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IndianStates
+        fields = ("id","state_name",'state_code','tin_num','created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')

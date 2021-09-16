@@ -1,7 +1,7 @@
-from ai_auth.serializers import (OfficialInformationSerializer, PersonalInformationSerializer,
-                                ProfessionalidentitySerializer,UserAttributeSerializer,
+from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, OfficialInformationSerializer, PersonalInformationSerializer,
+                                ProfessionalidentitySerializer, UserAppPreferenceSerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
-                                TempPricingPreferenceSerializer)
+                                TempPricingPreferenceSerializer, UserTaxInfoSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -9,9 +9,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import (AiUser, OfficialInformation, PersonalInformation, Professionalidentity,
+from ai_auth.models import (AiUser, BillingAddress, OfficialInformation, PersonalInformation, Professionalidentity, UserAppPreference,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference,CreditPack)
+                            TempPricingPreference,CreditPack, UserTaxInfo)
 from django.http import Http404,JsonResponse
 from rest_framework import status
 from django.db import IntegrityError
@@ -568,7 +568,7 @@ def buy_subscription(request):
 
 
 class UserSubscriptionCreateView(viewsets.ViewSet):
-
+    permission_classes = [IsAuthenticated]
     def create(self,request):
         user=request.user
         is_active = is_active_subscription(user=request.user)
@@ -597,3 +597,91 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
             return Response({'msg':'User already exist in stripe'}, status=400)
             
 
+class BillingInfoView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self, request):
+        queryset = AiUser.objects.get(id=request.user.id)
+        serializer = BillingInfoSerializer(queryset)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = BillingInfoSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class BillingAddressView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self, request):
+        queryset = BillingAddress.objects.get(user=request.user)
+        serializer = BillingAddressSerializer(queryset)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = BillingAddressSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save(user=self.request.user)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def update(self, request, pk=None):
+        queryset = BillingAddress.objects.get(user=request.user)
+        #queryset = BillingAddress.objects.get(id=pk)
+        serializer = BillingAddressSerializer(queryset,data={**request.POST.dict()},partial=True)
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserTaxInfoView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self, request):
+        queryset = UserTaxInfo.objects.get(user=request.user)
+        serializer = UserTaxInfoSerializer(queryset)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = UserTaxInfoSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save(user=self.request.user)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    
+    def update(self, request, pk=None):
+        queryset = UserTaxInfo.objects.get(id=pk)
+        #queryset = BillingAddress.objects.get(id=pk)
+        serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class UserAppPreferenceView(viewsets.ViewSet):
+
+    def list(self, request):
+        try:
+            queryset = UserAppPreference.objects.get(email=request.user.email)
+        except UserAppPreference.DoesNotExist:
+            return Response(status=204)
+
+        serializer = UserAppPreferenceSerializer(queryset)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = UserAppPreferenceSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

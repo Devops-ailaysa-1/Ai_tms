@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeEngines, Spellcheckers, 
                     SpellcheckerLanguages,SubscriptionPricing,Currencies,SubscriptionPricingPrices,SubscriptionFeatures,
-                    CreditsAddons,CreditAddonPrice)
+                    CreditsAddons,CreditAddonPrice,IndianStates)
 # Register your models here.
 
 admin.site.register(AiUserType)
@@ -17,3 +17,4 @@ admin.site.register(SubscriptionPricingPrices)
 admin.site.register(SubscriptionFeatures)
 admin.site.register(CreditsAddons)
 admin.site.register(CreditAddonPrice)
+admin.site.register(IndianStates)

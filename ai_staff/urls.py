@@ -11,6 +11,7 @@ router = routers.DefaultRouter()
 router.register(r'subscriptionpricing', api_views.SubscriptionPricingCreateView,basename='subscription-pricing')
 router.register(r'subscriptionfeatures', api_views.SubscriptionFeaturesCreateView,basename='subscription-features')
 router.register(r'addon_details',api_views.CreditsAddonsCreateView,basename='addon-details')
+router.register(r'indian-states',api_views.IndianStatesView,basename='indian-states')
 urlpatterns = router.urls
 
 urlpatterns += [

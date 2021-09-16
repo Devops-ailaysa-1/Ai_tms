@@ -16,7 +16,14 @@ from djstripe.models import Customer,Subscription,PaymentIntent,Invoice,Price,Pr
 from ai_auth import Aiwebhooks 
 # from djstripe import webhooks
 
-
+class BaseAddress(models.Model):
+    line1 = models.CharField(max_length=200,blank=True, null=True)
+    line2 = models.CharField(max_length=200,blank=True, null=True)
+    state = models.CharField(max_length=200,blank=True, null=True)
+    city = models.CharField(max_length=200,blank=True, null=True)
+    zipcode= models.IntegerField(default=0,blank=True, null=True)
+    class Meta:
+        abstract=True
 class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
     email = models.EmailField(_('email address'), unique=True)
@@ -65,9 +72,10 @@ class UserAttribute(models.Model):
 
 pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
-class PersonalInformation(models.Model):
+class PersonalInformation(BaseAddress):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='personal_info')
-    address = models.CharField(max_length=255, blank=True, null=True)
+    #address = models.CharField(max_length=255, blank=True, null=True)
+    
     country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
     timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
     phonenumber=models.CharField(max_length=255, blank=True, null=True)
@@ -81,10 +89,10 @@ class PersonalInformation(models.Model):
         db_table = 'personal_info'
 
 
-class OfficialInformation(models.Model):
+class OfficialInformation(BaseAddress):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='official_info')
     company_name = models.CharField(max_length=255, blank=True, null=True)
-    address = models.CharField(max_length=255, blank=True, null=True)
+   # address = models.CharField(max_length=255, blank=True, null=True)
     designation = models.CharField(max_length=255, blank=True, null=True)
     industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
     country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
@@ -107,6 +115,7 @@ class Professionalidentity(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name="professional_identity_info")
     avatar=models.ImageField(upload_to=user_directory_path,blank=True,null=True)
     logo=models.ImageField(upload_to=user_directory_path,blank=True,null=True)
+    header=models.ImageField(upload_to=user_directory_path,blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     class Meta:
@@ -160,3 +169,15 @@ class CreditPack(models.Model):
     type = models.CharField(max_length=200)
     credits = models.IntegerField(default=0)
 
+class BillingAddress(BaseAddress):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='billing_addr_user')
+    country= models.ForeignKey(Countries,related_name='billing_country', on_delete=models.CASCADE,blank=True, null=True)
+
+class UserTaxInfo(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
+    country = models.ForeignKey(Countries,on_delete=models.CASCADE) 
+    tax_id = models.CharField(max_length=250)
+
+class UserAppPreference(models.Model):
+    email = models.EmailField()
+    country = models.ForeignKey(Countries,related_name='app_pre_country',on_delete=models.CASCADE) 

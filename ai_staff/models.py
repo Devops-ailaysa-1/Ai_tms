@@ -1,3 +1,4 @@
+from django import db
 from django.utils import timezone
 from django.db import models
 from django.db.models.query import QuerySet
@@ -301,9 +302,41 @@ class CreditAddonPrice(ParanoidModel):
     currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
     stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
 
+class IndianStates(ParanoidModel):
+    state_name = models.CharField(max_length=200,null=True,blank=True)
+    state_code=models.CharField(max_length=200,null=True,blank=True)
+    tin_num= models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    is_active=models.BooleanField(default=True)
+    class Meta:
+        db_table = 'indian_states'
 
-# class Ai_Features(ParanoidModel):
-#     subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE)
-#     features = models.ForeignKey(SubscriptionFeatures,on_delete = models.CASCADE)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class AilaysaFinancialValues(ParanoidModel):
+    state = models.ForeignKey(IndianStates,on_delete = models.CASCADE,related_name='ai_fin_values_states')
+    finance_address = models.CharField(max_length=200,null=True,blank=True)
+    finance_email = models.EmailField()
+    finance_phone =models.IntegerField()
+    finance_gst = models.CharField(max_length=200,null=True,blank=True)
+    finance_pan =models.CharField(max_length=200,null=True,blank=True)
+    langscape_account_name = models.CharField(max_length=200,null=True,blank=True)
+    langscape_account_number = models.CharField(max_length=200,null=True,blank=True)
+    bank_branch = models.CharField(max_length=200,null=True,blank=True)
+    ifsc_code = models.CharField(max_length=200,null=True,blank=True)
+    swift_code = models.CharField(max_length=200,null=True,blank=True)
+    paypal_id = models.CharField(max_length=200,null=True,blank=True)
+    payoneer_id = models.CharField(max_length=200,null=True,blank=True)
+    bank_name = models.CharField(max_length=200,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    class Meta:
+        db_table = 'ailaysa_finance_values'
+
+class IndianGSTSACList(ParanoidModel):
+    sac_code = models.CharField(max_length=200,null=True,blank=True)
+    business_category = models.CharField(max_length=200,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    class Meta:
+        db_table = 'indian_gst_sac_list'

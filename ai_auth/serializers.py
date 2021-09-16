@@ -4,9 +4,9 @@ from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from ai_auth.models import (AiUser,UserAttribute,PersonalInformation,OfficialInformation,
+from ai_auth.models import (AiUser, BillingAddress, UserAppPreference,UserAttribute,PersonalInformation,OfficialInformation,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference)
+                            TempPricingPreference, UserTaxInfo)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer
@@ -128,7 +128,7 @@ class PersonalInformationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PersonalInformation
-        fields = ( 'address','country','timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
+        fields = ( 'line1','line2','state','city','zipcode','country','timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
         read_only_fields = ('created_at','updated_at')
 
     def create(self, validated_data):
@@ -143,7 +143,7 @@ class OfficialInformationSerializer(serializers.ModelSerializer):
     industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all(),many=False,required=False)
     class Meta:
         model = OfficialInformation
-        fields = ( 'id','company_name','address','designation','industry','country','timezone','website','linkedin','billing_email','created_at','updated_at')
+        fields = ( 'id','company_name','designation','industry','line1','line2','state','city','zipcode','country','timezone','website','linkedin','billing_email','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
 
     def create(self, validated_data):
@@ -157,7 +157,7 @@ class ProfessionalidentitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Professionalidentity
-        fields = ( 'id','avatar','logo')
+        fields = ( 'id','avatar','logo','header')
         #read_only_fields = ('id','created_at','updated_at')
 
 
@@ -231,3 +231,32 @@ class TempPricingPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = TempPricingPreference
         fields = "__all__"
+
+class BillingAddressSerializer(serializers.ModelSerializer):
+   # user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+    class Meta:
+        model = BillingAddress
+        #fields  = "__all__"
+        #read_only_fields = ('id','created_at','updated_at')
+        exclude = ['user']
+
+class UserTaxInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserTaxInfo
+        #fields  = "__all__"
+        exclude = ['user']
+
+class UserAppPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAppPreference
+        fields  = "__all__"
+        
+class BillingInfoSerializer(serializers.Serializer):
+    #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
+    id = serializers.IntegerField()
+    fullname = serializers.CharField(max_length=200)
+    address = BillingAddressSerializer(read_only=True,source='billing_addr_user')
+    tax = UserTaxInfoSerializer(many=True,read_only=True,source='tax_info_user')
+    class Meta:
+        fields = ('id','fullname','tax','address')
+
