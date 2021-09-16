@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
                     AvailableJobs,BidChat,BidPropasalDetails,BidProposalServicesRates,
                     Thread,ProjectPostContentType,ProjectPostSubjectField)
-from ai_auth.models import AiUser,OfficialInformation
+from ai_auth.models import AiUser,OfficialInformation,PersonalInformation
 from django.db.models import Q
 from ai_workspace.models import Project
 from drf_writable_nested import WritableNestedModelSerializer
@@ -81,7 +81,7 @@ class ThreadSerializer(serializers.ModelSerializer):
 
 
 class VendorServiceSerializer(serializers.ModelSerializer):
-    service = VendorServiceInfoSerializer(many=True,read_only=True,required=False)
+    service = VendorServiceInfoSerializer(many=True,read_only=True)
     class Meta:
         model = VendorLanguagePair
         fields = ('service',)
@@ -109,7 +109,7 @@ class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
     bidjob_details = BidPropasalDetailSerializer(many=True,read_only=True)
     class Meta:
         model=ProjectPostJobDetails
-        fields=('src_lang','tar_lang','bid_count','bidjob_details',)
+        fields=('id','src_lang','tar_lang','bid_count','bidjob_details',)
 
     def get_bid_count(self, obj):
         return obj.bidjob_details.count()
@@ -127,6 +127,8 @@ class ProjectPostSubjectFieldSerializer(serializers.ModelSerializer):
 
 
 class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
+    bid_count = serializers.SerializerMethodField()
+    # bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
     projectpost_jobs=ProjectPostJobDetailSerializer(many=True,required=False)
     projectpost_content_type=ProjectPostContentTypeSerializer(many=True,required=False)
     projectpost_subject=ProjectPostSubjectFieldSerializer(many=True,required=False)
@@ -137,7 +139,12 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
         fields=('id','project_id','customer_id','service','steps','proj_name','proj_desc',
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
-                 'unit','milestone','projectpost_jobs','projectpost_content_type','projectpost_subject',)
+                 'unit','milestone','bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',)
+    def get_bid_count(self, obj):
+        bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
+        print(obj.bidproject_details.count())
+        return obj.bidproject_details.count()
+
 
     def run_validation(self, data):
         if data.get('contents') and isinstance( data.get("contents"), str):
@@ -155,3 +162,22 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                                             for target_language in target_languages]
         print("data---->",data["projectpost_jobs"])
         return super().run_validation(data)
+
+class PersonalInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonalInformation
+        fields = ('country',)
+
+class VendorInfoListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VendorsInfo
+        fields = ('type',)
+
+
+class GetVendorListSerializer(serializers.ModelSerializer):
+    personal_info = PersonalInfoSerializer(read_only=True)
+    vendor_info = VendorInfoListSerializer(read_only=True)
+    professional_identity_info = ProfessionalidentitySerializer(read_only=True)
+    class Meta:
+        model = AiUser
+        fields = ('uid','fullname','personal_info','vendor_info','professional_identity_info',)

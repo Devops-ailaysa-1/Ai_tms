@@ -116,7 +116,7 @@ class Thread(models.Model):
     second_person = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True, blank=True,
                                      related_name='thread_second_person')
     bid = models.ForeignKey(BidPropasalDetails,on_delete=models.CASCADE, null=True, blank=True,related_name='thread_bid')
-    updated = models.DateTimeField(auto_now=True)
+    updated = models.DateTimeField(auto_now=True,null=True,blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     objects = ThreadManager()

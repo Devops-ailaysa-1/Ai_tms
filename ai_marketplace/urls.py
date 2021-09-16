@@ -10,7 +10,7 @@ router = DefaultRouter()
 urlpatterns = router.urls
 
 urlpatterns+= [
-    path('get_vendor_list/',api_views.get_vendor_list,name="get-vendor-list"),
+    # path('get_vendor_list/',api_views.get_vendor_list,name="get-vendor-list"),
     path('get_vendor_detail/',api_views.get_vendor_detail,name="get-vendor-detail"),
     path('hire_vendor/',api_views.assign_available_vendor_to_customer,name="assign-vendor"),
     path('post_job_primary_details/',api_views.post_job_primary_details,name="post-job-primary-details"),
@@ -27,4 +27,5 @@ urlpatterns+= [
     path('getting_bidpost_primary_details/',api_views.post_bid_primary_details),
     path('project_posts_list/',api_views.user_projectpost_list),
     path('availablejobs/',api_views.get_available_job_details),
+    path('get_vendor_list/',api_views.GetVendorListView.as_view(),name='get-vendor-list'),
     ]

@@ -1,3 +1,5 @@
+from rest_framework import filters,generics
+from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import render
 from ai_auth.models import AiUser
 from django.conf import settings
@@ -16,7 +18,7 @@ from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectFie
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,Thread,BidPropasalDetails,AvailableJobs)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
                         AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
-                        ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer)
+                        ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,GetVendorListSerializer)
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines)
@@ -28,7 +30,7 @@ from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits)
 from ai_auth.models import PersonalInformation, AiUser, OfficialInformation, Professionalidentity
-from ai_auth.serializers import OfficialInformationSerializer,PersonalInformationSerializer
+from ai_auth.serializers import OfficialInformationSerializer,PersonalInformationSerializer,AiUserDetailsSerializer
 import json,requests
 from django.db.models import Count
 from django.http import JsonResponse
@@ -37,57 +39,10 @@ from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
+from django_filters import Filter, FilterSet,RangeFilter
+import django_filters
+from django_filters.filters import OrderingFilter
 # Create your views here.
-
-@permission_classes((IsAuthenticated, ))
-@api_view(['POST',])
-def get_vendor_list(request):
-    job_id=request.POST.get('job_id')
-    content_type = request.POST.get("content_type")
-    subject_field = request.POST.get("subject_field")
-    source_lang_id=request.POST.get('source_lang_id')
-    target_lang_id=request.POST.get('target_lang_id')
-    status = 200
-    Match=1
-    if job_id:
-        source_lang_id=Job.objects.get(id=job_id).source_language_id
-        target_lang_id=Job.objects.get(id=job_id).target_language_id
-    queryset= queryset_all= AiUser.objects.select_related('personal_info','vendor_info','vendor_lang_pair','professional_identity_info')\
-                  .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None)).all()
-    if content_type:
-        content_type_list=json.loads(content_type)
-        queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=content_type_list)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
-    if subject_field:
-        subject_field_list=json.loads(subject_field)
-        queryset = queryset.filter(Q(vendor_subject__subject_id__in = subject_field_list)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
-    if content_type and subject_field:
-        queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=content_type_list)|Q(vendor_subject__subject_id__in=subject_field_list)).annotate(num_of_match=Count(('vendor_contentype__contenttype_id'),distinct=True)+Count(('vendor_subject__subject_id'),distinct=True)).order_by('-num_of_match').distinct()
-    if not queryset.values():
-        queryset = queryset_all
-        status = 422
-        Match=0
-        num_of_pages=0
-    paginator = Paginator(queryset, 30)
-    num_of_pages = paginator.num_pages
-    page = request.POST.get('page')
-    try:
-        dataqs = paginator.page(page)
-    except PageNotAnInteger:
-        dataqs = paginator.page(1)
-    except EmptyPage:
-        dataqs = paginator.page(paginator.num_pages)
-
-    vendor_list = dataqs.object_list.values('fullname', 'personal_info__country','vendor_info__type_id','uid','vendor_info__currency','vendor_lang_pair__service__mtpe_rate','professional_identity_info')
-    out=[]
-    for i in vendor_list:
-        pk= i.get('professional_identity_info')
-        image = Professionalidentity.objects.get(id = pk).avatar if pk else None
-        url = image.url if image else None
-        final_dict={"Name":i.get('fullname'),"Country":i.get('personal_info__country'),"LegalCatagories":i.get('vendor_info__type_id'),"Vendor_id":i.get('uid'),
-                    "currency":i.get('vendor_info__currency'),"mtpe_rate":i.get("vendor_lang_pair__service__mtpe_rate"),"Avatar":url}
-        out.append(final_dict)
-    return Response({'out':out,'pages':num_of_pages,'Match':Match},status = status)
-
 
 @permission_classes((IsAuthenticated, ))
 @api_view(['POST',])
@@ -336,3 +291,55 @@ def get_available_job_details(request):
         res={"job_id":i.get('projectpostjob'),"job_desc":i.get('projectpost__proj_desc'),"deadline":i.get('projectpost__proj_deadline')}
         out.append(res)
     return JsonResponse({'out':out},safe=False)
+
+
+
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
+
+class VendorFilter(django_filters.FilterSet):
+    content_type = NumberInFilter(field_name="vendor_contentype__contenttype_id",lookup_expr='in')
+    subject = NumberInFilter(field_name='vendor_subject__subject_id',lookup_expr='in')
+    year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
+    fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
+    class Meta:
+        model = AiUser
+        fields = ('fullname', 'email', 'content_type','subject','year_of_experience',)
+
+
+class GetVendorListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = GetVendorListSerializer
+    filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
+    filterset_class = VendorFilter
+    ordering_fields = ('vendor_contentype__contenttype_id', 'vendor_subject__subject_id')
+    page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+
+
+    def get_queryset(self):
+        job_id= self.request.query_params.get('job_id')
+        min_price =self.request.query_params.get('min_price')
+        max_price =self.request.query_params.get('max_price')
+        count_unit = self.request.query_params.get('count_unit')
+        source_lang_id=self.request.query_params.get('source_lang_id')
+        target_lang_id=self.request.query_params.get('target_lang_id')
+        contenttype_id = self.request.query_params.get('content_type')
+        subject=self.request.query_params.get('subject')
+        if job_id:
+            source_lang_id=Job.objects.get(id=job_id).source_language_id
+            target_lang_id=Job.objects.get(id=job_id).target_language_id
+        queryset = queryset_all = AiUser.objects.select_related('personal_info','vendor_info','professional_identity_info')\
+                    .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None)).distinct()
+        if max_price and min_price and count_unit:
+            ids=[]
+            for i in queryset.values('vendor_lang_pair__id'):
+                ids.append(i.get('vendor_lang_pair__id'))
+            queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
+        if  contenttype_id:
+            contentlist = contenttype_id.split(',')
+            queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=contentlist)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
+        if subject:
+            subjectlist=subject.split(',')
+            queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
+        return queryset
