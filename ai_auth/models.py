@@ -24,10 +24,12 @@ class BaseAddress(models.Model):
     zipcode= models.IntegerField(default=0,blank=True, null=True)
     class Meta:
         abstract=True
+
 class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
     email = models.EmailField(_('email address'), unique=True)
     fullname=models.CharField(max_length=191)
+    country= models.ForeignKey(Countries,related_name='aiuser_country', on_delete=models.CASCADE,blank=True, null=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -72,11 +74,11 @@ class UserAttribute(models.Model):
 
 pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
-class PersonalInformation(BaseAddress):
+class PersonalInformation(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='personal_info')
     #address = models.CharField(max_length=255, blank=True, null=True)
     
-    country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
+    #country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
     timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
     phonenumber=models.CharField(max_length=255, blank=True, null=True)
     mobilenumber=models.CharField(max_length=255, blank=True, null=True)
@@ -89,13 +91,13 @@ class PersonalInformation(BaseAddress):
         db_table = 'personal_info'
 
 
-class OfficialInformation(BaseAddress):
+class OfficialInformation(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='official_info')
     company_name = models.CharField(max_length=255, blank=True, null=True)
    # address = models.CharField(max_length=255, blank=True, null=True)
     designation = models.CharField(max_length=255, blank=True, null=True)
     industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
-    country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
+    #country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
     timezone=models.ForeignKey(Timezones,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
     website=models.CharField(max_length=255, blank=True, null=True)
     linkedin=models.CharField(max_length=255, blank=True, null=True)
@@ -171,6 +173,7 @@ class CreditPack(models.Model):
 
 class BillingAddress(BaseAddress):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='billing_addr_user')
+    name = models.CharField(max_length=255, blank=True, null=True)
     country= models.ForeignKey(Countries,related_name='billing_country', on_delete=models.CASCADE,blank=True, null=True)
 
 class UserTaxInfo(models.Model):
@@ -181,3 +184,17 @@ class UserTaxInfo(models.Model):
 class UserAppPreference(models.Model):
     email = models.EmailField()
     country = models.ForeignKey(Countries,related_name='app_pre_country',on_delete=models.CASCADE) 
+
+class AiUserProfile(models.Model):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='ai_profile_info')
+    organisation_name = models.CharField(max_length=255, blank=True, null=True)
+    timezone=models.ForeignKey(Timezones,related_name='profile_info', on_delete=models.CASCADE,blank=True, null=True)
+    phonenumber=models.CharField(max_length=255, blank=True, null=True)
+    linkedin=models.CharField(max_length=255, blank=True, null=True)
+    website=models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    # created_at = models.CharField(max_length=200,blank=True, null=True)
+    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+    class Meta:
+        db_table = 'ai_user_profile'

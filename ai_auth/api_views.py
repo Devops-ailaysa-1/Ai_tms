@@ -617,7 +617,10 @@ class BillingInfoView(viewsets.ViewSet):
 class BillingAddressView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def list(self, request):
-        queryset = BillingAddress.objects.get(user=request.user)
+        try:
+            queryset = BillingAddress.objects.get(user=request.user)
+        except BillingAddress.DoesNotExist:
+            return Response(status=204)
         serializer = BillingAddressSerializer(queryset)
         return Response(serializer.data)
 
@@ -625,12 +628,18 @@ class BillingAddressView(viewsets.ViewSet):
         serializer = BillingAddressSerializer(data={**request.POST.dict()})
         print(serializer.is_valid())
         if serializer.is_valid():
-            serializer.save(user=self.request.user)
+            try:
+                serializer.save(user=self.request.user)
+            except IntegrityError:
+                return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def update(self, request, pk=None):
-        queryset = BillingAddress.objects.get(user=request.user)
+        try:
+            queryset = BillingAddress.objects.get(user=request.user)
+        except BillingAddress.DoesNotExist:
+            return Response(status=204)
         #queryset = BillingAddress.objects.get(id=pk)
         serializer = BillingAddressSerializer(queryset,data={**request.POST.dict()},partial=True)
         print(serializer.is_valid())
@@ -642,8 +651,10 @@ class BillingAddressView(viewsets.ViewSet):
 class UserTaxInfoView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def list(self, request):
-        queryset = UserTaxInfo.objects.get(user=request.user)
-        serializer = UserTaxInfoSerializer(queryset)
+        queryset = UserTaxInfo.objects.filter(user=request.user)
+        if not queryset.exists():
+            return Response(status=204)
+        serializer = UserTaxInfoSerializer(queryset,many=True)
         return Response(serializer.data)
 
     def create(self,request):
@@ -656,7 +667,10 @@ class UserTaxInfoView(viewsets.ViewSet):
 
     
     def update(self, request, pk=None):
-        queryset = UserTaxInfo.objects.get(id=pk)
+        try:
+            queryset = UserTaxInfo.objects.get(id=pk)
+        except UserTaxInfo.DoesNotExist:
+            return Response(status=204)
         #queryset = BillingAddress.objects.get(id=pk)
         serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
         print(serializer.is_valid())
