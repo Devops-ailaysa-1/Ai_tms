@@ -9,9 +9,9 @@ from ai_auth.models import Professionalidentity
 @api_view(['GET',])
 def messages_page(request):
     user=request.user
-    threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
+    bid_id =request.GET.get('bid_id')
+    threads = Thread.objects.by_user(user=request.user).filter(bid_id=bid_id).prefetch_related('chatmessage_thread').order_by('timestamp')
     context = {
         'Threads': threads
-
     }
     return render(request, 'messages.html', context)
