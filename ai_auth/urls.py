@@ -19,7 +19,7 @@ router.register(r'usersubscribe',api_views.UserSubscriptionCreateView,basename="
 router.register(r'billing-info',api_views.BillingInfoView,basename="billing-info")
 router.register(r'tax-info',api_views.UserTaxInfoView,basename="tax-info")
 router.register(r'billing-address',api_views.BillingAddressView,basename="billing-address")
-router.register(r'user-app-preference',api_views.UserAppPreferenceView,basename="user-app-preference")
+router.register(r'aiuser-profile',api_views.AiUserProfileView,basename="aiuser-profile")
 
 
 urlpatterns = router.urls

@@ -1,7 +1,7 @@
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, OfficialInformationSerializer, PersonalInformationSerializer,
-                                ProfessionalidentitySerializer, UserAppPreferenceSerializer,UserAttributeSerializer,
+                                ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
-                                TempPricingPreferenceSerializer, UserTaxInfoSerializer)
+                                TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -9,9 +9,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import (AiUser, BillingAddress, OfficialInformation, PersonalInformation, Professionalidentity, UserAppPreference,
+from ai_auth.models import (AiUser, BillingAddress, OfficialInformation, PersonalInformation, Professionalidentity,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference,CreditPack, UserTaxInfo)
+                            TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile)
 from django.http import Http404,JsonResponse
 from rest_framework import status
 from django.db import IntegrityError
@@ -201,7 +201,7 @@ class ProfessionalidentityView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    # 
+    #
     # def put(self,request,pk):
     #     user = Professionalidentity.objects.get(user_id=pk)
     #     # user = get_object_or_404(queryset, pk=pk)
@@ -369,12 +369,12 @@ def get_addon_details(request):
     return JsonResponse({"out":out},safe=False)
 
 def create_checkout_session(user,price,customer=None):
-    
+
     domain_url = settings.CLIENT_BASE_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
+        api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
 
@@ -401,7 +401,7 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate=None,quantity=1):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
+        api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
 
@@ -429,7 +429,7 @@ def create_invoice_one_time(price_id,Aicustomer,tax_rate,quantity=1):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
+        api_key = settings.STRIPE_TEST_SECRET_KEY
     print(tax_rate)
     stripe.api_key = api_key
     data1=stripe.InvoiceItem.create(
@@ -471,7 +471,7 @@ def generate_portal_session(customer):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
+        api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
     session = stripe.billing_portal.Session.create(
@@ -511,7 +511,7 @@ def buy_addon(request):
     #tax_rate=['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi']
     tax_rate=None
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
-    
+
     #request.POST.get('')
     return Response({'msg':'Invoice Generated ','invoice_url':response.url}, status=307)
 
@@ -560,7 +560,7 @@ def buy_subscription(request):
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)
-        session=create_checkout_session(user=user,price=price,customer=customer)   
+        session=create_checkout_session(user=user,price=price,customer=customer)
         return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
     else:
         return Response({'msg':'No Stripe Account Found'}, status=404)
@@ -593,9 +593,9 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 free=CreditPack.objects.get(name='Free')
                 price = Price.objects.filter(product_id=free.product).last()
                 customer.subscribe(price=price)
-                #session = create_checkout_session(user=user,price_id="price_1JQWziSAQeQ4W2LNzgKUjrIS")  
+                #session = create_checkout_session(user=user,price_id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
             return Response({'msg':'User already exist in stripe'}, status=400)
-            
+
 
 class BillingInfoView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -634,7 +634,7 @@ class BillingAddressView(viewsets.ViewSet):
                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     def update(self, request, pk=None):
         try:
             queryset = BillingAddress.objects.get(user=request.user)
@@ -665,7 +665,7 @@ class UserTaxInfoView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    
+
     def update(self, request, pk=None):
         try:
             queryset = UserTaxInfo.objects.get(id=pk)
@@ -681,21 +681,32 @@ class UserTaxInfoView(viewsets.ViewSet):
 
 
 
-class UserAppPreferenceView(viewsets.ViewSet):
-
+class AiUserProfileView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self, request):
         try:
-            queryset = UserAppPreference.objects.get(email=request.user.email)
-        except UserAppPreference.DoesNotExist:
+            queryset = AiUserProfile.objects.get(user_id=request.user.id)
+        except AiUserProfile.DoesNotExist:
             return Response(status=204)
 
-        serializer = UserAppPreferenceSerializer(queryset)
+        serializer = AiUserProfileSerializer(queryset)
         return Response(serializer.data)
 
     def create(self,request):
-        serializer = UserAppPreferenceSerializer(data={**request.POST.dict()})
+        serializer = AiUserProfileSerializer(data={**request.POST.dict()},context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk=None):
+        try:
+            queryset = AiUserProfile.objects.get(id=pk)
+        except UserTaxInfo.DoesNotExist:
+            return Response(status=204)
+        serializer =AiUserProfileSerializer(queryset,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"Msg":"Profile Updated"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
