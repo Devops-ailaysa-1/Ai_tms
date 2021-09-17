@@ -83,6 +83,9 @@ class AvailableJobs(models.Model):
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}/{3}'.format(instance.vendor.uid,"BidDetails","Samplefiles",filename)
 
+class BidStatus(models.Model):
+    status = models.CharField(max_length=191,blank=True, null=True)
+
 
 class BidPropasalDetails(models.Model):
     projectpostjob =  models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="bidjob_details")
@@ -91,7 +94,10 @@ class BidPropasalDetails(models.Model):
     proposed_completion_date = models.DateTimeField(blank=True,null=True)
     description = models.TextField(blank=True,null=True)
     sample_file_upload = models.FileField(upload_to=user_directory_path, blank=True, null=True)
+    status = models.ForeignKey(BidStatus,on_delete=models.CASCADE,related_name="bid_status",blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    class Meta:
+        unique_together = ['projectpostjob', 'vendor']
 
 class BidProposalServicesRates(models.Model):
     bid =  models.ForeignKey(BidPropasalDetails, on_delete=models.CASCADE,related_name="service_and_rates")
