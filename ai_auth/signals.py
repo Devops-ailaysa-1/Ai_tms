@@ -2,6 +2,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.contrib.auth import settings
 from django.utils.text import slugify
+from ai_auth.api_views import billing_address
 import os
 import random
 
@@ -18,3 +19,8 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
     if instance.allocated_dir == None:
         instance.allocated_dir = os.path.join(settings.MEDIA_ROOT, str(instance.user.uid))
         instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)   
+
+
+# def updated_billingaddress(sender, instance, **kwargs):
+#     res=billing_address(address=instance)
+#     print("updated customer address")

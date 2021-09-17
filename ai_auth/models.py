@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones,SupportType
 from django.db.models.signals import post_save, pre_save
-from .signals import create_allocated_dirs
+from .signals import create_allocated_dirs,updated_billingaddress
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
@@ -15,15 +15,6 @@ from ai_auth.utils import get_unique_uid
 from djstripe.models import Customer,Subscription,PaymentIntent,Invoice,Price,Product,Charge
 from ai_auth import Aiwebhooks 
 # from djstripe import webhooks
-
-class BaseAddress(models.Model):
-    line1 = models.CharField(max_length=200,blank=True, null=True)
-    line2 = models.CharField(max_length=200,blank=True, null=True)
-    state = models.CharField(max_length=200,blank=True, null=True)
-    city = models.CharField(max_length=200,blank=True, null=True)
-    zipcode= models.IntegerField(default=0,blank=True, null=True)
-    class Meta:
-        abstract=True
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -47,6 +38,15 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
+
+class BaseAddress(models.Model):
+    line1 = models.CharField(max_length=200,blank=True, null=True)
+    line2 = models.CharField(max_length=200,blank=True, null=True)
+    state = models.CharField(max_length=200,blank=True, null=True)
+    city = models.CharField(max_length=200,blank=True, null=True)
+    zipcode= models.IntegerField(default=0,blank=True, null=True)
+    class Meta:
+        abstract=True
 
 
 class UserAttribute(models.Model):
@@ -175,6 +175,8 @@ class BillingAddress(BaseAddress):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='billing_addr_user')
     name = models.CharField(max_length=255, blank=True, null=True)
     country= models.ForeignKey(Countries,related_name='billing_country', on_delete=models.CASCADE,blank=True, null=True)
+
+#post_save.connect(updated_billingaddress, sender=BillingAddress)
 
 class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
