@@ -22,7 +22,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiUser
         fields = ['email', 'fullname',
-        'password',]
+        'password','country']
         extra_kwargs = {
             'password': {
                 'write_only':True
@@ -33,6 +33,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = AiUser(
             email=self.validated_data['email'],
             fullname=self.validated_data['fullname'],
+            country = self.validated_data['country']
+
         )
 
         password = self.validated_data['password']
@@ -123,12 +125,12 @@ class UserAttributeSerializer(serializers.ModelSerializer):
         return data
 
 class PersonalInformationSerializer(serializers.ModelSerializer):
-    country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
+   # country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
     timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
 
     class Meta:
         model = PersonalInformation
-        fields = ( 'line1','line2','state','city','zipcode','country','timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
+        fields = ( 'timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
         read_only_fields = ('created_at','updated_at')
 
     def create(self, validated_data):
@@ -138,12 +140,12 @@ class PersonalInformationSerializer(serializers.ModelSerializer):
         return  personal_info
 
 class OfficialInformationSerializer(serializers.ModelSerializer):
-    country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
+    #country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
     timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
     industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all(),many=False,required=False)
     class Meta:
         model = OfficialInformation
-        fields = ( 'id','company_name','designation','industry','line1','line2','state','city','zipcode','country','timezone','website','linkedin','billing_email','created_at','updated_at')
+        fields = ( 'id','company_name','designation','industry','timezone','website','linkedin','billing_email','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
 
     def create(self, validated_data):
@@ -204,6 +206,8 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
             extra_fields.append('last_name')
         if hasattr(UserModel, 'fullname'):
             extra_fields.append('fullname')
+        if hasattr(UserModel, 'country'):
+            extra_fields.append('country')
         model = UserModel
         fields = ('pk', *extra_fields)
         read_only_fields = ('email',)
@@ -254,9 +258,9 @@ class UserAppPreferenceSerializer(serializers.ModelSerializer):
 class BillingInfoSerializer(serializers.Serializer):
     #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
     id = serializers.IntegerField()
-    fullname = serializers.CharField(max_length=200)
+    #fullname = serializers.CharField(max_length=200)
     address = BillingAddressSerializer(read_only=True,source='billing_addr_user')
     tax = UserTaxInfoSerializer(many=True,read_only=True,source='tax_info_user')
     class Meta:
-        fields = ('id','fullname','tax','address')
+        fields = ('id','tax','address')
 

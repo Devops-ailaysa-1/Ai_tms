@@ -44,7 +44,7 @@ urlpatterns += [
      path('get_price_details/',api_views.get_pricing_details),
      path('get-addons-details/',api_views.get_addons_details),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
-    path('insert',views.Bulk_insert)
+    #path('insert',views.Bulk_insert)
 
 
 ]
