@@ -180,7 +180,8 @@ def user_tbx_write(job_id,project_id):
             Term1 = ET.SubElement(termSec1,"term")
             Term1.text = obj.tl_term.strip()
         out_fileName = TemplateTermsModel.objects.filter(job_id=job_id).last().file.filename[:-5] + ".tbx"
-        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True, pretty_print=True)
+        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
+        print("out_fileName type--->", type(out_fileName))
         return out_fileName
 
     except Exception as e:
