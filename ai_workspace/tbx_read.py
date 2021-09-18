@@ -161,7 +161,7 @@ def user_tbx_write(job_id,project_id):
         Title.text=Project.objects.get(id=project_id).project_name
         SourceDesc=ET.SubElement(Filedesc,"sourceDesc")
         Info=ET.SubElement(SourceDesc,"p")
-        Info.text="TBX created from " + Project.objects.get(id=project_id).project_name
+        Info.text="TBX created from " + TemplateTermsModel.objects.filter(job_id=job_id).last().file.filename
         EncodingDesc=ET.SubElement(tbxHeader,"encodingDesc")
         EncodingInfo=ET.SubElement(EncodingDesc,"p",type="XCSURI")
         EncodingInfo.text="TBXXCSV02.xcs"
@@ -179,10 +179,8 @@ def user_tbx_write(job_id,project_id):
             termSec1 = ET.SubElement(langSec1,"termSec")
             Term1 = ET.SubElement(termSec1,"term")
             Term1.text = obj.tl_term.strip()
-        out_file=Project.objects.get(id=project_id).project_name+"j"+str(Job.objects.filter(project=1).count()+ 1)
-        out_fileName=out_file+"_out.tbx"
-        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
-        print("type in write--->", type(out_fileName))
+        out_fileName = TemplateTermsModel.objects.filter(job_id=job_id).last().file.filename[:-5] + ".tbx"
+        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True, pretty_print=True)
         return out_fileName
 
     except Exception as e:

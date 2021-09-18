@@ -710,8 +710,6 @@ class TbxTemplateUploadView(APIView):
             job_id = prep_data["job"]
             upload_template_data_to_db(file_id, job_id)
             tbx_file = user_tbx_write(job_id, project_id)
-            print("WRITTEN TBX FILE--->", tbx_file)
-            print("TYPE--->", type(tbx_file))
             fl = open(tbx_file, 'rb')
             file_obj1 = DJFile(fl) #,name=os.path.basename(tbx_file))
             serializer2 = TbxFileSerializer(data={'tbx_file':file_obj1,'project':project_id,'job':job_id})
@@ -729,7 +727,6 @@ class TbxTemplateUploadView(APIView):
 @api_view(['GET',])
 def tbx_download(request,tbx_file_id):
     tbx_asset = TbxFile.objects.get(id=tbx_file_id).tbx_file
-    print("TBX asset file path-->", tbx_asset.path)
     fl_path = tbx_asset.path
     filename = os.path.basename(fl_path)
     print(os.path.dirname(fl_path))
