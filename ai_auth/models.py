@@ -51,7 +51,7 @@ class BaseAddress(models.Model):
 
 class UserAttribute(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True)
-    user_type=models.ForeignKey(AiUserType, related_name='user_attribute', on_delete=models.CASCADE)
+    user_type=models.ForeignKey(AiUserType, related_name='user_attribute', on_delete=models.CASCADE,default=1)
     allocated_dir = models.URLField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
@@ -176,7 +176,7 @@ class BillingAddress(BaseAddress):
     name = models.CharField(max_length=255, blank=True, null=True)
     country= models.ForeignKey(Countries,related_name='billing_country', on_delete=models.CASCADE,blank=True, null=True)
 
-#post_save.connect(updated_billingaddress, sender=BillingAddress)
+post_save.connect(updated_billingaddress, sender=BillingAddress)
 
 class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')

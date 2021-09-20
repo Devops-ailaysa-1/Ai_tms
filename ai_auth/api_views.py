@@ -481,31 +481,31 @@ def generate_portal_session(customer):
     return session
 
 
-# def billing_address(address):
-#     if settings.STRIPE_LIVE_MODE == True :
-#         api_key = settings.STRIPE_LIVE_SECRET_KEY
-#     else:
-#         api_key = settings.STRIPE_TEST_SECRET_KEY    
-#     try:
-#         customer = Customer.objects.get(subscriber=address.user)
-#     except Customer.DoesNotExist:
-#         customer = Customer.objects.get(subscriber=address.user)
+def update_billing_address(address):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+    try:
+        customer = Customer.objects.get(subscriber=address.user)
+    except Customer.DoesNotExist:
+        customer = Customer.objects.get(subscriber=address.user)
 
-#     stripe.api_key = api_key
-#     response =stripe.Customer.modify(
-#     customer.id,
-#     name = address.name if address.name is not None else address.user.fullname, 
-#     address={
-#     "city": address.city,
-#     "line1": address.line1,
-#     "line2": address.line2,
-#     "state": address.state,
-#     "country": address.country.sortname,
-#     "postal_code": address.zipcode
-#     },
+    stripe.api_key = api_key
+    response =stripe.Customer.modify(
+    customer.id,
+    name = address.name if address.name is not None else address.user.fullname, 
+    address={
+    "city": address.city,
+    "line1": address.line1,
+    "line2": address.line2,
+    "state": address.state,
+    "country": address.country.sortname,
+    "postal_code": address.zipcode
+    },
 
-#     )
-#     return response
+    )
+    return response
 
 # @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
@@ -592,6 +592,11 @@ def buy_subscription(request):
         return Response({'msg':'No Stripe Account Found'}, status=404)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_currency(request):
+    curr=Customer.objects.get(subscriber=request.user).currency
+    return Response({'currency':curr})
 
 class UserSubscriptionCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
