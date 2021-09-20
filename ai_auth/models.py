@@ -5,7 +5,7 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones,SupportType
+from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType
 from django.db.models.signals import post_save, pre_save
 from .signals import create_allocated_dirs,updated_billingaddress
 from django.contrib.auth.models import AbstractUser
@@ -180,7 +180,7 @@ post_save.connect(updated_billingaddress, sender=BillingAddress)
 
 class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
-    country = models.ForeignKey(Countries,on_delete=models.CASCADE)
+    stripe_tax_id = models.ForeignKey(StripeTaxId,on_delete=models.CASCADE,related_name='stripe_taxid_user')
     tax_id = models.CharField(max_length=250)
 
 # class UserAppPreference(models.Model):

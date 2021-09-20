@@ -32,6 +32,7 @@ def Bulk_insert(request):
                 try:
                     countr=Countries.objects.get(name=data[0])
                 except Countries.DoesNotExist:
+                    print("country==>",data[0])
                     countr=None
 
 
