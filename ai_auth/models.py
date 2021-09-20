@@ -7,8 +7,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType
 from django.db.models.signals import post_save, pre_save
-from .signals import create_allocated_dirs,updated_billingaddress
-from django.contrib.auth.models import AbstractUser
+from .signals import create_allocated_dirs,updated_billingaddress,updated_user_taxid
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -182,6 +181,8 @@ class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
     stripe_tax_id = models.ForeignKey(StripeTaxId,on_delete=models.CASCADE,related_name='stripe_taxid_user')
     tax_id = models.CharField(max_length=250)
+
+pre_save.connect(updated_user_taxid, sender=UserTaxInfo)
 
 # class UserAppPreference(models.Model):
 #     email = models.EmailField()

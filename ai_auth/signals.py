@@ -56,3 +56,30 @@ def update_billing_address(address):
 
     )
     return response
+
+
+def updated_user_taxid(sender, instance, *args, **kwargs):
+    res=update_user_tax_id(taxid=instance)
+    print("updated customer tax id")
+
+
+def update_user_tax_id(taxid):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+    try:
+        customer = Customer.objects.get(subscriber=taxid.user)
+    except Customer.DoesNotExist:
+        customer = Customer.objects.get(subscriber=taxid.user)
+
+    stripe.api_key = api_key
+    try:
+        response= stripe.Customer.create_tax_id(
+        customer.id,
+        type=taxid.stripe_tax_id.tax_code,
+        value=taxid.tax_id,
+        )
+    except stripe.error.InvalidRequestError as e:
+        raise ValueError('Invalid Tax Id')
+    return response
