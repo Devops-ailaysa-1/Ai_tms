@@ -13,7 +13,7 @@ from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
 from djstripe.models import Customer,Subscription,PaymentIntent,Invoice,Price,Product,Charge
-from ai_auth import Aiwebhooks 
+from ai_auth import Aiwebhooks
 # from djstripe import webhooks
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
@@ -77,7 +77,7 @@ pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 class PersonalInformation(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='personal_info')
     #address = models.CharField(max_length=255, blank=True, null=True)
-    
+
     #country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
     timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
     phonenumber=models.CharField(max_length=255, blank=True, null=True)
@@ -160,7 +160,7 @@ class UserCredits(models.Model):
     expiry = models.DateTimeField(blank=True, null=True)
     invoice = models.CharField(max_length=200,blank=True, null=True)
     paymentintent = models.CharField(max_length=200,blank=True, null=True)
-    
+
 
 
 class CreditPack(models.Model):
@@ -180,12 +180,12 @@ post_save.connect(updated_billingaddress, sender=BillingAddress)
 
 class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
-    country = models.ForeignKey(Countries,on_delete=models.CASCADE) 
+    country = models.ForeignKey(Countries,on_delete=models.CASCADE)
     tax_id = models.CharField(max_length=250)
 
-class UserAppPreference(models.Model):
-    email = models.EmailField()
-    country = models.ForeignKey(Countries,related_name='app_pre_country',on_delete=models.CASCADE) 
+# class UserAppPreference(models.Model):
+#     email = models.EmailField()
+#     country = models.ForeignKey(Countries,related_name='app_pre_country',on_delete=models.CASCADE)
 
 class AiUserProfile(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='ai_profile_info')

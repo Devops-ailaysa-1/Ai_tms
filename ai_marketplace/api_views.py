@@ -15,10 +15,13 @@ from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
-from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,Thread,BidPropasalDetails,AvailableJobs)
+from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
+                    Thread,BidPropasalDetails,AvailableJobs)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
                         AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
-                        ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,GetVendorListSerializer)
+                        ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
+                        GetVendorListSerializer,
+                        )
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines)
@@ -173,38 +176,43 @@ def shortlisted_vendor_list_send_email(request):
     bid_deadline=ProjectboardDetails.objects.get(id=projectpost_id).bid_deadline
     for i in jobs:
         res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id)).all()
-        for j in res:
-            out=[]
-            print(i.id)
-            print(j.user_id)
-            serializer=AvailableJobSerializer(data={'projectpostjob':i.id,'vendor':j.user_id,'projectpost':projectpost_id})
-            if serializer.is_valid():
-                serializer.save()
-            print(serializer.errors)
-            src_lang=Languages.objects.get(id=i.src_lang_id).language
-            tar_lang=Languages.objects.get(id=i.tar_lang_id).language
-            user_id=VendorLanguagePair.objects.get(id=j.id).user_id
-            out=[{"lang":[{"src_lang":src_lang,"tar_lang":tar_lang}],"user_id":user_id}]
-            if user_id not in userslist:
-                new.extend(out)
-                userslist.append(user_id)
-            else:
-                for k in new:
-                    if k.get("user_id")==user_id:
-                        k.get("lang").extend(out[0].get("lang"))
-    for data in new:
-        user_id=data.get('user_id')
-        user=AiUser.objects.get(id=user_id).fullname
-        email=AiUser.objects.get(id=user_id).email
-        print(email)
-        template = 'email.html'
-        context = {'user': user, 'lang':data.get('lang'),'proj_deadline':project_deadline,'bid_deadline':bid_deadline}
-        content = render_to_string(template, context)
-        subject='Regarding Available jobs'
-        msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,])
-        msg.content_subtype = 'html'
-        msg.send()
-    return JsonResponse({"message":"Email Successfully Sent"},safe=False)
+        if res:
+            for j in res:
+                out=[]
+                print(i.id)
+                print(j.user_id)
+                serializer=AvailableJobSerializer(data={'projectpostjob':i.id,'vendor':j.user_id,'projectpost':projectpost_id})
+                if serializer.is_valid():
+                    serializer.save()
+                print(serializer.errors)
+                src_lang=Languages.objects.get(id=i.src_lang_id).language
+                tar_lang=Languages.objects.get(id=i.tar_lang_id).language
+                user_id=VendorLanguagePair.objects.get(id=j.id).user_id
+                out=[{"lang":[{"src_lang":src_lang,"tar_lang":tar_lang}],"user_id":user_id}]
+                if user_id not in userslist:
+                    new.extend(out)
+                    userslist.append(user_id)
+                else:
+                    for k in new:
+                        if k.get("user_id")==user_id:
+                            k.get("lang").extend(out[0].get("lang"))
+    print(new)
+    if new:
+        for data in new:
+            user_id=data.get('user_id')
+            user=AiUser.objects.get(id=user_id).fullname
+            email=AiUser.objects.get(id=user_id).email
+            print(email)
+            template = 'email.html'
+            context = {'user': user, 'lang':data.get('lang'),'proj_deadline':project_deadline,'bid_deadline':bid_deadline}
+            content = render_to_string(template, context)
+            subject='Regarding Available jobs'
+            msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,])
+            msg.content_subtype = 'html'
+            msg.send()
+        return JsonResponse({"message":"Email Successfully Sent"},safe=False)
+    else:
+        return JsonResponse({"message":"No Match Found"},safe=False)
 
 
 
@@ -233,7 +241,7 @@ class BidPostInfoCreateView(APIView):
     def get(self, request,id):
         try:
             print(request.user.id)
-            queryset = BidPropasalDetails.objects.filter(projectpostjob_id=id)
+            queryset = BidPropasalDetails.objects.filter(Q(projectpostjob_id=id)&Q(vendor_id=request.user.id)).all()
             serializer = BidPropasalDetailSerializer(queryset,many=True)
             return Response(serializer.data)
         except:
@@ -243,16 +251,18 @@ class BidPostInfoCreateView(APIView):
         print(id)
         projectpost_id = ProjectPostJobDetails.objects.get(id=id).projectpost_id
         sample_file=request.FILES.get('sample_file')
-        print({**request.POST.dict(),'projectpostjob_id':id,'vendor_id':request.user.id,'sample_file_upload':sample_file})
-        serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpostjob_id':id,'vendor_id':request.user.id,'projectpost_id':projectpost_id,'sample_file_upload':sample_file})#,context={'request':request})
+        # print({**request.POST.dict(),'projectpostjob_id':id,'vendor_id':request.user.id,'sample_file_upload':sample_file})
+        serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpostjob_id':id,'vendor_id':request.user.id,'projectpost_id':projectpost_id,'sample_file_upload':sample_file,'status':1})#,context={'request':request})
         print(serializer.is_valid())
-        print(serializer.errors)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors)
+
 
     def put(self,request,bid_proposal_id):
-        Bid_info = BidPropasalDetails.objects.get(id=bid_proposal_id)
+        queryset = BidPropasalDetails.objects.filter(vendor_id=request.user.id).all()
+        Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
         sample_file=request.FILES.get('sample_file')
         if sample_file:
             serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)

@@ -50,7 +50,7 @@ class BidPropasalDetailSerializer(WritableNestedModelSerializer,serializers.Mode
     vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
     class Meta:
         model = BidPropasalDetails
-        fields = ('id','projectpostjob_id','projectpost_id','vendor_id','service_and_rates','proposed_completion_date','description','sample_file_upload',)
+        fields = ('id','projectpostjob_id','projectpost_id','vendor_id','service_and_rates','proposed_completion_date','description','sample_file_upload','status',)
 
     def run_validation(self, data):
         if data.get("service_and_rates") and isinstance( data.get("service_and_rates"), str):

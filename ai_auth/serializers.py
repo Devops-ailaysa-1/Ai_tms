@@ -4,9 +4,9 @@ from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from ai_auth.models import (AiUser, BillingAddress, UserAppPreference,UserAttribute,PersonalInformation,OfficialInformation,
+from ai_auth.models import (AiUser, BillingAddress,UserAttribute,PersonalInformation,OfficialInformation,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference, UserTaxInfo)
+                            TempPricingPreference, UserTaxInfo,AiUserProfile)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer
@@ -250,11 +250,11 @@ class UserTaxInfoSerializer(serializers.ModelSerializer):
         #fields  = "__all__"
         exclude = ['user']
 
-class UserAppPreferenceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserAppPreference
-        fields  = "__all__"
-        
+# class UserAppPreferenceSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = UserAppPreference
+#         fields  = "__all__"
+
 class BillingInfoSerializer(serializers.Serializer):
     #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
     id = serializers.IntegerField()
@@ -264,3 +264,38 @@ class BillingInfoSerializer(serializers.Serializer):
     class Meta:
         fields = ('id','tax','address')
 
+
+
+class AiUserProfileSerializer(serializers.ModelSerializer):
+    fullname = serializers.CharField(required=False)
+    class Meta:
+        model = AiUserProfile
+        fields = ('id','user_id','fullname','organisation_name','timezone','phonenumber','linkedin','website',)
+
+    def create(self, validated_data):
+        print("Before--->",validated_data)
+        request = self.context['request']
+        if "fullname" in validated_data:
+            fullname = validated_data.pop('fullname')
+            print(fullname)
+            user = AiUser.objects.get(id=request.user.id)
+            user.fullname = fullname
+            user.save()
+        print("After--->",validated_data)
+        profile = AiUserProfile.objects.create(**validated_data,user=request.user)
+        return profile
+
+    def update(self, instance, validated_data):
+        print(validated_data)
+        if "fullname" in validated_data:
+            res = super().update(instance, validated_data)
+            user = AiUser.objects.get(id=instance.user.id)
+            user.fullname = instance.fullname
+            user.save()
+        return super().update(instance, validated_data)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        print(instance)
+        data["fullname"] = instance.user.fullname
+        return data
