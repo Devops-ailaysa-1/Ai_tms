@@ -340,3 +340,13 @@ class IndianGSTSACList(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     class Meta:
         db_table = 'indian_gst_sac_list'
+
+
+class StripeTaxId(ParanoidModel):
+    country = models.ForeignKey(Countries,on_delete=models.CASCADE,blank=True,null=True,related_name='stripe_tax_coun')
+    tax_code = models.CharField(max_length=200,null=True,blank=True)
+    name = models.CharField(max_length=200,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    class Meta:
+        db_table = 'stripe_tax_id'
