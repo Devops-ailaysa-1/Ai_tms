@@ -37,12 +37,13 @@ ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.2
 CORS_ORIGIN_ALLOW_ALL= False
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000","http://143.244.140.71", "http://workspacestaging.ailaysa.com", "http://workspace.ailaysa.com",  "http://localhost:4200"
+    "http://localhost:3000","http://143.244.140.71", "http://workspacestaging.ailaysa.com", "http://workspace.ailaysa.com", 
+     "http://workspacetest.ailaysa.com",
 ]
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000", "http://157.245.99.128:3000",  "http://workspacestaging.ailaysa.com", 
-    "http://143.244.140.71", "http://workspace.ailaysa.com", "http://localhost:4200"
+    "http://localhost:3000", "http://157.245.99.128:3000",  "http://workspacestaging.ailaysa.com",
+    "http://143.244.140.71", "http://workspace.ailaysa.com", "http://workspacetest.ailaysa.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -244,9 +245,9 @@ REST_AUTH_SERIALIZERS = {
     'USER_DETAILS_SERIALIZER': 'ai_auth.serializers.AiUserDetailsSerializer',
 }
 
-PASSWORD_RESET_URL = "reset/"
+PASSWORD_RESET_URL = "reset-password/"
 
-CLIENT_BASE_URL = "http://localhost:3000/"
+CLIENT_BASE_URL = "http://143.244.140.71/"
 
 SIGNUP_CONFIRM_URL ="http://143.244.140.71/confirm-email"
 
