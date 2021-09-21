@@ -387,7 +387,7 @@ def create_checkout_session(user,price,customer=None):
         api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
-
+    #if user.billing
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
@@ -400,8 +400,11 @@ def create_checkout_session(user,price,customer=None):
             {
                 'price': price,
                 'quantity': 1,
+                'tax_rates':None,
             }
-        ]
+        ],
+        # tax_id_collection={'enabled':True},
+        # customer_update={'name':'auto','address':'auto'}
     )
     return checkout_session
 
@@ -623,6 +626,8 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except TempPricingPreference.DoesNotExist:
                 free=CreditPack.objects.get(name='Free')
+                if user.country.id == None:
+                    return Response({'msg':'No Data Found in User Country'}, status=204)
                 if user.country.id == 101 :
                     currency = 'inr'
                 else:
@@ -725,7 +730,11 @@ class UserTaxInfoView(viewsets.ViewSet):
         serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
         print(serializer.is_valid())
         if serializer.is_valid():
-            serializer.save()
+            try:
+                serializer.save()
+            except ValueError as e:
+                print(e)
+                return Response({'Error':str(e)}, status=422)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
