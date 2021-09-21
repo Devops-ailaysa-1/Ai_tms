@@ -273,7 +273,6 @@ class AiUserProfileSerializer(serializers.ModelSerializer):
         fields = ('id','user_id','fullname','organisation_name','timezone','phonenumber','linkedin','website',)
 
     def create(self, validated_data):
-        print("Before--->",validated_data)
         request = self.context['request']
         if "fullname" in validated_data:
             fullname = validated_data.pop('fullname')
@@ -281,7 +280,6 @@ class AiUserProfileSerializer(serializers.ModelSerializer):
             user = AiUser.objects.get(id=request.user.id)
             user.fullname = fullname
             user.save()
-        print("After--->",validated_data)
         profile = AiUserProfile.objects.create(**validated_data,user=request.user)
         return profile
 

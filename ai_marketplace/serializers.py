@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from .models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
                     AvailableJobs,BidChat,BidPropasalDetails,BidProposalServicesRates,
-                    Thread,ProjectPostContentType,ProjectPostSubjectField)
-from ai_auth.models import AiUser,OfficialInformation,PersonalInformation
+                    Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage)
+from ai_auth.models import AiUser,OfficialInformation,PersonalInformation,AiUserProfile
 from django.db.models import Q
 from ai_workspace.models import Project
 from drf_writable_nested import WritableNestedModelSerializer
@@ -93,12 +93,12 @@ class VendorSerializer(serializers.ModelSerializer):
 
 class OfficialInfoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = OfficialInformation
-        fields = ('company_name',)
+        model = AiUserProfile
+        fields = ('organisation_name',)
 
 class GetVendorDetailSerializer(serializers.Serializer):
     fullname = serializers.CharField(read_only=True)
-    official_info = OfficialInfoSerializer(read_only=True,required=False)
+    ai_profile_info = OfficialInfoSerializer(read_only=True,required=False)
     vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
     vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True)
     vendor_info = VendorSerializer(read_only=True)
@@ -163,10 +163,10 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
         print("data---->",data["projectpost_jobs"])
         return super().run_validation(data)
 
-class PersonalInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PersonalInformation
-        fields = ('country',)
+# class PersonalInfoSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = AiUserProfile
+#         fields = ('country',)
 
 class VendorInfoListSerializer(serializers.ModelSerializer):
     class Meta:
@@ -175,9 +175,25 @@ class VendorInfoListSerializer(serializers.ModelSerializer):
 
 
 class GetVendorListSerializer(serializers.ModelSerializer):
-    personal_info = PersonalInfoSerializer(read_only=True)
+    # ai_profile_info = PersonalInfoSerializer(read_only=True)
     vendor_info = VendorInfoListSerializer(read_only=True)
     professional_identity_info = ProfessionalidentitySerializer(read_only=True)
     class Meta:
         model = AiUser
-        fields = ('uid','fullname','personal_info','vendor_info','professional_identity_info',)
+        fields = ('uid','fullname','country','vendor_info','professional_identity_info',)
+
+
+class ChatMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatMessage
+        fields = '__all__'
+
+    def run_validation(self,data):
+        if self.context['request']._request.method == 'POST':
+            user = int(data.get('user'))
+            thread = data.get('thread')
+            user1 = Thread.objects.get(id = thread).first_person_id
+            user2 = Thread.objects.get(id = thread).second_person_id
+            if (user!=user1) and (user!=user2):
+                raise serializers.ValidationError({"msg":'This person is not in this thread,he cannot send messages here'})
+        return super().run_validation(data)
