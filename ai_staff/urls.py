@@ -8,7 +8,11 @@ from rest_framework.authtoken.views import obtain_auth_token
 from django.urls import path,include
 
 router = routers.DefaultRouter()
-#router.register(r'servicetypes', api_views.ServiceTypesView,basename='servicetypes')
+router.register(r'subscriptionpricing', api_views.SubscriptionPricingCreateView,basename='subscription-pricing')
+router.register(r'subscriptionfeatures', api_views.SubscriptionFeaturesCreateView,basename='subscription-features')
+router.register(r'addon_details',api_views.CreditsAddonsCreateView,basename='addon-details')
+router.register(r'indian-states',api_views.IndianStatesView,basename='indian-states')
+router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax-ids')
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -36,6 +40,10 @@ urlpatterns += [
      path('billunits/', api_views.BillingunitsView.as_view(), name='billunits'),
      path('billunits/<int:pk>', api_views.BillingunitsView.as_view(), name='billunits_pk'),
      path('servicetypeunits/', api_views.ServiceTypeunitsView.as_view(), name='billunits'),
+     path('support_types/',api_views.SupportTypeView.as_view(),name = 'support-types'),
+     path('get_plan_details/',api_views.get_plan_details),
+     path('get_price_details/',api_views.get_pricing_details),
+     path('get-addons-details/',api_views.get_addons_details),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      path('insert',views.Bulk_insert)
 

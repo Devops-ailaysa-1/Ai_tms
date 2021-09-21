@@ -1,3 +1,4 @@
+from django import db
 from django.utils import timezone
 from django.db import models
 from django.db.models.query import QuerySet
@@ -255,3 +256,97 @@ class SpellcheckerLanguages(ParanoidModel):
     is_active=models.BooleanField(default=True)
     class Meta:
         db_table = 'spellchecker_languages'
+
+
+class SupportType(ParanoidModel):
+    support_type = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class SubscriptionPricing(ParanoidModel):
+    stripe_product_id =  models.CharField(max_length=200,blank=True, null=True)
+    plan = models.CharField(max_length=100, null=True, blank=True)
+    #currency = models.ForeignKey(Currencies,on_delete=models.CASCADE,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class SubscriptionPricingPrices(ParanoidModel):
+    subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE,related_name='subscription_price')
+    monthly_price = models.IntegerField(blank=True, null=True)
+    montly_price_id=models.CharField(max_length=200,null=True,blank=True)
+    annual_price = models.IntegerField(blank=True, null=True)
+    annual_price_id=models.CharField(max_length=200,null=True,blank=True)
+    currency = models.ForeignKey(Currencies,on_delete=models.CASCADE,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class SubscriptionFeatures(ParanoidModel):
+    features = models.TextField(max_length=1000)
+    description = models.TextField(max_length=1000,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE,related_name='subscription_feature')
+
+class CreditsAddons(ParanoidModel):
+    stripe_product_id = models.CharField(max_length=200,null=True,blank=True)
+    pack = models.CharField(max_length=200,null=True,blank=True) 
+    description = models.TextField(max_length=1000, blank=True, null=True)
+    credits = models.IntegerField(null=True,blank=True)
+    discount = models.CharField(max_length=100,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class CreditAddonPrice(ParanoidModel):
+    pack = models.ForeignKey(CreditsAddons,on_delete = models.CASCADE,related_name='credit_addon_price')
+    price =  models.IntegerField(blank=True, null=True)
+    currency = models.ForeignKey(Currencies,on_delete=models.CASCADE)
+    stripe_price_id = models.CharField(max_length=200,null=True,blank=True)
+
+class IndianStates(ParanoidModel):
+    state_name = models.CharField(max_length=200,null=True,blank=True)
+    state_code=models.CharField(max_length=200,null=True,blank=True)
+    tin_num= models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    is_active=models.BooleanField(default=True)
+    class Meta:
+        db_table = 'indian_states'
+
+
+class AilaysaFinancialValues(ParanoidModel):
+    state = models.ForeignKey(IndianStates,on_delete = models.CASCADE,related_name='ai_fin_values_states')
+    finance_address = models.CharField(max_length=200,null=True,blank=True)
+    finance_email = models.EmailField()
+    finance_phone =models.IntegerField()
+    finance_gst = models.CharField(max_length=200,null=True,blank=True)
+    finance_pan =models.CharField(max_length=200,null=True,blank=True)
+    langscape_account_name = models.CharField(max_length=200,null=True,blank=True)
+    langscape_account_number = models.CharField(max_length=200,null=True,blank=True)
+    bank_branch = models.CharField(max_length=200,null=True,blank=True)
+    ifsc_code = models.CharField(max_length=200,null=True,blank=True)
+    swift_code = models.CharField(max_length=200,null=True,blank=True)
+    paypal_id = models.CharField(max_length=200,null=True,blank=True)
+    payoneer_id = models.CharField(max_length=200,null=True,blank=True)
+    bank_name = models.CharField(max_length=200,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    class Meta:
+        db_table = 'ailaysa_finance_values'
+
+class IndianGSTSACList(ParanoidModel):
+    sac_code = models.CharField(max_length=200,null=True,blank=True)
+    business_category = models.CharField(max_length=200,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    class Meta:
+        db_table = 'indian_gst_sac_list'
+
+
+class StripeTaxId(ParanoidModel):
+    country = models.ForeignKey(Countries,on_delete=models.CASCADE,blank=True,null=True,related_name='stripe_tax_coun')
+    tax_code = models.CharField(max_length=200,null=True,blank=True)
+    name = models.CharField(max_length=200,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    class Meta:
+        db_table = 'stripe_tax_id'

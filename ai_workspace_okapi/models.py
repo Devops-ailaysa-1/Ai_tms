@@ -56,8 +56,8 @@ class Segment(models.Model):
     def coded_ids_aslist(self):
         return json.loads(self.coded_ids_sequence)
 
-    class Meta:
-        managed = False
+    #class Meta:
+    #    managed = False
 
     @property
     def target_language_code(self):

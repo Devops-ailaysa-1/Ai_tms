@@ -1,13 +1,23 @@
+import ai_staff
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status,viewsets
+from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
-from django.http import Http404
-from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits,ServiceTypeunits
-from .serializer import ContentTypesSerializer, LanguagesSerializer, LocaleSerializer, MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer, TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer
+from django.http import Http404,JsonResponse
+from .models import (ContentTypes, Countries, Currencies, Languages,
+                    LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
+                    SupportFiles, Timezones,Billingunits,ServiceTypeunits,
+                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,IndianStates)
+from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
+                         MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
+                         CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
+                         TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
+                         SupportTypeSerializer,SubscriptionPricingSerializer,
+                         SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -51,7 +61,7 @@ class ServiceTypesView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CountriesView(APIView):
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
@@ -495,7 +505,155 @@ class ServiceTypeunitsView(APIView):
         serializer = ServiceTypeUnitsSerializer(queryset, many=True)
         return Response(serializer.data)
 
+class SupportTypeView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, format=None):
+        queryset = SupportType.objects.all()
+        serializer = SupportTypeSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 for klass in [LanguagesView]:
     klass.permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class SubscriptionPricingCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = SubscriptionPricing.objects.all()
+        serializer = SubscriptionPricingSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SubscriptionPricingSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = SubscriptionPricing.objects.all()
+        plan = get_object_or_404(queryset, pk=pk)
+        serializer= SubscriptionPricingSerializer(plan,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = SubscriptionPricing.objects.all()
+        plan = get_object_or_404(queryset, pk=pk)
+        plan.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class SubscriptionFeaturesCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = SubscriptionFeatures.objects.all()
+        serializer = SubscriptionFeatureSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SubscriptionFeatureSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = SubscriptionFeatures.objects.all()
+        feature = get_object_or_404(queryset, pk=pk)
+        serializer= SubscriptionFeatureSerializer(feature,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = SubscriptionFeatures.objects.all()
+        plan = get_object_or_404(queryset, pk=pk)
+        plan.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StripeTaxIdView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def list(self,request):
+        queryset = StripeTaxId.objects.all()
+        serializer = StripeTaxIdSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+@api_view(['GET',])
+def get_plan_details(request):
+    plans = SubscriptionPricing.objects.all()
+    out=[]
+    for plan in plans:
+         result={}
+         output=[]
+         serializer = SubscriptionPricingSerializer(plan)
+         result["subscription"]=serializer.data
+         features =  SubscriptionFeatures.objects.filter(subscriptionplan_id=plan.id).all()
+         for feature in features:
+             serializer2 = SubscriptionFeatureSerializer(feature)
+             feature = serializer2.data
+             output.append(feature)
+         result["features"]=output
+         out.append(result)
+    return JsonResponse({"plans":out},safe=False)
+
+
+@api_view(['GET',])
+def get_pricing_details(request):
+    plans = SubscriptionPricing.objects.all()
+    serializer = SubscriptionPricingPageSerializer(plans,many=True)
+    return JsonResponse({"plans":serializer.data},safe=False,status=200)
+
+@api_view(['GET',])
+def get_addons_details(request):
+    addons = CreditsAddons.objects.all()
+    serializer = CreditsAddonSerializer(addons,many=True)
+    return JsonResponse({"addons":serializer.data},safe=False,status=200)
+
+class CreditsAddonsCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = CreditsAddons.objects.all()
+        serializer = CreditsAddonSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = CreditsAddonSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = CreditsAddons.objects.all()
+        pack = get_object_or_404(queryset, pk=pk)
+        serializer= CreditsAddonSerializer(pack,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = CreditsAddons.objects.all()
+        pack = get_object_or_404(queryset, pk=pk)
+        pack.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class IndianStatesView(viewsets.ViewSet):
+    def list(self,request):
+        queryset = IndianStates.objects.all()
+        serializer = IndianStatesSerializer(queryset,many=True)
+        return Response(serializer.data)

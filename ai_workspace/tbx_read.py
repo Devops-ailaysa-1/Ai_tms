@@ -39,7 +39,6 @@ def termIdentify(root,t1,ls,datanew,codesrc,code):
                     lang = term_lang.get('{http://www.w3.org/XML/1998/namespace}lang')
                     if lang.split('-')[0]==codesrc:
                             for item in term_lang.iter('term'):
-                                #print("*****",item.text)
                                 if word.strip()==item.text.strip():
                                     match=1
                                     source=item.text

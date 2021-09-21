@@ -61,5 +61,3 @@ urlpatterns += [
 	# path("source_tmx", )
 	# path("project-setup-sub", api_views.projectSubjectView.as_view(), name="project_setup__sub"),
 ]
-
-

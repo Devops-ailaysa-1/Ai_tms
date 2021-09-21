@@ -20,7 +20,8 @@ from pathlib import Path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 TEMPLATE_DIR_2 = os.path.join(BASE_DIR,'ai_vendor','templates')
-
+TEMPLATE_DIR_3 = os.path.join(BASE_DIR,'ai_marketplace','templates')
+TEMPLATE_DIR_4 = os.path.join(BASE_DIR,'ai_auth','templates')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
@@ -116,6 +117,10 @@ INSTALLED_APPS = [
     "ai_workspace_okapi",
     'django_extensions',
     'sqlite3',
+    'ai_marketplace',
+    'djstripe',
+    'django_filters',
+    # 'channels',
 ]
 
 SITE_ID = 1
@@ -138,7 +143,7 @@ AUTH_USER_MODEL="ai_auth.AiUser"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,],
+        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,TEMPLATE_DIR_3,TEMPLATE_DIR_4],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -152,7 +157,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ai_tms.wsgi.application'
-
+ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
@@ -257,7 +262,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 3,
+    'PAGE_SIZE': 10,
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 
 
@@ -286,6 +292,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_ROOT =  os.path.join(BASE_DIR, 'media')
@@ -357,4 +366,22 @@ DEFAULT_FROM_EMAIL ="noreply@ailaysa.com"
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+
+STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
+STRIPE_LIVE_MODE = (True if os.getenv( "STRIPE_LIVE_MODE" ) == 'True' else False)  # Change to True in production
+DJSTRIPE_WEBHOOK_SECRET = os.getenv( "DJSTRIPE_WEBHOOK_SECRET" )  # Get it from the section in the Stripe dashboard where you added the webhook endpoint
+DJSTRIPE_USE_NATIVE_JSONFIELD = True  # We recommend setting to True for new installations
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
+
+
+
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        # 'CONFIG': {
+        #     'hosts': [('127.0.0.1', 6379)],
+        # }
+    }
 }

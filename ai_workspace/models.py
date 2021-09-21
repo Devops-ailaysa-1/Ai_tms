@@ -71,8 +71,8 @@ class PenseiveTM(models.Model):
     project = models.OneToOneField("Project", null=False, blank=False, on_delete=models.\
         CASCADE, related_name="project_penseivetm")
 
-    class Meta:
-        managed = False
+    # class Meta:
+    #     managed = False
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
@@ -455,8 +455,9 @@ class TmxFile(models.Model):
     # Out[8]: '/ai_home/media/user_2/p14/.pentm'
 
 def tbx_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.project.project_dir_path,"tbx",filename)
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,"tbx",filename)
     return file_path
+
 
 class Tbxfiles(models.Model):
     tbx_files = models.FileField(upload_to="uploaded_tbx_files", null=False,\

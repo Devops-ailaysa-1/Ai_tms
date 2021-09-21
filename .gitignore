@@ -46,3 +46,7 @@ Source.log
 data.txt
 data2.txt
 test.txt
+*.secure
+.secure
+list_of_tables.txt
+dummy.txt

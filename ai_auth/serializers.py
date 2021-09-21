@@ -1,11 +1,12 @@
-
 from ai_auth.forms import SendInviteForm
-from ai_staff.models import AiUserType, Countries, SubjectFields, Timezones
+from ai_staff.models import AiUserType, Countries, SubjectFields, Timezones,SupportType
 from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from ai_auth.models import AiUser,UserAttribute,PersonalInformation,OfficialInformation,Professionalidentity
+from ai_auth.models import (AiUser, BillingAddress,UserAttribute,PersonalInformation,OfficialInformation,
+                            Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
+                            TempPricingPreference, UserTaxInfo,AiUserProfile)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer
@@ -21,7 +22,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiUser
         fields = ['email', 'fullname',
-        'password',]
+        'password','country']
         extra_kwargs = {
             'password': {
                 'write_only':True
@@ -32,6 +33,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = AiUser(
             email=self.validated_data['email'],
             fullname=self.validated_data['fullname'],
+            country = self.validated_data['country']
+
         )
 
         password = self.validated_data['password']
@@ -122,12 +125,12 @@ class UserAttributeSerializer(serializers.ModelSerializer):
         return data
 
 class PersonalInformationSerializer(serializers.ModelSerializer):
-    country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
+   # country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
     timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
 
     class Meta:
         model = PersonalInformation
-        fields = ( 'address','country','timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
+        fields = ( 'timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
         read_only_fields = ('created_at','updated_at')
 
     def create(self, validated_data):
@@ -137,12 +140,12 @@ class PersonalInformationSerializer(serializers.ModelSerializer):
         return  personal_info
 
 class OfficialInformationSerializer(serializers.ModelSerializer):
-    country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
+    #country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
     timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
     industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all(),many=False,required=False)
     class Meta:
         model = OfficialInformation
-        fields = ( 'id','company_name','address','designation','industry','country','timezone','website','linkedin','billing_email','created_at','updated_at')
+        fields = ( 'id','company_name','designation','industry','timezone','website','linkedin','billing_email','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
 
     def create(self, validated_data):
@@ -156,7 +159,7 @@ class ProfessionalidentitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Professionalidentity
-        fields = ( 'id','avatar','logo')
+        fields = ( 'id','avatar','logo','header')
         #read_only_fields = ('id','created_at','updated_at')
 
 
@@ -203,6 +206,94 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
             extra_fields.append('last_name')
         if hasattr(UserModel, 'fullname'):
             extra_fields.append('fullname')
+        if hasattr(UserModel, 'country'):
+            extra_fields.append('country')
         model = UserModel
         fields = ('pk', *extra_fields)
         read_only_fields = ('email',)
+
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = "__all__"
+
+
+class CustomerSupportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerSupport
+        fields  = "__all__"
+
+
+class ContactPricingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactPricing
+        fields = "__all__"
+
+class TempPricingPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TempPricingPreference
+        fields = "__all__"
+
+class BillingAddressSerializer(serializers.ModelSerializer):
+   # user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+    class Meta:
+        model = BillingAddress
+        #fields  = "__all__"
+        #read_only_fields = ('id','created_at','updated_at')
+        exclude = ['user']
+
+class UserTaxInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserTaxInfo
+        #fields  = "__all__"
+        exclude = ['user']
+
+# class UserAppPreferenceSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = UserAppPreference
+#         fields  = "__all__"
+
+class BillingInfoSerializer(serializers.Serializer):
+    #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
+    id = serializers.IntegerField()
+    #fullname = serializers.CharField(max_length=200)
+    address = BillingAddressSerializer(read_only=True,source='billing_addr_user')
+    tax = UserTaxInfoSerializer(many=True,read_only=True,source='tax_info_user')
+    class Meta:
+        fields = ('id','tax','address')
+
+
+
+class AiUserProfileSerializer(serializers.ModelSerializer):
+    fullname = serializers.CharField(required=False)
+    class Meta:
+        model = AiUserProfile
+        fields = ('id','user_id','fullname','organisation_name','timezone','phonenumber','linkedin','website',)
+
+    def create(self, validated_data):
+        request = self.context['request']
+        if "fullname" in validated_data:
+            fullname = validated_data.pop('fullname')
+            print(fullname)
+            user = AiUser.objects.get(id=request.user.id)
+            user.fullname = fullname
+            user.save()
+        profile = AiUserProfile.objects.create(**validated_data,user=request.user)
+        return profile
+
+    def update(self, instance, validated_data):
+        print(validated_data)
+        if "fullname" in validated_data:
+            res = super().update(instance, validated_data)
+            user = AiUser.objects.get(id=instance.user.id)
+            user.fullname = instance.fullname
+            user.save()
+        return super().update(instance, validated_data)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        print(instance)
+        data["fullname"] = instance.user.fullname
+        return data

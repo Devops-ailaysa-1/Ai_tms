@@ -1,7 +1,12 @@
+from django.db.models.fields import IntegerField
 from rest_framework import serializers
-from .models import AilaysaSupportedMtpeEngines, ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType,ServiceTypeunits
-
-
+from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, IndianStates,
+                    Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, StripeTaxId,
+                    SubjectFields, SupportFiles, Timezones,Billingunits,
+                    AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
+                    SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,CreditAddonPrice)
+import json
+from drf_writable_nested import WritableNestedModelSerializer
 
 class ServiceTypesSerializer(serializers.ModelSerializer):
 
@@ -170,6 +175,13 @@ class ServiceTypeUnitsSerializer(serializers.ModelSerializer):
         fields = ( 'id', 'unit','is_active','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
 
+class SupportTypeSerializer(serializers.ModelSerializer):
+
+        class Meta:
+            model = SupportType
+            fields = ('id', 'support_type','created_at','updated_at')
+            read_only_fields = ('id','created_at','updated_at')
+
 class AiUserTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -183,4 +195,67 @@ class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
     class Meta:
         model = AilaysaSupportedMtpeEngines
         fields = ("id","name",'created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
+
+class SubscriptionPricingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPricing
+        fields = ('id','stripe_product_id',)
+
+
+class SubscriptionPricingPriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPricingPrices
+        fields = ('id','subscriptionplan','monthly_price','montly_price_id','annual_price','annual_price_id','currency',)
+        extra_kwargs = {
+        "subscriptionplan": {"write_only": True}
+        }
+
+
+class SubscriptionFeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionFeatures
+        fields = ('id','features','subscriptionplan','description')
+        extra_kwargs = {
+		 	"subscriptionplan": {"write_only": True}
+            }
+
+
+class CreditAddonPriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CreditAddonPrice
+        fields = ('id','pack','price','currency','stripe_price_id',)
+
+class CreditsAddonSerializer(serializers.ModelSerializer):
+    addon_price = CreditAddonPriceSerializer(many=True,read_only=True,source='credit_addon_price')
+    class Meta:
+        model = CreditsAddons
+        fields = ('id','pack','credits','description','discount','stripe_product_id','addon_price')
+
+
+
+class SubscriptionPricingPageSerializer(serializers.Serializer):
+    #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
+    id = serializers.IntegerField()
+    plan = serializers.CharField(max_length=200)
+    stripe_product_id = serializers.CharField(max_length=200)
+    subscription_price=SubscriptionPricingPriceSerializer(many=True,read_only=True)
+    subscription_feature=SubscriptionFeatureSerializer(many=True,read_only=True)
+    # class Meta:
+    #     fields = ('subscriptionplan','prices','features')
+
+
+
+class IndianStatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IndianStates
+        fields = ("id","state_name",'state_code','tin_num','created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
+
+
+
+class StripeTaxIdSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StripeTaxId
+        fields = ("id","tax_code",'name','country','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')

@@ -1,8 +1,10 @@
 from ai_workspace_okapi.models import Document
 from django.conf import settings
+from django.core.files import File as DJFile
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from ai_auth.authentication import IsCustomer
+from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_auth.models import AiUser
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -24,6 +26,11 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Task, TbxFile
 from django.http import JsonResponse
 import requests, json, os
+from .models import Task,Tbxfiles
+from lxml import etree as ET
+from ai_marketplace.models import AvailableVendors
+from django.http import JsonResponse,HttpResponse
+import requests, json, os,mimetypes
 from ai_workspace import serializers
 from ai_workspace_okapi.models import Document
 from ai_staff.models import LanguagesLocale, Languages
@@ -32,6 +39,9 @@ from django.http import JsonResponse, Http404, HttpResponse
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from django.core.files import File as DJFile
+from django.http import JsonResponse
+from tablib import Dataset
+import shutil
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -196,7 +206,7 @@ def integrity_error(func):
         except IntegrityError as e:
             print("error---->", e)
             return Response({'message': "integrirty error"}, 409)
-        
+
     return decorator
 
 class ProjectSetupView(viewsets.ViewSet, PageNumberPagination):
@@ -309,6 +319,7 @@ class TaskView(APIView):
 
     def get(self, request):
         tasks = self.get_queryset()
+        print(tasks)
         tasks_serlzr = TaskSerializer(tasks, many=True)
         return Response(tasks_serlzr.data, status=200)
 
@@ -438,13 +449,13 @@ class TmxFileView(viewsets.ViewSet):
 
 class TbxUploadView(APIView):
     def post(self, request):
-        tbx_file = request.FILES.get('tbx_file')
-        project_id = request.POST.get('project_id', 0)
+        tbx_files = request.FILES.get('tbx_files')
+        project_id = request.POST.get('project', 0)
         doc_id = request.POST.get('doc_id', 0)
         if doc_id != 0:
             job_id = Document.objects.get(id=doc_id).job_id
             project_id = Job.objects.get(id=job_id).project_id
-        serializer = TbxUploadSerializer(data={'tbx_files':tbx_file,'project':project_id})
+        serializer = TbxUploadSerializer(data={'tbx_files':tbx_files,'project':project_id})
         # print("SER VALIDITY-->", serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
