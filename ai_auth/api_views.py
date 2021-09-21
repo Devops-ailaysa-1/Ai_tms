@@ -728,7 +728,13 @@ class UserTaxInfoView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+def integrity_error(func):
+    def decorator(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except IntegrityError:
+            return Response({'message': "Integrity error"}, 409)
+    return decorator
 
 class AiUserProfileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -740,7 +746,7 @@ class AiUserProfileView(viewsets.ViewSet):
 
         serializer = AiUserProfileSerializer(queryset)
         return Response(serializer.data)
-
+    @integrity_error
     def create(self,request):
         serializer = AiUserProfileSerializer(data={**request.POST.dict()},context={'request':request})
         print(serializer.is_valid())

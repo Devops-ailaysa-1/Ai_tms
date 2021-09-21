@@ -16,11 +16,11 @@ from datetime import datetime
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
-                    Thread,BidPropasalDetails,AvailableJobs)
+                    Thread,BidPropasalDetails,AvailableJobs,ChatMessage)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
                         AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
-                        GetVendorListSerializer,
+                        GetVendorListSerializer,ChatMessageSerializer
                         )
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -231,6 +231,10 @@ def addingthread(request):
     serializer = ThreadSerializer(data={'first_person':user1,'second_person':user2,'bid':bid_id})
     if serializer.is_valid():
         serializer.save()
+        Bid_info = BidPropasalDetails.objects.get(id=bid_id)
+        serializer2 = BidPropasalDetailSerializer(Bid_info,data={'status':2},partial=True)
+        if serializer2.is_valid():
+            serializer2.save()
         return JsonResponse(serializer.data, status=201)
     else:
         return JsonResponse(serializer.errors, status=400)
@@ -261,8 +265,8 @@ class BidPostInfoCreateView(APIView):
 
 
     def put(self,request,bid_proposal_id):
-        queryset = BidPropasalDetails.objects.filter(vendor_id=request.user.id).all()
-        Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
+        Bid_info = BidPropasalDetails.objects.get(id=bid_proposal_id)
+        # Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
         sample_file=request.FILES.get('sample_file')
         if sample_file:
             serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
@@ -339,7 +343,7 @@ class GetVendorListView(generics.ListAPIView):
         if job_id:
             source_lang_id=Job.objects.get(id=job_id).source_language_id
             target_lang_id=Job.objects.get(id=job_id).target_language_id
-        queryset = queryset_all = AiUser.objects.select_related('personal_info','vendor_info','professional_identity_info')\
+        queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                     .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None)).distinct()
         if max_price and min_price and count_unit:
             ids=[]
@@ -353,3 +357,32 @@ class GetVendorListView(generics.ListAPIView):
             subjectlist=subject.split(',')
             queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset
+
+
+
+class ChatMessageListView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request,thread_id):
+        try:
+            queryset = ChatMessage.objects.filter(thread_id = thread_id).all()
+            print(queryset)
+            serializer = ChatMessageSerializer(queryset,many=True)
+            return Response(serializer.data)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def post(self, request,thread_id):
+        serializer = ChatMessageSerializer(data={**request.POST.dict(),'thread':thread_id},context={'request':request})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def put(self,request,chatmessage_id):
+        user=request.user.id
+        chat_info = ChatMessage.objects.get(id=chatmessage_id)
+        serializer = ChatMessageSerializer(chat_info,data={**request.POST.dict()},context={'request':request},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
