@@ -343,10 +343,10 @@ class TbxUploadSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class TbxTemplateUploadSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbxTemplateUploadFiles
-        fields = "__all__"
+# class TbxTemplateUploadSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = TbxTemplateUploadFiles
+#         fields = "__all__"
 
 # class TaskSerializer(serializers.ModelSerializer):
 # 	source_file_path = serializers.SerializerMethodField("get_source_file_path")
