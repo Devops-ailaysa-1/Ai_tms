@@ -1,9 +1,11 @@
 
+
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.contrib.auth import settings
 from django.utils.text import slugify
 #from ai_auth.api_views import update_billing_address
+from ai_auth import models as auth_model
 import os
 import random
 from djstripe.models import Customer
@@ -59,6 +61,12 @@ def update_billing_address(address):
 
 
 def updated_user_taxid(sender, instance, *args, **kwargs):
+    # ss=auth_model.UserTaxInfo.objects.get(id=instance.id)
+    # print('args',args)
+    # print('kwargs',kwargs)
+    # if instance.stripe_tax_id==ss.stripe_tax_id and instance.tax_id==ss.tax_id:
+    #     print("Already updated customer address")
+    #     pass
     res=update_user_tax_id(taxid=instance)
     print("updated customer tax id")
 

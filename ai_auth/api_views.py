@@ -537,12 +537,13 @@ def buy_addon(request):
          return Response({'msg':'Invalid price'}, status=406)
 
     cust=Customer.objects.get(subscriber=user)
+    #if user.country.sortname == 'IN' 
     #tax_rate=['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi']
     tax_rate=None
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
 
     #request.POST.get('')
-    return Response({'msg':'Invoice Generated ','invoice_url':response.url}, status=307)
+    return Response({'msg':'Payment Session Generated ','stripe_session_url':response.url}, status=307)
 
 
 
@@ -573,7 +574,7 @@ def check_subscription(request):
         subscription = Subscription.objects.filter(customer=customer).last()
        # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
         sub_name = CreditPack.objects.get(product__id=subscription.plan.product_id).name
-        return Response({'subscription_name':sub_name,'sub_status':subscription.status}, status=200)
+        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.product_id,'interval':subscription.plan.interval}, status=200)
     if is_active == (False,False):
         return Response({'msg':'Not a Stripe Customer'}, status=206)
 
