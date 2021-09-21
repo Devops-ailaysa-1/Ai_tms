@@ -23,11 +23,11 @@ from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime
-from djstripe.models import Price,Subscription,InvoiceItem
+from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product
 import stripe
 from django.conf import settings
-from djstripe.models import Customer,Invoice
 from ai_staff.models import SupportType
+from django.db.models import Q
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -329,16 +329,19 @@ def get_payment_details(request):
         out=[]
         for i in user_invoice_details:
             new={}
+            plan = Subscription.objects.get(id=i.subscription_id).plan
+            Name = plan.product.name
             Invoice_number = i.number
             Invoice_value = i.amount_paid
-            Invoice_date = i.created
-            status =  i.status
+            Currency = i.currency
+            Invoice_date = i.created.date()
+            status = "paid" if i.paid else "unpaid"
             pdf_download_link = i.invoice_pdf
             view_invoice_url = i.hosted_invoice_url
-            purchase_type = "Addon" if i.billing_reason == "manual" else "Subscription"
-            output={"Invoice_number":Invoice_number,"Invoice_value":Invoice_value,"Invoice_date":Invoice_date,
+            # purchase_type = "Addon" if i.billing_reason == "manual" else "Subscription"
+            output={"Name":Name,"Price":Invoice_value,"Currency":Currency,"Invoice_number":Invoice_number,"Invoice_date":Invoice_date,
                     "Status":status,"Invoice_Pdf_download_link":pdf_download_link,
-                    "Invoice_view_URL":view_invoice_url,"Purchase_Type":purchase_type}
+                    "Invoice_view_URL":view_invoice_url}
             new.update(output)
             out.append(new)
     else:
@@ -349,19 +352,26 @@ def get_payment_details(request):
 @api_view(['GET',])
 @permission_classes((IsAuthenticated, ))
 def get_addon_details(request):
+    user,add_on_list=None,None
     try:
         user = Customer.objects.get(subscriber_id = request.user.id).id
-        add_on_list = Session.objects.filter(Q(customer_id=user) & Q(mode = "payment")).all()
+        add_on_list = PaymentIntent.objects.filter(Q(customer_id=user)&Q(metadata__contains={"type":"Addon"})).all()
+        print(add_on_list)
     except Exception as error:
         print(error)
     if add_on_list:
         out=[]
         for i in add_on_list:
             new={}
-            add_on=Charge.objects.get(payment_intent_id=i.payment_intent_id)
+            add_on=Charge.objects.get(payment_intent_id=i.id)
+            quantity = i.metadata["quantity"]
+            name = Price.objects.get(id=i.metadata["price"]).product.name
+            purchase_date = i.created.date()
             amount = add_on.amount_captured
+            currency = add_on.currency
             receipt = add_on.receipt_url
-            output ={"Amount":amount,"Receipt":receipt}
+            status = "paid" if add_on.paid else "unpaid"
+            output ={"Name":name,"Quantity":quantity,"Amount":amount,"Currency":currency,"Date":purchase_date,"Receipt":receipt,"Status":status}
             new.update(output)
             out.append(new)
     else:
@@ -488,7 +498,7 @@ def generate_portal_session(customer):
 #     if settings.STRIPE_LIVE_MODE == True :
 #         api_key = settings.STRIPE_LIVE_SECRET_KEY
 #     else:
-#         api_key = settings.STRIPE_TEST_SECRET_KEY    
+#         api_key = settings.STRIPE_TEST_SECRET_KEY
 #     try:
 #         customer = Customer.objects.get(subscriber=address.user)
 #     except Customer.DoesNotExist:
@@ -497,7 +507,7 @@ def generate_portal_session(customer):
 #     stripe.api_key = api_key
 #     response =stripe.Customer.modify(
 #     customer.id,
-#     name = address.name if address.name is not None else address.user.fullname, 
+#     name = address.name if address.name is not None else address.user.fullname,
 #     address={
 #     "city": address.city,
 #     "line1": address.line1,
@@ -624,7 +634,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 else:
                     currency ='usd'
                 price = Price.objects.filter(product_id=free.product,currency=currency).last()
-                
+
                 customer = Customer.get_or_create(subscriber=user)
                 customer[0].subscribe(price=price)
                 return Response({'msg':'User Successfully created','subscription':'Free'}, status=201)
