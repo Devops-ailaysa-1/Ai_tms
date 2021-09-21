@@ -13,7 +13,7 @@ from tablib import Dataset
 from .forms import UploadFileForm
 from .models import (AiUserType, Billingunits, ContentTypes, Countries,
                      Currencies, Languages, LanguagesLocale, MtpeEngines,
-                     ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates)
+                     ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates,StripeTaxId)
 
 
 def Bulk_insert(request):
@@ -29,11 +29,18 @@ def Bulk_insert(request):
             imported_data = dataset.load(filedata.read(), format='xlsx')
             # print(imported_data)
             for data in imported_data:
+                try:
+                    countr=Countries.objects.get(name=data[0])
+                except Countries.DoesNotExist:
+                    print("country==>",data[0])
+                    countr=None
 
-                value = IndianStates(
-			state_name =data[1],
-            tin_num = data[2],
-            state_code=data[3],
+
+                value = StripeTaxId(
+            country = countr,
+			tax_code =data[1],
+            name = data[2],
+            #state_code=data[3],
             #unit_rate=data[3],
             #hourly_rate=data[4],
             #minute_rate = data[5],		

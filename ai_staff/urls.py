@@ -12,6 +12,7 @@ router.register(r'subscriptionpricing', api_views.SubscriptionPricingCreateView,
 router.register(r'subscriptionfeatures', api_views.SubscriptionFeaturesCreateView,basename='subscription-features')
 router.register(r'addon_details',api_views.CreditsAddonsCreateView,basename='addon-details')
 router.register(r'indian-states',api_views.IndianStatesView,basename='indian-states')
+router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax-ids')
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -44,7 +45,7 @@ urlpatterns += [
      path('get_price_details/',api_views.get_pricing_details),
      path('get-addons-details/',api_views.get_addons_details),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
-    #path('insert',views.Bulk_insert)
+    path('insert',views.Bulk_insert)
 
 
 ]

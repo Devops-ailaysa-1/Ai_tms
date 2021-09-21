@@ -9,12 +9,12 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from django.http import Http404,JsonResponse
 from .models import (ContentTypes, Countries, Currencies, Languages,
-                    LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SubscriptionPricingPrices,
+                    LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,IndianStates)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
-                         CountriesSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
+                         CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer)
@@ -575,6 +575,14 @@ class SubscriptionFeaturesCreateView(viewsets.ViewSet):
         plan = get_object_or_404(queryset, pk=pk)
         plan.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StripeTaxIdView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def list(self,request):
+        queryset = StripeTaxId.objects.all()
+        serializer = StripeTaxIdSerializer(queryset,many=True)
+        return Response(serializer.data)
 
 
 @api_view(['GET',])

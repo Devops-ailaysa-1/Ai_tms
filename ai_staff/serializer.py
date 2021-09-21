@@ -1,7 +1,7 @@
 from django.db.models.fields import IntegerField
 from rest_framework import serializers
 from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, IndianStates,
-                    Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies,
+                    Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, StripeTaxId,
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,CreditAddonPrice)
@@ -260,4 +260,12 @@ class IndianStatesSerializer(serializers.ModelSerializer):
     class Meta:
         model = IndianStates
         fields = ("id","state_name",'state_code','tin_num','created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
+
+
+
+class StripeTaxIdSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StripeTaxId
+        fields = ("id","tax_code",'name','country','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')

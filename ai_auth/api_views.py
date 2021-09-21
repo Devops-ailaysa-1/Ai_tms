@@ -481,6 +481,32 @@ def generate_portal_session(customer):
     return session
 
 
+# def update_billing_address(address):
+#     if settings.STRIPE_LIVE_MODE == True :
+#         api_key = settings.STRIPE_LIVE_SECRET_KEY
+#     else:
+#         api_key = settings.STRIPE_TEST_SECRET_KEY    
+#     try:
+#         customer = Customer.objects.get(subscriber=address.user)
+#     except Customer.DoesNotExist:
+#         customer = Customer.objects.get(subscriber=address.user)
+
+#     stripe.api_key = api_key
+#     response =stripe.Customer.modify(
+#     customer.id,
+#     name = address.name if address.name is not None else address.user.fullname, 
+#     address={
+#     "city": address.city,
+#     "line1": address.line1,
+#     "line2": address.line2,
+#     "state": address.state,
+#     "country": address.country.sortname,
+#     "postal_code": address.zipcode
+#     },
+
+#     )
+#     return response
+
 # @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
 # def buy_addon(request):
@@ -566,6 +592,11 @@ def buy_subscription(request):
         return Response({'msg':'No Stripe Account Found'}, status=404)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_currency(request):
+    curr=Customer.objects.get(subscriber=request.user).currency
+    return Response({'currency':curr})
 
 class UserSubscriptionCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -582,7 +613,12 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except TempPricingPreference.DoesNotExist:
                 free=CreditPack.objects.get(name='Free')
-                price = Price.objects.filter(product_id=free.product).last()
+                if user.country.id == 101 :
+                    currency = 'inr'
+                else:
+                    currency ='usd'
+                price = Price.objects.filter(product_id=free.product,currency=currency).last()
+                
                 customer = Customer.get_or_create(subscriber=user)
                 customer[0].subscribe(price=price)
                 return Response({'msg':'User Successfully created','subscription':'Free'}, status=201)
@@ -661,7 +697,11 @@ class UserTaxInfoView(viewsets.ViewSet):
         serializer = UserTaxInfoSerializer(data={**request.POST.dict()})
         print(serializer.is_valid())
         if serializer.is_valid():
-            serializer.save(user=self.request.user)
+            try:
+                serializer.save(user=self.request.user)
+            except ValueError as e:
+                print(e)
+                return Response({'Error':str(e)}, status=422)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

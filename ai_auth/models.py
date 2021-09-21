@@ -5,25 +5,15 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, SubjectFields,Countries,Timezones,SupportType
+from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType
 from django.db.models.signals import post_save, pre_save
-from .signals import create_allocated_dirs
-from django.contrib.auth.models import AbstractUser
+from .signals import create_allocated_dirs,updated_billingaddress,updated_user_taxid
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
 from djstripe.models import Customer,Subscription,PaymentIntent,Invoice,Price,Product,Charge
 from ai_auth import Aiwebhooks
 # from djstripe import webhooks
-
-class BaseAddress(models.Model):
-    line1 = models.CharField(max_length=200,blank=True, null=True)
-    line2 = models.CharField(max_length=200,blank=True, null=True)
-    state = models.CharField(max_length=200,blank=True, null=True)
-    city = models.CharField(max_length=200,blank=True, null=True)
-    zipcode= models.IntegerField(default=0,blank=True, null=True)
-    class Meta:
-        abstract=True
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -48,10 +38,19 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
 
+class BaseAddress(models.Model):
+    line1 = models.CharField(max_length=200,blank=True, null=True)
+    line2 = models.CharField(max_length=200,blank=True, null=True)
+    state = models.CharField(max_length=200,blank=True, null=True)
+    city = models.CharField(max_length=200,blank=True, null=True)
+    zipcode= models.IntegerField(default=0,blank=True, null=True)
+    class Meta:
+        abstract=True
+
 
 class UserAttribute(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True)
-    user_type=models.ForeignKey(AiUserType, related_name='user_attribute', on_delete=models.CASCADE)
+    user_type=models.ForeignKey(AiUserType, related_name='user_attribute', on_delete=models.CASCADE,default=1)
     allocated_dir = models.URLField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
@@ -176,10 +175,14 @@ class BillingAddress(BaseAddress):
     name = models.CharField(max_length=255, blank=True, null=True)
     country= models.ForeignKey(Countries,related_name='billing_country', on_delete=models.CASCADE,blank=True, null=True)
 
+post_save.connect(updated_billingaddress, sender=BillingAddress)
+
 class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
-    country = models.ForeignKey(Countries,on_delete=models.CASCADE)
+    stripe_tax_id = models.ForeignKey(StripeTaxId,on_delete=models.CASCADE,related_name='stripe_taxid_user')
     tax_id = models.CharField(max_length=250)
+
+pre_save.connect(updated_user_taxid, sender=UserTaxInfo)
 
 # class UserAppPreference(models.Model):
 #     email = models.EmailField()
