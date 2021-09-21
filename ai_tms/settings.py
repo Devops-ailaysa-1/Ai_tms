@@ -247,11 +247,11 @@ REST_AUTH_SERIALIZERS = {
     'USER_DETAILS_SERIALIZER': 'ai_auth.serializers.AiUserDetailsSerializer',
 }
 
-PASSWORD_RESET_URL = "reset/"
+PASSWORD_RESET_URL = "reset-password/"
 
-CLIENT_BASE_URL = "http://localhost:3000/"
+CLIENT_BASE_URL = "http://143.244.140.71/"
 
-SIGNUP_CONFIRM_URL ="http://localhost:3000/confirm-email"
+SIGNUP_CONFIRM_URL ="http://143.244.140.71/confirm-email"
 
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
