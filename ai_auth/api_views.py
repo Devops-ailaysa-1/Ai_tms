@@ -329,8 +329,7 @@ def get_payment_details(request):
         out=[]
         for i in user_invoice_details:
             new={}
-            plan = InvoiceItem.objects.filter(invoice_id=i.id).first()
-            Name = plan.plan.product.name
+            Name = i.plan.product.name
             Invoice_number = i.number
             Invoice_value = i.amount_paid
             Currency = i.currency
@@ -548,7 +547,7 @@ def buy_addon(request):
          return Response({'msg':'Invalid price'}, status=406)
 
     cust=Customer.objects.get(subscriber=user)
-    #if user.country.sortname == 'IN' 
+    #if user.country.sortname == 'IN'
     #tax_rate=['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi']
     tax_rate=None
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
