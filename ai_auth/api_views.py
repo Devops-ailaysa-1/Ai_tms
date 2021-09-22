@@ -365,7 +365,7 @@ def get_addon_details(request):
             try:
                 add_on=Charge.objects.get(Q(payment_intent_id=i.id)&Q(status='succeeded'))
             except:
-                add_on = None    
+                add_on = None
             quantity = i.metadata["quantity"]
             product = Price.objects.get(id=i.metadata["price"]).product_id
             name = Product.objects.get(id =product).name
@@ -373,7 +373,7 @@ def get_addon_details(request):
             amount = (i.amount)/100
             currency = i.currency
             receipt = add_on.receipt_url if add_on else None
-            status = "succeeded" if add_on else "failed"
+            status = "succeeded" if add_on else "incomplete"
             output ={"Name":name,"Quantity":quantity,"Amount":amount,"Currency":currency,"Date":purchase_date,"Receipt":receipt,"Status":status}
             new.update(output)
             out.append(new)
