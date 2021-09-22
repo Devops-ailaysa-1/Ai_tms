@@ -328,21 +328,10 @@ def get_payment_details(request):
     if user_invoice_details:
         out=[]
         for i in user_invoice_details:
-            new={}
-            Name = i.plan.product.name
-            Invoice_number = i.number
-            Invoice_value = i.amount_paid
-            Currency = i.currency
-            Invoice_date = i.created.date()
-            status = "paid" if i.paid else "unpaid"
-            pdf_download_link = i.invoice_pdf
-            view_invoice_url = i.hosted_invoice_url
-            # purchase_type = "Addon" if i.billing_reason == "manual" else "Subscription"
-            output={"Name":Name,"Price":Invoice_value,"Currency":Currency,"Invoice_number":Invoice_number,"Invoice_date":Invoice_date,
-                    "Status":status,"Invoice_Pdf_download_link":pdf_download_link,
-                    "Invoice_view_URL":view_invoice_url}
-            new.update(output)
-            out.append(new)
+            output={"Name":i.plan.product.name,"Price":i.amount_paid,"Currency":i.currency,"Invoice_number":i.number,"Invoice_date":i.created.date(),
+                    "Status":"paid" if i.paid else "unpaid","Invoice_Pdf_download_link": i.invoice_pdf,
+                    "Invoice_view_URL":i.hosted_invoice_url}
+            out.append(output)
     else:
         out = "No invoice details Exists"
     return JsonResponse({"Payments":out},safe=False)
@@ -361,22 +350,13 @@ def get_addon_details(request):
     if add_on_list:
         out=[]
         for i in add_on_list:
-            new={}
             try:
                 add_on=Charge.objects.get(Q(payment_intent_id=i.id)&Q(status='succeeded'))
             except:
                 add_on = None
-            quantity = i.metadata["quantity"]
-            product = Price.objects.get(id=i.metadata["price"]).product_id
-            name = Product.objects.get(id =product).name
-            purchase_date = i.created.date()
-            amount = (i.amount)/100
-            currency = i.currency
-            receipt = add_on.receipt_url if add_on else None
-            status = "succeeded" if add_on else "incomplete"
-            output ={"Name":name,"Quantity":quantity,"Amount":amount,"Currency":currency,"Date":purchase_date,"Receipt":receipt,"Status":status}
-            new.update(output)
-            out.append(new)
+            name = Price.objects.get(id=i.metadata["price"]).product.name
+            output ={"Name":name,"Quantity":i.metadata["quantity"],"Amount": (i.amount)/100,"Currency":i.currency,"Date":i.created.date(),"Receipt":add_on.receipt_url if add_on else None,"Status":"succeeded" if add_on else "incomplete"}
+            out.append(output)
     else:
         out = "No Add-on details Exists"
     return JsonResponse({"out":out},safe=False)
