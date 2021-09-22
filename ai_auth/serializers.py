@@ -44,6 +44,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         #     raise serializers.ValidationError({'password':'Passwords must match.'})
         user.set_password(password)
         user.save()
+        UserAttribute.objects.create(user=user)
         return user
 
 
