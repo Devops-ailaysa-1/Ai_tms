@@ -329,8 +329,8 @@ def get_payment_details(request):
         out=[]
         for i in user_invoice_details:
             new={}
-            plan = Subscription.objects.get(id=i.subscription_id).plan
-            Name = plan.product.name
+            plan = InvoiceItem.objects.filter(invoice_id=i.id).first()
+            Name = plan.plan.product.name
             Invoice_number = i.number
             Invoice_value = i.amount_paid
             Currency = i.currency
@@ -363,14 +363,15 @@ def get_addon_details(request):
         out=[]
         for i in add_on_list:
             new={}
-            add_on=Charge.objects.get(payment_intent_id=i.id)
+            # add_on=Charge.objects.get(payment_intent_id=i.id)
             quantity = i.metadata["quantity"]
-            name = Price.objects.get(id=i.metadata["price"]).product.name
+            product = Price.objects.get(id=i.metadata["price"]).product_id
+            name = Product.objects.get(id =product).name
             purchase_date = i.created.date()
-            amount = add_on.amount_captured
-            currency = add_on.currency
-            receipt = add_on.receipt_url
-            status = "paid" if add_on.paid else "unpaid"
+            amount = (i.amount)/100
+            currency = i.currency
+            receipt = "Null"
+            status = "Null"#"paid" if add_on.paid else "unpaid"
             output ={"Name":name,"Quantity":quantity,"Amount":amount,"Currency":currency,"Date":purchase_date,"Receipt":receipt,"Status":status}
             new.update(output)
             out.append(new)
@@ -379,7 +380,7 @@ def get_addon_details(request):
     return JsonResponse({"out":out},safe=False)
 
 def create_checkout_session(user,price,customer=None):
-
+    product_name = Price.objects.get(id = price).product.name
     domain_url = settings.CLIENT_BASE_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -387,7 +388,7 @@ def create_checkout_session(user,price,customer=None):
         api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
-    #if user.billing
+
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
@@ -400,11 +401,11 @@ def create_checkout_session(user,price,customer=None):
             {
                 'price': price,
                 'quantity': 1,
-                'tax_rates':None,
-            }
+            },
         ],
-        # tax_id_collection={'enabled':True},
-        # customer_update={'name':'auto','address':'auto'}
+        subscription_data={
+        'metadata' : {'price':price.id,'product':product_name,'type':'subscription'},
+        }
     )
     return checkout_session
 
@@ -626,8 +627,6 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except TempPricingPreference.DoesNotExist:
                 free=CreditPack.objects.get(name='Free')
-                if user.country.id == None:
-                    return Response({'msg':'No Data Found in User Country'}, status=204)
                 if user.country.id == 101 :
                     currency = 'inr'
                 else:
@@ -730,11 +729,7 @@ class UserTaxInfoView(viewsets.ViewSet):
         serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
         print(serializer.is_valid())
         if serializer.is_valid():
-            try:
-                serializer.save()
-            except ValueError as e:
-                print(e)
-                return Response({'Error':str(e)}, status=422)
+            serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
