@@ -37,7 +37,7 @@ urlpatterns+= [
      path('dj-rest-auth/registration/account-confirm-email/', VerifyEmailView.as_view(), name='account_email_verification_sent') ,
      path('userprofile/update/',api_views.UserProfileCreateView.as_view({'put':'update'})),
      path('get_payment_details_subscription/',api_views.get_payment_details),
-     path('get_addon_details_addon/',api_views.get_addon_details),
+     path('get_payment_details_addon/',api_views.get_addon_details),
      # path('profile-images/<int:pk>/', api_views.ProfessionalidentityView.as_view(), name='pro_identity'),
      path('check-subscription/',api_views.check_subscription),
      path('stripe-customer-portal/',api_views.customer_portal_session),
