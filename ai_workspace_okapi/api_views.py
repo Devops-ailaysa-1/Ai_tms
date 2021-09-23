@@ -28,6 +28,8 @@ from rest_framework.parsers import JSONParser
 from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
+import urllib.parse
+from .serializers import PentmUpdateSerializer
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -181,9 +183,18 @@ class SegmentsUpdateView(viewsets.ViewSet):
             segment_serlzr.save()
             return segment_serlzr
 
+    def update_pentm(self, segment):
+        data = PentmUpdateSerializer(segment).data
+        res = requests.post(f"http://{spring_host}:8080/project/pentm/update", data=data)
+        if res.status_code == 200:
+            print("res text--->", res.json())
+        else:
+            print("not successfully update")
+
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
         segment_serlzr = self.get_update(segment, request.data, request)
+        self.update_pentm(segment)
         return Response(segment_serlzr.data, status=201)
 
 class MT_RawAndTM_View(views.APIView):
@@ -229,7 +240,7 @@ class ConcordanceSearchView(views.APIView):
             tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
                     "threshold": 10})
             res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                    data = {'pentmsearchparams': json.dumps( tm_ser_data) })
+                    data = {'pentmsearchparams': json.dumps( tm_ser_data), "isCncrdSrch":"true" })
             if res.status_code == 200:
                 return res.json()
             else:
@@ -255,15 +266,19 @@ class DocumentToFile(views.APIView):
         res = self.document_data_to_file(request, document_id)
         if res.status_code in [200, 201]:
             file_path = res.text
+            print("file_path---->", file_path)
             if os.path.isfile(res.text):
                 if os.path.exists(file_path):
                     with open(file_path, 'rb') as fh:
                         response = HttpResponse(fh.read(), content_type=\
                             "application/vnd.ms-excel")
-                        response['Content-Disposition'] = 'attachment; filename='\
-                                    + os.path.basename(file_path)
+                        encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
+                                encoding='utf-8')
+                        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
+                                            .format(encoded_filename)
                         response["Access-Control-Allow-Origin"] = "*"
                         response["Access-Control-Allow-Headers"] = "*"
+                        print("cont-disp--->", response.get("Content-Disposition"))
                         return response
         return JsonResponse({"msg": "something went to wrong in okapi file processing"},\
                     status=409)

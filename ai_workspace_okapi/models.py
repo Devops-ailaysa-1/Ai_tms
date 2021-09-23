@@ -216,3 +216,5 @@ class FontSize(models.Model):
     font_size = models.IntegerField()
     language = models.ForeignKey(Languages, on_delete=models.CASCADE,
                                  related_name="language_font_size_set")
+
+
