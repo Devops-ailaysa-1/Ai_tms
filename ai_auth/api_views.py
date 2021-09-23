@@ -331,22 +331,10 @@ def get_payment_details(request):
     if user_invoice_details:
         out=[]
         for i in user_invoice_details:
-            new={}
-            plan = Subscription.objects.get(id=i.subscription_id).plan
-            Name = plan.product.name
-            Invoice_number = i.number
-            Invoice_value = i.amount_paid
-            Currency = i.currency
-            Invoice_date = i.created.date()
-            status = "paid" if i.paid else "unpaid"
-            pdf_download_link = i.invoice_pdf
-            view_invoice_url = i.hosted_invoice_url
-            # purchase_type = "Addon" if i.billing_reason == "manual" else "Subscription"
-            output={"Name":Name,"Price":Invoice_value,"Currency":Currency,"Invoice_number":Invoice_number,"Invoice_date":Invoice_date,
-                    "Status":status,"Invoice_Pdf_download_link":pdf_download_link,
-                    "Invoice_view_URL":view_invoice_url}
-            new.update(output)
-            out.append(new)
+            output={"Name":i.plan.product.name,"Price":i.amount_paid,"Currency":i.currency,"Invoice_number":i.number,"Invoice_date":i.created.date(),
+                    "Status":"paid" if i.paid else "unpaid","Invoice_Pdf_download_link": i.invoice_pdf,
+                    "Invoice_view_URL":i.hosted_invoice_url}
+            out.append(output)
     else:
         out = "No invoice details Exists"
     return JsonResponse({"Payments":out},safe=False)
@@ -365,24 +353,19 @@ def get_addon_details(request):
     if add_on_list:
         out=[]
         for i in add_on_list:
-            new={}
-            add_on=Charge.objects.get(payment_intent_id=i.id)
-            quantity = i.metadata["quantity"]
+            try:
+                add_on=Charge.objects.get(Q(payment_intent_id=i.id)&Q(status='succeeded'))
+            except:
+                add_on = None
             name = Price.objects.get(id=i.metadata["price"]).product.name
-            purchase_date = i.created.date()
-            amount = add_on.amount_captured
-            currency = add_on.currency
-            receipt = add_on.receipt_url
-            status = "paid" if add_on.paid else "unpaid"
-            output ={"Name":name,"Quantity":quantity,"Amount":amount,"Currency":currency,"Date":purchase_date,"Receipt":receipt,"Status":status}
-            new.update(output)
-            out.append(new)
+            output ={"Name":name,"Quantity":i.metadata["quantity"],"Amount": (i.amount)/100,"Currency":i.currency,"Date":i.created.date(),"Receipt":add_on.receipt_url if add_on else None,"Status":"succeeded" if add_on else "incomplete"}
+            out.append(output)
     else:
         out = "No Add-on details Exists"
     return JsonResponse({"out":out},safe=False)
 
 def create_checkout_session(user,price,customer=None):
-
+    product_name = Price.objects.get(id = price).product.name
     domain_url = settings.CLIENT_BASE_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -390,6 +373,7 @@ def create_checkout_session(user,price,customer=None):
         api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
+
     tax_rate =[]
 
     if user.country.sortname == 'IN':
@@ -420,8 +404,9 @@ def create_checkout_session(user,price,customer=None):
                 'tax_rates':tax_rate,
             }
         ],
-        # tax_id_collection={'enabled':True},
-        # customer_update={'name':'auto','address':'auto'}
+        subscription_data={
+        'metadata' : {'price':price.id,'product':product_name,'type':'subscription'},
+        }
     )
     return checkout_session
 
@@ -661,8 +646,6 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except TempPricingPreference.DoesNotExist:
                 free=CreditPack.objects.get(name='Free')
-                if user.country.id == None:
-                    return Response({'msg':'No Data Found in User Country'}, status=204)
                 if user.country.id == 101 :
                     currency = 'inr'
                 else:
@@ -788,11 +771,7 @@ class UserTaxInfoView(viewsets.ViewSet):
         serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
         print(serializer.is_valid())
         if serializer.is_valid():
-            try:
-                serializer.save()
-            except ValueError as e:
-                print(e)
-                return Response({'Error':str(e)}, status=422)
+            serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
