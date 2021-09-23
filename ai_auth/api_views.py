@@ -1,4 +1,4 @@
-from djstripe.models.billing import TaxId
+from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, OfficialInformationSerializer, PersonalInformationSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
@@ -636,15 +636,23 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 customer=cust[0]
             try:
                 # check user is from pricing page
-                pre_price = TempPricingPreference.objects.get(email=user.email).last().price_id
-                price = Price.objects.get(id=pre_price)    
+                pre_price = TempPricingPreference.objects.filter(email=user.email).last()
+                if pre_price == None:
+                    raise ValueError('No Prefernece Given')
+                if user.country.id == 101 :
+                    currency = 'inr'
+                else:
+                    currency ='usd'
+                price = Plan.objects.get(id=pre_price.price_id)
+                if price.currency != currency:
+                    price = Plan.objects.get(product=price.product,interval=price.interval,currency=currency)
                 try:
                     address = BillingAddress.objects.get(user=user)
                     session = create_checkout_session(user=user,price=price,customer=customer)
                 except BillingAddress.DoesNotExist:
                    return Response({'Error':'Billing Address Not Found'}, status=204) 
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
-            except TempPricingPreference.DoesNotExist:
+            except (TempPricingPreference.DoesNotExist,ValueError):
                 free=CreditPack.objects.get(name='Free')
                 if user.country.id == 101 :
                     currency = 'inr'
