@@ -112,6 +112,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task_credit_status.save()
                 else:
                     print(task_credit_status.errors)
+                user_credit = UserCredits.objects.get(user_id=request.user.id)
+                user_credit.credits_left -= total_char_count
+                user_credit.save()
             else:
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
                 raise  ValueError("Something went wrong in okapi file processing!!!")
