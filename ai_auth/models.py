@@ -181,6 +181,7 @@ class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
     stripe_tax_id = models.ForeignKey(StripeTaxId,on_delete=models.CASCADE,related_name='stripe_taxid_user')
     tax_id = models.CharField(max_length=250)
+    #tax_uid= models.CharField(max_length=250)
 
 pre_save.connect(updated_user_taxid, sender=UserTaxInfo)
 
