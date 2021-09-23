@@ -636,7 +636,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 customer=cust[0]
             try:
                 # check user is from pricing page
-                pre_price = TempPricingPreference.objects.filter(email=user.email).last().price_id
+                pre_price = TempPricingPreference.objects.get(email=user.email).last().price_id
                 price = Price.objects.get(id=pre_price)    
                 try:
                     address = BillingAddress.objects.get(user=user)
