@@ -137,8 +137,8 @@ class Document(models.Model):
         return self.get_segments().exclude(source__exact='')
 
     @property
-    def segments_without_blank(self):
-        return self.get_segments().exclude(source__exact='')
+    def segments_with_blank(self):
+        return self.get_segments().filter(source__exact='')
 
     @property
     def segments(self):

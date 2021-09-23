@@ -494,3 +494,27 @@ class TbxFile(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.tbx_file.file.name)
+
+def tbx_template_file_upload_path(instance, filename):
+    return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx_template", filename)
+
+class TbxTemplateFiles(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE ,null=False, blank=False)
+    job = models.ForeignKey(Job, on_delete=models.CASCADE ,null=False, blank=False)
+    tbx_template_file = models.FileField(upload_to=tbx_template_file_upload_path, 
+                                    validators=[FileExtensionValidator(allowed_extensions=["xlsx"])])
+    # upload_date = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def filename(self):
+        return  os.path.basename(self.tbx_template_file.file.name)
+    
+class TemplateTermsModel(models.Model):
+
+    file = models.ForeignKey(TbxTemplateFiles, on_delete=models.CASCADE ,null=False, blank=False)
+    job  =  models.ForeignKey(Job, on_delete=models.CASCADE ,null=False, blank=False)
+    sl_term = models.CharField(max_length=200, null=True, blank=True)
+    tl_term = models.CharField(max_length=200, null=True, blank=True)
+
+    def __str__(self):
+        return self.sl_term

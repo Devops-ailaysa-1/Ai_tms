@@ -45,6 +45,9 @@ urlpatterns += [
 	path("tbx_list_create/<int:project_id>", api_views.TbxFileListCreateView.as_view(), name='tbx-list-create'),
 	path("tbx_detail/<int:id>", api_views.TbxFileDetail.as_view(), name='tbx-detail'),
 	path("tmx_list/<int:project_id>", api_views.TmxList.as_view(), name='tmx-list'),
+	path("tbx_template_download", api_views.glossary_template_lite, name="tbx-template-download"),
+	path("tbx_template_upload/<int:project_id>", api_views.TbxTemplateUploadView.as_view(), name="tbx-template-upload"),
+	path("tbx_download/<int:tbx_file_id>", api_views.tbx_download, name="tbx-download"),
 ]
 # views urls adding for local testing
 urlpatterns += [

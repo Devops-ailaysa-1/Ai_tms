@@ -3,7 +3,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from ai_workspace.models import  Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile
+		ReferenceFiles, TbxFile, TbxTemplateFiles
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -449,3 +449,18 @@ class TbxFileSerializer(serializers.ModelSerializer):
 		job = data.get("job_id", None)
 		tbx_file = data.get("tbx_file")
 		return {"project": project, "job": job, "tbx_file": tbx_file}
+
+class TbxTemplateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = TbxTemplateFiles
+        fields = ("id", "project", "job", "tbx_template_file")
+    
+    @staticmethod
+    def prepare_data(data):
+        if not (("project_id" in data) and ("job_id" in data) and ("tbx_template_file" in data)):
+            raise serializers.ValidationError("Required fields missing!!!")
+        project = data["project_id"]		
+        job = data.get("job_id")
+        tbx_template_file = data.get("tbx_template_file")
+        return {"project": project, "job": job, "tbx_template_file": tbx_template_file}	
