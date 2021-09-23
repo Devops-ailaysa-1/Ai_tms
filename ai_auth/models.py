@@ -56,7 +56,7 @@ class UserAttribute(models.Model):
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
-        managed=False
+        # managed=False
         db_table='user_attribute'
         permissions = (
                 ("user-attribute-exist", "user attribute exist"),
@@ -88,7 +88,7 @@ class PersonalInformation(models.Model):
     # created_at = models.CharField(max_length=200,blank=True, null=True)
     # updated_at = models.CharField(max_length=200,blank=True, null=True)
     class Meta:
-        managed=False
+        # managed=False
         db_table = 'personal_info'
 
 
@@ -106,7 +106,7 @@ class OfficialInformation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     class Meta:
-        managed=False
+        # managed=False
         db_table = 'official_info'
 
 
@@ -123,7 +123,7 @@ class Professionalidentity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     class Meta:
-        managed=False
+        # managed=False
         db_table = 'professional_identity'
 #pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 

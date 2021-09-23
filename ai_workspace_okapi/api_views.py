@@ -2,16 +2,16 @@ from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSeriali
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer)
-from ai_workspace.serializers import TaskSerializer
+from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer
 from .models import Document, Segment, MT_RawTranslation, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets
 from rest_framework import views
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
-from ai_auth.models import AiUser, UserAttribute
+from ai_auth.models import AiUser, UserAttribute, UserCredits
 from ai_staff.models import AiUserType
 from django.http import HttpResponse
-from ai_workspace.models import Task
+from ai_workspace.models import Task, TaskCreditStatus
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
@@ -96,6 +96,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
+                total_char_count = doc_data.get("total_char_count", 0)
+                if total_char_count >  UserCredits.objects.get(user=request.user).credits_left:
+                    raise ValueError("Insufficient credits to open the task")                
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -103,6 +106,12 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     document = serializer.save()
                     task.document = document
                     task.save()
+                task_credit_status = TaskCreditStatusSerializer(data={"task":task.id, "allocated_credits":total_char_count,
+                                                              "actual_used_credits": document.mt_usage   })
+                if task_credit_status.is_valid():                                                             
+                    task_credit_status.save()
+                else:
+                    print(task_credit_status.errors)
             else:
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
                 raise  ValueError("Something went wrong in okapi file processing!!!")

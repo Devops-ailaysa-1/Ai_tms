@@ -1,3 +1,4 @@
+from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_auth.utils import get_unique_pid
 from django.db import models, IntegrityError
@@ -519,3 +520,9 @@ class TemplateTermsModel(models.Model):
 
     def __str__(self):
         return self.sl_term
+
+class TaskCreditStatus(models.Model):
+    task = models.ForeignKey(Task, null=False, blank=False, on_delete=models.CASCADE)
+    allocated_credits = models.IntegerField()
+    actual_used_credits = models.IntegerField()
+    

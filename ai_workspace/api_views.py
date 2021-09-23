@@ -13,11 +13,12 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer)
+    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
+        TaskCreditStatusSerializer)
 
 import copy, os, mimetypes
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField,\
+from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
     TempProject, TmxFile, ReferenceFiles
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
@@ -746,3 +747,23 @@ def tbx_download(request,tbx_file_id):
     response = HttpResponse(fl, content_type=mime_type)
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
+
+class UpdateTaskCreditStatus(APIView):
+
+    def get_object(self, doc_id):
+        try:
+            return TaskCreditStatus.objects.get(task__document=doc_id)
+        except TaskCreditStatus.DoesNotExist:
+            return HttpResponse(status=404)
+
+    def put(self, request, doc_id):
+        task_cred_status = self.get_object(doc_id)
+        doc = Document.objects.get(id=doc_id)
+        print("DOC MT USAGE-->", doc.mt_usage)
+        serializer = TaskCreditStatusSerializer(task_cred_status, data={"actual_used_credits" : doc.mt_usage}, 
+                        partial=True)
+        print("SER VALIDITY-->", serializer.is_valid()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+    

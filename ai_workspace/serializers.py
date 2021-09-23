@@ -3,7 +3,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from ai_workspace.models import  Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -483,3 +483,8 @@ class TbxTemplateSerializer(serializers.ModelSerializer):
         job = data.get("job_id")
         tbx_template_file = data.get("tbx_template_file")
         return {"project": project, "job": job, "tbx_template_file": tbx_template_file}	
+
+class TaskCreditStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskCreditStatus
+        fields = "__all__"
