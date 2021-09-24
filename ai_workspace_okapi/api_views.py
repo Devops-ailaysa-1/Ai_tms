@@ -83,12 +83,15 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     def credit_balance(request):
         total_credit_left = 0
         present = datetime.now()
-        addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
         sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="subscription"))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             total_credit_left += sub_credits.credits_left 
-        for addon in addon_credits:
-            total_credit_left += addon.credits_left 
+        try:
+            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
+            for addon in addon_credits:
+                total_credit_left += addon.credits_left
+        except Exception as e:
+            print("NO ADD-ONS AVAILABLE")
         
         return total_credit_left
 
@@ -115,7 +118,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 word_char_ratio = round(total_char_count/total_word_count, 2)
                 total_credit_left = DocumentViewByTask.credit_balance(request)                
                 if total_word_count > total_credit_left:
-                    raise ValueError("Insufficient credits to open the task")                
+                    open_alert = False
+                else:
+                    open_alert = True
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -137,18 +142,19 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             document = Document.objects.get(job=task.job, file=task.file)
             task.document = document
             task.save()
-        return document
+        return document, open_alert
 
     def get(self, request, task_id, format=None):
         task = self.get_object(task_id=task_id)
-        document = self.create_document_for_task_if_not_exists(task, request)
+        document, open_alert = self.create_document_for_task_if_not_exists(task, request)
         # page_segments = self.paginate_queryset(document.segments, request, view=self)
         # segments_ser = SegmentSerializer(page_segments, many=True)
         # return self.get_paginated_response(segments_ser.data)
-        if True:
-            return Response(DocumentSerializerV2(document).data, status=201)
-        else:
-            return HttpResponse('<h1>No Sufficient balance</h1>')
+        print("document serializer---->", DocumentSerializerV2(document).data)
+        doc = DocumentSerializerV2(document).data
+        doc["open_alert"] = open_alert
+        return Response(doc, status=201)
+
 
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
@@ -215,17 +221,38 @@ class SegmentsUpdateView(viewsets.ViewSet):
 class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
+    def credit_balance(request):
+        total_credit_left = 0
+        present = datetime.now()
+        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="subscription"))
+        if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+            total_credit_left += sub_credits.credits_left 
+        try:
+            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
+            for addon in addon_credits:
+                total_credit_left += addon.credits_left
+        except Exception as e:
+            print("NO ADD-ONS AVAILABLE")
+        
+        return total_credit_left
+
+    @staticmethod
     def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw), 200
 
-        mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
-                        context={"request": request})
-        if mt_raw_serlzr.is_valid(raise_exception=True):
-            # mt_raw_serlzr.validated_data[""]
-            mt_raw_serlzr.save()
-            return mt_raw_serlzr, 201
+        credit = MT_RawAndTM_View.credit_balance(request)
+
+        if credit != 0: 
+            mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
+                            context={"request": request})
+            if mt_raw_serlzr.is_valid(raise_exception=True):
+                # mt_raw_serlzr.validated_data[""]
+                mt_raw_serlzr.save()
+                return mt_raw_serlzr.data, 201
+        else:
+            return {"data":"Insufficient credits"}, 424
 
     @staticmethod
     def get_tm_data(request, segment_id):
@@ -243,7 +270,7 @@ class MT_RawAndTM_View(views.APIView):
     def get(self, request, segment_id):
         data, status_code = self.get_data(request, segment_id)
         tm_data = self.get_tm_data(request, segment_id)
-        return Response({**data.data, "tm":tm_data}, status=status_code)
+        return Response({**data, "tm":tm_data}, status=status_code)
 
 class ConcordanceSearchView(views.APIView):
 

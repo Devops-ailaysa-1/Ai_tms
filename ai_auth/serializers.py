@@ -297,3 +297,4 @@ class AiUserProfileSerializer(serializers.ModelSerializer):
         print(instance)
         data["fullname"] = instance.user.fullname
         return data
+

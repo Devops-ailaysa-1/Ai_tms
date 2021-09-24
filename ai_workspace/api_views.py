@@ -1,3 +1,4 @@
+from rest_framework.exceptions import ValidationError
 from ai_workspace_okapi.models import Document
 from django.conf import settings
 from django.core.files import File as DJFile
@@ -761,14 +762,25 @@ class UpdateTaskCreditStatus(APIView):
     @staticmethod
     def update_addon_credit(request, actual_used_credits=None, credit_diff=None):
         add_ons = UserCredits.objects.filter(Q(user_id=request.user.id) & Q(credit_pack_type="addon"))
-        case = credit_diff if credit_diff != None else actual_used_credits            
-        for addon in add_ons:
-            if addon.credits_left >= case:
-                addon.credits_left -= case
-                addon.save()
-                break
+        if add_ons.exists():
+            case = credit_diff if credit_diff != None else actual_used_credits   
+            for addon in add_ons:
+                if addon.credits_left >= case:
+                    addon.credits_left -= case
+                    addon.save()
+                    case = None
+                    break
+                else:
+                    diff = case - addon.credits_left
+                    addon.credits_left = 0
+                    addon.save()
+                    case = diff
+            if case != None:
+                return False
             else:
-                continue      
+                return True
+        else:
+            return False
     
     @staticmethod
     def update_usercredit(request, actual_used_credits):
@@ -779,16 +791,17 @@ class UpdateTaskCreditStatus(APIView):
                 if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits
                     user_credit.save()
+                    return True
                 else:
                     credit_diff = actual_used_credits - user_credit.credits_left
                     user_credit.credits_left = 0
                     user_credit.save()
-                    UpdateTaskCreditStatus.update_addon_credit(request, credit_diff)
+                    from_addon = UpdateTaskCreditStatus.update_addon_credit(request, credit_diff)
+                    return from_addon
             else:
                 raise Exception
 
         except Exception as e:
-            print("SUBSCRIPTION EXCEPTION ---->", e)
             UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)       
 
     def put(self, request, doc_id):
@@ -796,10 +809,17 @@ class UpdateTaskCreditStatus(APIView):
         doc = Document.objects.get(id=doc_id)
         print("DOC MT USAGE-->", doc.mt_usage)
         actual_used_credits = int(doc.mt_usage/task_cred_status.word_char_ratio)
-        self.update_usercredit(request, actual_used_credits - task_cred_status.actual_used_credits)        
+        credit_status = self.update_usercredit(request, actual_used_credits - task_cred_status.actual_used_credits)
+        print("CREDIT STATUS----->", credit_status)
+        if credit_status:
+            msg = "Successfully debited"
+            status = 200
+        else:
+            msg = "Insufficient credits"
+            status = 402
         serializer = TaskCreditStatusSerializer(task_cred_status, 
                      data={"actual_used_credits" : actual_used_credits }, partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response(serializer.data, status=200)
+            return Response({"msg" : msg}, status=status)
     
