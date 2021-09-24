@@ -78,21 +78,21 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
-    
+
     @staticmethod
     def credit_balance(request):
         total_credit_left = 0
         present = datetime.now()
         sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="subscription"))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-            total_credit_left += sub_credits.credits_left 
+            total_credit_left += sub_credits.credits_left
         try:
             addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
             for addon in addon_credits:
                 total_credit_left += addon.credits_left
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
-        
+
         return total_credit_left
 
     @staticmethod
@@ -116,7 +116,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_char_count = doc_data.get("total_char_count", 0)
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
-                total_credit_left = DocumentViewByTask.credit_balance(request)                
+                total_credit_left = DocumentViewByTask.credit_balance(request)
                 if total_word_count > total_credit_left:
                     open_alert = False
                 else:
@@ -130,7 +130,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task.save()
                 task_credit_status = TaskCreditStatusSerializer(data={"task":task.id, "allocated_credits":total_word_count,
                                     "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
-                if task_credit_status.is_valid():                                                             
+                if task_credit_status.is_valid():
                     task_credit_status.save()
                 else:
                     print(task_credit_status.errors)
@@ -152,7 +152,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # return self.get_paginated_response(segments_ser.data)
         print("document serializer---->", DocumentSerializerV2(document).data)
         doc = DocumentSerializerV2(document).data
-        doc["open_alert"] = open_alert
+        doc["open_credit_alert"] = open_alert
         return Response(doc, status=201)
 
 
@@ -197,7 +197,7 @@ class SourceTMXFilesCreate(views.APIView):
 
     def post(self, request, project_id):
         jobs, files = self.get_queryset(project_id=project_id)
-        
+
 class SegmentsUpdateView(viewsets.ViewSet):
     @staticmethod
     def get_object(segment_id):
@@ -226,14 +226,14 @@ class MT_RawAndTM_View(views.APIView):
         present = datetime.now()
         sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="subscription"))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-            total_credit_left += sub_credits.credits_left 
+            total_credit_left += sub_credits.credits_left
         try:
             addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
             for addon in addon_credits:
                 total_credit_left += addon.credits_left
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
-        
+
         return total_credit_left
 
     @staticmethod
@@ -244,7 +244,7 @@ class MT_RawAndTM_View(views.APIView):
 
         credit = MT_RawAndTM_View.credit_balance(request)
 
-        if credit != 0: 
+        if credit != 0:
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
@@ -655,18 +655,18 @@ class ProjectStatusView(APIView):
         docs = Document.objects.filter(job__project_id=project_id).all()
         total_segments = 0
         if not docs:
-            return JsonResponse({"res" : "YET TO START"}, safe=False)        
+            return JsonResponse({"res" : "YET TO START"}, safe=False)
         else:
             for doc in docs:
                 total_segments+=doc.total_segment_count
 
-        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) & 
+        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) &
             Q(status_id__in=[102,104,106])).all().count()
         if total_segments == status_count:
             return JsonResponse({"res" : "100% COMPLETE"}, safe=False)
         else:
             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
-            
+
 class GetPageIndexWithFilterApplied(views.APIView):
 
     def get_queryset(self, document_id, status_list):
@@ -680,9 +680,9 @@ class GetPageIndexWithFilterApplied(views.APIView):
         return  segments
 
     def post(self, request, document_id, segment_id):
-        print( "data---->", request.data ) 
+        print( "data---->", request.data )
         status_list = request.data.get("status_list", [])
-        print("status list", status_list + [] ) 
+        print("status list", status_list + [] )
         segments = self.get_queryset(document_id, status_list)
         print("segments---->", segments)
         if not segments:
@@ -704,16 +704,14 @@ class ProjectStatusView(APIView):
         docs = Document.objects.filter(job__project_id=project_id).all()
         total_segments = 0
         if not docs:
-            return JsonResponse({"res" : "YET TO START"}, safe=False)        
+            return JsonResponse({"res" : "YET TO START"}, safe=False)
         else:
             for doc in docs:
                 total_segments+=doc.total_segment_count
 
-        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) & 
+        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) &
             Q(status_id__in=[102,104,106])).all().count()
         if total_segments == status_count:
             return JsonResponse({"res" : "COMPLETED"}, safe=False)
         else:
             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
-
-
