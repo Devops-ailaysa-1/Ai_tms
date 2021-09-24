@@ -491,7 +491,7 @@ def generate_portal_session(customer):
     stripe.api_key = api_key
     session = stripe.billing_portal.Session.create(
         customer=customer.id,
-        return_url=domain_url,
+        return_url=domain_url+'dashboard',
     )
     return session
 
@@ -650,7 +650,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                     address = BillingAddress.objects.get(user=user)
                     session = create_checkout_session(user=user,price=price,customer=customer)
                 except BillingAddress.DoesNotExist:
-                   return Response({'Error':'Billing Address Not Found'}, status=204) 
+                   return Response({'Error':'Billing Address Not Found'}, status=412) 
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except (TempPricingPreference.DoesNotExist,ValueError):
                 free=CreditPack.objects.get(name='Free')
