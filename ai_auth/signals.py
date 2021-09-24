@@ -41,7 +41,8 @@ def update_billing_address(address):
     try:
         customer = Customer.objects.get(subscriber=address.user)
     except Customer.DoesNotExist:
-        customer = Customer.objects.get(subscriber=address.user)
+        cust = Customer.get_or_create(subscriber=address.user)
+        customer = cust[0]
 
     stripe.api_key = api_key
     response =stripe.Customer.modify(
@@ -76,11 +77,8 @@ def update_user_tax_id(taxid):
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
         api_key = settings.STRIPE_TEST_SECRET_KEY    
-    try:
-        customer = Customer.objects.get(subscriber=taxid.user)
-    except Customer.DoesNotExist:
-        customer = Customer.objects.get(subscriber=taxid.user)
 
+    customer = Customer.objects.get(subscriber=taxid.user)
     stripe.api_key = api_key
     try:
         response= stripe.Customer.create_tax_id(
