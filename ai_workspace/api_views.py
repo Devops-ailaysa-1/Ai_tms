@@ -5,7 +5,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_auth.models import AiUser
+from ai_auth.models import AiUser, UserCredits
 from rest_framework import viewsets
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
@@ -43,6 +43,8 @@ from django.core.files import File as DJFile
 from django.http import JsonResponse
 from tablib import Dataset
 import shutil
+from datetime import datetime
+from django.db.models import Q
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -755,15 +757,49 @@ class UpdateTaskCreditStatus(APIView):
             return TaskCreditStatus.objects.get(task__document=doc_id)
         except TaskCreditStatus.DoesNotExist:
             return HttpResponse(status=404)
+    
+    @staticmethod
+    def update_addon_credit(request, actual_used_credits=None, credit_diff=None):
+        add_ons = UserCredits.objects.filter(Q(user_id=request.user.id) & Q(credit_pack_type="addon"))
+        case = credit_diff if credit_diff != None else actual_used_credits            
+        for addon in add_ons:
+            if addon.credits_left >= case:
+                addon.credits_left -= case
+                addon.save()
+                break
+            else:
+                continue      
+    
+    @staticmethod
+    def update_usercredit(request, actual_used_credits):
+        present = datetime.now()
+        try:
+            user_credit = UserCredits.objects.get(Q(user_id=1) & Q(credit_pack_type="subscription")) 
+            if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+                if not actual_used_credits > user_credit.credits_left:
+                    user_credit.credits_left -= actual_used_credits
+                    user_credit.save()
+                else:
+                    credit_diff = actual_used_credits - user_credit.credits_left
+                    user_credit.credits_left = 0
+                    user_credit.save()
+                    UpdateTaskCreditStatus.update_addon_credit(request, credit_diff)
+            else:
+                raise Exception
+
+        except Exception as e:
+            print("SUBSCRIPTION EXCEPTION ---->", e)
+            UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)       
 
     def put(self, request, doc_id):
         task_cred_status = self.get_object(doc_id)
         doc = Document.objects.get(id=doc_id)
         print("DOC MT USAGE-->", doc.mt_usage)
-        serializer = TaskCreditStatusSerializer(task_cred_status, data={"actual_used_credits" : doc.mt_usage}, 
-                        partial=True)
-        print("SER VALIDITY-->", serializer.is_valid()) 
-        if serializer.is_valid():
+        actual_used_credits = int(doc.mt_usage/task_cred_status.word_char_ratio)
+        self.update_usercredit(request, actual_used_credits - task_cred_status.actual_used_credits)        
+        serializer = TaskCreditStatusSerializer(task_cred_status, 
+                     data={"actual_used_credits" : actual_used_credits }, partial=True)
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=200)
     

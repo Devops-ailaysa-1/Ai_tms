@@ -525,4 +525,4 @@ class TaskCreditStatus(models.Model):
     task = models.ForeignKey(Task, null=False, blank=False, on_delete=models.CASCADE)
     allocated_credits = models.IntegerField()
     actual_used_credits = models.IntegerField()
-    
+    word_char_ratio = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)

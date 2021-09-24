@@ -21,7 +21,9 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack):
     'credits_left':pack.credits*quants,
     'expiry': expiry,
     'paymentintent':payment.id if payment else None,
-    'invoice':invoice.id if invoice else None
+    'invoice':invoice.id if invoice else None,
+    'credit_pack_type': pack.type
+
     }
     us = models.UserCredits.objects.create(**kwarg)
     print(us)

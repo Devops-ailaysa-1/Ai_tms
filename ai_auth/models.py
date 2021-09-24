@@ -159,12 +159,11 @@ class UserCredits(models.Model):
     price_id = models.CharField(max_length=200)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     Buyed_credits = models.IntegerField()
-    credits_left =models.IntegerField()
+    credits_left =models.PositiveIntegerField()
     expiry = models.DateTimeField(blank=True, null=True)
     invoice = models.CharField(max_length=200,blank=True, null=True)
     paymentintent = models.CharField(max_length=200,blank=True, null=True)
-
-
+    credit_pack_type = models.CharField(max_length=200, blank=True, null=True)
 
 class CreditPack(models.Model):
     name = models.CharField(max_length=200)
