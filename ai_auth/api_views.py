@@ -333,7 +333,7 @@ def get_payment_details(request):
                     "Invoice_view_URL":i.hosted_invoice_url}
             out.append(output)
     else:
-        out = "No invoice details Exists"
+        out =[]
     return JsonResponse({"Payments":out},safe=False)
 
 
@@ -358,7 +358,7 @@ def get_addon_details(request):
             output ={"Name":name,"Quantity":i.metadata["quantity"],"Amount": (i.amount)/100,"Currency":i.currency,"Date":i.created.date(),"Receipt":add_on.receipt_url if add_on else None,"Status":"succeeded" if add_on else "incomplete"}
             out.append(output)
     else:
-        out = "No Add-on details Exists"
+        out = []
     return JsonResponse({"out":out},safe=False)
 
 def create_checkout_session(user,price,customer=None):
