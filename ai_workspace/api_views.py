@@ -470,7 +470,7 @@ class TbxUploadView(APIView):
 
 @api_view(['GET',])
 def getLanguageName(request,id):
-      
+
     job_id=Document.objects.get(id=id).job_id
     print("INSIDE")
     src_id=Job.objects.get(id=job_id).source_language_id
@@ -568,7 +568,7 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     def get_object(self, project_id):
-        
+
         tasks = Task.objects.filter(job__project_id=project_id).all()
         tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
         return tasks
@@ -683,7 +683,7 @@ class TbxFileDetail(APIView):
         tbx_file = request.FILES.get('tbx_file')
         job_id = request.POST.get("job_id", None)
         serializer = TbxFileSerializer(tbx_asset, data={"job" : job_id}, partial=True)
-        print("SER VALIDITY-->", serializer.is_valid()) 
+        print("SER VALIDITY-->", serializer.is_valid())
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data, status=200)
@@ -711,7 +711,7 @@ def glossary_template_lite(request):
 class TbxTemplateUploadView(APIView):
 
     def post(self, request, project_id):
-    
+
         data = {**request.POST.dict(), "tbx_template_file" : request.FILES.get('tbx_template_file')}
         data.update({'project_id': project_id})
         prep_data = TbxTemplateSerializer.prepare_data(data)
@@ -758,12 +758,12 @@ class UpdateTaskCreditStatus(APIView):
             return TaskCreditStatus.objects.get(task__document=doc_id)
         except TaskCreditStatus.DoesNotExist:
             return HttpResponse(status=404)
-    
+
     @staticmethod
     def update_addon_credit(request, actual_used_credits=None, credit_diff=None):
         add_ons = UserCredits.objects.filter(Q(user_id=request.user.id) & Q(credit_pack_type="addon"))
         if add_ons.exists():
-            case = credit_diff if credit_diff != None else actual_used_credits   
+            case = credit_diff if credit_diff != None else actual_used_credits
             for addon in add_ons:
                 if addon.credits_left >= case:
                     addon.credits_left -= case
@@ -775,13 +775,10 @@ class UpdateTaskCreditStatus(APIView):
                     addon.credits_left = 0
                     addon.save()
                     case = diff
-            if case != None:
-                return False
-            else:
-                return True
+            return False if case != None else True
         else:
             return False
-    
+
     @staticmethod
     def update_usercredit(request, actual_used_credits):
         present = datetime.now()
@@ -802,7 +799,7 @@ class UpdateTaskCreditStatus(APIView):
                 raise Exception
 
         except Exception as e:
-            UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)       
+            UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)
 
     def put(self, request, doc_id):
         task_cred_status = self.get_object(doc_id)
@@ -822,4 +819,3 @@ class UpdateTaskCreditStatus(APIView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response({"msg" : msg}, status=status)
-    
