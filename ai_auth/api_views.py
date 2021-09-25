@@ -1,3 +1,5 @@
+from djstripe.models.billing import Plan, TaxId
+from rest_framework import response
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, OfficialInformationSerializer, PersonalInformationSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
@@ -23,11 +25,12 @@ from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime
-from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product
+from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
-from ai_staff.models import SupportType
+from ai_staff.models import IndianStates, SupportType
 from django.db.models import Q
+from ai_auth.signals import update_billing_address
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -328,23 +331,12 @@ def get_payment_details(request):
     if user_invoice_details:
         out=[]
         for i in user_invoice_details:
-            new={}
-            Name = i.plan.product.name
-            Invoice_number = i.number
-            Invoice_value = i.amount_paid
-            Currency = i.currency
-            Invoice_date = i.created.date()
-            status = "paid" if i.paid else "unpaid"
-            pdf_download_link = i.invoice_pdf
-            view_invoice_url = i.hosted_invoice_url
-            # purchase_type = "Addon" if i.billing_reason == "manual" else "Subscription"
-            output={"Name":Name,"Price":Invoice_value,"Currency":Currency,"Invoice_number":Invoice_number,"Invoice_date":Invoice_date,
-                    "Status":status,"Invoice_Pdf_download_link":pdf_download_link,
-                    "Invoice_view_URL":view_invoice_url}
-            new.update(output)
-            out.append(new)
+            output={"Name":i.plan.product.name,"Price":i.amount_paid,"Currency":i.currency,"Invoice_number":i.number,"Invoice_date":i.created.date(),
+                    "Status":"paid" if i.paid else "unpaid","Invoice_Pdf_download_link": i.invoice_pdf,
+                    "Invoice_view_URL":i.hosted_invoice_url}
+            out.append(output)
     else:
-        out = "No invoice details Exists"
+        out =[]
     return JsonResponse({"Payments":out},safe=False)
 
 
@@ -361,21 +353,15 @@ def get_addon_details(request):
     if add_on_list:
         out=[]
         for i in add_on_list:
-            new={}
-            # add_on=Charge.objects.get(payment_intent_id=i.id)
-            quantity = i.metadata["quantity"]
-            product = Price.objects.get(id=i.metadata["price"]).product_id
-            name = Product.objects.get(id =product).name
-            purchase_date = i.created.date()
-            amount = (i.amount)/100
-            currency = i.currency
-            receipt = "Null"
-            status = "Null"#"paid" if add_on.paid else "unpaid"
-            output ={"Name":name,"Quantity":quantity,"Amount":amount,"Currency":currency,"Date":purchase_date,"Receipt":receipt,"Status":status}
-            new.update(output)
-            out.append(new)
+            try:
+                add_on=Charge.objects.get(Q(payment_intent_id=i.id)&Q(status='succeeded'))
+            except:
+                add_on = None
+            name = Price.objects.get(id=i.metadata["price"]).product.name
+            output ={"Name":name,"Quantity":i.metadata["quantity"],"Amount": (i.amount)/100,"Currency":i.currency,"Date":i.created.date(),"Receipt":add_on.receipt_url if add_on else None,"Status":"succeeded" if add_on else "incomplete"}
+            out.append(output)
     else:
-        out = "No Add-on details Exists"
+        out = []
     return JsonResponse({"out":out},safe=False)
 
 def create_checkout_session(user,price,customer=None):
@@ -388,6 +374,21 @@ def create_checkout_session(user,price,customer=None):
 
     stripe.api_key = api_key
 
+    tax_rate =[]
+
+    if user.country.sortname == 'IN':
+        addr=BillingAddress.objects.get(user=user)
+        print(addr.state)
+        state = IndianStates.objects.filter(state_name__icontains=addr.state)
+        if state.exists() and state.first().state_code == 'TN':
+            tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+        elif state.exists():
+            tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+    else:            
+        tax_rate=None
+    #if user.billing
+    # print("tax_rate",tax_rate)
+    # print("user country>>",user.country.sortname)
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
@@ -400,7 +401,8 @@ def create_checkout_session(user,price,customer=None):
             {
                 'price': price,
                 'quantity': 1,
-            },
+                'tax_rates':tax_rate,
+            }
         ],
         subscription_data={
         'metadata' : {'price':price.id,'product':product_name,'type':'subscription'},
@@ -409,7 +411,7 @@ def create_checkout_session(user,price,customer=None):
     return checkout_session
 
 
-def create_checkout_session_addon(price,Aicustomer,tax_rate=None,quantity=1):
+def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
     domain_url = settings.CLIENT_BASE_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -429,7 +431,7 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate=None,quantity=1):
             {
                 'price': price.id,
                 'quantity': quantity,
-                #'tax_rates':['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi'],
+                'tax_rates':tax_rate,
             },
         ],
         payment_intent_data={
@@ -489,7 +491,7 @@ def generate_portal_session(customer):
     stripe.api_key = api_key
     session = stripe.billing_portal.Session.create(
         customer=customer.id,
-        return_url=domain_url,
+        return_url=domain_url+'dashboard',
     )
     return session
 
@@ -547,9 +549,15 @@ def buy_addon(request):
          return Response({'msg':'Invalid price'}, status=406)
 
     cust=Customer.objects.get(subscriber=user)
-    #if user.country.sortname == 'IN'
-    #tax_rate=['txr_1JV9faSAQeQ4W2LNfk3OX208','txr_1JV9gGSAQeQ4W2LNDYP9YNQi']
-    tax_rate=None
+    if user.country.sortname == 'IN':
+        addr=BillingAddress.objects.get(user=user)
+        state = IndianStates.objects.filter(state_name__icontains=addr.state)
+        if state.exists() and state.first().state_code == 'TN':
+            tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+        elif state.exists():
+            tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+    else:            
+        tax_rate=None
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
 
     #request.POST.get('')
@@ -577,14 +585,17 @@ def check_subscription(request):
     if is_active == (False,True):
         customer = Customer.objects.get(subscriber=request.user)
         subscriptions = Subscription.objects.filter(customer=customer).last()
-        sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id).name
-        return Response({'msg':'User have No Active Subscription','prev_subscription':sub_name,'prev_sub_price_id':subscriptions.plan.id,'prev_sub_status':subscriptions.status}, status=402)
+        if subscriptions is not None:    
+            sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id).name
+            return Response({'msg':'User have No Active Subscription','prev_subscription':sub_name,'prev_sub_price_id':subscriptions.plan.id,'prev_sub_status':subscriptions.status}, status=402)
+        else:
+            return Response({'msg':'User have No Active Subscription','prev_subscription':None,'prev_sub_price_id':None,'prev_sub_status':None}, status=402)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user)
         subscription = Subscription.objects.filter(customer=customer).last()
        # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
         sub_name = CreditPack.objects.get(product__id=subscription.plan.product_id).name
-        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.product_id,'interval':subscription.plan.interval}, status=200)
+        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.product_id,'interval':subscription.plan.interval,'sub_period_end':subscription.current_period_end}, status=200)
     if is_active == (False,False):
         return Response({'msg':'Not a Stripe Customer'}, status=206)
 
@@ -617,34 +628,51 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
     def create(self,request):
         user=request.user
         is_active = is_active_subscription(user=request.user)
-        if is_active == (False,False):
+        if is_active[0] == False:
+            try:
+                customer = Customer.objects.get(subscriber=request.user)
+            except Customer.DoesNotExist:
+                cust = Customer.get_or_create(subscriber=user)
+                customer=cust[0]
             try:
                 # check user is from pricing page
-                pre_price = TempPricingPreference.objects.get(email=user.email).price_id
-                price = Price.objects.get(id=pre_price)
-                customer = Customer.get_or_create(subscriber=user)
-                session = create_checkout_session(user=user,price=price,customer=customer[0])
+                pre_price = TempPricingPreference.objects.filter(email=user.email).last()
+                if pre_price == None:
+                    raise ValueError('No Prefernece Given')
+                if user.country.id == 101 :
+                    currency = 'inr'
+                else:
+                    currency ='usd'
+                price = Plan.objects.get(id=pre_price.price_id)
+                if price.currency != currency:
+                    price = Plan.objects.get(product=price.product,interval=price.interval,currency=currency)
+                try:
+                    address = BillingAddress.objects.get(user=user)
+                    session = create_checkout_session(user=user,price=price,customer=customer)
+                except BillingAddress.DoesNotExist:
+                   return Response({'Error':'Billing Address Not Found'}, status=412) 
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
-            except TempPricingPreference.DoesNotExist:
+            except (TempPricingPreference.DoesNotExist,ValueError):
                 free=CreditPack.objects.get(name='Free')
                 if user.country.id == 101 :
                     currency = 'inr'
                 else:
                     currency ='usd'
                 price = Price.objects.filter(product_id=free.product,currency=currency).last()
-
-                customer = Customer.get_or_create(subscriber=user)
-                customer[0].subscribe(price=price)
-                return Response({'msg':'User Successfully created','subscription':'Free'}, status=201)
-        elif is_active == (False,True):
-            customer = Customer.objects.get(subscriber=request.user)
-            subscription = Subscription.objects.filter(customer=customer).last()
-            if subscription == None:
-                free=CreditPack.objects.get(name='Free')
-                price = Price.objects.filter(product_id=free.product).last()
                 customer.subscribe(price=price)
-                #session = create_checkout_session(user=user,price_id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
-            return Response({'msg':'User already exist in stripe'}, status=400)
+                return Response({'msg':'User Successfully created','subscription':'Free'}, status=201)
+        elif is_active == (True,True):
+            return Response({'msg':'User already Registerd'}, status=400)
+
+        # elif is_active == (False,True):
+        #     customer = Customer.objects.get(subscriber=request.user)
+        #     subscription = Subscription.objects.filter(customer=customer).last()
+        #     if subscription == None:
+        #         free=CreditPack.objects.get(name='Free')
+        #         price = Price.objects.filter(product_id=free.product).last()
+        #         customer.subscribe(price=price)
+        #         #session = create_checkout_session(user=user,price_id="price_1JQWziSAQeQ4W2LNzgKUjrIS")
+        #     return Response({'msg':'User already exist in stripe'}, status=400)
 
 
 class BillingInfoView(viewsets.ViewSet):
@@ -698,6 +726,22 @@ class BillingAddressView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+def user_taxid_delete(taxid):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+
+    stripe.api_key = api_key
+
+    response = stripe.Customer.delete_tax_id(
+    taxid.customer.id,
+    taxid.id,
+    )
+    print(response)
+    return response
+
+
 class UserTaxInfoView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def list(self, request):
@@ -722,10 +766,16 @@ class UserTaxInfoView(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         try:
-            queryset = UserTaxInfo.objects.get(id=pk)
+            queryset = UserTaxInfo.objects.get(user=request.user,id=pk)
+            if request.POST.get('stripe_tax_id') == queryset.stripe_tax_id and request.POST.get('tax_id') == queryset.tax_id:
+                return Response({'msg':'Successfully Updated'}, status=200)
+            else:
+                taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()         
+                user_taxid_delete(taxid)
         except UserTaxInfo.DoesNotExist:
             return Response(status=204)
         #queryset = BillingAddress.objects.get(id=pk)
+        #if queryset
         serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
         print(serializer.is_valid())
         if serializer.is_valid():
