@@ -595,7 +595,7 @@ def check_subscription(request):
         subscription = Subscription.objects.filter(customer=customer).last()
        # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
         sub_name = CreditPack.objects.get(product__id=subscription.plan.product_id).name
-        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.product_id,'interval':subscription.plan.interval,'sub_period_end':subscription.current_period_end}, status=200)
+        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.id,'interval':subscription.plan.interval,'sub_period_end':subscription.current_period_end,'sub_currency':subscription.plan.currency,'sub_amount':subscription.plan.amount}, status=200)
     if is_active == (False,False):
         return Response({'msg':'Not a Stripe Customer'}, status=206)
 

@@ -122,6 +122,7 @@ INSTALLED_APPS = [
     'djstripe',
     'django_filters',
     # 'channels',
+    #'django_crontab',
 ]
 
 
@@ -291,6 +292,10 @@ USE_L10N = True
 
 USE_TZ = True
 
+
+# CRONJOBS = [
+#     ('2 * * * *', 'ai_auth.cron.my_cron_job')
+# ]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
