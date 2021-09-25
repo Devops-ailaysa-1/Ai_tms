@@ -761,7 +761,7 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_addon_credit(request, actual_used_credits=None, credit_diff=None):
-        add_ons = UserCredits.objects.filter(Q(user_id=request.user.id) & Q(credit_pack_type="addon"))
+        add_ons = UserCredits.objects.filter(Q(user_id=request.user.id) & Q(credit_pack_type="Addon"))
         if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
             for addon in add_ons:
@@ -783,7 +783,7 @@ class UpdateTaskCreditStatus(APIView):
     def update_usercredit(request, actual_used_credits):
         present = datetime.now()
         try:
-            user_credit = UserCredits.objects.get(Q(user_id=request.user.id) & Q(credit_pack_type="subscription")) 
+            user_credit = UserCredits.objects.get(Q(user_id=request.user.id) & Q(credit_pack_type="Subscription")) 
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits

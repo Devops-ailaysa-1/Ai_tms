@@ -83,11 +83,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     def credit_balance(request):
         total_credit_left = 0
         present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="subscription"))
+        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription"))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             total_credit_left += sub_credits.credits_left
         try:
-            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
+            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
                 total_credit_left += addon.credits_left
         except Exception as e:
@@ -221,11 +221,11 @@ class MT_RawAndTM_View(views.APIView):
     def credit_balance(request):
         total_credit_left = 0
         present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="subscription"))
+        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription"))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             total_credit_left += sub_credits.credits_left
         try:
-            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
+            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
                 total_credit_left += addon.credits_left
         except Exception as e:
