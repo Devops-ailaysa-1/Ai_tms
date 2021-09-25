@@ -786,7 +786,7 @@ class UpdateTaskCreditStatus(APIView):
     def update_usercredit(request, actual_used_credits):
         present = datetime.now()
         try:
-            user_credit = UserCredits.objects.get(Q(user_id=1) & Q(credit_pack_type="subscription")) 
+            user_credit = UserCredits.objects.get(Q(user_id=request.user.id) & Q(credit_pack_type="subscription")) 
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits
@@ -808,15 +808,15 @@ class UpdateTaskCreditStatus(APIView):
         task_cred_status = self.get_object(doc_id)
         doc = Document.objects.get(id=doc_id)
         print("DOC MT USAGE-->", doc.mt_usage)
-        actual_used_credits = int(doc.mt_usage/task_cred_status.word_char_ratio)
+        actual_used_credits = int(doc.mt_usage / task_cred_status.word_char_ratio)
         credit_status = self.update_usercredit(request, actual_used_credits - task_cred_status.actual_used_credits)
         print("CREDIT STATUS----->", credit_status)
         if credit_status:
-            msg = "Successfully debited"
+            msg = "Successfully debited MT credits"
             status = 200
         else:
-            msg = "Insufficient credits"
-            status = 402
+            msg = "Insufficient credits to apply MT"
+            status = 424
         serializer = TaskCreditStatusSerializer(task_cred_status, 
                      data={"actual_used_credits" : actual_used_credits }, partial=True)
         if serializer.is_valid(raise_exception=True):

@@ -116,11 +116,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_char_count = doc_data.get("total_char_count", 0)
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
-                total_credit_left = DocumentViewByTask.credit_balance(request)                
-                if total_word_count > total_credit_left:
-                    open_alert = False
-                else:
-                    open_alert = True
+                total_credit_left = DocumentViewByTask.credit_balance(request)
+                open_alert = False if total_word_count > total_credit_left else True               
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -129,7 +126,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task.document = document
                     task.save()
                 task_credit_status = TaskCreditStatusSerializer(data={"task":task.id, "allocated_credits":total_word_count,
-                                    "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
+                        "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
                 if task_credit_status.is_valid():                                                             
                     task_credit_status.save()
                 else:
@@ -150,9 +147,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # page_segments = self.paginate_queryset(document.segments, request, view=self)
         # segments_ser = SegmentSerializer(page_segments, many=True)
         # return self.get_paginated_response(segments_ser.data)
-        print("document serializer---->", DocumentSerializerV2(document).data)
         doc = DocumentSerializerV2(document).data
-        doc["open_alert"] = open_alert
+        doc["open_credit_alert"] = open_alert 
         return Response(doc, status=201)
 
 
@@ -252,7 +248,7 @@ class MT_RawAndTM_View(views.APIView):
                 mt_raw_serlzr.save()
                 return mt_raw_serlzr.data, 201
         else:
-            return {"data":"Insufficient credits"}, 424
+            return {"data":"Insufficient credits for MT"}, 424
 
     @staticmethod
     def get_tm_data(request, segment_id):
