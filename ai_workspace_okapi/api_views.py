@@ -117,7 +117,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
                 total_credit_left = DocumentViewByTask.credit_balance(request)
-                open_alert = False if total_word_count > total_credit_left else True               
+                open_alert = False if (total_word_count > total_credit_left) else True 
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -139,6 +139,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             document = Document.objects.get(job=task.job, file=task.file)
             task.document = document
             task.save()
+        open_alert = True
         return document, open_alert
 
     def get(self, request, task_id, format=None):
