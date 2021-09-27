@@ -85,7 +85,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     def credit_balance(request):
         total_credit_left = 0
         present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription"))
+        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             total_credit_left += sub_credits.credits_left
         try:
@@ -119,7 +119,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
                 total_credit_left = DocumentViewByTask.credit_balance(request)
-                open_alert = False if (total_word_count > total_credit_left) else True 
+                open_alert = False if (total_word_count > total_credit_left) else True
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -129,7 +129,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task.save()
                 task_credit_status = TaskCreditStatusSerializer(data={"task":task.id, "allocated_credits":total_word_count,
                         "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
-                if task_credit_status.is_valid():                                                             
+                if task_credit_status.is_valid():
                     task_credit_status.save()
                 else:
                     print(task_credit_status.errors)
@@ -151,7 +151,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # segments_ser = SegmentSerializer(page_segments, many=True)
         # return self.get_paginated_response(segments_ser.data)
         doc = DocumentSerializerV2(document).data
-        doc["open_credit_alert"] = open_alert 
+        doc["open_credit_alert"] = open_alert
         return Response(doc, status=201)
 
 
@@ -232,7 +232,7 @@ class MT_RawAndTM_View(views.APIView):
     def credit_balance(request):
         total_credit_left = 0
         present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription"))
+        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             total_credit_left += sub_credits.credits_left
         try:
