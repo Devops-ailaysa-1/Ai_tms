@@ -145,14 +145,6 @@ class Document(models.Model):
         return self.get_segments()
 
     @property
-    def source_language(self):
-        return self.job.source__language.language
-
-    @property
-    def target_language(self):
-        return self.job.target__language.language
-
-    @property
     def source_language_id(self):
         return self.job.source_language.id
 
@@ -179,11 +171,11 @@ class Document(models.Model):
 
     @property
     def source_language(self):
-        return self.job.source__language.language
+        return str(self.job.source_language)
 
     @property
     def target_language(self):
-        return self.job.target__language.language
+        return str(self.job.target_language)
 
     @property
     def source_language_id(self):
@@ -216,3 +208,5 @@ class FontSize(models.Model):
     font_size = models.IntegerField()
     language = models.ForeignKey(Languages, on_delete=models.CASCADE,
                                  related_name="language_font_size_set")
+
+

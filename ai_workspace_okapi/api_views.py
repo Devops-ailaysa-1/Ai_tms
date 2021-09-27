@@ -29,6 +29,8 @@ from rest_framework.parsers import JSONParser
 from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
+import urllib.parse
+from .serializers import PentmUpdateSerializer
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -83,11 +85,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     def credit_balance(request):
         total_credit_left = 0
         present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="subscription"))
+        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription"))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             total_credit_left += sub_credits.credits_left
         try:
-            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
+            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
                 total_credit_left += addon.credits_left
         except Exception as e:
@@ -117,10 +119,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
                 total_credit_left = DocumentViewByTask.credit_balance(request)
-                if total_word_count > total_credit_left:
-                    open_alert = False
-                else:
-                    open_alert = True
+                open_alert = False if (total_word_count > total_credit_left) else True 
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -129,8 +128,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task.document = document
                     task.save()
                 task_credit_status = TaskCreditStatusSerializer(data={"task":task.id, "allocated_credits":total_word_count,
-                                    "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
-                if task_credit_status.is_valid():
+                        "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
+                if task_credit_status.is_valid():                                                             
                     task_credit_status.save()
                 else:
                     print(task_credit_status.errors)
@@ -142,6 +141,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             document = Document.objects.get(job=task.job, file=task.file)
             task.document = document
             task.save()
+        open_alert = True
         return document, open_alert
 
     def get(self, request, task_id, format=None):
@@ -150,9 +150,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # page_segments = self.paginate_queryset(document.segments, request, view=self)
         # segments_ser = SegmentSerializer(page_segments, many=True)
         # return self.get_paginated_response(segments_ser.data)
-        print("document serializer---->", DocumentSerializerV2(document).data)
         doc = DocumentSerializerV2(document).data
-        doc["open_credit_alert"] = open_alert
+        doc["open_credit_alert"] = open_alert 
         return Response(doc, status=201)
 
 
@@ -213,9 +212,18 @@ class SegmentsUpdateView(viewsets.ViewSet):
             segment_serlzr.save()
             return segment_serlzr
 
+    def update_pentm(self, segment):
+        data = PentmUpdateSerializer(segment).data
+        res = requests.post(f"http://{spring_host}:8080/project/pentm/update", data=data)
+        if res.status_code == 200:
+            print("res text--->", res.json())
+        else:
+            print("not successfully update")
+
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
         segment_serlzr = self.get_update(segment, request.data, request)
+        self.update_pentm(segment)
         return Response(segment_serlzr.data, status=201)
 
 class MT_RawAndTM_View(views.APIView):
@@ -224,11 +232,11 @@ class MT_RawAndTM_View(views.APIView):
     def credit_balance(request):
         total_credit_left = 0
         present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="subscription"))
+        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription"))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             total_credit_left += sub_credits.credits_left
         try:
-            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="addon"))
+            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
                 total_credit_left += addon.credits_left
         except Exception as e:
@@ -252,7 +260,7 @@ class MT_RawAndTM_View(views.APIView):
                 mt_raw_serlzr.save()
                 return mt_raw_serlzr.data, 201
         else:
-            return {"data":"Insufficient credits"}, 424
+            return {"data":"Insufficient credits for MT"}, 424
 
     @staticmethod
     def get_tm_data(request, segment_id):
@@ -282,7 +290,7 @@ class ConcordanceSearchView(views.APIView):
             tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
                     "threshold": 10})
             res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                    data = {'pentmsearchparams': json.dumps( tm_ser_data) })
+                    data = {'pentmsearchparams': json.dumps( tm_ser_data), "isCncrdSrch":"true" })
             if res.status_code == 200:
                 return res.json()
             else:
@@ -308,15 +316,19 @@ class DocumentToFile(views.APIView):
         res = self.document_data_to_file(request, document_id)
         if res.status_code in [200, 201]:
             file_path = res.text
+            print("file_path---->", file_path)
             if os.path.isfile(res.text):
                 if os.path.exists(file_path):
                     with open(file_path, 'rb') as fh:
                         response = HttpResponse(fh.read(), content_type=\
                             "application/vnd.ms-excel")
-                        response['Content-Disposition'] = 'attachment; filename='\
-                                    + os.path.basename(file_path)
+                        encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
+                                encoding='utf-8')
+                        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
+                                            .format(encoded_filename)
                         response["Access-Control-Allow-Origin"] = "*"
                         response["Access-Control-Allow-Headers"] = "*"
+                        print("cont-disp--->", response.get("Content-Disposition"))
                         return response
         return JsonResponse({"msg": "something went to wrong in okapi file processing"},\
                     status=409)

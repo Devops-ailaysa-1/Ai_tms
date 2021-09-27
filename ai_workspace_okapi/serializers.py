@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize, Comment
 import json
 from google.cloud import translate_v2 as translate
+from ai_workspace.serializers import PentmWriteSerializer
+from ai_workspace.models import  Project
 
 client = translate.Client()
 
@@ -272,6 +274,35 @@ class FilterSerializer(serializers.Serializer):
 
     class Meta:
         fields = ( "status_list", )
+
+class PentmUpdateParamSerializer(serializers.ModelSerializer):
+    source_text = serializers.CharField(source="source", read_only=True)
+    # target_language_code = serializers.CharField(\
+    #     source="target_language_code", read_only=True)
+    target_text = serializers.CharField(source="target", read_only=True)
+
+    class Meta:
+        model = Segment
+        fields = ("source_text", "target_language_code", \
+                  "target_text")
+
+
+class PentmUpdateSerializer(serializers.ModelSerializer):
+
+    pentm_params = serializers.SerializerMethodField(read_only=True)
+    pentm_update_params = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Segment
+        fields = ("pentm_params", "pentm_update_params")
+
+    def get_pentm_params(self, object):
+        project = Project.objects.get( \
+            id = object.text_unit.document.project)
+        return json.dumps(PentmWriteSerializer(project).data)
+
+    def get_pentm_update_params(self, object):
+        return json.dumps(PentmUpdateParamSerializer(object).data)
 
 
 # //////////////////////////////////// References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
