@@ -164,6 +164,8 @@ class UserCredits(models.Model):
     invoice = models.CharField(max_length=200,blank=True, null=True)
     paymentintent = models.CharField(max_length=200,blank=True, null=True)
     credit_pack_type = models.CharField(max_length=200, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
 
 class CreditPack(models.Model):
     name = models.CharField(max_length=200)
