@@ -154,11 +154,14 @@ class UserCredits(models.Model):
     stripe_cust_id=  models.ForeignKey(Customer, on_delete=models.CASCADE)
     price_id = models.CharField(max_length=200)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    Buyed_credits = models.IntegerField()
+    buyed_credits = models.IntegerField()
     credits_left =models.IntegerField()
     expiry = models.DateTimeField(blank=True, null=True)
     invoice = models.CharField(max_length=200,blank=True, null=True)
     paymentintent = models.CharField(max_length=200,blank=True, null=True)
+    credit_pack_type = models.CharField(max_length=200, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
 
 
 
