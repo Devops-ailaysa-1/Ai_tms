@@ -819,3 +819,19 @@ class UpdateTaskCreditStatus(APIView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response({"msg" : msg}, status=status)
+
+################Incomplete project list for Marketplace###########3
+# class IncompleteProjectListView(viewsets.ViewSet) :
+#     serializer_class = ProjectSetupSerializer
+#
+#     def get_queryset(self):
+#         objects_id = [x.id for x in Project.objects.all() if x.progress != "completed" ]
+#         return Project.objects.filter(Q(ai_user=self.request.user) & Q(id__in=objects_id))
+#
+#     def list(self,request):
+#         queryset = self.get_queryset()
+#         print(queryset)
+#         # pagin_tc = self.paginate_queryset(queryset, request , view=self)
+#         serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
+#         # response = self.get_paginated_response(serializer.data)
+#         return Response(serializer.data)
