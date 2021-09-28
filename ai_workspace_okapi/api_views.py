@@ -82,22 +82,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             raise ValueError("OKAPI request fields not setted correctly!!!")
 
     @staticmethod
-    def credit_balance(request):
-        total_credit_left = 0
-        present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
-        if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-            total_credit_left += sub_credits.credits_left
-        try:
-            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="Addon"))
-            for addon in addon_credits:
-                total_credit_left += addon.credits_left
-        except Exception as e:
-            print("NO ADD-ONS AVAILABLE")
-
-        return total_credit_left
-
-    @staticmethod
     def create_document_for_task_if_not_exists(task, request):
         document = task.document
         if (not document) and  (not Document.objects.filter(job=task.job, file=task.file).all()):
@@ -118,7 +102,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_char_count = doc_data.get("total_char_count", 0)
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
-                total_credit_left = DocumentViewByTask.credit_balance(request)
+                total_credit_left = request.user.credit_balance
                 open_alert = False if (total_word_count > total_credit_left) else True
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
@@ -229,28 +213,13 @@ class SegmentsUpdateView(viewsets.ViewSet):
 class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
-    def credit_balance(request):
-        total_credit_left = 0
-        present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=request.user) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
-        if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-            total_credit_left += sub_credits.credits_left
-        try:
-            addon_credits = UserCredits.objects.filter(Q(user=request.user) & Q(credit_pack_type="Addon"))
-            for addon in addon_credits:
-                total_credit_left += addon.credits_left
-        except Exception as e:
-            print("NO ADD-ONS AVAILABLE")
-
-        return total_credit_left
-
-    @staticmethod
     def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
+            print("*** inside IF  ****")
             return MT_RawSerializer(mt_raw), 200
 
-        credit = MT_RawAndTM_View.credit_balance(request)
+        credit = request.user.credit_balance
 
         if credit != 0:
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
