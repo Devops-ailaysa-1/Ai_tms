@@ -46,6 +46,7 @@ from tablib import Dataset
 import shutil
 from datetime import datetime
 from django.db.models import Q
+from rest_framework.decorators import permission_classes
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -752,6 +753,8 @@ def tbx_download(request,tbx_file_id):
     return response
 
 class UpdateTaskCreditStatus(APIView):
+    
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, doc_id):
         try:
@@ -838,6 +841,7 @@ class UpdateTaskCreditStatus(APIView):
 #         return Response(serializer.data)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def dashboard_credit_status(request):
     return Response({"credits_left" : request.user.credit_balance, 
                             "total_available" : request.user.buyed_credits}, status=200)
