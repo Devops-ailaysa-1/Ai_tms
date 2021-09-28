@@ -201,6 +201,12 @@ class Document(models.Model):
     def mt_usage(self):
         return sum([len(seg.source) for seg in self.segments.all()\
                 if hasattr(seg, "mt_rawtranslation")])
+    
+    @property
+    def doc_credit_check_open_alert(self):
+        total_credit_left = self.created_by.credit_balance
+        open_alert = False if (self.total_word_count < total_credit_left) else True
+        return open_alert
 
 class FontSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,
