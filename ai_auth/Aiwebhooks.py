@@ -3,7 +3,8 @@ from djstripe import webhooks
 from djstripe.models import Customer,Price,Invoice,PaymentIntent
 from djstripe.models.billing import Subscription
 from ai_auth import models
-
+from django.db.models import Q
+from django.utils import timezone
 
 # def add_credits(user,price,data):
 #     pass
@@ -12,6 +13,11 @@ from ai_auth import models
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None):
     if pack.type=="Subscription":
         expiry = subscription.current_period_end
+        creditsls= models.UserCredits.objects.filter(credit_pack_type='Subscription').filter(~Q(invoice=invoice.id))
+        for credit in creditsls:
+            credit.ended_at=timezone.now()
+            credit.save()
+
     if pack.type=="Addon":
         expiry = None
     kwarg = {
