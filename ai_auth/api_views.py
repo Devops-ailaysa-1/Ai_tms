@@ -550,7 +550,10 @@ def buy_addon(request):
 
     cust=Customer.objects.get(subscriber=user)
     if user.country.sortname == 'IN':
-        addr=BillingAddress.objects.get(user=user)
+        try:
+            addr=BillingAddress.objects.get(user=user)
+        except BillingAddress.DoesNotExist:
+            return Response({'Error':'Billing Address Not Found'}, status=412) 
         state = IndianStates.objects.filter(state_name__icontains=addr.state)
         if state.exists() and state.first().state_code == 'TN':
             tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
