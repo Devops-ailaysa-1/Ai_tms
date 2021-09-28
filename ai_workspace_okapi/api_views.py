@@ -102,8 +102,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_char_count = doc_data.get("total_char_count", 0)
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
-                total_credit_left = request.user.credit_balance
-                open_alert = False if (total_word_count > total_credit_left) else True
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
@@ -125,17 +123,15 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             document = Document.objects.get(job=task.job, file=task.file)
             task.document = document
             task.save()
-        open_alert = True
-        return document, open_alert
+        return document
 
     def get(self, request, task_id, format=None):
         task = self.get_object(task_id=task_id)
-        document, open_alert = self.create_document_for_task_if_not_exists(task, request)
+        document = self.create_document_for_task_if_not_exists(task, request)
         # page_segments = self.paginate_queryset(document.segments, request, view=self)
         # segments_ser = SegmentSerializer(page_segments, many=True)
         # return self.get_paginated_response(segments_ser.data)
         doc = DocumentSerializerV2(document).data
-        doc["open_credit_alert"] = open_alert
         return Response(doc, status=201)
 
 
