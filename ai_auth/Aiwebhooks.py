@@ -1,6 +1,7 @@
 # from django.db import transaction
 from djstripe import webhooks
 from djstripe.models import Customer,Price,Invoice,PaymentIntent
+from djstripe.models.billing import Subscription
 from ai_auth import models
 
 
@@ -8,22 +9,22 @@ from ai_auth import models
 #     pass
 
 
-def update_user_credits(user,cust,price,quants,invoice,payment,pack):
+def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None):
     if pack.type=="Subscription":
-        expiry = invoice.period_end
+        expiry = subscription.current_period_end
     if pack.type=="Addon":
         expiry = None
     kwarg = {
     'user':user,
     'stripe_cust_id':cust,
     'price_id':price.id,
-    'Buyed_credits':pack.credits*quants,
+    'buyed_credits':pack.credits*quants,
     'credits_left':pack.credits*quants,
     'expiry': expiry,
     'paymentintent':payment.id if payment else None,
     'invoice':invoice.id if invoice else None,
-    'credit_pack_type': pack.type
-
+    'credit_pack_type': pack.type,
+    'ended_at': None
     }
     us = models.UserCredits.objects.create(**kwarg)
     print(us)
@@ -111,14 +112,17 @@ def my_handler(event, **kwargs):
     user=cust_obj.subscriber
     invoice=data.get('object').get('id') 
     invoice_obj=Invoice.objects.get(id=invoice)
+    sub=data['object']['lines']['data'][0]['subscription']
+    subscription = Subscription.objects.get(id=sub)
     #meta = data['object']['metadata']
     price_obj= Price.objects.get(id=price)
+    if price_obj.id != subscription.plan.id:
+        print("Subscription not updated yet")
     cp = models.CreditPack.objects.get(product=price_obj.product)
-    expiry = invoice_obj.period_end
     #print(data['object']['metadata'])
     #quants= int(meta.get('quantity'))
     update_user_credits(user=user,cust=cust_obj,price=price_obj,
-                        quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp)
+                        quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp,subscription=subscription)
     # kwarg = {
     #     'user':user,
     #     'stripe_cust_id':cust_obj,

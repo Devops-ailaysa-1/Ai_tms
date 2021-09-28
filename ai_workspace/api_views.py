@@ -762,7 +762,7 @@ class UpdateTaskCreditStatus(APIView):
     @staticmethod
     def update_addon_credit(request, actual_used_credits=None, credit_diff=None):
         add_ons = UserCredits.objects.filter(Q(user_id=request.user.id) & Q(credit_pack_type="Addon"))
-        if add_ons.exists():
+        if add_ons.exists():            
             case = credit_diff if credit_diff != None else actual_used_credits
             for addon in add_ons:
                 if addon.credits_left >= case:
@@ -774,7 +774,7 @@ class UpdateTaskCreditStatus(APIView):
                     diff = case - addon.credits_left
                     addon.credits_left = 0
                     addon.save()
-                    case = diff
+                    case = diff            
             return False if case != None else True
         else:
             return False
@@ -785,21 +785,22 @@ class UpdateTaskCreditStatus(APIView):
         try:
             user_credit = UserCredits.objects.get(Q(user_id=request.user.id) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                if not actual_used_credits > user_credit.credits_left:
+                if not actual_used_credits > user_credit.credits_left:                    
                     user_credit.credits_left -= actual_used_credits
                     user_credit.save()
                     return True
-                else:
+                else:                    
                     credit_diff = actual_used_credits - user_credit.credits_left
                     user_credit.credits_left = 0
                     user_credit.save()
                     from_addon = UpdateTaskCreditStatus.update_addon_credit(request, credit_diff)
                     return from_addon
-            else:
+            else:                
                 raise Exception
 
-        except Exception as e:
-            UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)
+        except Exception as e:                       
+            from_addon = UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)
+            return from_addon
 
     def put(self, request, doc_id):
         task_cred_status = self.get_object(doc_id)
@@ -835,3 +836,8 @@ class UpdateTaskCreditStatus(APIView):
 #         serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
 #         # response = self.get_paginated_response(serializer.data)
 #         return Response(serializer.data)
+
+@api_view(['GET'])
+def dashboard_credit_status(request):
+    return Response({"credits_left" : request.user.credit_balance, 
+                            "total_available" : request.user.buyed_credits}, status=200)

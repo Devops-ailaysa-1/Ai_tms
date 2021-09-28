@@ -14,6 +14,8 @@ from ai_auth.utils import get_unique_uid
 from djstripe.models import Customer,Subscription,PaymentIntent,Invoice,Price,Product,Charge
 from ai_auth import Aiwebhooks
 # from djstripe import webhooks
+from django.db.models import Q
+from datetime import datetime
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -37,6 +39,41 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
+    
+    @property
+    def credit_balance(self):
+        print("**** inside AiUser credit balance  ****")
+        total_credit_left = 0
+        present = datetime.now()
+        sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
+        if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+            total_credit_left += sub_credits.credits_left
+        try:
+            addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
+            for addon in addon_credits:
+                total_credit_left += addon.credits_left
+        except Exception as e:
+            print("NO ADD-ONS AVAILABLE")
+
+        return total_credit_left
+    
+    @property
+    def buyed_credits(self):
+        print("**** inside AiUser buyed credits  ****")
+        total_buyed_credits = 0
+        present = datetime.now()
+        sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
+        if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+            total_buyed_credits += sub_credits.buyed_credits
+        try:
+            addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
+            for addon in addon_credits:
+                total_buyed_credits += addon.buyed_credits
+        except Exception as e:
+            print("NO ADD-ONS AVAILABLE")
+
+        return total_buyed_credits
+
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)
@@ -158,8 +195,8 @@ class UserCredits(models.Model):
     stripe_cust_id=  models.ForeignKey(Customer, on_delete=models.CASCADE)
     price_id = models.CharField(max_length=200)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    Buyed_credits = models.IntegerField()
-    credits_left =models.PositiveIntegerField()
+    buyed_credits = models.IntegerField()
+    credits_left =models.IntegerField()
     expiry = models.DateTimeField(blank=True, null=True)
     invoice = models.CharField(max_length=200,blank=True, null=True)
     paymentintent = models.CharField(max_length=200,blank=True, null=True)

@@ -49,6 +49,7 @@ urlpatterns += [
 	path("tbx_template_upload/<int:project_id>", api_views.TbxTemplateUploadView.as_view(), name="tbx-template-upload"),
 	path("tbx_download/<int:tbx_file_id>", api_views.tbx_download, name="tbx-download"),
 	path("task_credit_status_update/<int:doc_id>", api_views.UpdateTaskCreditStatus.as_view(), name="task-credit-update"),
+	path("dashboard_credit_status", api_views.dashboard_credit_status, name="dashboard-credit-status"),
 ]
 # views urls adding for local testing
 urlpatterns += [
