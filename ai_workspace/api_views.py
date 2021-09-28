@@ -836,3 +836,8 @@ class UpdateTaskCreditStatus(APIView):
 #         serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
 #         # response = self.get_paginated_response(serializer.data)
 #         return Response(serializer.data)
+
+@api_view(['GET'])
+def dashboard_credit_status(request):
+    return Response({"credits_left" : request.user.credit_balance, 
+                            "total_available" : request.user.buyed_credits}, status=200)
