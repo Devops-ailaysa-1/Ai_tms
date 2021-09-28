@@ -213,7 +213,7 @@ class MT_RawAndTM_View(views.APIView):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             print("*** inside IF  ****")
-            return MT_RawSerializer(mt_raw), 200
+            return MT_RawSerializer(mt_raw).data, 200
 
         credit = request.user.credit_balance
 
