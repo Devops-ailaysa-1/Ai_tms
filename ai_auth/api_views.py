@@ -405,6 +405,7 @@ def create_checkout_session(user,price,customer=None):
             }
         ],
         subscription_data={
+        'default_tax_rates':tax_rate,
         'metadata' : {'price':price.id,'product':product_name,'type':'subscription'},
         }
     )
@@ -567,6 +568,29 @@ def buy_addon(request):
     return Response({'msg':'Payment Session Generated ','stripe_session_url':response.url}, status=307)
 
 
+def subscriptin_modify_default_tax_rate(customer,addr):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+
+    stripe.api_key = api_key
+
+    if customer.subscriber.country.sortname == 'IN' and addr.country.sortname == 'IN':
+        state = IndianStates.objects.filter(state_name__icontains=addr.state)
+        if state.exists() and state.first().state_code == 'TN':
+            tax_rates=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+        elif state.exists():
+            tax_rates=[TaxRate.objects.get(display_name = 'IGST').id,]
+    else:            
+        tax_rates=None
+
+    if tax_rates != None:
+        response = stripe.Subscription.modify(
+        customer.subscription.id,
+        default_tax_rates=tax_rates
+        )
+        print(response)
 
 
 @api_view(['GET'])
@@ -575,9 +599,13 @@ def customer_portal_session(request):
     user = request.user
     try:
         customer = Customer.objects.get(subscriber=user)
+        addr = BillingAddress.objects.get(user=request.user)
         session=generate_portal_session(customer)
+        subscriptin_modify_default_tax_rate(customer,addr)
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
+    except BillingAddress.DoesNotExist:
+        return Response({'Error':'Billing Address Not Found'}, status=412) 
     return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
 
 
@@ -609,8 +637,11 @@ def buy_subscription(request):
     user = request.user
     try:
         price = Price.objects.get(id=request.POST.get('price'))
+        addr = BillingAddress.objects.get(user=request.user)
     except (KeyError,Price.DoesNotExist) :
         return Response({'msg':'Invalid price'}, status=406)
+    except BillingAddress.DoesNotExist:
+        return Response({'Error':'Billing Address Not Found'}, status=412) 
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)

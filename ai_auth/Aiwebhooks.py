@@ -1,7 +1,10 @@
 # from django.db import transaction
+from django.conf import settings
+import stripe
+from ai_staff.models import IndianStates
 from djstripe import webhooks
 from djstripe.models import Customer,Price,Invoice,PaymentIntent
-from djstripe.models.billing import Subscription
+from djstripe.models.billing import Subscription, TaxRate
 from ai_auth import models
 from django.db.models import Q
 from django.utils import timezone
@@ -113,9 +116,12 @@ def my_handler(event, **kwargs):
 
     price=data['object']['lines']['data'][0]['price']['id']
     quants= data['object']['lines']['data'][0]['quantity']
-    customer=data.get('object').get('customer',None)
+    customer=data.get('object').get('customer')
     cust_obj = Customer.objects.get(id=customer)
     user=cust_obj.subscriber
+    if user == None:
+        raise ValueError("No user Found")
+    print("----user-------",user)
     invoice=data.get('object').get('id') 
     invoice_obj=Invoice.objects.get(id=invoice)
     sub=data['object']['lines']['data'][0]['subscription']
@@ -148,3 +154,85 @@ def my_handler(event, **kwargs):
 # @webhooks.handler("customer.tax_id.created")
 # def my_handler(event, **kwargs):
 #     print(event.data)
+
+
+# def modify_invoice(invoice_id,tax_rate):
+#     if settings.STRIPE_LIVE_MODE == True :
+#         api_key = settings.STRIPE_LIVE_SECRET_KEY
+#     else:
+#         api_key = settings.STRIPE_TEST_SECRET_KEY
+
+#     stripe.api_key = api_key
+
+#     stripe.Invoice.modify(
+#     invoice_id,
+#     default_tax_rates=taxrate
+#     )
+
+# @webhooks.handler("invoice.created")
+# def my_handler(event, **kwargs):
+#     print("**** invoice Created *****")
+#     print(event.data)
+#     print("**** invoice  End *****")
+    
+#     if event.data.object.billing_reason == 'subscription_update':
+#         customer=event.data.get('object').get('customer',None)
+#         invoice_id=event.data.get('object').get('id',None)
+#         cust_obj=Customer.objects.get(id=customer)
+#         user=cust_obj.subscriber
+#         if user.country.sortname == 'IN':
+#             try:
+#                 addr=models.BillingAddress.objects.get(user=user)
+#             except models.BillingAddress.DoesNotExist:
+#                 print("Billing Address Not Found")
+#             state = IndianStates.objects.filter(state_name__icontains=addr.state)
+#             if state.exists() and state.first().state_code == 'TN':
+#                 tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+#             elif state.exists():
+#                 tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+#         else:            
+#             tax_rate=None
+
+#         modify_invoice(invoice_id=invoice_id,tax_rate=tax_rate)
+
+
+# def subscriptin_modify_default_tax_rate(sub_id,tax_rates):
+#     if settings.STRIPE_LIVE_MODE == True :
+#         api_key = settings.STRIPE_LIVE_SECRET_KEY
+#     else:
+#         api_key = settings.STRIPE_TEST_SECRET_KEY
+
+#     stripe.api_key = api_key
+#     if tax_rates != None:
+#         response = stripe.Subscription.modify(
+#         sub_id,
+#         default_tax_rates=tax_rates
+#         )
+#         print(response)
+
+# @webhooks.handler("customer.subscription.created")
+# def my_handler(event, **kwargs):
+
+#     print("**** invoice Created *****")
+#     print(event.data)
+#     print("**** invoice  End *****") 
+#     data = event.data
+#     sub_id=data['object']['id']
+#     customer=event.data.get('object').get('customer',None)
+#     cust_obj=Customer.objects.get(id=customer)
+#     user=cust_obj.subscriber
+#     try:
+#         addr=models.BillingAddress.objects.get(user=user)
+#     except models.BillingAddress.DoesNotExist:
+#         print("Billing Address Not Found")
+
+#     if user.country.sortname == 'IN' and addr.country.sortname == 'IN':
+#         state = IndianStates.objects.filter(state_name__icontains=addr.state)
+#         if state.exists() and state.first().state_code == 'TN':
+#             tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+#         elif state.exists():
+#             tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+#     else:            
+#         tax_rate=None
+
+#     subscriptin_modify_default_tax_rate(sub_id=sub_id,tax_rates=tax_rate)
