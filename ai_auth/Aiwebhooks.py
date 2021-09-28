@@ -13,7 +13,7 @@ from django.utils import timezone
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None):
     if pack.type=="Subscription":
         expiry = subscription.current_period_end
-        creditsls= models.UserCredits.objects.filter(credit_pack_type='Subscription').filter(~Q(invoice=invoice.id))
+        creditsls= models.UserCredits.objects.filter(user=user,credit_pack_type='Subscription').filter(~Q(invoice=invoice.id))
         for credit in creditsls:
             credit.ended_at=timezone.now()
             credit.save()
