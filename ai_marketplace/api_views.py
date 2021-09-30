@@ -59,9 +59,9 @@ def get_vendor_detail(request):
         source_lang_id=Job.objects.get(id=job_id).source_language_id
         target_lang_id=Job.objects.get(id=job_id).target_language_id
     uid=request.POST.get('vendor_id')
-    user=AiUser.objects.get(uid=uid)
-    user_id = user.id
     try:
+        user=AiUser.objects.get(uid=uid)
+        user_id = user.id
         lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)))
         serializer1= VendorServiceSerializer(lang)
         out.append(serializer1.data)
@@ -425,5 +425,5 @@ def get_incomplete_projects_list(request):
                 rt.append({"project":j.project_name,"job_id":i.id,"job":jobs,"vendors":res.count()})
                 out.extend(rt)
     except:
-        out="No incomplete projects"            
+        out="No incomplete projects"
     return JsonResponse({'project_list':out},safe=False)
