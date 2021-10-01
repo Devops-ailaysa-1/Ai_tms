@@ -47,8 +47,9 @@ import django_filters
 from django_filters.filters import OrderingFilter
 # Create your views here.
 
-@permission_classes((IsAuthenticated, ))
+
 @api_view(['POST',])
+@permission_classes([IsAuthenticated])
 def get_vendor_detail(request):
     out=[]
     job_id=request.POST.get('job_id')
@@ -58,9 +59,9 @@ def get_vendor_detail(request):
         source_lang_id=Job.objects.get(id=job_id).source_language_id
         target_lang_id=Job.objects.get(id=job_id).target_language_id
     uid=request.POST.get('vendor_id')
-    user=AiUser.objects.get(uid=uid)
-    user_id = user.id
     try:
+        user=AiUser.objects.get(uid=uid)
+        user_id = user.id
         lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)))
         serializer1= VendorServiceSerializer(lang)
         out.append(serializer1.data)
@@ -71,22 +72,38 @@ def get_vendor_detail(request):
     return Response({"out":out})
 
 
-@permission_classes((IsAuthenticated, ))
+
 @api_view(['POST',])
+@permission_classes([IsAuthenticated])
 def assign_available_vendor_to_customer(request):
     uid=request.POST.get('vendor_id')
-    vendor_id=AiUser.objects.get(uid=uid).id
-    print(vendor_id)
+    bid_id = request.POST.get('bid_id',None)
+    print(bid_id)
+    if uid:
+        vendor_id=AiUser.objects.get(uid=uid).id
+    elif bid_id:
+        vendor_id=BidPropasalDetails.objects.get(id=bid_id).vendor_id
     customer_id=request.user.id
     serializer=AvailableVendorSerializer(data={"vendor":vendor_id,"customer":customer_id})
     if serializer.is_valid():
         serializer.save()
+        if bid_id:
+            try:
+                Bid_info = BidPropasalDetails.objects.get(id=bid_id)
+                serializer2 = BidPropasalDetailSerializer(Bid_info,data={'status':4},partial=True)
+                if serializer2.is_valid():
+                    serializer2.save()
+                else:
+                    print(serializer2.errors)
+            except:
+                print("No bid detail exists")
         return Response(data={"Message":"Vendor Assigned to User Successfully"})
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@permission_classes((IsAuthenticated, ))
+
 @api_view(['POST',])
+@permission_classes([IsAuthenticated])
 def post_job_primary_details(request):
     project_id=request.POST.get('project_id')
     jobslist=Job.objects.filter(project_id=project_id).values('source_language_id','target_language_id')
@@ -145,8 +162,9 @@ class ProjectPostInfoCreateView(APIView):
             return Response(serializer.data)
 
 
-@permission_classes((IsAuthenticated, ))
+
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def user_projectpost_list(request):
     customer_id = request.user.id
     new=[]
@@ -165,8 +183,9 @@ def user_projectpost_list(request):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@permission_classes((IsAuthenticated, ))
+
 @api_view(['POST',])
+@permission_classes([IsAuthenticated])
 def shortlisted_vendor_list_send_email(request):
     projectpost_id=request.POST.get('projectpost_id')
     new=[]
@@ -216,8 +235,9 @@ def shortlisted_vendor_list_send_email(request):
 
 
 
-@permission_classes((IsAuthenticated, ))
+
 @api_view(['POST',])
+@permission_classes([IsAuthenticated])
 def addingthread(request):
     user1=request.user.id
     bid_id=request.POST.get("bid_id")
@@ -277,8 +297,9 @@ class BidPostInfoCreateView(APIView):
             return Response(serializer.data)
 
 
-@permission_classes((IsAuthenticated, ))
+
 @api_view(['POST',])
+@permission_classes([IsAuthenticated])
 def post_bid_primary_details(request):
     projectpostjob = request.POST.get('projectpostjob')
     vendor_id = request.user.id
@@ -294,8 +315,9 @@ def post_bid_primary_details(request):
     return JsonResponse({'out':out},safe=False)
 
 
-@permission_classes((IsAuthenticated, ))
+
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def get_available_job_details(request):
     # available_jobs = AvailableJobs.objects.filter(vendor_id = request.user.id).all()
     out=[]
@@ -386,3 +408,22 @@ class ChatMessageListView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_incomplete_projects_list(request):
+    try:
+        project_list=[x for x in Project.objects.filter(ai_user=request.user.id) if x.progress != "completed" ]
+        out=[]
+        for j in project_list:
+            jobs = j.get_jobs
+            for i in jobs:
+                rt=[]
+                jobs=i.source_language.language+"->"+i.target_language.language
+                res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id)).distinct()
+                rt.append({"project":j.project_name,"job_id":i.id,"job":jobs,"vendors":res.count()})
+                out.extend(rt)
+    except:
+        out="No incomplete projects"
+    return JsonResponse({'project_list':out},safe=False)
