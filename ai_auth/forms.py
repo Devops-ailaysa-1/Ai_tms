@@ -33,13 +33,13 @@ class SendInviteForm(ResetPasswordForm):
             "current_site": current_site,
         }
         msg_plain = render_to_string("account/email/password_reset_email.txt", context)
-        msg_html = render_to_string("account/email/password_reset_email.html", context)
+        #msg_html = render_to_string("account/email/password_reset_email.html", context)
         send_mail(
             "Password Reset",
             msg_plain,
             'noreply@ailaysa.com',
             [email],
-            html_message=msg_html,
+            #html_message=msg_html,
         )
 
 
