@@ -161,6 +161,7 @@ class Document(models.Model):
     def project(self):
         return self.job.project.id
 
+    
 class FontSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,
                                    related_name="user_font_size_set")

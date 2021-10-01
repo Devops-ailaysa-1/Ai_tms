@@ -101,6 +101,29 @@ class Project(ParanoidModel):
         if not self.project_name:
             self.project_name = self.ai_project_id
         super().save()
+        
+    @property
+    def ref_files(self):
+        return self.project_ref_files_set.all()
+
+    @property
+    def progress(self):
+        docs = Document.objects.filter(job__project_id=self.id).all()
+        total_segments = 0
+        if not docs:
+            return "Yet to start"
+        else:
+            for doc in docs:
+                total_segments+=doc.total_segment_count
+
+        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
+            Q(status_id__in=[102,104,106])).all().count()
+
+        if total_segments == status_count:
+            return "Completed"
+
+        else:
+            return "In Progress"
 
     @property
     def files_and_jobs_set(self):
@@ -136,6 +159,10 @@ class Project(ParanoidModel):
     @property
     def pentm_path(self):
         return self.project_penseivetm.penseive_tm_dir_path
+
+    @property
+    def get_jobs(self):
+        return [job for job in self.project_jobs_set.all()]
 
     @property
     def tmx_files_path(self):
