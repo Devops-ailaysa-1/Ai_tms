@@ -196,6 +196,10 @@ class Project(ParanoidModel):
         return self.project_penseivetm.penseive_tm_dir_path
 
     @property
+    def get_jobs(self):
+        return [job for job in self.project_jobs_set.all()]
+
+    @property
     def tmx_files_path(self):
         return [tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.all()]
 
