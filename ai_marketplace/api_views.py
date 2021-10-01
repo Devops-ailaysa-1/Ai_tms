@@ -13,10 +13,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
-                    Thread,BidPropasalDetails,AvailableJobs,ChatMessage)
+                    Thread,BidPropasalDetails,AvailableJobs,ChatMessage,ProjectPostSubjectField)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
                         AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
@@ -319,12 +320,16 @@ def post_bid_primary_details(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_job_details(request):
-    # available_jobs = AvailableJobs.objects.filter(vendor_id = request.user.id).all()
     out=[]
     available_jobs_details = AvailableJobs.objects.select_related('projectpostjob','projectpost')\
-                            .filter(vendor_id = request.user.id).values('projectpost__proj_desc','projectpost__proj_deadline','projectpostjob')
+                            .filter(vendor_id = request.user.id).values('projectpost__proj_desc','projectpost__proj_deadline','projectpostjob','projectpost__bid_deadline','projectpost__proj_name',
+                            'projectpost__customer__ai_profile_info__organisation_name','projectpost__id')
     for i in available_jobs_details:
-        res={"job_id":i.get('projectpostjob'),"job_desc":i.get('projectpost__proj_desc'),"deadline":i.get('projectpost__proj_deadline')}
+        try:
+            subjects=[x.subject_id for x in ProjectPostSubjectField.objects.filter(project_id=i.get('projectpost__id'))]
+        except:
+            subjects=[]
+        res={"proj_name":i.get('projectpost__proj_name'),"organisation_name":i.get('projectpost__customer__ai_profile_info__organisation_name'),"job_id":i.get('projectpostjob'),"job_desc":i.get('projectpost__proj_desc'),"project_deadline":i.get('projectpost__proj_deadline'),"bid_deadline":i.get('projectpost__bid_deadline'),"subjects":subjects}
         out.append(res)
     return JsonResponse({'out':out},safe=False)
 
@@ -352,8 +357,13 @@ class GetVendorListView(generics.ListAPIView):
     ordering_fields = ('vendor_contentype__contenttype_id', 'vendor_subject__subject_id')
     page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
 
+    # def validate(self):
+    #     if 'min_price' or 'max_price' or 'count_unit' in self.request.GET:
+    #         print("########")
+    #         raise ValidationError({"msg":"max_price,min_price,count_unit all fields are required"})
 
     def get_queryset(self):
+        # self.validate()
         job_id= self.request.query_params.get('job_id')
         min_price =self.request.query_params.get('min_price')
         max_price =self.request.query_params.get('max_price')
@@ -427,3 +437,15 @@ def get_incomplete_projects_list(request):
     except:
         out="No incomplete projects"
     return JsonResponse({'project_list':out},safe=False)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def vendor_applied_jobs_list(request):
+    try:
+        print(request.user.id)
+        queryset = BidPropasalDetails.objects.filter(vendor_id=request.user.id).all()
+        serializer = BidPropasalDetailSerializer(queryset,many=True)
+        return Response(serializer.data)
+    except:
+        return Response(status=status.HTTP_204_NO_CONTENT)
