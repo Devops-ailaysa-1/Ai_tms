@@ -23,6 +23,18 @@ class AvailableVendorSerializer(serializers.ModelSerializer):
         model= AvailableVendors
         fields="__all__"
 
+    def run_validation(self, data):
+        vendor = data.get('vendor')
+        customer = data.get('customer')
+        if vendor == customer:
+            raise serializers.ValidationError({"msg":"Both vendor and customer are same"})
+        lookup = Q(customer_id=customer) & Q(vendor_id=vendor)
+        qs = AvailableVendors.objects.filter(lookup)
+        print(qs)
+        if qs.exists():
+            raise serializers.ValidationError({"msg":"This vendor is already assigned to customer" })
+        return super().run_validation(data)    
+
 
 class BidChatSerializer(serializers.ModelSerializer):
     class Meta:
