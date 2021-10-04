@@ -242,13 +242,17 @@ def shortlisted_vendor_list_send_email(request):
 def addingthread(request):
     user1=request.user.id
     bid_id=request.POST.get("bid_id")
-    user=BidPropasalDetails.objects.get(id=bid_id).vendor_id
-    if user == user1:
-        projectpostjob = BidPropasalDetails.objects.get(id=bid_id).projectpostjob_id
-        projectpost = ProjectPostJobDetails.objects.get(id=projectpostjob).projectpost_id
-        user2 = ProjectboardDetails.objects.get(id=projectpost).customer_id
+    uid=request.POST.get("vendor_id")
+    if bid_id:
+        user=BidPropasalDetails.objects.get(id=bid_id).vendor_id
+        if user == user1:
+            projectpostjob = BidPropasalDetails.objects.get(id=bid_id).projectpostjob_id
+            projectpost = ProjectPostJobDetails.objects.get(id=projectpostjob).projectpost_id
+            user2 = ProjectboardDetails.objects.get(id=projectpost).customer_id
+        else:
+            user2 = user
     else:
-        user2 = user
+        user2=AiUser.objects.get(uid=uid).id
     serializer = ThreadSerializer(data={'first_person':user1,'second_person':user2,'bid':bid_id})
     if serializer.is_valid():
         serializer.save()

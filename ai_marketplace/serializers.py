@@ -192,13 +192,8 @@ class GetVendorListSerializer(serializers.ModelSerializer):
     professional_identity_info = ProfessionalidentitySerializer(read_only=True)
     class Meta:
         model = AiUser
-        fields = ('uid','fullname','country','vendor_info','professional_identity_info',)
-    def run_validation(self, data):
-        print("^^^^^")
-        if data.get('min_price') or data.get('max_price') or data.get('count_unit'):
-            if data.get('min_price') and data.get(max_price) and data.get('count_unit')==None:
-                raise serializers.ValidationError({"msg":"max_price,min_price,count_unit all fields are required"})
-        return super().run_validation(data)
+        fields = ('id','uid','fullname','country','vendor_info','professional_identity_info',)
+
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
