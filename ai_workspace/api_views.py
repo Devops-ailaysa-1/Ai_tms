@@ -259,41 +259,41 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
 #             return Response({"msg": task_serlzr.errors}, status=400)
 
 
-class TaskView(APIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = TaskSerializer
-
-    def get_queryset(self,):
-        tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
-                    for task in project.get_tasks
-                  ]
-        return  tasks
-
-    def get(self, request):
-        tasks = self.get_queryset()
-        print(tasks)
-        tasks_serlzr = TaskSerializer(tasks, many=True)
-        return Response(tasks_serlzr.data, status=200)
-
-    @staticmethod
-    def get_object(data):
-        obj = Task.objects.filter(**data).first()
-        return obj
-
-    def post(self, request):
-        obj = self.get_object({**request.POST.dict(), "assign_to": self.request.user.id})
-        if obj:
-            task_ser = TaskSerializer(obj)
-            return Response(task_ser.data, status=200)
-
-        task_serlzr = TaskSerializer(data=request.POST.dict(), context={# Self assign
-            "assign_to": self.request.user.id})
-        if task_serlzr.is_valid(raise_exception=True):
-            task_serlzr.save()
-            return Response({"msg": task_serlzr.data}, status=200)
-
-        else:
-            return Response({"msg": task_serlzr.errors}, status=400)
+# class TaskView(APIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = TaskSerializer
+#
+#     def get_queryset(self,):
+#         tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
+#                     for task in project.get_tasks
+#                   ]
+#         return  tasks
+#
+#     def get(self, request):
+#         tasks = self.get_queryset()
+#         print(tasks)
+#         tasks_serlzr = TaskSerializer(tasks, many=True)
+#         return Response(tasks_serlzr.data, status=200)
+#
+#     @staticmethod
+#     def get_object(data):
+#         obj = Task.objects.filter(**data).first()
+#         return obj
+#
+#     def post(self, request):
+#         obj = self.get_object({**request.POST.dict(), "assign_to": self.request.user.id})
+#         if obj:
+#             task_ser = TaskSerializer(obj)
+#             return Response(task_ser.data, status=200)
+#
+#         task_serlzr = TaskSerializer(data=request.POST.dict(), context={# Self assign
+#             "assign_to": self.request.user.id})
+#         if task_serlzr.is_valid(raise_exception=True):
+#             task_serlzr.save()
+#             return Response({"msg": task_serlzr.data}, status=200)
+#
+#         else:
+#             return Response({"msg": task_serlzr.errors}, status=400)
 
 class Files_Jobs_List(APIView):
     permission_classes = [IsAuthenticated]
@@ -588,40 +588,40 @@ def get_tbx_files(request,project_id):
     serializer = TbxUploadSerializer(queryset,many=True)
     return Response(serializer.data)
 
-# #############Tasks Assign to vendor#################
-# class TaskView(APIView):
-#     permission_classes = [IsAuthenticated]
-#     serializer_class = TaskSerializer
-#
-#     def get_queryset(self,):
-#         tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
-#                     for task in project.get_tasks
-#                   ]
-#         return  tasks
-#
-#     def get(self, request):
-#         tasks = self.get_queryset()
-#         print(tasks)
-#         tasks_serlzr = TaskSerializer(tasks, many=True)
-#         return Response(tasks_serlzr.data, status=200)
-#
-#     @staticmethod
-#     def get_object(data):
-#         obj = Task.objects.filter(**data).first()
-#         return obj
-#
-#     def post(self, request):
-#         print(self.request.POST.dict())
-#         obj = self.get_object({**request.POST.dict()})
-#         if obj:
-#             task_ser = TaskSerializer(obj)
-#             return Response(task_ser.data, status=200)
-#
-#         task_serlzr = TaskSerializer(data=request.POST.dict(), context={"request":request,
-#             "assign_to": self.request.POST.get('assign_to'),"customer":self.request.user.id})
-#         if task_serlzr.is_valid(raise_exception=True):
-#             task_serlzr.save()
-#             return Response({"msg": task_serlzr.data}, status=200)
-#
-#         else:
-#             return Response({"msg": task_serlzr.errors}, status=400)
+#############Tasks Assign to vendor#################
+class TaskView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = TaskSerializer
+
+    def get_queryset(self,):
+        tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
+                    for task in project.get_tasks
+                  ]
+        return  tasks
+
+    def get(self, request):
+        tasks = self.get_queryset()
+        print(tasks)
+        tasks_serlzr = TaskSerializer(tasks, many=True)
+        return Response(tasks_serlzr.data, status=200)
+
+    @staticmethod
+    def get_object(data):
+        obj = Task.objects.filter(**data).first()
+        return obj
+
+    def post(self, request):
+        print(self.request.POST.dict())
+        obj = self.get_object({**request.POST.dict()})
+        if obj:
+            task_ser = TaskSerializer(obj)
+            return Response(task_ser.data, status=200)
+
+        task_serlzr = TaskSerializer(data=request.POST.dict(), context={"request":request,
+            "assign_to": self.request.POST.get('assign_to'),"customer":self.request.user.id})
+        if task_serlzr.is_valid(raise_exception=True):
+            task_serlzr.save()
+            return Response({"msg": task_serlzr.data}, status=200)
+
+        else:
+            return Response({"msg": task_serlzr.errors}, status=400)

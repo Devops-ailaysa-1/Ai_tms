@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize, Comment
 import json
 from google.cloud import translate_v2 as translate
+from ai_workspace.models import Job,Project
 
 client = translate.Client()
 
@@ -172,12 +173,15 @@ class DocumentSerializerV2(DocumentSerializer):
     document_id = serializers.IntegerField(source="id", read_only=True)
 
     def to_internal_value(self, data):
+        job_id=data["job"]
+        job = Job.objects.get(id=job_id)
         data["text_unit_ser"] = [
             {key:value} for key, value in data.pop("text", {}).items()
         ]
-        data["created_by"] = (self.context.get("request").user.id \
-                              if self.context.get("request", None)\
-                              else None)
+        # data["created_by"] = (self.context.get("request").user.id \
+        #                       if self.context.get("request", None)\
+        #                       else None)
+        data["created_by"] = (job.project.ai_user_id)
         return super(DocumentSerializer, self).to_internal_value(data=data)
 
     class Meta(DocumentSerializer.Meta):
@@ -316,5 +320,3 @@ class FilterSerializer(serializers.Serializer):
 #     total_segment_count = IntegerField()
 #     created_by = PrimaryKeyRelatedField(allow_null=True, queryset=AiUser.objects.all(), required=False, write_only=True)
 #     id = IntegerField(label='ID', read_only=True)
-
-

@@ -293,17 +293,17 @@ class TaskSerializer(serializers.ModelSerializer):
 				fields=['file', 'job', 'version']
 			)
 		]
-	# def run_validation(self,data):
-	# 	if self.context['request']._request.method == 'POST':
-	# 		assign_to = int(self.context.get("assign_to"))
-	# 		print(assign_to)
-	# 		customer_id = self.context.get("customer")
-	# 		print(customer_id)
-	# 		if assign_to != customer_id:
-	# 			vendors = AvailableVendors.objects.filter(customer_id = customer_id).values_list('vendor_id',flat = True)
-	# 			if assign_to not in (list(vendors)):
-	# 				raise serializers.ValidationError({"message":"This vendor is not hired vendor for customer"})
-	# 	return super().run_validation(data)
+	def run_validation(self,data):
+		if self.context['request']._request.method == 'POST':
+			assign_to = int(self.context.get("assign_to"))
+			print(assign_to)
+			customer_id = self.context.get("customer")
+			print(customer_id)
+			if assign_to != customer_id:
+				vendors = AvailableVendors.objects.filter(customer_id = customer_id).values_list('vendor_id',flat = True)
+				if assign_to not in (list(vendors)):
+					raise serializers.ValidationError({"message":"This vendor is not hired vendor for customer"})
+		return super().run_validation(data)
 
 
 	def to_internal_value(self, data):

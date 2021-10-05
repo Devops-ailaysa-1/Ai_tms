@@ -31,5 +31,6 @@ urlpatterns+= [
     path('get_vendor_list/',api_views.GetVendorListView.as_view(),name='get-vendor-list'),
     path('get_incomplete_projects_list/',api_views.get_incomplete_projects_list),
     path('vendor_applied_jobs_list/',api_views.vendor_applied_jobs_list),
+    path('get_my_jobs/',api_views.get_my_jobs),
     # path('bid_proposal_status_update/<int:bid_id>/',api_views.BidProposalPostStatusUpdateView.as_view(),name='status-update'),
     ]
