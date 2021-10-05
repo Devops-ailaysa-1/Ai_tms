@@ -14,9 +14,9 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
+from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
-                    Thread,BidPropasalDetails,AvailableJobs,ChatMessage)
+                    Thread,BidPropasalDetails,AvailableJobs,ChatMessage,ProjectPostSubjectField)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
                         AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
@@ -45,6 +45,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django_filters import Filter, FilterSet,RangeFilter
 import django_filters
 from django_filters.filters import OrderingFilter
+from ai_workspace.serializers import TaskSerializer
 # Create your views here.
 
 
@@ -124,6 +125,7 @@ def post_job_primary_details(request):
     for j in content_type:
         contents.append({'content_type':j.content_type_id})
     result["contents"]=contents
+    result["project_name"]=Project.objects.get(id=project_id).project_name
     # proj_detail = Project.objects.select_related('proj_subject','proj_content_type').filter(id=1)\
     #               .values('proj_content_type__content_type_id', 'proj_subject__subject_id','project_name')
     # proj_detail={"project_name":proj_detail[0].get('project_name'),"subject":proj_detail[0].get('proj_subject__subject_id'),"content_type":proj_detail[0].get('proj_content_type__content_type_id')}
@@ -319,12 +321,19 @@ def post_bid_primary_details(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_job_details(request):
-    # available_jobs = AvailableJobs.objects.filter(vendor_id = request.user.id).all()
     out=[]
+    present = datetime.now()
     available_jobs_details = AvailableJobs.objects.select_related('projectpostjob','projectpost')\
-                            .filter(vendor_id = request.user.id).values('projectpost__proj_desc','projectpost__proj_deadline','projectpostjob')
+                            .filter(vendor_id = request.user.id).values('projectpost__proj_desc','projectpost__proj_deadline','projectpostjob','projectpost__bid_deadline','projectpost__proj_name',
+                            'projectpost__customer__ai_profile_info__organisation_name','projectpost__id')
     for i in available_jobs_details:
-        res={"job_id":i.get('projectpostjob'),"job_desc":i.get('projectpost__proj_desc'),"deadline":i.get('projectpost__proj_deadline')}
+        try:
+            subjects=[x.subject_id for x in ProjectPostSubjectField.objects.filter(project_id=i.get('projectpost__id'))]
+            print(subjects)
+        except:
+            subjects=[]
+        apply=True if present.strftime('%Y-%m-%d %H:%M:%S') <= i.get('projectpost__bid_deadline').strftime('%Y-%m-%d %H:%M:%S') else False
+        res={"proj_name":i.get('projectpost__proj_name'),"organisation_name":i.get('projectpost__customer__ai_profile_info__organisation_name'),"job_id":i.get('projectpostjob'),"job_desc":i.get('projectpost__proj_desc'),"project_deadline":i.get('projectpost__proj_deadline'),"bid_deadline":i.get('projectpost__bid_deadline'),"subjects":subjects,"apply":apply}
         out.append(res)
     return JsonResponse({'out':out},safe=False)
 
@@ -427,3 +436,25 @@ def get_incomplete_projects_list(request):
     except:
         out="No incomplete projects"
     return JsonResponse({'project_list':out},safe=False)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def vendor_applied_jobs_list(request):
+    try:
+        print(request.user.id)
+        queryset = BidPropasalDetails.objects.filter(vendor_id=request.user.id).all()
+        serializer = BidPropasalDetailSerializer(queryset,many=True)
+        return Response(serializer.data)
+    except:
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_my_jobs(request):
+    tasks = Task.objects.filter(assign_to_id=request.user.id)
+    print(tasks)
+    # tasks = Task.objects.filter(assign_to_id=request.user.id)
+    tasks_serlzr = TaskSerializer(tasks, many=True)
+    return Response(tasks_serlzr.data, status=200)

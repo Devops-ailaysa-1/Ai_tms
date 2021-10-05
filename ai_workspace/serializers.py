@@ -281,17 +281,17 @@ class TaskSerializer(serializers.ModelSerializer):
 				fields=['file', 'job', 'version']
 			)
 		]
-	# def run_validation(self,data):
-	# 	if self.context['request']._request.method == 'POST':
-	# 		assign_to = int(self.context.get("assign_to"))
-	# 		print(assign_to)
-	# 		customer_id = self.context.get("customer")
-	# 		print(customer_id)
-	# 		if assign_to != customer_id:
-	# 			vendors = AvailableVendors.objects.filter(customer_id = customer_id).values_list('vendor_id',flat = True)
-	# 			if assign_to not in (list(vendors)):
-	# 				raise serializers.ValidationError({"message":"This vendor is not hired vendor for customer"})
-	# 	return super().run_validation(data)
+	def run_validation(self,data):
+		if self.context['request']._request.method == 'POST':
+			assign_to = int(self.context.get("assign_to"))
+			print(assign_to)
+			customer_id = self.context.get("customer")
+			print(customer_id)
+			if assign_to != customer_id:
+				vendors = AvailableVendors.objects.filter(customer_id = customer_id).values_list('vendor_id',flat = True)
+				if assign_to not in (list(vendors)):
+					raise serializers.ValidationError({"message":"This vendor is not hired vendor for customer"})
+		return super().run_validation(data)
 
 
 	def to_internal_value(self, data):
@@ -456,7 +456,7 @@ class TbxFileSerializer(serializers.ModelSerializer):
 	class Meta:
 	    model = TbxFile
 	    fields = ("id", "project", "tbx_file", "job", "filename")
-	
+
 	def save_update(self):
 	    return super().save()
 
@@ -474,15 +474,15 @@ class TbxTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbxTemplateFiles
         fields = ("id", "project", "job", "tbx_template_file")
-    
+
     @staticmethod
     def prepare_data(data):
         if not (("project_id" in data) and ("job_id" in data) and ("tbx_template_file" in data)):
             raise serializers.ValidationError("Required fields missing!!!")
-        project = data["project_id"]		
+        project = data["project_id"]
         job = data.get("job_id")
         tbx_template_file = data.get("tbx_template_file")
-        return {"project": project, "job": job, "tbx_template_file": tbx_template_file}	
+        return {"project": project, "job": job, "tbx_template_file": tbx_template_file}
 
 class TaskCreditStatusSerializer(serializers.ModelSerializer):
     class Meta:

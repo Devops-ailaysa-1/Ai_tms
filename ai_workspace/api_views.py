@@ -312,41 +312,41 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
             return Response(serializer.errors, status=409)
 
 
-class TaskView(APIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = TaskSerializer
-
-    def get_queryset(self,):
-        tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
-                    for task in project.get_tasks
-                  ]
-        return  tasks
-
-    def get(self, request):
-        tasks = self.get_queryset()
-        print(tasks)
-        tasks_serlzr = TaskSerializer(tasks, many=True)
-        return Response(tasks_serlzr.data, status=200)
-
-    @staticmethod
-    def get_object(data):
-        obj = Task.objects.filter(**data).first()
-        return obj
-
-    def post(self, request):
-        obj = self.get_object({**request.POST.dict(), "assign_to": self.request.user.id})
-        if obj:
-            task_ser = TaskSerializer(obj)
-            return Response(task_ser.data, status=200)
-
-        task_serlzr = TaskSerializer(data=request.POST.dict(), context={# Self assign
-            "assign_to": self.request.user.id})
-        if task_serlzr.is_valid(raise_exception=True):
-            task_serlzr.save()
-            return Response({"msg": task_serlzr.data}, status=200)
-
-        else:
-            return Response({"msg": task_serlzr.errors}, status=400)
+# class TaskView(APIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = TaskSerializer
+#
+#     def get_queryset(self,):
+#         tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
+#                     for task in project.get_tasks
+#                   ]
+#         return  tasks
+#
+#     def get(self, request):
+#         tasks = self.get_queryset()
+#         print(tasks)
+#         tasks_serlzr = TaskSerializer(tasks, many=True)
+#         return Response(tasks_serlzr.data, status=200)
+#
+#     @staticmethod
+#     def get_object(data):
+#         obj = Task.objects.filter(**data).first()
+#         return obj
+#
+#     def post(self, request):
+#         obj = self.get_object({**request.POST.dict(), "assign_to": self.request.user.id})
+#         if obj:
+#             task_ser = TaskSerializer(obj)
+#             return Response(task_ser.data, status=200)
+#
+#         task_serlzr = TaskSerializer(data=request.POST.dict(), context={# Self assign
+#             "assign_to": self.request.user.id})
+#         if task_serlzr.is_valid(raise_exception=True):
+#             task_serlzr.save()
+#             return Response({"msg": task_serlzr.data}, status=200)
+#
+#         else:
+#             return Response({"msg": task_serlzr.errors}, status=400)
 
 class Files_Jobs_List(APIView):
     permission_classes = [IsAuthenticated]
@@ -753,7 +753,7 @@ def tbx_download(request,tbx_file_id):
     return response
 
 class UpdateTaskCreditStatus(APIView):
-    
+
     permission_classes = [IsAuthenticated]
 
     def get_object(self, doc_id):
@@ -765,7 +765,7 @@ class UpdateTaskCreditStatus(APIView):
     @staticmethod
     def update_addon_credit(request, actual_used_credits=None, credit_diff=None):
         add_ons = UserCredits.objects.filter(Q(user_id=request.user.id) & Q(credit_pack_type="Addon"))
-        if add_ons.exists():            
+        if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
             for addon in add_ons:
                 if addon.credits_left >= case:
@@ -777,7 +777,7 @@ class UpdateTaskCreditStatus(APIView):
                     diff = case - addon.credits_left
                     addon.credits_left = 0
                     addon.save()
-                    case = diff            
+                    case = diff
             return False if case != None else True
         else:
             return False
@@ -788,20 +788,20 @@ class UpdateTaskCreditStatus(APIView):
         try:
             user_credit = UserCredits.objects.get(Q(user_id=request.user.id) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                if not actual_used_credits > user_credit.credits_left:                    
+                if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits
                     user_credit.save()
                     return True
-                else:                    
+                else:
                     credit_diff = actual_used_credits - user_credit.credits_left
                     user_credit.credits_left = 0
                     user_credit.save()
                     from_addon = UpdateTaskCreditStatus.update_addon_credit(request, credit_diff)
                     return from_addon
-            else:                
+            else:
                 raise Exception
 
-        except Exception as e:                       
+        except Exception as e:
             from_addon = UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)
             return from_addon
 
@@ -843,5 +843,46 @@ class UpdateTaskCreditStatus(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_credit_status(request):
-    return Response({"credits_left" : request.user.credit_balance, 
+    return Response({"credits_left" : request.user.credit_balance,
                             "total_available" : request.user.buyed_credits}, status=200)
+
+
+
+#############Tasks Assign to vendor#################
+class TaskView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = TaskSerializer
+
+    def get_queryset(self,):
+        tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
+                    for task in project.get_tasks
+                  ]
+        return  tasks
+
+    def get(self, request):
+        tasks = self.get_queryset()
+        print(tasks)
+        # tasks = Task.objects.filter(assign_to_id=request.user.id)
+        tasks_serlzr = TaskSerializer(tasks, many=True)
+        return Response(tasks_serlzr.data, status=200)
+
+    @staticmethod
+    def get_object(data):
+        obj = Task.objects.filter(**data).first()
+        return obj
+
+    def post(self, request):
+        print(self.request.POST.dict())
+        obj = self.get_object({**request.POST.dict()})
+        if obj:
+            task_ser = TaskSerializer(obj)
+            return Response(task_ser.data, status=200)
+
+        task_serlzr = TaskSerializer(data=request.POST.dict(), context={"request":request,
+            "assign_to": self.request.POST.get('assign_to'),"customer":self.request.user.id})
+        if task_serlzr.is_valid(raise_exception=True):
+            task_serlzr.save()
+            return Response({"msg": task_serlzr.data}, status=200)
+
+        else:
+            return Response({"msg": task_serlzr.errors}, status=400)
