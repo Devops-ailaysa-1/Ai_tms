@@ -3,7 +3,7 @@ from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, T
 import json
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
-from ai_workspace.models import  Project
+from ai_workspace.models import  Project,Job
 
 client = translate.Client()
 
@@ -175,12 +175,17 @@ class DocumentSerializerV2(DocumentSerializer):
     filename = serializers.CharField(source="file.filename", read_only=True)
 
     def to_internal_value(self, data):
+        print(data)
+        job_id=data["job"]
+        job = Job.objects.get(id=job_id)
+        print(job)
         data["text_unit_ser"] = [
             {key:value} for key, value in data.pop("text", {}).items()
         ]
-        data["created_by"] = (self.context.get("request").user.id \
-                              if self.context.get("request", None)\
-                              else None)
+        # data["created_by"] = (self.context.get("request").user.id \
+        #                       if self.context.get("request", None)\
+        #                       else None)
+        data["created_by"] = (job.project.ai_user_id)
         return super(DocumentSerializer, self).to_internal_value(data=data)
 
     class Meta(DocumentSerializer.Meta):
@@ -353,5 +358,3 @@ class PentmUpdateSerializer(serializers.ModelSerializer):
 #     total_segment_count = IntegerField()
 #     created_by = PrimaryKeyRelatedField(allow_null=True, queryset=AiUser.objects.all(), required=False, write_only=True)
 #     id = IntegerField(label='ID', read_only=True)
-
-
