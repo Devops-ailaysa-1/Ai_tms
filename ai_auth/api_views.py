@@ -772,7 +772,7 @@ def user_taxid_delete(taxid):
     taxid.customer.id,
     taxid.id,
     )
-    print(response)
+
     return response
 
 
@@ -801,11 +801,17 @@ class UserTaxInfoView(viewsets.ViewSet):
     def update(self, request, pk=None):
         try:
             queryset = UserTaxInfo.objects.get(user=request.user,id=pk)
+            if request.POST.get('stripe_tax_id') == None and request.POST.get('tax_id') == None:
+                taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()         
+                user_taxid_delete(taxid)
+                queryset.delete()
+                return Response({'msg':'Successfully Deleted'}, status=200)
             if request.POST.get('stripe_tax_id') == queryset.stripe_tax_id and request.POST.get('tax_id') == queryset.tax_id:
                 return Response({'msg':'Successfully Updated'}, status=200)
             else:
                 taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()         
                 user_taxid_delete(taxid)
+                queryset.delete()
         except UserTaxInfo.DoesNotExist:
             return Response(status=204)
         #queryset = BillingAddress.objects.get(id=pk)
