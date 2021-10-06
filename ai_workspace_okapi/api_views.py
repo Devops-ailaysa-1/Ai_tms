@@ -4,7 +4,7 @@ from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSeriali
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer)
 from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer
-from .models import Document, Segment, MT_RawTranslation, TranslationStatus, FontSize, Comment
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets
 from rest_framework import views
 from django.shortcuts import get_object_or_404
@@ -34,6 +34,7 @@ from django.db.models import Q
 import urllib.parse
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
+from ai_workspace.api_views import UpdateTaskCreditStatus
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -215,21 +216,23 @@ class MT_RawAndTM_View(views.APIView):
     def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
-            print("*** inside IF  ****")
+            print("*** MT RAW AVAILABLE ****")
             return MT_RawSerializer(mt_raw).data, 200
-
         initial_credit = request.user.credit_balance
-        source_segment_char = len(Segment.objects.get(id=segment_id).source)
-        # remaining_credits = initial_credit - source_segment_char
+        text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
+        doc = TextUnit.objects.get(id=text_unit_id).document
+        word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
+
+        consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)        
         
-        if initial_credit >= source_segment_char:
+        if initial_credit >= consumable_credits:
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
                 # mt_raw_serlzr.validated_data[""]
                 mt_raw_serlzr.save()
-                ######   HAVE TO WRITE HERE CREDIT UPDATE LOGIC   #######
-                # doc_id = Document.objects
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
+                print("DEBIT STATUS -----> ", debit_status["msg"])
                 return mt_raw_serlzr.data, 201
         else:
             return {"data":"Insufficient credits for MT"}, 424
