@@ -756,7 +756,8 @@ class UpdateTaskCreditStatus(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, doc_id):
+    @staticmethod
+    def get_object(doc_id):
         try:
             return TaskCreditStatus.objects.get(task__document=doc_id)
         except TaskCreditStatus.DoesNotExist:
@@ -805,12 +806,10 @@ class UpdateTaskCreditStatus(APIView):
             from_addon = UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)
             return from_addon
 
-    def put(self, request, doc_id):
-        task_cred_status = self.get_object(doc_id)
-        doc = Document.objects.get(id=doc_id)
-        print("DOC MT USAGE-->", doc.mt_usage)
-        actual_used_credits = int(doc.mt_usage / task_cred_status.word_char_ratio)
-        credit_status = self.update_usercredit(request, actual_used_credits - task_cred_status.actual_used_credits)
+    @staticmethod
+    def update_credits(request, doc_id, actual_used_credits):
+        task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
+        credit_status = UpdateTaskCreditStatus.update_usercredit(request, actual_used_credits)
         print("CREDIT STATUS----->", credit_status)
         if credit_status:
             msg = "Successfully debited MT credits"
@@ -822,7 +821,7 @@ class UpdateTaskCreditStatus(APIView):
                      data={"actual_used_credits" : actual_used_credits }, partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"msg" : msg}, status=status)
+            return {"msg" : msg}, status
 
 ################Incomplete project list for Marketplace###########3
 # class IncompleteProjectListView(viewsets.ViewSet) :

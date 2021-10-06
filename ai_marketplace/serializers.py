@@ -33,7 +33,7 @@ class AvailableVendorSerializer(serializers.ModelSerializer):
         print(qs)
         if qs.exists():
             raise serializers.ValidationError({"msg":"This vendor is already assigned to customer" })
-        return super().run_validation(data)    
+        return super().run_validation(data)
 
 
 class BidChatSerializer(serializers.ModelSerializer):
@@ -57,8 +57,8 @@ class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
 
 class BidPropasalDetailSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
-    projectpostjob_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectPostJobDetails.objects.all().values_list('pk', flat=True),write_only=True)
-    projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True),write_only=True)
+    projectpostjob_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectPostJobDetails.objects.all().values_list('pk', flat=True))
+    projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
     vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
     class Meta:
         model = BidPropasalDetails
@@ -192,7 +192,7 @@ class GetVendorListSerializer(serializers.ModelSerializer):
     professional_identity_info = ProfessionalidentitySerializer(read_only=True)
     class Meta:
         model = AiUser
-        fields = ('uid','fullname','country','vendor_info','professional_identity_info',)
+        fields = ('id','uid','fullname','country','vendor_info','professional_identity_info',)
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):
