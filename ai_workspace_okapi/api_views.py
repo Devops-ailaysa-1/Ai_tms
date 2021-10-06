@@ -856,20 +856,22 @@ def spellcheck(request):
     doc_id = request.POST.get('doc_id')
     doc = Document.objects.get(id=doc_id)
     out,res = [],[]
-    spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
-    if spellchecker=="pyspellchecker":
-        code = doc.target_language_code
-        spell = SpellChecker(code)
-        words=spell.split_words(tar)#list
-        misspelled=spell.unknown(words)#set
-        for word in misspelled:
-            suggestion=list(spell.candidates(word))
-            for k in words:
-                if k==word.capitalize():
-                    out=[{"word":k,"Suggested Words":suggestion}]
-                    break
-                else:
-                    out=[{"word":word,"Suggested Words":suggestion}]
-            res.extend(out)
-        return JsonResponse({"result":res},safe=False)
-    return JsonResponse({"message":"Spellcheck not available"},safe=False)
+    try:
+        spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
+        if spellchecker=="pyspellchecker":
+            code = doc.target_language_code
+            spell = SpellChecker(code)
+            words=spell.split_words(tar)#list
+            misspelled=spell.unknown(words)#set
+            for word in misspelled:
+                suggestion=list(spell.candidates(word))
+                for k in words:
+                    if k==word.capitalize():
+                        out=[{"word":k,"Suggested Words":suggestion}]
+                        break
+                    else:
+                        out=[{"word":word,"Suggested Words":suggestion}]
+                res.extend(out)
+            return JsonResponse({"result":res},safe=False)
+    except:
+        return JsonResponse({"message":"Spellcheck not available"},safe=False)
