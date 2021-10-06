@@ -41,6 +41,8 @@ urlpatterns+=[
     path("project_progress/<int:project_id>", api_views.ProjectStatusView.as_view(),\
          name="project-status"),
     path('wiktdata/',api_views.WiktionaryParse,name='wiktdata'),
+    path('get_wikipedia/<int:doc_id>/', api_views.WikipediaWorkspace, name='get-wikipedia'),
+    path('get_wiktionary/<int:doc_id>/', api_views.WiktionaryWorkSpace, name='get-wiktionary'),
 ]
 
 urlpatterns+=[
