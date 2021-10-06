@@ -21,6 +21,7 @@ import json, os, re, time
 import pickle
 import logging
 from rest_framework.exceptions import APIException
+from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 from django.http import  HttpResponse, JsonResponse
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
@@ -31,6 +32,7 @@ from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
 from .serializers import PentmUpdateSerializer
+from wiktionaryparser import WiktionaryParser
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -692,3 +694,155 @@ class ProjectStatusView(APIView):
             return JsonResponse({"res" : "COMPLETED"}, safe=False)
         else:
             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
+
+############ wiktionary quick lookup ##################
+@api_view(['GET', 'POST',])
+def WiktionaryParse(request):
+    user_input=request.POST.get("term")
+    term_type=request.POST.get("term_type")
+    doc_id=request.POST.get("doc_id")
+    user_input=user_input.strip()
+    doc = Document.objects.get(id=doc_id)
+    sourceLanguage=doc.source_language
+    targetLanguage=doc.target_language
+    if term_type=="source":
+        src_lang=sourceLanguage
+        tar_lang=targetLanguage
+    elif term_type=="target":
+        src_lang=targetLanguage
+        tar_lang=sourceLanguage
+    parser = WiktionaryParser()
+    parser.set_default_language(src_lang)
+    parser.include_relation('Translations')
+    word = parser.fetch(user_input)
+    res=[]
+    tar=""
+    for i in word:
+        defin=i.get("definitions")
+        for j,k in enumerate(defin):
+            out=[]
+            pos=k.get("partOfSpeech")
+            text=k.get("text")
+            print("pos--->",pos)
+            print("definitions----->",text)
+            rel=k.get('relatedWords')
+            # for n in rel:
+            #     if n.get('relationshipType')=='translations':
+            #         for l in n.get('words'):
+            #             if tar_lang in l:
+            #                 tar=l
+            out=[{'pos':pos,'definitions':text,'target':tar}]
+            res.extend(out)
+            print("****************************************")
+    print("final------>",res)
+    return JsonResponse({"Output":res},safe=False)
+
+
+def wikipedia_ws(code,codesrc,user_input):
+    S = requests.Session()
+    URL = f"https://{codesrc}.wikipedia.org/w/api.php"
+    print(code)
+    print(codesrc)
+    print(URL)
+    PARAMS = {
+        "action": "query",
+        "format": "json",
+        "prop": "langlinks",
+        "llinlanguagecode":codesrc,
+        "titles": user_input,
+        "redirects": 1,
+        "llprop": "url",
+        "lllang": code,
+    }
+    R = S.get(url=URL, params=PARAMS)
+    DATA = R.json()
+    res=DATA["query"]["pages"]
+    srcURL=f"https://{codesrc}.wikipedia.org/wiki/{user_input}"
+    print(srcURL)
+    for i in res:
+        lang=DATA["query"]["pages"][i]
+    if (lang.get("langlinks"))!=None:
+        for j in lang.get("langlinks"):
+            output=j.get("*")
+            url=j.get("url")
+        return {"source":user_input,"target":output,"targeturl":url,"srcURL":srcURL}
+    else:
+        output=""
+    return {"source":user_input,"target":output,"targeturl":"","srcURL":srcURL}
+
+
+
+
+########  Workspace WIKI OPTIONS  ##########################
+#WIKIPEDIA
+@api_view(['GET',])
+# @permission_classes((HasToken,))
+def WikipediaWorkspace(request,doc_id):
+    data=request.GET.dict()
+    print(data)
+    user_input=data.get("term")
+    term_type=data.get("term_type","source")
+    user_input=user_input.strip()
+    doc = Document.objects.get(id=doc_id)
+    if term_type=="source":
+        codesrc =doc.source_language_code
+        code = doc.target_language_code
+    elif term_type=="target":
+        codesrc = doc.target_language_code
+        code = doc.source_language_code
+    print("src--->",codesrc)
+    res=wikipedia_ws(code,codesrc,user_input)
+    print("tt-->",res.get("target"))
+    return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
+
+
+def wiktionary_ws(code,codesrc,user_input):
+    S = requests.Session()
+    URL =f" https://{codesrc}.wiktionary.org/w/api.php?"
+    PARAMS={
+        "action": "query",
+        "format": "json",
+        "prop": "iwlinks",
+        "iwprop": "url",
+        "iwprefix":code,
+        "titles": user_input,
+        "iwlocal":codesrc,
+    }
+    response = S.get(url=URL, params=PARAMS)
+    data = response.json()
+    print(data)
+    srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input}"
+    print(srcURL)
+    res=data["query"]["pages"]
+    for i in res:
+       lang=data["query"]["pages"][i]
+       print(lang)
+    output=[]
+    out=[]
+    if (lang.get("iwlinks"))!=None:
+         for j in lang.get("iwlinks"):
+                out=[{'target':j.get("*"),'target-url':j.get("url")}]
+                output.extend(out)
+         print(output)
+         return {"source":user_input,"source-url":srcURL,"targets":output}
+    return {"source":user_input,"source-url":srcURL}
+
+#WIKTIONARY
+@api_view(['GET',])
+# @permission_classes((HasToken,))
+def WiktionaryWorkSpace(request,doc_id):
+    data=request.GET.dict()
+    user_input=data.get("term")
+    term_type=data.get("term_type")
+    print(term_type)
+    user_input=user_input.strip()
+    print(user_input)
+    doc = Document.objects.get(id=doc_id)
+    if term_type=="source":
+        codesrc =doc.source_language_code
+        code = doc.target_language_code
+    elif term_type=="target":
+        codesrc = doc.target_language_code
+        code = doc.source_language_code
+    res=wiktionary_ws(code,codesrc,user_input)
+    return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
