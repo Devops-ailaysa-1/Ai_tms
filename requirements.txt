@@ -134,3 +134,4 @@ webencodings==0.5.1
 widgetsnbextension==3.5.1
 zope.interface==5.4.0
 wiktionaryparser==0.0.97
+pyspellchecker==0.6.2

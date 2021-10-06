@@ -10,7 +10,7 @@ from rest_framework import views
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from ai_auth.models import AiUser, UserAttribute, UserCredits
-from ai_staff.models import AiUserType
+from ai_staff.models import AiUserType,SpellcheckerLanguages
 from django.http import HttpResponse
 from ai_workspace.models import Task, TaskCreditStatus
 from rest_framework.response import  Response
@@ -21,6 +21,7 @@ import json, os, re, time
 import pickle
 import logging
 from rest_framework.exceptions import APIException
+from spellchecker import SpellChecker
 from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 from django.http import  HttpResponse, JsonResponse
@@ -846,3 +847,29 @@ def WiktionaryWorkSpace(request,doc_id):
         code = doc.source_language_code
     res=wiktionary_ws(code,codesrc,user_input)
     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
+
+
+######  USING PY SPELLCHECKER  ######
+@api_view(['GET', 'POST',])
+def spellcheck(request):
+    tar = request.POST.get('target')
+    doc_id = request.POST.get('doc_id')
+    doc = Document.objects.get(id=doc_id)
+    out,res = [],[]
+    spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
+    if spellchecker=="pyspellchecker":
+        code = doc.target_language_code
+        spell = SpellChecker(code)
+        words=spell.split_words(tar)#list
+        misspelled=spell.unknown(words)#set
+        for word in misspelled:
+            suggestion=list(spell.candidates(word))
+            for k in words:
+                if k==word.capitalize():
+                    out=[{"word":k,"Suggested Words":suggestion}]
+                    break
+                else:
+                    out=[{"word":word,"Suggested Words":suggestion}]
+            res.extend(out)
+        return JsonResponse({"result":res},safe=False)
+    return JsonResponse({"message":"Spellcheck not available"},safe=False)
