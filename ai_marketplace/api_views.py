@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
@@ -243,13 +244,17 @@ def shortlisted_vendor_list_send_email(request):
 def addingthread(request):
     user1=request.user.id
     bid_id=request.POST.get("bid_id")
-    user=BidPropasalDetails.objects.get(id=bid_id).vendor_id
-    if user == user1:
-        projectpostjob = BidPropasalDetails.objects.get(id=bid_id).projectpostjob_id
-        projectpost = ProjectPostJobDetails.objects.get(id=projectpostjob).projectpost_id
-        user2 = ProjectboardDetails.objects.get(id=projectpost).customer_id
+    uid=request.POST.get("vendor_id")
+    if bid_id:
+        user=BidPropasalDetails.objects.get(id=bid_id).vendor_id
+        if user == user1:
+            projectpostjob = BidPropasalDetails.objects.get(id=bid_id).projectpostjob_id
+            projectpost = ProjectPostJobDetails.objects.get(id=projectpostjob).projectpost_id
+            user2 = ProjectboardDetails.objects.get(id=projectpost).customer_id
+        else:
+            user2 = user
     else:
-        user2 = user
+        user2=AiUser.objects.get(uid=uid).id
     serializer = ThreadSerializer(data={'first_person':user1,'second_person':user2,'bid':bid_id})
     if serializer.is_valid():
         serializer.save()
@@ -329,7 +334,6 @@ def get_available_job_details(request):
     for i in available_jobs_details:
         try:
             subjects=[x.subject_id for x in ProjectPostSubjectField.objects.filter(project_id=i.get('projectpost__id'))]
-            print(subjects)
         except:
             subjects=[]
         apply=True if present.strftime('%Y-%m-%d %H:%M:%S') <= i.get('projectpost__bid_deadline').strftime('%Y-%m-%d %H:%M:%S') else False
@@ -361,8 +365,13 @@ class GetVendorListView(generics.ListAPIView):
     ordering_fields = ('vendor_contentype__contenttype_id', 'vendor_subject__subject_id')
     page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
 
+    # def validate(self):
+    #     if 'min_price' or 'max_price' or 'count_unit' in self.request.GET:
+    #         print("########")
+    #         raise ValidationError({"msg":"max_price,min_price,count_unit all fields are required"})
 
     def get_queryset(self):
+        # self.validate()
         job_id= self.request.query_params.get('job_id')
         min_price =self.request.query_params.get('min_price')
         max_price =self.request.query_params.get('max_price')
