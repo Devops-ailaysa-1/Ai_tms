@@ -217,14 +217,18 @@ class MT_RawAndTM_View(views.APIView):
             print("*** inside IF  ****")
             return MT_RawSerializer(mt_raw).data, 200
 
-        credit = request.user.credit_balance
-
-        if credit != 0:
+        initial_credit = request.user.credit_balance
+        source_segment_char = len(Segment.objects.get(id=segment_id).source)
+        # remaining_credits = initial_credit - source_segment_char
+        
+        if initial_credit >= source_segment_char:
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
                 # mt_raw_serlzr.validated_data[""]
                 mt_raw_serlzr.save()
+                ######   HAVE TO WRITE HERE CREDIT UPDATE LOGIC   #######
+                # doc_id = Document.objects
                 return mt_raw_serlzr.data, 201
         else:
             return {"data":"Insufficient credits for MT"}, 424
