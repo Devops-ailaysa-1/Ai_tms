@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import IntegrityError
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
+from ai_workspace_okapi.models import Document
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -224,14 +225,11 @@ class VendorsBankInfoCreateView(APIView):
 @api_view(['GET','POST',])
 def SpellCheckerApiCheck(request):
     doc_id= request.POST.get("doc_id")
-    result=requests.get(f"http://157.245.99.128:8086/workspace/getLangName/{doc_id}/")
-    content=result.json()
-    targetLanguage=content.get("target_lang")
-    print("TARGET LANGUAGE--->", targetLanguage)
-    target_lang_id=Languages.objects.get(language=targetLanguage).id
+    job_id = Document.objects.get(id=doc_id).job_id
+    target_lang_id = Job.objects.get(id=job_id).target_language_id
     print(target_lang_id)
     try:
-        spellchecker_id=SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
+        spellchecker_id = SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
         print(spellchecker_id)
         data=1
     except:
