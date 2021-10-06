@@ -39,7 +39,8 @@ urlpatterns+=[
          name="get-page-id-of-segment-on-apply-filter"),
     # path("comments", api_views)
     path("project_progress/<int:project_id>", api_views.ProjectStatusView.as_view(),\
-         name="project-status")
+         name="project-status"),
+    path('wiktdata/',api_views.WiktionaryParse,name='wiktdata'),
 ]
 
 urlpatterns+=[

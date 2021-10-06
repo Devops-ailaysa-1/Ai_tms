@@ -21,6 +21,7 @@ import json, os, re, time
 import pickle
 import logging
 from rest_framework.exceptions import APIException
+from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 from django.http import  HttpResponse, JsonResponse
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
@@ -31,6 +32,7 @@ from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
 from .serializers import PentmUpdateSerializer
+from wiktionaryparser import WiktionaryParser
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -692,3 +694,45 @@ class ProjectStatusView(APIView):
             return JsonResponse({"res" : "COMPLETED"}, safe=False)
         else:
             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
+
+
+@api_view(['GET', 'POST',])
+def WiktionaryParse(request):
+    user_input=request.POST.get("term")
+    term_type=request.POST.get("term_type")
+    doc_id=request.POST.get("doc_id")
+    user_input=user_input.strip()
+    doc = Document.objects.get(id=doc_id)
+    sourceLanguage=doc.source_language
+    targetLanguage=doc.target_language
+    if term_type=="source":
+        src_lang=sourceLanguage
+        tar_lang=targetLanguage
+    elif term_type=="target":
+        src_lang=targetLanguage
+        tar_lang=sourceLanguage
+    parser = WiktionaryParser()
+    parser.set_default_language(src_lang)
+    parser.include_relation('Translations')
+    word = parser.fetch(user_input)
+    res=[]
+    tar=""
+    for i in word:
+        defin=i.get("definitions")
+        for j,k in enumerate(defin):
+            out=[]
+            pos=k.get("partOfSpeech")
+            text=k.get("text")
+            print("pos--->",pos)
+            print("definitions----->",text)
+            rel=k.get('relatedWords')
+            for i in rel:
+                if i.get('relationshipType')=='translations':
+                    for l in i.get('words'):
+                        if tar_lang in l:
+                            tar=l
+            out=[{'pos':pos,'definitions':text,'target':tar}]
+            res.extend(out)
+            print("****************************************")
+    print("final------>",res)
+    return JsonResponse({"Output":res},safe=False)

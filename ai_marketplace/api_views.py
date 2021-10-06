@@ -423,19 +423,22 @@ class ChatMessageListView(APIView):
 @permission_classes([IsAuthenticated])
 def get_incomplete_projects_list(request):
     try:
+        new=[]
         project_list=[x for x in Project.objects.filter(ai_user=request.user.id) if x.progress != "completed" ]
         out=[]
         for j in project_list:
+            out=[{"project_id":j.id,"project":j.project_name}]
             jobs = j.get_jobs
             for i in jobs:
                 rt=[]
                 jobs=i.source_language.language+"->"+i.target_language.language
                 res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id)).distinct()
-                rt.append({"project":j.project_name,"job_id":i.id,"job":jobs,"vendors":res.count()})
+                rt.append({"job_id":i.id,"job":jobs,"vendors":res.count()})
                 out.extend(rt)
+            new.append(out)
     except:
         out="No incomplete projects"
-    return JsonResponse({'project_list':out},safe=False)
+    return JsonResponse({'project_list':new},safe=False)
 
 
 @api_view(['GET',])
