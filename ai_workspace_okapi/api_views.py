@@ -225,7 +225,7 @@ class MT_RawAndTM_View(views.APIView):
 
         consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)        
         
-        if initial_credit >= consumable_credits:
+        if initial_credit > consumable_credits:
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
