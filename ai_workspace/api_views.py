@@ -317,7 +317,7 @@ class TempProjectSetupView(viewsets.ViewSet):
             return Response(serializer.errors, status=409)
         else:
             serializer = TempProjectSetupSerializer(data={**request.POST.dict(),
-                "tempfiles":request.FILES.getlist('tempfiles')})
+                "tempfiles":request.FILES.getlist('files')})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 return Response(serializer.data, status=201)
