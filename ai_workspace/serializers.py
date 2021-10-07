@@ -102,7 +102,8 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 			data["jobs"] = [{"source_language": source_language, "target_language": \
 				target_language} for target_language in target_languages]
 		else:
-			raise ValueError("source or target values could not json loadable!!!")
+		# 	raise ValueError("source or target values could not json loadable!!!")
+			data["jobs"] = json.loads(data.pop("jobs", "[]"))
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 		return super().to_internal_value(data=data)
 
@@ -204,18 +205,18 @@ class TemplangpairSerializer(serializers.ModelSerializer):
 	project = serializers.CharField(required=False,source="temp_proj_langpair")
 	class Meta:
 		model = Templangpair
-		fields = ( "project","temp_src_lang", "temp_tar_lang")
+		fields = ( "project","source_language", "target_language")
 
 class TempFileSerializer(serializers.ModelSerializer):
 	project = serializers.CharField(required=False,source="temp_proj_file")
 	class Meta:
 		model = TempFiles
-		fields = ("project", "files_temp")
+		fields = ("project", "files")
 
 
 class TempProjectSetupSerializer(serializers.ModelSerializer):
 	langpair = TemplangpairSerializer(many=True, source="temp_proj_langpair")
-	tempfiles = TempFileSerializer(many=True, source="temp_proj_file")
+	tempfiles = TempFileSerializer(many=True, source="temp_proj_file",required=False)
 
 	class Meta:
 		model = TempProject
@@ -225,8 +226,13 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 
 	def is_valid(self, *args, **kwargs):
 		print("intial-->",self.initial_data )
-		self.initial_data['langpair'] = json.loads(self.initial_data['langpair'])
-		self.initial_data['tempfiles'] = [{"files_temp":file} for file in self.initial_data\
+		source_language = json.loads(self.initial_data["source_language"])
+		target_languages = json.loads(self.initial_data["target_languages"])
+		if source_language and target_languages:
+			self.initial_data['langpair'] = [{"source_language": source_language, "target_language": \
+				target_language} for target_language in target_languages]
+		# self.initial_data['langpair'] = json.loads(self.initial_data['langpair'])
+		self.initial_data['tempfiles'] = [{"files":file} for file in self.initial_data\
 			['tempfiles']]
 		# self.initial_data['files'] = [{"file"}]
 		print("Aftre intial-->",self.initial_data )
