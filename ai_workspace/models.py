@@ -50,18 +50,13 @@ def get_temp_file_upload_path(instance, filename):
             "source")
     return os.path.join(file_path, filename)
 
-class TempFiles(models.Model):
-    temp_proj = models.ForeignKey(TempProject, on_delete=models.CASCADE,
-        related_name="temp_proj_file")
-    files_temp = models.FileField(upload_to=get_temp_file_upload_path,\
-        null=False, blank=False, max_length=1000)
 
 class Templangpair(models.Model):
     temp_proj = models.ForeignKey(TempProject, on_delete=models.CASCADE,
                         related_name="temp_proj_langpair")
-    temp_src_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=\
+    source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=\
         models.CASCADE, related_name="temp_source_lang")
-    temp_tar_lang = models.ForeignKey(Languages, null=False, blank=False, on_delete=\
+    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=\
         models.CASCADE, related_name="temp_target_lang")
 
 class PenseiveTM(models.Model):
@@ -413,7 +408,7 @@ class Task(models.Model):
     def extension(self):
         try:ret=get_file_extension(self.file.file.path)
         except:ret=''
-        return ret 
+        return ret
 
     @property
     def processor_name(self):
@@ -489,14 +484,14 @@ def tbx_file_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx", filename)
 
 class TbxFile(models.Model):
-    project = models.ForeignKey(Project, null=False, blank=False, related_name="project_tbx_file", 
-                                on_delete=models.CASCADE) 
+    project = models.ForeignKey(Project, null=False, blank=False, related_name="project_tbx_file",
+                                on_delete=models.CASCADE)
     # In case when "Apply to all jobs" is selected, then Project ID will be passed
-    job = models.ForeignKey(Job, null=True, blank=True, related_name="job_tbx_file", on_delete=models.CASCADE) 
+    job = models.ForeignKey(Job, null=True, blank=True, related_name="job_tbx_file", on_delete=models.CASCADE)
     # When TBX assigned to particular job
-    tbx_file = models.FileField(upload_to=tbx_file_path, 
+    tbx_file = models.FileField(upload_to=tbx_file_path,
                             validators=[FileExtensionValidator(allowed_extensions=["tbx"])])
-    
+
     @property
     def filename(self):
         return  os.path.basename(self.tbx_file.file.name)
@@ -507,14 +502,14 @@ def tbx_template_file_upload_path(instance, filename):
 class TbxTemplateFiles(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE ,null=False, blank=False)
     job = models.ForeignKey(Job, on_delete=models.CASCADE ,null=False, blank=False)
-    tbx_template_file = models.FileField(upload_to=tbx_template_file_upload_path, 
+    tbx_template_file = models.FileField(upload_to=tbx_template_file_upload_path,
                                     validators=[FileExtensionValidator(allowed_extensions=["xlsx"])])
     # upload_date = models.DateTimeField(auto_now_add=True)
 
     @property
     def filename(self):
         return  os.path.basename(self.tbx_template_file.file.name)
-    
+
 class TemplateTermsModel(models.Model):
 
     file = models.ForeignKey(TbxTemplateFiles, on_delete=models.CASCADE ,null=False, blank=False)
@@ -530,3 +525,10 @@ class TaskCreditStatus(models.Model):
     allocated_credits = models.IntegerField()
     actual_used_credits = models.IntegerField()
     word_char_ratio = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+
+class TempFiles(models.Model):
+    temp_proj = models.ForeignKey(TempProject, on_delete=models.CASCADE,
+        related_name="temp_proj_file")
+    files = models.FileField(upload_to=get_temp_file_upload_path,\
+        null=False, blank=False, max_length=1000)
