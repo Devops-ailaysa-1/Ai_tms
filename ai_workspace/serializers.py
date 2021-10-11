@@ -10,7 +10,7 @@ from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from ai_marketplace.models import AvailableVendors
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
-
+from ai_auth.models import AiUser
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -101,11 +101,15 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		if source_language and target_languages:
 			data["jobs"] = [{"source_language": source_language, "target_language": \
 				target_language} for target_language in target_languages]
+			print(data["jobs"])
 		else:
-		# 	raise ValueError("source or target values could not json loadable!!!")
-			data["jobs"] = json.loads(data.pop("jobs", "[]"))
+			raise ValueError("source or target values could not json loadable!!!")
+			# data["jobs"] = json.loads(data.pop("jobs", "[]"))
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
+		print("F------>",data.get('files'))
 		return super().to_internal_value(data=data)
+
+
 
 	def create(self, validated_data):
 		ai_user = self.context["request"].user
@@ -386,22 +390,29 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False)
+	# ai_user = serializers.IntegerField(required=False)
 
 	class Meta:
 		model = Project
-		fields = ("project_name", "jobs", "files")
+		fields = ("project_name", "jobs", "files")#,'ai_user')
 
 	def to_internal_value(self, data):
+		print("project--->",data["project_name"])
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
-
+		print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 
 		return super().to_internal_value(data=data)
 
 	def create(self, validated_data):
-		ai_user = self.context.get("request", None).user
+		print("data-->",validated_data)
+		print("req---->",self.context.get("request"))
+		if self.context.get("request")!=None:
+			ai_user = self.context.get("request", None).user
+		else:
+		 	ai_user = self.context.get("ai_user", None)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
 			f_klass=File,j_klass=Job, ai_user=ai_user)

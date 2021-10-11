@@ -532,3 +532,7 @@ class TempFiles(models.Model):
         related_name="temp_proj_file")
     files = models.FileField(upload_to=get_temp_file_upload_path,\
         null=False, blank=False, max_length=1000)
+
+    @property
+    def filename(self):
+        return  os.path.basename(self.files.file.name)

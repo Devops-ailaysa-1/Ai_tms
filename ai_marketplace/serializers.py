@@ -188,11 +188,12 @@ class VendorInfoListSerializer(serializers.ModelSerializer):
 
 class GetVendorListSerializer(serializers.ModelSerializer):
     # ai_profile_info = PersonalInfoSerializer(read_only=True)
+    # vendor_lang_pair = VendorServiceSerializer(read_only = True)
     vendor_info = VendorInfoListSerializer(read_only=True)
     professional_identity_info = ProfessionalidentitySerializer(read_only=True)
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','country','vendor_info','professional_identity_info',)
+        fields = ('id','uid','fullname','country','vendor_info','professional_identity_info',)#'vendor_lang_pair',)
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):

@@ -31,7 +31,6 @@ class AilzaManager(BaseUserManager):
 class ProjectManager(models.Manager):
     def create_and_jobs_files_bulk_create(self,\
             data, files_key, jobs_key, f_klass, j_klass, ai_user):
-
         files_data = data.pop(files_key)
         jobs_data = data.pop(jobs_key)
         project = self.create(**data, ai_user=ai_user)
@@ -70,7 +69,7 @@ class TaskManager(models.Manager):
             assign_to = project.ai_user
 
         if not assign_to:
-            raise ValueError("You should send parameter either project " 
+            raise ValueError("You should send parameter either project "
                              "object or assign_to user")
                                                                     # POSTEDIT
         tasks = [self.get_or_create(file=file, job=job, assign_to=assign_to,\
