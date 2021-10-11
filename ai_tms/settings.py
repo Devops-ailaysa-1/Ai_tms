@@ -252,9 +252,9 @@ REST_AUTH_SERIALIZERS = {
 
 PASSWORD_RESET_URL = "reset-password/"
 
-CLIENT_BASE_URL = "http://143.244.140.71/"
+CLIENT_BASE_URL = "http://userportal.ailaysa.com/"
 
-SIGNUP_CONFIRM_URL ="http://143.244.140.71/confirm-email"
+SIGNUP_CONFIRM_URL ="http://userportal.ailaysa.com/confirm-email"
 
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 

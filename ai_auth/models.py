@@ -208,7 +208,7 @@ class CreditPack(models.Model):
     name = models.CharField(max_length=200)
     #product = models.OneToOneField(Product, on_delete=models.CASCADE)
     #price = models.OneToOneField(Price, on_delete=models.CASCADE)
-    product =models.OneToOneField(Product,on_delete=models.CASCADE)
+    product =models.ForeignKey(Product,on_delete=models.CASCADE)
     type = models.CharField(max_length=200)
     credits = models.IntegerField(default=0)
 

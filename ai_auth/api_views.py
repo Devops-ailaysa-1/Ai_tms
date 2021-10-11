@@ -1,5 +1,6 @@
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
+from stripe.api_resources import subscription
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, OfficialInformationSerializer, PersonalInformationSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
@@ -31,6 +32,8 @@ from django.conf import settings
 from ai_staff.models import IndianStates, SupportType
 from django.db.models import Q
 from ai_auth.signals import update_billing_address
+from  django.utils import timezone
+import time
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -364,7 +367,7 @@ def get_addon_details(request):
         out = []
     return JsonResponse({"out":out},safe=False)
 
-def create_checkout_session(user,price,customer=None):
+def create_checkout_session(user,price,customer=None,trial=False):
     product_name = Price.objects.get(id = price).product.name
     domain_url = settings.CLIENT_BASE_URL
     if settings.STRIPE_LIVE_MODE == True :
@@ -375,6 +378,13 @@ def create_checkout_session(user,price,customer=None):
     stripe.api_key = api_key
 
     tax_rate =[]
+
+    if trial == True :
+        date_time = timezone.now()
+        trial_end = int(time.mktime(date_time.timetuple()))
+        print("trial_end>>>",trial_end)
+    else:
+        trial_end = None
 
     if user.country.sortname == 'IN':
         addr=BillingAddress.objects.get(user=user)
@@ -406,10 +416,56 @@ def create_checkout_session(user,price,customer=None):
         ],
         subscription_data={
         'default_tax_rates':tax_rate,
+        'trial_end':None,
         'metadata' : {'price':price.id,'product':product_name,'type':'subscription'},
         }
     )
     return checkout_session
+
+def find_taxrate(user,trial=False):
+    if trial:
+         tax_rate=None
+
+    else:
+        if user.country.sortname == 'IN':
+            addr=BillingAddress.objects.get(user=user)
+            print(addr.state)
+            state = IndianStates.objects.filter(state_name__icontains=addr.state)
+            if state.exists() and state.first().state_code == 'TN':
+                tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+            elif state.exists():
+                tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+        else:            
+            tax_rate=None
+    return tax_rate
+
+
+def subscribe_trial(price,customer=None):
+    product_name = Price.objects.get(id = price).product.name
+    domain_url = settings.CLIENT_BASE_URL
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+
+    stripe.api_key = api_key
+    tax_rate=find_taxrate(customer.subscriber,trial=True)
+    subscription = stripe.Subscription.create(
+    customer=customer.id,
+    items=[
+    {
+        'price': price,
+    },
+    ],
+    default_tax_rates=tax_rate,
+    trial_period_days=3,
+
+    metadata={'price':price.id,'product':product_name,'type':'subscription_trial'}
+    )
+
+    return subscription
+
+
 
 
 def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
@@ -467,14 +523,18 @@ def create_invoice_one_time(price_id,Aicustomer,tax_rate,quantity=1):
 
 def is_active_subscription(user):
     '''check customer exist and he has active subscription'''
-    #(F,F)-->(No active subscription,Customer not exist)
-    #(F,T)-->(No active subscription,Customer exist)
+    #(F,F)-->(No active subscription,Customer not exist in stripe)
+    #(F,T)-->(No active subscription,Customer exist in stripe)
+    #(T,T)-->(Has active subscriptionor trial subscription,Customer exist in stripe)
     try:
         customer = Customer.objects.get(subscriber=user)
     except Customer.DoesNotExist:
         return False,False
-    subscription = Subscription.objects.filter(customer=customer).last()
-    if subscription != None and subscription.status == 'active':
+    #subscription = Subscription.objects.filter(customer=customer).last()
+    subscription = customer.subscriptions
+    if subscription.exists() and subscription.filter(status = 'active').exists():
+        is_active = (True, True)
+    elif subscription.exists() and subscription.filter(status = 'trialing').exists():
         is_active = (True, True)
     else:
         is_active = (False, True)
@@ -587,7 +647,7 @@ def subscriptin_modify_default_tax_rate(customer,addr):
 
     if tax_rates != None:
         response = stripe.Subscription.modify(
-        customer.subscription.id,
+        customer.subscriptions.last().id,
         default_tax_rates=tax_rates
         )
         print(response)
@@ -601,11 +661,15 @@ def customer_portal_session(request):
         customer = Customer.objects.get(subscriber=user)
         addr = BillingAddress.objects.get(user=request.user)
         session=generate_portal_session(customer)
+        if not customer.subscriptions.exists():
+             return Response({'msg':'User has No Active Subscription'}, status=402)
         subscriptin_modify_default_tax_rate(customer,addr)
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
     except BillingAddress.DoesNotExist:
         return Response({'Error':'Billing Address Not Found'}, status=412) 
+    # except Subscription:
+    #     customer.
     return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
 
 
@@ -617,15 +681,16 @@ def check_subscription(request):
         customer = Customer.objects.get(subscriber=request.user)
         subscriptions = Subscription.objects.filter(customer=customer).last()
         if subscriptions is not None:    
-            sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id).name
+            sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
             return Response({'msg':'User have No Active Subscription','prev_subscription':sub_name,'prev_sub_price_id':subscriptions.plan.id,'prev_sub_status':subscriptions.status}, status=402)
         else:
             return Response({'msg':'User have No Active Subscription','prev_subscription':None,'prev_sub_price_id':None,'prev_sub_status':None}, status=402)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user)
-        subscription = Subscription.objects.filter(customer=customer).last()
+        #subscription = Subscription.objects.filter(customer=customer).last()
+        subscription=customer.subscriptions.filter(Q(status='trialing')|Q(status='active')).last()
        # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
-        sub_name = CreditPack.objects.get(product__id=subscription.plan.product_id).name
+        sub_name = CreditPack.objects.get(product__id=subscription.plan.product_id,type='Subscription').name
         return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.id,'interval':subscription.plan.interval,'sub_period_end':subscription.current_period_end,'sub_currency':subscription.plan.currency,'sub_amount':subscription.plan.amount}, status=200)
     if is_active == (False,False):
         return Response({'msg':'Not a Stripe Customer'}, status=206)
@@ -645,7 +710,10 @@ def buy_subscription(request):
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)
-        session=create_checkout_session(user=user,price=price,customer=customer)
+        if customer.subscription.status == "trialing":
+            session= create_checkout_session(user=user,price=price,customer=customer,trial=True)
+        else:
+            session=create_checkout_session(user=user,price=price,customer=customer)
         return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
     else:
         return Response({'msg':'No Stripe Account Found'}, status=404)
@@ -679,7 +747,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                     currency ='usd'
                 price = Plan.objects.get(id=pre_price.price_id)
                 if price.currency != currency:
-                    price = Plan.objects.get(product=price.product,interval=price.interval,currency=currency)
+                    price = Plan.objects.filter(product=price.product,interval=price.interval,currency=currency).last()
                 try:
                     address = BillingAddress.objects.get(user=user)
                     session = create_checkout_session(user=user,price=price,customer=customer)
@@ -687,14 +755,17 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                    return Response({'Error':'Billing Address Not Found'}, status=412) 
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except (TempPricingPreference.DoesNotExist,ValueError):
-                free=CreditPack.objects.get(name='Free')
+                #free=CreditPack.objects.get(name='Free')
+                pro=CreditPack.objects.get(name='Pro')
                 if user.country.id == 101 :
                     currency = 'inr'
                 else:
                     currency ='usd'
-                price = Price.objects.filter(product_id=free.product,currency=currency).last()
-                customer.subscribe(price=price)
-                return Response({'msg':'User Successfully created','subscription':'Free'}, status=201)
+                price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month').last()
+                response=subscribe_trial(price,customer)
+                print(response)
+                #customer.subscribe(price=price)
+                return Response({'msg':'User Successfully created','subscription':'Pro_Trial'}, status=201)
         elif is_active == (True,True):
             return Response({'msg':'User already Registerd'}, status=400)
 
