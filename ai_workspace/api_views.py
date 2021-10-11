@@ -20,7 +20,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
 import copy, os, mimetypes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles
+    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -225,6 +225,8 @@ class ProjectSetupView(viewsets.ViewSet, PageNumberPagination):
 
     @integrity_error
     def create(self, request):
+        print("data--->",request.POST.dict())
+        print("Files--->",request.FILES.getlist('files'))
         serializer = ProjectSetupSerializer(data={**request.POST.dict(),
             "files":request.FILES.getlist('files')},context={"request":request})
         if serializer.is_valid(raise_exception=True):
@@ -287,7 +289,7 @@ class ProjectCreateView(viewsets.ViewSet):
     def update(self, request, pk=None):
         pass
 
-class AnonymousProjectSetupView(viewsets.ViewSet):
+class TempProjectSetupView(viewsets.ViewSet):
     serializer_class = TempProjectSetupSerializer
     parser_classes = [MultiPartParser, JSONParser]
     permission_classes = [AllowAny,]
@@ -297,18 +299,28 @@ class AnonymousProjectSetupView(viewsets.ViewSet):
 
     @integrity_error
     def create(self, request):
-        # print("metaaa>>",request.META)
-        serializer = TempProjectSetupSerializer(data={**request.POST.dict(),
-            "tempfiles":request.FILES.getlist('tempfiles')})
-        if serializer.is_valid(raise_exception=True):
-            #try:
-            serializer.save()
-            #except IntegrityError:
-              #  return Response(serializer.data, status=409)
-
-            return Response(serializer.data, status=201)
-
+        text_data=request.POST.get('text_data')
+        if text_data:
+            name = text_data.split()[0]+ ".txt"
+            f1 = open(name, 'w')
+            f1.write(text_data)
+            f1.close()
+            f2 = open(name, 'rb')
+            file_obj2 = DJFile(f2)
+            serializer = TempProjectSetupSerializer(data={**request.POST.dict(),
+            "tempfiles":[file_obj2]})
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                f2.close()
+                os.remove(os.path.abspath(name))
+                return Response(serializer.data, status=201)
+            return Response(serializer.errors, status=409)
         else:
+            serializer = TempProjectSetupSerializer(data={**request.POST.dict(),
+                "tempfiles":request.FILES.getlist('files')})
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
 
 
@@ -469,29 +481,29 @@ class TbxUploadView(APIView):
             return Response(serializer.errors)
 
 
-@api_view(['GET',])
-def getLanguageName(request,id):
-
-    job_id=Document.objects.get(id=id).job_id
-    print("INSIDE")
-    src_id=Job.objects.get(id=job_id).source_language_id
-    print("SRC ID-->", src_id)
-    src_name=Languages.objects.get(id=src_id).language
-    tar_id=Job.objects.get(id=job_id).target_language_id
-    print("TAR ID-->", tar_id)
-    tar_name=Languages.objects.get(id=tar_id).language
-    print("GOT LANGUAGES")
-    try:
-        src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name)\
-                     .locale_code
-        tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name)\
-                     .locale_code
-        return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
-                     "src_code":src_lang_code,"tar_code":tar_lang_code})
-    except Exception as E:
-        print("Exception-->", E)
-        return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
-                     "src_code":0,"tar_code":0})
+# @api_view(['GET',])
+# def getLanguageName(request,id):
+#
+#     job_id=Document.objects.get(id=id).job_id
+#     print("INSIDE")
+#     src_id=Job.objects.get(id=job_id).source_language_id
+#     print("SRC ID-->", src_id)
+#     src_name=Languages.objects.get(id=src_id).language
+#     tar_id=Job.objects.get(id=job_id).target_language_id
+#     print("TAR ID-->", tar_id)
+#     tar_name=Languages.objects.get(id=tar_id).language
+#     print("GOT LANGUAGES")
+#     try:
+#         src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name)\
+#                      .locale_code
+#         tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name)\
+#                      .locale_code
+#         return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
+#                      "src_code":src_lang_code,"tar_code":tar_lang_code})
+#     except Exception as E:
+#         print("Exception-->", E)
+#         return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
+#                      "src_code":0,"tar_code":0})
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -756,7 +768,8 @@ class UpdateTaskCreditStatus(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, doc_id):
+    @staticmethod
+    def get_object(doc_id):
         try:
             return TaskCreditStatus.objects.get(task__document=doc_id)
         except TaskCreditStatus.DoesNotExist:
@@ -805,12 +818,10 @@ class UpdateTaskCreditStatus(APIView):
             from_addon = UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)
             return from_addon
 
-    def put(self, request, doc_id):
-        task_cred_status = self.get_object(doc_id)
-        doc = Document.objects.get(id=doc_id)
-        print("DOC MT USAGE-->", doc.mt_usage)
-        actual_used_credits = int(doc.mt_usage / task_cred_status.word_char_ratio)
-        credit_status = self.update_usercredit(request, actual_used_credits - task_cred_status.actual_used_credits)
+    @staticmethod
+    def update_credits(request, doc_id, actual_used_credits):
+        task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
+        credit_status = UpdateTaskCreditStatus.update_usercredit(request, actual_used_credits)
         print("CREDIT STATUS----->", credit_status)
         if credit_status:
             msg = "Successfully debited MT credits"
@@ -822,7 +833,7 @@ class UpdateTaskCreditStatus(APIView):
                      data={"actual_used_credits" : actual_used_credits }, partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({"msg" : msg}, status=status)
+            return {"msg" : msg}, status
 
 ################Incomplete project list for Marketplace###########3
 # class IncompleteProjectListView(viewsets.ViewSet) :
@@ -886,3 +897,55 @@ class TaskView(APIView):
 
         else:
             return Response({"msg": task_serlzr.errors}, status=400)
+
+
+@api_view(['POST',])
+def create_project_from_temp_project(request):
+    ai_user_id = request.POST.get("user_id")
+    temp_proj_id = request.POST.get("temp_project")
+    temp_proj =  TempProject.objects.get(temp_proj_id =temp_proj_id)
+    files_list = TempFiles.objects.filter(temp_proj_id =temp_proj.id)
+    print(len(files_list))
+    if len(files_list)==1:
+        file = str(files_list[0].files)
+        name = os.path.basename(file)
+        filename,extension = os.path.splitext(name)
+        if extension == ".txt":
+            proj = Project.objects.create(ai_user_id=ai_user_id,project_name=filename)
+        else:
+            proj = Project.objects.create(ai_user_id=ai_user_id)
+    else:
+        proj = Project.objects.create(ai_user_id=ai_user_id)
+    temp_proj =  TempProject.objects.get(temp_proj_id =temp_proj_id)
+    jobs_list = Templangpair.objects.filter(temp_proj_id=temp_proj.id)
+    for i in jobs_list:
+        Job.objects.create(source_language=i.source_language,target_language=i.target_language,project_id=proj.id)
+    # files_list = TempFiles.objects.filter(temp_proj_id =temp_proj.id)
+    for j in files_list:
+        File.objects.create(file=j.files,filename=os.path.basename(str(j.files)),project_id=proj.id,usage_type_id=1)
+    query = Project.objects.get(id =proj.id)
+    serializer = ProjectSetupSerializer(query)
+    print(serializer.data)
+    return JsonResponse({"data":serializer.data},safe=False)
+
+
+
+@api_view(['POST',])
+def create_project_from_temp_project_new(request):
+    ai_user_id = request.POST.get("user_id")
+    ai_user = AiUser.objects.get(id=ai_user_id)
+    temp_proj_id = request.POST.get("temp_project")
+    temp_proj =  TempProject.objects.get(temp_proj_id =temp_proj_id)
+    files_list = TempFiles.objects.filter(temp_proj_id =temp_proj.id)
+    jobs_list = Templangpair.objects.filter(temp_proj_id=temp_proj.id)
+    source_language = str(jobs_list[0].source_language_id)
+    target_languages = [str(i.target_language_id) for i in jobs_list]
+    files = [DJFile(i.files,name=i.filename) for i in files_list]
+    filename,extension = os.path.splitext((files_list[0].filename))
+    serializer = ProjectQuickSetupSerializer(data={'project_name':[filename + str(temp_proj.id)],'source_language':source_language,'target_languages':target_languages,'files':files},context={'ai_user':ai_user})
+    if serializer.is_valid():
+        serializer.save()
+        print(serializer.data)
+        return JsonResponse({"data":serializer.data},safe=False)
+    else:
+        return JsonResponse({"data":serializer.errors},safe=False)

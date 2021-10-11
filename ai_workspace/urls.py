@@ -7,7 +7,7 @@ router.register(r"project", api_views.ProjectView, basename="project")
 router.register(r'job', api_views.JobView, basename="job")
 router.register(r'file', api_views.FileView, basename="file")
 router.register(r"project_setup", api_views.ProjectSetupView, basename="project_setup")
-router.register(r"temp_project_setup", api_views.AnonymousProjectSetupView,\
+router.register(r"temp_project_setup", api_views.TempProjectSetupView,\
 				basename="temp_project_setup")
 router.register(r"project-setup-sub", api_views.ProjectSubjectView,\
 				basename="project_setup__sub")
@@ -33,7 +33,7 @@ urlpatterns += [
 		 name="source-tmx-files"),
 	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(),\
 		 name="project-report-analysis"),
-    path("getLangName/<int:id>/", api_views.getLanguageName, name="get-language-name"),
+    # path("getLangName/<int:id>/", api_views.getLanguageName, name="get-language-name"),
 	path("project/report_analysis/<int:project_id>/", api_views.ProjectReportAnalysis.as_view(),\
 		 name="project-report-analysis"),
 	path("tbx_upload", api_views.TbxUploadView.as_view(), name='tbx-upload'),
@@ -50,6 +50,7 @@ urlpatterns += [
 	path("tbx_download/<int:tbx_file_id>", api_views.tbx_download, name="tbx-download"),
 	path("task_credit_status_update/<int:doc_id>", api_views.UpdateTaskCreditStatus.as_view(), name="task-credit-update"),
 	path("dashboard_credit_status", api_views.dashboard_credit_status, name="dashboard-credit-status"),
+	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
 ]
 # views urls adding for local testing
 urlpatterns += [
