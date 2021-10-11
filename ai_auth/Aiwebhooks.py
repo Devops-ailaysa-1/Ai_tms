@@ -13,13 +13,16 @@ from django.utils import timezone
 #     pass
 
 
-def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None):
+def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
     if pack.type=="Subscription":
         expiry = subscription.current_period_end
-        creditsls= models.UserCredits.objects.filter(user=user,credit_pack_type='Subscription').filter(~Q(invoice=invoice.id))
+        creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
         for credit in creditsls:
             credit.ended_at=timezone.now()
             credit.save()
+
+    if pack.type=="Subscription_Trial":
+         expiry = subscription.trial_end
 
     if pack.type=="Addon":
         expiry = None
@@ -94,7 +97,10 @@ def my_handler(event, **kwargs):
 #     print(event)
 #     print("charge paid")
 
-
+def remove_trial_sub(customer,subscription):
+    trials = customer.subscriptions.filter(status='trialing').filter(~Q(id=subscription.id))
+    for trial in trials:
+        trial.cancel(at_period_end=False)
 
 
 @webhooks.handler("invoice.paid")
@@ -126,19 +132,31 @@ def my_handler(event, **kwargs):
     invoice_obj=Invoice.objects.get(id=invoice)
     sub=data['object']['lines']['data'][0]['subscription']
     subscription = Subscription.objects.get(id=sub)
+    bill_reason = data['object']['billing_reason'] 
+    amount_paid=data['object']['amount_paid']
+    if bill_reason != 'subscription_create' and amount_paid != 0:
+        modify_subscription_data(subscription)
+
+    remove_trial_sub(cust_obj,subscription)
     #meta = data['object']['metadata']
     price_obj= Price.objects.get(id=price)
     if price_obj.id != subscription.plan.id:
         print("Subscription not updated yet")
-    cp = models.CreditPack.objects.get(product=price_obj.product)
+    sub_type=data['object']['lines']['data'][0]['metadata']['type']
+    if subscription.status == 'trialing':
+        trial = True
+        cp = models.CreditPack.objects.get(product=price_obj.product,type='Subscription_Trial')
+    else:
+        cp = models.CreditPack.objects.get(product=price_obj.product,type='Subscription')
+        trial=False
     #print(data['object']['metadata'])
     #quants= int(meta.get('quantity'))
     update_user_credits(user=user,cust=cust_obj,price=price_obj,
-                        quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp,subscription=subscription)
+                        quants=quants,invoice=invoice_obj,payment=payment_obj,pack=cp,subscription=subscription,trial=trial)
     # kwarg = {
     #     'user':user,
     #     'stripe_cust_id':cust_obj,
-    #     'price_id':price,
+    #     'price_id':price,Subscription_Trial
     #     'Buyed_credits':cp.credits*quants,
     #     'credits_left':cp.credits*quants,
     #     'expiry': expiry,
@@ -236,3 +254,51 @@ def my_handler(event, **kwargs):
 #         tax_rate=None
 
 #     subscriptin_modify_default_tax_rate(sub_id=sub_id,tax_rates=tax_rate)
+
+
+@webhooks.handler("customer.subscription.updated")
+def my_handler(event, **kwargs):
+    print("**** customer updated *****")
+    print(event.data)
+    print("**** customer updated   End *****")
+    # stripe.Subscription.modify(
+    # "sub_C6Am1ELc0KQvPV",
+    #  metadata={"order_id": "6735"},
+    # )
+
+
+def modify_subscription_data(subscription):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+    stripe.api_key = api_key
+
+    stripe.Subscription.modify(
+    subscription.id,
+    metadata={'type':'subscription'}
+    )
+
+
+
+
+
+
+@webhooks.handler("customer.subscription.trial_will_end")
+def my_handler(event, **kwargs):
+    print("**** customer trial_end *****")
+    print(event.data)
+    print("**** customer trial_end   End *****")
+    # stripe.Subscription.modify(
+    # "sub_C6Am1ELc0KQvPV",
+    #  metadata={"order_id": "6735"},
+    # )
+
+
+def subscription_delete(sub):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+    stripe.api_key = api_key
+    stripe.Subscription.delete(sub.id)
