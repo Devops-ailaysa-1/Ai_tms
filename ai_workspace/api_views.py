@@ -517,12 +517,30 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     def create(self, request):
-        serlzr = ProjectQuickSetupSerializer(data=\
+        text_data=request.POST.get('text_data')
+        if text_data:
+            name = text_data.split()[0]+ ".txt"
+            f1 = open(name, 'w')
+            f1.write(text_data)
+            f1.close()
+            f2 = open(name, 'rb')
+            file_obj2 = DJFile(f2)
+            serializer = ProjectQuickSetupSerializer(data={**request.data,
+            "files":[file_obj2]},context={"request": request})
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                f2.close()
+                os.remove(os.path.abspath(name))
+                return Response(serializer.data, status=201)
+            return Response(serializer.errors, status=409)
+        else:
+            serlzr = ProjectQuickSetupSerializer(data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request})
-        if serlzr.is_valid(raise_exception=True):
-            serlzr.save()
-            return Response(serlzr.data, status=201)
+            if serlzr.is_valid(raise_exception=True):
+                serlzr.save()
+                return Response(serlzr.data, status=201)
+            return Response(serializer.errors, status=409)
 
     def update(self, request, pk, format=None):
         instance = self.get_object()
