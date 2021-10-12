@@ -925,7 +925,7 @@ def create_project_from_temp_project_new(request):
     temp_proj =  TempProject.objects.get(temp_proj_id =temp_proj_id)
     files_list = TempFiles.objects.filter(temp_proj_id =temp_proj.id)
     jobs_list = Templangpair.objects.filter(temp_proj_id=temp_proj.id)
-    source_language = str(jobs_list[0].source_language_id)
+    source_language = [str(jobs_list[0].source_language_id)]
     target_languages = [str(i.target_language_id) for i in jobs_list]
     files = [DJFile(i.files,name=i.filename) for i in files_list]
     filename,extension = os.path.splitext((files_list[0].filename))
