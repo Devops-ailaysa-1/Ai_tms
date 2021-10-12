@@ -918,37 +918,6 @@ class TaskView(APIView):
 
 
 @api_view(['POST',])
-def create_project_from_temp_project(request):
-    ai_user_id = request.POST.get("user_id")
-    temp_proj_id = request.POST.get("temp_project")
-    temp_proj =  TempProject.objects.get(temp_proj_id =temp_proj_id)
-    files_list = TempFiles.objects.filter(temp_proj_id =temp_proj.id)
-    print(len(files_list))
-    if len(files_list)==1:
-        file = str(files_list[0].files)
-        name = os.path.basename(file)
-        filename,extension = os.path.splitext(name)
-        if extension == ".txt":
-            proj = Project.objects.create(ai_user_id=ai_user_id,project_name=filename)
-        else:
-            proj = Project.objects.create(ai_user_id=ai_user_id)
-    else:
-        proj = Project.objects.create(ai_user_id=ai_user_id)
-    temp_proj =  TempProject.objects.get(temp_proj_id =temp_proj_id)
-    jobs_list = Templangpair.objects.filter(temp_proj_id=temp_proj.id)
-    for i in jobs_list:
-        Job.objects.create(source_language=i.source_language,target_language=i.target_language,project_id=proj.id)
-    # files_list = TempFiles.objects.filter(temp_proj_id =temp_proj.id)
-    for j in files_list:
-        File.objects.create(file=j.files,filename=os.path.basename(str(j.files)),project_id=proj.id,usage_type_id=1)
-    query = Project.objects.get(id =proj.id)
-    serializer = ProjectSetupSerializer(query)
-    print(serializer.data)
-    return JsonResponse({"data":serializer.data},safe=False)
-
-
-
-@api_view(['POST',])
 def create_project_from_temp_project_new(request):
     ai_user_id = request.POST.get("user_id")
     ai_user = AiUser.objects.get(id=ai_user_id)
