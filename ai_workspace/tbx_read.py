@@ -130,16 +130,19 @@ def upload_template_data_to_db(file_id, job_id):
     template_file =TbxTemplateFiles.objects.get(id=file_id).tbx_template_file
     dataset = Dataset()
     imported_data = dataset.load(template_file.read(), format='xlsx')
-    for data in imported_data:
-        value = TemplateTermsModel(
-                # data[0],          #Blank column
-                data[1],            #Autoincremented in the model
-                sl_term = data[2].strip(),    #SL term column
-                tl_term = data[3].strip()    #TL term column
-        )
-        value.job_id = job_id
-        value.file_id = file_id
-        value.save()
+    try:
+        for data in imported_data:
+            value = TemplateTermsModel(
+                    # data[0],          #Blank column
+                    data[1],            #Autoincremented in the model
+                    sl_term = data[2].strip(),    #SL term column
+                    tl_term = data[3].strip()    #TL term column
+            )
+            value.job_id = job_id
+            value.file_id = file_id
+            value.save()
+    except Exception as e:
+        print(e)
 
 def user_tbx_write(job_id,project_id):
     try:
