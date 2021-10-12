@@ -389,7 +389,7 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
-	project_name = serializers.CharField(required=False)
+	project_name = serializers.CharField(required=False,allow_null=True)
 	# ai_user = serializers.IntegerField(required=False)
 
 	class Meta:
@@ -397,7 +397,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		fields = ("project_name", "jobs", "files")#,'ai_user')
 
 	def to_internal_value(self, data):
-		print("project--->",data["project_name"])
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
@@ -408,7 +407,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def create(self, validated_data):
 		print("data-->",validated_data)
-		print("req---->",self.context.get("request"))
 		if self.context.get("request")!=None:
 			ai_user = self.context.get("request", None).user
 		else:
