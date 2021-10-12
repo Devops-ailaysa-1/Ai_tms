@@ -334,10 +334,11 @@ def get_payment_details(request):
     if user_invoice_details:
         out=[]
         for i in user_invoice_details:
-            output={"Name":i.plan.product.name,"Price":i.amount_paid,"Currency":i.currency,"Invoice_number":i.number,"Invoice_date":i.created.date(),
-                    "Status":"paid" if i.paid else "unpaid","Invoice_Pdf_download_link": i.invoice_pdf,
-                    "Invoice_view_URL":i.hosted_invoice_url}
-            out.append(output)
+            if i.subscription.status != "trialing":
+                output={"Name":i.plan.product.name,"Price":i.amount_paid,"Currency":i.currency,"Invoice_number":i.number,"Invoice_date":i.created.date(),
+                        "Status":"paid" if i.paid else "unpaid","Invoice_Pdf_download_link": i.invoice_pdf,
+                        "Invoice_view_URL":i.hosted_invoice_url}
+                out.append(output)
     else:
         out =[]
     return JsonResponse({"Payments":out},safe=False)
@@ -394,7 +395,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
             tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
         elif state.exists():
             tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:            
+    else:
         tax_rate=None
     #if user.billing
     # print("tax_rate",tax_rate)
@@ -435,7 +436,7 @@ def find_taxrate(user,trial=False):
                 tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
             elif state.exists():
                 tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-        else:            
+        else:
             tax_rate=None
     return tax_rate
 
@@ -614,13 +615,13 @@ def buy_addon(request):
         try:
             addr=BillingAddress.objects.get(user=user)
         except BillingAddress.DoesNotExist:
-            return Response({'Error':'Billing Address Not Found'}, status=412) 
+            return Response({'Error':'Billing Address Not Found'}, status=412)
         state = IndianStates.objects.filter(state_name__icontains=addr.state)
         if state.exists() and state.first().state_code == 'TN':
             tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
         elif state.exists():
             tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:            
+    else:
         tax_rate=None
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
 
@@ -642,7 +643,7 @@ def subscriptin_modify_default_tax_rate(customer,addr):
             tax_rates=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
         elif state.exists():
             tax_rates=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:            
+    else:
         tax_rates=None
 
     if tax_rates != None:
@@ -667,7 +668,7 @@ def customer_portal_session(request):
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
     except BillingAddress.DoesNotExist:
-        return Response({'Error':'Billing Address Not Found'}, status=412) 
+        return Response({'Error':'Billing Address Not Found'}, status=412)
     # except Subscription:
     #     customer.
     return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
@@ -680,7 +681,7 @@ def check_subscription(request):
     if is_active == (False,True):
         customer = Customer.objects.get(subscriber=request.user)
         subscriptions = Subscription.objects.filter(customer=customer).last()
-        if subscriptions is not None:    
+        if subscriptions is not None:
             sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
             return Response({'msg':'User have No Active Subscription','prev_subscription':sub_name,'prev_sub_price_id':subscriptions.plan.id,'prev_sub_status':subscriptions.status}, status=402)
         else:
@@ -706,7 +707,7 @@ def buy_subscription(request):
     except (KeyError,Price.DoesNotExist) :
         return Response({'msg':'Invalid price'}, status=406)
     except BillingAddress.DoesNotExist:
-        return Response({'Error':'Billing Address Not Found'}, status=412) 
+        return Response({'Error':'Billing Address Not Found'}, status=412)
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)
@@ -752,7 +753,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                     address = BillingAddress.objects.get(user=user)
                     session = create_checkout_session(user=user,price=price,customer=customer)
                 except BillingAddress.DoesNotExist:
-                   return Response({'Error':'Billing Address Not Found'}, status=412) 
+                   return Response({'Error':'Billing Address Not Found'}, status=412)
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except (TempPricingPreference.DoesNotExist,ValueError):
                 #free=CreditPack.objects.get(name='Free')
@@ -873,14 +874,14 @@ class UserTaxInfoView(viewsets.ViewSet):
         try:
             queryset = UserTaxInfo.objects.get(user=request.user,id=pk)
             if request.POST.get('stripe_tax_id') == None and request.POST.get('tax_id') == None:
-                taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()         
+                taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()
                 user_taxid_delete(taxid)
                 queryset.delete()
                 return Response({'msg':'Successfully Deleted'}, status=200)
             if request.POST.get('stripe_tax_id') == queryset.stripe_tax_id and request.POST.get('tax_id') == queryset.tax_id:
                 return Response({'msg':'Successfully Updated'}, status=200)
             else:
-                taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()         
+                taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()
                 user_taxid_delete(taxid)
                 queryset.delete()
         except UserTaxInfo.DoesNotExist:
