@@ -134,11 +134,11 @@ class Document(models.Model):
 
     @property
     def segments_without_blank(self):
-        return self.get_segments().exclude(source__exact='')
+        return self.get_segments().exclude(source__exact='').order_by("id")
 
     @property
     def segments_with_blank(self):
-        return self.get_segments().filter(source__exact='')
+        return self.get_segments().filter(source__exact='').order_by("id")
 
     @property
     def segments(self):
