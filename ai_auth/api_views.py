@@ -334,6 +334,7 @@ def get_payment_details(request):
     if user_invoice_details:
         out=[]
         for i in user_invoice_details:
+            print("status--->",i.subscription.status)
             if i.subscription.status != "trialing":
                 output={"Name":i.plan.product.name,"Price":i.amount_paid,"Currency":i.currency,"Invoice_number":i.number,"Invoice_date":i.created.date(),
                         "Status":"paid" if i.paid else "unpaid","Invoice_Pdf_download_link": i.invoice_pdf,
