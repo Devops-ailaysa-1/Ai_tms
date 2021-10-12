@@ -817,7 +817,7 @@ class UpdateTaskCreditStatus(APIView):
     def update_usercredit(request, actual_used_credits):
         present = datetime.now()
         try:
-            user_credit = UserCredits.objects.get(Q(user_id=request.user.id) & Q(credit_pack_type="Subscription") & Q(ended_at=None))
+            user_credit = UserCredits.objects.get(Q(user_id=request.user.id) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits
