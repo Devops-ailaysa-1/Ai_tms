@@ -6,7 +6,7 @@ from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 from ai_auth.models import (AiUser, BillingAddress,UserAttribute,PersonalInformation,OfficialInformation,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,VendorOnboarding)
+                            TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,VendorOnboarding,GeneralSupport)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer
@@ -309,3 +309,8 @@ class VendorOnboardingSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorOnboarding
         fields  = "__all__"
+
+class GeneralSupportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralSupport
+        fields = "__all__"
