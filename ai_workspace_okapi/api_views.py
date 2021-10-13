@@ -5,7 +5,7 @@ from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSeriali
                           TM_FetchSerializer)
 from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
-from rest_framework import viewsets
+from rest_framework import viewsets, authentication
 from rest_framework import views
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
@@ -301,6 +301,7 @@ class DocumentToFile(views.APIView):
                                 encoding='utf-8')
                         response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
                                             .format(encoded_filename)
+                        response['X-Suggested-Filename'] = encoded_filename
                         response["Access-Control-Allow-Origin"] = "*"
                         response["Access-Control-Allow-Headers"] = "*"
                         print("cont-disp--->", response.get("Content-Disposition"))
