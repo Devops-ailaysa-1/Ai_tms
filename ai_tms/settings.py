@@ -86,7 +86,7 @@ CORS_ALLOW_HEADERS = [
      'Access-Control-Allow-Headers',
      'cache',
      'cookie',
-     'access-control-expose-headers',
+     'Access-Control-Expose-Headers',
      'responseType',
      'redirect',
 ]
