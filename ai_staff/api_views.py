@@ -5,19 +5,19 @@ from rest_framework import status,viewsets
 from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,AllowAny
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from django.http import Http404,JsonResponse
 from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
-                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,IndianStates)
+                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,IndianStates,SupportTopics,JobPositions)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
-                         SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer)
+                         SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,SupportTopicSerializer,JobPositionSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -657,3 +657,67 @@ class IndianStatesView(viewsets.ViewSet):
         queryset = IndianStates.objects.all()
         serializer = IndianStatesSerializer(queryset,many=True)
         return Response(serializer.data)
+
+
+class SupportTopicsView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = SupportTopics.objects.all()
+        serializer = SupportTopicSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SupportTopicSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = SupportTopics.objects.all()
+        topic = get_object_or_404(queryset, pk=pk)
+        serializer= SupportTopicSerializer(topic,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = SupportTopics.objects.all()
+        topic = get_object_or_404(queryset, pk=pk)
+        topic.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class JobPositionsView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = JobPositions.objects.all()
+        serializer = JobPositionSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = JobPositionSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = JobPositions.objects.all()
+        jobname = get_object_or_404(queryset, pk=pk)
+        serializer= JobPositionSerializer(jobname,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = JobPositions.objects.all()
+        jobname = get_object_or_404(queryset, pk=pk)
+        jobname.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

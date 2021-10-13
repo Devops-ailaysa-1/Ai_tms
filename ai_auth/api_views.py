@@ -4,7 +4,8 @@ from stripe.api_resources import subscription
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, OfficialInformationSerializer, PersonalInformationSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
-                                TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer)
+                                TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
+                                CarrierSupportSerializer,VendorOnboardingSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
