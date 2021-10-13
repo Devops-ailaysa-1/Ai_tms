@@ -4,7 +4,8 @@ from stripe.api_resources import subscription
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, OfficialInformationSerializer, PersonalInformationSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
-                                TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer)
+                                TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
+                                CarrierSupportSerializer,VendorOnboardingSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -460,7 +461,7 @@ def subscribe_trial(price,customer=None):
     },
     ],
     default_tax_rates=tax_rate,
-    trial_period_days=3,
+    trial_period_days=14,
 
     metadata={'price':price.id,'product':product_name,'type':'subscription_trial'}
     )

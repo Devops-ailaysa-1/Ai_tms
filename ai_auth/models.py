@@ -5,7 +5,7 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType
+from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics
 from django.db.models.signals import post_save, pre_save
 from .signals import create_allocated_dirs,updated_billingaddress,updated_user_taxid
 from django.contrib.auth.models import Permission, User
@@ -39,17 +39,17 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
-    
+
     @property
     def credit_balance(self):
         print("**** inside AiUser credit balance  ****")
         total_credit_left = 0
         present = datetime.now()
         sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
-                                             & Q(ended_at=None))        
+                                             & Q(ended_at=None))
         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
             total_credit_left += sub_credits.credits_left
-        
+
         try:
             addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
@@ -58,7 +58,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             print("NO ADD-ONS AVAILABLE")
 
         return total_credit_left
-    
+
     @property
     def buyed_credits(self):
         print("**** inside AiUser buyed credits  ****")
@@ -246,3 +246,40 @@ class AiUserProfile(models.Model):
     # updated_at = models.CharField(max_length=200,blank=True, null=True)
     class Meta:
         db_table = 'ai_user_profile'
+
+def file_path(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.name,"cv_file",filename)
+
+class CarrierSupport(models.Model):
+    name = models.CharField(max_length=250,blank=True,null=True)
+    email = models.EmailField(blank=True,null=True)
+    phonenumber = models.CharField(max_length=255, blank=True, null=True)
+    job_positions = models.ForeignKey(JobPositions,on_delete=models.CASCADE,blank=True, null=True)
+    message = models.TextField(max_length=1000, blank=True, null=True)
+    cv_file = models.FileField(upload_to=file_path, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+def file_path_vendor(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.name,"vendor_cv_file",filename)
+
+class VendorOnboarding(models.Model):
+    name = models.CharField(max_length=250,blank=True,null=True)
+    email = models.EmailField(blank=True,null=True)
+    cv_file = models.FileField(upload_to=file_path_vendor, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+def support_file_path(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.name,"support_file",filename)
+
+class GeneralSupport(models.Model):
+    name = models.CharField(max_length=250,blank=True,null=True)
+    email = models.EmailField(blank=True,null=True)
+    phonenumber = models.CharField(max_length=255, blank=True, null=True)
+    topic = models.ForeignKey(SupportTopics,on_delete=models.CASCADE,blank=True, null=True)
+    message = models.TextField(max_length=1000, blank=True, null=True)
+    support_file = models.FileField(upload_to=support_file_path, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

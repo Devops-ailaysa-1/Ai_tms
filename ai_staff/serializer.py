@@ -4,7 +4,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, StripeTaxId,
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
-                    SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,CreditAddonPrice)
+                    SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,CreditAddonPrice,SupportTopics,JobPositions)
 import json
 from drf_writable_nested import WritableNestedModelSerializer
 
@@ -259,3 +259,14 @@ class StripeTaxIdSerializer(serializers.ModelSerializer):
         model = StripeTaxId
         fields = ("id","tax_code",'name','country','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
+
+
+class SupportTopicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupportTopics
+        fields = "__all__"
+
+class JobPositionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobPositions
+        fields = "__all__"
