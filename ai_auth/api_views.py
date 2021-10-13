@@ -461,7 +461,7 @@ def subscribe_trial(price,customer=None):
     },
     ],
     default_tax_rates=tax_rate,
-    trial_period_days=3,
+    trial_period_days=14,
 
     metadata={'price':price.id,'product':product_name,'type':'subscription_trial'}
     )
