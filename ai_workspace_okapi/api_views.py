@@ -409,7 +409,8 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
             elif match_case:
                 segments = segments.filter(**{f'{lookup_field}__regex':f'{search_word}'})
             elif exact_word:
-                segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
+                # segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
+                segments = segments.filter(**{f'{lookup_field}__regex':f'(?i)[^\w]{search_word}[^\w]'})  # temp regex
 
         return segments, 200
 
@@ -459,7 +460,8 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
             if match_case:
                 regex = re.compile(f'(?<!\w){search_word}(?!\w)')
             else:
-                regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
+                # regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
+                regex = re.compile(f'(?i)[^\w]{search_word}[^\w]')  # temp regex
         else:
             if match_case:
                 regex = re.compile(search_word)
@@ -511,7 +513,9 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
             if match_case:
                 regex = re.compile(f'(?<!\w){search_word}(?!\w)')
             else:
-                regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
+                # regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
+                regex = re.compile(f'(?i)[^\w]{search_word}[^\w]')  # temp regex
+
         else:
             if match_case:
                 regex = re.compile(search_word)
