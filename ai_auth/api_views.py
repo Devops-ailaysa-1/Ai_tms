@@ -5,7 +5,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
-                                CarrierSupportSerializer,VendorOnboardingSerializer)
+                                CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -26,15 +26,15 @@ from django.core.mail import EmailMessage
 from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
-from datetime import datetime
+from datetime import datetime,date
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
-from ai_staff.models import IndianStates, SupportType
+from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics
 from django.db.models import Q
 from ai_auth.signals import update_billing_address
 from  django.utils import timezone
-import time
+import time,pytz
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -265,7 +265,7 @@ class CustomerSupportCreateView(viewsets.ViewSet):
         support_type = request.POST.get("support_type")
         support_type_name = SupportType.objects.get(id=support_type).support_type
         description = request.POST.get("description")
-        timestamp = datetime.now()
+        timestamp = date.today()
         serializer = CustomerSupportSerializer(data={**request.POST.dict(),'user':id})
         subject='Regarding Customer Support'
         template = 'customer_support_email.html'
@@ -292,10 +292,10 @@ class ContactPricingCreateView(viewsets.ViewSet):
         name = request.POST.get("name")
         description = request.POST.get("description")
         email = request.POST.get("business_email")
-        timestamp = datetime.now()
+        today = date.today()
         template = 'contact_pricing_email.html'
         subject='Regarding Contact-Us Pricing'
-        context = {'user': email,'name':name,'description':description,'timestamp':timestamp}
+        context = {'user': email,'name':name,'description':description,'timestamp':today}
         serializer = ContactPricingSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
             serializer.save()
@@ -306,7 +306,10 @@ class ContactPricingCreateView(viewsets.ViewSet):
 
 def send_email(subject,template,context):
     content = render_to_string(template, context)
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change
+    file =context.get('file')
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['thenmozhivijay20@gmail.com',])#to emailaddress need to change
+    if file:
+        msg.attach(file.name, file.read(), file.content_type)
     msg.content_subtype = 'html'
     msg.send()
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
@@ -933,4 +936,70 @@ class AiUserProfileView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             return Response({"Msg":"Profile Updated"})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class CarrierSupportCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        name = request.POST.get("name")
+        job_position = request.POST.get("job_position")
+        job_name = JobPositions.objects.get(id=job_position).job_name
+        print(job_name)
+        email = request.POST.get("email")
+        message = request.POST.get("message")
+        phonenumber = request.POST.get('phonenumber')
+        cv_file = request.FILES.get('cv_file')
+        # time =datetime.now(pytz.timezone('Asia/Kolkata'))
+        time = date.today()
+        template = 'carrier_support_email.html'
+        subject='Regarding Job Hiring'
+        context = {'email': email,'name':name,'job_position':job_name,'phonenumber':phonenumber,'date':time,'file':cv_file,'message':message}
+        serializer = CarrierSupportSerializer(data={**request.POST.dict(),'cv_file':cv_file})
+        if serializer.is_valid():
+            serializer.save()
+            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GeneralSupportCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        name = request.POST.get("name")
+        topic = request.POST.get("topic")
+        topic_name = SupportTopics.objects.get(id=topic).topic
+        print(topic_name)
+        email = request.POST.get("email")
+        message = request.POST.get("message")
+        phonenumber = request.POST.get('phonenumber')
+        support_file = request.FILES.get('support_file')
+        today = date.today()
+        template = 'general_support_email.html'
+        subject='Regarding General Support'
+        context = {'email': email,'name':name,'topic':topic_name,'phonenumber':phonenumber,'date':today,'file':support_file,'message':message}
+        serializer = GeneralSupportSerializer(data={**request.POST.dict(),'support_file':support_file})
+        if serializer.is_valid():
+            serializer.save()
+            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VendorOnboardingCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        name = request.POST.get("name")
+        email = request.POST.get("email")
+        cv_file = request.FILES.get('cv_file')
+        today = date.today()
+        template = 'vendor_onboarding_email.html'
+        subject='Regarding Vendor Onboarding'
+        context = {'email': email,'name':name,'file':cv_file,'date':today}
+        serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file})
+        if serializer.is_valid():
+            serializer.save()
+            send_email(subject,template,context)
+            return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
