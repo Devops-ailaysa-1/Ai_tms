@@ -54,3 +54,5 @@ test5.out-2.docx
 *.bak
 json_back.zip
 fixtures
+*.ipy
+.env2.save

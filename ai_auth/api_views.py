@@ -385,23 +385,26 @@ def create_checkout_session(user,price,customer=None,trial=False):
 
     tax_rate =[]
 
-    if trial == True :
-        date_time = timezone.now()
-        trial_end = int(time.mktime(date_time.timetuple()))
-        print("trial_end>>>",trial_end)
-    else:
-        trial_end = None
+    # if trial == True :
+    #     date_time = timezone.now()
+    #     trial_end = int(time.mktime(date_time.timetuple()))
+    #     print("trial_end>>>",trial_end)
+    # else:
+    #     trial_end = None
 
-    if user.country.sortname == 'IN':
-        addr=BillingAddress.objects.get(user=user)
-        print(addr.state)
-        state = IndianStates.objects.filter(state_name__icontains=addr.state)
-        if state.exists() and state.first().state_code == 'TN':
-            tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-        elif state.exists():
-            tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:
-        tax_rate=None
+    tax_rate=find_taxrate(user,trial)
+
+    # if user.country.sortname == 'IN':
+    #     addr=BillingAddress.objects.get(user=user)
+    #     print(addr.state)
+    #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
+    #     if state.exists() and state.first().state_code == 'TN':
+    #         tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+    #     elif state.exists():
+    #         tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+    # else:            
+    #     tax_rate=None
+    # tax_rate = None
     #if user.billing
     # print("tax_rate",tax_rate)
     # print("user country>>",user.country.sortname)
@@ -420,6 +423,9 @@ def create_checkout_session(user,price,customer=None,trial=False):
                 'tax_rates':tax_rate,
             }
         ],
+        billing_address_collection='required',
+        customer_update={'address':'auto','name':'auto'},
+        tax_id_collection={'enabled':'True'},
         subscription_data={
         'default_tax_rates':tax_rate,
         'trial_end':None,
@@ -431,17 +437,17 @@ def create_checkout_session(user,price,customer=None,trial=False):
 def find_taxrate(user,trial=False):
     if trial:
          tax_rate=None
-
     else:
         if user.country.sortname == 'IN':
-            addr=BillingAddress.objects.get(user=user)
-            print(addr.state)
-            state = IndianStates.objects.filter(state_name__icontains=addr.state)
-            if state.exists() and state.first().state_code == 'TN':
-                tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-            elif state.exists():
-                tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-        else:
+            # addr=BillingAddress.objects.get(user=user)
+            # print(addr.state)
+            # state = IndianStates.objects.filter(state_name__icontains=addr.state)
+            # if state.exists() and state.first().state_code == 'TN':
+            #     tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+            # elif state.exists():
+            #     tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+            tax_rate=[TaxRate.objects.get(display_name = 'GST',description='IN GST').id,]
+        else:            
             tax_rate=None
     return tax_rate
 
@@ -558,7 +564,7 @@ def generate_portal_session(customer):
     stripe.api_key = api_key
     session = stripe.billing_portal.Session.create(
         customer=customer.id,
-        return_url=domain_url+'dashboard',
+        return_url=domain_url+'subscription-plans',
     )
     return session
 
@@ -616,25 +622,26 @@ def buy_addon(request):
          return Response({'msg':'Invalid price'}, status=406)
 
     cust=Customer.objects.get(subscriber=user)
-    if user.country.sortname == 'IN':
-        try:
-            addr=BillingAddress.objects.get(user=user)
-        except BillingAddress.DoesNotExist:
-            return Response({'Error':'Billing Address Not Found'}, status=412)
-        state = IndianStates.objects.filter(state_name__icontains=addr.state)
-        if state.exists() and state.first().state_code == 'TN':
-            tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-        elif state.exists():
-            tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:
-        tax_rate=None
+    tax_rate=find_taxrate(user)
+    # if user.country.sortname == 'IN':
+    #     try:
+    #         addr=BillingAddress.objects.get(user=user)
+    #     except BillingAddress.DoesNotExist:
+    #         return Response({'Error':'Billing Address Not Found'}, status=412) 
+    #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
+    #     if state.exists() and state.first().state_code == 'TN':
+    #         tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+    #     elif state.exists():
+    #         tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+    # else:            
+    #     tax_rate=None
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
 
     #request.POST.get('')
     return Response({'msg':'Payment Session Generated ','stripe_session_url':response.url}, status=307)
 
 
-def subscriptin_modify_default_tax_rate(customer,addr):
+def subscriptin_modify_default_tax_rate(customer,addr=None):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -642,19 +649,19 @@ def subscriptin_modify_default_tax_rate(customer,addr):
 
     stripe.api_key = api_key
 
-    if customer.subscriber.country.sortname == 'IN' and addr.country.sortname == 'IN':
-        state = IndianStates.objects.filter(state_name__icontains=addr.state)
-        if state.exists() and state.first().state_code == 'TN':
-            tax_rates=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-        elif state.exists():
-            tax_rates=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:
-        tax_rates=None
-
-    if tax_rates != None:
+    # if customer.subscriber.country.sortname == 'IN' and addr.country.sortname == 'IN':
+    #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
+    #     if state.exists() and state.first().state_code == 'TN':
+    #         tax_rates=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+    #     elif state.exists():
+    #         tax_rates=[TaxRate.objects.get(display_name = 'IGST').id,]
+    # else:            
+    #     tax_rates=None
+    tax_rate=find_taxrate(customer.subscriber)
+    if tax_rate != None:
         response = stripe.Subscription.modify(
         customer.subscriptions.last().id,
-        default_tax_rates=tax_rates
+        default_tax_rates=tax_rate
         )
         print(response)
 
@@ -665,15 +672,15 @@ def customer_portal_session(request):
     user = request.user
     try:
         customer = Customer.objects.get(subscriber=user)
-        addr = BillingAddress.objects.get(user=request.user)
+        #addr = BillingAddress.objects.get(user=request.user)
         session=generate_portal_session(customer)
         if not customer.subscriptions.exists():
              return Response({'msg':'User has No Active Subscription'}, status=402)
-        subscriptin_modify_default_tax_rate(customer,addr)
+        subscriptin_modify_default_tax_rate(customer)
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
-    except BillingAddress.DoesNotExist:
-        return Response({'Error':'Billing Address Not Found'}, status=412)
+    # except BillingAddress.DoesNotExist:
+    #     return Response({'Error':'Billing Address Not Found'}, status=412) 
     # except Subscription:
     #     customer.
     return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
@@ -708,18 +715,16 @@ def buy_subscription(request):
     user = request.user
     try:
         price = Price.objects.get(id=request.POST.get('price'))
-        addr = BillingAddress.objects.get(user=request.user)
+        #addr = BillingAddress.objects.get(user=request.user)
     except (KeyError,Price.DoesNotExist) :
         return Response({'msg':'Invalid price'}, status=406)
-    except BillingAddress.DoesNotExist:
-        return Response({'Error':'Billing Address Not Found'}, status=412)
+    #except BillingAddress.DoesNotExist:
+        # return Response({'Error':'Billing Address Not Found'}, status=412) 
+        pass
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)
-        if customer.subscription.status == "trialing":
-            session= create_checkout_session(user=user,price=price,customer=customer,trial=True)
-        else:
-            session=create_checkout_session(user=user,price=price,customer=customer)
+        session=create_checkout_session(user=user,price=price,customer=customer)
         return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
     else:
         return Response({'msg':'No Stripe Account Found'}, status=404)
@@ -754,11 +759,11 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 price = Plan.objects.get(id=pre_price.price_id)
                 if price.currency != currency:
                     price = Plan.objects.filter(product=price.product,interval=price.interval,currency=currency).last()
-                try:
-                    address = BillingAddress.objects.get(user=user)
-                    session = create_checkout_session(user=user,price=price,customer=customer)
-                except BillingAddress.DoesNotExist:
-                   return Response({'Error':'Billing Address Not Found'}, status=412)
+                #try:
+                #address = BillingAddress.objects.get(user=user)
+                session = create_checkout_session(user=user,price=price,customer=customer)
+                # except BillingAddress.DoesNotExist:
+                #    return Response({'Error':'Billing Address Not Found'}, status=412) 
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except (TempPricingPreference.DoesNotExist,ValueError):
                 #free=CreditPack.objects.get(name='Free')

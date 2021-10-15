@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv("django_secret_key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117', "157.245.99.128"]
+ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117', "157.245.99.128","djangotest.ailaysa.com"]
 
 
 CORS_ORIGIN_ALLOW_ALL= False
@@ -86,7 +86,7 @@ CORS_ALLOW_HEADERS = [
      'Access-Control-Allow-Headers',
      'cache',
      'cookie',
-     'access-control-expose-headers',
+     'Access-Control-Expose-Headers',
      'responseType',
      'redirect',
 ]
@@ -126,7 +126,7 @@ INSTALLED_APPS = [
     'djstripe',
     'django_filters',
     # 'channels',
-    #'django_crontab',
+    #'django_q',
 ]
 
 SITE_ID = 1
@@ -294,9 +294,6 @@ USE_L10N = True
 USE_TZ = True
 
 
-# CRONJOBS = [
-#     ('2 * * * *', 'ai_auth.cron.my_cron_job')
-# ]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
@@ -373,10 +370,6 @@ CELERY_TASK_SERIALIZER = 'json'
 DEFAULT_FROM_EMAIL ="noreply@ailaysa.com"
 
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-}
 
 STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
 STRIPE_LIVE_MODE = (True if os.getenv( "STRIPE_LIVE_MODE" ) == 'True' else False)  # Change to True in production

@@ -1,7 +1,7 @@
 # from django.db import transaction
 from django.conf import settings
 import stripe
-from ai_staff.models import IndianStates
+from ai_staff.models import IndianStates,Countries
 from djstripe import webhooks
 from djstripe.models import Customer,Price,Invoice,PaymentIntent
 from djstripe.models.billing import Subscription, TaxRate
@@ -15,7 +15,10 @@ from django.utils import timezone
 
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
     if pack.type=="Subscription":
-        expiry = subscription.current_period_end
+        if subscription.plan.interval=='year':
+            expiry = subscription.current_period_end
+        else:
+            expiry = subscription.current_period_end
         creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
         for credit in creditsls:
             credit.ended_at=timezone.now()
@@ -302,3 +305,73 @@ def subscription_delete(sub):
         api_key = settings.STRIPE_TEST_SECRET_KEY
     stripe.api_key = api_key
     stripe.Subscription.delete(sub.id)
+
+
+
+@webhooks.handler("customer.updated")
+def my_handler(event, **kwargs):
+    print("**** customer updated start *****")
+    print(event.data)
+    data=event.data
+    print("**** customer updated end *****")
+    custid=data['object']['id']
+    address = data['object']['address']
+    name = data['object']['name']
+    update_aiuser_billing(custid,address,name)
+    # stripe.Subscription.modify(
+    # "sub_C6Am1ELc0KQvPV",
+    #  metadata={"order_id": "6735"},
+    # )
+
+
+def update_aiuser_billing(custid,address,name=None):
+    customer = Customer.objects.get(id=custid)
+    if customer.subscriber!=None:
+        addr = models.BillingAddress.objects.filter(user=customer.subscriber).first()
+        if addr== None:
+            addr=models.BillingAddress(user=customer.subscriber)
+        
+        print('addr>>>>',addr)
+
+        if settings.STRIPE_LIVE_MODE == True :
+            api_key = settings.STRIPE_LIVE_SECRET_KEY
+        else:
+            api_key = settings.STRIPE_TEST_SECRET_KEY
+
+        stripe.api_key = api_key
+
+        # response = stripe.Customer.retrieve(custid)
+        # address=response['address']
+
+
+        kwarg = dict()
+        if address != None:
+            if addr.name!= name:
+                if name == None:
+                    kwarg['name']=customer.subscriber.fullname 
+                else:
+                    kwarg['name']=name
+            if address['line1'] != None and addr.line1!= address['line1']:
+                kwarg['line1']=address['line1'] 
+            if address['line2'] != None and addr.line2!= address['line2']:
+                kwarg['line2']= address['line2']
+            if address['state'] != None and addr.state!= address['state']:
+                kwarg['state']= address['state']
+            if address['city'] != None and addr.city!= address['city']:
+                kwarg['city']=address['city']
+            if address['postal_code'] != None and addr.zipcode != address['postal_code']:
+                kwarg['zipcode']=address['postal_code']
+            if address['country'] != None :
+                if addr.country != None:
+                    if addr.country.sortname != address['country']:
+                        coun=Countries.objects.get(sortname= address['country'])
+                        kwarg['country']=coun
+                else:
+                    coun=Countries.objects.get(sortname= address['country'])
+                    kwarg['country']=coun
+
+        if len(kwarg)>0:
+            addr.__dict__.update(kwarg)
+            if kwarg.get('country',None)!= None:
+                addr.country=kwarg['country']
+            addr.save()
