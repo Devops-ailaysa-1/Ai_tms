@@ -17,7 +17,7 @@ from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
 import requests
-import json, os, re, time
+import json, os, re, time, jwt
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -35,6 +35,7 @@ import urllib.parse
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 from ai_workspace.api_views import UpdateTaskCreditStatus
+from django.conf import  settings
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -280,7 +281,6 @@ class ConcordanceSearchView(views.APIView):
         return Response(concordance, status=200)
 
 class DocumentToFile(views.APIView):
-    permission_classes = []
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()
@@ -288,26 +288,33 @@ class DocumentToFile(views.APIView):
         return  document
 
     def get(self, request, document_id):
-        res = self.document_data_to_file(request, document_id)
-        if res.status_code in [200, 201]:
-            file_path = res.text
-            print("file_path---->", file_path)
-            if os.path.isfile(res.text):
-                if os.path.exists(file_path):
-                    with open(file_path, 'rb') as fh:
-                        response = HttpResponse(fh.read(), content_type=\
-                            "application/vnd.ms-excel")
-                        encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                encoding='utf-8')
-                        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
-                                            .format(encoded_filename)
-                        response['X-Suggested-Filename'] = encoded_filename
-                        response["Access-Control-Allow-Origin"] = "*"
-                        response["Access-Control-Allow-Headers"] = "*"
-                        print("cont-disp--->", response.get("Content-Disposition"))
-                        return response
-        return JsonResponse({"msg": "something went to wrong in okapi file processing"},\
-                    status=409)
+        token = request.GET.get("token")
+        payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
+        user_id_payload = payload.get("user_id", 0)
+        user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
+        if user_id_payload == user_id_document:
+            res = self.document_data_to_file(request, document_id)
+            if res.status_code in [200, 201]:
+                file_path = res.text
+                print("file_path---->", file_path)
+                if os.path.isfile(res.text):
+                    if os.path.exists(file_path):
+                        with open(file_path, 'rb') as fh:
+                            response = HttpResponse(fh.read(), content_type=\
+                                "application/vnd.ms-excel")
+                            encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
+                                    encoding='utf-8')
+                            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
+                                                .format(encoded_filename)
+                            response['X-Suggested-Filename'] = encoded_filename
+                            response["Access-Control-Allow-Origin"] = "*"
+                            response["Access-Control-Allow-Headers"] = "*"
+                            print("cont-disp--->", response.get("Content-Disposition"))
+                            return response
+            return JsonResponse({"msg": "something went to wrong in okapi file processing"},\
+                        status=409)
+        else:
+            return JsonResponse({"msg": "Unauthorised"}, status=401)
 
     @staticmethod
     def document_data_to_file(request, document_id):
