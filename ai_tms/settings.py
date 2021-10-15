@@ -327,8 +327,8 @@ SIMPLE_JWT = {
 #     'BLACKLIST_AFTER_ROTATION': True,
 #     'UPDATE_LAST_LOGIN': False,
 
-#     'ALGORITHM': 'HS256',
-#     'SIGNING_KEY': SECRET_KEY,
+    # 'ALGORITHM': 'HS256',
+    # 'SIGNING_KEY': os.getenv( "JWT_SECRET_KEY" ),
 #     'VERIFYING_KEY': None,
 #     'AUDIENCE': None,
 #     'ISSUER': None,
@@ -356,7 +356,6 @@ SIMPLE_JWT = {
 #     'AUTH_COOKIE_PATH': '/',        # The path of the auth cookie.
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
-# }
 
 
 CELERY_BROKER_URL = 'redis://localhost:6379'
