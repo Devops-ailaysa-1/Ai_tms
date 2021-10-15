@@ -1,4 +1,5 @@
 from ai_auth.forms import SendInviteForm
+from django.core.validators import FileExtensionValidator
 from ai_staff.models import AiUserType, Countries, SubjectFields, Timezones,SupportType
 from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -13,6 +14,7 @@ from dj_rest_auth.serializers import PasswordResetSerializer
 from django.contrib.auth import get_user_model
 from django.conf import settings
 UserModel = get_user_model()
+from .validators import file_size
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     # email=serializers.EmailField()
@@ -299,18 +301,20 @@ class AiUserProfileSerializer(serializers.ModelSerializer):
         data["fullname"] = instance.user.fullname
         return data
 
-
 class CarrierSupportSerializer(serializers.ModelSerializer):
+    cv_file = serializers.FileField(validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
     class Meta:
         model = CarrierSupport
         fields  = "__all__"
 
 class VendorOnboardingSerializer(serializers.ModelSerializer):
+    cv_file = serializers.FileField(validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
     class Meta:
         model = VendorOnboarding
         fields  = "__all__"
 
 class GeneralSupportSerializer(serializers.ModelSerializer):
+    support_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
     class Meta:
         model = GeneralSupport
         fields = "__all__"

@@ -248,38 +248,38 @@ class AiUserProfile(models.Model):
         db_table = 'ai_user_profile'
 
 def file_path(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.name,"cv_file",filename)
+    return '{0}/{1}/{2}'.format(instance.email,"cv_file",filename)
 
 class CarrierSupport(models.Model):
     name = models.CharField(max_length=250,blank=True,null=True)
-    email = models.EmailField(blank=True,null=True)
+    email = models.EmailField()
     phonenumber = models.CharField(max_length=255, blank=True, null=True)
-    job_positions = models.ForeignKey(JobPositions,on_delete=models.CASCADE,blank=True, null=True)
-    message = models.TextField(max_length=1000, blank=True, null=True)
-    cv_file = models.FileField(upload_to=file_path, blank=True, null=True)
+    job_position = models.ForeignKey(JobPositions,on_delete=models.CASCADE)
+    message = models.TextField(max_length=1000)
+    cv_file = models.FileField(upload_to=file_path)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 def file_path_vendor(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.name,"vendor_cv_file",filename)
+    return '{0}/{1}/{2}'.format(instance.email,"vendor_cv_file",filename)
 
 class VendorOnboarding(models.Model):
-    name = models.CharField(max_length=250,blank=True,null=True)
-    email = models.EmailField(blank=True,null=True)
-    cv_file = models.FileField(upload_to=file_path_vendor, blank=True, null=True)
+    name = models.CharField(max_length=250)
+    email = models.EmailField()
+    cv_file = models.FileField(upload_to=file_path_vendor)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
 def support_file_path(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.name,"support_file",filename)
+    return '{0}/{1}/{2}'.format(instance.email,"support_file",filename)
 
 class GeneralSupport(models.Model):
     name = models.CharField(max_length=250,blank=True,null=True)
-    email = models.EmailField(blank=True,null=True)
+    email = models.EmailField()
     phonenumber = models.CharField(max_length=255, blank=True, null=True)
-    topic = models.ForeignKey(SupportTopics,on_delete=models.CASCADE,blank=True, null=True)
-    message = models.TextField(max_length=1000, blank=True, null=True)
+    topic = models.ForeignKey(SupportTopics,on_delete=models.CASCADE)
+    message = models.TextField(max_length=1000)
     support_file = models.FileField(upload_to=support_file_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

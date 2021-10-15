@@ -20,6 +20,9 @@ router.register(r'billing-info',api_views.BillingInfoView,basename="billing-info
 router.register(r'tax-info',api_views.UserTaxInfoView,basename="tax-info")
 router.register(r'billing-address',api_views.BillingAddressView,basename="billing-address")
 router.register(r'aiuser-profile',api_views.AiUserProfileView,basename="aiuser-profile")
+router.register(r'carrier-support',api_views.CarrierSupportCreateView,basename="carrier-support")
+router.register(r'general-support',api_views.GeneralSupportCreateView,basename="general-support")
+router.register(r'vendor-onboarding',api_views.VendorOnboardingCreateView,basename="vendor-onboarding")
 
 
 urlpatterns = router.urls

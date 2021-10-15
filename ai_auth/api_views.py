@@ -5,7 +5,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
-                                CarrierSupportSerializer,VendorOnboardingSerializer)
+                                CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -26,15 +26,15 @@ from django.core.mail import EmailMessage
 from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
-from datetime import datetime
+from datetime import datetime,date
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
-from ai_staff.models import IndianStates, SupportType
+from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics
 from django.db.models import Q
 from ai_auth.signals import update_billing_address
 from  django.utils import timezone
-import time
+import time,pytz
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -265,7 +265,7 @@ class CustomerSupportCreateView(viewsets.ViewSet):
         support_type = request.POST.get("support_type")
         support_type_name = SupportType.objects.get(id=support_type).support_type
         description = request.POST.get("description")
-        timestamp = datetime.now()
+        timestamp = date.today()
         serializer = CustomerSupportSerializer(data={**request.POST.dict(),'user':id})
         subject='Regarding Customer Support'
         template = 'customer_support_email.html'
@@ -292,10 +292,10 @@ class ContactPricingCreateView(viewsets.ViewSet):
         name = request.POST.get("name")
         description = request.POST.get("description")
         email = request.POST.get("business_email")
-        timestamp = datetime.now()
+        today = date.today()
         template = 'contact_pricing_email.html'
         subject='Regarding Contact-Us Pricing'
-        context = {'user': email,'name':name,'description':description,'timestamp':timestamp}
+        context = {'user': email,'name':name,'description':description,'timestamp':today}
         serializer = ContactPricingSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
             serializer.save()
@@ -306,7 +306,10 @@ class ContactPricingCreateView(viewsets.ViewSet):
 
 def send_email(subject,template,context):
     content = render_to_string(template, context)
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change
+    file =context.get('file')
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['thenmozhivijay20@gmail.com',])#to emailaddress need to change
+    if file:
+        msg.attach(file.name, file.read(), file.content_type)
     msg.content_subtype = 'html'
     msg.send()
     # return JsonResponse({"message":"Email Successfully Sent"},safe=False)
@@ -382,23 +385,26 @@ def create_checkout_session(user,price,customer=None,trial=False):
 
     tax_rate =[]
 
-    if trial == True :
-        date_time = timezone.now()
-        trial_end = int(time.mktime(date_time.timetuple()))
-        print("trial_end>>>",trial_end)
-    else:
-        trial_end = None
+    # if trial == True :
+    #     date_time = timezone.now()
+    #     trial_end = int(time.mktime(date_time.timetuple()))
+    #     print("trial_end>>>",trial_end)
+    # else:
+    #     trial_end = None
 
-    if user.country.sortname == 'IN':
-        addr=BillingAddress.objects.get(user=user)
-        print(addr.state)
-        state = IndianStates.objects.filter(state_name__icontains=addr.state)
-        if state.exists() and state.first().state_code == 'TN':
-            tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-        elif state.exists():
-            tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:
-        tax_rate=None
+    tax_rate=find_taxrate(user,trial)
+
+    # if user.country.sortname == 'IN':
+    #     addr=BillingAddress.objects.get(user=user)
+    #     print(addr.state)
+    #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
+    #     if state.exists() and state.first().state_code == 'TN':
+    #         tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+    #     elif state.exists():
+    #         tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+    # else:            
+    #     tax_rate=None
+    # tax_rate = None
     #if user.billing
     # print("tax_rate",tax_rate)
     # print("user country>>",user.country.sortname)
@@ -417,6 +423,9 @@ def create_checkout_session(user,price,customer=None,trial=False):
                 'tax_rates':tax_rate,
             }
         ],
+        billing_address_collection='required',
+        customer_update={'address':'auto','name':'auto'},
+        tax_id_collection={'enabled':'True'},
         subscription_data={
         'default_tax_rates':tax_rate,
         'trial_end':None,
@@ -428,17 +437,17 @@ def create_checkout_session(user,price,customer=None,trial=False):
 def find_taxrate(user,trial=False):
     if trial:
          tax_rate=None
-
     else:
         if user.country.sortname == 'IN':
-            addr=BillingAddress.objects.get(user=user)
-            print(addr.state)
-            state = IndianStates.objects.filter(state_name__icontains=addr.state)
-            if state.exists() and state.first().state_code == 'TN':
-                tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-            elif state.exists():
-                tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-        else:
+            # addr=BillingAddress.objects.get(user=user)
+            # print(addr.state)
+            # state = IndianStates.objects.filter(state_name__icontains=addr.state)
+            # if state.exists() and state.first().state_code == 'TN':
+            #     tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+            # elif state.exists():
+            #     tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+            tax_rate=[TaxRate.objects.get(display_name = 'GST',description='IN GST').id,]
+        else:            
             tax_rate=None
     return tax_rate
 
@@ -555,7 +564,7 @@ def generate_portal_session(customer):
     stripe.api_key = api_key
     session = stripe.billing_portal.Session.create(
         customer=customer.id,
-        return_url=domain_url+'dashboard',
+        return_url=domain_url+'subscription-plans',
     )
     return session
 
@@ -613,25 +622,26 @@ def buy_addon(request):
          return Response({'msg':'Invalid price'}, status=406)
 
     cust=Customer.objects.get(subscriber=user)
-    if user.country.sortname == 'IN':
-        try:
-            addr=BillingAddress.objects.get(user=user)
-        except BillingAddress.DoesNotExist:
-            return Response({'Error':'Billing Address Not Found'}, status=412)
-        state = IndianStates.objects.filter(state_name__icontains=addr.state)
-        if state.exists() and state.first().state_code == 'TN':
-            tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-        elif state.exists():
-            tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:
-        tax_rate=None
+    tax_rate=find_taxrate(user)
+    # if user.country.sortname == 'IN':
+    #     try:
+    #         addr=BillingAddress.objects.get(user=user)
+    #     except BillingAddress.DoesNotExist:
+    #         return Response({'Error':'Billing Address Not Found'}, status=412) 
+    #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
+    #     if state.exists() and state.first().state_code == 'TN':
+    #         tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+    #     elif state.exists():
+    #         tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+    # else:            
+    #     tax_rate=None
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
 
     #request.POST.get('')
     return Response({'msg':'Payment Session Generated ','stripe_session_url':response.url}, status=307)
 
 
-def subscriptin_modify_default_tax_rate(customer,addr):
+def subscriptin_modify_default_tax_rate(customer,addr=None):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -639,19 +649,19 @@ def subscriptin_modify_default_tax_rate(customer,addr):
 
     stripe.api_key = api_key
 
-    if customer.subscriber.country.sortname == 'IN' and addr.country.sortname == 'IN':
-        state = IndianStates.objects.filter(state_name__icontains=addr.state)
-        if state.exists() and state.first().state_code == 'TN':
-            tax_rates=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-        elif state.exists():
-            tax_rates=[TaxRate.objects.get(display_name = 'IGST').id,]
-    else:
-        tax_rates=None
-
-    if tax_rates != None:
+    # if customer.subscriber.country.sortname == 'IN' and addr.country.sortname == 'IN':
+    #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
+    #     if state.exists() and state.first().state_code == 'TN':
+    #         tax_rates=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+    #     elif state.exists():
+    #         tax_rates=[TaxRate.objects.get(display_name = 'IGST').id,]
+    # else:            
+    #     tax_rates=None
+    tax_rate=find_taxrate(customer.subscriber)
+    if tax_rate != None:
         response = stripe.Subscription.modify(
         customer.subscriptions.last().id,
-        default_tax_rates=tax_rates
+        default_tax_rates=tax_rate
         )
         print(response)
 
@@ -662,15 +672,15 @@ def customer_portal_session(request):
     user = request.user
     try:
         customer = Customer.objects.get(subscriber=user)
-        addr = BillingAddress.objects.get(user=request.user)
+        #addr = BillingAddress.objects.get(user=request.user)
         session=generate_portal_session(customer)
         if not customer.subscriptions.exists():
              return Response({'msg':'User has No Active Subscription'}, status=402)
-        subscriptin_modify_default_tax_rate(customer,addr)
+        subscriptin_modify_default_tax_rate(customer)
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
-    except BillingAddress.DoesNotExist:
-        return Response({'Error':'Billing Address Not Found'}, status=412)
+    # except BillingAddress.DoesNotExist:
+    #     return Response({'Error':'Billing Address Not Found'}, status=412) 
     # except Subscription:
     #     customer.
     return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
@@ -705,18 +715,16 @@ def buy_subscription(request):
     user = request.user
     try:
         price = Price.objects.get(id=request.POST.get('price'))
-        addr = BillingAddress.objects.get(user=request.user)
+        #addr = BillingAddress.objects.get(user=request.user)
     except (KeyError,Price.DoesNotExist) :
         return Response({'msg':'Invalid price'}, status=406)
-    except BillingAddress.DoesNotExist:
-        return Response({'Error':'Billing Address Not Found'}, status=412)
+    #except BillingAddress.DoesNotExist:
+        # return Response({'Error':'Billing Address Not Found'}, status=412) 
+        pass
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)
-        if customer.subscription.status == "trialing":
-            session= create_checkout_session(user=user,price=price,customer=customer,trial=True)
-        else:
-            session=create_checkout_session(user=user,price=price,customer=customer)
+        session=create_checkout_session(user=user,price=price,customer=customer)
         return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
     else:
         return Response({'msg':'No Stripe Account Found'}, status=404)
@@ -751,11 +759,11 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 price = Plan.objects.get(id=pre_price.price_id)
                 if price.currency != currency:
                     price = Plan.objects.filter(product=price.product,interval=price.interval,currency=currency).last()
-                try:
-                    address = BillingAddress.objects.get(user=user)
-                    session = create_checkout_session(user=user,price=price,customer=customer)
-                except BillingAddress.DoesNotExist:
-                   return Response({'Error':'Billing Address Not Found'}, status=412)
+                #try:
+                #address = BillingAddress.objects.get(user=user)
+                session = create_checkout_session(user=user,price=price,customer=customer)
+                # except BillingAddress.DoesNotExist:
+                #    return Response({'Error':'Billing Address Not Found'}, status=412) 
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except (TempPricingPreference.DoesNotExist,ValueError):
                 #free=CreditPack.objects.get(name='Free')
@@ -933,4 +941,70 @@ class AiUserProfileView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             return Response({"Msg":"Profile Updated"})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class CarrierSupportCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        name = request.POST.get("name")
+        job_position = request.POST.get("job_position")
+        job_name = JobPositions.objects.get(id=job_position).job_name
+        print(job_name)
+        email = request.POST.get("email")
+        message = request.POST.get("message")
+        phonenumber = request.POST.get('phonenumber')
+        cv_file = request.FILES.get('cv_file')
+        # time =datetime.now(pytz.timezone('Asia/Kolkata'))
+        time = date.today()
+        template = 'carrier_support_email.html'
+        subject='Regarding Job Hiring'
+        context = {'email': email,'name':name,'job_position':job_name,'phonenumber':phonenumber,'date':time,'file':cv_file,'message':message}
+        serializer = CarrierSupportSerializer(data={**request.POST.dict(),'cv_file':cv_file})
+        if serializer.is_valid():
+            serializer.save()
+            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GeneralSupportCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        name = request.POST.get("name")
+        topic = request.POST.get("topic")
+        topic_name = SupportTopics.objects.get(id=topic).topic
+        print(topic_name)
+        email = request.POST.get("email")
+        message = request.POST.get("message")
+        phonenumber = request.POST.get('phonenumber')
+        support_file = request.FILES.get('support_file')
+        today = date.today()
+        template = 'general_support_email.html'
+        subject='Regarding General Support'
+        context = {'email': email,'name':name,'topic':topic_name,'phonenumber':phonenumber,'date':today,'file':support_file,'message':message}
+        serializer = GeneralSupportSerializer(data={**request.POST.dict(),'support_file':support_file})
+        if serializer.is_valid():
+            serializer.save()
+            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VendorOnboardingCreateView(viewsets.ViewSet):
+
+    def create(self,request):
+        name = request.POST.get("name")
+        email = request.POST.get("email")
+        cv_file = request.FILES.get('cv_file')
+        today = date.today()
+        template = 'vendor_onboarding_email.html'
+        subject='Regarding Vendor Onboarding'
+        context = {'email': email,'name':name,'file':cv_file,'date':today}
+        serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file})
+        if serializer.is_valid():
+            serializer.save()
+            send_email(subject,template,context)
+            return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
