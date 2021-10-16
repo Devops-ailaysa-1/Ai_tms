@@ -148,8 +148,12 @@ class DocumentViewByDocumentId(views.APIView):
         return  document
 
     def get(self, request, document_id):
-        document = self.get_object(document_id)
-        return Response(DocumentSerializerV2(document).data, status=200)
+        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
+        if request.user.id == doc_user:
+            document = self.get_object(document_id)
+            return Response(DocumentSerializerV2(document).data, status=200)
+        else:
+            return Response({"msg" : "Unauthorised"}, status=401)
 
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
