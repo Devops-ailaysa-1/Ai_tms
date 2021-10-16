@@ -182,7 +182,7 @@ class ContactPricing(models.Model):
     name = models.CharField(max_length=200, blank=True, null=True)
     business_email = models.EmailField()
     country = models.ForeignKey(Countries,on_delete=models.CASCADE,blank=True,null=True)
-    description = models.TextField(max_length=1000, blank=True, null=True)
+    description = models.TextField(max_length=1000)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
 class TempPricingPreference(models.Model):

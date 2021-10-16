@@ -951,7 +951,10 @@ class CarrierSupportCreateView(viewsets.ViewSet):
     def create(self,request):
         name = request.POST.get("name")
         job_position = request.POST.get("job_position")
-        job_name = JobPositions.objects.get(id=job_position).job_name
+        try:
+            job_name = JobPositions.objects.get(id=job_position).job_name
+        except:
+            job_name = None
         print(job_name)
         email = request.POST.get("email")
         message = request.POST.get("message")
@@ -975,7 +978,10 @@ class GeneralSupportCreateView(viewsets.ViewSet):
     def create(self,request):
         name = request.POST.get("name")
         topic = request.POST.get("topic")
-        topic_name = SupportTopics.objects.get(id=topic).topic
+        try:
+            topic_name = SupportTopics.objects.get(id=topic).topic
+        except:
+            topic_name = None
         print(topic_name)
         email = request.POST.get("email")
         message = request.POST.get("message")
