@@ -294,7 +294,7 @@ class ContactPricingCreateView(viewsets.ViewSet):
         email = request.POST.get("business_email")
         today = date.today()
         template = 'contact_pricing_email.html'
-        subject='Regarding Contact-Us Pricing'
+        subject='Regarding Contact-Us'
         context = {'user': email,'name':name,'description':description,'timestamp':today}
         serializer = ContactPricingSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
@@ -402,7 +402,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
     #         tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
     #     elif state.exists():
     #         tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-    # else:            
+    # else:
     #     tax_rate=None
     # tax_rate = None
     #if user.billing
@@ -447,7 +447,7 @@ def find_taxrate(user,trial=False):
             # elif state.exists():
             #     tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
             tax_rate=[TaxRate.objects.get(display_name = 'GST',description='IN GST').id,]
-        else:            
+        else:
             tax_rate=None
     return tax_rate
 
@@ -627,13 +627,13 @@ def buy_addon(request):
     #     try:
     #         addr=BillingAddress.objects.get(user=user)
     #     except BillingAddress.DoesNotExist:
-    #         return Response({'Error':'Billing Address Not Found'}, status=412) 
+    #         return Response({'Error':'Billing Address Not Found'}, status=412)
     #     state = IndianStates.objects.filter(state_name__icontains=addr.state)
     #     if state.exists() and state.first().state_code == 'TN':
     #         tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
     #     elif state.exists():
     #         tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-    # else:            
+    # else:
     #     tax_rate=None
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
 
@@ -655,7 +655,7 @@ def subscriptin_modify_default_tax_rate(customer,addr=None):
     #         tax_rates=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
     #     elif state.exists():
     #         tax_rates=[TaxRate.objects.get(display_name = 'IGST').id,]
-    # else:            
+    # else:
     #     tax_rates=None
     tax_rate=find_taxrate(customer.subscriber)
     if tax_rate != None:
@@ -680,7 +680,7 @@ def customer_portal_session(request):
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
     # except BillingAddress.DoesNotExist:
-    #     return Response({'Error':'Billing Address Not Found'}, status=412) 
+    #     return Response({'Error':'Billing Address Not Found'}, status=412)
     # except Subscription:
     #     customer.
     return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
@@ -719,7 +719,7 @@ def buy_subscription(request):
     except (KeyError,Price.DoesNotExist) :
         return Response({'msg':'Invalid price'}, status=406)
     #except BillingAddress.DoesNotExist:
-        # return Response({'Error':'Billing Address Not Found'}, status=412) 
+        # return Response({'Error':'Billing Address Not Found'}, status=412)
         pass
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
@@ -763,7 +763,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 #address = BillingAddress.objects.get(user=user)
                 session = create_checkout_session(user=user,price=price,customer=customer)
                 # except BillingAddress.DoesNotExist:
-                #    return Response({'Error':'Billing Address Not Found'}, status=412) 
+                #    return Response({'Error':'Billing Address Not Found'}, status=412)
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except (TempPricingPreference.DoesNotExist,ValueError):
                 #free=CreditPack.objects.get(name='Free')
