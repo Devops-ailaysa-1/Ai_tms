@@ -11,6 +11,9 @@ import os
 import random
 from djstripe.models import Customer
 import stripe
+from allauth.account.signals import email_confirmed
+from ai_auth import forms as auth_forms
+from django.contrib.sites.shortcuts import get_current_site
 
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
@@ -123,3 +126,12 @@ def update_user_tax_id(taxid):
     except stripe.error.InvalidRequestError as e:
         raise ValueError('Invalid Tax Id')
     return response
+
+
+@receiver(email_confirmed)
+def email_confirmed_(request, email_address, **kwargs):
+
+    user = auth_model.AiUser.objects.get(email=email_address) 
+    current_site = get_current_site(request)
+    auth_forms.send_welcome_mail(current_site,user)
+    

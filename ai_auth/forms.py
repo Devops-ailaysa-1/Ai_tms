@@ -6,8 +6,7 @@ from allauth.account.forms import (
 )
 from allauth.account.utils import user_pk_to_url_str
 from django.conf import settings
-from django.contrib.auth import forms as admin_forms
-from django.contrib.auth import get_user_model
+#from django.contrib.auth import forms as admin_forms
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
@@ -102,3 +101,20 @@ class SendInviteForm(ResetPasswordForm):
 #                 'account/email/password_reset_key', email, context
 #             )
 #         return self.cleaned_data['email']
+
+
+def send_welcome_mail(current_site,user):
+    context = {
+        "user":user,
+        "current_site": current_site,
+    }
+    email =user.email
+    msg_plain = render_to_string("account/email/welcome.txt", context)
+    msg_html = render_to_string("account/email/welcome.html", context)
+    send_mail(
+        "Welcome to Ailaysa!",
+        msg_plain,
+        'noreply@ailaysa.com',
+        [email],
+        html_message=msg_html,
+    )
