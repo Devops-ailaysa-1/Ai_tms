@@ -506,7 +506,7 @@ class ServiceTypeunitsView(APIView):
         return Response(serializer.data)
 
 class SupportTypeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
 
     def get(self, request, format=None):
         queryset = SupportType.objects.all()
