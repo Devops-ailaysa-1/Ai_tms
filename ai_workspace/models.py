@@ -124,30 +124,29 @@ class Project(ParanoidModel):
     def ref_files(self):
         return self.project_ref_files_set.all()
 
-    @property
+    @property    
     def progress(self):
         docs = Document.objects.filter(job__project_id=self.id).all()
-        if len(self.get_tasks) == docs.count():
-            total_segments = 0
-            if not docs:
-                return "Yet to start"
-            else:
-                for doc in docs:
-                    total_segments+=doc.total_segment_count
-
-            status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-                Q(status_id__in=[102,104,106])).all().count()
-
-            if total_segments == status_count:
-                return "Completed"
-
-            else:
-                return "In Progress"
-        elif docs.count() == 0:
+        tasks = len(self.get_tasks)
+        total_segments = 0
+        if not docs:
             return "Yet to start"
         else:
-            return "In progress"
-            
+            if docs.count() == tasks:
+                for doc in docs:
+                    total_segments+=doc.total_segment_count
+            else:
+                return "In Progress"
+
+        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
+            Q(status_id__in=[102,104,106])).all().count()
+
+        if total_segments == status_count:
+            return "Completed"
+
+        else:
+            return "In Progress"
+
 
 
     @property
