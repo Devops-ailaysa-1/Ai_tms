@@ -1,4 +1,5 @@
 from rest_framework.exceptions import ValidationError
+from urllib.parse import urlparse
 from ai_workspace_okapi.models import Document
 from django.conf import settings
 from django.core.files import File as DJFile
@@ -301,6 +302,8 @@ class TempProjectSetupView(viewsets.ViewSet):
     def create(self, request):
         text_data=request.POST.get('text_data')
         if text_data:
+            if urlparse(text_data).scheme:
+                return Response({"msg":"Url not Accepted"},status=406)
             name = text_data.split()[0]+ ".txt"
             f1 = open(name, 'w')
             f1.write(text_data)
@@ -519,6 +522,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def create(self, request):
         text_data=request.POST.get('text_data')
         if text_data:
+            if urlparse(text_data).scheme:
+                return Response({"msg":"Url not Accepted"},status = 406)
             name = text_data.split()[0]+ ".txt"
             f1 = open(name, 'w')
             f1.write(text_data)
