@@ -143,11 +143,8 @@ class Project(ParanoidModel):
 
         if total_segments == status_count:
             return "Completed"
-
         else:
             return "In Progress"
-
-
 
     @property
     def files_and_jobs_set(self):
