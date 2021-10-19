@@ -1,6 +1,5 @@
 from types import GetSetDescriptorType
 
-from ai_auth.models import OfficialInformation, PersonalInformation
 from ai_vendor.models import (VendorBankDetails, VendorCATsoftware,
                               VendorContentTypes, VendorLanguagePair,
                               VendorMembership, VendorMtpeEngines,

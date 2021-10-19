@@ -2,14 +2,14 @@ from rest_framework import serializers
 from .models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
                     AvailableJobs,BidChat,BidPropasalDetails,BidProposalServicesRates,
                     Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage)
-from ai_auth.models import AiUser,OfficialInformation,PersonalInformation,AiUserProfile
+from ai_auth.models import AiUser,AiUserProfile
 from django.db.models import Q
 from ai_workspace.models import Project
 from drf_writable_nested import WritableNestedModelSerializer
 import json
 from rest_framework.response import Response
 from dj_rest_auth.serializers import UserDetailsSerializer
-from ai_auth.serializers import ProfessionalidentitySerializer,OfficialInformationSerializer
+from ai_auth.serializers import ProfessionalidentitySerializer
 from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo
 

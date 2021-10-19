@@ -1,7 +1,7 @@
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from stripe.api_resources import subscription
-from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, OfficialInformationSerializer, PersonalInformationSerializer,
+from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, 
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
@@ -13,7 +13,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import (AiUser, BillingAddress, OfficialInformation, PersonalInformation, Professionalidentity,
+from ai_auth.models import (AiUser, BillingAddress, Professionalidentity,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile)
 from django.http import Http404,JsonResponse
@@ -81,78 +81,78 @@ class UserAttributeView(APIView):
 
 
 
-class PersonalInformationView(APIView):
-    permission_classes = [IsAuthenticated]
+# class PersonalInformationView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request,format=None):
-        try:
-            queryset = PersonalInformation.objects.get(user_id=request.user.id)
-        except PersonalInformation.DoesNotExist:
-            return Response(status=204)
+#     def get(self, request,format=None):
+#         try:
+#             queryset = PersonalInformation.objects.get(user_id=request.user.id)
+#         except PersonalInformation.DoesNotExist:
+#             return Response(status=204)
 
-        serializer = PersonalInformationSerializer(queryset)
-        return Response(serializer.data)
+#         serializer = PersonalInformationSerializer(queryset)
+#         return Response(serializer.data)
 
-    def post(self, request):
-        data = request.data
-        print("Data==>",data)
-        serializer = PersonalInformationSerializer(data=data, context={'request':request})
+#     def post(self, request):
+#         data = request.data
+#         print("Data==>",data)
+#         serializer = PersonalInformationSerializer(data=data, context={'request':request})
 
-        if serializer.is_valid():
-            try:
-                serializer.save()
-            except IntegrityError:
-                return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
-
-
-    def patch(self, request, format=None):
-        print(request.data)
-        personal_info = PersonalInformation.objects.get(user_id=request.user.id)
-        serializer = PersonalInformationSerializer(personal_info,
-                                           data=request.data,
-                                           partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         if serializer.is_valid():
+#             try:
+#                 serializer.save()
+#             except IntegrityError:
+#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
+#             return Response(serializer.data, status=201)
+#         return Response(serializer.errors, status=400)
 
 
-class OfficialInformationView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request,format=None):
-        try:
-            queryset = OfficialInformation.objects.get(user_id=request.user.id)
-        except OfficialInformation.DoesNotExist:
-            return Response(status=204)
-        serializer = OfficialInformationSerializer(queryset)
-        return Response(serializer.data)
-
-
-    def post(self, request):
-        data = request.data
-        serializer = OfficialInformationSerializer(data=data, context={'request':request})
-
-        if serializer.is_valid():
-            try:
-                serializer.save()
-            except IntegrityError:
-                return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+#     def patch(self, request, format=None):
+#         print(request.data)
+#         personal_info = PersonalInformation.objects.get(user_id=request.user.id)
+#         serializer = PersonalInformationSerializer(personal_info,
+#                                            data=request.data,
+#                                            partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-    def patch(self, request, format=None):
-        officaial_info = OfficialInformation.objects.get(user_id=request.user.id)
-        serializer = OfficialInformationSerializer(officaial_info,
-                                           data=request.data,
-                                           partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# class OfficialInformationView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request,format=None):
+#         try:
+#             queryset = OfficialInformation.objects.get(user_id=request.user.id)
+#         except OfficialInformation.DoesNotExist:
+#             return Response(status=204)
+#         serializer = OfficialInformationSerializer(queryset)
+#         return Response(serializer.data)
+
+
+#     def post(self, request):
+#         data = request.data
+#         serializer = OfficialInformationSerializer(data=data, context={'request':request})
+
+#         if serializer.is_valid():
+#             try:
+#                 serializer.save()
+#             except IntegrityError:
+#                 return Response(serializer.errors, status=status.HTTP_409_CONFLICT)
+#             return Response(serializer.data, status=201)
+#         return Response(serializer.errors, status=400)
+
+
+#     def patch(self, request, format=None):
+#         officaial_info = OfficialInformation.objects.get(user_id=request.user.id)
+#         serializer = OfficialInformationSerializer(officaial_info,
+#                                            data=request.data,
+#                                            partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
