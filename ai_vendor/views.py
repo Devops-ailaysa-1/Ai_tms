@@ -24,7 +24,7 @@ from .serializers import (ServiceExpertiseSerializer,
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits)
-from ai_auth.models import PersonalInformation, AiUser, OfficialInformation, Professionalidentity
+from ai_auth.models import AiUser, Professionalidentity
 import json,requests
 from django.http import JsonResponse
 # from django.core.mail import EmailMessage

@@ -133,7 +133,9 @@ def email_confirmed_(request, email_address, **kwargs):
     auth_forms.send_welcome_mail(current_site,user)
 
 @receiver(password_changed)
-def password_changed_(request, user, **kwargs):
-    print("Inside signal")
+def password_changed_handler(request, user, **kwargs):
     current_site = get_current_site(request)
     auth_forms.send_password_change_mail(current_site, user)
+
+
+

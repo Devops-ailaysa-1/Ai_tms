@@ -5,14 +5,15 @@ from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from ai_auth.models import (AiUser, BillingAddress,UserAttribute,PersonalInformation,OfficialInformation,
+from ai_auth.models import (AiUser, BillingAddress,UserAttribute,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,VendorOnboarding,GeneralSupport)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
-from dj_rest_auth.serializers import PasswordResetSerializer
+from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from allauth.account.signals import password_changed
 UserModel = get_user_model()
 from .validators import file_size
 
@@ -52,7 +53,17 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
     password_reset_form_class = SendInviteForm
 
 
-
+class AiPasswordChangeSerializer(PasswordChangeSerializer):
+       def save(self):
+        self.set_password_form.save()
+        password_changed.send(
+            sender=self.request.user.__class__,
+            request=self.request,
+            user=self.request.user,
+        )
+        if not self.logout_on_password_change:
+            from django.contrib.auth import update_session_auth_hash
+            update_session_auth_hash(self.request, self.user)
 
 
 
@@ -124,34 +135,34 @@ class UserAttributeSerializer(serializers.ModelSerializer):
         data['user_type'] = user_type_serializer.data
         return data
 
-class PersonalInformationSerializer(serializers.ModelSerializer):
-   # country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
-    timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
+# class PersonalInformationSerializer(serializers.ModelSerializer):
+#    # country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
+#     timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
 
-    class Meta:
-        model = PersonalInformation
-        fields = ( 'timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
-        read_only_fields = ('created_at','updated_at')
+#     class Meta:
+#         model = PersonalInformation
+#         fields = ( 'timezone','mobilenumber','phonenumber','linkedin','created_at','updated_at')
+#         read_only_fields = ('created_at','updated_at')
 
-    def create(self, validated_data):
-        print("validated==>",validated_data)
-        request = self.context['request']
-        personal_info = PersonalInformation.objects.create(**validated_data,user_id=request.user.id)
-        return  personal_info
+#     def create(self, validated_data):
+#         print("validated==>",validated_data)
+#         request = self.context['request']
+#         personal_info = PersonalInformation.objects.create(**validated_data,user_id=request.user.id)
+#         return  personal_info
 
-class OfficialInformationSerializer(serializers.ModelSerializer):
-    #country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
-    timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
-    industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all(),many=False,required=False)
-    class Meta:
-        model = OfficialInformation
-        fields = ( 'id','company_name','designation','industry','timezone','website','linkedin','billing_email','created_at','updated_at')
-        read_only_fields = ('id','created_at','updated_at')
+# class OfficialInformationSerializer(serializers.ModelSerializer):
+#     #country = serializers.PrimaryKeyRelatedField(queryset=Countries.objects.all(),many=False,required=False)
+#     timezone = serializers.PrimaryKeyRelatedField(queryset=Timezones.objects.all(),many=False,required=False)
+#     industry = serializers.PrimaryKeyRelatedField(queryset=SubjectFields.objects.all(),many=False,required=False)
+#     class Meta:
+#         model = OfficialInformation
+#         fields = ( 'id','company_name','designation','industry','timezone','website','linkedin','billing_email','created_at','updated_at')
+#         read_only_fields = ('id','created_at','updated_at')
 
-    def create(self, validated_data):
-        request = self.context['request']
-        official_info = OfficialInformation.objects.create(**validated_data,user_id=request.user.id)
-        return official_info
+#     def create(self, validated_data):
+#         request = self.context['request']
+#         official_info = OfficialInformation.objects.create(**validated_data,user_id=request.user.id)
+#         return official_info
 
 
 

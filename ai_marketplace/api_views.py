@@ -33,8 +33,8 @@ from ai_vendor.serializers import (ServiceExpertiseSerializer,
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits)
-from ai_auth.models import PersonalInformation, AiUser, OfficialInformation, Professionalidentity
-from ai_auth.serializers import OfficialInformationSerializer,PersonalInformationSerializer,AiUserDetailsSerializer
+from ai_auth.models import  AiUser, Professionalidentity
+from ai_auth.serializers import AiUserDetailsSerializer
 import json,requests
 from django.db.models import Count
 from django.http import JsonResponse
