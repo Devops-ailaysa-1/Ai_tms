@@ -1,5 +1,3 @@
-
-
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.contrib.auth import settings
@@ -11,7 +9,7 @@ import os
 import random
 from djstripe.models import Customer
 import stripe
-from allauth.account.signals import email_confirmed
+from allauth.account.signals import email_confirmed, password_changed
 from ai_auth import forms as auth_forms
 from django.contrib.sites.shortcuts import get_current_site
 
@@ -130,8 +128,12 @@ def update_user_tax_id(taxid):
 
 @receiver(email_confirmed)
 def email_confirmed_(request, email_address, **kwargs):
-
     user = auth_model.AiUser.objects.get(email=email_address) 
     current_site = get_current_site(request)
     auth_forms.send_welcome_mail(current_site,user)
-    
+
+@receiver(password_changed)
+def password_changed_(request, user, **kwargs):
+    print("Inside signal")
+    current_site = get_current_site(request)
+    auth_forms.send_password_change_mail(current_site, user)

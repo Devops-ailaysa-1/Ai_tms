@@ -23,12 +23,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AiUser
-        fields = ['email', 'fullname',
-        'password','country']
+        fields = ['email','fullname','password','country']
         extra_kwargs = {
-            'password': {
-                'write_only':True
-            }
+            'password': {'write_only':True}
         }
 
     def save(self, request):

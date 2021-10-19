@@ -13,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 # from .tasks import email_send_task
 
 from django.contrib.sites.shortcuts import get_current_site
+from datetime import date
 
 
 
@@ -113,6 +114,25 @@ def send_welcome_mail(current_site,user):
     msg_html = render_to_string("account/email/welcome.html", context)
     send_mail(
         "Welcome to Ailaysa!",
+        msg_plain,
+        'noreply@ailaysa.com',
+        [email],
+        html_message=msg_html,
+    )
+
+def send_password_change_mail(current_site,user):
+    today = date.today()
+    d1 = today.strftime("%d/%m/%Y")
+    context = {
+        "user":user,
+        "current_site": current_site,
+        "date" : d1,
+    }
+    email =user.email
+    msg_plain = render_to_string("account/email/password_change.txt", context)
+    msg_html = render_to_string("account/email/password_change.html", context)
+    send_mail(
+        "Password change",
         msg_plain,
         'noreply@ailaysa.com',
         [email],
