@@ -776,6 +776,7 @@ class TbxTemplateUploadView(APIView):
             else:
                 return Response(serializer2.errors)
             fl.close()
+            TemplateTermsModel.objects.filter(job_id = job_id).delete()
             os.remove(os.path.abspath(tbx_file))
             return Response({'msg':"Template File uploaded and TBX created & uploaded","data":serializer.data})#,"tbx_file":tbx_file})
         else:
