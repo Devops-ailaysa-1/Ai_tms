@@ -241,6 +241,9 @@ JWT_AUTH_REFRESH_COOKIE = 'ailaysa-refresh-token'
 
 #JWT_AUTH_SAMESITE = None
  
+REST_AUTH_REGISTER_SERIALIZERS = {
+    'REGISTER_SERIALIZER': 'ai_auth.serializers.UserRegistrationSerializer',
+}
 
 REST_AUTH_SERIALIZERS = {
     'PASSWORD_RESET_SERIALIZER':'ai_auth.serializers.AiPasswordResetSerializer',
