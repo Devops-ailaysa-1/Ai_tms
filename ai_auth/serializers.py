@@ -15,6 +15,8 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 UserModel = get_user_model()
 from .validators import file_size
+import django.contrib.auth.password_validation as validators
+from django.core import exceptions
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     # email=serializers.EmailField()
@@ -30,6 +32,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 'write_only':True
             }
         }
+
+    def run_validation(self,data):
+        password = data['password']
+        try:
+            validators.validate_password(password=password)
+        except exceptions.ValidationError as e:
+            print("Errors---->",list(e))
+            raise serializers.ValidationError({"error":list(e)})
+        return super().run_validation(data)
+
 
     def save(self, request):
         user = AiUser(
