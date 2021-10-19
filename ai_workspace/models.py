@@ -72,7 +72,7 @@ class PenseiveTM(models.Model):
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
-class Project(ParanoidModel):
+class Project(models.Model):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
@@ -124,7 +124,7 @@ class Project(ParanoidModel):
     def ref_files(self):
         return self.project_ref_files_set.all()
 
-    @property    
+    @property
     def progress(self):
         docs = Document.objects.filter(job__project_id=self.id).all()
         tasks = len(self.get_tasks)

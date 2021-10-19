@@ -572,6 +572,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             serlzr.save()
             return Response(serlzr.data)
 
+    def delete(self, request, pk):
+        project = self.get_object()
+        project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class VendorDashBoardView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
