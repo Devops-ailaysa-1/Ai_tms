@@ -84,7 +84,7 @@ class BaseAddress(models.Model):
     line2 = models.CharField(max_length=200,blank=True, null=True)
     state = models.CharField(max_length=200,blank=True, null=True)
     city = models.CharField(max_length=200,blank=True, null=True)
-    zipcode= models.IntegerField(default=0,blank=True, null=True)
+    zipcode= models.CharField(max_length=200,blank=True, null=True)
     class Meta:
         abstract=True
 
