@@ -886,7 +886,9 @@ class UserTaxInfoView(viewsets.ViewSet):
             print("1",queryset)
             if request.POST.get('stripe_tax_id') == None and request.POST.get('tax_id') == None:
                 taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()
-                user_taxid_delete(taxid.id)
+                if taxid == None:
+                    return Response({'msg':"Taxid not exist"}, status=404)
+                user_taxid_delete(taxid)
                 queryset.delete()
                 return Response({'msg':'Successfully Deleted'}, status=200)
             if request.POST.get('stripe_tax_id') == queryset.stripe_tax_id and request.POST.get('tax_id') == queryset.tax_id:
