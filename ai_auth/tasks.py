@@ -13,9 +13,9 @@ import smtplib
 #         # html_message=msg_html,
 #     )
 #     return True
-    
+
 # @shared_task
-# def send_dj_core_emails(conn, from_email, recipients, message, fail_silently=True):  
+# def send_dj_core_emails(conn, from_email, recipients, message, fail_silently=True):
 #     try:
 #         conn.sendmail(from_email, recipients, message.as_bytes(linesep='\r\n'))
 #     except smtplib.SMTPException:
@@ -34,3 +34,7 @@ import smtplib
 #         created_at__lte=one_minute_ago
 #     )
 #     expired_discounts.delete()
+
+def delete_inactive_user_account():
+    AiUser.objects.filter(deactivation_date__date = date.today()).delete()
+    

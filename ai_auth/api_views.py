@@ -1,7 +1,7 @@
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from stripe.api_resources import subscription
-from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer, 
+from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
@@ -35,6 +35,7 @@ from django.db.models import Q
 from ai_auth.signals import update_billing_address
 from  django.utils import timezone
 import time,pytz
+from dateutil.relativedelta import relativedelta
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -1014,3 +1015,25 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
             send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def Account_deactivation(request):
+    user_id = request.user.id
+    user = AiUser.objects.get(id = user_id )
+    present = datetime.now()
+    six_mon_rel = relativedelta(months=6)
+    user.deactive = True
+    user.deactivation_date = present.date()+six_mon_rel
+    user.save()
+    return JsonResponse({"msg":"user deactivated successfully"},safe = False)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def Account_activation(request):
+    user_id = request.user.id
+    user = AiUser.objects.get(id = user_id )
+    user.deactive = False
+    user.deactivation_date = None
+    user.save()
+    return JsonResponse({"msg":"user activated successfully"},safe = False)

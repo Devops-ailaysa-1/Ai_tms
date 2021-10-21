@@ -4,7 +4,7 @@ from rest_framework import exceptions, serializers
 from rest_framework.authentication import CSRFCheck
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
-
+from django.contrib.auth import authenticate, get_user_model
 
 def set_jwt_access_cookie(response, access_token):
     from rest_framework_simplejwt.settings import api_settings as jwt_settings
@@ -116,6 +116,7 @@ class JWTCookieAuthentication(JWTAuthentication):
         if reason:
             # CSRF failed, bail with explicit error message
             raise exceptions.PermissionDenied(f'CSRF Failed: {reason}')
+
 
     def authenticate(self, request):
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', None)

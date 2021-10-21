@@ -26,6 +26,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     country= models.ForeignKey(Countries,related_name='aiuser_country', on_delete=models.CASCADE,blank=True, null=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    deactivation_date = models.DateTimeField(null=True, blank=True)
+    deactive = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     from_mysql = models.BooleanField(default=False)
 
