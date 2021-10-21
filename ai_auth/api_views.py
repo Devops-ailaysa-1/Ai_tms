@@ -868,7 +868,7 @@ class UserTaxInfoView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-        request.POST.get('tax_id') == request.POST.get('tax_id').upper() 
+        request.POST.get('tax_id') == request.POST.get('tax_id').upper()
         serializer = UserTaxInfoSerializer(data={**request.POST.dict()})
         print(serializer.is_valid())
         if serializer.is_valid():
@@ -905,7 +905,7 @@ class UserTaxInfoView(viewsets.ViewSet):
             return Response(status=204)
         #queryset = BillingAddress.objects.get(id=pk)
         #if queryset
-        request.POST.get('tax_id') == request.POST.get('tax_id').upper() 
+        request.POST.get('tax_id') == request.POST.get('tax_id').upper()
         serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
         print(serializer.is_valid())
         if serializer.is_valid():
@@ -1025,22 +1025,31 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def Account_deactivation(request):
+def account_deactivation(request):
     user_id = request.user.id
     user = AiUser.objects.get(id = user_id )
     present = datetime.now()
     six_mon_rel = relativedelta(months=6)
-    user.deactive = True
+    user.is_active = False
     user.deactivation_date = present.date()+six_mon_rel
     user.save()
     return JsonResponse({"msg":"user deactivated successfully"},safe = False)
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def Account_activation(request):
-    user_id = request.user.id
-    user = AiUser.objects.get(id = user_id )
-    user.deactive = False
+@api_view(['POST'])
+def account_activation(request):
+    email = request.POST.get('email')
+    try:
+        user = AiUser.objects.get(email = email)
+    except:
+        return Response({"msg":"User Not Found"},status = 400)
+    user.is_active = True
     user.deactivation_date = None
     user.save()
     return JsonResponse({"msg":"user activated successfully"},safe = False)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def account_delete(request):
+    AiUser.objects.get(id =request.user.id).delete()
+    return JsonResponse({"msg":"user account deleted"},safe = False)

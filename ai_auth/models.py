@@ -27,7 +27,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     deactivation_date = models.DateTimeField(null=True, blank=True)
-    deactive = models.BooleanField(default=False)
+    # deactive = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     from_mysql = models.BooleanField(default=False)
 
