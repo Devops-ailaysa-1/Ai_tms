@@ -32,7 +32,6 @@ import stripe
 from django.conf import settings
 from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics
 from django.db.models import Q
-from ai_auth.signals import update_billing_address
 from  django.utils import timezone
 import time,pytz
 from dateutil.relativedelta import relativedelta
@@ -820,7 +819,7 @@ class BillingAddressView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-        serializer = BillingAddressSerializer(data={**request.POST.dict()})
+        serializer = BillingAddressSerializer(data={**request.POST.dict()},context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
             try:
@@ -836,7 +835,7 @@ class BillingAddressView(viewsets.ViewSet):
         except BillingAddress.DoesNotExist:
             return Response(status=204)
         #queryset = BillingAddress.objects.get(id=pk)
-        serializer = BillingAddressSerializer(queryset,data={**request.POST.dict()},partial=True)
+        serializer = BillingAddressSerializer(queryset,data={**request.POST.dict()},partial=True,context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
@@ -869,6 +868,7 @@ class UserTaxInfoView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
+        request.POST.get('tax_id') == request.POST.get('tax_id').upper() 
         serializer = UserTaxInfoSerializer(data={**request.POST.dict()})
         print(serializer.is_valid())
         if serializer.is_valid():
@@ -884,8 +884,11 @@ class UserTaxInfoView(viewsets.ViewSet):
     def update(self, request, pk=None):
         try:
             queryset = UserTaxInfo.objects.get(user=request.user,id=pk)
+            print("1",queryset)
             if request.POST.get('stripe_tax_id') == None and request.POST.get('tax_id') == None:
                 taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()
+                if taxid == None:
+                    return Response({'msg':"Taxid not exist"}, status=404)
                 user_taxid_delete(taxid)
                 queryset.delete()
                 return Response({'msg':'Successfully Deleted'}, status=200)
@@ -893,12 +896,16 @@ class UserTaxInfoView(viewsets.ViewSet):
                 return Response({'msg':'Successfully Updated'}, status=200)
             else:
                 taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()
+                print("2",taxid)
+                if taxid == None:
+                    return Response({'msg':"Taxid not exist"}, status=404)
                 user_taxid_delete(taxid)
                 queryset.delete()
         except UserTaxInfo.DoesNotExist:
             return Response(status=204)
         #queryset = BillingAddress.objects.get(id=pk)
         #if queryset
+        request.POST.get('tax_id') == request.POST.get('tax_id').upper() 
         serializer = UserTaxInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
         print(serializer.is_valid())
         if serializer.is_valid():

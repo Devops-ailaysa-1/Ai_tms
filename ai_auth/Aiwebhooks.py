@@ -8,6 +8,7 @@ from djstripe.models.billing import Subscription, TaxRate
 from ai_auth import models
 from django.db.models import Q
 from django.utils import timezone
+import calendar
 
 # def add_credits(user,price,data):
 #     pass
@@ -16,7 +17,7 @@ from django.utils import timezone
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
     if pack.type=="Subscription":
         if subscription.plan.interval=='year':
-            expiry = subscription.current_period_end
+            expiry = expiry_yearly_sub(subscription)
         else:
             expiry = subscription.current_period_end
         creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
@@ -375,3 +376,20 @@ def update_aiuser_billing(custid,address,name=None):
             if kwarg.get('country',None)!= None:
                 addr.country=kwarg['country']
             addr.save()
+
+
+def expiry_yearly_sub(sub):
+    start=sub.current_period_start
+    end=sub.current_period_end
+    bill_anchor=sub.billing_cycle_anchor
+    expiry= add_months(bill_anchor,abs((timezone.now().month+1)+(((start.year - end.year)*12)+start.month-end.month)))
+    return expiry
+
+
+def add_months(sourcedate, months):
+    month = sourcedate.month - 1 + months
+    year = sourcedate.year + month // 12
+    month = month % 12 + 1
+    day = min(sourcedate.day, calendar.monthrange(year,month)[1])
+    sourcedate=sourcedate.replace(year=year,month=month,day=day)
+    return sourcedate

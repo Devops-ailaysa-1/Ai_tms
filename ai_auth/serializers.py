@@ -1,3 +1,4 @@
+from django.db.models import query
 from ai_auth.forms import SendInviteForm
 from django.core.validators import FileExtensionValidator
 from ai_staff.models import AiUserType, Countries, SubjectFields, Timezones,SupportType
@@ -18,6 +19,7 @@ UserModel = get_user_model()
 from .validators import file_size
 import django.contrib.auth.password_validation as validators
 from django.core import exceptions
+from ai_auth.signals import update_billing_address2
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     # email=serializers.EmailField()
@@ -266,6 +268,18 @@ class BillingAddressSerializer(serializers.ModelSerializer):
         #fields  = "__all__"
         #read_only_fields = ('id','created_at','updated_at')
         exclude = ['user']
+
+
+    def save(self,*args,**kwargs):
+        print(self.context.get('request'))
+        context_ = self.context.get('request')
+        response=super().save(*args,**kwargs)
+        update_billing_address2.send(
+            sender=context_.user.__class__,
+            request=context_,
+            user=context_.user,
+            instance=response
+        )
 
 class UserTaxInfoSerializer(serializers.ModelSerializer):
     class Meta:

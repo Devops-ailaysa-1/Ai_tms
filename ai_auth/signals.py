@@ -1,5 +1,5 @@
 from django.db.models.signals import post_save, pre_save
-from django.dispatch import receiver
+from django.dispatch import receiver,Signal
 from django.contrib.auth import settings
 from django.utils.text import slugify
 #from ai_auth.api_views import update_billing_address
@@ -28,72 +28,72 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
         instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)   
 
 
-def updated_billingaddress(sender, instance, *args, **kwargs):
-    '''Updating user billing address to stripe'''
-    res=update_billing_address(address=instance)
-    print("-----------updated customer address-------")
+# def updated_billingaddress(sender, instance, *args, **kwargs):
+#     '''Updating user billing address to stripe'''
+#     res=update_billing_address(address=instance)
+#     print("-----------updated customer address-------")
 
 
 
 
-def update_billing_address(address):
-    if settings.STRIPE_LIVE_MODE == True :
-        api_key = settings.STRIPE_LIVE_SECRET_KEY
-    else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
-    try:
-        customer = Customer.objects.get(subscriber=address.user)
-    except Customer.DoesNotExist:
-        cust = Customer.get_or_create(subscriber=address.user)
-        customer = cust[0]
-    stripe.api_key = api_key
-    coun=None
-    # addr=auth_model.BillingAddress.filter(user=customer.subscriber)
-    response = stripe.Customer.retrieve(customer.id)
-    kwarg=dict()
-    stipe_addr=response['address']
-    if stipe_addr != None:
-        if stipe_addr['line1'] != None and address.line1 != stipe_addr['line1']:
-            kwarg['line1']=address.line1
-        if stipe_addr['line2'] != None and address.line2 != stipe_addr['line2']:
-            kwarg['line2']= address.line2
-        if stipe_addr['state'] != None and address.state != stipe_addr['state']:
-            kwarg['state']= address.state
-        if stipe_addr['city'] != None and address.city != stipe_addr['city']:
-            kwarg['city']=address.city
-        if stipe_addr['postal_code'] != None and address.zipcode != stipe_addr['postal_code']:
-            kwarg['postal_code']=address.zipcode
-        if stipe_addr['country'] != None :
-            if address.country != None:
-                if address.country.sortname != stipe_addr['country']:
-                    coun=staff_model.Countries.objects.get(sortname= stipe_addr['country'])
-                    kwarg['country']=coun
-            else:
-                coun=staff_model.Countries.objects.get(sortname= stipe_addr['country'])
-                kwarg['country']=coun
+# def update_billing_address(address):
+#     if settings.STRIPE_LIVE_MODE == True :
+#         api_key = settings.STRIPE_LIVE_SECRET_KEY
+#     else:
+#         api_key = settings.STRIPE_TEST_SECRET_KEY    
+#     try:
+#         customer = Customer.objects.get(subscriber=address.user)
+#     except Customer.DoesNotExist:
+#         cust = Customer.get_or_create(subscriber=address.user)
+#         customer = cust[0]
+#     stripe.api_key = api_key
+#     coun=None
+#     # addr=auth_model.BillingAddress.filter(user=customer.subscriber)
+#     response = stripe.Customer.retrieve(customer.id)
+#     kwarg=dict()
+#     stipe_addr=response['address']
+#     if stipe_addr != None:
+#         if stipe_addr['line1'] != None and address.line1 != stipe_addr['line1']:
+#             kwarg['line1']=address.line1
+#         if stipe_addr['line2'] != None and address.line2 != stipe_addr['line2']:
+#             kwarg['line2']= address.line2
+#         if stipe_addr['state'] != None and address.state != stipe_addr['state']:
+#             kwarg['state']= address.state
+#         if stipe_addr['city'] != None and address.city != stipe_addr['city']:
+#             kwarg['city']=address.city
+#         if stipe_addr['postal_code'] != None and address.zipcode != stipe_addr['postal_code']:
+#             kwarg['postal_code']=address.zipcode
+#         if stipe_addr['country'] != None :
+#             if address.country != None:
+#                 if address.country.sortname != stipe_addr['country']:
+#                     coun=staff_model.Countries.objects.get(sortname= stipe_addr['country'])
+#                     kwarg['country']=coun
+#             else:
+#                 coun=staff_model.Countries.objects.get(sortname= stipe_addr['country'])
+#                 kwarg['country']=coun
 
                 
-    if len(kwarg)>0:
-        if coun!= None:
-            coun_name=coun.sortname
-        else:
-             coun_name= None
+#     if len(kwarg)>0:
+#         if coun!= None:
+#             coun_name=coun.sortname
+#         else:
+#              coun_name= None
 
-        response =stripe.Customer.modify(
-        customer.id,
-        name = address.name if address.name is not None else address.user.fullname, 
+#         response =stripe.Customer.modify(
+#         customer.id,
+#         name = address.name if address.name is not None else address.user.fullname, 
         
-        address={
-        "city": address.city,
-        "line1": address.line1,
-        "line2": address.line2,
-        "state": address.state,
-        "country":coun_name ,
-        "postal_code": address.zipcode
-        },
+#         address={
+#         "city": address.city,
+#         "line1": address.line1,
+#         "line2": address.line2,
+#         "state": address.state,
+#         "country":coun_name ,
+#         "postal_code": address.zipcode
+#         },
 
-        )
-    return response
+#         )
+#     return response
 
 
 def updated_user_taxid(sender, instance, *args, **kwargs):
@@ -139,3 +139,34 @@ def password_changed_handler(request, user, **kwargs):
 
 
 
+update_billing_address2= Signal()
+
+@receiver(update_billing_address2)
+def password_changed_handler(request, user,instance, **kwargs):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY    
+    try:
+        customer = Customer.objects.get(subscriber=user)
+    except Customer.DoesNotExist:
+        cust = Customer.get_or_create(subscriber=user)
+        customer = cust[0]
+    stripe.api_key = api_key
+    # addr=auth_model.BillingAddress.filter(user=customer.subscriber)
+    #response = stripe.Customer.retrieve(customer.id)
+
+    response =stripe.Customer.modify(
+    customer.id,
+    name = instance.name if instance.name is not None else instance.user.fullname, 
+    
+    address={
+    "city": instance.city,
+    "line1": instance.line1,
+    "line2": instance.line2,
+    "state": instance.state,
+    "country":instance.country.sortname ,
+    "postal_code": instance.zipcode
+    },
+
+    )
