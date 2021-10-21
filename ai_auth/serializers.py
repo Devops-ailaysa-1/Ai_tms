@@ -271,6 +271,7 @@ class BillingAddressSerializer(serializers.ModelSerializer):
 
 
     def save(self,*args,**kwargs):
+        print(self.context.get('request'))
         context_ = self.context.get('request')
         response=super().save(*args,**kwargs)
         update_billing_address2.send(

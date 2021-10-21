@@ -818,7 +818,7 @@ class BillingAddressView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-        serializer = BillingAddressSerializer(data={**request.POST.dict()})
+        serializer = BillingAddressSerializer(data={**request.POST.dict()},context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
             try:
@@ -867,6 +867,7 @@ class UserTaxInfoView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
+        request.POST.get('tax_id') == request.POST.get('tax_id').upper() 
         serializer = UserTaxInfoSerializer(data={**request.POST.dict()})
         print(serializer.is_valid())
         if serializer.is_valid():
@@ -893,6 +894,8 @@ class UserTaxInfoView(viewsets.ViewSet):
             else:
                 taxid = TaxId.objects.filter(customer__subscriber=request.user,value=queryset.tax_id,type=queryset.stripe_tax_id.tax_code).first()
                 print("2",taxid)
+                if taxid == None:
+                    return Response({'msg':"Taxid not exist"}, status=404)
                 user_taxid_delete(taxid)
                 queryset.delete()
         except UserTaxInfo.DoesNotExist:
