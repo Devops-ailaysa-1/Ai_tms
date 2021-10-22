@@ -234,7 +234,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
         if hasattr(UserModel, 'country'):
             extra_fields.append('country')
         model = UserModel
-        fields = ('pk', *extra_fields)
+        fields = ('pk','is_active', *extra_fields)
         read_only_fields = ('email',)
 
 

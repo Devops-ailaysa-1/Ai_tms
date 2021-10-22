@@ -1,6 +1,10 @@
 # from celery import shared_task
 from django.core.mail import send_mail
 import smtplib
+import celery
+from celery.utils.log import get_task_logger
+
+logger = get_task_logger(__name__)
 
 # @shared_task
 # def test_task():
@@ -13,9 +17,9 @@ import smtplib
 #         # html_message=msg_html,
 #     )
 #     return True
-    
+
 # @shared_task
-# def send_dj_core_emails(conn, from_email, recipients, message, fail_silently=True):  
+# def send_dj_core_emails(conn, from_email, recipients, message, fail_silently=True):
 #     try:
 #         conn.sendmail(from_email, recipients, message.as_bytes(linesep='\r\n'))
 #     except smtplib.SMTPException:
@@ -34,3 +38,7 @@ import smtplib
 #         created_at__lte=one_minute_ago
 #     )
 #     expired_discounts.delete()
+@celery.task
+def delete_inactive_user_account():
+    AiUser.objects.filter(deactivation_date__date = date.today()).delete()
+    logger.info("Delete Inactive User")

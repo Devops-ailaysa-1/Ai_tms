@@ -304,7 +304,7 @@ class TempProjectSetupView(viewsets.ViewSet):
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status=406)
-            name = text_data.split()[0]+ ".txt"
+            name =  text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
             f1 = open(name, 'w')
             f1.write(text_data)
             f1.close()
@@ -524,7 +524,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
-            name = text_data.split()[0]+ ".txt"
+            name = text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
             f1 = open(name, 'w')
             f1.write(text_data)
             f1.close()
