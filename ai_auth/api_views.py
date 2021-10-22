@@ -420,6 +420,12 @@ def create_checkout_session(user,price,customer=None,trial=False):
     #if user.billing
     # print("tax_rate",tax_rate)
     # print("user country>>",user.country.sortname)
+    try:
+        BillingAddress.objects.get(user=user)
+        addr_collect='auto'
+    except BillingAddress.DoesNotExist:
+        addr_collect= 'required'
+
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
@@ -435,7 +441,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
                 'tax_rates':tax_rate,
             }
         ],
-        billing_address_collection='required',
+        billing_address_collection=addr_collect,
         customer_update={'address':'auto','name':'auto'},
         tax_id_collection={'enabled':'True'},
         subscription_data={
@@ -500,7 +506,11 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
         api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
-
+    try:
+        BillingAddress.objects.get(user=Aicustomer.subscriber)
+        addr_collect='auto'
+    except BillingAddress.DoesNotExist:
+        addr_collect= 'required'
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=Aicustomer.subscriber,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
@@ -508,6 +518,9 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
         payment_method_types=['card'],
         mode='payment',
         customer = Aicustomer.id,
+        billing_address_collection=addr_collect,
+        customer_update={'address':'auto','name':'auto'},
+        tax_id_collection={'enabled':'True'},
         line_items=[
             {
                 'price': price.id,
