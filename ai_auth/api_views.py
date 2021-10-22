@@ -19,6 +19,7 @@ from ai_auth.models import (AiUser, BillingAddress, Professionalidentity,
 from django.http import Http404,JsonResponse
 from rest_framework import status
 from django.db import IntegrityError
+from django.contrib.auth.hashers import check_password
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
 from rest_framework.decorators import api_view,permission_classes
@@ -1048,8 +1049,14 @@ def account_activation(request):
     return JsonResponse({"msg":"user activated successfully"},safe = False)
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def account_delete(request):
-    AiUser.objects.get(id =request.user.id).delete()
+    password_entered = request.POST.get('password')
+    user = AiUser.objects.get(id =request.user.id)
+    match_check = check_password(password_entered,user.password)
+    if match_check:
+        user.delete()
+    else:
+        return Response({"msg":"password didn't match"},status = 400)
     return JsonResponse({"msg":"user account deleted"},safe = False)
