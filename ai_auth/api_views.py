@@ -721,9 +721,9 @@ def check_subscription(request):
         subscriptions = Subscription.objects.filter(customer=customer).last()
         if subscriptions is not None:
             sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
-            return Response({'msg':'User have No Active Subscription','prev_subscription':sub_name,'prev_sub_price_id':subscriptions.plan.id,'prev_sub_status':subscriptions.status}, status=402)
+            return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,'interval':subscriptions.plan.interval,'sub_period_end':subscriptions.current_period_end,'sub_currency':subscriptions.plan.currency,'sub_amount':subscriptions.plan.amount}, status=200)
         else:
-            return Response({'msg':'User have No Active Subscription','prev_subscription':None,'prev_sub_price_id':None,'prev_sub_status':None}, status=402)
+            return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None}, status=200)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user)
         #subscription = Subscription.objects.filter(customer=customer).last()

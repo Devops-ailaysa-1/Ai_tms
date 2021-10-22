@@ -56,3 +56,6 @@ json_back.zip
 fixtures
 *.ipy
 .env2.save
+celery.sh
+celerybeat-schedule
+docker-compose_prod.yml
