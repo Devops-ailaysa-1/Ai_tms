@@ -207,6 +207,18 @@ class ProfessionalidentityView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def delete(self, request, format=None):
+        identity = self.get_object(request.user.id)
+        if request.POST.get('avatar',None) != None :
+            identity.avatar=None
+        if request.POST.get('logo',None) != None :
+            identity.logo=None
+        if request.POST.get('header',None) != None :
+            identity.header=None
+        identity.save()
+        return Response({"msg":"Deleted Successfully"},status=200)
     #
     # def put(self,request,pk):
     #     user = Professionalidentity.objects.get(user_id=pk)
