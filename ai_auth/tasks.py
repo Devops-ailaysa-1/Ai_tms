@@ -2,9 +2,9 @@
 from django.core.mail import send_mail
 import smtplib
 import celery
-from celery.utils.log import get_task_logger
+# from celery.utils.log import get_task_logger
 
-logger = get_task_logger(__name__)
+# logger = get_task_logger(__name__)
 
 # @shared_task
 # def test_task():
@@ -38,7 +38,11 @@ logger = get_task_logger(__name__)
 #         created_at__lte=one_minute_ago
 #     )
 #     expired_discounts.delete()
-@celery.task
-def delete_inactive_user_account():
-    AiUser.objects.filter(deactivation_date__date = date.today()).delete()
-    logger.info("Delete Inactive User")
+
+
+
+
+# @celery.task
+# def delete_inactive_user_account():
+#     AiUser.objects.filter(deactivation_date__date = date.today()).delete()
+#     logger.info("Delete Inactive User")
