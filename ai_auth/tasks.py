@@ -42,15 +42,14 @@ import datetime
 
 
 
-<<<<<<< HEAD
+
 @task
 def delete_inactive_user_account():
     AiUser.objects.filter(deactivation_date__date = date.today()).delete()
     logger.info("Delete Inactive User")
-=======
+
 
 # @celery.task
 # def delete_inactive_user_account():
 #     AiUser.objects.filter(deactivation_date__date = date.today()).delete()
 #     logger.info("Delete Inactive User")
->>>>>>> origin/merged
