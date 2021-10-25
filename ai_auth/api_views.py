@@ -421,6 +421,12 @@ def create_checkout_session(user,price,customer=None,trial=False):
     #if user.billing
     # print("tax_rate",tax_rate)
     # print("user country>>",user.country.sortname)
+    try:
+        BillingAddress.objects.get(user=user)
+        addr_collect='auto'
+    except BillingAddress.DoesNotExist:
+        addr_collect= 'required'
+
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
@@ -436,7 +442,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
                 'tax_rates':tax_rate,
             }
         ],
-        billing_address_collection='required',
+        billing_address_collection=addr_collect,
         customer_update={'address':'auto','name':'auto'},
         tax_id_collection={'enabled':'True'},
         subscription_data={
@@ -501,7 +507,11 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
         api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
-
+    try:
+        BillingAddress.objects.get(user=Aicustomer.subscriber)
+        addr_collect='auto'
+    except BillingAddress.DoesNotExist:
+        addr_collect= 'required'
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=Aicustomer.subscriber,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
@@ -509,6 +519,9 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
         payment_method_types=['card'],
         mode='payment',
         customer = Aicustomer.id,
+        billing_address_collection=addr_collect,
+        customer_update={'address':'auto','name':'auto'},
+        tax_id_collection={'enabled':'True'},
         line_items=[
             {
                 'price': price.id,
@@ -708,9 +721,9 @@ def check_subscription(request):
         subscriptions = Subscription.objects.filter(customer=customer).last()
         if subscriptions is not None:
             sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
-            return Response({'msg':'User have No Active Subscription','prev_subscription':sub_name,'prev_sub_price_id':subscriptions.plan.id,'prev_sub_status':subscriptions.status}, status=402)
+            return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,'interval':subscriptions.plan.interval,'sub_period_end':subscriptions.current_period_end,'sub_currency':subscriptions.plan.currency,'sub_amount':subscriptions.plan.amount}, status=200)
         else:
-            return Response({'msg':'User have No Active Subscription','prev_subscription':None,'prev_sub_price_id':None,'prev_sub_status':None}, status=402)
+            return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None}, status=200)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user)
         #subscription = Subscription.objects.filter(customer=customer).last()

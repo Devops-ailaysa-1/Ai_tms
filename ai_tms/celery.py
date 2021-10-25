@@ -26,6 +26,11 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=7, minute=00),#crontab(hour=1, minute=15),
         'args': (),
     },
+    #     'renew': {
+    #     'task': 'tasks.delete_inactive_user_account',
+    #     'schedule': crontab(hour=1, minute=00),
+    #     'args': (),
+    # },
 }
 
 @app.task(bind=True)

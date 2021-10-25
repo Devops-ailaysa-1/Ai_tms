@@ -227,7 +227,8 @@ class MT_RawAndTM_View(views.APIView):
         sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
                                 & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
 
-        if sub_active == None:
+        if sub_active == None: 
+        # Only when there an active subscription, MT should be applied though addons are present
             initial_credit = request.user.credit_balance
             text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
             doc = TextUnit.objects.get(id=text_unit_id).document
@@ -247,7 +248,7 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 return {"data":"Insufficient credits for MT"}, 424
         else:
-            return {"data":"No active subscription"}, 400
+            return {"data":"No active subscription"}, 424
 
     @staticmethod
     def get_tm_data(request, segment_id):
