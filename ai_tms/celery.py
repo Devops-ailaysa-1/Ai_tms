@@ -17,18 +17,17 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 
-@app.task(bind=True)
-def debug_task(self):
-    print(f'Request: {self.request!r}')
-
-
 from celery.schedules import crontab
 
 app.conf.beat_schedule = {
     # Executes every day at  8:00 am.
     'run-every-day': {
-        'task': 'tasks.delete_inactive_user_account',
-        'schedule': crontab(hour=8, minute=00),
+        'task': 'ai_auth.tasks.delete_inactive_user_account',
+        'schedule': crontab(hour=7, minute=00),#crontab(hour=1, minute=15),
         'args': (),
     },
 }
+
+@app.task(bind=True)
+def debug_task(self):
+    print(f'Request: {self.request!r}')

@@ -78,7 +78,6 @@ numpy==1.21.0
 oauthlib==3.1.1
 openpyxl==3.0.7
 packaging==21.0
-pandas==1.3.0
 pandocfilters==1.4.3
 parso==0.8.2
 pexpect==4.8.0
@@ -135,3 +134,4 @@ widgetsnbextension==3.5.1
 zope.interface==5.4.0
 wiktionaryparser==0.0.97
 pyspellchecker==0.6.2
+redis
