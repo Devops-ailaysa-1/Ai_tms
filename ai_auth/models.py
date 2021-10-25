@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics
 from django.db.models.signals import post_save, pre_save
-from ai_auth.signals import create_allocated_dirs,updated_user_taxid
+from .signals import create_allocated_dirs, updated_user_taxid
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -17,8 +17,6 @@ from ai_auth import Aiwebhooks
 from django.db.models import Q
 from datetime import datetime
 
-
-
 class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
     email = models.EmailField(_('email address'), unique=True)
@@ -26,8 +24,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     country= models.ForeignKey(Countries,related_name='aiuser_country', on_delete=models.CASCADE,blank=True, null=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    deactivation_date = models.DateTimeField(null=True, blank=True)
-    # deactive = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     from_mysql = models.BooleanField(default=False)
 
@@ -46,7 +42,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
     @property
     def credit_balance(self):
-        print("**** inside AiUser credit balance  ****")
+        # print("**** inside AiUser credit balance  ****")
         total_credit_left = 0
         present = datetime.now()
         sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
@@ -86,7 +82,7 @@ class BaseAddress(models.Model):
     line2 = models.CharField(max_length=200,blank=True, null=True)
     state = models.CharField(max_length=200,blank=True, null=True)
     city = models.CharField(max_length=200,blank=True, null=True)
-    zipcode= models.CharField(max_length=200,blank=True, null=True)
+    zipcode= models.IntegerField(default=0,blank=True, null=True)
     class Meta:
         abstract=True
 
@@ -117,40 +113,40 @@ class UserAttribute(models.Model):
 
 pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
-# class PersonalInformation(models.Model):
-#     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='personal_info')
-#     #address = models.CharField(max_length=255, blank=True, null=True)
+class PersonalInformation(models.Model):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='personal_info')
+    #address = models.CharField(max_length=255, blank=True, null=True)
 
-#     #country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
-#     timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
-#     phonenumber=models.CharField(max_length=255, blank=True, null=True)
-#     mobilenumber=models.CharField(max_length=255, blank=True, null=True)
-#     linkedin=models.CharField(max_length=255, blank=True, null=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-#     # created_at = models.CharField(max_length=200,blank=True, null=True)
-#     # updated_at = models.CharField(max_length=200,blank=True, null=True)
-#     class Meta:
-#         #managed=False
-#         db_table = 'personal_info'
+    #country= models.ForeignKey(Countries,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
+    timezone=models.ForeignKey(Timezones,related_name='personal_info', on_delete=models.CASCADE,blank=True, null=True)
+    phonenumber=models.CharField(max_length=255, blank=True, null=True)
+    mobilenumber=models.CharField(max_length=255, blank=True, null=True)
+    linkedin=models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    # created_at = models.CharField(max_length=200,blank=True, null=True)
+    # updated_at = models.CharField(max_length=200,blank=True, null=True)
+    class Meta:
+        managed=False
+        db_table = 'personal_info'
 
 
-# class OfficialInformation(models.Model):
-#     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='official_info')
-#     company_name = models.CharField(max_length=255, blank=True, null=True)
-#    # address = models.CharField(max_length=255, blank=True, null=True)
-#     designation = models.CharField(max_length=255, blank=True, null=True)
-#     industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
-#     #country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
-#     timezone=models.ForeignKey(Timezones,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
-#     website=models.CharField(max_length=255, blank=True, null=True)
-#     linkedin=models.CharField(max_length=255, blank=True, null=True)
-#     billing_email=models.EmailField(blank=True, null=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-#     class Meta:
-#         #managed=False
-#         db_table = 'official_info'
+class OfficialInformation(models.Model):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,null=True,related_name='official_info')
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+   # address = models.CharField(max_length=255, blank=True, null=True)
+    designation = models.CharField(max_length=255, blank=True, null=True)
+    industry=models.ForeignKey(SubjectFields,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
+    #country= models.ForeignKey(Countries,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
+    timezone=models.ForeignKey(Timezones,related_name='official_info', on_delete=models.CASCADE,blank=True, null=True)
+    website=models.CharField(max_length=255, blank=True, null=True)
+    linkedin=models.CharField(max_length=255, blank=True, null=True)
+    billing_email=models.EmailField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    class Meta:
+        managed=False
+        db_table = 'official_info'
 
 
 def user_directory_path(instance, filename):
@@ -223,7 +219,6 @@ class BillingAddress(BaseAddress):
     name = models.CharField(max_length=255, blank=True, null=True)
     country= models.ForeignKey(Countries,related_name='billing_country', on_delete=models.CASCADE,blank=True, null=True)
 
-# post_save.connect(updated_billingaddress, sender=BillingAddress)
 
 class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
