@@ -20,17 +20,12 @@ app.autodiscover_tasks()
 from celery.schedules import crontab
 
 app.conf.beat_schedule = {
-    # Executes every day at  8:00 am.
+    # Executes every day at  7:00 am.
     'run-every-day': {
         'task': 'ai_auth.tasks.delete_inactive_user_account',
         'schedule': crontab(hour=7, minute=00),#crontab(hour=1, minute=15),
         'args': (),
     },
-    #     'renew': {
-    #     'task': 'tasks.delete_inactive_user_account',
-    #     'schedule': crontab(hour=1, minute=00),
-    #     'args': (),
-    # },
 }
 
 @app.task(bind=True)

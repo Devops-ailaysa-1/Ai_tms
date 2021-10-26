@@ -1081,7 +1081,11 @@ def account_delete(request):
     user = AiUser.objects.get(id =request.user.id)
     match_check = check_password(password_entered,user.password)
     if match_check:
-        user.delete()
+        present = datetime.now()
+        one_mon_rel = relativedelta(months=1)
+        user.is_active = False
+        user.deactivation_date = present.date()+one_mon_rel
+        user.save()
     else:
         return Response({"msg":"password didn't match"},status = 400)
     return JsonResponse({"msg":"user account deleted"},safe = False)
