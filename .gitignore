@@ -3,6 +3,7 @@
 .env
 docker-compose.yml
 file.sql
+db002.sqlite3-journal
 Dockerfile
 media
 */migrations
