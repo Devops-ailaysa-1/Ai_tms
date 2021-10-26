@@ -49,7 +49,7 @@ CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000", "http://157.245.99.128:3000",  "http://workspacestaging.ailaysa.com",
     "http://143.244.140.71", "http://workspace.ailaysa.com", "http://workspacetest.ailaysa.com",
     "http://workspacecommon.ailaysa.com","http://userportal.ailaysa.com", "http://transeditor.ailaysa.com",
-    "http://static.ailaysa.com", "https://static.ailaysa.com","https://userportal.ailaysa.com", 
+    "http://static.ailaysa.com", "https://static.ailaysa.com","https://userportal.ailaysa.com",
     "https://transeditor.ailaysa.com", "https://transeditorstaging.ailaysa.com", "https://userportalstaging.ailaysa.com",
     "https://staticstaging.ailaysa.com"
 ]
