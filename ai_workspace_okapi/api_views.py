@@ -223,19 +223,19 @@ class MT_RawAndTM_View(views.APIView):
         if mt_raw:
             print("*** MT RAW AVAILABLE ****")
             return MT_RawSerializer(mt_raw).data, 200
-        
+
         sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
                                 & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
 
-        if sub_active == None: 
+        if sub_active == None:
         # Only when there an active subscription, MT should be applied though addons are present
             initial_credit = request.user.credit_balance
             text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
             doc = TextUnit.objects.get(id=text_unit_id).document
             word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
 
-            consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)        
-            
+            consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
+
             if initial_credit > consumable_credits :
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                                 context={"request": request})
@@ -773,9 +773,6 @@ def WiktionaryParse(request):
 def wikipedia_ws(code,codesrc,user_input):
     S = requests.Session()
     URL = f"https://{codesrc}.wikipedia.org/w/api.php"
-    print(code)
-    print(codesrc)
-    print(URL)
     PARAMS = {
         "action": "query",
         "format": "json",
@@ -790,9 +787,10 @@ def wikipedia_ws(code,codesrc,user_input):
     DATA = R.json()
     res=DATA["query"]["pages"]
     srcURL=f"https://{codesrc}.wikipedia.org/wiki/{user_input}"
-    print(srcURL)
     for i in res:
         lang=DATA["query"]["pages"][i]
+        if 'missing' in lang:
+            return {"source":'',"target":'',"targeturl":'',"srcURL":''}
     if (lang.get("langlinks"))!=None:
         for j in lang.get("langlinks"):
             output=j.get("*")
@@ -842,13 +840,14 @@ def wiktionary_ws(code,codesrc,user_input):
     }
     response = S.get(url=URL, params=PARAMS)
     data = response.json()
-    print(data)
     srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input}"
-    print(srcURL)
     res=data["query"]["pages"]
+    print("RES-------->",res)
     for i in res:
        lang=data["query"]["pages"][i]
-       print(lang)
+       if 'missing' in lang:
+           return {"source":'',"source-url":''}
+       print('Lang--------->',lang)
     output=[]
     out=[]
     if (lang.get("iwlinks"))!=None:
