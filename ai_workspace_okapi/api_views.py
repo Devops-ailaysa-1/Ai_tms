@@ -122,7 +122,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     print(task_credit_status.errors)
             else:
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                raise  ValueError("Something went wrong in okapi file processing!!!")
+                raise  ValueError("Something wrong with file processing!!!")
 
         elif (not document):
             document = Document.objects.get(job=task.job, file=task.file)
