@@ -306,6 +306,7 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
             res = self.document_data_to_file(request, document_id)
+            print("RES CODE ====> ", res)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 print("file_path---->", file_path)
