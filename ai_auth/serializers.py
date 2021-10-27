@@ -348,7 +348,7 @@ class VendorOnboardingSerializer(serializers.ModelSerializer):
         fields  = "__all__"
 
 class GeneralSupportSerializer(serializers.ModelSerializer):
-    support_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx','jpg','png'])])
+    support_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx','jpg','png','jpeg'])])
     class Meta:
         model = GeneralSupport
         fields = "__all__"
