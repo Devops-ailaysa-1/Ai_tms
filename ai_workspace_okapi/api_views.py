@@ -323,7 +323,7 @@ class DocumentToFile(views.APIView):
                             response["Access-Control-Allow-Headers"] = "*"
                             print("cont-disp--->", response.get("Content-Disposition"))
                             return response
-            return JsonResponse({"msg": "something went to wrong in okapi file processing"},\
+            return JsonResponse({"msg": "Something wrong with file processing"},\
                         status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
