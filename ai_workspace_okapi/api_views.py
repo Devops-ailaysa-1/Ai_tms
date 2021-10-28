@@ -356,6 +356,7 @@ class DocumentToFile(views.APIView):
                      "fprm_file_path": None
                      }
         print("params data--->", params_data)
+
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
             data={
@@ -363,7 +364,17 @@ class DocumentToFile(views.APIView):
                 "doc_req_res_params": json.dumps(res_paths),
                 "doc_req_params": json.dumps(params_data),
             }
+
         )
+        data_dict={
+            'document-json-dump': json.dumps(data),
+            "doc_req_res_params": json.dumps(res_paths),
+            "doc_req_params": json.dumps(params_data),
+        }
+        filename = 'wiki'
+        outfile = open(filename,'wb')
+        pickle.dump(data_dict,outfile)
+        outfile.close()
         return res
 
 OUTPUT_TYPES = dict(
@@ -747,6 +758,8 @@ def WiktionaryParse(request):
     parser.set_default_language(src_lang)
     parser.include_relation('Translations')
     word = parser.fetch(user_input)
+    if word[0].get('definitions')==[]:
+        word=parser.fetch(user_input.lower())
     res=[]
     tar=""
     for i in word:
@@ -826,6 +839,7 @@ def WikipediaWorkspace(request,doc_id):
     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
 
 
+
 def wiktionary_ws(code,codesrc,user_input):
     S = requests.Session()
     URL =f" https://{codesrc}.wiktionary.org/w/api.php?"
@@ -843,6 +857,11 @@ def wiktionary_ws(code,codesrc,user_input):
     srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input}"
     res=data["query"]["pages"]
     print("RES-------->",res)
+    if "-1" in res:
+        PARAMS.update({'titles':user_input.lower()})
+        data = S.get(url=URL, params=PARAMS).json()
+        srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input.lower()}"
+        res =data['query']['pages']
     for i in res:
        lang=data["query"]["pages"][i]
        if 'missing' in lang:
@@ -864,6 +883,7 @@ def wiktionary_ws(code,codesrc,user_input):
 def WiktionaryWorkSpace(request,doc_id):
     data=request.GET.dict()
     user_input=data.get("term")
+    # user_input=user_input.lower()
     term_type=data.get("term_type")
     print(term_type)
     user_input=user_input.strip()
