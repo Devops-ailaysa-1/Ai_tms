@@ -756,6 +756,8 @@ def buy_subscription(request):
         return Response({'msg':'No Stripe Account Found'}, status=404)
 
 
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_currency(request):
@@ -882,6 +884,13 @@ def user_taxid_delete(taxid):
     )
 
     return response
+
+def cancel_subscription(user):
+    cust=Customer.objects.get(subscriber=user)
+    subs = cust.subscriptions.all()
+    for sub in subs:
+        sub.cancel(at_period_end=True)
+
 
 
 class UserTaxInfoView(viewsets.ViewSet):
@@ -1059,6 +1068,7 @@ def account_deactivation(request):
     user.is_active = False
     user.deactivation_date = present.date()+six_mon_rel
     user.save()
+    cancel_subscription(user)
     return JsonResponse({"msg":"user deactivated successfully"},safe = False)
 
 @api_view(['POST'])
@@ -1086,6 +1096,7 @@ def account_delete(request):
         user.is_delete = True
         user.deactivation_date = present.date()+one_mon_rel
         user.save()
+        cancel_subscription(user)
     else:
         return Response({"msg":"password didn't match"},status = 400)
     return JsonResponse({"msg":"user account deleted"},safe = False)

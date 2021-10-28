@@ -26,7 +26,11 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
             credit.save()
 
     if pack.type=="Subscription_Trial":
-         expiry = subscription.trial_end
+        expiry = subscription.trial_end
+        creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
+        for credit in creditsls:
+            credit.ended_at=timezone.now()
+            credit.save()
 
     if pack.type=="Addon":
         expiry = None
@@ -284,10 +288,6 @@ def modify_subscription_data(subscription):
     )
 
 
-
-
-
-
 @webhooks.handler("customer.subscription.trial_will_end")
 def my_handler(event, **kwargs):
     print("**** customer trial_end *****")
@@ -306,8 +306,6 @@ def subscription_delete(sub):
         api_key = settings.STRIPE_TEST_SECRET_KEY
     stripe.api_key = api_key
     stripe.Subscription.delete(sub.id)
-
-
 
 @webhooks.handler("customer.updated")
 def my_handler(event, **kwargs):

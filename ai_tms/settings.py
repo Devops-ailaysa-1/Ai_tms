@@ -130,6 +130,7 @@ INSTALLED_APPS = [
     'ai_marketplace',
     'djstripe',
     'django_filters',
+    #'dbbackup',
     # 'channels',
     #'django_q',
 ]
@@ -393,3 +394,7 @@ CHANNEL_LAYERS = {
         # }
     }
 }
+
+
+# DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
+# DBBACKUP_STORAGE_OPTIONS = {'location': 'backupdb/'}

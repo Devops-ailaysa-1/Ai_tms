@@ -61,3 +61,4 @@ fixtures
 celery.sh
 celerybeat-schedule
 docker-compose_prod.yml
+backupdb
