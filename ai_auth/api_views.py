@@ -1093,7 +1093,7 @@ def account_delete(request):
     if match_check:
         present = datetime.now()
         one_mon_rel = relativedelta(months=1)
-        user.is_active = False
+        user.is_delete = True
         user.deactivation_date = present.date()+one_mon_rel
         user.save()
         cancel_subscription(user)

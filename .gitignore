@@ -2,6 +2,7 @@
 .env2
 .env
 docker-compose.yml
+celerybeat-schedule
 file.sql
 db002.sqlite3-journal
 Dockerfile

@@ -122,7 +122,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     print(task_credit_status.errors)
             else:
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                raise  ValueError("Something went wrong in okapi file processing!!!")
+                raise  ValueError("Something wrong with file processing!!!")
 
         elif (not document):
             document = Document.objects.get(job=task.job, file=task.file)
@@ -223,19 +223,19 @@ class MT_RawAndTM_View(views.APIView):
         if mt_raw:
             print("*** MT RAW AVAILABLE ****")
             return MT_RawSerializer(mt_raw).data, 200
-        
+
         sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
                                 & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
 
-        if sub_active == None: 
+        if sub_active == None:
         # Only when there an active subscription, MT should be applied though addons are present
             initial_credit = request.user.credit_balance
             text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
             doc = TextUnit.objects.get(id=text_unit_id).document
             word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
 
-            consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)        
-            
+            consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
+
             if initial_credit > consumable_credits :
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                                 context={"request": request})
@@ -306,6 +306,7 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
             res = self.document_data_to_file(request, document_id)
+            print("RES CODE ====> ", res)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 print("file_path---->", file_path)
@@ -323,7 +324,7 @@ class DocumentToFile(views.APIView):
                             response["Access-Control-Allow-Headers"] = "*"
                             print("cont-disp--->", response.get("Content-Disposition"))
                             return response
-            return JsonResponse({"msg": "something went to wrong in okapi file processing"},\
+            return JsonResponse({"msg": "Something wrong with file processing"},\
                         status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
@@ -334,6 +335,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
+        print("Data ---> ", data)
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -356,6 +358,7 @@ class DocumentToFile(views.APIView):
                      "fprm_file_path": None
                      }
         print("params data--->", params_data)
+
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
             data={
@@ -364,6 +367,15 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),
             }
         )
+        data_dict = {
+            'document-json-dump': json.dumps(data),
+            "doc_req_res_params": json.dumps(res_paths),
+            "doc_req_params": json.dumps(params_data),
+        }
+        filename = 'wiki'
+        outfile = open(filename,'wb')
+        pickle.dump(data_dict,outfile)
+        outfile.close()
         return res
 
 OUTPUT_TYPES = dict(
@@ -747,6 +759,8 @@ def WiktionaryParse(request):
     parser.set_default_language(src_lang)
     parser.include_relation('Translations')
     word = parser.fetch(user_input)
+    if word[0].get('definitions')==[]:
+        word=parser.fetch(user_input.lower())
     res=[]
     tar=""
     for i in word:
@@ -773,9 +787,6 @@ def WiktionaryParse(request):
 def wikipedia_ws(code,codesrc,user_input):
     S = requests.Session()
     URL = f"https://{codesrc}.wikipedia.org/w/api.php"
-    print(code)
-    print(codesrc)
-    print(URL)
     PARAMS = {
         "action": "query",
         "format": "json",
@@ -790,9 +801,10 @@ def wikipedia_ws(code,codesrc,user_input):
     DATA = R.json()
     res=DATA["query"]["pages"]
     srcURL=f"https://{codesrc}.wikipedia.org/wiki/{user_input}"
-    print(srcURL)
     for i in res:
         lang=DATA["query"]["pages"][i]
+        if 'missing' in lang:
+            return {"source":'',"target":'',"targeturl":'',"srcURL":''}
     if (lang.get("langlinks"))!=None:
         for j in lang.get("langlinks"):
             output=j.get("*")
@@ -828,6 +840,7 @@ def WikipediaWorkspace(request,doc_id):
     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
 
 
+
 def wiktionary_ws(code,codesrc,user_input):
     S = requests.Session()
     URL =f" https://{codesrc}.wiktionary.org/w/api.php?"
@@ -842,13 +855,19 @@ def wiktionary_ws(code,codesrc,user_input):
     }
     response = S.get(url=URL, params=PARAMS)
     data = response.json()
-    print(data)
     srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input}"
-    print(srcURL)
     res=data["query"]["pages"]
+    print("RES-------->",res)
+    if "-1" in res:
+        PARAMS.update({'titles':user_input.lower()})
+        data = S.get(url=URL, params=PARAMS).json()
+        srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input.lower()}"
+        res =data['query']['pages']
     for i in res:
        lang=data["query"]["pages"][i]
-       print(lang)
+       if 'missing' in lang:
+           return {"source":'',"source-url":''}
+       print('Lang--------->',lang)
     output=[]
     out=[]
     if (lang.get("iwlinks"))!=None:
@@ -865,6 +884,7 @@ def wiktionary_ws(code,codesrc,user_input):
 def WiktionaryWorkSpace(request,doc_id):
     data=request.GET.dict()
     user_input=data.get("term")
+    # user_input=user_input.lower()
     term_type=data.get("term_type")
     print(term_type)
     user_input=user_input.strip()

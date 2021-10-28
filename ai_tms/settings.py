@@ -31,7 +31,8 @@ SECRET_KEY = os.getenv("django_secret_key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136','192.168.0.117', "157.245.99.128","djangotest.ailaysa.com"]
+ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136',
+'192.168.0.117', "157.245.99.128","djangotest.ailaysa.com", "api.ailaysa.com",]
 
 
 CORS_ORIGIN_ALLOW_ALL= False
@@ -40,7 +41,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000","http://143.244.140.71", "http://workspacestaging.ailaysa.com", "http://workspace.ailaysa.com",
      "http://workspacetest.ailaysa.com", "http://workspacecommon.ailaysa.com","http://userportal.ailaysa.com",
      "http://transeditor.ailaysa.com", "http://static.ailaysa.com", "https://static.ailaysa.com",
-     "https://userportal.ailaysa.com", "https://traseditor.ailaysa.com"
+     "https://userportal.ailaysa.com", "https://transeditor.ailaysa.com", "https://transeditorstaging.ailaysa.com",
+     "https://userportalstaging.ailaysa.com", "https://staticstaging.ailaysa.com"
 
 ]
 
@@ -49,7 +51,8 @@ CORS_ORIGIN_WHITELIST = [
     "http://143.244.140.71", "http://workspace.ailaysa.com", "http://workspacetest.ailaysa.com",
     "http://workspacecommon.ailaysa.com","http://userportal.ailaysa.com", "http://transeditor.ailaysa.com",
     "http://static.ailaysa.com", "https://static.ailaysa.com","https://userportal.ailaysa.com",
-    "https://traseditor.ailaysa.com",
+    "https://transeditor.ailaysa.com", "https://transeditorstaging.ailaysa.com", "https://userportalstaging.ailaysa.com",
+    "https://staticstaging.ailaysa.com"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
