@@ -16,6 +16,9 @@ class TextUnit(models.Model):
     okapi_ref_translation_unit_id = models.TextField()
     document = models.ForeignKey("Document", on_delete=models.CASCADE, related_name=\
         "document_text_unit_set")
+    @property
+    def text_unit_segment_set_sorted(self):
+        return self.text_unit_segment_set.order_by("id")
 
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)

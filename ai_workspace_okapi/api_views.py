@@ -306,6 +306,7 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
             res = self.document_data_to_file(request, document_id)
+            print("RES CODE ====> ", res)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 print("file_path---->", file_path)
@@ -334,6 +335,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
+        print("Data ---> ", data)
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -364,9 +366,8 @@ class DocumentToFile(views.APIView):
                 "doc_req_res_params": json.dumps(res_paths),
                 "doc_req_params": json.dumps(params_data),
             }
-
         )
-        data_dict={
+        data_dict = {
             'document-json-dump': json.dumps(data),
             "doc_req_res_params": json.dumps(res_paths),
             "doc_req_params": json.dumps(params_data),
