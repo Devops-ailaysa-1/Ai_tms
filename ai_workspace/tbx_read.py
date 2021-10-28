@@ -57,15 +57,15 @@ def termIdentify(root,t1,ls,datanew,codesrc,code):
                 break
     return({"res":res1})
 
-def getLanguageName(id):
-        job_id=Document.objects.get(id=id).job_id
-        src_id=Job.objects.get(id=job_id).source_language_id
-        src_name=Languages.objects.get(id=src_id).language
-        tar_id=Job.objects.get(id=job_id).target_language_id
-        tar_name=Languages.objects.get(id=tar_id).language
-        src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name).locale_code
-        tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name).locale_code
-        return ({"source_lang":src_name,"target_lang":tar_name,"src_code":src_lang_code,"tar_code":tar_lang_code})
+# def getLanguageName(id):
+#         job_id=Document.objects.get(id=id).job_id
+#         src_id=Job.objects.get(id=job_id).source_language_id
+#         src_name=Languages.objects.get(id=src_id).language
+#         tar_id=Job.objects.get(id=job_id).target_language_id
+#         tar_name=Languages.objects.get(id=tar_id).language
+#         src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name).locale_code
+#         tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name).locale_code
+#         return ({"source_lang":src_name,"target_lang":tar_name,"src_code":src_lang_code,"tar_code":tar_lang_code})
 
 
 @api_view(['POST',])
@@ -85,11 +85,12 @@ def TermSearch(request):
     fourgrams = ngrams(tokens_new,4)
     four_words=list(" ".join(i) for i in fourgrams)
     doc_id = data.get("doc_id")
-    LangName = getLanguageName(doc_id)
-    codesrc = LangName.get("src_code")
-    code = LangName.get("tar_code")
-    # print(codesrc)
-    # print(code)
+    doc = Document.objects.get(id = doc_id)
+    # LangName = getLanguageName(doc_id)
+    codesrc = doc.source_language_code
+    code = doc.target_language_code
+    print(codesrc)
+    print(code)
     job_id = Document.objects.get(id=doc_id).job_id
     project_id = Job.objects.get(id=job_id).project_id
     files =  TbxFile.objects.filter(Q(job_id=job_id) | Q(job_id=None) & Q(project_id=project_id)).all()
