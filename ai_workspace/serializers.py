@@ -55,6 +55,7 @@ class JobSerializer(serializers.ModelSerializer):
 
 class FileSerializer(serializers.ModelSerializer):
 	project = serializers.IntegerField(required=False, source="project_id")
+	file = serializers.FileField(validators=[project_file_size])
 	class Meta:
 		model = File
 		fields = ("id","usage_type", "file", "project","filename", "get_source_file_path",

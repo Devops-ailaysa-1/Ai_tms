@@ -8,6 +8,6 @@ def file_size(value): # add this to some file where you can import it from
 
 
 def project_file_size(value):
-    limit = 2 * 1024 * 1024
+    limit = 100 * 1024 * 1024
     if value.size > limit:
-        raise ValidationError('File too large. Size should not exceed 2 MB.')
+        raise ValidationError('File too large. Size should not exceed 100 MB.')
