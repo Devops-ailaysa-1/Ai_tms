@@ -407,16 +407,17 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 
 		return super().to_internal_value(data=data)
-
-	def run_validation(self, data):
-		print("run_validation")
-		print('FILE----->',len(data.get('files')))
-		print('TL-------->',len(data.get("target_languages")))
-		if len(data.get('files'))>20:
-			raise serializers.ValidationError({"msg":"Number of files per project exceeded."})
-		if len(data.get("target_languages"))>20:
-			raise serializers.ValidationError({"msg":"Number of jobs per project exceeded."})
-		return super().run_validation(data=data)
+	# 
+	# def run_validation(self, data):
+	# 	print("run_validation")
+	# 	# if self.context['request']._request.method == 'POST':
+	# 	print('FILE----->',len(data.get('files')))
+	# 	print('TL-------->',len(data.get("target_languages")))
+	# 	if len(data.get('files'))>20:
+	# 		raise serializers.ValidationError({"msg":"Number of files per project exceeded."})
+	# 	if len(data.get("target_languages"))>20:
+	# 		raise serializers.ValidationError({"msg":"Number of jobs per project exceeded."})
+	# 	return super().run_validation(data=data)
 
 
 	def create(self, validated_data):
