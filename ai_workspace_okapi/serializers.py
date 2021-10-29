@@ -115,7 +115,7 @@ class TextUnitSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data=data)
 
 class TextUnitSerializerV2(serializers.ModelSerializer):
-    segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set_sorted")
+    segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
 
     class Meta:
         model = TextUnit
