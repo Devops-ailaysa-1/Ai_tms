@@ -16,9 +16,6 @@ class TextUnit(models.Model):
     okapi_ref_translation_unit_id = models.TextField()
     document = models.ForeignKey("Document", on_delete=models.CASCADE, related_name=\
         "document_text_unit_set")
-    @property
-    def text_unit_segment_set_sorted(self):
-        return self.text_unit_segment_set.order_by("id")
 
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)
@@ -44,6 +41,9 @@ class Segment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
     # segment_count = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['id',]
 
     @property
     def has_comment(self):
