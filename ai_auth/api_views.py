@@ -1078,10 +1078,13 @@ def account_activation(request):
         user = AiUser.objects.get(email = email)
     except:
         return Response({"msg":"User Not Found"},status = 400)
-    user.deactivate = False
-    user.deactivation_date = None
-    user.save()
-    return JsonResponse({"msg":"user activated successfully"},safe = False)
+    if user.deactivate == True:
+        user.deactivate = False
+        user.deactivation_date = None
+        user.save()
+        return JsonResponse({"msg":"user activated successfully"},safe = False)
+    else:
+        return JsonResponse({"msg":"no need to call activation.user is already active "})
 
 
 @api_view(['POST'])
