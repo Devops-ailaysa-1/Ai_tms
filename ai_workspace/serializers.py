@@ -232,15 +232,18 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		print("intial-->",self.initial_data )
 		source_language = json.loads(self.initial_data["source_language"])
 		target_languages = json.loads(self.initial_data["target_languages"])
+		if len(self.initial_data['tempfiles'])>20:
+			raise serializers.ValidationError({"msg":"Number of files per project exceeded."})
+		if len(target_languages)>20:
+			raise serializers.ValidationError({"msg":"Number of jobs per project exceeded."})
 		if source_language and target_languages:
 			self.initial_data['langpair'] = [{"source_language": source_language, "target_language": \
 				target_language} for target_language in target_languages]
-		# self.initial_data['langpair'] = json.loads(self.initial_data['langpair'])
 		self.initial_data['tempfiles'] = [{"files":file} for file in self.initial_data\
 			['tempfiles']]
-		# self.initial_data['files'] = [{"file"}]
 		print("Aftre intial-->",self.initial_data )
 		return super().is_valid(*args, **kwargs)
+
 
 	def create(self, validated_data):
 		#ai_user = self.context["request"].user
@@ -404,6 +407,17 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 
 		return super().to_internal_value(data=data)
+
+	def run_validation(self, data):
+		print("run_validation")
+		print('FILE----->',len(data.get('files')))
+		print('TL-------->',len(data.get("target_languages")))
+		if len(data.get('files'))>20:
+			raise serializers.ValidationError({"msg":"Number of files per project exceeded."})
+		if len(data.get("target_languages"))>20:
+			raise serializers.ValidationError({"msg":"Number of jobs per project exceeded."})
+		return super().run_validation(data=data)
+
 
 	def create(self, validated_data):
 		print("data-->",validated_data)
