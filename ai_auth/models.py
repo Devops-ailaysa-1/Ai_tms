@@ -26,7 +26,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     deactivation_date = models.DateTimeField(null=True,blank=True)
     date_joined = models.DateTimeField(default=timezone.now)
     from_mysql = models.BooleanField(default=False)
-    is_delete = models.BooleanField(default=False)
+    deactivate = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []

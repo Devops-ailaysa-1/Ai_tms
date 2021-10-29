@@ -1065,7 +1065,7 @@ def account_deactivation(request):
     user = AiUser.objects.get(id = user_id )
     present = datetime.now()
     six_mon_rel = relativedelta(months=6)
-    user.is_active = False
+    user.deactivate = True
     user.deactivation_date = present.date()+six_mon_rel
     user.save()
     cancel_subscription(user)
@@ -1078,7 +1078,7 @@ def account_activation(request):
         user = AiUser.objects.get(email = email)
     except:
         return Response({"msg":"User Not Found"},status = 400)
-    user.is_active = True
+    user.deactivate = False
     user.deactivation_date = None
     user.save()
     return JsonResponse({"msg":"user activated successfully"},safe = False)
@@ -1093,7 +1093,7 @@ def account_delete(request):
     if match_check:
         present = datetime.now()
         one_mon_rel = relativedelta(months=1)
-        user.is_delete = True
+        user.is_active = False
         user.deactivation_date = present.date()+one_mon_rel
         user.save()
         cancel_subscription(user)
