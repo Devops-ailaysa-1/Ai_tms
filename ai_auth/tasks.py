@@ -4,8 +4,8 @@ from celery.utils.log import get_task_logger
 import celery
 logger = get_task_logger(__name__)
 from celery.decorators import task
-from .models import AiUser
 from datetime import date
+from .models import AiUser,UserAttribute
 import datetime
 # @shared_task
 # def test_task():
@@ -45,7 +45,12 @@ import datetime
 
 @task
 def delete_inactive_user_account():
-    AiUser.objects.filter(deactivation_date__date = date.today()).delete()
+    # AiUser.objects.filter(deactivation_date__date = date.today()).delete()
+    users_list = AiUser.objects.filter(deactivation_date__date = date.today())
+    for i in users_list:
+        dir = UserAttribute.objects.get(user_id=i.id).allocated_dir
+        os.system("rm -r " +dir)
+        i.delete()
     logger.info("Delete Inactive User")
 
 # @task
