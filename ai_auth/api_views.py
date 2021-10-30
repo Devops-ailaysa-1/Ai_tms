@@ -1058,14 +1058,14 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def account_deactivation(request):
     user_id = request.user.id
     user = AiUser.objects.get(id = user_id )
     present = datetime.now()
     six_mon_rel = relativedelta(months=6)
-    user.is_active = False
+    user.deactivate = True
     user.deactivation_date = present.date()+six_mon_rel
     user.save()
     cancel_subscription(user)
@@ -1078,10 +1078,13 @@ def account_activation(request):
         user = AiUser.objects.get(email = email)
     except:
         return Response({"msg":"User Not Found"},status = 400)
-    user.is_active = True
-    user.deactivation_date = None
-    user.save()
-    return JsonResponse({"msg":"user activated successfully"},safe = False)
+    if user.deactivate == True:
+        user.deactivate = False
+        user.deactivation_date = None
+        user.save()
+        return JsonResponse({"msg":"user activated successfully"},safe = False)
+    else:
+        return JsonResponse({"msg":"no need to call activation.user is already active "})
 
 
 @api_view(['POST'])
@@ -1093,7 +1096,7 @@ def account_delete(request):
     if match_check:
         present = datetime.now()
         one_mon_rel = relativedelta(months=1)
-        user.is_delete = True
+        user.is_active = False
         user.deactivation_date = present.date()+one_mon_rel
         user.save()
         cancel_subscription(user)

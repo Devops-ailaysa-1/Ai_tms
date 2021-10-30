@@ -351,7 +351,7 @@ class File(models.Model):
 
     @property
     def output_file_path(self):
-        return '.out'.join( os.path.splitext(self.get_source_file_path))
+        return '_out'.join( os.path.splitext(self.get_source_file_path))
 
     @property
     def get_file_name(self):

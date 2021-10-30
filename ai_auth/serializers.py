@@ -11,12 +11,16 @@ from ai_auth.models import (AiUser, BillingAddress,UserAttribute,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,VendorOnboarding,GeneralSupport)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
-from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer
+from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from allauth.account.signals import password_changed
 UserModel = get_user_model()
 from .validators import file_size
+try:
+    from django.utils.translation import gettext_lazy as _
+except ImportError:
+    from django.utils.translation import gettext_lazy as _
 import django.contrib.auth.password_validation as validators
 from django.core import exceptions
 from ai_auth.signals import update_billing_address2
@@ -66,6 +70,31 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 
     password_reset_form_class = SendInviteForm
 
+class AiLoginSerializer(LoginSerializer):
+    def validate(self, attrs):
+        username = attrs.get('username')
+        email = attrs.get('email')
+        password = attrs.get('password')
+        user = self.get_auth_user(username, email, password)
+
+        if user:
+            if user.deactivate == True:
+                msg = _('User is deactivated.')
+                raise exceptions.ValidationError(msg)
+
+        if not user:
+            msg = _('Unable to log in with provided credentials.')
+            raise exceptions.ValidationError(msg)
+
+        # Did we get back an active user?
+        self.validate_auth_user_status(user)
+
+        # If required, is the email verified?
+        if 'dj_rest_auth.registration' in settings.INSTALLED_APPS:
+            self.validate_email_verification_status(user)
+
+        attrs['user'] = user
+        return attrs
 
 class AiPasswordChangeSerializer(PasswordChangeSerializer):
        def save(self):
@@ -236,7 +265,6 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
         model = UserModel
         fields = ('pk','is_active', *extra_fields)
         read_only_fields = ('email',)
-
 
 
 class UserProfileSerializer(serializers.ModelSerializer):

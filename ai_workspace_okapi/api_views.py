@@ -314,9 +314,9 @@ class DocumentToFile(views.APIView):
                     if os.path.exists(file_path):
                         with open(file_path, 'rb') as fh:
                             response = HttpResponse(fh.read(), content_type=\
-                                "application/vnd.ms-excel")
+                                "application/vnd.ms-excel")          
                             encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                    encoding='utf-8')
+                                    encoding='utf-8')                             
                             response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
                                                 .format(encoded_filename)
                             response['X-Suggested-Filename'] = encoded_filename
@@ -351,7 +351,7 @@ class DocumentToFile(views.APIView):
             ext = ".xliff"
         if output_type == "TMX":
             ext = ".tmx"
-        task_data["output_file_path"] = pre + ext
+        task_data["output_file_path"] = pre + "(" + task_data["source_language"] + "-" + task_data["target_language"] + ")" + ext
 
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
@@ -367,15 +367,7 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),
             }
         )
-        data_dict = {
-            'document-json-dump': json.dumps(data),
-            "doc_req_res_params": json.dumps(res_paths),
-            "doc_req_params": json.dumps(params_data),
-        }
-        filename = 'wiki'
-        outfile = open(filename,'wb')
-        pickle.dump(data_dict,outfile)
-        outfile.close()
+
         return res
 
 OUTPUT_TYPES = dict(

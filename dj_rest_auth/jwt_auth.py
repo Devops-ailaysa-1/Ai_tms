@@ -121,28 +121,6 @@ class JWTCookieAuthentication(JWTAuthentication):
             raise exceptions.PermissionDenied(f'CSRF Failed: {reason}')
 
 
-    def get_user(self, validated_token):
-        """
-        Attempts to find and return a user using the given validated token.
-        """
-        try:
-            user_id = validated_token[api_settings.USER_ID_CLAIM]
-        except KeyError:
-            raise InvalidToken(_('Token contained no recognizable user identification'))
-
-        try:
-            user = self.user_model.objects.get(**{api_settings.USER_ID_FIELD: user_id})
-        except self.user_model.DoesNotExist:
-            raise AuthenticationFailed(_('User not found'), code='user_not_found')
-
-        if not user.is_active:
-            raise AuthenticationFailed(_('User is inactive'), code='user_inactive')
-
-        #############Need to change#############
-        if user.is_delete:
-            raise AuthenticationFailed(_('User is deleted'), code='user_deleted')
-        return user
-
     def authenticate(self, request):
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', None)
         header = self.get_header(request)

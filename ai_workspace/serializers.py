@@ -11,6 +11,7 @@ from ai_marketplace.models import AvailableVendors
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
 from ai_auth.models import AiUser
+from ai_auth.validators import project_file_size
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -54,6 +55,7 @@ class JobSerializer(serializers.ModelSerializer):
 
 class FileSerializer(serializers.ModelSerializer):
 	project = serializers.IntegerField(required=False, source="project_id")
+	file = serializers.FileField(validators=[project_file_size])
 	class Meta:
 		model = File
 		fields = ("id","usage_type", "file", "project","filename", "get_source_file_path",
@@ -232,15 +234,18 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		print("intial-->",self.initial_data )
 		source_language = json.loads(self.initial_data["source_language"])
 		target_languages = json.loads(self.initial_data["target_languages"])
+		# if len(self.initial_data['tempfiles'])>20:
+		# 	raise serializers.ValidationError({"msg":"Number of files per project exceeded."})
+		# if len(target_languages)>20:
+		# 	raise serializers.ValidationError({"msg":"Number of jobs per project exceeded."})
 		if source_language and target_languages:
 			self.initial_data['langpair'] = [{"source_language": source_language, "target_language": \
 				target_language} for target_language in target_languages]
-		# self.initial_data['langpair'] = json.loads(self.initial_data['langpair'])
 		self.initial_data['tempfiles'] = [{"files":file} for file in self.initial_data\
 			['tempfiles']]
-		# self.initial_data['files'] = [{"file"}]
 		print("Aftre intial-->",self.initial_data )
 		return super().is_valid(*args, **kwargs)
+
 
 	def create(self, validated_data):
 		#ai_user = self.context["request"].user
@@ -405,6 +410,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		return super().to_internal_value(data=data)
 
+
 	def create(self, validated_data):
 		print("data-->",validated_data)
 		if self.context.get("request")!=None:
@@ -429,8 +435,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		jobs_data = validated_data.pop("project_jobs_set")
 
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
-			files_data, jobs_data, f_klass=File, j_klass=Job)
 
+		files_data, jobs_data, f_klass=File, j_klass=Job)
 		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 			project=project)  # For self assign quick setup run)
 
