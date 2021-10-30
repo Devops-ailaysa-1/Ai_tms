@@ -31,31 +31,16 @@ SECRET_KEY = os.getenv("django_secret_key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','143.244.140.71','167.71.235.214','127.0.0.1','49.207.182.133','192.168.0.136',
-'192.168.0.117', "157.245.99.128","djangotest.ailaysa.com", "api.ailaysa.com",]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split()
 
 
 CORS_ORIGIN_ALLOW_ALL= False
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000","http://143.244.140.71", "http://workspacestaging.ailaysa.com", "http://workspace.ailaysa.com",
-     "http://workspacetest.ailaysa.com", "http://workspacecommon.ailaysa.com","http://userportal.ailaysa.com",
-     "http://transeditor.ailaysa.com", "http://static.ailaysa.com", "https://static.ailaysa.com",
-     "https://userportal.ailaysa.com", "https://transeditor.ailaysa.com", "https://transeditorstaging.ailaysa.com",
-     "https://userportalstaging.ailaysa.com", "https://staticstaging.ailaysa.com"
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split()
 
-]
+CORS_ORIGIN_WHITELIST = os.getenv("CORS_ORIGIN_WHITELIST").split()
 
-CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000", "http://157.245.99.128:3000",  "http://workspacestaging.ailaysa.com",
-    "http://143.244.140.71", "http://workspace.ailaysa.com", "http://workspacetest.ailaysa.com",
-    "http://workspacecommon.ailaysa.com","http://userportal.ailaysa.com", "http://transeditor.ailaysa.com",
-    "http://static.ailaysa.com", "https://static.ailaysa.com","https://userportal.ailaysa.com",
-    "https://transeditor.ailaysa.com", "https://transeditorstaging.ailaysa.com", "https://userportalstaging.ailaysa.com",
-    "https://staticstaging.ailaysa.com"
-]
-
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = (True if os.getenv( "CORS_ALLOW_CREDENTIALS" ) == 'True' else False)
 
 
 # JWT_AUTH_COOKIE_USE_CSRF= True
@@ -234,13 +219,13 @@ EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
 
 
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_AUTHENTICATION_METHOD = os.getenv("ACCOUNT_AUTHENTICATION_METHOD")
+ACCOUNT_USERNAME_REQUIRED = (True if os.getenv( "ACCOUNT_USERNAME_REQUIRED" ) == 'True' else False)
+ACCOUNT_EMAIL_REQUIRED = (True if os.getenv( "ACCOUNT_EMAIL_REQUIRED" ) == 'True' else False)
+ACCOUNT_UNIQUE_EMAIL = (True if os.getenv( "ACCOUNT_UNIQUE_EMAIL" ) == 'True' else False)
+ACCOUNT_USER_MODEL_USERNAME_FIELD = os.getenv("ACCOUNT_USER_MODEL_USERNAME_FIELD" )
 
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION")
 
 JWT_AUTH_COOKIE = 'ailaysa-auth'
 JWT_AUTH_REFRESH_COOKIE = 'ailaysa-refresh-token'
@@ -258,11 +243,11 @@ REST_AUTH_SERIALIZERS = {
     'LOGIN_SERIALIZER':'ai_auth.serializers.AiLoginSerializer',
 }
 
-PASSWORD_RESET_URL = "reset-password/"
+PASSWORD_RESET_URL = os.getenv("PASSWORD_RESET_URL")
 
-CLIENT_BASE_URL = "http://userportal.ailaysa.com/"
+CLIENT_BASE_URL = os.getenv("CLIENT_BASE_URL")
 
-SIGNUP_CONFIRM_URL ="http://userportal.ailaysa.com/confirm-email"
+SIGNUP_CONFIRM_URL = os.getenv("SIGNUP_CONFIRM_URL")
 
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
@@ -366,22 +351,21 @@ SIMPLE_JWT = {
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
 
 
-CELERY_BROKER_URL = 'redis://redis:6379/0'
-CELERY_BACKEND_URL = 'redis://redis:6379/0'
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TASK_SERIALIZER = 'json'
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
+CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT").split()
+CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
+CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
 
 
 
-DEFAULT_FROM_EMAIL ="noreply@ailaysa.com"
+DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
 
-
-
+STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
 STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
 STRIPE_LIVE_MODE = (True if os.getenv( "STRIPE_LIVE_MODE" ) == 'True' else False)  # Change to True in production
 DJSTRIPE_WEBHOOK_SECRET = os.getenv( "DJSTRIPE_WEBHOOK_SECRET" )  # Get it from the section in the Stripe dashboard where you added the webhook endpoint
-DJSTRIPE_USE_NATIVE_JSONFIELD = True  # We recommend setting to True for new installations
+DJSTRIPE_USE_NATIVE_JSONFIELD = (True if os.getenv( "DJSTRIPE_USE_NATIVE_JSONFIELD" ) == 'True' else False)  # We recommend setting to True for new installations
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
 
 

@@ -29,6 +29,7 @@ class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
     temp_target = serializers.CharField(read_only=True, source="get_temp_target")
     status = serializers.IntegerField(read_only=True, source="status.status_id")
+    source = serializers.CharField(trim_whitespace=False)
 
     class Meta:
         model = Segment
@@ -67,7 +68,8 @@ class SegmentSerializer(serializers.ModelSerializer):
         return representation
 
 class SegmentSerializerV2(SegmentSerializer):
-    temp_target = serializers.CharField()
+    temp_target = serializers.CharField(trim_whitespace=False)
+    target = serializers.CharField(trim_whitespace=False, required=False)
     status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
     class Meta(SegmentSerializer.Meta):
         fields = ("target", "id", "temp_target", "status")
@@ -85,7 +87,7 @@ class SegmentSerializerV2(SegmentSerializer):
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
-    target = serializers.CharField(read_only=True, source="coded_target")
+    target = serializers.CharField(read_only=True, source="coded_target", trim_whitespace=False)
     class Meta:
         # pass
         model = Segment
@@ -159,7 +161,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
 
     def create(self, validated_data, **kwargs):
-        text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
+        text_unit_ser_data  = validated_data.pop("text_unit_ser", [])  
         document = Document.objects.create(**validated_data)
         for text_unit in text_unit_ser_data:
             segs = text_unit.pop("segment_ser", [])
@@ -175,7 +177,6 @@ class DocumentSerializerV2(DocumentSerializer):
     filename = serializers.CharField(source="file.filename", read_only=True)
 
     def to_internal_value(self, data):
-        print(data)
         job_id=data["job"]
         job = Job.objects.get(id=job_id)
         print(job)
@@ -234,7 +235,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         segment = validated_data["segment"]
         validated_data["mt_raw"]= client.translate(segment.source,
-                                    target_language=segment.target_language_code)\
+                                    target_language=segment.target_language_code, format_="text")\
                                     .get("translatedText")
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
