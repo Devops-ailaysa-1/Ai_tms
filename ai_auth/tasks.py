@@ -45,15 +45,10 @@ import datetime
 
 @task
 def delete_inactive_user_account():
-    # AiUser.objects.filter(deactivation_date__date = date.today()).delete()
+    AiUser.objects.filter(deactivation_date__date = date.today()).delete()
     users_list = AiUser.objects.filter(deactivation_date__date = date.today())
     for i in users_list:
         dir = UserAttribute.objects.get(user_id=i.id).allocated_dir
         os.system("rm -r " +dir)
         i.delete()
     logger.info("Delete Inactive User")
-
-# @task
-# def delete_user_account():
-#     AiUser.objects.filter(deactivation_date__date = date.today()).delete()
-#     logger.info("Delete User")

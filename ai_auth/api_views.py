@@ -1095,9 +1095,9 @@ def account_delete(request):
     match_check = check_password(password_entered,user.password)
     if match_check:
         present = datetime.now()
-        one_mon_rel = relativedelta(months=1)
+        three_mon_rel = relativedelta(months=3)
         user.is_active = False
-        user.deactivation_date = present.date()+one_mon_rel
+        user.deactivation_date = present.date()+three_mon_rel
         user.save()
         cancel_subscription(user)
     else:
