@@ -43,13 +43,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
     @property
     def credit_balance(self):
-        # print("**** inside AiUser credit balance  ****")
         total_credit_left = 0
         present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
-                                             & Q(ended_at=None))
-        if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-            total_credit_left += sub_credits.credits_left
 
         try:
             addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
@@ -58,22 +53,34 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
 
+        try:
+            sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
+                                                & Q(ended_at=None))
+            if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+                total_credit_left += sub_credits.credits_left
+        except:
+            print("No active subscription")
+            return total_credit_left        
+
         return total_credit_left
 
     @property
     def buyed_credits(self):
-        print("**** inside AiUser buyed credits  ****")
         total_buyed_credits = 0
         present = datetime.now()
-        sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-        if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-            total_buyed_credits += sub_credits.buyed_credits
         try:
             addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
                 total_buyed_credits += addon.buyed_credits
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
+        try:
+            sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+            if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+                total_buyed_credits += sub_credits.buyed_credits
+        except:
+            print("No active subscription")
+            return total_buyed_credits
 
         return total_buyed_credits
 
