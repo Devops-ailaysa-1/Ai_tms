@@ -375,11 +375,31 @@ def update_aiuser_billing(custid,address,name=None):
                 addr.country=kwarg['country']
             addr.save()
 
+@webhooks.handler("customer.subscription.deleted")
+def my_handler(event, **kwargs):
+    print("**** customer deleted start *****")
+    print(event.data)
+    data=event.data
+    print("**** customer deleted end *****")
+    custid=data.get('object').get('customer')
+    cust_obj = Customer.objects.get(id=custid)
+    user=cust_obj.subscriber
+    subid=data.get('object').get('id')
+    invoice_obj = Invoice.objects.get(subscription_id=subid)
+    creditsls= models.UserCredits.objects.filter(user=user).filter(Q(invoice=invoice_obj.id))
+    for credit in creditsls:
+        credit.ended_at=timezone.now()
+        credit.save()
+    # invoice=data.get('object').get('id') 
+    # invoice_obj=Invoice.objects.get(id=invoice)
+    #sub=data['object']['lines']['data'][0]['subscription']
 
 def expiry_yearly_sub(sub):
+    '''Montly renewal of Credits for Yearly Subscription'''
     start=sub.current_period_start
     end=sub.current_period_end
     bill_anchor=sub.billing_cycle_anchor
+    #us
     expiry= add_months(bill_anchor,abs((timezone.now().month+1)+(((start.year - end.year)*12)+start.month-end.month)))
     return expiry
 
