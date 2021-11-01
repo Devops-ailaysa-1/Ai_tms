@@ -890,9 +890,19 @@ def user_taxid_delete(taxid):
 def cancel_subscription(user):
     cust=Customer.objects.get(subscriber=user)
     subs = cust.subscriptions.all()
-    for sub in subs:
-        sub.cancel(at_period_end=True)
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
 
+    stripe.api_key = api_key
+
+    for sub in subs:
+        if sub.status == 'active' or 'trialing':
+            stripe.Subscription.modify(
+            sub.id,
+            cancel_at_period_end=True
+            )
 
 
 class UserTaxInfoView(viewsets.ViewSet):
