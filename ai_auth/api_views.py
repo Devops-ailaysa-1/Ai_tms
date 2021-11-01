@@ -987,15 +987,15 @@ class AiUserProfileView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self, request, pk=None):
+    def update(self, request, pk):
         try:
-            queryset = AiUserProfile.objects.get(id=pk)
-        except UserTaxInfo.DoesNotExist:
+            queryset = AiUserProfile.objects.get(Q(id=pk) & Q(user_id = request.user.id))
+        except AiUserProfile.DoesNotExist:
             return Response(status=204)
         serializer =AiUserProfileSerializer(queryset,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response({"Msg":"Profile Updated"})
+            return Response({"user_profile_id":pk,"msg":"profile updated"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
