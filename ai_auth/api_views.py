@@ -898,7 +898,7 @@ def cancel_subscription(user):
     stripe.api_key = api_key
 
     for sub in subs:
-        if sub.status == 'active' or 'trialing':
+        if sub.status == 'active' or sub.status =='trialing':
             stripe.Subscription.modify(
             sub.id,
             cancel_at_period_end=True
