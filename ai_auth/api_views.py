@@ -276,7 +276,10 @@ class CustomerSupportCreateView(viewsets.ViewSet):
         id = request.user.id
         email = AiUser.objects.get(id=id).email
         support_type = request.POST.get("support_type")
-        support_type_name = SupportType.objects.get(id=support_type).support_type
+        try:
+            support_type_name = SupportType.objects.get(id=support_type).support_type
+        except:
+            support_type_name = None
         description = request.POST.get("description")
         timestamp = date.today()
         serializer = CustomerSupportSerializer(data={**request.POST.dict(),'user':id})

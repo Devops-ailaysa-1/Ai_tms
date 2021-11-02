@@ -176,7 +176,7 @@ class UserProfile(models.Model):
 class CustomerSupport(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
     support_type = models.ForeignKey(SupportType,on_delete=models.CASCADE)
-    description = models.TextField(max_length=1000, blank=True, null=True)
+    description = models.TextField(max_length=1000)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
 class ContactPricing(models.Model):
