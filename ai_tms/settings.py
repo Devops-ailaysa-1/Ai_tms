@@ -29,7 +29,7 @@ TEMPLATE_DIR_4 = os.path.join(BASE_DIR,'ai_auth','templates')
 SECRET_KEY = os.getenv("django_secret_key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split()
 

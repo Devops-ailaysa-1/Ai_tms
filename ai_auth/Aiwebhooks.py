@@ -396,12 +396,15 @@ def my_handler(event, **kwargs):
 
 def expiry_yearly_sub(sub):
     '''Montly renewal of Credits for Yearly Subscription'''
-    start=sub.current_period_start
-    end=sub.current_period_end
-    bill_anchor=sub.billing_cycle_anchor
-    #us
-    expiry= add_months(bill_anchor,abs((timezone.now().month+1)+(((start.year - end.year)*12)+start.month-end.month)))
+    start=sub.billing_cycle_anchor
+    end=timezone.now()
+    if start.day != end.day:
+        print("This is Not bill date")
+
+    print("no of months",abs(((start.year - end.year)*12)+start.month-end.month)+1)
+    expiry= add_months(start,abs(((start.year - end.year)*12)+start.month-end.month)+1)
     return expiry
+
 
 
 def add_months(sourcedate, months):
