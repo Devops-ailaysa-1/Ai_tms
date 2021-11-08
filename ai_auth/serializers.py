@@ -70,31 +70,31 @@ class AiPasswordResetSerializer(PasswordResetSerializer):
 
     password_reset_form_class = SendInviteForm
 
-class AiLoginSerializer(LoginSerializer):
-    def validate(self, attrs):
-        username = attrs.get('username')
-        email = attrs.get('email')
-        password = attrs.get('password')
-        user = self.get_auth_user(username, email, password)
-
-        if user:
-            if user.deactivate == True:
-                msg = _('User is deactivated.')
-                raise exceptions.ValidationError(msg)
-
-        if not user:
-            msg = _('Unable to log in with provided credentials.')
-            raise exceptions.ValidationError(msg)
-
-        # Did we get back an active user?
-        self.validate_auth_user_status(user)
-
-        # If required, is the email verified?
-        if 'dj_rest_auth.registration' in settings.INSTALLED_APPS:
-            self.validate_email_verification_status(user)
-
-        attrs['user'] = user
-        return attrs
+# class AiLoginSerializer(LoginSerializer):
+#     def validate(self, attrs):
+#         username = attrs.get('username')
+#         email = attrs.get('email')
+#         password = attrs.get('password')
+#         user = self.get_auth_user(username, email, password)
+#
+#         if user:
+#             if user.deactivate == True:
+#                 msg = _('User is deactivated.')
+#                 raise exceptions.ValidationError(msg)
+#
+#         if not user:
+#             msg = _('Unable to log in with provided credentials.')
+#             raise exceptions.ValidationError(msg)
+#
+#         # Did we get back an active user?
+#         self.validate_auth_user_status(user)
+#
+#         # If required, is the email verified?
+#         if 'dj_rest_auth.registration' in settings.INSTALLED_APPS:
+#             self.validate_email_verification_status(user)
+#
+#         attrs['user'] = user
+#         return attrs
 
 class AiPasswordChangeSerializer(PasswordChangeSerializer):
        def save(self):
@@ -263,7 +263,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
         if hasattr(UserModel, 'country'):
             extra_fields.append('country')
         model = UserModel
-        fields = ('pk','is_active', *extra_fields)
+        fields = ('pk','deactivate', *extra_fields)
         read_only_fields = ('email',)
 
 
