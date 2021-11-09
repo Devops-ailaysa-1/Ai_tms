@@ -11,7 +11,6 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
 # from .tasks import email_send_task
-
 from django.contrib.sites.shortcuts import get_current_site
 from datetime import date
 
@@ -35,9 +34,9 @@ class SendInviteForm(ResetPasswordForm):
         msg_plain = render_to_string("account/email/password_reset_email.txt", context)
         msg_html = render_to_string("account/email/password_reset_email.html", context)
         send_mail(
-            "Password Reset",
+            "Ailaysa : Password Reset",
             msg_plain,
-            'noreply@ailaysa.com',
+           settings.DEFAULT_FROM_EMAIL,
             [email],
             html_message=msg_html,
         )
@@ -115,7 +114,7 @@ def send_welcome_mail(current_site,user):
     send_mail(
         "Welcome to Ailaysa!",
         msg_plain,
-        'noreply@ailaysa.com',
+       settings.DEFAULT_FROM_EMAIL,
         [email],
         html_message=msg_html,
     )
@@ -134,7 +133,7 @@ def send_password_change_mail(current_site,user):
     send_mail(
         "Password change",
         msg_plain,
-        'noreply@ailaysa.com',
+        settings.DEFAULT_FROM_EMAIL,
         [email],
         html_message=msg_html,
     )
