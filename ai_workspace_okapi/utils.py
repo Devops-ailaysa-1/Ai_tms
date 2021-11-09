@@ -71,6 +71,8 @@ def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
 
     ids_dict =  { id:ids_list.count(id) for id in ids_set}
 
+    ids_dict_for_single_tag = {id:run for run, id in runs_and_ref_ids}
+
     for id, count in ids_dict.items():
         if count == 2:
             open_tag = "<"+str(id)+">"
@@ -84,7 +86,20 @@ def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
                 ) or \
                 (text_content.index(open_tag)>text_content\
                 .index(close_tag))):
+                text_content = text_content.replace(open_tag,'')
+                text_content = text_content.replace(close_tag, '')
                 text_content = open_tag+close_tag+text_content
+
+        else:
+            run = ids_dict_for_single_tag.get(id)
+            if "\ue101" in run:
+                tag = "<" + str(id) + ">"
+            else:
+                tag = "</" + str(id) + ">"
+
+            if tag not in text_content:
+                text_content = tag+text_content
+
 
     missed_ref_ids = []
 
@@ -102,5 +117,3 @@ def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
         text_content = text_content.replace(run_id_tag, run)
 
     return text_content
-
-
