@@ -3,6 +3,8 @@ from allauth.account.adapter import DefaultAccountAdapter
 from django.contrib.sites.shortcuts import get_current_site
 from urllib.parse import urljoin
 from os.path import join
+from django.utils.encoding import force_str
+from allauth.account import app_settings
 
 class MyAccountAdapter(DefaultAccountAdapter):
 
@@ -42,3 +44,11 @@ class MyAccountAdapter(DefaultAccountAdapter):
             email_template = "account/email/email_confirmation"
 
         self.send_mail(email_template, emailconfirmation.email_address.email, ctx)
+
+
+    # def format_email_subject(self, subject):
+    #     prefix = app_settings.EMAIL_SUBJECT_PREFIX
+    #     if prefix is None:
+    #         site = get_current_site(self.request)
+    #         prefix = "{name}".format(name=site.name)
+    #     return prefix + force_str(subject)
