@@ -227,28 +227,30 @@ class MT_RawAndTM_View(views.APIView):
         sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
                                 & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
 
-        if sub_active == None:
+        # if sub_active == None:
         # Only when there an active subscription, MT should be applied though addons are present
-            initial_credit = request.user.credit_balance
-            text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
-            doc = TextUnit.objects.get(id=text_unit_id).document
-            word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
 
-            consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
+        initial_credit = request.user.credit_balance
+        text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
+        doc = TextUnit.objects.get(id=text_unit_id).document
+        word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
 
-            if initial_credit > consumable_credits :
-                mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
-                                context={"request": request})
-                if mt_raw_serlzr.is_valid(raise_exception=True):
-                    # mt_raw_serlzr.validated_data[""]
-                    mt_raw_serlzr.save()
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
-                    print("DEBIT STATUS -----> ", debit_status["msg"])
-                    return mt_raw_serlzr.data, 201
-            else:
-                return {"data":"Insufficient credits for MT"}, 424
+        consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
+
+        if initial_credit > consumable_credits :
+            mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
+                            context={"request": request})
+            if mt_raw_serlzr.is_valid(raise_exception=True):
+                # mt_raw_serlzr.validated_data[""]
+                mt_raw_serlzr.save()
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
+                print("DEBIT STATUS -----> ", debit_status["msg"])
+                return mt_raw_serlzr.data, 201
         else:
-            return {"data":"No active subscription"}, 424
+            return {"data":"MT doesn't work as the credits are insufficient. Please buy more or upgrade."}, 424
+
+        # else:
+        #     return {"data":"No active subscription"}, 424
 
     @staticmethod
     def get_tm_data(request, segment_id):
