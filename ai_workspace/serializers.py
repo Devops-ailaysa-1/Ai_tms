@@ -399,7 +399,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name", "jobs", "files")#,'ai_user')
+		fields = ("id", "project_name", "jobs", "files")#,'ai_user')
 
 	def to_internal_value(self, data):
 		data["project_name"] = data.get("project_name", [None])[0]
