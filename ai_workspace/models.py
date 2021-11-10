@@ -106,7 +106,8 @@ class Project(models.Model):
             objects.filter(ai_user=self.ai_user).count()+1)
 
         if not self.project_name:
-            self.project_name = self.ai_project_id
+            #self.project_name = self.ai_project_id
+            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
 
         if self.id:
             project_count = Project.objects.filter(project_name=self.project_name, \
