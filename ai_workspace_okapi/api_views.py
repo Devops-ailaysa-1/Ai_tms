@@ -122,7 +122,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     print(task_credit_status.errors)
             else:
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                raise  ValueError("Something wrong with file processing!!!")
+                raise  ValueError("Sorry! Something went wrong with file processing.")
 
         elif (not document):
             document = Document.objects.get(job=task.job, file=task.file)
@@ -324,7 +324,7 @@ class DocumentToFile(views.APIView):
                             response["Access-Control-Allow-Headers"] = "*"
                             print("cont-disp--->", response.get("Content-Disposition"))
                             return response
-            return JsonResponse({"msg": "Something wrong with file processing"},\
+            return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
