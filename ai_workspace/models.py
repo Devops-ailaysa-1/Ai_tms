@@ -124,6 +124,10 @@ class Project(models.Model):
     @property
     def ref_files(self):
         return self.project_ref_files_set.all()
+    
+    @property
+    def files_count(self):
+        return self.project_files_set.all().count()
 
     @property
     def progress(self):
@@ -153,7 +157,7 @@ class Project(models.Model):
             ( # jobs will not exceed 100nos, and files will not exceed 10nos,
             # so all() functionality used...
             self.project_jobs_set.all(),
-            self.project_files_set.all())
+            self.project_files_set.all()) 
 
     @property
     def _assign_tasks_url(self):
