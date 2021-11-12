@@ -384,7 +384,7 @@ class LanguagesView(APIView):
             raise Http404
 
     def get(self, request, format=None):
-        queryset = Languages.objects.all()
+        queryset = Languages.objects.all().order_by('language')
         serializer = LanguagesSerializer(queryset, many=True)
         return Response(serializer.data)
 

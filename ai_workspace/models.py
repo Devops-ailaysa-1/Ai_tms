@@ -106,7 +106,8 @@ class Project(models.Model):
             objects.filter(ai_user=self.ai_user).count()+1)
 
         if not self.project_name:
-            self.project_name = self.ai_project_id
+            #self.project_name = self.ai_project_id
+            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
 
         if self.id:
             project_count = Project.objects.filter(project_name=self.project_name, \
@@ -123,6 +124,10 @@ class Project(models.Model):
     @property
     def ref_files(self):
         return self.project_ref_files_set.all()
+    
+    @property
+    def files_count(self):
+        return self.project_files_set.all().count()
 
     @property
     def progress(self):
@@ -152,7 +157,7 @@ class Project(models.Model):
             ( # jobs will not exceed 100nos, and files will not exceed 10nos,
             # so all() functionality used...
             self.project_jobs_set.all(),
-            self.project_files_set.all())
+            self.project_files_set.all()) 
 
     @property
     def _assign_tasks_url(self):
@@ -162,6 +167,10 @@ class Project(models.Model):
     def get_tasks(self):
         return [task for job in self.project_jobs_set.all() for task \
             in job.job_tasks_set.all()]
+    @property
+    def tasks_count(self):
+        return len([task for job in self.project_jobs_set.all() for task \
+            in job.job_tasks_set.all()])
 
     @property
     def files_jobs_choice_url(self):
