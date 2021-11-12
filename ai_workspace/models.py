@@ -167,6 +167,10 @@ class Project(models.Model):
     def get_tasks(self):
         return [task for job in self.project_jobs_set.all() for task \
             in job.job_tasks_set.all()]
+    @property
+    def tasks_count(self):
+        return len([task for job in self.project_jobs_set.all() for task \
+            in job.job_tasks_set.all()])
 
     @property
     def files_jobs_choice_url(self):
