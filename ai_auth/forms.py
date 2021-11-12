@@ -34,7 +34,7 @@ class SendInviteForm(ResetPasswordForm):
         msg_plain = render_to_string("account/email/password_reset_email.txt", context)
         msg_html = render_to_string("account/email/password_reset_email.html", context)
         send_mail(
-            "Ailaysa : Password Reset",
+            "Password Reset",
             msg_plain,
            settings.DEFAULT_FROM_EMAIL,
             [email],

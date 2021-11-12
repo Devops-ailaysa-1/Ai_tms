@@ -461,14 +461,14 @@ def find_taxrate(user,trial=False):
          tax_rate=None
     else:
         if user.country.sortname == 'IN':
-            # addr=BillingAddress.objects.get(user=user)
-            # print(addr.state)
-            # state = IndianStates.objects.filter(state_name__icontains=addr.state)
-            # if state.exists() and state.first().state_code == 'TN':
-            #     tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
-            # elif state.exists():
-            #     tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
-            tax_rate=[TaxRate.objects.get(display_name = 'GST',description='IN GST').id,]
+            addr=BillingAddress.objects.get(user=user)
+            print(addr.state)
+            state = IndianStates.objects.filter(state_name__icontains=addr.state)
+            if state.exists() and state.first().state_code == 'TN':
+                tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+            elif state.exists():
+                tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+            #tax_rate=[TaxRate.objects.get(display_name = 'GST',description='IN GST').id,]
         else:
             tax_rate=None
     return tax_rate
