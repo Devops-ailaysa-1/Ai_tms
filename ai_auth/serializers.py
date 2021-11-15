@@ -213,15 +213,16 @@ class ProfessionalidentitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Professionalidentity
-        fields = ( 'id','avatar','logo','header')
+        fields = "__all__"
+        # fields = ( 'id','avatar','logo','header')
         #read_only_fields = ('id','created_at','updated_at')
 
 
-    def create(self, validated_data):
-        request = self.context['request']
-        print("validated data ",validated_data)
-        identity = Professionalidentity.objects.create(**validated_data,user=request.user)
-        return identity
+    # def create(self, validated_data):
+    #     request = self.context['request']
+    #     print("validated data ",validated_data)
+    #     identity = Professionalidentity.objects.create(**validated_data,user=request.user)
+    #     return identity
 
     # def save(self, *args, **kwargs):
     #     if self.instance.avatar:

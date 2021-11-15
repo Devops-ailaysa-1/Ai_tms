@@ -187,10 +187,9 @@ class ProfessionalidentityView(APIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        # print(request.data)
-        # print(request.data.get('logo'))
-        # print("files",request.FILES.get('logo'))
-        serializer = ProfessionalidentitySerializer(data=request.data, context={'request':request})
+        id = request.user.id
+        avatar = request.FILES.get('avatar')
+        serializer = ProfessionalidentitySerializer(data={**request.POST.dict(),'user':id,'avatar':avatar})
         if serializer.is_valid():
             try:
                 serializer.save()
@@ -599,7 +598,7 @@ def generate_portal_session(customer):
 
 # def check_active_user(func):
 #     def decorator(*args, **kwargs):
-#         if 
+#         if
 #         try:
 #             return func(*args, **kwargs)
 #         except IntegrityError as e:
@@ -611,7 +610,7 @@ def generate_portal_session(customer):
 def is_deactivated(user):
     "To be Changed To decorator"
     return user.deactivate == True
-    
+
 
 # def update_billing_address(address):
 #     if settings.STRIPE_LIVE_MODE == True :
@@ -660,7 +659,7 @@ def is_deactivated(user):
 def buy_addon(request):
     user = request.user
     if is_deactivated(user):
-        return Response({'msg':'User is not active'}, status=423) 
+        return Response({'msg':'User is not active'}, status=423)
     quantity=request.POST.get('quantity',1)
     try:
         price = Price.objects.get(id=request.POST.get('price'))
