@@ -247,7 +247,7 @@ class MT_RawAndTM_View(views.APIView):
                 print("DEBIT STATUS -----> ", debit_status["msg"])
                 return mt_raw_serlzr.data, 201
         else:
-            return {"data":"MT doesn't work as the credits are insufficient. Please buy more or upgrade."}, 424
+            return {}, 424
 
         # else:
         #     return {"data":"No active subscription"}, 424
@@ -267,8 +267,10 @@ class MT_RawAndTM_View(views.APIView):
 
     def get(self, request, segment_id):
         data, status_code = self.get_data(request, segment_id)
+        mt_alert = True if status_code == 424 else False
+        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if status_code == 424 else ""
         tm_data = self.get_tm_data(request, segment_id)
-        return Response({**data, "tm":tm_data}, status=status_code)
+        return Response({**data, "tm":tm_data, "mt_alert": mt_alert, "alert_msg":alert_msg}, status=status_code)
 
 class ConcordanceSearchView(views.APIView):
 
