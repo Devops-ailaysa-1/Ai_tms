@@ -85,6 +85,31 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
+    
+    @staticmethod
+    def okapi_response_to_file(data):
+        with open('okapi_data.json', 'w') as f:
+            json.dump(data, f)
+        pass
+    
+    @staticmethod
+    def fetch_first_20_segments():
+        f = open('okapi_data.json',)
+        okapi_data = json.load(f)
+        seg_data = okapi_data.get("text", 0)
+        print("*seg data --->", seg_data)
+        count = 0
+        replace_dict = {}
+        for key, value in seg_data.items():
+            count += len(value)
+            if count <= 20:
+                replace_dict.update({key:value})
+            else:
+                break
+        print("REPLCE DICT ---> ", replace_dict)
+        okapi_data["text"] = replace_dict
+        return okapi_data
+            
 
     @staticmethod
     def create_document_for_task_if_not_exists(task, request):
@@ -104,10 +129,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
+                DocumentViewByTask.okapi_response_to_file(doc_data)                
+                first_20_data = DocumentViewByTask.fetch_first_20_segments()
                 total_char_count = doc_data.get("total_char_count", 0)
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
-                serializer = (DocumentSerializerV2(data={**doc_data,\
+                # serializer = (DocumentSerializerV2(data={**doc_data,\
+                serializer = (DocumentSerializerV2(data={**first_20_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
                 if serializer.is_valid(raise_exception=True):
