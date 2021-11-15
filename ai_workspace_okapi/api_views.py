@@ -134,8 +134,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_char_count = doc_data.get("total_char_count", 0)
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
-                # serializer = (DocumentSerializerV2(data={**doc_data,\
-                serializer = (DocumentSerializerV2(data={**first_20_data,\
+                serializer = (DocumentSerializerV2(data={**doc_data,\
+                # serializer = (DocumentSerializerV2(data={**first_20_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 }, context={"request": request}))
                 if serializer.is_valid(raise_exception=True):
