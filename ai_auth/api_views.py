@@ -597,6 +597,21 @@ def generate_portal_session(customer):
     )
     return session
 
+# def check_active_user(func):
+#     def decorator(*args, **kwargs):
+#         if 
+#         try:
+#             return func(*args, **kwargs)
+#         except IntegrityError as e:
+#             print("error---->", e)
+#             return Response({'message': "integrirty error"}, 409)
+
+#     return decorator
+
+def is_deactivated(user):
+    "To be Changed To decorator"
+    return user.deactivate == True
+    
 
 # def update_billing_address(address):
 #     if settings.STRIPE_LIVE_MODE == True :
@@ -644,6 +659,8 @@ def generate_portal_session(customer):
 @permission_classes([IsAuthenticated])
 def buy_addon(request):
     user = request.user
+    if is_deactivated(user):
+        return Response({'msg':'User is not active'}, status=423) 
     quantity=request.POST.get('quantity',1)
     try:
         price = Price.objects.get(id=request.POST.get('price'))
@@ -744,6 +761,8 @@ def check_subscription(request):
 @permission_classes([IsAuthenticated])
 def buy_subscription(request):
     user = request.user
+    if is_deactivated(user):
+        return Response({'msg':'User is not active'}, status=423)
     try:
         price = Price.objects.get(id=request.POST.get('price'))
         #addr = BillingAddress.objects.get(user=request.user)
@@ -751,7 +770,6 @@ def buy_subscription(request):
         return Response({'msg':'Invalid price'}, status=406)
     #except BillingAddress.DoesNotExist:
         # return Response({'Error':'Billing Address Not Found'}, status=412)
-        pass
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)
