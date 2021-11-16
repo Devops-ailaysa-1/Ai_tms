@@ -194,7 +194,8 @@ class DocumentSerializerV2(DocumentSerializer):
                   "total_word_count", "total_char_count",
                   "total_segment_count", "created_by", "document_id",
                   "source_language", "target_language", "source_language_id",
-                  "target_language_id", "source_language_code", "target_language_code", "doc_credit_check_open_alert"
+                  "target_language_id", "source_language_code", "target_language_code", "doc_credit_check_open_alert",
+                  "is_first_doc_view",
                   )
 
 class DocumentSerializerV3(DocumentSerializerV2):
