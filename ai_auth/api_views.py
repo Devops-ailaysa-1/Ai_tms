@@ -423,11 +423,11 @@ def create_checkout_session(user,price,customer=None,trial=False):
     #if user.billing
     # print("tax_rate",tax_rate)
     # print("user country>>",user.country.sortname)
-    try:
-        BillingAddress.objects.get(user=user)
-        addr_collect='auto'
-    except BillingAddress.DoesNotExist:
-        addr_collect= 'required'
+    # try:
+    #     BillingAddress.objects.get(user=user)
+    #     addr_collect='auto'
+    # except BillingAddress.DoesNotExist:
+    #     addr_collect= 'required'
 
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
@@ -444,9 +444,9 @@ def create_checkout_session(user,price,customer=None,trial=False):
                 'tax_rates':tax_rate,
             }
         ],
-        billing_address_collection=addr_collect,
-        customer_update={'address':'auto','name':'auto'},
-        tax_id_collection={'enabled':'True'},
+        #billing_address_collection=addr_collect,
+        customer_update={'address':'never','name':'never'},
+        #tax_id_collection={'enabled':'True'},
         subscription_data={
         'default_tax_rates':tax_rate,
         'trial_end':None,
@@ -509,11 +509,11 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
         api_key = settings.STRIPE_TEST_SECRET_KEY
 
     stripe.api_key = api_key
-    try:
-        BillingAddress.objects.get(user=Aicustomer.subscriber)
-        addr_collect='auto'
-    except BillingAddress.DoesNotExist:
-        addr_collect= 'required'
+    # try:
+    #     BillingAddress.objects.get(user=Aicustomer.subscriber)
+    #     addr_collect='auto'
+    # except BillingAddress.DoesNotExist:
+    #     addr_collect= 'required'
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=Aicustomer.subscriber,
         success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
@@ -521,9 +521,9 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
         payment_method_types=['card'],
         mode='payment',
         customer = Aicustomer.id,
-        billing_address_collection=addr_collect,
-        customer_update={'address':'auto','name':'auto'},
-        tax_id_collection={'enabled':'True'},
+        #billing_address_collection=addr_collect,
+        customer_update={'address':'never','name':'never'},
+        #tax_id_collection={'enabled':'True'},
         line_items=[
             {
                 'price': price.id,
@@ -667,6 +667,10 @@ def buy_addon(request):
          return Response({'msg':'Invalid price'}, status=406)
 
     cust=Customer.objects.get(subscriber=user)
+    try:
+        addr=BillingAddress.objects.get(user=user)
+    except BillingAddress.DoesNotExist:
+        return Response({'Error':'Billing Address Not Found'}, status=412)
     tax_rate=find_taxrate(user)
     # if user.country.sortname == 'IN':
     #     try:
@@ -764,11 +768,11 @@ def buy_subscription(request):
         return Response({'msg':'User is not active'}, status=423)
     try:
         price = Price.objects.get(id=request.POST.get('price'))
-        #addr = BillingAddress.objects.get(user=request.user)
+        addr = BillingAddress.objects.get(user=request.user)
     except (KeyError,Price.DoesNotExist) :
         return Response({'msg':'Invalid price'}, status=406)
-    #except BillingAddress.DoesNotExist:
-        # return Response({'Error':'Billing Address Not Found'}, status=412)
+    except BillingAddress.DoesNotExist:
+        return Response({'Error':'Billing Address Not Found'}, status=412)
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
         customer= Customer.objects.get(subscriber=user)
