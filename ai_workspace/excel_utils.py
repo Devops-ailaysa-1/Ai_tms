@@ -33,8 +33,8 @@ def WriteToExcel_lite():
     worksheet_s.protect()
     # write header
     worksheet_s.write(0, 1, ugettext("ID"), header)
-    worksheet_s.write(0, 2, ugettext("SourceLanguage_Term"),unlocked)
-    worksheet_s.write(0, 3, ugettext("TargetLanguage_Term"),unlocked)
+    worksheet_s.write(0, 2, ugettext("Source language term"),unlocked)
+    worksheet_s.write(0, 3, ugettext("Target language term"),unlocked)
 
 
     # column widths
