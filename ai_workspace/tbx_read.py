@@ -137,13 +137,15 @@ def upload_template_data_to_db(file_id, job_id):
                     # data[0],          #Blank column
                     data[1],            #Autoincremented in the model
                     sl_term = data[2].strip(),    #SL term column
-                    tl_term = data[3].strip()    #TL term column
+                    tl_term = data[3].strip()     #TL term column
             )
             value.job_id = job_id
             value.file_id = file_id
             value.save()
+        return True
     except Exception as e:
-        print(e)
+        print("Exception in uploading terms ----> ", e)
+        return False
 
 def user_tbx_write(job_id,project_id):
     try:
@@ -189,4 +191,4 @@ def user_tbx_write(job_id,project_id):
 
     except Exception as e:
         print("Exception1-->", e)
-        return Response(data={"Message":"TBX file Not ready"})
+        return Response(data={"Message":"Something wrong in TBX conversion"})

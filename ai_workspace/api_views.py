@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_auth.models import AiUser, UserCredits
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
     ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
@@ -765,20 +765,23 @@ class TbxTemplateUploadView(APIView):
             saved_data = serializer.data
             file_id = saved_data.get("id")
             job_id = prep_data["job"]
-            upload_template_data_to_db(file_id, job_id)
-            tbx_file = user_tbx_write(job_id, project_id)
-            fl = open(tbx_file, 'rb')
-            file_obj1 = DJFile(fl) #,name=os.path.basename(tbx_file))
-            serializer2 = TbxFileSerializer(data={'tbx_file':file_obj1,'project':project_id,'job':job_id})
-            print("TBX serializer---->", serializer2.is_valid())
-            if serializer2.is_valid():
-                serializer2.save()
+            if bool(upload_template_data_to_db(file_id, job_id)):
+                tbx_file = user_tbx_write(job_id, project_id)
+                fl = open(tbx_file, 'rb')
+                file_obj1 = DJFile(fl) #,name=os.path.basename(tbx_file))
+                serializer2 = TbxFileSerializer(data={'tbx_file':file_obj1,'project':project_id,'job':job_id})
+                print("TBX serializer---->", serializer2.is_valid())
+                if serializer2.is_valid():
+                    serializer2.save()
+                else:
+                    return Response(serializer2.errors)
+                fl.close()
+                TemplateTermsModel.objects.filter(job_id = job_id).delete()
+                os.remove(os.path.abspath(tbx_file))
+                return Response({'msg':"Template File uploaded and TBX created & uploaded","data":serializer.data})#,"tbx_file":tbx_file})
             else:
-                return Response(serializer2.errors)
-            fl.close()
-            TemplateTermsModel.objects.filter(job_id = job_id).delete()
-            os.remove(os.path.abspath(tbx_file))
-            return Response({'msg':"Template File uploaded and TBX created & uploaded","data":serializer.data})#,"tbx_file":tbx_file})
+                return Response({'msg':"Something wrong in TBX conversion. Use glossary template to upload terms", "data":{}},
+                        status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(serializer.errors)
 
