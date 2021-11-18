@@ -29,7 +29,7 @@ class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
     temp_target = serializers.CharField(read_only=True, source="get_temp_target")
     status = serializers.IntegerField(read_only=True, source="status.status_id")
-    source = serializers.CharField(trim_whitespace=False)
+    source = serializers.CharField(trim_whitespace=False, allow_blank=True)
 
     class Meta:
         model = Segment
