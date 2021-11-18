@@ -464,9 +464,9 @@ def find_taxrate(user,trial=False):
             print(addr.state)
             state = IndianStates.objects.filter(state_name__icontains=addr.state)
             if state.exists() and state.first().state_code == 'TN':
-                tax_rate=[TaxRate.objects.get(display_name = 'CGST').id,TaxRate.objects.get(display_name = 'SGST').id]
+                tax_rate=[TaxRate.objects.filter(display_name = 'CGST').last().id,TaxRate.objects.filter(display_name = 'SGST').last().id]
             elif state.exists():
-                tax_rate=[TaxRate.objects.get(display_name = 'IGST').id,]
+                tax_rate=[TaxRate.objects.filter(display_name = 'IGST').last().id,]
             #tax_rate=[TaxRate.objects.get(display_name = 'GST',description='IN GST').id,]
         else:
             tax_rate=None
