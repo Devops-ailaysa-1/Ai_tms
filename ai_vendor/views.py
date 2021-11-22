@@ -23,7 +23,7 @@ from .serializers import (ServiceExpertiseSerializer,
                           )
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
-                            MtpeEngines, SubjectFields,ServiceTypeunits)
+                            MtpeEngines, SubjectFields,ServiceTypeunits, LanguageMetaDetails)
 from ai_auth.models import AiUser, Professionalidentity
 import json,requests
 from django.http import JsonResponse
@@ -223,18 +223,22 @@ class VendorsBankInfoCreateView(APIView):
 
 
 @api_view(['GET','POST',])
-def SpellCheckerApiCheck(request):
+def feature_availability(request):
     doc_id= request.POST.get("doc_id")
-    job_id = Document.objects.get(id=doc_id).job_id
-    target_lang_id = Job.objects.get(id=job_id).target_language_id
-    print(target_lang_id)
+    target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
     try:
         spellchecker_id = SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
-        print(spellchecker_id)
         data=1
-    except:
-        data=0
-    return JsonResponse({"out":data}, safe = False)
+    except: data=0
+    # if LanguageMetaDetails.objects.get(language_id=target_lang_id).script_id == None:
+    #     show_ime = True # Show IME only for languages OTHER THAN Roman & Cyrillic script languages
+    # else:
+    #     show_ime = False
+    if target_lang_id in [ 17, 22, 26, 63, 66, 73 ]: #temporarily hard-coded, later will be queried from language meta details model
+         show_ime = False
+    else:
+        show_ime = True
+    return JsonResponse({"out":data, "show_ime":show_ime}, safe = False)
 
 @api_view(['GET',])
 def vendor_legal_categories_list(request):

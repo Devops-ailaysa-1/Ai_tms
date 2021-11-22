@@ -129,7 +129,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
-                print("From spring ----> ", doc_data)
                 DocumentViewByTask.okapi_response_to_file(doc_data)                
                 first_40_data = DocumentViewByTask.fetch_first_40_segments()
                 total_char_count = doc_data.get("total_char_count", 0)
@@ -233,6 +232,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def update_pentm(self, segment):
         data = PentmUpdateSerializer(segment).data
         res = requests.post(f"http://{spring_host}:8080/project/pentm/update", data=data)
+        # # res = requests.post(f"http://host.docker.internal:8080/project/pentm/update", data=data)
+        # res = requests.post(f"http://172.17.0.1:8080/project/pentm/update", data=data)
+        print("Response from spring --- >", res.json())
         if res.status_code == 200:
             print("res text--->", res.json())
         else:

@@ -457,7 +457,7 @@ class TmxFileView(viewsets.ViewSet):
                     ser.save()
             return JsonResponse(res.json(), safe=False)
         else:
-            return JsonResponse({"msg": "Something went to wrong in tmx to pentm processing"}, status=res.status_code)
+            return JsonResponse({"msg": "Something wrong with file processing"}, status=res.status_code)
 
     def create(self, request):
         data = {**request.POST.dict(), "tmx_files": request.FILES.getlist("tmx_files")}

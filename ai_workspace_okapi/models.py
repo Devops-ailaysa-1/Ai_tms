@@ -5,7 +5,7 @@ from django.db.models.signals import post_save, pre_save
 from .signals import set_segment_tags_in_source_and_target
 import json
 from ai_auth.models import AiUser
-from ai_staff.models import Languages
+from ai_staff.models import LanguageMetaDetails, Languages
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
 from django.utils.functional import cached_property
 
@@ -178,7 +178,12 @@ class Document(models.Model):
 
     @property
     def target_language(self):
-        return str(self.job.target_language)
+        return str(self.job.target_language)        
+    
+    # @property
+    # def target_language_script(self):
+    #     target_lang_id = self.job.target_language.id
+    #     return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script        
 
     @property
     def source_language_id(self):

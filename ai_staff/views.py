@@ -12,7 +12,8 @@ from tablib import Dataset
 from .forms import UploadFileForm
 from .models import (AiUserType, Billingunits, ContentTypes, Countries,
                      Currencies, Languages, LanguagesLocale, MtpeEngines,
-                     ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates,StripeTaxId)
+                     ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates,StripeTaxId,
+                     LanguageMetaDetails)
 
 
 def Bulk_insert(request):
@@ -35,10 +36,10 @@ def Bulk_insert(request):
                     countr=None
 
 
-                value = StripeTaxId(
-            country = countr,
-			tax_code =data[1],
-            name = data[2],
+                value = LanguageMetaDetails(
+            language_id = data[0],
+			lang_name_in_script =data[1],
+            script_id = data[2],
             #state_code=data[3],
             #unit_rate=data[3],
             #hourly_rate=data[4],

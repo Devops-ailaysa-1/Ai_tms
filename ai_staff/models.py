@@ -256,6 +256,27 @@ class SpellcheckerLanguages(ParanoidModel):
     class Meta:
         db_table = 'spellchecker_languages'
 
+class LanguageScripts(models.Model):
+    # Currently scripts listed are used for filtering 
+    # IME icon will be displayed for languages that are not available in this model
+    script_name = models.CharField(max_length=200, null=True, blank=True)
+
+    class Meta:
+        db_table = "language_scripts"
+
+    def __str__(self):
+        return self.script_name
+
+class LanguageMetaDetails(models.Model):
+    language = models.ForeignKey(Languages, related_name="language_meta_details", on_delete=models.CASCADE, null=True, blank=True)
+    lang_name_in_script = models.CharField(max_length=200, null=True, blank=True)
+    script = models.ForeignKey(LanguageScripts, related_name="language_meta_details", on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return self.language.language
+    
+    class Meta:
+        db_table = "language_meta_details"
 
 class SupportType(ParanoidModel):
     support_type = models.CharField(max_length=100, null=True, blank=True)
