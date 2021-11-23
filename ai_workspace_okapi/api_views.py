@@ -232,8 +232,6 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def update_pentm(self, segment):
         data = PentmUpdateSerializer(segment).data
         res = requests.post(f"http://{spring_host}:8080/project/pentm/update", data=data)
-        # # res = requests.post(f"http://host.docker.internal:8080/project/pentm/update", data=data)
-        # res = requests.post(f"http://172.17.0.1:8080/project/pentm/update", data=data)
         print("Response from spring --- >", res.json())
         if res.status_code == 200:
             print("res text--->", res.json())
