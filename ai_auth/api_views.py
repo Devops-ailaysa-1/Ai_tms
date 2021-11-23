@@ -390,7 +390,7 @@ def get_addon_details(request):
 
 def create_checkout_session(user,price,customer=None,trial=False):
     product_name = Price.objects.get(id = price).product.name
-    domain_url = settings.CLIENT_BASE_URL
+    domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -475,7 +475,7 @@ def find_taxrate(user,trial=False):
 
 def subscribe_trial(price,customer=None):
     product_name = Price.objects.get(id = price).product.name
-    domain_url = settings.CLIENT_BASE_URL
+    domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -502,7 +502,7 @@ def subscribe_trial(price,customer=None):
 
 
 def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
-    domain_url = settings.CLIENT_BASE_URL
+    domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -583,7 +583,7 @@ def is_active_subscription(user):
 
 
 def generate_portal_session(customer):
-    domain_url = settings.CLIENT_BASE_URL
+    domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
