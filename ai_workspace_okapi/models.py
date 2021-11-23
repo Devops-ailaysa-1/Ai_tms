@@ -180,10 +180,10 @@ class Document(models.Model):
     def target_language(self):
         return str(self.job.target_language)        
     
-    # @property
-    # def target_language_script(self):
-    #     target_lang_id = self.job.target_language.id
-    #     return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script        
+    @property
+    def target_language_script(self):
+        target_lang_id = self.job.target_language.id
+        return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script        
 
     @property
     def source_language_id(self):
