@@ -12,7 +12,7 @@ from rest_framework import permissions
 from ai_auth.models import AiUser, UserAttribute, UserCredits
 from ai_staff.models import AiUserType,SpellcheckerLanguages
 from django.http import HttpResponse
-from ai_workspace.models import Task, TaskCreditStatus
+from ai_workspace.models import Task, TaskCreditStatus, Project
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
@@ -36,6 +36,7 @@ from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.conf import  settings
+from django.urls import reverse
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -951,3 +952,38 @@ def spellcheck(request):
             return JsonResponse({"result":res},safe=False)
     except:
         return JsonResponse({"message":"Spellcheck not available"},safe=False)
+
+
+class ProjectAnalysis(APIView):
+    permission_classes = [IsAuthenticated] 
+
+    def get(self, request, project_id):
+
+        tasks = Project.objects.get(id=project_id).get_tasks
+        proj_word_count = 0
+        proj_char_count = 0
+        proj_seg_count = 0
+        task_words = []
+
+        for task in tasks:
+            if not task.document_id == None:
+                doc = Document.objects.get(id=task.document_id)
+                proj_word_count += doc.total_word_count
+                proj_char_count += doc.total_char_count
+                proj_seg_count += doc.total_segment_count
+                task_words.append({task.id:doc.total_word_count})
+            else:
+                doc = DocumentViewByTask.create_document_for_task_if_not_exists(task, request)                
+                proj_word_count += doc.total_word_count
+                proj_char_count += doc.total_char_count
+                proj_seg_count += doc.total_segment_count
+
+                task_words.append({task.id:doc.total_word_count})
+                
+        return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+                                  "task_words" : task_words }, status=200)
+
+            
+        
+
+        

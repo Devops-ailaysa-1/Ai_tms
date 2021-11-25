@@ -445,7 +445,6 @@ class TmxFileView(viewsets.ViewSet):
         project_id = data[0]["project"]
         project = Project.objects.get(id=project_id)
         data = PentmWriteSerializer(project).data
-
         res = requests.post(f"http://{spring_host}:8080/project/pentm/create",
                             data={"pentm_params": json.dumps(data)})
         if res.status_code == 200:
