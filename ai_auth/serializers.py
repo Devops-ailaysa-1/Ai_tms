@@ -8,7 +8,8 @@ from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 from ai_auth.models import (AiUser, BillingAddress,UserAttribute,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,VendorOnboarding,GeneralSupport)
+                            TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
+                            VendorOnboarding,GeneralSupport,Team,ExternalMember,InternalMember)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -380,4 +381,19 @@ class GeneralSupportSerializer(serializers.ModelSerializer):
     support_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx','jpg','png','jpeg'])])
     class Meta:
         model = GeneralSupport
+        fields = "__all__"
+
+class TeamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        fields = "__all__"
+
+class InternalMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InternalMember
+        fields = "__all__"
+
+class ExternalMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExternalMember
         fields = "__all__"

@@ -23,6 +23,10 @@ router.register(r'aiuser-profile',api_views.AiUserProfileView,basename="aiuser-p
 router.register(r'carrier-support',api_views.CarrierSupportCreateView,basename="carrier-support")
 router.register(r'general-support',api_views.GeneralSupportCreateView,basename="general-support")
 router.register(r'vendor-onboarding',api_views.VendorOnboardingCreateView,basename="vendor-onboarding")
+router.register(r'team',api_views.TeamCreateView,basename="team")
+router.register(r'internal-member',api_views.InternalMemberCreateView,basename="internal-member")
+
+
 
 
 urlpatterns = router.urls
@@ -51,6 +55,8 @@ urlpatterns+= [
      path('deactivate-account/',api_views.account_deactivation),
      path('activate-account/',api_views.account_activation),
      path('delete-account/',api_views.account_delete),
+     path('accept/<uid>/<token>',api_views.invite_accept,name='accept'),
+     path('external-member-invite/',api_views.external_member_invite),
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
 ]

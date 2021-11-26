@@ -1,11 +1,13 @@
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
+from django.urls import reverse
 from stripe.api_resources import subscription
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
-                                CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer)
+                                CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
+                                TeamSerializer,InternalMemberSerializer,ExternalMemberSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -15,11 +17,16 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, Professionalidentity,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile)
+                            TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
+                            Team,InternalMember,ExternalMember)
 from django.http import Http404,JsonResponse
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_text
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+# from django.utils import six
 from rest_framework import status
 from django.db import IntegrityError
-from django.contrib.auth.hashers import check_password
+from django.contrib.auth.hashers import check_password,make_password
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import renderers
 from rest_framework.decorators import api_view,permission_classes
@@ -31,10 +38,10 @@ from datetime import datetime,date
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
-from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics
+from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics,Role
 from django.db.models import Q
 from  django.utils import timezone
-import time,pytz
+import time,pytz,six
 from dateutil.relativedelta import relativedelta
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
@@ -322,7 +329,7 @@ class ContactPricingCreateView(viewsets.ViewSet):
 def send_email(subject,template,context):
     content = render_to_string(template, context)
     file =context.get('file')
-    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['support@ailaysa.com',])#to emailaddress need to change
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=['thenmozhivijay20@gmail.com',])#to emailaddress need to change
     if file:
         msg.attach(file.name, file.read(), file.content_type)
     msg.content_subtype = 'html'
@@ -1139,3 +1146,126 @@ def account_delete(request):
     else:
         return Response({"msg":"password didn't match"},status = 400)
     return JsonResponse({"msg":"user account deleted"},safe = False)
+
+
+class TeamCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self, request):
+        try:
+            queryset =Team.objects.get(owner_id=request.user.id)
+        except Team.DoesNotExist:
+            return Response(status=204)
+        serializer = TeamSerializer(queryset)
+        return Response(serializer.data)
+
+    @integrity_error
+    def create(self,request):
+        user_id = request.POST.get('user_id')
+        username = AiUser.objects.get(id =user_id).fullname
+        teamname = username + "'s team"
+        serializer =TeamSerializer(data={'name':teamname,'owner':user_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk):
+        try:
+            queryset = Team.objects.get(Q(id=pk) & Q(owner_id = request.user.id))
+        except Team.DoesNotExist:
+            return Response(status=204)
+        serializer =TeamSerializer(queryset,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def send_email_user(subject,template,context,email):
+    print(email)
+    content = render_to_string(template, context)
+    msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL , to=[email,])
+    msg.content_subtype = 'html'
+    msg.send()
+
+class TokenGenerator(PasswordResetTokenGenerator):
+    def _make_hash_value(self, user, timestamp):
+        return (
+            six.text_type(user.pk) + six.text_type(timestamp) + six.text_type(user.is_active)
+        )
+
+
+invite_accept_token = TokenGenerator()
+
+class InternalMemberCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self, request):
+        print(request.user.id)
+        queryset =InternalMember.objects.filter(team__owner_id=request.user.id)
+        if not queryset.exists():
+            return Response(status=204)
+        serializer = InternalMemberSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    @integrity_error
+    def create(self,request):
+        data = request.POST.dict()
+        team = data.get('team')
+        email = data.get('email')
+        role = data.get('role')
+        role_name = Role.objects.get(id=role).role
+        today = date.today()
+        try:
+            team_name = Team.objects.get(Q(id=team) & Q(owner_id = request.user.id)).name
+        except:
+            raise Http404
+        functional_identity = request.POST.get('functional_identity')
+        password = AiUser.objects.make_random_password()
+        hashed = make_password(password)
+        template = 'Internal_member_credential_email.html'
+        subject='Regarding Login credentials'
+        context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password,'date':today}
+        user = AiUser.objects.create(fullname =data.get('name'),email = email,password = hashed,is_internal_member=True)
+        serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,'functional_identity':functional_identity})
+        if serializer.is_valid():
+            serializer.save()
+            send_email_user(subject,template,context,email)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def external_member_invite(request):
+    team = request.POST.get('team')
+    uid=request.POST.get('vendor_id')
+    role = request.POST.get('role')
+    vendor = AiUser.objects.get(uid=uid)
+    team_name = Team.objects.get(id=team).name
+    role_name = Role.objects.get(id=role).role
+    email = vendor.email
+    serializer = ExternalMemberSerializer(data={'team':team,'role':role,'external_member':vendor.id,'status':1})
+    if serializer.is_valid():
+        serializer.save()
+        external_member_id = serializer.data.get('id')
+        link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(vendor)}))
+        template = 'External_member_invite_email.html'
+        subject='Ailaysa MarketPlace Invite'
+        context = {'name':vendor.fullname,'team':team_name,'role':role_name,'link':link}
+        send_email_user(subject,template,context,email)
+        return JsonResponse({"msg":"email sent successfully"},safe = False)
+    # # link = request.build_absolute_uri('/team/external_member/accept/'+urlsafe_base64_encode(force_bytes(vendor.id))+'/'+urlsafe_base64_encode(force_bytes(team.id))+'/'+invite_accept_token.make_token(user)+'/')
+    # # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(vendor.id)),'teamid':urlsafe_base64_encode(force_bytes(team)),'roleid':urlsafe_base64_encode(force_bytes(role)),'token':invite_accept_token.make_token(vendor)}))
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@permission_classes([IsAuthenticated])
+def invite_accept(request,uid,token):
+    vendor_id = urlsafe_base64_decode(uid)
+    vendor = ExternalMember.objects.get(id= vendor_id)
+    user = AiUser.objects.get(id=vendor.external_member_id)
+    if user is not None and invite_accept_token.check_token(user, token):
+        vendor.status = 2
+        vendor.save()
+        print("success & updated")
+        return JsonResponse({"msg":"success"},safe=False)
+    return JsonResponse({"msg":"Failed"},safe=False)

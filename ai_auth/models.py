@@ -4,7 +4,7 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics
+from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role
 from django.db.models.signals import post_save, pre_save
 from ai_auth.signals import create_allocated_dirs, updated_user_taxid
 from django.contrib.auth.models import Permission, User
@@ -27,6 +27,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
     from_mysql = models.BooleanField(default=False)
     deactivate = models.BooleanField(default=False)
+    is_vendor = models.BooleanField(default=False)
+    is_internal_member = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -60,7 +62,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
                 total_credit_left += sub_credits.credits_left
         except:
             print("No active subscription")
-            return total_credit_left        
+            return total_credit_left
 
         return total_credit_left
 
@@ -290,3 +292,31 @@ class GeneralSupport(models.Model):
     support_file = models.FileField(upload_to=support_file_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class Team(models.Model):
+    name = models.CharField(max_length=250,blank=True,null=True)
+    owner = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='team_owner')
+    description = models.TextField(max_length=1000,blank=True,null=True)
+
+
+class InternalMember(models.Model):
+    team = models.ForeignKey(Team,on_delete=models.CASCADE,related_name='internal_member_team_info')
+    internal_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='internal_member')
+    role = models.ForeignKey(Role,on_delete=models.CASCADE)
+    functional_identity = models.CharField(max_length=255, blank=True, null=True)
+
+
+class ExternalMember(models.Model):
+    INVITE_SENT = 1
+    INVITE_ACCEPTED = 2
+    INVITE_DECLINED = 3
+    STATUS_CHOICES = [
+        (INVITE_SENT,'Invite Sent'),
+        (INVITE_ACCEPTED, 'Invite Accepted'),
+        (INVITE_DECLINED, 'Invite Declined'),    
+    ]
+    status = models.IntegerField(choices=STATUS_CHOICES)
+    team = models.ForeignKey(Team,on_delete=models.CASCADE,related_name='team_info')
+    external_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='team_member')
+    role = models.ForeignKey(Role,on_delete=models.CASCADE)

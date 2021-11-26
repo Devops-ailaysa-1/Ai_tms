@@ -4,7 +4,8 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, StripeTaxId,
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
-                    SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,CreditAddonPrice,SupportTopics,JobPositions)
+                    SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
+                    CreditAddonPrice,SupportTopics,JobPositions,Role)
 import json
 from drf_writable_nested import WritableNestedModelSerializer
 
@@ -269,4 +270,9 @@ class SupportTopicSerializer(serializers.ModelSerializer):
 class JobPositionSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobPositions
+        fields = "__all__"
+
+class TeamRoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
         fields = "__all__"

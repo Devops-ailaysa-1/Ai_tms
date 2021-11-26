@@ -257,7 +257,7 @@ class SpellcheckerLanguages(ParanoidModel):
         db_table = 'spellchecker_languages'
 
 class LanguageScripts(models.Model):
-    # Currently scripts listed are used for filtering 
+    # Currently scripts listed are used for filtering
     # IME icon will be displayed for languages that are not available in this model
     script_name = models.CharField(max_length=200, null=True, blank=True)
 
@@ -274,7 +274,7 @@ class LanguageMetaDetails(models.Model):
 
     def __str__(self):
         return self.language.language
-    
+
     class Meta:
         db_table = "language_meta_details"
 
@@ -380,5 +380,11 @@ class JobPositions(ParanoidModel):
 
 class SupportTopics(ParanoidModel):
     topic = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class Role(ParanoidModel):
+    role = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
