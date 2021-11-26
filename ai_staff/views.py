@@ -14,6 +14,7 @@ from .models import (AiUserType, Billingunits, ContentTypes, Countries,
                      Currencies, Languages, LanguagesLocale, MtpeEngines,
                      ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates,StripeTaxId,
                      LanguageMetaDetails)
+from ai_auth.models import AiUser
 
 
 def Bulk_insert(request):
@@ -29,17 +30,18 @@ def Bulk_insert(request):
             imported_data = dataset.load(filedata.read(), format='xlsx')
             # print(imported_data)
             for data in imported_data:
-                try:
-                    countr=Countries.objects.get(name=data[0])
-                except Countries.DoesNotExist:
-                    print("country==>",data[0])
-                    countr=None
-
-
-                value = LanguageMetaDetails(
-            language_id = data[0],
-			lang_name_in_script =data[1],
-            script_id = data[2],
+                value = AiUser(
+            id = data[0],
+			password =data[1],
+            last_login = data[2],
+            is_superuser = data[3],
+			uid =data[4],
+            email = data[5],
+			fullname =data[6],
+            is_staff = data[7],
+            is_active = data[8],
+            date_joined = data[9],
+            from_mysql = data[10],
             #state_code=data[3],
             #unit_rate=data[3],
             #hourly_rate=data[4],
@@ -70,8 +72,8 @@ def Bulk_insert(request):
             # deleted_at = data[5],
                 )
                 # print(value)
-                value.save()
-            print("$$$ END  $$$")
+            value.save()
+            # print("$$$ END  $$$")
             return JsonResponse({'message':'success'})
         except Exception as E:
                 print(E)
