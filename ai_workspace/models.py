@@ -24,6 +24,8 @@ from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from django.db.models import Q
 from django.utils.functional import cached_property
 
+from django.db.models.fields.files import FileField 
+
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
 from .signals import (create_allocated_dirs, create_project_dir, \
@@ -319,10 +321,24 @@ def get_file_upload_path(instance, filename):
     instance.filename = filename
     return os.path.join(file_path, filename)
 
+
+
+storage_type = os.environ.get("storage_type")
+
+class CustomFileField(FileField):
+    @property
+    def path(self):
+        if storage_type == "LOCAL":
+            print('Local')
+            return super(CustomFileField).path()
+        else:
+            print('spaces')
+            return self.name
+
 class File(models.Model):
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="project_usage_type")
-    file = models.FileField(upload_to=get_file_upload_path, null=False,\
+    file =CustomFileField(upload_to=get_file_upload_path, null=False,\
                 blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
