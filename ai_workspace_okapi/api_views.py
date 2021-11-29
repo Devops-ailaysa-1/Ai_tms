@@ -12,7 +12,7 @@ from rest_framework import permissions
 from ai_auth.models import AiUser, UserAttribute, UserCredits
 from ai_staff.models import AiUserType,SpellcheckerLanguages
 from django.http import HttpResponse
-from ai_workspace.models import Task, TaskCreditStatus, Project
+from ai_workspace.models import Task, TaskCreditStatus
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
@@ -113,7 +113,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             
 
     @staticmethod
-    def create_document_for_task_if_not_exists(task, request):
+    def create_document_for_task_if_not_exists(task):
         document = task.document
         if (not document) and  (not Document.objects.filter(job=task.job, file=task.file).all()):
             ser = TaskSerializer(task)
@@ -136,9 +136,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 total_word_count = doc_data.get("total_word_count", 0)
                 word_char_ratio = round(total_char_count/total_word_count, 2)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
-                # serializer = (DocumentSerializerV2(data={**first_40_data,\
                                     "file": task.file.id, "job": task.job.id,
-                                }, context={"request": request}))
+                                },)) #context={"request": request}
                 if serializer.is_valid(raise_exception=True):
                     document = serializer.save()
                     task.document = document
@@ -161,7 +160,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     def get(self, request, task_id, format=None):
         task = self.get_object(task_id=task_id)
-        document = self.create_document_for_task_if_not_exists(task, request)
+        document = self.create_document_for_task_if_not_exists(task)
         # page_segments = self.paginate_queryset(document.segments, request, view=self)
         # segments_ser = SegmentSerializer(page_segments, many=True)
         # return self.get_paginated_response(segments_ser.data)
@@ -379,7 +378,7 @@ class DocumentToFile(views.APIView):
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
-        print("task_data---->", task_data)
+        # print("task_data---->", task_data)
         pre, ext = os.path.splitext(task_data["output_file_path"])
         if output_type == "XLIFF":
             ext = ".xliff"
@@ -697,24 +696,24 @@ class CommentView(viewsets.ViewSet):
         obj.delete()
         return  Response({},204)
 
-class ProjectStatusView(APIView):
-    permission_classes = [IsAuthenticated]
+# class ProjectStatusView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request, project_id):
-        docs = Document.objects.filter(job__project_id=project_id).all()
-        total_segments = 0
-        if not docs:
-            return JsonResponse({"res" : "YET TO START"}, safe=False)
-        else:
-            for doc in docs:
-                total_segments+=doc.total_segment_count
+#     def get(self, request, project_id):
+#         docs = Document.objects.filter(job__project_id=project_id).all()
+#         total_segments = 0
+#         if not docs:
+#             return JsonResponse({"res" : "YET TO START"}, safe=False)
+#         else:
+#             for doc in docs:
+#                 total_segments+=doc.total_segment_count
 
-        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) &
-            Q(status_id__in=[102,104,106])).all().count()
-        if total_segments == status_count:
-            return JsonResponse({"res" : "100% COMPLETE"}, safe=False)
-        else:
-            return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
+#         status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) &
+#             Q(status_id__in=[102,104,106])).all().count()
+#         if total_segments == status_count:
+#             return JsonResponse({"res" : "100% COMPLETE"}, safe=False)
+#         else:
+#             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
 
 class GetPageIndexWithFilterApplied(views.APIView):
 
@@ -746,24 +745,24 @@ class GetPageIndexWithFilterApplied(views.APIView):
             res = ({"page_id": None}, 404)
         return  Response(*res)
 
-class ProjectStatusView(APIView):
-    permission_classes = [IsAuthenticated]
+# class ProjectStatusView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request, project_id):
-        docs = Document.objects.filter(job__project_id=project_id).all()
-        total_segments = 0
-        if not docs:
-            return JsonResponse({"res" : "YET TO START"}, safe=False)
-        else:
-            for doc in docs:
-                total_segments+=doc.total_segment_count
+#     def get(self, request, project_id):
+#         docs = Document.objects.filter(job__project_id=project_id).all()
+#         total_segments = 0
+#         if not docs:
+#             return JsonResponse({"res" : "YET TO START"}, safe=False)
+#         else:
+#             for doc in docs:
+#                 total_segments+=doc.total_segment_count
 
-        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) &
-            Q(status_id__in=[102,104,106])).all().count()
-        if total_segments == status_count:
-            return JsonResponse({"res" : "COMPLETED"}, safe=False)
-        else:
-            return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
+#         status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) &
+#             Q(status_id__in=[102,104,106])).all().count()
+#         if total_segments == status_count:
+#             return JsonResponse({"res" : "COMPLETED"}, safe=False)
+#         else:
+#             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
 
 ############ wiktionary quick lookup ##################
 @api_view(['GET', 'POST',])
@@ -951,39 +950,7 @@ def spellcheck(request):
                 res.extend(out)
             return JsonResponse({"result":res},safe=False)
     except:
-        return JsonResponse({"message":"Spellcheck not available"},safe=False)
-
-
-class ProjectAnalysis(APIView):
-    permission_classes = [IsAuthenticated] 
-
-    def get(self, request, project_id):
-
-        tasks = Project.objects.get(id=project_id).get_tasks
-        proj_word_count = 0
-        proj_char_count = 0
-        proj_seg_count = 0
-        task_words = []
-
-        for task in tasks:
-            if not task.document_id == None:
-                doc = Document.objects.get(id=task.document_id)
-                proj_word_count += doc.total_word_count
-                proj_char_count += doc.total_char_count
-                proj_seg_count += doc.total_segment_count
-                task_words.append({task.id:doc.total_word_count})
-            else:
-                doc = DocumentViewByTask.create_document_for_task_if_not_exists(task, request)                
-                proj_word_count += doc.total_word_count
-                proj_char_count += doc.total_char_count
-                proj_seg_count += doc.total_segment_count
-
-                task_words.append({task.id:doc.total_word_count})
-                
-        return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
-                                  "task_words" : task_words }, status=200)
-
-            
+        return JsonResponse({"message":"Spellcheck not available"},safe=False)           
         
 
         

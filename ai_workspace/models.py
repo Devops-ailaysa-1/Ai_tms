@@ -214,6 +214,36 @@ class Project(models.Model):
     def tmx_files_path_not_processed(self):
         return {tmx_file.id:tmx_file.tmx_file.path for tmx_file in self.project_tmx_files\
             .filter(is_processed=False).all()}
+                
+    @property
+    def project_analysis(self):        
+
+        tasks = self.get_tasks
+        proj_word_count = 0
+        proj_char_count = 0
+        proj_seg_count = 0
+        task_words = []
+
+        for task in tasks:
+            if not task.document_id == None:
+                doc = Document.objects.get(id=task.document_id)
+                proj_word_count += doc.total_word_count
+                proj_char_count += doc.total_char_count
+                proj_seg_count += doc.total_segment_count
+                
+                task_words.append({task.id:doc.total_word_count})
+            else:
+                from ai_workspace_okapi.api_views import DocumentViewByTask
+                print("Creating")
+                doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
+                proj_word_count += doc.total_word_count
+                proj_char_count += doc.total_char_count
+                proj_seg_count += doc.total_segment_count
+
+                task_words.append({task.id:doc.total_word_count})
+                
+        return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+                                  "task_words" : task_words }
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)

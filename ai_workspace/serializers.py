@@ -1,7 +1,7 @@
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
-from ai_workspace.models import  Project, Job, File, ProjectContentType, Tbxfiles,\
+from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus
 import json
@@ -95,7 +95,8 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url", "id", "progress", "files_count", "tasks_count")
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url", 
+					"id", "progress", "files_count", "tasks_count", "project_analysis")
 
 	def to_internal_value(self, data):
 		source_language = json.loads(data.pop("source_language", "0"))
@@ -111,8 +112,6 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		print("F------>",data.get('files'))
 		return super().to_internal_value(data=data)
 
-
-
 	def create(self, validated_data):
 		ai_user = self.context["request"].user
 		project_jobs_set = validated_data.pop("project_jobs_set")
@@ -121,7 +120,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
 		[project.project_files_set.create(**file_data) for file_data in project_files_set]
 		# project.save()
-		return project
+		return project        
 
 class ProjectSubjectSerializer(serializers.ModelSerializer):
 	class Meta:
