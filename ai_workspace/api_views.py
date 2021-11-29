@@ -924,7 +924,7 @@ class TaskView(APIView):
             return Response(task_ser.data, status=200)
 
         task_serlzr = TaskSerializer(data=request.POST.dict(), context={"request":request,
-            "assign_to": self.request.POST.get('assign_to', self.request.user.id),"customer":self.request.user.id})
+            "assign_to": self.request.POST.get('assign_to', self.request.user.id)})#,"customer":self.request.user.id})
         if task_serlzr.is_valid(raise_exception=True):
             task_serlzr.save()
             return Response({"msg": task_serlzr.data}, status=200)
@@ -989,6 +989,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
+        print("DATA------------->",request.POST.dict())
         serializer = TaskAssignInfoSerializer(data={**request.POST.dict()})
         if serializer.is_valid():
             serializer.save()

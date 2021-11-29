@@ -295,17 +295,17 @@ class TaskSerializer(serializers.ModelSerializer):
 				fields=['file', 'job', 'version']
 			)
 		]
-	def run_validation(self,data):
-		if self.context['request']._request.method == 'POST':
-			assign_to = int(self.context.get("assign_to"))
-			print(assign_to)
-			customer_id = self.context.get("customer")
-			print(customer_id)
-			if assign_to != customer_id:
-				vendors = AvailableVendors.objects.filter(customer_id = customer_id).values_list('vendor_id',flat = True)
-				if assign_to not in (list(vendors)):
-					raise serializers.ValidationError({"message":"This vendor is not hired vendor for customer"})
-		return super().run_validation(data)
+	# def run_validation(self,data):
+	# 	if self.context['request']._request.method == 'POST':
+	# 		assign_to = int(self.context.get("assign_to"))
+	# 		print(assign_to)
+	# 		customer_id = self.context.get("customer")
+	# 		print(customer_id)
+	# 		if assign_to != customer_id:
+	# 			vendors = AvailableVendors.objects.filter(customer_id = customer_id).values_list('vendor_id',flat = True)
+	# 			if assign_to not in (list(vendors)):
+	# 				raise serializers.ValidationError({"message":"This vendor is not hired vendor for customer"})
+	# 	return super().run_validation(data)
 
 
 	def to_internal_value(self, data):
@@ -510,6 +510,25 @@ class TaskCreditStatusSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
+    assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = "__all__"
+        fields = ('id','task','instruction','po_number','deadline','assign_to',)
+
+    def run_validation(self, data):
+        data["assign_to"] = json.loads(data["assign_to"])
+        print("validated data run validation----->",data)
+        return super().run_validation(data)
+
+    def create(self, data):
+        print('validated data==>',data)
+        assign_to = data.pop("assign_to")
+        print(assign_to)
+        task_id = data.get("task").id
+        print(task_id)
+        task = Task.objects.get(id = task_id)
+        user = AiUser.objects.get(id = assign_to)
+        task.assign_to = user
+        task.save()
+        task_assign_info = TaskAssignInfo.objects.create(**data)
+        return task_assign_info
