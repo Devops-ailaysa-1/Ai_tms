@@ -16,7 +16,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-        TaskCreditStatusSerializer)
+        TaskCreditStatusSerializer,TaskAssignInfoSerializer)
 
 import copy, os, mimetypes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -954,7 +954,7 @@ def create_project_from_temp_project_new(request):
         return JsonResponse({"data":serializer.errors},safe=False)
 
 # class ProjectAnalysis(APIView):
-#     permission_classes = [IsAuthenticated] 
+#     permission_classes = [IsAuthenticated]
 
 #     def get(self, request, project_id):
 
@@ -970,15 +970,38 @@ def create_project_from_temp_project_new(request):
 #                 proj_word_count += doc.total_word_count
 #                 proj_char_count += doc.total_char_count
 #                 proj_seg_count += doc.total_segment_count
-                
+
 #                 task_words.append({task.id:doc.total_word_count})
 #             else:
-#                 doc = DocumentViewByTask.create_document_for_task_if_not_exists(task, request)                
+#                 doc = DocumentViewByTask.create_document_for_task_if_not_exists(task, request)
 #                 proj_word_count += doc.total_word_count
 #                 proj_char_count += doc.total_char_count
 #                 proj_seg_count += doc.total_segment_count
 
 #                 task_words.append({task.id:doc.total_word_count})
-                
+
 #         return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
 #                                   "task_words" : task_words }, status=200)
+
+
+class TaskAssignInfoCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @integrity_error
+    def create(self,request):
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk):
+        try:
+            queryset = TaskAssignInfo.objects.get(id=pk)
+        except TaskAssignInfo.DoesNotExist:
+            return Response(status=204)
+        serializer =TaskAssignInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

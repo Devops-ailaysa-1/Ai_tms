@@ -3,7 +3,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -95,7 +95,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url", 
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url",
 					"id", "progress", "files_count", "tasks_count", "project_analysis")
 
 	def to_internal_value(self, data):
@@ -120,7 +120,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
 		[project.project_files_set.create(**file_data) for file_data in project_files_set]
 		# project.save()
-		return project        
+		return project
 
 class ProjectSubjectSerializer(serializers.ModelSerializer):
 	class Meta:
@@ -507,4 +507,9 @@ class TbxTemplateSerializer(serializers.ModelSerializer):
 class TaskCreditStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskCreditStatus
+        fields = "__all__"
+
+class TaskAssignInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskAssignInfo
         fields = "__all__"

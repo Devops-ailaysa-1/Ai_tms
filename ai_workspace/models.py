@@ -481,6 +481,7 @@ class TaskAssignInfo(models.Model):
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
     po_number = models.CharField(max_length=191, blank=True, null=True)
+    deadline = models.DateTimeField(blank=True, null=True)
 
 class TmxFile(models.Model):
 
