@@ -12,7 +12,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
 import os
-from ai_auth.models import AiUser
+from ai_auth.models import AiUser,Team
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields
 from ai_staff.models import ContentTypes, Languages, SubjectFields
@@ -124,7 +124,7 @@ class Project(models.Model):
     @property
     def ref_files(self):
         return self.project_ref_files_set.all()
-    
+
     @property
     def files_count(self):
         return self.project_files_set.all().count()
@@ -157,7 +157,7 @@ class Project(models.Model):
             ( # jobs will not exceed 100nos, and files will not exceed 10nos,
             # so all() functionality used...
             self.project_jobs_set.all(),
-            self.project_files_set.all()) 
+            self.project_files_set.all())
 
     @property
     def _assign_tasks_url(self):
@@ -214,9 +214,9 @@ class Project(models.Model):
     def tmx_files_path_not_processed(self):
         return {tmx_file.id:tmx_file.tmx_file.path for tmx_file in self.project_tmx_files\
             .filter(is_processed=False).all()}
-                
+
     @property
-    def project_analysis(self):        
+    def project_analysis(self):
 
         tasks = self.get_tasks
         proj_word_count = 0
@@ -230,7 +230,7 @@ class Project(models.Model):
                 proj_word_count += doc.total_word_count
                 proj_char_count += doc.total_char_count
                 proj_seg_count += doc.total_segment_count
-                
+
                 task_words.append({task.id:doc.total_word_count})
             else:
                 from ai_workspace_okapi.api_views import DocumentViewByTask
@@ -240,7 +240,7 @@ class Project(models.Model):
                 proj_seg_count += doc.total_segment_count
 
                 task_words.append({task.id:doc.total_word_count})
-                
+
         return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
                                   "task_words" : task_words }
 
@@ -320,6 +320,12 @@ class Job(models.Model):
 
     def __str__(self):
         return self.source_language.language+"->"+self.target_language.language
+
+class ProjectTeamInfo(models.Model):
+    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
+                CASCADE, related_name="team_project_info")
+    team = models.ForeignKey(Team, null=False, blank=False, on_delete=models.\
+                CASCADE, related_name="project_team_info")
 
 class FileTypes(models.Model):
     TERMBASE = "termbase"
@@ -469,6 +475,12 @@ class Task(models.Model):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
+
+class TaskAssignInfo(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,
+            related_name="task_assign_info")
+    instruction = models.TextField(max_length=1000, blank=True, null=True)
+    po_number = models.CharField(max_length=191, blank=True, null=True)
 
 class TmxFile(models.Model):
 
