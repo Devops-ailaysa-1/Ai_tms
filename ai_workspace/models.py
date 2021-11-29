@@ -234,7 +234,6 @@ class Project(models.Model):
                 task_words.append({task.id:doc.total_word_count})
             else:
                 from ai_workspace_okapi.api_views import DocumentViewByTask
-                print("Creating")
                 doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
                 proj_word_count += doc.total_word_count
                 proj_char_count += doc.total_char_count

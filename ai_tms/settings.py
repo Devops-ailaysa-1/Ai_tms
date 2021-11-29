@@ -33,6 +33,9 @@ DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split()
 
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE')
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE')
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT")
 
 CORS_ORIGIN_ALLOW_ALL= False
 
