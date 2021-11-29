@@ -1261,7 +1261,7 @@ def external_member_invite(request):
 @permission_classes([IsAuthenticated])
 def invite_accept(request,uid,token):
     vendor_id = urlsafe_base64_decode(uid)
-    vendor = ExternalMember.objects.get(id= vendor_id)
+    vendor = ExternalMember.objects.get(id=vendor_id)
     user = AiUser.objects.get(id=vendor.external_member_id)
     if user is not None and invite_accept_token.check_token(user, token):
         vendor.status = 2
