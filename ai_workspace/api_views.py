@@ -48,6 +48,7 @@ import shutil
 from datetime import datetime
 from django.db.models import Q
 from rest_framework.decorators import permission_classes
+# from ai_workspace_okapi.api_views import DocumentViewByTask
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -445,6 +446,7 @@ class TmxFileView(viewsets.ViewSet):
         project_id = data[0]["project"]
         project = Project.objects.get(id=project_id)
         data = PentmWriteSerializer(project).data
+        print("For pentm create  ---> ", data)
         res = requests.post(f"http://{spring_host}:8080/project/pentm/create",
                             data={"pentm_params": json.dumps(data)})
         if res.status_code == 200:
@@ -950,3 +952,33 @@ def create_project_from_temp_project_new(request):
         return JsonResponse({"data":serializer.data},safe=False)
     else:
         return JsonResponse({"data":serializer.errors},safe=False)
+
+# class ProjectAnalysis(APIView):
+#     permission_classes = [IsAuthenticated] 
+
+#     def get(self, request, project_id):
+
+#         tasks = Project.objects.get(id=project_id).get_tasks
+#         proj_word_count = 0
+#         proj_char_count = 0
+#         proj_seg_count = 0
+#         task_words = []
+
+#         for task in tasks:
+#             if not task.document_id == None:
+#                 doc = Document.objects.get(id=task.document_id)
+#                 proj_word_count += doc.total_word_count
+#                 proj_char_count += doc.total_char_count
+#                 proj_seg_count += doc.total_segment_count
+                
+#                 task_words.append({task.id:doc.total_word_count})
+#             else:
+#                 doc = DocumentViewByTask.create_document_for_task_if_not_exists(task, request)                
+#                 proj_word_count += doc.total_word_count
+#                 proj_char_count += doc.total_char_count
+#                 proj_seg_count += doc.total_segment_count
+
+#                 task_words.append({task.id:doc.total_word_count})
+                
+#         return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+#                                   "task_words" : task_words }, status=200)

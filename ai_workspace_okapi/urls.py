@@ -34,17 +34,16 @@ urlpatterns+=[
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
-    path("project_status/<int:project_id>", api_views.ProjectStatusView.as_view(), name="project-status"),
+#     path("project_status/<int:project_id>", api_views.ProjectStatusView.as_view(), name="project-status"),
     path("segment/get/page/filter/<int:document_id>/<int:segment_id>", api_views.GetPageIndexWithFilterApplied.as_view(),\
          name="get-page-id-of-segment-on-apply-filter"),
     # path("comments", api_views)
-    path("project_progress/<int:project_id>", api_views.ProjectStatusView.as_view(),\
-         name="project-status"),
+#     path("project_progress/<int:project_id>", api_views.ProjectStatusView.as_view(),\
+#          name="project-status"),
     path('wiktdata/',api_views.WiktionaryParse,name='wiktdata'),
     path('get_wikipedia/<int:doc_id>/', api_views.WikipediaWorkspace, name='get-wikipedia'),
     path('get_wiktionary/<int:doc_id>/', api_views.WiktionaryWorkSpace, name='get-wiktionary'),
     path('spellcheck/', api_views.spellcheck, name='spellcheck'),
-    path('project_analysis/<int:project_id>', api_views.ProjectAnalysis.as_view(), name='project-analysis'),
 ]
 
 urlpatterns+=[
