@@ -477,7 +477,7 @@ class Task(models.Model):
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
 class TaskAssignInfo(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,
+    task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
     po_number = models.CharField(max_length=191, blank=True, null=True)

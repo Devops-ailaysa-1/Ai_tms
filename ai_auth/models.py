@@ -296,7 +296,7 @@ class GeneralSupport(models.Model):
 
 class Team(models.Model):
     name = models.CharField(max_length=250,blank=True,null=True)
-    owner = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='team_owner')
+    owner = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='team_owner')
     description = models.TextField(max_length=1000,blank=True,null=True)
 
 
@@ -310,11 +310,11 @@ class InternalMember(models.Model):
 class ExternalMember(models.Model):
     INVITE_SENT = 1
     INVITE_ACCEPTED = 2
-    INVITE_DECLINED = 3
+    # INVITE_DECLINED = 3
     STATUS_CHOICES = [
         (INVITE_SENT,'Invite Sent'),
         (INVITE_ACCEPTED, 'Invite Accepted'),
-        (INVITE_DECLINED, 'Invite Declined'),
+        # (INVITE_DECLINED, 'Invite Declined'),
     ]
     status = models.IntegerField(choices=STATUS_CHOICES)
     team = models.ForeignKey(Team,on_delete=models.CASCADE,related_name='team_info')

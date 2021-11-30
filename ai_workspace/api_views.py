@@ -990,7 +990,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     @integrity_error
     def create(self,request):
         print("DATA------------->",request.POST.dict())
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict()})
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'task':request.POST.getlist('task')})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

@@ -511,24 +511,31 @@ class TaskCreditStatusSerializer(serializers.ModelSerializer):
 
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
+    tasks = serializers.ListField(required=False)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','task','instruction','po_number','deadline','assign_to',)
+        fields = ('id','instruction','po_number','deadline','assign_to','tasks')
 
     def run_validation(self, data):
+        print("Intial_data-->",data)
         data["assign_to"] = json.loads(data["assign_to"])
+        data['tasks'] = [json.loads(task) for task in data.pop('task', [])]
         print("validated data run validation----->",data)
         return super().run_validation(data)
 
     def create(self, data):
         print('validated data==>',data)
-        assign_to = data.pop("assign_to")
-        print(assign_to)
-        task_id = data.get("task").id
-        print(task_id)
-        task = Task.objects.get(id = task_id)
-        user = AiUser.objects.get(id = assign_to)
-        task.assign_to = user
-        task.save()
-        task_assign_info = TaskAssignInfo.objects.create(**data)
+        task_list = data.pop('tasks')
+        assign_to = data.pop('assign_to')
+        task_info = [Task.objects.filter(id = task).update(assign_to = assign_to) for task in task_list]
+        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
         return task_assign_info
+# assign_to = data.pop("assign_to")
+# print(assign_to)
+# task_id = data.get("task").id
+# print(task_id)
+# task = Task.objects.get(id = task_id)
+# user = AiUser.objects.get(id = assign_to)
+# task.assign_to = user
+# task.save()
+# files = [self.create(**item, project=project) for item in data]
