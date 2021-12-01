@@ -517,9 +517,10 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         fields = ('id','instruction','po_number','deadline','assign_to','tasks')
 
     def run_validation(self, data):
-        print("Intial_data-->",data)
-        data["assign_to"] = json.loads(data["assign_to"])
-        data['tasks'] = [json.loads(task) for task in data.pop('task', [])]
+        if data.get('assign_to'):
+           data["assign_to"] = json.loads(data["assign_to"])
+        if data.get('tasks'):
+           data['tasks'] = [json.loads(task) for task in data.pop('task', [])]
         print("validated data run validation----->",data)
         return super().run_validation(data)
 
@@ -527,7 +528,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         print('validated data==>',data)
         task_list = data.pop('tasks')
         assign_to = data.pop('assign_to')
-        task_info = [Task.objects.filter(id = task).update(assign_to = assign_to) for task in task_list]
+        task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
         task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
         return task_assign_info
 # assign_to = data.pop("assign_to")
@@ -538,4 +539,3 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 # user = AiUser.objects.get(id = assign_to)
 # task.assign_to = user
 # task.save()
-# files = [self.create(**item, project=project) for item in data]

@@ -21,7 +21,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
 import copy, os, mimetypes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel
+    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel,TaskAssignInfo
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -989,7 +989,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        print("DATA------------->",request.POST.dict())
         serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'task':request.POST.getlist('task')})
         if serializer.is_valid():
             serializer.save()
