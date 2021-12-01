@@ -2,6 +2,7 @@ from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from django.urls import reverse
 from stripe.api_resources import subscription
+from ai_auth.access_policies import MemberCreationAccess
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
@@ -1198,7 +1199,7 @@ class TokenGenerator(PasswordResetTokenGenerator):
 invite_accept_token = TokenGenerator()
 
 class InternalMemberCreateView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,MemberCreationAccess]
     def list(self, request):
         print(request.user.id)
         queryset =InternalMember.objects.filter(team__owner_id=request.user.id)
@@ -1216,7 +1217,7 @@ class InternalMemberCreateView(viewsets.ViewSet):
         role_name = Role.objects.get(id=role).role
         today = date.today()
         try:
-            team_name = Team.objects.get(Q(id=team) & Q(owner_id = request.user.id)).name
+            team_name = Team.objects.get(id=team).name
         except:
             raise Http404
         functional_identity = request.POST.get('functional_identity')

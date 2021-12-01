@@ -299,12 +299,21 @@ class Team(models.Model):
     owner = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='team_owner')
     description = models.TextField(max_length=1000,blank=True,null=True)
 
+    def __str__(self):
+        return self.name
+    @property
+    def get_project_manager(self):
+        self.internal_member_team_info.filter(role__role = "project owner")
+
 
 class InternalMember(models.Model):
     team = models.ForeignKey(Team,on_delete=models.CASCADE,related_name='internal_member_team_info')
     internal_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='internal_member')
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     functional_identity = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.internal_member.email
 
 
 class ExternalMember(models.Model):
