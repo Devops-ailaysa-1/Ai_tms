@@ -1199,7 +1199,7 @@ class TokenGenerator(PasswordResetTokenGenerator):
 invite_accept_token = TokenGenerator()
 
 class InternalMemberCreateView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,MemberCreationAccess]
+    permission_classes = [IsAuthenticated]
     def list(self, request):
         print(request.user.id)
         queryset =InternalMember.objects.filter(team__owner_id=request.user.id)
@@ -1222,6 +1222,7 @@ class InternalMemberCreateView(viewsets.ViewSet):
             raise Http404
         functional_identity = request.POST.get('functional_identity')
         password = AiUser.objects.make_random_password()
+        print("randowm pass",password)
         hashed = make_password(password)
         template = 'Internal_member_credential_email.html'
         subject='Regarding Login credentials'

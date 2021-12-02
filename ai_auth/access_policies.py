@@ -6,21 +6,39 @@ from ai_auth.models import Team
 
 class MemberCreationAccess(AccessPolicy):
     statements = [
-        {"action": ["create","list"], 
-        "principal": ["group:project_managers"],  
-         "effect": "allow"
+        {"action": ["*"], 
+        "principal": ["group:account_owner",],  
+        "effect": "allow",
+        "condition":["is_team_owner"]
+        #"condition_expression": ["(is_project_owner or is_team_owner)"]
          },
     ]
 
-    # @classmethod
-    # def scope_queryset(cls, request, queryset):
-    #     if request.user.(name='editor').exists():
-    #         return queryset
+class TeamAccess(AccessPolicy):
+    statements = [
+        {"action": ["*"], 
+        "principal": ["group:account_owner"],  
+        "effect": "allow",
+        "condition":["is_team_owner"]
+        #"condition_expression": ["(is_project_owner or is_team_owner)"]
+         },
+        {"action": ["*"], 
+        "principal": ["group:internalmember"],  
+        "effect": "allow",
+        "condition":["is_project_owner"]
+        #"condition_expression": ["(is_project_owner or is_team_owner)"]
+         },
+    ]
 
-    #     return queryset.filter(status='published')
+class ProjectAccess(AccessPolicy):
+    statements = [
+        {"action": ["*"], 
+        "principal": ["group:vendor"],  
+        "effect": "allow",
+        "condition":["is_vendor"]
+        #"condition_expression": ["(is_project_owner or is_team_owner)"]
+         },
+    ]
 
-    # def is_project_owner(self, request, view, action) -> bool:
-    #     team = request.POST.get('team')
-    #     managers = Team.objects.get(id=team).internal_member_team_info.filter(role__role = "project owner")
-    #     return request.user in managers 
+
 
