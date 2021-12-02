@@ -6,8 +6,8 @@ from ai_auth.models import Team
 
 class MemberCreationAccess(AccessPolicy):
     statements = [
-        {"action": ["create","list"], 
-        "principal": ["group:project_managers"],  
+        {"action": ["create","list"],
+         "principal": ["*"],  
          "effect": "allow"
          },
     ]
@@ -22,5 +22,4 @@ class MemberCreationAccess(AccessPolicy):
     # def is_project_owner(self, request, view, action) -> bool:
     #     team = request.POST.get('team')
     #     managers = Team.objects.get(id=team).internal_member_team_info.filter(role__role = "project owner")
-    #     return request.user in managers 
-
+    #     return request.user in managers

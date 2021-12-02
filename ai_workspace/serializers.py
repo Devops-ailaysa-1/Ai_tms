@@ -3,7 +3,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,TaskAssignHistory
 import json
 import pickle
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -519,8 +519,11 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     def run_validation(self, data):
         if data.get('assign_to'):
            data["assign_to"] = json.loads(data["assign_to"])
-        if data.get('tasks'):
-           data['tasks'] = [json.loads(task) for task in data.pop('task', [])]
+        if data.get('task') and self.context['request']._request.method=='POST':
+           data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
+        else:
+           data['tasks'] = [json.loads(data.pop('task'))]
+        print(data['tasks'])
         print("validated data run validation----->",data)
         return super().run_validation(data)
 
@@ -531,6 +534,33 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
         task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
         return task_assign_info
+
+    def update(self,instance,data):
+        if 'assign_to' in data:
+            task = Task.objects.get(id = instance.task_id)
+            previous_assign = Task.objects.get(id = instance.task_id).assign_to_id
+            print(previous_assign)
+            segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
+            task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
+            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=previous_assign,task_segment_confirmed=segment_count)
+        return super().update(instance, data)
+			# task_list = data.pop('tasks')
+			# assign_to = data.pop('assign_to')
+            # res = super().update(instance, validated_data)
+            # task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
+			#
+
+
+
+
+# def update(self, instance, validated_data):
+# 	print(validated_data)
+# 	if "fullname" in validated_data:
+# 		res = super().update(instance, validated_data)
+# 		user = AiUser.objects.get(id=instance.user.id)
+# 		user.fullname = instance.fullname
+# 		user.save()
+# 	return super().update(instance, validated_data)
 # assign_to = data.pop("assign_to")
 # print(assign_to)
 # task_id = data.get("task").id

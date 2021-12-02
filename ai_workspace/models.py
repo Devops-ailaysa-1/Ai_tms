@@ -483,6 +483,12 @@ class TaskAssignInfo(models.Model):
     po_number = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
 
+class TaskAssignHistory(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,
+            related_name="task_assign_history")
+    previous_assign = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=False, blank=False)
+    task_segment_confirmed = models.IntegerField(null=True, blank=True)
+
 class TmxFile(models.Model):
 
     def tmx_file_path(instance, filename):

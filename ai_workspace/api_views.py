@@ -989,19 +989,21 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'task':request.POST.getlist('task')})
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self, request, pk):
-        try:
-            queryset = TaskAssignInfo.objects.get(id=pk)
-        except TaskAssignInfo.DoesNotExist:
-            return Response(status=204)
-        serializer =TaskAssignInfoSerializer(queryset,data={**request.POST.dict()},partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def update(self, request,pk=None):
+        task = request.POST.getlist('task')
+        if not task:
+            return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+        for i in task:
+            task_assign_info = TaskAssignInfo.objects.get(task_id = i)
+            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(task, status=status.HTTP_200_OK)
