@@ -271,6 +271,7 @@ class LanguageMetaDetails(models.Model):
     language = models.ForeignKey(Languages, related_name="language_meta_details", on_delete=models.CASCADE, null=True, blank=True)
     lang_name_in_script = models.CharField(max_length=200, null=True, blank=True)
     script = models.ForeignKey(LanguageScripts, related_name="language_meta_details", on_delete=models.SET_NULL, null=True, blank=True)
+    ner = models.BooleanField(null=True, blank=True)
 
     def __str__(self):
         return self.language.language

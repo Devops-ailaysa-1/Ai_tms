@@ -1263,10 +1263,17 @@ class ExternalMemberCreateView(viewsets.ViewSet):
     @integrity_error
     def create(self,request):
         team = request.POST.get('team')
+        if team == None:
+            team = Team.objects.get(owner_id=request.user.id).id
+            team_name = request.user.fullname
+            template = 'External_member_pro_invite_email.html'
+        else:
+            template = 'External_member_business_invite_email.html'
+            team_name = Team.objects.get(id=team).name
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role')
         vendor = AiUser.objects.get(uid=uid)
-        team_name = Team.objects.get(id=team).name
+        # team_name = Team.objects.get(id=team).name
         role_name = Role.objects.get(id=role).role
         email = vendor.email
         serializer = ExternalMemberSerializer(data={'team':team,'role':role,'external_member':vendor.id,'status':1})
@@ -1274,7 +1281,7 @@ class ExternalMemberCreateView(viewsets.ViewSet):
             serializer.save()
             external_member_id = serializer.data.get('id')
             link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(vendor)}))
-            template = 'External_member_invite_email.html'
+            # template = 'External_member_invite_email.html'
             subject='Ailaysa MarketPlace Invite'
             context = {'name':vendor.fullname,'team':team_name,'role':role_name,'link':link}
             send_email_user(subject,template,context,email)

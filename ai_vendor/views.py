@@ -226,6 +226,9 @@ class VendorsBankInfoCreateView(APIView):
 def feature_availability(request):
     doc_id= request.POST.get("doc_id")
     target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
+    source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
+    
+    # CHECK FOR IME AND SPELLCHECKER AVAILABILITY
     try:
         spellchecker_id = SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
         data = 1
@@ -233,15 +236,11 @@ def feature_availability(request):
     except: 
         data = 0
         show_ime = True
-    # if LanguageMetaDetails.objects.get(language_id=target_lang_id).script_id == None:
-    #     show_ime = True # Show IME only for languages OTHER THAN Roman & Cyrillic script languages
-    # else:
-    # #     show_ime = False
-    # if target_lang_id in [ 17, 22, 26, 63, 66, 73 ]: #temporarily hard-coded, later will be queried from language meta details model
-    #      show_ime = False
-    # else:
-    #     show_ime = True
-    return JsonResponse({"out":data, "show_ime":show_ime}, safe = False)
+    
+    # CHECK FOR NER AVAILABILITY
+    show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False
+    
+    return JsonResponse({"out":data, "show_ime":show_ime, "ner":show_ner}, safe = False)
 
 @api_view(['GET',])
 def vendor_legal_categories_list(request):
