@@ -41,4 +41,3 @@ class ProjectAccess(AccessPolicy):
     ]
 
 
-
