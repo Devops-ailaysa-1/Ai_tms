@@ -9,6 +9,8 @@ from ai_auth.models import AiUser,user_directory_path
 from ai_workspace.models import Job,Project
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
+from django.db.models.signals import post_save, pre_save
+from ai_vendor.signals import user_update
 
 
 def vendor_directory_path(instance, filename):
@@ -110,7 +112,7 @@ class VendorLanguagePair(ParanoidModel):
        constraints = [
             UniqueConstraint(fields=['user', 'source_lang', 'target_lang'], condition=Q(deleted_at=None), name='unique_if_not_deleted')
         ]
-
+post_save.connect(user_update, sender=VendorLanguagePair)
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
