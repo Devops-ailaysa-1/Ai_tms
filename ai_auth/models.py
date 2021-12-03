@@ -85,7 +85,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             return total_buyed_credits
 
         return total_buyed_credits
-# post_save.connect(team_create, sender=AiUser)
+post_save.connect(team_create, sender=AiUser)
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)

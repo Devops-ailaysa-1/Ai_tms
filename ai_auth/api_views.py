@@ -1219,6 +1219,7 @@ class InternalMemberCreateView(viewsets.ViewSet):
         team_name = Team.objects.get(id=team).name
         functional_identity = request.POST.get('functional_identity')
         password = AiUser.objects.make_random_password()
+        print("randowm pass",password)
         hashed = make_password(password)
         template = 'Internal_member_credential_email.html'
         subject='Regarding Login credentials'

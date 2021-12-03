@@ -94,10 +94,11 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 
 #         )
 #     return response
-def team_create(sender, instance, *args, **kwargs):
-	teamname = instance.fullname + "'s team"
-	team =auth_model.Team.objects.get_or_create(name=teamname,owner_id=instance.id)
-	print("Team Created")
+def team_create(sender, instance,created, *args, **kwargs):
+    if created:
+        teamname = instance.fullname + "'s team"
+        team =auth_model.Team.objects.get_or_create(name=teamname,owner_id=instance.id)
+        print("Team Created")
 
 def updated_user_taxid(sender, instance, *args, **kwargs):
     # ss=auth_model.UserTaxInfo.objects.get(id=instance.id)

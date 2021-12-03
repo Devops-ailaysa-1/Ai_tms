@@ -387,3 +387,5 @@ CHANNEL_LAYERS = {
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 # DBBACKUP_STORAGE_OPTIONS = {'location': 'backupdb/'}
+
+DRF_ACCESS_POLICY = {"reusable_conditions": ["ai_auth.global_access_conditions"]}
