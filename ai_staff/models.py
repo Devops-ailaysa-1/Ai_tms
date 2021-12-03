@@ -271,7 +271,7 @@ class LanguageMetaDetails(models.Model):
     language = models.ForeignKey(Languages, related_name="language_meta_details", on_delete=models.CASCADE, null=True, blank=True)
     lang_name_in_script = models.CharField(max_length=200, null=True, blank=True)
     script = models.ForeignKey(LanguageScripts, related_name="language_meta_details", on_delete=models.SET_NULL, null=True, blank=True)
-    ner = models.BooleanField(null=True, blank=True)
+    # ner = models.BooleanField(null=True, blank=True)
 
     def __str__(self):
         return self.language.language
@@ -386,6 +386,9 @@ class SupportTopics(ParanoidModel):
 
 
 class Role(ParanoidModel):
-    role = models.CharField(max_length=100, null=True, blank=True)
+    name = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.name

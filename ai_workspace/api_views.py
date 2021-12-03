@@ -1000,10 +1000,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
         for i in task:
-            task_assign_info = TaskAssignInfo.objects.get(task_id = i)
-            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                task_assign_info = TaskAssignInfo.objects.get(task_id = i)
+                serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            except TaskAssignInfo.DoesNotExist:
+                print('not exist')
         return Response(task, status=status.HTTP_200_OK)

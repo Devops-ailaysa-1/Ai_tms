@@ -238,9 +238,9 @@ def feature_availability(request):
         show_ime = True
     
     # CHECK FOR NER AVAILABILITY
-    show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False
+    # show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False
     
-    return JsonResponse({"out":data, "show_ime":show_ime, "ner":show_ner}, safe = False)
+    return JsonResponse({"out":data, "show_ime":show_ime}, safe = False)
 
 @api_view(['GET',])
 def vendor_legal_categories_list(request):

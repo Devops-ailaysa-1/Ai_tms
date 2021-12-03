@@ -538,34 +538,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     def update(self,instance,data):
         if 'assign_to' in data:
             task = Task.objects.get(id = instance.task_id)
-            previous_assign = Task.objects.get(id = instance.task_id).assign_to_id
-            print(previous_assign)
             segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
             task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
-            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=previous_assign,task_segment_confirmed=segment_count)
+            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
         return super().update(instance, data)
-			# task_list = data.pop('tasks')
-			# assign_to = data.pop('assign_to')
-            # res = super().update(instance, validated_data)
-            # task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
-			#
-
-
-
-
-# def update(self, instance, validated_data):
-# 	print(validated_data)
-# 	if "fullname" in validated_data:
-# 		res = super().update(instance, validated_data)
-# 		user = AiUser.objects.get(id=instance.user.id)
-# 		user.fullname = instance.fullname
-# 		user.save()
-# 	return super().update(instance, validated_data)
-# assign_to = data.pop("assign_to")
-# print(assign_to)
-# task_id = data.get("task").id
-# print(task_id)
-# task = Task.objects.get(id = task_id)
-# user = AiUser.objects.get(id = assign_to)
-# task.assign_to = user
-# task.save()

@@ -56,6 +56,7 @@ urlpatterns+= [
      path('activate-account/',api_views.account_activation),
      path('delete-account/',api_views.account_delete),
      path('accept/<uid>/<token>',api_views.invite_accept,name='accept'),
+     path('teamlist/',api_views.teams_list),
      # path('external-member-invite/',api_views.external_member_invite),
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
