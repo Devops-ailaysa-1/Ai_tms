@@ -35,9 +35,22 @@ class ProjectAccess(AccessPolicy):
         {"action": ["*"], 
         "principal": ["group:vendor"],  
         "effect": "allow",
-        "condition":["is_vendor"]
+        "condition":["is_assigned"]
         #"condition_expression": ["(is_project_owner or is_team_owner)"]
          },
+        {"action": ["*"], 
+        "principal": ["group:account_owner"],  
+        "effect": "allow",
+        "condition":["is_team_owner"]
+        #"condition_expression": ["(is_project_owner or is_team_owner)"]
+         },
+        {"action": ["*"], 
+        "principal": ["group:project_owners"],  
+        "effect": "allow",
+        #"condition":["is_project_owner"]
+        "condition_expression": ["(is_project_owner and is_project_owner)"]
+         },
     ]
+    
 
 

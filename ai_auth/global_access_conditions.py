@@ -22,3 +22,7 @@ def is_internalmember(self,request, view, action) -> bool:
 
 def is_vendor(self,request, view, action) -> bool:
     return request.user.is_vendor
+
+def is_assigned_vendor(self,request, view, action) -> bool:
+    
+    return request.user.is_vendor
