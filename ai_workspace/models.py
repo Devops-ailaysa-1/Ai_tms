@@ -14,7 +14,7 @@ from django.contrib.auth import settings
 import os
 from ai_auth.models import AiUser,Team
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
-    ContentTypes, Languages, SubjectFields
+    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document, Segment
 from ai_staff.models import ParanoidModel
@@ -480,8 +480,13 @@ class TaskAssignInfo(models.Model):
     task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
-    po_number = models.CharField(max_length=191, blank=True, null=True)
+    assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
+    total_word_count = models.IntegerField(null=True, blank=True)
+    mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+    mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
+    currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
+
 
 class TaskAssignHistory(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,
