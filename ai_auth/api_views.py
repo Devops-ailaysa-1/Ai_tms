@@ -1207,6 +1207,7 @@ class InternalMemberCreateView(viewsets.ViewSet):
             return Response(status=204)
         serializer = InternalMemberSerializer(queryset,many=True)
         return Response(serializer.data)
+
     @integrity_error
     def create(self,request):
         data = request.POST.dict()
@@ -1317,3 +1318,13 @@ def invite_accept(request,uid,token):
         print("success & updated")
         return JsonResponse({"msg":"success"},safe=False)
     return JsonResponse({"msg":"Failed"},safe=False)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def teams_list(request):
+    teams =[]
+    ext = ExternalMember.objects.filter(external_member = request.user.id)
+    for j in ext:
+        teams.append(({'team':j.team.name,'role':j.role.name}))
+    return JsonResponse({'My_external_team':teams})

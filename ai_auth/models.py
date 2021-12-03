@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role
 from django.db.models.signals import post_save, pre_save
-from ai_auth.signals import create_allocated_dirs, updated_user_taxid
+from ai_auth.signals import create_allocated_dirs, updated_user_taxid,team_create
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -85,7 +85,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             return total_buyed_credits
 
         return total_buyed_credits
-
+# post_save.connect(team_create, sender=AiUser)
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)
@@ -301,6 +301,7 @@ class Team(models.Model):
 
     def __str__(self):
         return self.name
+        
     @property
     def get_project_manager(self):
         self.internal_member_team_info.filter(role__role = "project owner")

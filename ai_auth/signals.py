@@ -25,7 +25,7 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
     '''
     if instance.allocated_dir == None:
         instance.allocated_dir = os.path.join(settings.MEDIA_ROOT, str(instance.user.uid))
-        instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)   
+        instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)
 
 
 # def updated_billingaddress(sender, instance, *args, **kwargs):
@@ -40,7 +40,7 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 #     if settings.STRIPE_LIVE_MODE == True :
 #         api_key = settings.STRIPE_LIVE_SECRET_KEY
 #     else:
-#         api_key = settings.STRIPE_TEST_SECRET_KEY    
+#         api_key = settings.STRIPE_TEST_SECRET_KEY
 #     try:
 #         customer = Customer.objects.get(subscriber=address.user)
 #     except Customer.DoesNotExist:
@@ -72,7 +72,7 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 #                 coun=staff_model.Countries.objects.get(sortname= stipe_addr['country'])
 #                 kwarg['country']=coun
 
-                
+
 #     if len(kwarg)>0:
 #         if coun!= None:
 #             coun_name=coun.sortname
@@ -81,8 +81,8 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 
 #         response =stripe.Customer.modify(
 #         customer.id,
-#         name = address.name if address.name is not None else address.user.fullname, 
-        
+#         name = address.name if address.name is not None else address.user.fullname,
+
 #         address={
 #         "city": address.city,
 #         "line1": address.line1,
@@ -94,7 +94,10 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 
 #         )
 #     return response
-
+def team_create(sender, instance, *args, **kwargs):
+	teamname = instance.fullname + "'s team"
+	team =auth_model.Team.objects.get_or_create(name=teamname,owner_id=instance.id)
+	print("Team Created")
 
 def updated_user_taxid(sender, instance, *args, **kwargs):
     # ss=auth_model.UserTaxInfo.objects.get(id=instance.id)
@@ -111,7 +114,7 @@ def update_user_tax_id(taxid):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
+        api_key = settings.STRIPE_TEST_SECRET_KEY
 
     customer = Customer.objects.get(subscriber=taxid.user)
     stripe.api_key = api_key
@@ -128,7 +131,7 @@ def update_user_tax_id(taxid):
 
 @receiver(email_confirmed)
 def email_confirmed_(request, email_address, **kwargs):
-    user = auth_model.AiUser.objects.get(email=email_address) 
+    user = auth_model.AiUser.objects.get(email=email_address)
     current_site = get_current_site(request)
     auth_forms.send_welcome_mail(current_site,user)
 
@@ -146,7 +149,7 @@ def password_changed_handler(request, user,instance, **kwargs):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
+        api_key = settings.STRIPE_TEST_SECRET_KEY
     try:
         customer = Customer.objects.get(subscriber=user)
     except Customer.DoesNotExist:
@@ -158,8 +161,8 @@ def password_changed_handler(request, user,instance, **kwargs):
 
     response =stripe.Customer.modify(
     customer.id,
-    name = instance.name if instance.name is not None else instance.user.fullname, 
-    
+    name = instance.name if instance.name is not None else instance.user.fullname,
+
     address={
     "city": instance.city,
     "line1": instance.line1,

@@ -386,6 +386,9 @@ class SupportTopics(ParanoidModel):
 
 
 class Role(ParanoidModel):
-    role = models.CharField(max_length=100, null=True, blank=True)
+    name = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.name
