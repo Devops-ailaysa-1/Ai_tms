@@ -10,7 +10,7 @@ from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from ai_marketplace.models import AvailableVendors
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
-from ai_auth.models import AiUser
+from ai_auth.models import AiUser,Team
 from ai_auth.validators import project_file_size
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -394,11 +394,16 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
+	team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	# team = serializers.IntegerField(required=False)
+	project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	# ai_user = serializers.IntegerField(required=False)
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name", "jobs", "files")#,'ai_user')
+		fields = ("id", "project_name", "jobs", "files","team_id",'get_team','project_manager_id',"files_jobs_choice_url",
+		 			"progress", "files_count", "tasks_count", "project_analysis",)#,'ai_user')
+
 
 	def to_internal_value(self, data):
 		data["project_name"] = data.get("project_name", [None])[0]
@@ -406,7 +411,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			target_language} for target_language in data.get("target_languages", [])]
 		print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-
+		data['team_id'] = data.get('team',[None])[0]
+		data['project_manager_id'] = data.get('project_manager')
+		print(data)
 		return super().to_internal_value(data=data)
 
 
@@ -416,9 +423,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			ai_user = self.context.get("request", None).user
 		else:
 		 	ai_user = self.context.get("ai_user", None)
+		if not validated_data.get('project_manager_id'):
+			validated_data['project_manager_id'] = ai_user.id
+		if not validated_data.get('team_id'):
+			validated_data['team_id'] = Team.objects.get(owner=ai_user).id
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
-			f_klass=File,j_klass=Job, ai_user=ai_user)
+			f_klass=File,j_klass=Job, ai_user=ai_user)#,team=team,project_manager=project_manager)
 
 		tasks = Task.objects.create_tasks_of_files_and_jobs(
 			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
@@ -514,7 +525,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     tasks = serializers.ListField(required=False)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','po_number','deadline','assign_to','tasks')
+        fields = ('id','instruction','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count')
 
     def run_validation(self, data):
         if data.get('assign_to'):

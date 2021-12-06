@@ -511,6 +511,8 @@ class TbxUploadView(APIView):
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    paginator = PageNumberPagination()
+    paginator.page_size = 10
 
     def get_object(self):
         pk = self.kwargs.get("pk", 0)
@@ -519,6 +521,16 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         except:
             raise Http404
         return obj
+
+    def get_queryset(self):
+        return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
+
+    def list(self,request):
+        queryset = self.get_queryset()
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request})
+        response = self.paginator.get_paginated_response(serializer.data)
+        return  response
 
     def create(self, request):
         text_data=request.POST.get('text_data')
@@ -541,8 +553,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             return Response(serializer.errors, status=409)
         else:
             serlzr = ProjectQuickSetupSerializer(data=\
-            {**request.data, "files": request.FILES.getlist("files")},
-            context={"request": request})
+            {**request.data, "files": request.FILES.getlist("files")},context={"request": request})
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 return Response(serlzr.data, status=201)
@@ -945,7 +956,9 @@ def create_project_from_temp_project_new(request):
     target_languages = [str(i.target_language_id) for i in jobs_list]
     files = [DJFile(i.files,name=i.filename) for i in files_list]
     filename,extension = os.path.splitext((files_list[0].filename))
-    serializer = ProjectQuickSetupSerializer(data={'project_name':[filename + str(temp_proj.id)],'source_language':source_language,'target_languages':target_languages,'files':files},context={'ai_user':ai_user})
+    serializer = ProjectQuickSetupSerializer(data={'project_name':[filename + str(temp_proj.id)],\
+    'source_language':source_language,'target_languages':target_languages,'files':files},\
+    context={'ai_user':ai_user})
     if serializer.is_valid():
         serializer.save()
         print(serializer.data)
@@ -992,7 +1005,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request,pk=None):

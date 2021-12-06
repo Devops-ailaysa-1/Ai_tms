@@ -301,10 +301,10 @@ class Team(models.Model):
 
     def __str__(self):
         return self.name
-        
+
     @property
     def get_project_manager(self):
-        self.internal_member_team_info.filter(role__role = "project owner")
+        self.internal_member_team_info.filter(role__name = "project owner")
 
 
 class InternalMember(models.Model):
