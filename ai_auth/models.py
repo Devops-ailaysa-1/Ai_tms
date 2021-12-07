@@ -327,8 +327,8 @@ class ExternalMember(models.Model):
         # (INVITE_DECLINED, 'Invite Declined'),
     ]
     status = models.IntegerField(choices=STATUS_CHOICES)
-    team = models.ForeignKey(Team,on_delete=models.CASCADE,related_name='team_info')
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='team_info')
     external_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='team_member')
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
-        unique_together = ['team', 'external_member','role']
+        unique_together = ['user', 'external_member','role']

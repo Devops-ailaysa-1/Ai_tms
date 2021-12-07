@@ -1255,7 +1255,7 @@ class ExternalMemberCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def list(self, request):
         print(request.user.id)
-        queryset =ExternalMember.objects.filter(Q(team__owner_id=request.user.id) & Q(status = 2))
+        queryset =ExternalMember.objects.filter(Q(user_id=request.user.id) & Q(status = 2))
         if not queryset.exists():
             return Response(status=204)
         serializer = ExternalMemberSerializer(queryset,many=True)
@@ -1263,28 +1263,28 @@ class ExternalMemberCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        team = request.POST.get('team')
-        if team == None:
-            team = Team.objects.get(owner_id=request.user.id).id
-            team_name = request.user.fullname
-            template = 'External_member_pro_invite_email.html'
-        else:
-            template = 'External_member_business_invite_email.html'
-            team_name = Team.objects.get(id=team).name
+        # team = request.POST.get('team')
+        # if team == None:
+        team = Team.objects.get(owner_id=request.user.id).id
+        user = request.user.fullname
+        template = 'External_member_pro_invite_email.html'
+        # else:
+        #     template = 'External_member_business_invite_email.html'
+        #     team_name = Team.objects.get(id=team).name
         uid=request.POST.get('vendor_id')
-        role = request.POST.get('role')
+        role = request.POST.get('role',2)
         vendor = AiUser.objects.get(uid=uid)
         # team_name = Team.objects.get(id=team).name
         role_name = Role.objects.get(id=role).name
         email = vendor.email
-        serializer = ExternalMemberSerializer(data={'team':team,'role':role,'external_member':vendor.id,'status':1})
+        serializer = ExternalMemberSerializer(data={'user':request.user.id,'role':role,'external_member':vendor.id,'status':1})
         if serializer.is_valid():
             serializer.save()
             external_member_id = serializer.data.get('id')
             link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(vendor)}))
             # template = 'External_member_invite_email.html'
             subject='Ailaysa MarketPlace Invite'
-            context = {'name':vendor.fullname,'team':team_name,'role':role_name,'link':link}
+            context = {'name':vendor.fullname,'team':user,'role':role_name,'link':link}
             send_email_user(subject,template,context,email)
             return JsonResponse({"msg":"email sent successfully"},safe = False)
         # # link = request.build_absolute_uri('/team/external_member/accept/'+urlsafe_base64_encode(force_bytes(vendor.id))+'/'+urlsafe_base64_encode(force_bytes(team.id))+'/'+invite_accept_token.make_token(user)+'/')

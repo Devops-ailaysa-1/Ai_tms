@@ -513,7 +513,7 @@ class TbxUploadView(APIView):
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
-    paginator.page_size = 10
+    paginator.page_size = 20
 
     def get_object(self):
         pk = self.kwargs.get("pk", 0)
@@ -524,7 +524,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     def get_queryset(self):
-        return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
+        # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
+        return Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
 
     def list(self,request):
         queryset = self.get_queryset()
@@ -1058,3 +1059,32 @@ def get_assign_to_list(request):
     except:
         externalmembers =[]
     return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})
+
+# @api_view(['GET',])
+# def get_assign_to_list(request):
+#     project = request.GET.get('project')
+#     job_id = request.GET.get('job')
+#     job = Job.objects.get(id = job_id)
+#     proj_ = Project.objects.get(id = project)
+#     internalmembers = []
+#     externalmembers = []
+#     if team:
+#         try:
+#             internal_team = InternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
+#             for i in internal_team:
+#                 internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id})
+#         except:
+#             internalmembers = []
+#         try:
+#             external_team = ExternalMember.objects.filter(Q(user_id = team__owner_id) & Q(role = 2))
+#             for j in external_team:
+#                 try:
+#                     vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
+#                     print(vendor)
+#                 except:
+#                     vendor = None
+#                 if vendor:
+#                     externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
+#         except:
+#             externalmembers =[]
+#     return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})

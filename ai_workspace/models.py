@@ -220,7 +220,9 @@ class Project(models.Model):
 
     @property
     def get_team(self):
-        if self.team.owner == self.ai_user:
+        if self.team == None:
+            return None
+        elif self.team.owner == self.ai_user:
             return "self"
         else:
             return self.team.name

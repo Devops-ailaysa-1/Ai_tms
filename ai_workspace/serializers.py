@@ -425,8 +425,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 	ai_user = self.context.get("ai_user", None)
 		if not validated_data.get('project_manager_id'):
 			validated_data['project_manager_id'] = ai_user.id
-		if not validated_data.get('team_id'):
-			validated_data['team_id'] = Team.objects.get(owner=ai_user).id
+		# if not validated_data.get('team_id'):
+		# 	validated_data['team_id'] = Team.objects.get(owner=ai_user).id
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
 			f_klass=File,j_klass=Job, ai_user=ai_user)#,team=team,project_manager=project_manager)
