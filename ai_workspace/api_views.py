@@ -559,7 +559,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 return Response(serlzr.data, status=201)
-            return Response(serializer.errors, status=409)
+            return Response(serlzr.errors, status=409)
 
     def update(self, request, pk, format=None):
         instance = self.get_object()
@@ -1032,59 +1032,73 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         return Response(task, status=status.HTTP_200_OK)
 
 
-@api_view(['GET',])
-def get_assign_to_list(request):
-    # project = request.GET.get('project')
-    job_id = request.GET.get('job')
-    job = Job.objects.get(id = job_id)
-    team = Team.objects.get(owner_id = request.user.id)
-    internalmembers = []
-    externalmembers = []
-    try:
-        internal_team = InternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
-        for i in internal_team:
-            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id})
-    except:
-        internalmembers = []
-    try:
-        external_team = ExternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
-        for j in external_team:
-            try:
-                vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
-                print(vendor)
-            except:
-                vendor = None
-            if vendor:
-                externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
-    except:
-        externalmembers =[]
-    return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})
-
 # @api_view(['GET',])
 # def get_assign_to_list(request):
-#     project = request.GET.get('project')
+#     # project = request.GET.get('project')
 #     job_id = request.GET.get('job')
 #     job = Job.objects.get(id = job_id)
-#     proj_ = Project.objects.get(id = project)
+#     team = Team.objects.get(owner_id = request.user.id)
 #     internalmembers = []
 #     externalmembers = []
-#     if team:
-#         try:
-#             internal_team = InternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
-#             for i in internal_team:
-#                 internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id})
-#         except:
-#             internalmembers = []
-#         try:
-#             external_team = ExternalMember.objects.filter(Q(user_id = team__owner_id) & Q(role = 2))
-#             for j in external_team:
-#                 try:
-#                     vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
-#                     print(vendor)
-#                 except:
-#                     vendor = None
-#                 if vendor:
-#                     externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
-#         except:
-#             externalmembers =[]
+#     try:
+#         internal_team = InternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
+#         for i in internal_team:
+#             internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id})
+#     except:
+#         internalmembers = []
+#     try:
+#         external_team = ExternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
+#         for j in external_team:
+#             try:
+#                 vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
+#                 print(vendor)
+#             except:
+#                 vendor = None
+#             if vendor:
+#                 externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
+#     except:
+#         externalmembers =[]
 #     return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})
+
+@api_view(['GET',])
+def get_assign_to_list(request):
+    project = request.GET.get('project')
+    job_id = request.GET.get('job')
+    job = Job.objects.get(id = job_id)
+    proj_team = Project.objects.get(id = project).team
+    internalmembers = []
+    externalmembers = []
+    if proj_team:
+        try:
+            internal_team = InternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
+            for i in internal_team:
+                internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id})
+        except:
+            internalmembers = []
+        try:
+            external_team = ExternalMember.objects.filter(Q(user_id = team__owner_id)).filter(Q(external_member_id = request.user.id) & Q(role = 2) & Q(status = 2))
+            for j in external_team:
+                try:
+                    vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
+                    print(vendor)
+                except:
+                    vendor = None
+                if vendor:
+                    externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
+        except:
+            externalmembers =[]
+    else:
+        try:
+            external_team = ExternalMember.objects.filter(Q(user_id = ai_user_id)).filter(Q(external_member_id = request.user.id) & Q(role = 2) & Q(status = 2))
+            for j in external_team:
+                try:
+                    vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
+                    print(vendor)
+                except:
+                    vendor = None
+                if vendor:
+                    externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
+        except:
+            externalmembers =[]
+
+    return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})

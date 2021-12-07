@@ -397,11 +397,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	# team = serializers.IntegerField(required=False)
 	project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	# assign_enable = serializers.BooleanField()
 	# ai_user = serializers.IntegerField(required=False)
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
+		fields = ("id", "project_name", "jobs", "files","team_id",'get_team','project_manager_id',"files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis",)#,'ai_user')
 
 

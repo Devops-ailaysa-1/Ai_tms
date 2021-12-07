@@ -227,15 +227,19 @@ class Project(models.Model):
         else:
             return self.team.name
 
-    @property
-    def assign_enable(self):
-        if self.team.owner == self.ai_user:
-            return True
-        obj = ExternalMember.objects.get(Q(team = self.team) & Q(external_member_id = self.ai_user) & Q(role = 1) & Q(status = 2))
-        if obj:
-            return True
-        else:
-            return False
+    # @property
+    # def assign_enable(self):
+    #     if self.team == None:
+    #         return True
+    #     if self.team.owner == self.ai_user:
+    #         return True
+    #     else:
+    #         obj = ExternalMember.objects.get(Q(user=self.team.owner) & Q(role = 1) & Q(status = 2))
+    #         print(obj)
+    #         if obj:
+    #             return True
+    #         else:
+    #             return False
 
     @property
     def project_analysis(self):
@@ -256,12 +260,15 @@ class Project(models.Model):
                 task_words.append({task.id:doc.total_word_count})
             else:
                 from ai_workspace_okapi.api_views import DocumentViewByTask
-                doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
-                proj_word_count += doc.total_word_count
-                proj_char_count += doc.total_char_count
-                proj_seg_count += doc.total_segment_count
+                try:
+                    doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
+                    proj_word_count += doc.total_word_count
+                    proj_char_count += doc.total_char_count
+                    proj_seg_count += doc.total_segment_count
 
-                task_words.append({task.id:doc.total_word_count})
+                    task_words.append({task.id:doc.total_word_count})
+                except:
+                    print('Error')
 
         return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
                                   "task_words" : task_words }
