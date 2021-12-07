@@ -53,6 +53,7 @@ urlpatterns += [
 	path("dashboard_credit_status", api_views.dashboard_credit_status, name="dashboard-credit-status"),
 	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
 	path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
+	path('get_assign_to_list/',api_views.get_assign_to_list),
 ]
 # views urls adding for local testing
 urlpatterns += [

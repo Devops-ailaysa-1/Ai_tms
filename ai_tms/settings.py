@@ -118,6 +118,7 @@ INSTALLED_APPS = [
     'ai_marketplace',
     'djstripe',
     'django_filters',
+    'notifications',
     #'dbbackup',
     # 'channels',
     #'django_q',
@@ -198,7 +199,9 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-
+DJANGO_NOTIFICATIONS_CONFIG = {
+      'USE_JSONFIELD': True,
+}
 #REST_FRAMEWORK = {
 
 #    'DEFAULT_AUTHENTICATION_CLASSES': (

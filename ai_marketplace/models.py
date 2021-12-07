@@ -127,7 +127,7 @@ class Thread(models.Model):
 
     objects = ThreadManager()
     class Meta:
-        unique_together = ['first_person', 'second_person','bid']
+        unique_together = ['first_person', 'second_person']
 
 
 class ChatMessage(models.Model):
@@ -135,3 +135,7 @@ class ChatMessage(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     message = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    # @property
+    # def get_sender_and_receiver(self):
+    #     Thread.objects.get()

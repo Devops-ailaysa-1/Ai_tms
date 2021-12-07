@@ -135,3 +135,4 @@ wiktionaryparser==0.0.97
 pyspellchecker==0.6.2
 redis
 django-dbbackup
+django-notifications-hq==1.6.0

@@ -3,6 +3,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import render
 from ai_auth.models import AiUser
 from django.conf import settings
+from notifications.signals import notify
+from notifications.models import Notification
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
 from django.test.client import RequestFactory
@@ -258,10 +260,10 @@ def addingthread(request):
     serializer = ThreadSerializer(data={'first_person':user1,'second_person':user2,'bid':bid_id})
     if serializer.is_valid():
         serializer.save()
-        Bid_info = BidPropasalDetails.objects.get(id=bid_id)
-        serializer2 = BidPropasalDetailSerializer(Bid_info,data={'status':2},partial=True)
-        if serializer2.is_valid():
-            serializer2.save()
+        # Bid_info = BidPropasalDetails.objects.get(id=bid_id)
+        # serializer2 = BidPropasalDetailSerializer(Bid_info,data={'status':2},partial=True)
+        # if serializer2.is_valid():
+        #     serializer2.save()
         return JsonResponse(serializer.data, status=201)
     else:
         return JsonResponse(serializer.errors, status=400)
@@ -398,7 +400,9 @@ class GetVendorListView(generics.ListAPIView):
             queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset
 
-
+def notification_read(thread_id):
+    list = Notification.objects.filter(data={'thread_id':thread_id})
+    list.mark_all_as_read()
 
 class ChatMessageListView(APIView):
     permission_classes = [IsAuthenticated]
@@ -407,15 +411,26 @@ class ChatMessageListView(APIView):
             queryset = ChatMessage.objects.filter(thread_id = thread_id).all()
             print(queryset)
             serializer = ChatMessageSerializer(queryset,many=True)
+            notification_read(thread_id)
             return Response(serializer.data)
         except:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request,thread_id):
-        serializer = ChatMessageSerializer(data={**request.POST.dict(),'thread':thread_id},context={'request':request})
+        user = request.user.id
+        sender = AiUser.objects.get(id = user)
+        tt = Thread.objects.get(id=thread_id)
+        if tt.first_person_id == request.user.id:
+            receiver = tt.second_person_id
+        else:
+            receiver = tt.first_person_id
+        Receiver = AiUser.objects.get(id = receiver)
+        serializer = ChatMessageSerializer(data={**request.POST.dict(),'thread':thread_id,'user':user},context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
+            thread_id = serializer.data.get('thread')
+            notify.send(sender, recipient=Receiver, verb='Message', description=request.POST.get('message'),thread_id=thread_id)
             return Response(serializer.data)
         return Response(serializer.errors)
 
@@ -470,3 +485,36 @@ def get_my_jobs(request):
     # tasks = Task.objects.filter(assign_to_id=request.user.id)
     tasks_serlzr = TaskSerializer(tasks, many=True)
     return Response(tasks_serlzr.data, status=200)
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_available_threads(request):
+    try:
+        threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
+        receivers_list =[]
+        for i in threads:
+            if i.first_person_id == request.user.id:
+                receiver = i.second_person_id
+            else:
+                receiver = i.first_person_id
+            Receiver = AiUser.objects.get(id = receiver)
+            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname})
+        return JsonResponse({"receivers_list":receivers_list})
+    except:
+        return JsonResponse({"receivers_list":[]})
+
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def unread_notifications(request):
+    user = AiUser.objects.get(pk=request.user.id)
+    notifications = user.notifications.unread()
+    count = user.notifications.unread().count()
+    notification_details=[]
+    notification_details.append({'count':count})
+    for i in notifications:
+        notification_details.append({'message':i.description,'time':i.timesince(),'sender':i.actor.fullname,\
+                                    'thread':i.data.get('thread_id')})
+    return JsonResponse({'notifications':notification_details})

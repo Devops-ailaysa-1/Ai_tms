@@ -88,7 +88,7 @@ class ThreadSerializer(serializers.ModelSerializer):
         qs = Thread.objects.filter(lookup)
         print(qs)
         if qs.exists():
-            raise serializers.ValidationError({"msg":f'Thread between {first_person} and {second_person} already exists for this {bid}.'})
+            raise serializers.ValidationError({"msg":f'Thread between {first_person} and {second_person} already exists.','thread_id':qs[0].id})# for this {bid}.'})
         return super().run_validation(data)
 
 

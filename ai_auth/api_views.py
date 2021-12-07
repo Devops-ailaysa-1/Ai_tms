@@ -1214,7 +1214,7 @@ class InternalMemberCreateView(viewsets.ViewSet):
         team = data.get('team')
         email = data.get('email')
         role = data.get('role')
-        role_name = Role.objects.get(id=role).role
+        role_name = Role.objects.get(id=role).name
         today = date.today()
         team_name = Team.objects.get(id=team).name
         functional_identity = request.POST.get('functional_identity')
@@ -1275,7 +1275,7 @@ class ExternalMemberCreateView(viewsets.ViewSet):
         role = request.POST.get('role')
         vendor = AiUser.objects.get(uid=uid)
         # team_name = Team.objects.get(id=team).name
-        role_name = Role.objects.get(id=role).role
+        role_name = Role.objects.get(id=role).name
         email = vendor.email
         serializer = ExternalMemberSerializer(data={'team':team,'role':role,'external_member':vendor.id,'status':1})
         if serializer.is_valid():
@@ -1325,7 +1325,9 @@ def invite_accept(request,uid,token):
 @permission_classes([IsAuthenticated])
 def teams_list(request):
     teams =[]
+    my_team = Team.objects.get(owner_id = request.user.id).id
+    teams.append({'team_id':my_team,'team':'self'})
     ext = ExternalMember.objects.filter(external_member = request.user.id)
     for j in ext:
-        teams.append(({'team':j.team.name,'role':j.role.name}))
+        teams.append(({'team_id':j.team.id,'team':j.team.name,'role':j.role.name}))
     return JsonResponse({'My_external_team':teams})

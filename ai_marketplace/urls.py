@@ -3,6 +3,7 @@ from django.urls import path,include
 from ai_marketplace import api_views,views
 from rest_framework.routers import DefaultRouter
 from django.conf.urls import url
+import notifications.urls
 
 router = DefaultRouter()
 # router.register(r'bidchat',views.BidChatView,basename="bid-chat")
@@ -32,5 +33,8 @@ urlpatterns+= [
     path('get_incomplete_projects_list/',api_views.get_incomplete_projects_list),
     path('vendor_applied_jobs_list/',api_views.vendor_applied_jobs_list),
     path('get_my_jobs/',api_views.get_my_jobs),
+    path('get_available_threads/',api_views.get_available_threads),
+    url('^notifications/', include(notifications.urls, namespace='notifications')),
+    path('unread/notifications/',api_views.unread_notifications),
     # path('bid_proposal_status_update/<int:bid_id>/',api_views.BidProposalPostStatusUpdateView.as_view(),name='status-update'),
     ]

@@ -401,7 +401,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name", "jobs", "files","team_id",'get_team','project_manager_id',"files_jobs_choice_url",
+		fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis",)#,'ai_user')
 
 
@@ -525,7 +525,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     tasks = serializers.ListField(required=False)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count')
+        fields = ('id','instruction','reference_file','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count')
 
     def run_validation(self, data):
         if data.get('assign_to'):

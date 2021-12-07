@@ -5,9 +5,10 @@ from django.conf import settings
 from django.core.files import File as DJFile
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
+from ai_vendor.models import VendorLanguagePair
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_auth.models import AiUser, UserCredits
+from ai_auth.models import AiUser, UserCredits, Team, InternalMember, ExternalMember
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
@@ -584,10 +585,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             serlzr.save()
             return Response(serlzr.data)
 
-    def delete(self, request, pk):
-        project = self.get_object()
-        project.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    # def delete(self, request, pk):
+    #     project = self.get_object()
+    #     project.delete()
+    #     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class VendorDashBoardView(viewsets.ModelViewSet):
@@ -1002,7 +1003,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'task':request.POST.getlist('task')},context={'request':request})
+        file=request.FILES.get('reference_file')
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'reference_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response({"msg":"Task Assigned"})
@@ -1010,12 +1012,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     def update(self, request,pk=None):
         task = request.POST.getlist('task')
+        file = request.FILES.get('reference_file')
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
         for i in task:
             try:
                 task_assign_info = TaskAssignInfo.objects.get(task_id = i)
-                serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+                if file:
+                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'reference_file':file},context={'request':request},partial=True)
+                else:
+                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
                 if serializer.is_valid():
                     serializer.save()
                 else:
@@ -1023,3 +1029,32 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             except TaskAssignInfo.DoesNotExist:
                 print('not exist')
         return Response(task, status=status.HTTP_200_OK)
+
+
+@api_view(['GET',])
+def get_assign_to_list(request):
+    # project = request.GET.get('project')
+    job_id = request.GET.get('job')
+    job = Job.objects.get(id = job_id)
+    team = Team.objects.get(owner_id = request.user.id)
+    internalmembers = []
+    externalmembers = []
+    try:
+        internal_team = InternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
+        for i in internal_team:
+            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id})
+    except:
+        internalmembers = []
+    try:
+        external_team = ExternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
+        for j in external_team:
+            try:
+                vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
+                print(vendor)
+            except:
+                vendor = None
+            if vendor:
+                externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
+    except:
+        externalmembers =[]
+    return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})

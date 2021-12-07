@@ -295,7 +295,7 @@ class GeneralSupport(models.Model):
 
 
 class Team(models.Model):
-    name = models.CharField(max_length=250,blank=True,null=True)
+    name = models.CharField(max_length=50,unique=True)
     owner = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='team_owner')
     description = models.TextField(max_length=1000,blank=True,null=True)
 

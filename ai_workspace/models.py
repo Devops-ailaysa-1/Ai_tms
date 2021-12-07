@@ -12,7 +12,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
 import os
-from ai_auth.models import AiUser,Team
+from ai_auth.models import AiUser,Team,ExternalMember
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
 from ai_staff.models import ContentTypes, Languages, SubjectFields
@@ -221,9 +221,19 @@ class Project(models.Model):
     @property
     def get_team(self):
         if self.team.owner == self.ai_user:
-            return "self_project"
+            return "self"
         else:
             return self.team.name
+
+    @property
+    def assign_enable(self):
+        if self.team.owner == self.ai_user:
+            return True
+        obj = ExternalMember.objects.get(Q(team = self.team) & Q(external_member_id = self.ai_user) & Q(role = 1) & Q(status = 2))
+        if obj:
+            return True
+        else:
+            return False
 
     @property
     def project_analysis(self):
@@ -486,10 +496,16 @@ class Task(models.Model):
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
+def reference_file_upload_path(instance, filename):
+    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,\
+            "references", filename)
+    return file_path
+
 class TaskAssignInfo(models.Model):
     task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
+    reference_file = models.FileField (upload_to=reference_file_upload_path,blank=True, null=True)
     assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)
