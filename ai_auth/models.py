@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role
 from django.db.models.signals import post_save, pre_save
-from ai_auth.signals import create_allocated_dirs, updated_user_taxid,team_create
+from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -42,6 +42,17 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
+
+    @property
+    def internal_member_team_info(self):
+        if self.is_internal_member == True:
+            print("RR")
+            obj = InternalMember.objects.get(internal_member_id = self.id)
+            # team_info = InternalMember.objects.get(internal_member_id = self.id).team
+            return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
+
+
+
 
     @property
     def credit_balance(self):
@@ -85,7 +96,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             return total_buyed_credits
 
         return total_buyed_credits
-post_save.connect(team_create, sender=AiUser)
+post_save.connect(update_internal_member_status, sender=AiUser)
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)
@@ -308,10 +319,17 @@ class Team(models.Model):
 
 
 class InternalMember(models.Model):
+    CRDENTIALS_SENT = 1
+    LOGGED_IN = 2
+    STATUS_CHOICES = [
+        (CRDENTIALS_SENT,'Credentials Sent'),
+        (LOGGED_IN, 'Logged In'),
+    ]
     team = models.ForeignKey(Team,on_delete=models.CASCADE,related_name='internal_member_team_info')
     internal_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='internal_member')
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     functional_identity = models.CharField(max_length=255, blank=True, null=True)
+    status = models.IntegerField(choices=STATUS_CHOICES)
 
     def __str__(self):
         return self.internal_member.email

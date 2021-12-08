@@ -12,6 +12,8 @@ from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
 from ai_auth.models import AiUser,Team
 from ai_auth.validators import project_file_size
+from django.db.models import Q
+
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -395,14 +397,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
-	# team = serializers.IntegerField(required=False)
 	project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
-	# assign_enable = serializers.BooleanField()
-	# ai_user = serializers.IntegerField(required=False)
+	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name", "jobs", "files","team_id",'get_team','project_manager_id',"files_jobs_choice_url",
+		fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis",)#,'ai_user')
 
 
@@ -417,6 +417,21 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		print(data)
 		return super().to_internal_value(data=data)
 
+	def check_role(self, instance):
+		if self.context.get("request")!=None:
+			user = self.context.get("request").user
+		else:user = self.context.get("ai_user", None)
+		if instance.team :
+			return True if ((instance.team.owner == user)\
+				or(instance.team.internal_member_team_info.all().\
+				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+				or(instance.team.owner.team_info.all()\
+				.filter(Q(external_member_id = user.id) & Q(role_id=1))))\
+				else False
+		else:
+			return True if ((instance.ai_user == user) or\
+			(instance.ai_user.team_info.all().filter(Q(external_member_id = user.id) & Q(role_id=1))))\
+			else False
 
 	def create(self, validated_data):
 		print("data-->",validated_data)
@@ -437,10 +452,17 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return  project
 
 	def update(self, instance, validated_data):
-
-		instance.project_name = validated_data.get("project_name",\
-								instance.project_name)
-		instance.save()
+		print("TTTTTTTtt",validated_data)
+		if validated_data.get('project_name'):
+			instance.project_name = validated_data.get("project_name",\
+									instance.project_name)
+			instance.save()
+		if validated_data.get('team_id'):
+			instance.team_id = validated_data.get('team_id')
+			instance.save()
+		if validated_data.get('project_manager_id'):
+			instance.project_manager_id = validated_data.get('project_manager_id')
+			instance.save()
 
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
@@ -453,6 +475,41 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		return  project
 
+class TaskAssignInfoSerializer(serializers.ModelSerializer):
+    assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
+    tasks = serializers.ListField(required=False)
+    class Meta:
+        model = TaskAssignInfo
+        fields = ('id','instruction','reference_file','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count')
+
+    def run_validation(self, data):
+        if data.get('assign_to'):
+           data["assign_to"] = json.loads(data["assign_to"])
+        if data.get('task') and self.context['request']._request.method=='POST':
+           data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
+        else:
+           data['tasks'] = [json.loads(data.pop('task'))]
+        print(data['tasks'])
+        print("validated data run validation----->",data)
+        return super().run_validation(data)
+
+    def create(self, data):
+        print('validated data==>',data)
+        task_list = data.pop('tasks')
+        assign_to = data.pop('assign_to')
+        task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
+        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
+        return task_assign_info
+
+    def update(self,instance,data):
+        if 'assign_to' in data:
+            task = Task.objects.get(id = instance.task_id)
+            segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
+            task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
+            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
+        return super().update(instance, data)
+
+
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
 	source_language = serializers.CharField(read_only=True, source=\
@@ -463,12 +520,13 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
+	task_assign_info = TaskAssignInfoSerializer(required=False)
 
 	class Meta:
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "project_name",\
-			"document_url", "progress")
+			"document_url", "progress","task_assign_info")
 
 class ProjectSerializerV2(serializers.ModelSerializer):
 	class Meta:
@@ -521,36 +579,36 @@ class TaskCreditStatusSerializer(serializers.ModelSerializer):
         model = TaskCreditStatus
         fields = "__all__"
 
-class TaskAssignInfoSerializer(serializers.ModelSerializer):
-    assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
-    tasks = serializers.ListField(required=False)
-    class Meta:
-        model = TaskAssignInfo
-        fields = ('id','instruction','reference_file','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count')
-
-    def run_validation(self, data):
-        if data.get('assign_to'):
-           data["assign_to"] = json.loads(data["assign_to"])
-        if data.get('task') and self.context['request']._request.method=='POST':
-           data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
-        else:
-           data['tasks'] = [json.loads(data.pop('task'))]
-        print(data['tasks'])
-        print("validated data run validation----->",data)
-        return super().run_validation(data)
-
-    def create(self, data):
-        print('validated data==>',data)
-        task_list = data.pop('tasks')
-        assign_to = data.pop('assign_to')
-        task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
-        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
-        return task_assign_info
-
-    def update(self,instance,data):
-        if 'assign_to' in data:
-            task = Task.objects.get(id = instance.task_id)
-            segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
-            task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
-            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
-        return super().update(instance, data)
+# class TaskAssignInfoSerializer(serializers.ModelSerializer):
+#     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
+#     tasks = serializers.ListField(required=False)
+#     class Meta:
+#         model = TaskAssignInfo
+#         fields = ('id','instruction','reference_file','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count')
+#
+#     def run_validation(self, data):
+#         if data.get('assign_to'):
+#            data["assign_to"] = json.loads(data["assign_to"])
+#         if data.get('task') and self.context['request']._request.method=='POST':
+#            data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
+#         else:
+#            data['tasks'] = [json.loads(data.pop('task'))]
+#         print(data['tasks'])
+#         print("validated data run validation----->",data)
+#         return super().run_validation(data)
+#
+#     def create(self, data):
+#         print('validated data==>',data)
+#         task_list = data.pop('tasks')
+#         assign_to = data.pop('assign_to')
+#         task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
+#         task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
+#         return task_assign_info
+#
+#     def update(self,instance,data):
+#         if 'assign_to' in data:
+#             task = Task.objects.get(id = instance.task_id)
+#             segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
+#             task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
+#             task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
+#         return super().update(instance, data)

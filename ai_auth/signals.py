@@ -94,11 +94,11 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 
 #         )
 #     return response
-def team_create(sender, instance,created, *args, **kwargs):
-    if created:
-        teamname = instance.fullname + "'s team"
-        team =auth_model.Team.objects.get_or_create(name=teamname,owner_id=instance.id)
-        print("Team Created")
+# def team_create(sender, instance,created, *args, **kwargs):
+#     if created:
+#         teamname = instance.fullname + "'s team"
+#         team =auth_model.Team.objects.get_or_create(name=teamname,owner_id=instance.id)
+#         print("Team Created")
 
 def updated_user_taxid(sender, instance, *args, **kwargs):
     # ss=auth_model.UserTaxInfo.objects.get(id=instance.id)
@@ -174,3 +174,12 @@ def password_changed_handler(request, user,instance, **kwargs):
     },
 
     )
+
+
+def update_internal_member_status(sender, instance, *args, **kwargs):
+	if instance.is_internal_member:
+		if instance.last_login:
+			obj = auth_model.InternalMember.objects.get(internal_member = instance)
+			obj.status = 2
+			obj.save()
+			print("status updated")

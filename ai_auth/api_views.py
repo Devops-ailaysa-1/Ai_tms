@@ -1161,10 +1161,8 @@ class TeamCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        user_id = request.POST.get('user_id')
-        username = AiUser.objects.get(id =user_id).fullname
-        teamname = username + "'s team"
-        serializer =TeamSerializer(data={'name':teamname,'owner':user_id})
+        name = request.POST.get('name')
+        serializer =TeamSerializer(data={'name':name,'owner':request.user.id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -1225,7 +1223,7 @@ class InternalMemberCreateView(viewsets.ViewSet):
         subject='Regarding Login credentials'
         context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password,'date':today}
         user = AiUser.objects.create(fullname =data.get('name'),email = email,password = hashed,is_internal_member=True)
-        serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,'functional_identity':functional_identity})
+        serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,'functional_identity':functional_identity,'status':1})
         if serializer.is_valid():
             serializer.save()
             send_email_user(subject,template,context,email)
@@ -1255,7 +1253,7 @@ class ExternalMemberCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def list(self, request):
         print(request.user.id)
-        queryset =ExternalMember.objects.filter(Q(user_id=request.user.id) & Q(status = 2))
+        queryset =ExternalMember.objects.filter(Q(user_id=request.user.id))# & Q(status = 2))
         if not queryset.exists():
             return Response(status=204)
         serializer = ExternalMemberSerializer(queryset,many=True)
@@ -1325,9 +1323,16 @@ def invite_accept(request,uid,token):
 @permission_classes([IsAuthenticated])
 def teams_list(request):
     teams =[]
-    my_team = Team.objects.get(owner_id = request.user.id).id
-    teams.append({'team_id':my_team,'team':'self'})
-    ext = ExternalMember.objects.filter(external_member = request.user.id)
+    try:
+        my_team = Team.objects.get(owner_id = request.user.id).id
+        teams.append({'team_id':my_team,'team':'self'})
+    except:
+        print('No self team')
+    ext = ExternalMember.objects.filter(Q(external_member = request.user.id) & Q(role=1) &Q(status =2))
     for j in ext:
-        teams.append(({'team_id':j.team.id,'team':j.team.name,'role':j.role.name}))
+        try:
+            team = Team.objects.get(owner_id = j.user_id)
+            teams.append(({'team_id':team.id,'team':team.name}))
+        except:
+            print("No team")
     return JsonResponse({'My_external_team':teams})

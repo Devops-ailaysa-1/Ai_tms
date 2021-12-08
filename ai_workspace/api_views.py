@@ -524,11 +524,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     def get_queryset(self):
+        print(self.request.user.id)
         # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
         return Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
 
     def list(self,request):
         queryset = self.get_queryset()
+        print(queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request})
         response = self.paginator.get_paginated_response(serializer.data)
@@ -600,7 +602,12 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_tasks_by_projectid(self, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
-        return project.get_tasks
+        if project.ai_user == self.request.user:
+            return project.get_tasks
+        else:
+            return [task for job in project.project_jobs_set.all() for task \
+                    in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
+
 
     def get_object(self):
         tasks = Task.objects.order_by("-id").all()
@@ -1032,73 +1039,43 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         return Response(task, status=status.HTTP_200_OK)
 
 
-# @api_view(['GET',])
-# def get_assign_to_list(request):
-#     # project = request.GET.get('project')
-#     job_id = request.GET.get('job')
-#     job = Job.objects.get(id = job_id)
-#     team = Team.objects.get(owner_id = request.user.id)
-#     internalmembers = []
-#     externalmembers = []
-#     try:
-#         internal_team = InternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
-#         for i in internal_team:
-#             internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id})
-#     except:
-#         internalmembers = []
-#     try:
-#         external_team = ExternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
-#         for j in external_team:
-#             try:
-#                 vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
-#                 print(vendor)
-#             except:
-#                 vendor = None
-#             if vendor:
-#                 externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
-#     except:
-#         externalmembers =[]
-#     return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})
-
 @api_view(['GET',])
 def get_assign_to_list(request):
     project = request.GET.get('project')
     job_id = request.GET.get('job')
     job = Job.objects.get(id = job_id)
-    proj_team = Project.objects.get(id = project).team
+    proj = Project.objects.get(id = project)
     internalmembers = []
     externalmembers = []
-    if proj_team:
+    if proj.team:
         try:
-            internal_team = InternalMember.objects.filter(Q(team_id = team.id) & Q(role = 2))
+            internal_team = InternalMember.objects.filter(Q(team_id = proj.team.id) & Q(role = 2))
             for i in internal_team:
-                internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id})
+                internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.status})
         except:
             internalmembers = []
         try:
-            external_team = ExternalMember.objects.filter(Q(user_id = team__owner_id)).filter(Q(external_member_id = request.user.id) & Q(role = 2) & Q(status = 2))
-            for j in external_team:
-                try:
-                    vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
-                    print(vendor)
-                except:
-                    vendor = None
-                if vendor:
-                    externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
+            external_team = ExternalMember.objects.filter(Q(user_id = proj.team.owner_id) & Q(role = 2))# & Q(status = 2))
+            externalmembers = find_vendor(external_team,job)
         except:
             externalmembers =[]
     else:
         try:
-            external_team = ExternalMember.objects.filter(Q(user_id = ai_user_id)).filter(Q(external_member_id = request.user.id) & Q(role = 2) & Q(status = 2))
-            for j in external_team:
-                try:
-                    vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
-                    print(vendor)
-                except:
-                    vendor = None
-                if vendor:
-                    externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id})
+            external_team = ExternalMember.objects.filter(Q(user_id = proj.ai_user_id) & Q(role = 2))# & Q(status = 2))
+            externalmembers = find_vendor(external_team,job)
         except:
             externalmembers =[]
 
     return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})
+
+def find_vendor(team,job):
+    externalmembers=[]
+    for j in team:
+        try:
+            vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
+            print(vendor)
+        except:
+            vendor = None
+        if vendor:
+            externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id,'status':j.status})
+    return externalmembers

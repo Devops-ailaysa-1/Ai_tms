@@ -350,11 +350,11 @@ class Job(models.Model):
     def __str__(self):
         return self.source_language.language+"->"+self.target_language.language
 
-class ProjectTeamInfo(models.Model):
-    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
-                CASCADE, related_name="team_project_info")
-    team = models.ForeignKey(Team, null=False, blank=False, on_delete=models.\
-                CASCADE, related_name="project_team_info")
+# class ProjectTeamInfo(models.Model):
+#     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
+#                 CASCADE, related_name="team_project_info")
+#     team = models.ForeignKey(Team, null=False, blank=False, on_delete=models.\
+#                 CASCADE, related_name="project_team_info")
 
 class FileTypes(models.Model):
     TERMBASE = "termbase"
