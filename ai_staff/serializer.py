@@ -230,7 +230,7 @@ class CreditsAddonSerializer(serializers.ModelSerializer):
     addon_price = CreditAddonPriceSerializer(many=True,read_only=True,source='credit_addon_price')
     class Meta:
         model = CreditsAddons
-        fields = ('id','pack','credits','description','discount','stripe_product_id','addon_price')
+        fields = ('id','pack','credits','description','expiry','discount','stripe_product_id','addon_price')
 
 
 
