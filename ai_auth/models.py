@@ -115,10 +115,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             return total_buyed_credits
 
         return total_buyed_credits
-<<<<<<< HEAD
 post_save.connect(update_internal_member_status, sender=AiUser)
-=======
->>>>>>> origin/merged
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)
