@@ -15,6 +15,7 @@ import calendar
 
 
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
+    carry = 0
     if pack.type=="Subscription":
         if subscription.plan.interval=='year':
             expiry = expiry_yearly_sub(subscription)
@@ -22,6 +23,9 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
             expiry = subscription.current_period_end
         creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
         for credit in creditsls:
+            #check the previous subscription record has unused credits before expiry
+            if credit.ended_at==None and (credit.expiry > timezone.now()):
+                carry = credit.credits_left
             credit.ended_at=timezone.now()
             credit.save()
 
@@ -29,17 +33,21 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
         expiry = subscription.trial_end
         creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
         for credit in creditsls:
+            #check the previous subscription record has unused credits before expiry
+            if credit.ended_at==None and (credit.expiry > timezone.now()):
+                carry = credit.credits_left
             credit.ended_at=timezone.now()
             credit.save()
 
     if pack.type=="Addon":
         expiry = None
+   
     kwarg = {
     'user':user,
     'stripe_cust_id':cust,
     'price_id':price.id,
     'buyed_credits':pack.credits*quants,
-    'credits_left':pack.credits*quants,
+    'credits_left':(pack.credits*quants)+carry,
     'expiry': expiry,
     'paymentintent':payment.id if payment else None,
     'invoice':invoice.id if invoice else None,
@@ -48,8 +56,7 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     }
     us = models.UserCredits.objects.create(**kwarg)
     print(us)
-
-
+ 
 
 @webhooks.handler("payment_intent.succeeded")
 def my_handler(event, **kwargs):
@@ -414,3 +421,8 @@ def add_months(sourcedate, months):
     day = min(sourcedate.day, calendar.monthrange(year,month)[1])
     sourcedate=sourcedate.replace(year=year,month=month,day=day)
     return sourcedate
+
+
+def subscription_credit_carry(user,invoice):
+
+    pass
