@@ -54,6 +54,7 @@ urlpatterns += [
 	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
 	path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
 	path('get_assign_to_list/',api_views.get_assign_to_list),
+	path('project_list/',api_views.project_list),
 ]
 # views urls adding for local testing
 urlpatterns += [

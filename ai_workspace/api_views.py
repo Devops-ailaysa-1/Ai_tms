@@ -49,6 +49,8 @@ import shutil
 from datetime import datetime
 from django.db.models import Q
 from rest_framework.decorators import permission_classes
+from notifications.signals import notify
+from notifications.models import Notification
 # from ai_workspace_okapi.api_views import DocumentViewByTask
 
 spring_host = os.environ.get("SPRING_HOST")
@@ -525,8 +527,14 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user.id)
+        team = self.request.query_params.get('team',0)
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
+        if team:
+            return queryset.filter(team_id = team)
+        return queryset
+
         # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
-        return Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
+        # return Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
 
     def list(self,request):
         queryset = self.get_queryset()
@@ -762,6 +770,7 @@ class TmxList(APIView):
         files = TmxFile.objects.filter(project_id=project_id).all()
         serializer = TmxFileSerializer(files, many=True)
         return Response(serializer.data)
+
 
 @api_view(['GET',])
 def glossary_template_lite(request):
@@ -1012,10 +1021,14 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     @integrity_error
     def create(self,request):
         file=request.FILES.get('reference_file')
+        sender = self.request.user
+        receiver = request.POST.get('assign_to')
+        Receiver = AiUser.objects.get(id = receiver)
         serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'reference_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
-            return Response({"msg":"Task Assigned"})
+            notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task')
+            return Response({"msg":"Task Assigned and Notification Sent"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request,pk=None):
@@ -1040,6 +1053,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
 
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def get_assign_to_list(request):
     project = request.GET.get('project')
     job_id = request.GET.get('job')
@@ -1048,34 +1062,32 @@ def get_assign_to_list(request):
     internalmembers = []
     externalmembers = []
     if proj.team:
-        try:
-            internal_team = InternalMember.objects.filter(Q(team_id = proj.team.id) & Q(role = 2))
-            for i in internal_team:
-                internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.status})
-        except:
-            internalmembers = []
-        try:
-            external_team = ExternalMember.objects.filter(Q(user_id = proj.team.owner_id) & Q(role = 2))# & Q(status = 2))
-            externalmembers = find_vendor(external_team,job)
-        except:
-            externalmembers =[]
+        internal_team = proj.team.internal_member_team_info.filter(role = 2)
+        for i in internal_team:
+            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.status})
+        external_team = proj.team.owner.team_info.filter(role =2)
+        print(external_team)
+        externalmembers = find_vendor(external_team,job)
     else:
-        try:
-            external_team = ExternalMember.objects.filter(Q(user_id = proj.ai_user_id) & Q(role = 2))# & Q(status = 2))
-            externalmembers = find_vendor(external_team,job)
-        except:
-            externalmembers =[]
+        external_team = proj.ai_user.team_info.filter(role=2)
+        print(external_team)
+        externalmembers = find_vendor(external_team,job)
 
     return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})
 
 def find_vendor(team,job):
     externalmembers=[]
     for j in team:
-        try:
-            vendor = VendorLanguagePair.objects.get(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(user_id = j.external_member_id))
-            print(vendor)
-        except:
-            vendor = None
+        vendor = j.external_member.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id))
         if vendor:
             externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id,'status':j.status})
     return externalmembers
+
+
+@permission_classes([IsAuthenticated])
+@api_view(['GET',])
+def project_list(request):
+    queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = request.user)|Q(ai_user = request.user)).distinct().order_by("-id")
+    serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request})
+    print(serializer.data)
+    return  Response(serializer.data)

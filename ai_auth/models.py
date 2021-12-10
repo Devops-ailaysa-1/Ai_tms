@@ -46,7 +46,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     @property
     def internal_member_team_info(self):
         if self.is_internal_member == True:
-            print("RR")
             obj = InternalMember.objects.get(internal_member_id = self.id)
             # team_info = InternalMember.objects.get(internal_member_id = self.id).team
             return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
