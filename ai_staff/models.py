@@ -313,6 +313,7 @@ class CreditsAddons(ParanoidModel):
     pack = models.CharField(max_length=200,null=True,blank=True)
     description = models.TextField(max_length=1000, blank=True, null=True)
     credits = models.IntegerField(null=True,blank=True)
+    expiry =  models.CharField(max_length=200,null=True,blank=True)
     discount = models.CharField(max_length=100,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

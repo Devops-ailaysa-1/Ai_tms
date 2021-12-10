@@ -831,12 +831,12 @@ class UpdateTaskCreditStatus(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @staticmethod
-    def get_object(doc_id):
-        try:
-            return TaskCreditStatus.objects.get(task__document=doc_id)
-        except TaskCreditStatus.DoesNotExist:
-            return HttpResponse(status=404)
+    # @staticmethod
+    # def get_object(doc_id):
+    #     try:
+    #         return TaskCreditStatus.objects.get(task__document=doc_id)
+    #     except TaskCreditStatus.DoesNotExist:
+    #         return HttpResponse(status=404)
 
     @staticmethod
     def update_addon_credit(request, actual_used_credits=None, credit_diff=None):
@@ -883,20 +883,21 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_credits(request, doc_id, actual_used_credits):
-        task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
+        # task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
         credit_status = UpdateTaskCreditStatus.update_usercredit(request, actual_used_credits)
-        print("CREDIT STATUS----->", credit_status)
+        # print("CREDIT STATUS----->", credit_status)
         if credit_status:
             msg = "Successfully debited MT credits"
             status = 200
         else:
             msg = "Insufficient credits to apply MT"
             status = 424
-        serializer = TaskCreditStatusSerializer(task_cred_status,
-                     data={"actual_used_credits" : actual_used_credits }, partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return {"msg" : msg}, status
+        # serializer = TaskCreditStatusSerializer(task_cred_status,
+        #              data={"actual_used_credits" : actual_used_credits }, partial=True)
+        # if serializer.is_valid(raise_exception=True):
+        #     serializer.save()
+        #     return {"msg" : msg}, status
+        return {"msg" : msg}, status
 
 ################Incomplete project list for Marketplace###########3
 # class IncompleteProjectListView(viewsets.ViewSet) :

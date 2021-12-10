@@ -86,31 +86,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
-    
-    # @staticmethod
-    # def okapi_response_to_file(data):
-    #     with open('okapi_data.json', 'w') as f:
-    #         json.dump(data, f)
-    #     pass
-    
-    # @staticmethod
-    # def fetch_first_40_segments():
-    #     f = open('okapi_data.json',)
-    #     okapi_data = json.load(f)
-    #     seg_data = okapi_data.get("text", 0)
-    #     # print("*seg data --->", seg_data)
-    #     count = 0
-    #     replace_dict = {}
-    #     for key, value in seg_data.items():
-    #         count += len(value)
-    #         if count <= 40:
-    #             replace_dict.update({key:value})
-    #         else:
-    #             break
-    #     # print("REPLCE DICT ---> ", replace_dict)
-    #     okapi_data["text"] = replace_dict
-    #     return okapi_data
-            
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
@@ -130,11 +105,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
-                # DocumentViewByTask.okapi_response_to_file(doc_data)                
-                # first_40_data = DocumentViewByTask.fetch_first_40_segments()
-                total_char_count = doc_data.get("total_char_count", 0)
-                total_word_count = doc_data.get("total_word_count", 0)
-                word_char_ratio = round(total_char_count/total_word_count, 2)
+                # total_char_count = doc_data.get("total_char_count", 0)
+                # total_word_count = doc_data.get("total_word_count", 0)
+                # word_char_ratio = round(total_char_count/total_word_count, 2)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 },)) #context={"request": request}
@@ -142,12 +115,12 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     document = serializer.save()
                     task.document = document
                     task.save()
-                task_credit_status = TaskCreditStatusSerializer(data={"task":task.id, "allocated_credits":total_word_count,
-                        "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
-                if task_credit_status.is_valid():
-                    task_credit_status.save()
-                else:
-                    print(task_credit_status.errors)
+                # task_credit_status = TaskCreditStatusSerializer(data={"task":task.id, "allocated_credits":total_word_count,
+                #         "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
+                # if task_credit_status.is_valid():
+                #     task_credit_status.save()
+                # else:
+                #     print(task_credit_status.errors)
             else:
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
@@ -250,21 +223,29 @@ class MT_RawAndTM_View(views.APIView):
     def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
-            print("*** MT RAW AVAILABLE ****")
             return MT_RawSerializer(mt_raw).data, 200
 
         sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
                                 & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
 
-        # if sub_active == None:
-        # Only when there an active subscription, MT should be applied though addons are present
-
         initial_credit = request.user.credit_balance
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
-        word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
+        # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
 
-        consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
+        # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
+
+        segment_source = Segment.objects.get(id=segment_id).source
+        seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
+                     "processor_name":"plain-text-processor", "extension":".txt"}
+
+        res = requests.post(f"http://{spring_host}:8080/segment/word_count", \
+            data={"segmentWordCountdata":json.dumps(seg_data)})
+        if res.status_code == 200:
+            print("Word count --->", res.json())
+            consumable_credits = res.json()
+        else:
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
         if initial_credit > consumable_credits :
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
@@ -273,7 +254,7 @@ class MT_RawAndTM_View(views.APIView):
                 # mt_raw_serlzr.validated_data[""]
                 mt_raw_serlzr.save()
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
-                print("DEBIT STATUS -----> ", debit_status["msg"])
+                # print("DEBIT STATUS -----> ", debit_status["msg"])
                 return mt_raw_serlzr.data, 201
         else:
             return {}, 424
@@ -347,9 +328,9 @@ class DocumentToFile(views.APIView):
                     if os.path.exists(file_path):
                         with open(file_path, 'rb') as fh:
                             response = HttpResponse(fh.read(), content_type=\
-                                "application/vnd.ms-excel")          
+                                "application/vnd.ms-excel")
                             encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                    encoding='utf-8')                             
+                                    encoding='utf-8')
                             response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
                                                 .format(encoded_filename)
                             response['X-Suggested-Filename'] = encoded_filename
@@ -770,7 +751,10 @@ def WiktionaryParse(request):
     user_input=request.POST.get("term")
     term_type=request.POST.get("term_type")
     doc_id=request.POST.get("doc_id")
+    print("Before strip--->",user_input)
     user_input=user_input.strip()
+    user_input=user_input.strip('0123456789')
+    print("After strip--->",user_input)
     doc = Document.objects.get(id=doc_id)
     sourceLanguage=doc.source_language
     targetLanguage=doc.target_language
@@ -852,6 +836,7 @@ def WikipediaWorkspace(request,doc_id):
     user_input=data.get("term")
     term_type=data.get("term_type","source")
     user_input=user_input.strip()
+    user_input=user_input.strip('0123456789')
     doc = Document.objects.get(id=doc_id)
     if term_type=="source":
         codesrc =doc.source_language_code
@@ -909,11 +894,10 @@ def wiktionary_ws(code,codesrc,user_input):
 def WiktionaryWorkSpace(request,doc_id):
     data=request.GET.dict()
     user_input=data.get("term")
-    # user_input=user_input.lower()
     term_type=data.get("term_type")
     print(term_type)
     user_input=user_input.strip()
-    print(user_input)
+    user_input=user_input.strip('0123456789')
     doc = Document.objects.get(id=doc_id)
     if term_type=="source":
         codesrc =doc.source_language_code
@@ -950,7 +934,4 @@ def spellcheck(request):
                 res.extend(out)
             return JsonResponse({"result":res},safe=False)
     except:
-        return JsonResponse({"message":"Spellcheck not available"},safe=False)           
-        
-
-        
+        return JsonResponse({"message":"Spellcheck not available"},safe=False)

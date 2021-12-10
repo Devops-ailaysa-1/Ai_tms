@@ -76,6 +76,26 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
         return total_credit_left
 
+    # @property
+    # def buyed_credits(self):
+    #     addons = subscription = 0
+    #     present = datetime.now()
+    #     try:
+    #         addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
+    #         for addon in addon_credits:
+    #             addons += addon.buyed_credits
+    #     except Exception as e:
+    #         print("NO ADD-ONS AVAILABLE")
+    #     try:
+    #         sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+    #         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+    #             subscription += sub_credits.buyed_credits
+    #     except:
+    #         print("No active subscription")
+    #         return {"addon":addons, "subscription":subscription}
+
+    #     return {"addon":addons, "subscription":subscription}
+
     @property
     def buyed_credits(self):
         total_buyed_credits = 0
@@ -95,7 +115,10 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             return total_buyed_credits
 
         return total_buyed_credits
+<<<<<<< HEAD
 post_save.connect(update_internal_member_status, sender=AiUser)
+=======
+>>>>>>> origin/merged
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)
