@@ -5,7 +5,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus
 import json
-import pickle
+import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from ai_marketplace.models import AvailableVendors
 from django.shortcuts import reverse
@@ -95,7 +95,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url", 
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url",
 					"id", "progress", "files_count", "tasks_count", "project_analysis")
 
 	def to_internal_value(self, data):
@@ -120,7 +120,7 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		[project.project_jobs_set.create(**job_data) for job_data in  project_jobs_set]
 		[project.project_files_set.create(**file_data) for file_data in project_files_set]
 		# project.save()
-		return project        
+		return project
 
 class ProjectSubjectSerializer(serializers.ModelSerializer):
 	class Meta:
@@ -399,6 +399,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
 		fields = ("id", "project_name", "jobs", "files")#,'ai_user')
+
+	def run_validation(self,data):
+		comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
+		if True in comparisons:
+			raise serializers.ValidationError({"msg":"source and target languages should not be same"})
+		return super().run_validation(data)
 
 	def to_internal_value(self, data):
 		data["project_name"] = data.get("project_name", [None])[0]

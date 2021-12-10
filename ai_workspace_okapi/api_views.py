@@ -85,7 +85,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         print("remove keys--->", remove_keys)
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
-            raise ValueError("OKAPI request fields not setted correctly!!!")    
+            raise ValueError("OKAPI request fields not setted correctly!!!")
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
@@ -245,7 +245,7 @@ class MT_RawAndTM_View(views.APIView):
             print("Word count --->", res.json())
             consumable_credits = res.json()
         else:
-            raise  ValueError("Sorry! Something went wrong with word count calculation.")        
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
         if initial_credit > consumable_credits :
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
@@ -328,9 +328,9 @@ class DocumentToFile(views.APIView):
                     if os.path.exists(file_path):
                         with open(file_path, 'rb') as fh:
                             response = HttpResponse(fh.read(), content_type=\
-                                "application/vnd.ms-excel")          
+                                "application/vnd.ms-excel")
                             encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                    encoding='utf-8')                             
+                                    encoding='utf-8')
                             response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
                                                 .format(encoded_filename)
                             response['X-Suggested-Filename'] = encoded_filename
@@ -751,7 +751,10 @@ def WiktionaryParse(request):
     user_input=request.POST.get("term")
     term_type=request.POST.get("term_type")
     doc_id=request.POST.get("doc_id")
+    print("Before strip--->",user_input)
     user_input=user_input.strip()
+    user_input=user_input.strip('0123456789')
+    print("After strip--->",user_input)
     doc = Document.objects.get(id=doc_id)
     sourceLanguage=doc.source_language
     targetLanguage=doc.target_language
@@ -833,6 +836,7 @@ def WikipediaWorkspace(request,doc_id):
     user_input=data.get("term")
     term_type=data.get("term_type","source")
     user_input=user_input.strip()
+    user_input=user_input.strip('0123456789')
     doc = Document.objects.get(id=doc_id)
     if term_type=="source":
         codesrc =doc.source_language_code
@@ -890,11 +894,10 @@ def wiktionary_ws(code,codesrc,user_input):
 def WiktionaryWorkSpace(request,doc_id):
     data=request.GET.dict()
     user_input=data.get("term")
-    # user_input=user_input.lower()
     term_type=data.get("term_type")
     print(term_type)
     user_input=user_input.strip()
-    print(user_input)
+    user_input=user_input.strip('0123456789')
     doc = Document.objects.get(id=doc_id)
     if term_type=="source":
         codesrc =doc.source_language_code
@@ -931,7 +934,4 @@ def spellcheck(request):
                 res.extend(out)
             return JsonResponse({"result":res},safe=False)
     except:
-        return JsonResponse({"message":"Spellcheck not available"},safe=False)           
-        
-
-        
+        return JsonResponse({"message":"Spellcheck not available"},safe=False)
