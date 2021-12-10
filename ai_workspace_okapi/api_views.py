@@ -231,21 +231,21 @@ class MT_RawAndTM_View(views.APIView):
         initial_credit = request.user.credit_balance
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
-        word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
+        # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
 
-        consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
+        # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
 
-        # segment_source = Segment.objects.get(id=segment_id).source
-        # seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
-        #              "processor_name":"plain-text-processor", "extension":".txt"}
+        segment_source = Segment.objects.get(id=segment_id).source
+        seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
+                     "processor_name":"plain-text-processor", "extension":".txt"}
 
-        # res = requests.post(f"http://{spring_host}:8080/segment/word_count", \
-        #     data={"segmentWordCountdata":json.dumps(seg_data)})
-        # if res.status_code == 200:
-        #     print("Word count --->", res.json())
-        #     consumable_credits = res.json()
-        # else:
-        #     raise  ValueError("Sorry! Something went wrong with word count calculation.")        
+        res = requests.post(f"http://{spring_host}:8080/segment/word_count", \
+            data={"segmentWordCountdata":json.dumps(seg_data)})
+        if res.status_code == 200:
+            print("Word count --->", res.json())
+            consumable_credits = res.json()
+        else:
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")        
 
         if initial_credit > consumable_credits :
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
