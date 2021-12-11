@@ -239,7 +239,7 @@ class MT_RawAndTM_View(views.APIView):
         seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
                      "processor_name":"plain-text-processor", "extension":".txt"}
 
-        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count/", \
+        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
             data={"segmentWordCountdata":json.dumps(seg_data)})
         if res.status_code == 200:
             print("Word count --->", res.json())
