@@ -214,7 +214,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
         segment_serlzr = self.get_update(segment, request.data, request)
-        self.update_pentm(segment)
+        # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         return Response(segment_serlzr.data, status=201)
 
 class MT_RawAndTM_View(views.APIView):
@@ -231,8 +231,8 @@ class MT_RawAndTM_View(views.APIView):
         initial_credit = request.user.credit_balance
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
+        
         # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
-
         # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
 
         segment_source = Segment.objects.get(id=segment_id).source
@@ -286,7 +286,7 @@ class ConcordanceSearchView(views.APIView):
 
     @staticmethod
     def get_concordance_data(request, segment_id, search_string):
-        segment = Segment.objects.filter(id=segment_id).first()
+        segment = Segment.objects.filter(id=segment_id).first()        
         if segment:
             tm_ser_data = TM_FetchSerializer(segment).data
             tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
@@ -300,7 +300,7 @@ class ConcordanceSearchView(views.APIView):
         return []
 
     def get(self, request, segment_id):
-        search_string = request.GET.get("string", None)
+        search_string = request.GET.get("string", None).strip('0123456789')
         concordance = []
         if search_string:
             concordance = self.get_concordance_data(request, segment_id, search_string)
