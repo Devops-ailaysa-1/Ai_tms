@@ -747,9 +747,10 @@ def check_subscription(request):
         if subscriptions is not None:
             trial = 'true' if subscriptions.metadata.get('type') == 'subscription_trial' else 'false'
             sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
-            return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,'interval':subscriptions.plan.interval,'sub_period_end':subscriptions.current_period_end,'sub_currency':subscriptions.plan.currency,'sub_amount':subscriptions.plan.amount,'trial':trial}, status=200)
+            return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,
+                            'interval':subscriptions.plan.interval,'sub_period_end':subscriptions.current_period_end,'sub_currency':subscriptions.plan.currency,'sub_amount':subscriptions.plan.amount,'trial':trial,'canceled_at':subscriptions.canceled_at}, status=200)
         else:
-            return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None,'trial':None}, status=200)
+            return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None,'trial':None,'canceled_at':None}, status=200)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user)
         #subscription = Subscription.objects.filter(customer=customer).last()
@@ -757,7 +758,8 @@ def check_subscription(request):
         trial = 'true' if subscription.metadata.get('type') == 'subscription_trial' else 'false'
        # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
         sub_name = CreditPack.objects.get(product__id=subscription.plan.product_id,type='Subscription').name
-        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.id,'interval':subscription.plan.interval,'sub_period_end':subscription.current_period_end,'sub_currency':subscription.plan.currency,'sub_amount':subscription.plan.amount,'trial':trial}, status=200)
+        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.id,'interval':subscription.plan.interval,'sub_period_end':subscription.current_period_end,
+                        'sub_currency':subscription.plan.currency,'sub_amount':subscription.plan.amount,'trial':trial,'canceled_at':subscription.canceled_at}, status=200)
     if is_active == (False,False):
         return Response({'msg':'Not a Stripe Customer'}, status=206)
 
