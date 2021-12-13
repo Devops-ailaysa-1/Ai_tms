@@ -407,18 +407,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 
 	def run_validation(self,data):
-		print("RUN_VALIDATION----->",data)
-		comparisons = [source == target for (source,target) in itertools.product(data['source_language'],data['target_languages'])]
-		if True in comparisons:
-			raise serializers.ValidationError({"msg":"source and target languages should not be same"})
-		return super().run_validation(data)
-
-
-
-	def run_validation(self,data):
-		comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
-		if True in comparisons:
-			raise serializers.ValidationError({"msg":"source and target languages should not be same"})
+		if data.get('target_languages')!=None:
+			comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
+			if True in comparisons:
+				raise serializers.ValidationError({"msg":"source and target languages should not be same"})
 		return super().run_validation(data)
 
 	def to_internal_value(self, data):

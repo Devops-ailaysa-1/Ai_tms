@@ -2,6 +2,7 @@ from rest_framework import filters,generics
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import render
 from ai_auth.models import AiUser
+from ai_staff.models import Languages,ContentTypes
 from django.conf import settings
 from notifications.signals import notify
 from notifications.models import Notification
@@ -67,8 +68,10 @@ def get_vendor_detail(request):
         user=AiUser.objects.get(uid=uid)
         user_id = user.id
         lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)))
-        serializer1= VendorServiceSerializer(lang)
-        out.append(serializer1.data)
+        # serializer1= VendorServiceSerializer(lang)
+        # out.append(serializer1.data)
+        serializer2= VendorLanguagePairCloneSerializer(lang)
+        out.append(serializer2.data)
         serializer = GetVendorDetailSerializer(user)
         out.append(serializer.data)
     except:
@@ -348,15 +351,28 @@ def get_available_job_details(request):
 class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
     pass
 
+class CharInFilter(django_filters.BaseInFilter, django_filters.CharFilter):
+    pass
+
+# class VendorFilter(django_filters.FilterSet):
+#     content_type = NumberInFilter(field_name="vendor_contentype__contenttype_id",lookup_expr='in')
+#     subject = NumberInFilter(field_name='vendor_subject__subject_id',lookup_expr='in')
+#     year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
+#     fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
+#     class Meta:
+#         model = AiUser
+#         fields = ('fullname', 'email', 'content_type','subject','year_of_experience',)
 
 class VendorFilter(django_filters.FilterSet):
-    content_type = NumberInFilter(field_name="vendor_contentype__contenttype_id",lookup_expr='in')
-    subject = NumberInFilter(field_name='vendor_subject__subject_id',lookup_expr='in')
+    source_lang = django_filters.CharFilter(field_name="vendor_lang_pair__source_lang__language")#,lookup_expr='in')
+    target_lang = django_filters.CharFilter(field_name="vendor_lang_pair__target_lang__language")#,lookup_expr='in')
+    content_type = CharInFilter(field_name="vendor_contentype__contenttype_id__name",lookup_expr='in')
+    subject = CharInFilter(field_name='vendor_subject__subject_id__name',lookup_expr='in')
     year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
     fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
     class Meta:
         model = AiUser
-        fields = ('fullname', 'email', 'content_type','subject','year_of_experience',)
+        fields = ('fullname', 'email', 'content_type','subject','year_of_experience','source_lang','target_lang',)
 
 
 class GetVendorListView(generics.ListAPIView):
@@ -367,37 +383,16 @@ class GetVendorListView(generics.ListAPIView):
     ordering_fields = ('vendor_contentype__contenttype_id', 'vendor_subject__subject_id')
     page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
 
-    # def validate(self):
-    #     if 'min_price' or 'max_price' or 'count_unit' in self.request.GET:
-    #         print("########")
-    #         raise ValidationError({"msg":"max_price,min_price,count_unit all fields are required"})
-
     def get_queryset(self):
         # self.validate()
-        job_id= self.request.query_params.get('job_id')
-        min_price =self.request.query_params.get('min_price')
-        max_price =self.request.query_params.get('max_price')
-        count_unit = self.request.query_params.get('count_unit')
-        source_lang_id=self.request.query_params.get('source_lang_id')
-        target_lang_id=self.request.query_params.get('target_lang_id')
-        contenttype_id = self.request.query_params.get('content_type')
-        subject=self.request.query_params.get('subject')
+        job_id= self.request.query_params.get('job')
+        source_lang_id=self.request.query_params.get('source_lang')
+        target_lang_id=self.request.query_params.get('target_lang')
         if job_id:
             source_lang_id=Job.objects.get(id=job_id).source_language_id
             target_lang_id=Job.objects.get(id=job_id).target_language_id
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                     .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None)).distinct()
-        if max_price and min_price and count_unit:
-            ids=[]
-            for i in queryset.values('vendor_lang_pair__id'):
-                ids.append(i.get('vendor_lang_pair__id'))
-            queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
-        if  contenttype_id:
-            contentlist = contenttype_id.split(',')
-            queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=contentlist)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
-        if subject:
-            subjectlist=subject.split(',')
-            queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset
 
 def notification_read(thread_id):
@@ -530,3 +525,56 @@ def general_notifications(request):
     for i in notifications:
         notification_details.append({'message':i.description,'time':i.timesince(),'sender':i.actor.fullname})
     return JsonResponse({'notifications':notification_details})
+
+
+class VendorFilterNew(django_filters.FilterSet):
+    year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
+    fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
+    email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
+    class Meta:
+        model = AiUser
+        fields = ('fullname', 'email','year_of_experience',)
+
+
+
+
+class GetVendorListViewNew(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = GetVendorListSerializer
+    filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
+    filterset_class = VendorFilterNew
+    page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+
+    # def validate(self):
+    #     if 'min_price' or 'max_price' or 'count_unit' in self.request.GET:
+    #         print("########")
+    #         raise ValidationError({"msg":"max_price,min_price,count_unit all fields are required"})
+
+
+    def get_queryset(self):
+        # # self.validate()
+        job_id= self.request.query_params.get('job')
+        min_price =self.request.query_params.get('min_price')
+        max_price =self.request.query_params.get('max_price')
+        count_unit = self.request.query_params.get('count_unit')
+        source_lang=self.request.query_params.get('source_lang')
+        target_lang=self.request.query_params.get('target_lang')
+        contenttype = self.request.query_params.get('content')
+        subject=self.request.query_params.get('subject')
+        if job_id:
+            source_lang=Job.objects.get(id=job_id).source_language
+            target_lang=Job.objects.get(id=job_id).target_language
+        queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
+                    .filter(Q(vendor_lang_pair__source_lang__language=source_lang) & Q(vendor_lang_pair__target_lang__language=target_lang) & Q(vendor_lang_pair__deleted_at=None)).distinct()
+        if max_price and min_price and count_unit:
+            ids=[]
+            for i in queryset.values('vendor_lang_pair__id'):
+                ids.append(i.get('vendor_lang_pair__id'))
+            queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
+        if  contenttype:
+            contentlist = contenttype.split(',')
+            queryset = queryset.filter(Q(vendor_contentype__contenttype_id__name__in=contentlist)&Q(vendor_contentype__deleted_at=None)).annotate(number_of_match=Count('vendor_contentype__contenttype_id__name',0)).order_by('-number_of_match').distinct()
+        if subject:
+            subjectlist=subject.split(',')
+            queryset = queryset.filter(Q(vendor_subject__subject_id__name__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id__name',0)).order_by('-number_of_match').distinct()
+        return queryset

@@ -3,8 +3,9 @@ from .models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
                     AvailableJobs,BidChat,BidPropasalDetails,BidProposalServicesRates,
                     Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage)
 from ai_auth.models import AiUser,AiUserProfile
+from ai_staff.models import Languages
 from django.db.models import Q
-from ai_workspace.models import Project
+from ai_workspace.models import Project,Job
 from drf_writable_nested import WritableNestedModelSerializer
 import json
 from rest_framework.response import Response
@@ -92,12 +93,6 @@ class ThreadSerializer(serializers.ModelSerializer):
         return super().run_validation(data)
 
 
-class VendorServiceSerializer(serializers.ModelSerializer):
-    service = VendorServiceInfoSerializer(many=True,read_only=True)
-    class Meta:
-        model = VendorLanguagePair
-        fields = ('service',)
-
 class VendorSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorsInfo
@@ -175,26 +170,37 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
         print("data---->",data["projectpost_jobs"])
         return super().run_validation(data)
 
-# class PersonalInfoSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = AiUserProfile
-#         fields = ('country',)
-
 class VendorInfoListSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorsInfo
-        fields = ('type',)
+        fields = ('type','currency')
+
+
+class VendorServiceSerializer(serializers.ModelSerializer):
+    service = VendorServiceInfoSerializer(many=True,read_only=True)
+    class Meta:
+        model = VendorLanguagePair
+        fields = ('service',)
 
 
 class GetVendorListSerializer(serializers.ModelSerializer):
-    # ai_profile_info = PersonalInfoSerializer(read_only=True)
-    # vendor_lang_pair = VendorServiceSerializer(read_only = True)
+    vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
+    # vendor_lang_pair = VendorServiceSerializer(many=True,read_only = True)
     vendor_info = VendorInfoListSerializer(read_only=True)
     professional_identity_info = ProfessionalidentitySerializer(read_only=True)
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','country','vendor_info','professional_identity_info',)#'vendor_lang_pair',)
+        fields = ('id','uid','fullname','email','country','vendor_info','professional_identity_info','vendor_lang_pair',)
 
+    def get_vendor_lang_pair(self, obj):
+        request = self.context['request']
+        job_id= request.query_params.get('job')
+        source_lang = request.query_params.get('source_lang')
+        target_lang = request.query_params.get('target_lang')
+        if job_id:
+            source_lang=Job.objects.get(id=job_id).source_language
+            target_lang=Job.objects.get(id=job_id).target_language
+        return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang__language=source_lang)&Q(target_lang__language=target_lang)), many=True, read_only=True).data
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:

@@ -29,7 +29,7 @@ urlpatterns+= [
     path('getting_bidpost_primary_details/',api_views.post_bid_primary_details),
     path('project_posts_list/',api_views.user_projectpost_list),
     path('availablejobs/',api_views.get_available_job_details),
-    path('get_vendor_list/',api_views.GetVendorListView.as_view(),name='get-vendor-list'),
+    path('get_vendor_list/',api_views.GetVendorListViewNew.as_view(),name='get-vendor-list'),
     path('get_incomplete_projects_list/',api_views.get_incomplete_projects_list),
     path('vendor_applied_jobs_list/',api_views.vendor_applied_jobs_list),
     path('get_my_jobs/',api_views.get_my_jobs),

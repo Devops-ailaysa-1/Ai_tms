@@ -170,18 +170,22 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
         serializer = ServiceExpertiseSerializer(queryset,many=True)
         return Response(serializer.data)
     def get_queryset(self):
+        print(self.request.user.id)
         queryset=AiUser.objects.filter(id=self.request.user.id).all()
         return queryset
+
     def create(self,request):
         id = request.user.id
+        print(id)
         # data = request.data
-        serializer = ServiceExpertiseSerializer(data={**request.POST.dict()})
+        serializer = ServiceExpertiseSerializer(data={**request.POST.dict()},context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
-            serializer.save(id=id)
+            serializer.save()
             return Response(serializer.data)
             # return Response(data={"Message":"VendorExpertiseInfo Created"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def update(self,request,pk=None):
         queryset = AiUser.objects.filter(id=self.request.user.id).all()
         User = get_object_or_404(queryset, pk=request.user.id)
@@ -227,19 +231,19 @@ def feature_availability(request):
     doc_id= request.POST.get("doc_id")
     target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
     source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
-    
+
     # CHECK FOR IME AND SPELLCHECKER AVAILABILITY
     try:
         spellchecker_id = SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
         data = 1
         show_ime = False
-    except: 
+    except:
         data = 0
         show_ime = True
-    
+
     # CHECK FOR NER AVAILABILITY
     # show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False
-    
+
     return JsonResponse({"out":data, "show_ime":show_ime}, safe = False)
 
 @api_view(['GET',])

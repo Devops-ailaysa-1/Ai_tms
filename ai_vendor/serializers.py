@@ -194,7 +194,7 @@ class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.Model
         if data.get("vendor_software") and isinstance( data.get("vendor_software"), str):
             data["vendor_software"] = json.loads(data["vendor_software"])
         print("validated data----->",data)
-        return data
+        return super().run_validation(data)
 
 class VendorBankDetailSerializer(serializers.ModelSerializer):
     class Meta:

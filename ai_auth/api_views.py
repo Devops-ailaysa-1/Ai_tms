@@ -1223,6 +1223,7 @@ class InternalMemberCreateView(viewsets.ViewSet):
         subject='Regarding Login credentials'
         context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password,'date':today}
         user = AiUser.objects.create(fullname =data.get('name'),email = email,password = hashed,is_internal_member=True)
+        user_attribute = UserAttribute.objects.create(user=user)
         serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,'functional_identity':functional_identity,'status':1})
         if serializer.is_valid():
             serializer.save()

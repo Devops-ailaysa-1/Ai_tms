@@ -1088,7 +1088,11 @@ def find_vendor(team,job):
 @permission_classes([IsAuthenticated])
 @api_view(['GET',])
 def project_list(request):
+    proj_list=[]
     queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = request.user)|Q(ai_user = request.user)).distinct().order_by("-id")
     serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request})
-    print(serializer.data)
-    return  Response(serializer.data)
+    data = serializer.data
+    for i in data:
+        if i.get('assign_enable')==True:
+            proj_list.append(i)
+    return Response(proj_list)
