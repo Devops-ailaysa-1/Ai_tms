@@ -76,45 +76,53 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
         return total_credit_left
 
-    # @property
-    # def buyed_credits(self):
-    #     addons = subscription = 0
-    #     present = datetime.now()
-    #     try:
-    #         addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
-    #         for addon in addon_credits:
-    #             addons += addon.buyed_credits
-    #     except Exception as e:
-    #         print("NO ADD-ONS AVAILABLE")
-    #     try:
-    #         sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-    #         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-    #             subscription += sub_credits.buyed_credits
-    #     except:
-    #         print("No active subscription")
-    #         return {"addon":addons, "subscription":subscription}
-
-    #     return {"addon":addons, "subscription":subscription}
-
     @property
     def buyed_credits(self):
-        total_buyed_credits = 0
+        addons = subscription = 0
         present = datetime.now()
         try:
             addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
-                total_buyed_credits += addon.buyed_credits
+                addons += addon.buyed_credits
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
         try:
             sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                total_buyed_credits += sub_credits.buyed_credits
+                subscription += sub_credits.buyed_credits
+
+            carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
+                Q(ended_at__isnull=False)).last()
+            # for carry_on in carry_on_credits:
+            #     # if present.strftime('%Y-%m-%d %H:%M:%S') <= carry_on.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+            #     #     subscription += carry_on.credits_left
+
+            subscription += carry_on_credits.credits_left
         except:
             print("No active subscription")
-            return total_buyed_credits
+            return {"addon":addons, "subscription":subscription}
 
-        return total_buyed_credits
+        return {"addon":addons, "subscription":subscription}
+
+    # @property
+    # def buyed_credits(self):
+    #     total_buyed_credits = 0
+    #     present = datetime.now()
+    #     try:
+    #         addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
+    #         for addon in addon_credits:
+    #             total_buyed_credits += addon.buyed_credits
+    #     except Exception as e:
+    #         print("NO ADD-ONS AVAILABLE")
+    #     try:
+    #         sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+    #         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+    #             total_buyed_credits += sub_credits.buyed_credits
+    #     except:
+    #         print("No active subscription")
+    #         return total_buyed_credits
+
+        # return total_buyed_credits
 post_save.connect(update_internal_member_status, sender=AiUser)
 
 class BaseAddress(models.Model):

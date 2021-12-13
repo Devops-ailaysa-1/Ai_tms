@@ -1,3 +1,5 @@
+from logging import INFO
+import re
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from django.urls import reverse
@@ -695,7 +697,7 @@ def buy_addon(request):
     response = create_checkout_session_addon(price,cust,tax_rate,quantity)
 
     #request.POST.get('')
-    return Response({'msg':'Payment Session Generated ','stripe_session_url':response.url}, status=307)
+    return Response({'msg':'Payment Session Generated ','stripe_session_url':response.url,'strip_session_id':response.id}, status=307)
 
 
 def subscriptin_modify_default_tax_rate(customer,addr=None):
@@ -753,9 +755,10 @@ def check_subscription(request):
         if subscriptions is not None:
             trial = 'true' if subscriptions.metadata.get('type') == 'subscription_trial' else 'false'
             sub_name = CreditPack.objects.get(product__id=subscriptions.plan.product_id,type='Subscription').name
-            return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,'interval':subscriptions.plan.interval,'sub_period_end':subscriptions.current_period_end,'sub_currency':subscriptions.plan.currency,'sub_amount':subscriptions.plan.amount,'trial':trial}, status=200)
+            return Response({'subscription_name':sub_name,'sub_status':subscriptions.status,'sub_price_id':subscriptions.plan.id,
+                            'interval':subscriptions.plan.interval,'sub_period_end':subscriptions.current_period_end,'sub_currency':subscriptions.plan.currency,'sub_amount':subscriptions.plan.amount,'trial':trial,'canceled_at':subscriptions.canceled_at}, status=200)
         else:
-            return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None,'trial':None}, status=200)
+            return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None,'trial':None,'canceled_at':None}, status=200)
     if is_active == (True,True):
         customer = Customer.objects.get(subscriber=request.user)
         #subscription = Subscription.objects.filter(customer=customer).last()
@@ -763,7 +766,8 @@ def check_subscription(request):
         trial = 'true' if subscription.metadata.get('type') == 'subscription_trial' else 'false'
        # sub_name = SubscriptionPricing.objects.get(stripe_price_id=subscription.plan.id).plan
         sub_name = CreditPack.objects.get(product__id=subscription.plan.product_id,type='Subscription').name
-        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.id,'interval':subscription.plan.interval,'sub_period_end':subscription.current_period_end,'sub_currency':subscription.plan.currency,'sub_amount':subscription.plan.amount,'trial':trial}, status=200)
+        return Response({'subscription_name':sub_name,'sub_status':subscription.status,'sub_price_id':subscription.plan.id,'interval':subscription.plan.interval,'sub_period_end':subscription.current_period_end,
+                        'sub_currency':subscription.plan.currency,'sub_amount':subscription.plan.amount,'trial':trial,'canceled_at':subscription.canceled_at}, status=200)
     if is_active == (False,False):
         return Response({'msg':'Not a Stripe Customer'}, status=206)
 
@@ -999,6 +1003,46 @@ def integrity_error(func):
         except IntegrityError:
             return Response({'message': "Integrity error"}, 409)
     return decorator
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def TransactionSessionInfo(request):
+    session_id = request.POST.get('session_id')  
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+
+    stripe.api_key = api_key
+
+    response = stripe.checkout.Session.retrieve(
+                 session_id
+                    )
+    # print("Bank Details")
+    # print()
+    # print(response)
+    if response.mode == "subscription":
+        try:
+            invoice =Invoice.objects.get(subscription=response.subscription)
+        except Invoice.DoesNotExist:
+             return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+        charge = invoice.charge
+        # if invoice == None:
+
+        #     return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)          
+        pack = CreditPack.objects.get(product__prices__id=invoice.plan.id,type="Subscription")
+        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount,"plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"paid":charge.paid,"payment_type":charge.payment_method.type,"txn_id":charge.balance_transaction_id},status=200,safe = False)
+
+    elif response.mode == "payment":
+        try:    
+            charge = Charge.objects.get(payment_intent=response.payment_intent)
+        except Charge.DoesNotExist:
+             return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+        pack = CreditPack.objects.get(product__prices__id=charge.metadata.get("price"),type="Addon")
+        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount, "paid":charge.paid ,"payment_type":charge.payment_method.type, "txn_id":charge.balance_transaction_id},status=200,safe = False)
+    else:
+        return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+
 
 class AiUserProfileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]

@@ -86,6 +86,55 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
+    
+    # @staticmethod
+    # def create_document_for_task_if_not_exists(task):
+
+    #     if Document.objects.filter(file_id=task.file_id).exists():
+    #         print("***  Inside *****")
+    #         doc = Document.objects.filter(file_id=task.file_id).last()
+    #         doc_data = DocumentSerializerV3(doc).data
+
+    #         serializer = (DocumentSerializerV2(data={**doc_data,\
+    #                                 "file": task.file.id, "job": task.job.id,
+    #                             },)) 
+    #         if serializer.is_valid(raise_exception=True):
+    #             print("***  serializer is valid  ****")
+    #             document = serializer.save()
+    #             task.document = document
+    #             print("********   Before save  ***********")
+    #             task.save()
+        
+    #     else:
+        
+    #         ser = TaskSerializer(task)
+    #         data = ser.data
+    #         DocumentViewByTask.correct_fields(data)
+    #         # print("data--->", data)
+    #         params_data = {**data, "output_type": None}
+    #         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+    #                      "fprm_file_path": None
+    #                      }
+    #         doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+    #             "doc_req_params":json.dumps(params_data),
+    #             "doc_req_res_params": json.dumps(res_paths)
+    #         })
+    #         if doc.status_code == 200 :
+    #             doc_data = doc.json()
+    #             print("Doc data ---> ", doc_data)
+    #             serializer = (DocumentSerializerV2(data={**doc_data,\
+    #                                 "file": task.file.id, "job": task.job.id,
+    #                             },)) 
+    #             if serializer.is_valid(raise_exception=True):
+    #                 document = serializer.save()
+    #                 task.document = document
+    #                 task.save()
+    #         else:
+    #             logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+    #             raise  ValueError("Sorry! Something went wrong with file processing.")
+
+    #     return document
+
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
@@ -105,22 +154,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
-                # total_char_count = doc_data.get("total_char_count", 0)
-                # total_word_count = doc_data.get("total_word_count", 0)
-                # word_char_ratio = round(total_char_count/total_word_count, 2)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
-                                },)) #context={"request": request}
+                                },)) 
                 if serializer.is_valid(raise_exception=True):
                     document = serializer.save()
                     task.document = document
                     task.save()
-                # task_credit_status = TaskCreditStatusSerializer(data={"task":task.id, "allocated_credits":total_word_count,
-                #         "actual_used_credits": document.mt_usage, "word_char_ratio" : word_char_ratio })
-                # if task_credit_status.is_valid():
-                #     task_credit_status.save()
-                # else:
-                #     print(task_credit_status.errors)
             else:
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
@@ -214,7 +254,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
         segment_serlzr = self.get_update(segment, request.data, request)
-        self.update_pentm(segment)
+        # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         return Response(segment_serlzr.data, status=201)
 
 class MT_RawAndTM_View(views.APIView):
@@ -231,15 +271,15 @@ class MT_RawAndTM_View(views.APIView):
         initial_credit = request.user.credit_balance
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
+        
         # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
-
         # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
 
         segment_source = Segment.objects.get(id=segment_id).source
         seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
                      "processor_name":"plain-text-processor", "extension":".txt"}
 
-        res = requests.post(f"http://{spring_host}:8080/segment/word_count", \
+        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
             data={"segmentWordCountdata":json.dumps(seg_data)})
         if res.status_code == 200:
             print("Word count --->", res.json())
@@ -286,7 +326,7 @@ class ConcordanceSearchView(views.APIView):
 
     @staticmethod
     def get_concordance_data(request, segment_id, search_string):
-        segment = Segment.objects.filter(id=segment_id).first()
+        segment = Segment.objects.filter(id=segment_id).first()        
         if segment:
             tm_ser_data = TM_FetchSerializer(segment).data
             tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
@@ -300,7 +340,7 @@ class ConcordanceSearchView(views.APIView):
         return []
 
     def get(self, request, segment_id):
-        search_string = request.GET.get("string", None)
+        search_string = request.GET.get("string", None).strip('0123456789')
         concordance = []
         if search_string:
             concordance = self.get_concordance_data(request, segment_id, search_string)
