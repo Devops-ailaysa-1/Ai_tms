@@ -51,6 +51,7 @@ urlpatterns+= [
      path('deactivate-account/',api_views.account_deactivation),
      path('activate-account/',api_views.account_activation),
      path('delete-account/',api_views.account_delete),
+     path('transaction-info/',api_views.TransactionSessionInfo)
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
 ]
