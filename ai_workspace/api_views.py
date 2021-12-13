@@ -327,43 +327,6 @@ class TempProjectSetupView(viewsets.ViewSet):
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
 
-
-# class TaskView(APIView):
-#     permission_classes = [IsAuthenticated]
-#     serializer_class = TaskSerializer
-#
-#     def get_queryset(self,):
-#         tasks = [ task for project in get_list_or_404(Project.objects.all(), ai_user=self.request.user)
-#                     for task in project.get_tasks
-#                   ]
-#         return  tasks
-#
-#     def get(self, request):
-#         tasks = self.get_queryset()
-#         print(tasks)
-#         tasks_serlzr = TaskSerializer(tasks, many=True)
-#         return Response(tasks_serlzr.data, status=200)
-#
-#     @staticmethod
-#     def get_object(data):
-#         obj = Task.objects.filter(**data).first()
-#         return obj
-#
-#     def post(self, request):
-#         obj = self.get_object({**request.POST.dict(), "assign_to": self.request.user.id})
-#         if obj:
-#             task_ser = TaskSerializer(obj)
-#             return Response(task_ser.data, status=200)
-#
-#         task_serlzr = TaskSerializer(data=request.POST.dict(), context={# Self assign
-#             "assign_to": self.request.user.id})
-#         if task_serlzr.is_valid(raise_exception=True):
-#             task_serlzr.save()
-#             return Response({"msg": task_serlzr.data}, status=200)
-#
-#         else:
-#             return Response({"msg": task_serlzr.errors}, status=400)
-
 class Files_Jobs_List(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -483,31 +446,6 @@ class TbxUploadView(APIView):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
-
-
-# @api_view(['GET',])
-# def getLanguageName(request,id):
-#
-#     job_id=Document.objects.get(id=id).job_id
-#     print("INSIDE")
-#     src_id=Job.objects.get(id=job_id).source_language_id
-#     print("SRC ID-->", src_id)
-#     src_name=Languages.objects.get(id=src_id).language
-#     tar_id=Job.objects.get(id=job_id).target_language_id
-#     print("TAR ID-->", tar_id)
-#     tar_name=Languages.objects.get(id=tar_id).language
-#     print("GOT LANGUAGES")
-#     try:
-#         src_lang_code=LanguagesLocale.objects.get(language_locale_name=src_name)\
-#                      .locale_code
-#         tar_lang_code=LanguagesLocale.objects.get(language_locale_name=tar_name)\
-#                      .locale_code
-#         return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
-#                      "src_code":src_lang_code,"tar_code":tar_lang_code})
-#     except Exception as E:
-#         print("Exception-->", E)
-#         return JsonResponse({"source_lang":src_name,"target_lang":tar_name,\
-#                      "src_code":0,"tar_code":0})
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -952,4 +890,4 @@ def create_project_from_temp_project_new(request):
         print(serializer.data)
         return JsonResponse({"data":serializer.data},safe=False)
     else:
-        return JsonResponse({"data":serializer.errors},safe=False)
+        return JsonResponse({"data":serializer.errors},safe=False)        
