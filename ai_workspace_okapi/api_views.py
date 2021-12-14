@@ -94,7 +94,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             return task.document
 
         elif Document.objects.filter(file_id=task.file_id).exists():
-            print("***  Inside *****")
             doc = Document.objects.filter(file_id=task.file_id).last()
             doc_data = DocumentSerializerV3(doc).data
 
@@ -102,10 +101,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                                     "file": task.file.id, "job": task.job.id,
                                 },)) 
             if serializer.is_valid(raise_exception=True):
-                print("***  serializer is valid  ****")
                 document = serializer.save()
                 task.document = document
-                print("********   Before save  ***********")
+                print("********   Document written using existing file  ***********")
                 task.save()
         
         else:
@@ -124,7 +122,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
-                print("Doc data ---> ", doc_data)
+                # print("Doc data ---> ", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 },)) 
