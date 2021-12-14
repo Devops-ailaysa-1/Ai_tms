@@ -17,7 +17,7 @@ from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
 import requests
-import json, os, re, time, jwt
+import json, os, re, time, jwt, time
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -101,7 +101,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                                     "file": task.file.id, "job": task.job.id,
                                 },)) 
             if serializer.is_valid(raise_exception=True):
+                start = time.process_time()
                 document = serializer.save()
+                print("Time taken to write ==========>", time.process_time() - start)
                 task.document = document
                 print("********   Document written using existing file  ***********")
                 task.save()
@@ -116,10 +118,12 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None
                          }
+            start = time.process_time()
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
+            print("Time taken for spring ==========>", time.process_time() - start)
             if doc.status_code == 200 :
                 doc_data = doc.json()
                 # print("Doc data ---> ", doc_data)
