@@ -921,7 +921,6 @@ def create_project_from_temp_project_new(request):
         print(serializer.data)
         return JsonResponse({"data":serializer.data},safe=False)
     else:
-<<<<<<< HEAD
         return JsonResponse({"data":serializer.errors},safe=False)
 
 # class ProjectAnalysis(APIView):
@@ -1035,6 +1034,3 @@ def project_list(request):
         if i.get('assign_enable')==True:
             proj_list.append(i)
     return Response(proj_list)
-=======
-        return JsonResponse({"data":serializer.errors},safe=False)        
->>>>>>> origin/merged
