@@ -87,59 +87,27 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
     
-    # @staticmethod
-    # def create_document_for_task_if_not_exists(task):
-
-    #     if Document.objects.filter(file_id=task.file_id).exists():
-    #         print("***  Inside *****")
-    #         doc = Document.objects.filter(file_id=task.file_id).last()
-    #         doc_data = DocumentSerializerV3(doc).data
-
-    #         serializer = (DocumentSerializerV2(data={**doc_data,\
-    #                                 "file": task.file.id, "job": task.job.id,
-    #                             },)) 
-    #         if serializer.is_valid(raise_exception=True):
-    #             print("***  serializer is valid  ****")
-    #             document = serializer.save()
-    #             task.document = document
-    #             print("********   Before save  ***********")
-    #             task.save()
-        
-    #     else:
-        
-    #         ser = TaskSerializer(task)
-    #         data = ser.data
-    #         DocumentViewByTask.correct_fields(data)
-    #         # print("data--->", data)
-    #         params_data = {**data, "output_type": None}
-    #         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-    #                      "fprm_file_path": None
-    #                      }
-    #         doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-    #             "doc_req_params":json.dumps(params_data),
-    #             "doc_req_res_params": json.dumps(res_paths)
-    #         })
-    #         if doc.status_code == 200 :
-    #             doc_data = doc.json()
-    #             print("Doc data ---> ", doc_data)
-    #             serializer = (DocumentSerializerV2(data={**doc_data,\
-    #                                 "file": task.file.id, "job": task.job.id,
-    #                             },)) 
-    #             if serializer.is_valid(raise_exception=True):
-    #                 document = serializer.save()
-    #                 task.document = document
-    #                 task.save()
-    #         else:
-    #             logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-    #             raise  ValueError("Sorry! Something went wrong with file processing.")
-
-    #     return document
-
-
     @staticmethod
     def create_document_for_task_if_not_exists(task):
-        document = task.document
-        if (not document) and  (not Document.objects.filter(job=task.job, file=task.file).all()):
+
+        if task.document:
+            return task.document
+
+        elif Document.objects.filter(file_id=task.file_id).exists():
+            doc = Document.objects.filter(file_id=task.file_id).last()
+            doc_data = DocumentSerializerV3(doc).data
+
+            serializer = (DocumentSerializerV2(data={**doc_data,\
+                                    "file": task.file.id, "job": task.job.id,
+                                },)) 
+            if serializer.is_valid(raise_exception=True):
+                document = serializer.save()
+                task.document = document
+                print("********   Document written using existing file  ***********")
+                task.save()
+        
+        else:
+        
             ser = TaskSerializer(task)
             data = ser.data
             DocumentViewByTask.correct_fields(data)
@@ -154,6 +122,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             if doc.status_code == 200 :
                 doc_data = doc.json()
+                # print("Doc data ---> ", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 },)) 
@@ -165,11 +134,45 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
-        elif (not document):
-            document = Document.objects.get(job=task.job, file=task.file)
-            task.document = document
-            task.save()
         return document
+
+
+    # @staticmethod
+    # def create_document_for_task_if_not_exists(task):
+    #     document = task.document
+    #     if (not document) and  (not Document.objects.filter(job=task.job, file=task.file).all()):
+    #         ser = TaskSerializer(task)
+    #         data = ser.data
+    #         DocumentViewByTask.correct_fields(data)
+    #         # print("data--->", data)
+    #         params_data = {**data, "output_type": None}
+    #         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+    #                      "fprm_file_path": None
+    #                      }
+    #         doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+    #             "doc_req_params":json.dumps(params_data),
+    #             "doc_req_res_params": json.dumps(res_paths)
+    #         })
+    #         if doc.status_code == 200 :
+    #             doc_data = doc.json()
+    #             print("Doc data ------------>", doc_data)
+    #             serializer = (DocumentSerializerV2(data={**doc_data,\
+    #                                 "file": task.file.id, "job": task.job.id,
+    #                             },)) 
+    #             if serializer.is_valid(raise_exception=True):
+    #                 document = serializer.save()
+    #                 task.document = document
+    #                 task.save()
+    #         else:
+    #             logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+    #             raise  ValueError("Sorry! Something went wrong with file processing.")
+
+    #     elif (not document):
+    #         document = Document.objects.get(job=task.job, file=task.file)
+    #         printt("*** DOCUMENT ALREADY PRESENT  ****")
+    #         task.document = document
+    #         task.save()
+    #     return document
 
     def get(self, request, task_id, format=None):
         task = self.get_object(task_id=task_id)

@@ -1031,7 +1031,8 @@ def TransactionSessionInfo(request):
 
         #     return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=invoice.plan.id,type="Subscription")
-        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount,"plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"paid":charge.paid,"payment_type":charge.payment_method.type,"txn_id":charge.balance_transaction_id},status=200,safe = False)
+        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount,"plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"paid":charge.paid,"payment_type":charge.payment_method.type,
+                            "txn_id":charge.balance_transaction_id,"receipt_url":charge.receipt_url},status=200,safe = False)
 
     elif response.mode == "payment":
         try:
@@ -1039,7 +1040,7 @@ def TransactionSessionInfo(request):
         except Charge.DoesNotExist:
              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=charge.metadata.get("price"),type="Addon")
-        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount, "paid":charge.paid ,"payment_type":charge.payment_method.type, "txn_id":charge.balance_transaction_id},status=200,safe = False)
+        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount, "paid":charge.paid ,"payment_type":charge.payment_method.type, "txn_id":charge.balance_transaction_id,"receipt_url":charge.receipt_url},status=200,safe = False)
     else:
         return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
 
