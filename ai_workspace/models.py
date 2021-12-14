@@ -11,7 +11,7 @@ from enum import Enum
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
-import os
+import os,time
 from ai_auth.models import AiUser
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields
@@ -233,8 +233,10 @@ class Project(models.Model):
                 
                 task_words.append({task.id:doc.total_word_count})
             else:
+                start = time.process_time()
                 from ai_workspace_okapi.api_views import DocumentViewByTask
                 doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
+                print("Time taken to create document ==========>", time.process_time() - start)
                 proj_word_count += doc.total_word_count
                 proj_char_count += doc.total_char_count
                 proj_seg_count += doc.total_segment_count
