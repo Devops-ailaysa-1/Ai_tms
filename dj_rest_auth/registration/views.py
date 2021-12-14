@@ -16,6 +16,7 @@ from rest_framework.generics import CreateAPIView, GenericAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core import signing
 
 from dj_rest_auth.app_settings import (
     JWTSerializer, TokenSerializer, create_token,
@@ -104,6 +105,15 @@ class VerifyEmailView(APIView, ConfirmEmailView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.kwargs['key'] = serializer.validated_data['key']
+        # Added EmailConfirmationHMAC_allauth related functions to find expiry of token
+        key = serializer.validated_data['key']
+        try:
+            max_age = 60 * 60 * 24 * settings.ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS
+            signing.loads(key, max_age=max_age, salt='account')            
+        except signing.SignatureExpired :
+            return Response({'detail': _('Link Expired')}, status=401)
+        except signing.BadSignature :
+            return Response({'detail': _('Invalid')}, status=400)
         confirmation = self.get_object()
         email = confirmation.confirm(self.request)
         if not email:
@@ -118,12 +128,12 @@ class ResendEmailVerificationView(CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        try: 
-            email = EmailAddress.objects.get(**serializer.validated_data) 
-        except EmailAddress.DoesNotExist: 
+        key = serializer.validated_data['key']
+        try:
+            pk=signing.loads(key, max_age=None, salt='account') 
+            email = EmailAddress.objects.get(id=pk) 
+        except (EmailAddress.DoesNotExist,signing.BadSignature): 
             return Response({'detail': _('Account does not exist')}, status=400)
-            #raise ValidationError("Account does not exist")
 
         if email.verified:
             return Response({'detail': _('Account is already verified')}, status=400)
