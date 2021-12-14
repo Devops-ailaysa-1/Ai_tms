@@ -166,9 +166,9 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         for text_unit in text_unit_ser_data:
             segs = text_unit.pop("segment_ser", [])
             text_unit = TextUnit.objects.create(**text_unit, document=document)
-            print("text unit data--->", text_unit)
+            # print("text unit data--->", text_unit)
             for seg  in segs:
-                print("seg data---->", seg)
+                # print("seg data---->", seg)
                 seg = Segment.objects.create(**seg, text_unit=text_unit)
         return document
 
