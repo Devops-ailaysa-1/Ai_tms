@@ -1,4 +1,7 @@
 from rest_framework.exceptions import ValidationError
+import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
 from ai_workspace_okapi.models import Document
 from django.conf import settings
@@ -219,11 +222,17 @@ def integrity_error(func):
 
     return decorator
 
+
+
+
+
+
 class ProjectSetupView(viewsets.ViewSet, PageNumberPagination):
     serializer_class = ProjectSetupSerializer
     parser_classes = [MultiPartParser, JSONParser]
     permission_classes = [IsAuthenticated]
     page_size = 20
+
 
     def get_queryset(self):
         return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
@@ -246,7 +255,9 @@ class ProjectSetupView(viewsets.ViewSet, PageNumberPagination):
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = ProjectSetupSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
+        print(response)
         return  response
+
 
     def retrieve(self, request, pk=None):
         queryset = self.get_queryset()
@@ -450,9 +461,32 @@ class TbxUploadView(APIView):
         else:
             return Response(serializer.errors)
 
+
+class ProjectFilter(django_filters.FilterSet):
+    project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
+    # team = django_filters.CharFilter(field_name='team__name',lookup_expr='icontains')
+    team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
+    class Meta:
+        model = Project
+        fields = ('project', 'team')
+
+    def filter_team(self, queryset, name, value):
+        if value=="None":
+            lookup = '__'.join([name, 'isnull'])
+            return queryset.filter(**{lookup: True})
+        else:
+            lookup = '__'.join([name, 'icontains'])
+            return queryset.filter(**{lookup: value})
+
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
+    serializer_class = ProjectQuickSetupSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    ordering_fields = ['project_name','team__name','id']
+    filterset_class = ProjectFilter
+    search_fields = ['project_name']
+    ordering = ('-id')
     paginator.page_size = 20
 
     def get_object(self):
@@ -464,19 +498,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         return obj
 
     def get_queryset(self):
-        print(self.request.user.id)
-        team = self.request.query_params.get('team',0)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
-        if team:
-            return queryset.filter(team_id = team)
+        print(self.request.user)
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct()#.order_by("-id")
         return queryset
 
         # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
         # return Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
 
-    def list(self,request):
-        queryset = self.get_queryset()
-        print(queryset)
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request})
         response = self.paginator.get_paginated_response(serializer.data)
@@ -533,7 +563,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
             return Response(serlzr.data)
-
+        return Response(serlzr.errors, status=409)
     # def delete(self, request, pk):
     #     project = self.get_object()
     #     project.delete()
@@ -1017,7 +1047,7 @@ def get_assign_to_list(request):
 def find_vendor(team,job):
     externalmembers=[]
     for j in team:
-        vendor = j.external_member.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id))
+        vendor = j.external_member.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
         if vendor:
             externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id,'status':j.status})
     return externalmembers

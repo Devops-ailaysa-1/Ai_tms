@@ -403,7 +403,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
 		fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis",)#,'ai_user')
+		 			"progress", "files_count", "tasks_count",)# "project_analysis",)#,'ai_user')
 
 
 	def run_validation(self,data):

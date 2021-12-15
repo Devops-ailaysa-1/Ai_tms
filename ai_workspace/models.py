@@ -223,7 +223,7 @@ class Project(models.Model):
         if self.team == None:
             return None
         elif self.team.owner == self.ai_user:
-            return "self"
+            return self.team.name+"(self)"
         else:
             return self.team.name
 
