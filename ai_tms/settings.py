@@ -373,7 +373,7 @@ DJSTRIPE_USE_NATIVE_JSONFIELD = (True if os.getenv( "DJSTRIPE_USE_NATIVE_JSONFIE
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
 
 
-
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
 CHANNEL_LAYERS = {
     'default': {

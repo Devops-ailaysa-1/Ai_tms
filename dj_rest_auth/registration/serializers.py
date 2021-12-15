@@ -251,3 +251,8 @@ class RegisterSerializer(serializers.Serializer):
 
 class VerifyEmailSerializer(serializers.Serializer):
     key = serializers.CharField()
+
+
+class ResendEmailVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False)
+    key = serializers.CharField(required=False)
