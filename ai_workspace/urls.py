@@ -52,13 +52,10 @@ urlpatterns += [
 	path("task_credit_status_update/<int:doc_id>", api_views.UpdateTaskCreditStatus.as_view(), name="task-credit-update"),
 	path("dashboard_credit_status", api_views.dashboard_credit_status, name="dashboard-credit-status"),
 	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
-<<<<<<< HEAD
 	path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
 	path('get_assign_to_list/',api_views.get_assign_to_list),
 	path('project_list/',api_views.project_list),
-=======
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
->>>>>>> origin/merged
 ]
 # views urls adding for local testing
 urlpatterns += [

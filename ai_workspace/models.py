@@ -219,7 +219,6 @@ class Project(models.Model):
             .filter(is_processed=False).all()}
 
     @property
-<<<<<<< HEAD
     def get_team(self):
         if self.team == None:
             return None
@@ -241,13 +240,13 @@ class Project(models.Model):
     #             return True
     #         else:
     #             return False
-=======
+    @property
     def is_proj_analysed(self):
         for task in self.get_tasks:
             if bool(task.document) == False:
                 return False
         return True
->>>>>>> origin/merged
+
 
     @property
     def project_analysis(self):
@@ -264,24 +263,8 @@ class Project(models.Model):
                 proj_seg_count += doc.total_segment_count
 
                 task_words.append({task.id:doc.total_word_count})
-<<<<<<< HEAD
-            else:
-                from ai_workspace_okapi.api_views import DocumentViewByTask
-                try:
-                    doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
-                    proj_word_count += doc.total_word_count
-                    proj_char_count += doc.total_char_count
-                    proj_seg_count += doc.total_segment_count
-
-                    task_words.append({task.id:doc.total_word_count})
-                except:
-                    print('Error')
-
-        return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
-=======
 
             return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
->>>>>>> origin/merged
                                   "task_words" : task_words }
         return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
                                   "task_words" : [] }
