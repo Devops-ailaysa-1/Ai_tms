@@ -109,8 +109,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 print("********   Document written using existing file  ***********")
                 task.save()
         
-        else:
-        
+        else:        
             ser = TaskSerializer(task)
             data = ser.data
             DocumentViewByTask.correct_fields(data)
