@@ -90,7 +90,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def create_document_for_task_if_not_exists(task):
 
-        if task.document:
+        if task.document != None:
+            print("*** Document exists *****")
             return task.document
 
         elif Document.objects.filter(file_id=task.file_id).exists():
@@ -108,8 +109,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 print("********   Document written using existing file  ***********")
                 task.save()
         
-        else:
-        
+        else:        
             ser = TaskSerializer(task)
             data = ser.data
             DocumentViewByTask.correct_fields(data)

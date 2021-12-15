@@ -11,7 +11,7 @@ from enum import Enum
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
-import os
+import os,time
 from ai_auth.models import AiUser,Team,ExternalMember
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
@@ -219,6 +219,7 @@ class Project(models.Model):
             .filter(is_processed=False).all()}
 
     @property
+<<<<<<< HEAD
     def get_team(self):
         if self.team == None:
             return None
@@ -240,24 +241,30 @@ class Project(models.Model):
     #             return True
     #         else:
     #             return False
+=======
+    def is_proj_analysed(self):
+        for task in self.get_tasks:
+            if bool(task.document) == False:
+                return False
+        return True
+>>>>>>> origin/merged
 
     @property
     def project_analysis(self):
 
-        tasks = self.get_tasks
-        proj_word_count = 0
-        proj_char_count = 0
-        proj_seg_count = 0
-        task_words = []
+        if self.is_proj_analysed == True:
 
-        for task in tasks:
-            if not task.document_id == None:
+            proj_word_count = proj_char_count = proj_seg_count = 0
+            task_words = []
+
+            for task in self.get_tasks:
                 doc = Document.objects.get(id=task.document_id)
                 proj_word_count += doc.total_word_count
                 proj_char_count += doc.total_char_count
                 proj_seg_count += doc.total_segment_count
 
                 task_words.append({task.id:doc.total_word_count})
+<<<<<<< HEAD
             else:
                 from ai_workspace_okapi.api_views import DocumentViewByTask
                 try:
@@ -271,7 +278,41 @@ class Project(models.Model):
                     print('Error')
 
         return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+=======
+
+            return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
+>>>>>>> origin/merged
                                   "task_words" : task_words }
+        return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
+                                  "task_words" : [] }
+
+        # tasks = self.get_tasks
+        # proj_word_count = 0
+        # proj_char_count = 0
+        # proj_seg_count = 0
+        # task_words = []
+
+        # for task in tasks:
+        #     if not task.document_id == None:
+        #         doc = Document.objects.get(id=task.document_id)
+        #         proj_word_count += doc.total_word_count
+        #         proj_char_count += doc.total_char_count
+        #         proj_seg_count += doc.total_segment_count
+
+        #         task_words.append({task.id:doc.total_word_count})
+        #     else:
+        #         start = time.process_time()
+        #         from ai_workspace_okapi.api_views import DocumentViewByTask
+        #         doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
+        #         print("Time taken to create document ==========>", time.process_time() - start)
+        #         proj_word_count += doc.total_word_count
+        #         proj_char_count += doc.total_char_count
+        #         proj_seg_count += doc.total_segment_count
+
+        #         task_words.append({task.id:doc.total_word_count})
+
+        # return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+        #                           "task_words" : task_words }
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)

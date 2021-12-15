@@ -232,14 +232,18 @@ def feature_availability(request):
     target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
     source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
 
-    # CHECK FOR IME AND SPELLCHECKER AVAILABILITY
+    # CHECK FOR SPELLCHECKER AVAILABILITY
     try:
         spellchecker_id = SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
         data = 1
-        show_ime = False
+        # show_ime = False
     except:
         data = 0
-        show_ime = True
+        # show_ime = True
+
+    # CHECK FOR IME
+    show_ime = True if LanguageMetaDetails.objects.get(language_id=target_lang_id).ime == True else False
+
 
     # CHECK FOR NER AVAILABILITY
     # show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False

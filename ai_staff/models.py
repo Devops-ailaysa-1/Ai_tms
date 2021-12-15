@@ -1,4 +1,5 @@
 from django import db
+from django.db.models.fields import NullBooleanField
 from django.utils import timezone
 from django.db import models
 from django.db.models.query import QuerySet
@@ -272,6 +273,7 @@ class LanguageMetaDetails(models.Model):
     lang_name_in_script = models.CharField(max_length=200, null=True, blank=True)
     script = models.ForeignKey(LanguageScripts, related_name="language_meta_details", on_delete=models.SET_NULL, null=True, blank=True)
     # ner = models.BooleanField(null=True, blank=True)
+    ime = models.BooleanField(null=True, blank=True, default=False)
 
     def __str__(self):
         return self.language.language
