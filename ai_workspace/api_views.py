@@ -897,6 +897,7 @@ class ProjectAnalysis(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, project_id):
+
         tasks = Project.objects.get(id=project_id).get_tasks
         proj_word_count = proj_char_count = proj_seg_count = 0
         task_words = []
@@ -918,5 +919,5 @@ class ProjectAnalysis(APIView):
 
                 task_words.append({task.id:doc.total_word_count})
                 
-        return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
-                                  "task_words" : task_words }
+        return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+                                  "task_words" : task_words }, status=status.HTTP_200_OK)
