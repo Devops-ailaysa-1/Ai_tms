@@ -238,9 +238,10 @@ class Project(models.Model):
                 
                 task_words.append({task.id:doc.total_word_count})
 
-            return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+            return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
                                   "task_words" : task_words }
-        return None
+        return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
+                                  "task_words" : [] }
 
         # tasks = self.get_tasks
         # proj_word_count = 0
