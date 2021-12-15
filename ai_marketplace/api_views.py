@@ -552,6 +552,8 @@ class GetVendorListViewNew(generics.ListAPIView):
 
 
     def get_queryset(self):
+        # existing_users_id = [i.external_member_id for i in self.request.user.team_info.all()]
+        # print(existing_users_id)
         # # self.validate()
         job_id= self.request.query_params.get('job')
         min_price =self.request.query_params.get('min_price')
@@ -565,7 +567,7 @@ class GetVendorListViewNew(generics.ListAPIView):
             source_lang=Job.objects.get(id=job_id).source_language
             target_lang=Job.objects.get(id=job_id).target_language
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-                    .filter(Q(vendor_lang_pair__source_lang__language=source_lang) & Q(vendor_lang_pair__target_lang__language=target_lang) & Q(vendor_lang_pair__deleted_at=None)).distinct()
+                    .filter(Q(vendor_lang_pair__source_lang__language=source_lang) & Q(vendor_lang_pair__target_lang__language=target_lang) & Q(vendor_lang_pair__deleted_at=None)).distinct()#.exclude(id__in=existing_users_id)
         if max_price and min_price and count_unit:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):
