@@ -1,5 +1,5 @@
 import os
-
+from datetime import datetime, timedelta
 from celery import Celery
 
 # Set the default Django settings module for the 'celery' program.
@@ -28,6 +28,17 @@ app.conf.beat_schedule = {
     },
 }
 
+# @app.task(bind=True)
+# def hello(self,a):
+#     print(a)
+#     return 'hello world'
+
+# tomorrow = datetime.utcnow() + timedelta(minutes=3)
+# hello.apply_async((1,),eta=tomorrow)
+
 @app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')
+
+
+
