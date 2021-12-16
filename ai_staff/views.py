@@ -72,7 +72,7 @@ def Bulk_insert(request):
             # deleted_at = data[5],
                 )
                 # print(value)
-            value.save()
+                value.save()
             # print("$$$ END  $$$")
             return JsonResponse({'message':'success'})
         except Exception as E:

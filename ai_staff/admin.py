@@ -12,22 +12,63 @@ class LanguagesAdmin(admin.ModelAdmin):
 class CountriesAdmin(admin.ModelAdmin):
     list_display = ('sortname','name','phonecode')
 
+@admin.register(LanguagesLocale)
+class LanguagesLocaleAdmin(admin.ModelAdmin):
+   list_display = ('language','language_locale_name','locale_code') 
+
+@admin.register(StripeTaxId)
+class StripeTaxIdAdmin(admin.ModelAdmin):
+   list_display = ('country','tax_code','name') 
+
+@admin.register(IndianStates)
+class IndianStatesAdmin(admin.ModelAdmin):
+   list_display = ('state_name','state_code','tin_num') 
+
+@admin.register(SpellcheckerLanguages)
+class SpellcheckerLanguagesAdmin(admin.ModelAdmin):
+   list_display = ('language','spellchecker') 
+
+@admin.register(Spellcheckers)
+class SpellcheckersAdmin(admin.ModelAdmin):
+   list_display = ('spellchecker_name',) 
+
+@admin.register(Currencies)
+class CurrenciesAdmin(admin.ModelAdmin):
+   list_display = ('currency','currency_code') 
+
+@admin.register(AilaysaSupportedMtpeEngines)
+class AilaysaSupportedMtpeEnginesAdmin(admin.ModelAdmin):
+   list_display = ('name',) 
+
+
+@admin.register(SubscriptionPricing)
+class SubscriptionPricingAdmin(admin.ModelAdmin):
+   list_display = ('stripe_product_id','plan') 
+
+@admin.register(SubscriptionPricingPrices)
+class SubscriptionPricingPricesAdmin(admin.ModelAdmin):
+   list_display = ('subscriptionplan','monthly_price','montly_price_id','annual_price','annual_price_id','currency') 
+
+@admin.register(SubscriptionFeatures)
+class SubscriptionPricingAdmin(admin.ModelAdmin):
+   list_display = ('subscriptionplan','features','description')
+
 admin.site.register(AiUserType)
 admin.site.register(Languages,LanguagesAdmin)
 admin.site.register(AssetUsageTypes)
-admin.site.register(AilaysaSupportedMtpeEngines)
-admin.site.register(SpellcheckerLanguages)
-admin.site.register(Spellcheckers)
-admin.site.register(SubscriptionPricing)
-admin.site.register(Currencies)
-admin.site.register(SubscriptionPricingPrices)
-admin.site.register(SubscriptionFeatures)
+# admin.site.register(AilaysaSupportedMtpeEngines)
+# admin.site.register(SpellcheckerLanguages)
+# admin.site.register(Spellcheckers)
+# admin.site.register(SubscriptionPricing)
+# admin.site.register(Currencies)
+# admin.site.register(SubscriptionPricingPrices)
+# admin.site.register(SubscriptionFeatures)
 admin.site.register(CreditsAddons)
 admin.site.register(CreditAddonPrice)
-admin.site.register(IndianStates)
-admin.site.register(StripeTaxId)
+#admin.site.register(IndianStates)
+# admin.site.register(StripeTaxId)
 admin.site.register(JobPositions)
-admin.site.register(LanguagesLocale)
+# admin.site.register(LanguagesLocale)
 admin.site.register(LanguageScripts)
 admin.site.register(LanguageMetaDetails)
 admin.site.register(Countries,CountriesAdmin)
