@@ -28,7 +28,7 @@ from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Task, TbxFile
 from django.http import JsonResponse
-import requests, json, os
+import requests, json, os, time
 from .models import Task,Tbxfiles
 from lxml import etree as ET
 from ai_marketplace.models import AvailableVendors
@@ -890,4 +890,34 @@ def create_project_from_temp_project_new(request):
         print(serializer.data)
         return JsonResponse({"data":serializer.data},safe=False)
     else:
-        return JsonResponse({"data":serializer.errors},safe=False)        
+        return JsonResponse({"data":serializer.errors},safe=False)
+
+class ProjectAnalysis(APIView):
+    
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id):
+
+        tasks = Project.objects.get(id=project_id).get_tasks
+        proj_word_count = proj_char_count = proj_seg_count = 0
+        task_words = []
+
+        for task in tasks:
+            if not task.document_id == None:
+                doc = Document.objects.get(id=task.document_id)
+                proj_word_count += doc.total_word_count
+                proj_char_count += doc.total_char_count
+                proj_seg_count += doc.total_segment_count
+                
+                task_words.append({task.id:doc.total_word_count}) #task.file.filename, str(t.job)
+            else:
+                from ai_workspace_okapi.api_views import DocumentViewByTask
+                doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
+                proj_word_count += doc.total_word_count
+                proj_char_count += doc.total_char_count
+                proj_seg_count += doc.total_segment_count
+
+                task_words.append({task.id:doc.total_word_count})
+                
+        return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+                                  "task_words" : task_words }, status=status.HTTP_200_OK)

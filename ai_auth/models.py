@@ -81,11 +81,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             
             carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
                 Q(ended_at__isnull=False)).last()
-            # for carry_on in carry_on_credits:
-            #     # if present.strftime('%Y-%m-%d %H:%M:%S') <= carry_on.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-            #     #     subscription += carry_on.credits_left
-                
-            subscription += carry_on_credits.credits_left
+            
+            if sub_credits.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+                subscription += carry_on_credits.credits_left
         except:
             print("No active subscription")
             return {"addon":addons, "subscription":subscription}
