@@ -22,7 +22,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
         TaskCreditStatusSerializer,TaskAssignInfoSerializer)
 
-import copy, os, mimetypes
+import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
     TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel,TaskAssignInfo
@@ -956,6 +956,28 @@ def create_project_from_temp_project_new(request):
 class ProjectAnalysis(APIView):
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def exact_required_fields_for_okapi_get_document():
+        fields = ['source_file_path', 'source_language', 'target_language',
+                     'extension', 'processor_name', 'output_file_path']
+        return fields
+
+    erfogd = exact_required_fields_for_okapi_get_document
+
+    @staticmethod
+    def correct_fields(data):
+        check_fields = ProjectAnalysis.erfogd()
+        remove_keys = []
+        for i in data.keys():
+            if i in check_fields:
+                check_fields.remove(i)
+            else:
+                remove_keys.append(i)
+        print("remove keys--->", remove_keys)
+        [data.pop(i) for i in remove_keys]
+        if check_fields != []:
+            raise ValueError("OKAPI request fields not setted correctly!!!")
+
     def get(self, request, project_id):
 
         tasks = Project.objects.get(id=project_id).get_tasks
@@ -964,21 +986,52 @@ class ProjectAnalysis(APIView):
         proj_seg_count = 0
         task_words = []
 
+        # for task in tasks:
+        #     if not task.document_id == None:
+        #         doc = Document.objects.get(id=task.document_id)
+        #         proj_word_count += doc.total_word_count
+        #         proj_char_count += doc.total_char_count
+        #         proj_seg_count += doc.total_segment_count
+
+        #         task_words.append({task.id:doc.total_word_count}) #task.file.filename, str(t.job)
+        #     else:
+        #         from ai_workspace_okapi.api_views import DocumentViewByTask
+        #         doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
+        #         proj_word_count += doc.total_word_count
+        #         proj_char_count += doc.total_char_count
+        #         proj_seg_count += doc.total_segment_count
+
+        #         task_words.append({task.id:doc.total_word_count})
+
+        # return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
+        #                           "task_words" : task_words }, status=status.HTTP_200_OK)
+
         for task in tasks:
-            if not task.document_id == None:
-                doc = Document.objects.get(id=task.document_id)
-                proj_word_count += doc.total_word_count
-                proj_char_count += doc.total_char_count
-                proj_seg_count += doc.total_segment_count
+            ser = TaskSerializer(task)
+            data = ser.data
+            ProjectAnalysis.correct_fields(data)
+            # print("data--->", data)
+            params_data = {**data, "output_type": None}
+            res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+                         "fprm_file_path": None
+                         }
+            start = time.process_time()
+            doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+                "doc_req_params":json.dumps(params_data),
+                "doc_req_res_params": json.dumps(res_paths)
+            })
+            print("Time taken for spring ==========>", time.process_time() - start)
+            if doc.status_code == 200 :
+                doc_data = doc.json()
+                proj_word_count += doc_data.get('total_word_count')
+                proj_char_count += doc_data.get('total_char_count')
+                proj_seg_count += doc_data.get('total_segment_count')
 
-                task_words.append({task.id:doc.total_word_count})
+                task_words.append({task.id : doc_data.get('total_word_count')})
+
             else:
-                doc = DocumentViewByTask.create_document_for_task_if_not_exists(task, request)
-                proj_word_count += doc.total_word_count
-                proj_char_count += doc.total_char_count
-                proj_seg_count += doc.total_segment_count
-
-                task_words.append({task.id:doc.total_word_count})
+                logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                raise  ValueError("Sorry! Something went wrong with file processing.")
 
         return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
                                   "task_words" : task_words }, status=200)
