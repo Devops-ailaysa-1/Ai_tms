@@ -305,6 +305,18 @@ class ProjectCreateView(viewsets.ViewSet):
     def update(self, request, pk=None):
         pass
 
+
+def text_file_processing(text_data):
+    name =  text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
+    f1 = open(name, 'w')
+    f1.write(text_data)
+    f1.close()
+    f2 = open(name, 'rb')
+    file_obj2 = DJFile(f2)
+    return file_obj2,f2,name
+
+
+
 class TempProjectSetupView(viewsets.ViewSet):
     serializer_class = TempProjectSetupSerializer
     parser_classes = [MultiPartParser, JSONParser]
@@ -319,14 +331,8 @@ class TempProjectSetupView(viewsets.ViewSet):
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status=406)
-            name =  text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
-            f1 = open(name, 'w')
-            f1.write(text_data)
-            f1.close()
-            f2 = open(name, 'rb')
-            file_obj2 = DJFile(f2)
-            serializer = TempProjectSetupSerializer(data={**request.POST.dict(),
-            "tempfiles":[file_obj2]})
+            file_obj2,f2,name = text_file_processing(text_data)
+            serializer = TempProjectSetupSerializer(data={**request.POST.dict(),"tempfiles":[file_obj2]})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 f2.close()
@@ -517,14 +523,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
-            name = text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
-            f1 = open(name, 'w')
-            f1.write(text_data)
-            f1.close()
-            f2 = open(name, 'rb')
-            file_obj2 = DJFile(f2)
-            serializer = ProjectQuickSetupSerializer(data={**request.data,
-            "files":[file_obj2]},context={"request": request})
+            file_obj2,f2,name = text_file_processing(text_data)
+            serializer = ProjectQuickSetupSerializer(data={**request.data,"files":[file_obj2]},context={"request": request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 f2.close()
@@ -943,7 +943,7 @@ def create_project_from_temp_project_new(request):
     target_languages = [str(i.target_language_id) for i in jobs_list]
     files = [DJFile(i.files,name=i.filename) for i in files_list]
     filename,extension = os.path.splitext((files_list[0].filename))
-    serializer = ProjectQuickSetupSerializer(data={'project_name':[filename + str(temp_proj.id)],\
+    serializer = ProjectQuickSetupSerializer(data={'project_name':[filename +'-tmp'+ str(temp_proj.id)],\
     'source_language':source_language,'target_languages':target_languages,'files':files},\
     context={'ai_user':ai_user})
     if serializer.is_valid():

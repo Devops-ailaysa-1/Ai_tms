@@ -1234,8 +1234,9 @@ def send_email_user(subject,template,context,email):
 
 class TokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
+        print("USER-------->",user)
         return (
-            six.text_type(user.pk) + six.text_type(timestamp) + six.text_type(user.is_active)
+            six.text_type(user.pk) + six.text_type(timestamp) + six.text_type(user.status)
         )
 
 
@@ -1329,7 +1330,9 @@ class ExternalMemberCreateView(viewsets.ViewSet):
             if serializer.is_valid():
                 serializer.save()
                 external_member_id = serializer.data.get('id')
-                link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(vendor)}))
+                tt = ExternalMember.objects.get(id = serializer.data.get('id'))
+                print("TTTTTTTTTTTTTTTTTTTTTTT-------------------->",tt)
+                link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(tt)}))
                 # template = 'External_member_invite_email.html'
                 subject='Ailaysa MarketPlace Invite'
                 context = {'name':vendor.fullname,'team':user,'role':role_name,'link':link}
@@ -1360,13 +1363,16 @@ class ExternalMemberCreateView(viewsets.ViewSet):
 def invite_accept(request,uid,token):
     vendor_id = urlsafe_base64_decode(uid)
     vendor = ExternalMember.objects.get(id=vendor_id)
-    user = AiUser.objects.get(id=vendor.external_member_id)
-    if user is not None and invite_accept_token.check_token(user, token):
+    # user = AiUser.objects.get(id=vendor.external_member_id)
+    # if user is not None and invite_accept_token.check_token(user, token):
+    if vendor is not None and invite_accept_token.check_token(vendor, token):
         vendor.status = 2
         vendor.save()
         print("success & updated")
         return JsonResponse({"msg":"success"},safe=False)
-    return JsonResponse({"msg":"Failed"},safe=False)
+    else:
+        return JsonResponse({"msg":'Activation link is invalid!'},safe=False)
+    # return JsonResponse({"msg":"Failed"},safe=False)
 
 
 @api_view(['GET'])
