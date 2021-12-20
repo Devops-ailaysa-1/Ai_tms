@@ -243,36 +243,17 @@ class Project(models.Model):
         return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
                                   "task_words" : [] }
 
-        # tasks = self.get_tasks
-        # proj_word_count = 0
-        # proj_char_count = 0
-        # proj_seg_count = 0
-        # task_words = []
-
-        # for task in tasks:
-        #     if not task.document_id == None:
-        #         doc = Document.objects.get(id=task.document_id)
-        #         proj_word_count += doc.total_word_count
-        #         proj_char_count += doc.total_char_count
-        #         proj_seg_count += doc.total_segment_count
-                
-        #         task_words.append({task.id:doc.total_word_count})
-        #     else:
-        #         start = time.process_time()
-        #         from ai_workspace_okapi.api_views import DocumentViewByTask
-        #         doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
-        #         print("Time taken to create document ==========>", time.process_time() - start)
-        #         proj_word_count += doc.total_word_count
-        #         proj_char_count += doc.total_char_count
-        #         proj_seg_count += doc.total_segment_count
-
-        #         task_words.append({task.id:doc.total_word_count})
-                
-        # return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
-        #                           "task_words" : task_words }
-
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
+
+# class ProjectDetails(models.Model):
+#     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="project_details")
+#     project_word_count = models.IntegerField(null=True, blank=True)
+#     project_char_count = models.IntegerField(null=True, blank=True)
+#     project_seg_count = models.IntegerField(null=True, blank=True)
+
+#     def __str__(self):
+#         return self.project.project_name
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -496,6 +477,15 @@ class Task(models.Model):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
+
+# class TaskDetails(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_details")
+#     task_word_count = models.IntegerField(null=True, blank=True)
+#     task_char_count = models.IntegerField(null=True, blank=True)
+#     task_seg_count = models.IntegerField(null=True, blank=True)
+
+#     def __str__(self):
+#         return "file=> "+ str(self.task.file) + ", job=> "+ str(self.task.job)
 
 class TmxFile(models.Model):
 
