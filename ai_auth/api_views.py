@@ -1330,9 +1330,9 @@ class ExternalMemberCreateView(viewsets.ViewSet):
             if serializer.is_valid():
                 serializer.save()
                 external_member_id = serializer.data.get('id')
-                tt = ExternalMember.objects.get(id = serializer.data.get('id'))
-                print("TTTTTTTTTTTTTTTTTTTTTTT-------------------->",tt)
-                link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(tt)}))
+                ext = ExternalMember.objects.get(id = serializer.data.get('id'))
+                print("TTTTTTTTTTTTTTTTTTTTTTT-------------------->",ext)
+                link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
                 # template = 'External_member_invite_email.html'
                 subject='Ailaysa MarketPlace Invite'
                 context = {'name':vendor.fullname,'team':user,'role':role_name,'link':link}
@@ -1371,7 +1371,7 @@ def invite_accept(request,uid,token):
         print("success & updated")
         return JsonResponse({"msg":"success"},safe=False)
     else:
-        return JsonResponse({"msg":'Activation link is invalid!'},safe=False)
+        return JsonResponse({"msg":'Accept link is invalid!'},safe=False)
     # return JsonResponse({"msg":"Failed"},safe=False)
 
 

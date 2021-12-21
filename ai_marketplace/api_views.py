@@ -505,14 +505,20 @@ def get_available_threads(request):
 @permission_classes([IsAuthenticated])
 def chat_unread_notifications(request):
     user = AiUser.objects.get(pk=request.user.id)
-    notifications = user.notifications.filter(verb='Message').unread()
+    # notifications = user.notifications.filter(verb='Message').unread()
     count = user.notifications.filter(verb='Message').unread().count()
     notification_details=[]
-    notification_details.append({'count':count})
+    notification=[]
+    notification.append({'total_count':count})
+    notifications= user.notifications.filter(verb='Message').unread().values('data','actor_object_id').annotate(count= Count('actor_object_id')).order_by()
     for i in notifications:
-        notification_details.append({'message':i.description,'time':i.timesince(),'sender':i.actor.fullname,\
-                                    'thread':i.data.get('thread_id')})
-    return JsonResponse({'notifications':notification_details})
+        print(i.get('actor_object_id'))
+        sender = AiUser.objects.get(id =i.get('actor_object_id'))
+        notification_details.append({'thread_id':i.get('data').get('thread_id'),'count':i.get('count'),'sender':sender.fullname})
+    # for i in notifications:
+    #     notification_details.append({'message':i.description,'time':i.timesince(),'sender':i.actor.fullname,\
+    #                                 'thread':i.data.get('thread_id')})
+    return JsonResponse({'notifications':notification,'notification_details':notification_details})
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
