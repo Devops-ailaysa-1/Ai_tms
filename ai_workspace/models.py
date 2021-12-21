@@ -24,7 +24,7 @@ from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from django.db.models import Q
 from django.utils.functional import cached_property
 
-from django.db.models.fields.files import FileField 
+from django.db.models.fields.files import FieldFile, FileField 
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -33,6 +33,7 @@ from .signals import (create_allocated_dirs, create_project_dir, \
     check_job_file_version_has_same_project)
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager
+from django.db.models.fields import Field
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -323,22 +324,42 @@ def get_file_upload_path(instance, filename):
 
 
 
-storage_type = os.environ.get("storage_type")
+use_spaces = os.environ.get("USE_SPACES")
 
-class CustomFileField(FileField):
-    @property
+class CustomFileField(models.FileField, Field):
     def path(self):
-        if storage_type == "LOCAL":
-            print('Local')
+        if not use_spaces == 'TRUE':
+            print('  ************ Local *********  ')
             return super(CustomFileField).path()
         else:
-            print('spaces')
-            return self.name
+            print('  ************ Spaces *********  ')
+            return self.url()
+
+# def path(self):
+#         self._require_file()
+#         return self.storage.path(self.name)
+
+# @property
+#     def url(self):
+#         self._require_file()
+#         return self.storage.url(self.name)
+
+# class CustomFileField(models.FileField):
+#     def __init__(self, *args, **kwargs):
+#         if use_spaces == 'True':
+#             print("******  Spaces  *******")
+#             # return super(CustomFileField).path()
+#             # super().__init__(*args, **kwargs)
+#         else:
+#             print("******  Local *******")
+#             return self.url(self)
+#             # super().__init__(*args, **kwargs)
 
 class File(models.Model):
+
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="project_usage_type")
-    file =CustomFileField(upload_to=get_file_upload_path, null=False,\
+    file = CustomFileField(upload_to=get_file_upload_path, null=False,\
                 blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
@@ -372,7 +393,7 @@ class File(models.Model):
 
     @property
     def get_source_file_path(self):
-        return self.file.path
+        return self.file.url
 
     @property
     def output_file_path(self):
@@ -440,7 +461,7 @@ class Task(models.Model):
 
     @property
     def processor_name(self):
-        return  get_processor_name(self.file.file.path).get("processor_name", None)
+        return  get_processor_name(self.file.file.name).get("processor_name", None)
 
     @property
     def get_progress(self):

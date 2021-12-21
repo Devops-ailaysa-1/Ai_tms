@@ -339,24 +339,27 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
             res = self.document_data_to_file(request, document_id)
-            print("RES CODE ====> ", res)
+            print("RES CODE ====> ", res.status_code)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 print("file_path---->", file_path)
-                if os.path.isfile(res.text):
-                    if os.path.exists(file_path):
-                        with open(file_path, 'rb') as fh:
-                            response = HttpResponse(fh.read(), content_type=\
-                                "application/vnd.ms-excel")          
-                            encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                    encoding='utf-8')                             
-                            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
-                                                .format(encoded_filename)
-                            response['X-Suggested-Filename'] = encoded_filename
-                            response["Access-Control-Allow-Origin"] = "*"
-                            response["Access-Control-Allow-Headers"] = "*"
-                            print("cont-disp--->", response.get("Content-Disposition"))
-                            return response
+                try:
+                    if os.path.isfile(res.text):
+                        if os.path.exists(file_path):
+                            with open(file_path, 'rb') as fh:
+                                response = HttpResponse(fh.read(), content_type=\
+                                    "application/vnd.ms-excel")          
+                                encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
+                                        encoding='utf-8')                             
+                                response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
+                                                    .format(encoded_filename)
+                                response['X-Suggested-Filename'] = encoded_filename
+                                response["Access-Control-Allow-Origin"] = "*"
+                                response["Access-Control-Allow-Headers"] = "*"
+                                print("cont-disp--->", response.get("Content-Disposition"))
+                                return response
+                except Exception as e:
+                    print("Exception ------> ", e)
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
         else:
