@@ -37,6 +37,7 @@ from wiktionaryparser import WiktionaryParser
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.conf import  settings
 from django.urls import reverse
+from json import JSONDecodeError
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -911,7 +912,10 @@ def wiktionary_ws(code,codesrc,user_input):
         "iwlocal":codesrc,
     }
     response = S.get(url=URL, params=PARAMS)
-    data = response.json()
+    try:
+        data = response.json()
+    except JSONDecodeError:
+        return {"source":'',"source-url":''}
     srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input}"
     res=data["query"]["pages"]
     print("RES-------->",res)
