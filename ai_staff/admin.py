@@ -14,40 +14,40 @@ class CountriesAdmin(admin.ModelAdmin):
 
 @admin.register(LanguagesLocale)
 class LanguagesLocaleAdmin(admin.ModelAdmin):
-   list_display = ('language','language_locale_name','locale_code') 
+   list_display = ('language','language_locale_name','locale_code')
 
 @admin.register(StripeTaxId)
 class StripeTaxIdAdmin(admin.ModelAdmin):
-   list_display = ('country','tax_code','name') 
+   list_display = ('country','tax_code','name')
 
 @admin.register(IndianStates)
 class IndianStatesAdmin(admin.ModelAdmin):
-   list_display = ('state_name','state_code','tin_num') 
+   list_display = ('state_name','state_code','tin_num')
 
 @admin.register(SpellcheckerLanguages)
 class SpellcheckerLanguagesAdmin(admin.ModelAdmin):
-   list_display = ('language','spellchecker') 
+   list_display = ('language','spellchecker')
 
 @admin.register(Spellcheckers)
 class SpellcheckersAdmin(admin.ModelAdmin):
-   list_display = ('spellchecker_name',) 
+   list_display = ('spellchecker_name',)
 
 @admin.register(Currencies)
 class CurrenciesAdmin(admin.ModelAdmin):
-   list_display = ('currency','currency_code') 
+   list_display = ('currency','currency_code')
 
 @admin.register(AilaysaSupportedMtpeEngines)
 class AilaysaSupportedMtpeEnginesAdmin(admin.ModelAdmin):
-   list_display = ('name',) 
+   list_display = ('name',)
 
 
 @admin.register(SubscriptionPricing)
 class SubscriptionPricingAdmin(admin.ModelAdmin):
-   list_display = ('stripe_product_id','plan') 
+   list_display = ('stripe_product_id','plan')
 
 @admin.register(SubscriptionPricingPrices)
 class SubscriptionPricingPricesAdmin(admin.ModelAdmin):
-   list_display = ('subscriptionplan','monthly_price','montly_price_id','annual_price','annual_price_id','currency') 
+   list_display = ('subscriptionplan','monthly_price','montly_price_id','annual_price','annual_price_id','currency')
 
 @admin.register(SubscriptionFeatures)
 class SubscriptionPricingAdmin(admin.ModelAdmin):
@@ -71,9 +71,8 @@ admin.site.register(JobPositions)
 # admin.site.register(LanguagesLocale)
 admin.site.register(LanguageScripts)
 admin.site.register(LanguageMetaDetails)
-<<<<<<< HEAD
-admin.site.register(Countries)
+
+# admin.site.register(Countries)
 admin.site.register(Role)
-=======
+
 admin.site.register(Countries,CountriesAdmin)
->>>>>>> origin/merged

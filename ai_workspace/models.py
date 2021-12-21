@@ -532,7 +532,7 @@ class Task(models.Model):
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
-<<<<<<< HEAD
+
 def reference_file_upload_path(instance, filename):
     file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,\
             "references", filename)
@@ -560,7 +560,7 @@ class TaskAssignHistory(models.Model):
             related_name="task_assign_history")
     previous_assign = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=False, blank=False)
     task_segment_confirmed = models.IntegerField(null=True, blank=True)
-=======
+
 class TaskDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_details")
     task_word_count = models.IntegerField(null=True, blank=True)
@@ -570,7 +570,7 @@ class TaskDetails(models.Model):
 
     def __str__(self):
         return "file=> "+ str(self.task.file) + ", job=> "+ str(self.task.job)
->>>>>>> origin/merged
+
 
 class TmxFile(models.Model):
 
