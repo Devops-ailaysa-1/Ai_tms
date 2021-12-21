@@ -234,33 +234,33 @@ class Project(models.Model):
         else:
             return False
 
-    @property
-    def project_analysis(self):
-        if self.is_proj_analysed == True:
-            proj_word_count = proj_char_count = proj_seg_count = 0
-            task_words = []
+    # @property
+    # def project_analysis(self):
+    #     if self.is_proj_analysed == True:
+    #         proj_word_count = proj_char_count = proj_seg_count = 0
+    #         task_words = []
 
-            if self.is_all_doc_opened:
-                for task in self.get_tasks:
-                    doc = Document.objects.get(id=task.document_id)
-                    proj_word_count += doc.total_word_count
-                    proj_char_count += doc.total_char_count
-                    proj_seg_count += doc.total_segment_count
+    #         if self.is_all_doc_opened:
+    #             for task in self.get_tasks:
+    #                 doc = Document.objects.get(id=task.document_id)
+    #                 proj_word_count += doc.total_word_count
+    #                 proj_char_count += doc.total_char_count
+    #                 proj_seg_count += doc.total_segment_count
 
-                    task_words.append({task.id:doc.total_word_count})
-                return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
-                                  "task_words" : task_words }
-            else:
-                out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-                task_words = []
-                for task in self.get_tasks:
-                    task_words.append({task.id : task.task_details.first().task_word_count})
-                return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-                    "proj_seg_count":out.get('task_seg_count__sum'),
-                                "task_words":task_words}
-        else:
-            return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
-                                  "task_words" : [] }
+    #                 task_words.append({task.id:doc.total_word_count})
+    #             return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
+    #                               "task_words" : task_words }
+    #         else:
+    #             out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+    #             task_words = []
+    #             for task in self.get_tasks:
+    #                 task_words.append({task.id : task.task_details.first().task_word_count})
+    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+    #                 "proj_seg_count":out.get('task_seg_count__sum'),
+    #                             "task_words":task_words}
+    #     else:
+    #         return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
+    #                               "task_words" : [] }
     
     @property
     def project_analysis(self):
