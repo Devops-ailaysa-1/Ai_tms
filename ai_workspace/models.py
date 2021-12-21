@@ -21,7 +21,7 @@ from ai_staff.models import ParanoidModel
 from django.shortcuts import reverse
 from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.utils.functional import cached_property
 
 from .manager import AilzaManager
@@ -227,75 +227,78 @@ class Project(models.Model):
         else:
             return self.team.name
 
-    # @property
-    # def assign_enable(self):
-    #     if self.team == None:
-    #         return True
-    #     if self.team.owner == self.ai_user:
-    #         return True
-    #     else:
-    #         obj = ExternalMember.objects.get(Q(user=self.team.owner) & Q(role = 1) & Q(status = 2))
-    #         print(obj)
-    #         if obj:
-    #             return True
-    #         else:
-    #             return False
+    @property
+    def is_all_doc_opened(self):
+        if self.get_tasks:
+            for task in self.get_tasks:
+                if bool(task.document) == False:
+                    return False
+            return True
+        else:
+            return False
+
+
     @property
     def is_proj_analysed(self):
-        for task in self.get_tasks:
-            if bool(task.document) == False:
-                return False
-        return True
-
+        if self.is_all_doc_opened:
+            return True
+        if self.task_project.exists():
+            return True
+        else:
+            return False
 
     @property
     def project_analysis(self):
-
         if self.is_proj_analysed == True:
-
             proj_word_count = proj_char_count = proj_seg_count = 0
             task_words = []
 
-            for task in self.get_tasks:
-                doc = Document.objects.get(id=task.document_id)
-                proj_word_count += doc.total_word_count
-                proj_char_count += doc.total_char_count
-                proj_seg_count += doc.total_segment_count
+            if self.is_all_doc_opened:
+                for task in self.get_tasks:
+                    doc = Document.objects.get(id=task.document_id)
+                    proj_word_count += doc.total_word_count
+                    proj_char_count += doc.total_char_count
+                    proj_seg_count += doc.total_segment_count
 
-                task_words.append({task.id:doc.total_word_count})
-
-            return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
+                    task_words.append({task.id:doc.total_word_count})
+                return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
                                   "task_words" : task_words }
-        return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
+            else:
+                out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+                task_words = []
+                for task in self.get_tasks:
+                    task_words.append({task.id : task.task_details.first().task_word_count})
+                return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+                    "proj_seg_count":out.get('task_seg_count__sum'),
+                                "task_words":task_words}
+        else:
+            return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
                                   "task_words" : [] }
 
-        # tasks = self.get_tasks
-        # proj_word_count = 0
-        # proj_char_count = 0
-        # proj_seg_count = 0
-        # task_words = []
+    # @property
+    # def project_analysis(self):
+    #     if self.is_proj_analysed == True:
+    #         task_words = []
 
-        # for task in tasks:
-        #     if not task.document_id == None:
-        #         doc = Document.objects.get(id=task.document_id)
-        #         proj_word_count += doc.total_word_count
-        #         proj_char_count += doc.total_char_count
-        #         proj_seg_count += doc.total_segment_count
+    #         if self.is_all_doc_opened:
+    #             [task_words.append({i.id:i.document.total_word_count}) for i in self.get_tasks]
+    #             out=Document.objects.filter(id__in=[j.document_id for j in self.get_tasks]).aggregate(Sum('total_word_count'),\
+    #                 Sum('total_char_count'),Sum('total_segment_count'))
 
-        #         task_words.append({task.id:doc.total_word_count})
-        #     else:
-        #         start = time.process_time()
-        #         from ai_workspace_okapi.api_views import DocumentViewByTask
-        #         doc = DocumentViewByTask.create_document_for_task_if_not_exists(task)
-        #         print("Time taken to create document ==========>", time.process_time() - start)
-        #         proj_word_count += doc.total_word_count
-        #         proj_char_count += doc.total_char_count
-        #         proj_seg_count += doc.total_segment_count
+    #             return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+    #                 "proj_seg_count":out.get('total_segment_count__sum'),\
+    #                               "task_words" : task_words }
+    #         else:
+    #             out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+    #             task_words = []
+    #             [task_words.append({i.id:i.task_details.first().total_word_count}) for i in self.get_tasks]
 
-        #         task_words.append({task.id:doc.total_word_count})
-
-        # return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
-        #                           "task_words" : task_words }
+    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+    #                 "proj_seg_count":out.get('task_seg_count__sum'),
+    #                             "task_words":task_words}
+    #     else:
+    #         return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
+    #                               "task_words" : [] }
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -529,6 +532,7 @@ class Task(models.Model):
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
+<<<<<<< HEAD
 def reference_file_upload_path(instance, filename):
     file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,\
             "references", filename)
@@ -556,6 +560,17 @@ class TaskAssignHistory(models.Model):
             related_name="task_assign_history")
     previous_assign = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=False, blank=False)
     task_segment_confirmed = models.IntegerField(null=True, blank=True)
+=======
+class TaskDetails(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_details")
+    task_word_count = models.IntegerField(null=True, blank=True)
+    task_char_count = models.IntegerField(null=True, blank=True)
+    task_seg_count = models.IntegerField(null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="task_project")
+
+    def __str__(self):
+        return "file=> "+ str(self.task.file) + ", job=> "+ str(self.task.job)
+>>>>>>> origin/merged
 
 class TmxFile(models.Model):
 

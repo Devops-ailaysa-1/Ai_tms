@@ -3,7 +3,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,TaskAssignHistory
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,TaskAssignHistory,TaskDetails
 import json
 import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -586,6 +586,7 @@ class TaskCreditStatusSerializer(serializers.ModelSerializer):
         model = TaskCreditStatus
         fields = "__all__"
 
+<<<<<<< HEAD
 # class TaskAssignInfoSerializer(serializers.ModelSerializer):
 #     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
 #     tasks = serializers.ListField(required=False)
@@ -619,3 +620,9 @@ class TaskCreditStatusSerializer(serializers.ModelSerializer):
 #             task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
 #             task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
 #         return super().update(instance, data)
+=======
+class TaskDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskDetails
+        fields = "__all__"
+>>>>>>> origin/merged

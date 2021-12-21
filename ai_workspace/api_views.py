@@ -20,12 +20,16 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
+<<<<<<< HEAD
         TaskCreditStatusSerializer,TaskAssignInfoSerializer)
+=======
+        TaskCreditStatusSerializer, TaskDetailSerializer)
+>>>>>>> origin/merged
 
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel,TaskAssignInfo
+    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails, TaskAssignInfo
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -50,7 +54,7 @@ from django.http import JsonResponse
 from tablib import Dataset
 import shutil
 from datetime import datetime
-from django.db.models import Q
+from django.db.models import Q, Sum
 from rest_framework.decorators import permission_classes
 from notifications.signals import notify
 from notifications.models import Notification
@@ -953,7 +957,12 @@ def create_project_from_temp_project_new(request):
     else:
         return JsonResponse({"data":serializer.errors},safe=False)
 
+##############   PROJECT ANALYSIS BY STORING ONLY COUNT DATA   ###########
 class ProjectAnalysis(APIView):
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/merged
     permission_classes = [IsAuthenticated]
 
     @staticmethod
@@ -978,14 +987,53 @@ class ProjectAnalysis(APIView):
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
 
-    def get(self, request, project_id):
+    @staticmethod
+    def get_data_from_docs(project):
+        proj_word_count = proj_char_count = proj_seg_count = 0
+        task_words = []
 
+        for task in project.get_tasks:
+            doc = Document.objects.get(id=task.document_id)
+            proj_word_count += doc.total_word_count
+            proj_char_count += doc.total_char_count
+            proj_seg_count += doc.total_segment_count
+
+            task_words.append({task.id:doc.total_word_count})
+
+        return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
+                                "task_words" : task_words }, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_data_from_analysis(project):
+        out = TaskDetails.objects.filter(project_id=project.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+        task_words = []
+        for task in project.get_tasks:
+            task_words.append({task.id : task.task_details.first().task_word_count})
+        return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+                        "proj_seg_count":out.get('task_seg_count__sum'),
+                        "task_words":task_words}, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_analysed_data(project_id):
+        project = Project.objects.get(id=project_id)
+        if project.is_all_doc_opened:
+            return ProjectAnalysis.get_data_from_docs(project)
+        else:
+            return ProjectAnalysis.get_data_from_analysis(project)
+
+    @staticmethod
+    def analyse_project(project_id):
         tasks = Project.objects.get(id=project_id).get_tasks
+<<<<<<< HEAD
         proj_word_count = 0
         proj_char_count = 0
         proj_seg_count = 0
+=======
+>>>>>>> origin/merged
         task_words = []
+        file_ids = []
 
+<<<<<<< HEAD
         # for task in tasks:
         #     if not task.document_id == None:
         #         doc = Document.objects.get(id=task.document_id)
@@ -1006,30 +1054,45 @@ class ProjectAnalysis(APIView):
         # return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,
         #                           "task_words" : task_words }, status=status.HTTP_200_OK)
 
+=======
+>>>>>>> origin/merged
         for task in tasks:
-            ser = TaskSerializer(task)
-            data = ser.data
-            ProjectAnalysis.correct_fields(data)
-            # print("data--->", data)
-            params_data = {**data, "output_type": None}
-            res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+
+            if task.file_id not in file_ids:
+
+                ser = TaskSerializer(task)
+                data = ser.data
+                ProjectAnalysis.correct_fields(data)
+                params_data = {**data, "output_type": None}
+                res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None
                          }
-            start = time.process_time()
-            doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-                "doc_req_params":json.dumps(params_data),
-                "doc_req_res_params": json.dumps(res_paths)
-            })
-            print("Time taken for spring ==========>", time.process_time() - start)
-            if doc.status_code == 200 :
-                doc_data = doc.json()
-                proj_word_count += doc_data.get('total_word_count')
-                proj_char_count += doc_data.get('total_char_count')
-                proj_seg_count += doc_data.get('total_segment_count')
+                doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+                    "doc_req_params":json.dumps(params_data),
+                    "doc_req_res_params": json.dumps(res_paths)
+                })
+                if doc.status_code == 200 :
+                    doc_data = doc.json()
+                    task_words.append({task.id : doc_data.get('total_word_count')})
 
-                task_words.append({task.id : doc_data.get('total_word_count')})
+                    task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
+                                                            "task_char_count":doc_data.get('total_char_count', 0),
+                                                            "task_seg_count":doc_data.get('total_segment_count', 0),
+                                                            "task": task.id,"project":project_id}
+                                                                 )
+
+                    if task_detail_serializer.is_valid(raise_exception=True):
+                        task_detail_serializer.save()
+                    else:
+                        print("error-->", task_detail_serializer.errors)
+                else:
+                    logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                    raise  ValueError("Sorry! Something went wrong with file processing.")
+
+                file_ids.append(task.file_id)
 
             else:
+<<<<<<< HEAD
                 logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
@@ -1117,3 +1180,25 @@ def project_list(request):
         if i.get('assign_enable')==True:
             proj_list.append(i)
     return Response(proj_list)
+=======
+                print("*************  File taken only once  **************")
+                tasks = [i for i in Task.objects.filter(file_id=task.file_id)]
+                task_details = TaskDetails.objects.filter(task__in = tasks).first()
+                task_details.pk = None
+                task_details.task_id = task.id
+                task_details.save()
+                task_words.append({task.id : task_details.task_word_count})
+
+        out = TaskDetails.objects.filter(project_id=project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+        return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+                        "proj_seg_count":out.get('task_seg_count__sum'),
+                        "task_words":task_words}, status=status.HTTP_200_OK)
+
+    def get(self, request, project_id):
+
+        if bool(Project.objects.get(id=project_id).is_proj_analysed):
+            return ProjectAnalysis.get_analysed_data(project_id)
+        else:
+            return ProjectAnalysis.analyse_project(project_id)
+#######################################
+>>>>>>> origin/merged
