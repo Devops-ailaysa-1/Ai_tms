@@ -411,7 +411,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
-		print("files-->",data['files'])
+		# print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 
 		return super().to_internal_value(data=data)
