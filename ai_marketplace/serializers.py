@@ -109,6 +109,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
     vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
     vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True)
     vendor_info = VendorSerializer(read_only=True)
+    professional_identity_info = ProfessionalidentitySerializer(read_only=True)
 
 
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):

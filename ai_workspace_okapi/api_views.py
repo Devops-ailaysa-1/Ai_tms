@@ -275,10 +275,11 @@ class MT_RawAndTM_View(views.APIView):
 
         # sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
         #                         & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
-
-        initial_credit = request.user.credit_balance
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
+        user = doc.doc_credit_debit_user
+        initial_credit = user.credit_balance
+
 
         # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
         # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
@@ -814,8 +815,9 @@ def WiktionaryParse(request):
     parser.set_default_language(src_lang)
     parser.include_relation('Translations')
     word = parser.fetch(user_input)
-    if word[0].get('definitions')==[]:
-        word=parser.fetch(user_input.lower())
+    if word:
+        if word[0].get('definitions')==[]:
+            word=parser.fetch(user_input.lower())
     res=[]
     tar=""
     for i in word:
