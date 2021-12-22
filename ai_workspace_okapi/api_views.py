@@ -87,7 +87,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
-    
+
     @staticmethod
     def create_document_for_task_if_not_exists(task):
 
@@ -101,7 +101,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
             serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
-                                },)) 
+                                },))
             if serializer.is_valid(raise_exception=True):
                 start = time.process_time()
                 document = serializer.save()
@@ -109,8 +109,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task.document = document
                 print("********   Document written using existing file  ***********")
                 task.save()
-        
-        else:        
+
+        else:
             ser = TaskSerializer(task)
             data = ser.data
             DocumentViewByTask.correct_fields(data)
@@ -130,7 +130,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 # print("Doc data ---> ", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
-                                },)) 
+                                },))
                 if serializer.is_valid(raise_exception=True):
                     document = serializer.save()
                     task.document = document
@@ -163,7 +163,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     #             print("Doc data ------------>", doc_data)
     #             serializer = (DocumentSerializerV2(data={**doc_data,\
     #                                 "file": task.file.id, "job": task.job.id,
-    #                             },)) 
+    #                             },))
     #             if serializer.is_valid(raise_exception=True):
     #                 document = serializer.save()
     #                 task.document = document
@@ -273,13 +273,13 @@ class MT_RawAndTM_View(views.APIView):
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200
 
-        sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
-                                & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
+        # sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
+        #                         & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
 
         initial_credit = request.user.credit_balance
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
-        
+
         # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
         # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
 
@@ -334,7 +334,7 @@ class ConcordanceSearchView(views.APIView):
 
     @staticmethod
     def get_concordance_data(request, segment_id, search_string):
-        segment = Segment.objects.filter(id=segment_id).first()        
+        segment = Segment.objects.filter(id=segment_id).first()
         if segment:
             tm_ser_data = TM_FetchSerializer(segment).data
             tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
@@ -799,10 +799,8 @@ def WiktionaryParse(request):
     user_input=request.POST.get("term")
     term_type=request.POST.get("term_type")
     doc_id=request.POST.get("doc_id")
-    print("Before strip--->",user_input)
     user_input=user_input.strip()
     user_input=user_input.strip('0123456789')
-    print("After strip--->",user_input)
     doc = Document.objects.get(id=doc_id)
     sourceLanguage=doc.source_language
     targetLanguage=doc.target_language

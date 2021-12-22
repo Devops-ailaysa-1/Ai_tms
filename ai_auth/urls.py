@@ -55,7 +55,7 @@ urlpatterns+= [
      path('deactivate-account/',api_views.account_deactivation),
      path('activate-account/',api_views.account_activation),
      path('delete-account/',api_views.account_delete),
-     path('accept/<uid>/<token>',api_views.invite_accept,name='accept'),
+     path('accept/',api_views.invite_accept,name='accept'),
      path('teamlist/',api_views.teams_list),
      path('transaction-info/',api_views.TransactionSessionInfo)
      # path('external-member-invite/',api_views.external_member_invite),
