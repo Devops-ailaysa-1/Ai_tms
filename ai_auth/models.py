@@ -315,3 +315,6 @@ class GeneralSupport(models.Model):
     support_file = models.FileField(upload_to=support_file_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+class ReferredUsers(models.Model):
+    email = models.EmailField()

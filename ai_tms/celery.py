@@ -26,7 +26,19 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=7, minute=00),#crontab(hour=1, minute=15),
         'args': (),
     },
+    'renew-test': {
+        'task': 'ai_auth.tasks.renewal_list',
+        'schedule': crontab(hour=12, minute=57),#crontab(hour=1, minute=15),
+        'args': (),
+    },
 }
+app.conf.timezone = 'UTC'
+
+# @app.task
+# def add(x, y):
+#     return x + y
+# # tomorrow = datetime.utcnow() + timedelta(minutes=5)
+# add.apply_async((2, 2), countdown=20)
 
 # @app.task(bind=True)
 # def hello(self,a):

@@ -15,7 +15,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import (AiUser, BillingAddress, Professionalidentity,
+from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile)
 from django.http import Http404,JsonResponse
@@ -1184,3 +1184,15 @@ def account_delete(request):
     else:
         return Response({"msg":"password didn't match"},status = 400)
     return JsonResponse({"msg":"user account deleted"},safe = False)
+
+
+@api_view(['POST'])
+def referral_users(request):
+    ref_email = request.POST.get('email')
+    try:
+        user = AiUser.objects.get(email =ref_email)
+        return Response({"msg":"User Already Exists"},status = 400)
+    
+    except AiUser.DoesNotExist:
+        ref =ReferredUsers.objects.create(email=ref_email)
+    return Response({"msg":"Successfully Added"},status = 201)
