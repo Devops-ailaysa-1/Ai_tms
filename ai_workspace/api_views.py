@@ -955,7 +955,12 @@ class ProjectAnalysis(APIView):
 
     @staticmethod
     def analyse_project(project_id):
-        tasks = Project.objects.get(id=project_id).get_tasks
+        project = Project.objects.get(id=project_id)
+        project_tasks = Project.objects.get(id=project_id).get_tasks
+        tasks = []
+        for _task in project_tasks:
+            if _task.task_details.first() == None:
+                tasks.append(_task)
         task_words = []
         file_ids = []
 
@@ -976,7 +981,7 @@ class ProjectAnalysis(APIView):
                 })
                 if doc.status_code == 200 :
                     doc_data = doc.json()
-                    task_words.append({task.id : doc_data.get('total_word_count')})
+                    # task_words.append({task.id : doc_data.get('total_word_count')})
 
                     task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
                                                             "task_char_count":doc_data.get('total_char_count', 0),
@@ -1001,8 +1006,9 @@ class ProjectAnalysis(APIView):
                 task_details.pk = None
                 task_details.task_id = task.id
                 task_details.save()
-                task_words.append({task.id : task_details.task_word_count})
-
+                # task_words.append({task.id : task_details.task_word_count})
+                
+        [task_words.append({task.id : task.task_details.first().task_word_count})for task in project.get_tasks]
         out = TaskDetails.objects.filter(project_id=project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
         return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
