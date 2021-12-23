@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeEngines, Spellcheckers,
                     SpellcheckerLanguages,SubscriptionPricing,Currencies,SubscriptionPricingPrices,SubscriptionFeatures,
                     CreditsAddons,CreditAddonPrice,IndianStates,StripeTaxId,JobPositions, LanguagesLocale, LanguageScripts,
-                    LanguageMetaDetails, Countries,Role)
+                    LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -76,3 +76,9 @@ admin.site.register(LanguageMetaDetails)
 admin.site.register(Role)
 
 admin.site.register(Countries,CountriesAdmin)
+
+admin.site.register(SubjectFields)
+admin.site.register(Billingunits)
+admin.site.register(ContentTypes)
+admin.site.register(ServiceTypes)
+admin.site.register(VendorLegalCategories)

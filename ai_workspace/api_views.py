@@ -958,64 +958,6 @@ def create_project_from_temp_project_new(request):
         return JsonResponse({"data":serializer.errors},safe=False)
 
 ##############   PROJECT ANALYSIS BY STORING ONLY COUNT DATA   ###########
-class ProjectAnalysis(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @staticmethod
-    def exact_required_fields_for_okapi_get_document():
-        fields = ['source_file_path', 'source_language', 'target_language',
-                     'extension', 'processor_name', 'output_file_path']
-        return fields
-
-    erfogd = exact_required_fields_for_okapi_get_document
-
-    @staticmethod
-    def correct_fields(data):
-        check_fields = ProjectAnalysis.erfogd()
-        remove_keys = []
-        for i in data.keys():
-            if i in check_fields:
-                check_fields.remove(i)
-            else:
-                remove_keys.append(i)
-        print("remove keys--->", remove_keys)
-        [data.pop(i) for i in remove_keys]
-        if check_fields != []:
-            raise ValueError("OKAPI request fields not setted correctly!!!")
-
-    @staticmethod
-    def get_data_from_docs(project):
-        proj_word_count = proj_char_count = proj_seg_count = 0
-        task_words = []
-
-        for task in project.get_tasks:
-            doc = Document.objects.get(id=task.document_id)
-            proj_word_count += doc.total_word_count
-            proj_char_count += doc.total_char_count
-            proj_seg_count += doc.total_segment_count
-
-            task_words.append({task.id:doc.total_word_count})
-
-        return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
-                                "task_words" : task_words }, status=status.HTTP_200_OK)
-
-    @staticmethod
-    def get_data_from_analysis(project):
-        out = TaskDetails.objects.filter(project_id=project.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-        task_words = []
-        for task in project.get_tasks:
-            task_words.append({task.id : task.task_details.first().task_word_count})
-        return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-                        "proj_seg_count":out.get('task_seg_count__sum'),
-                        "task_words":task_words}, status=status.HTTP_200_OK)
-
-    @staticmethod
-    def get_analysed_data(project_id):
-        project = Project.objects.get(id=project_id)
-        if project.is_all_doc_opened:
-            return ProjectAnalysis.get_data_from_docs(project)
-        else:
-            return ProjectAnalysis.get_data_from_analysis(project)
 
 class ProjectAnalysis(APIView):
 
@@ -1138,6 +1080,7 @@ class ProjectAnalysis(APIView):
             return ProjectAnalysis.get_analysed_data(project_id)
         else:
             return ProjectAnalysis.analyse_project(project_id)
+            
 #######################################
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
