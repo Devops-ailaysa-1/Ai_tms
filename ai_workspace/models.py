@@ -9,7 +9,7 @@ from django.utils.text import slugify
 from datetime import datetime
 from enum import Enum
 from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.contrib.auth import settings
 import os,time
 from ai_auth.models import AiUser
@@ -28,7 +28,7 @@ from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
 from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
-    check_job_file_version_has_same_project)
+    check_job_file_version_has_same_project,)
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager
 
@@ -229,7 +229,7 @@ class Project(models.Model):
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
             return True
-        if self.task_project.exists():
+        if len(self.get_tasks) == self.task_project.count():
             return True
         else:
             return False
