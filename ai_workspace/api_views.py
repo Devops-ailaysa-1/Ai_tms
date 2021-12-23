@@ -504,7 +504,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct()#.order_by("-id")
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
         return queryset
 
         # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
@@ -578,6 +578,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
         if project.ai_user == self.request.user:
+            return project.get_tasks
+        elif project.team.owner == self.request.user:
             return project.get_tasks
         else:
             return [task for job in project.project_jobs_set.all() for task \
@@ -806,8 +808,8 @@ class UpdateTaskCreditStatus(APIView):
     #         return HttpResponse(status=404)
 
     @staticmethod
-    def update_addon_credit(request, actual_used_credits=None, credit_diff=None):
-        add_ons = UserCredits.objects.filter(Q(user_id=request.user.id) & Q(credit_pack_type="Addon"))
+    def update_addon_credit(request,user, actual_used_credits=None, credit_diff=None):
+        add_ons = UserCredits.objects.filter(Q(user_id=user.id) & Q(credit_pack_type="Addon"))
         if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
             for addon in add_ons:
@@ -826,10 +828,13 @@ class UpdateTaskCreditStatus(APIView):
             return False
 
     @staticmethod
-    def update_usercredit(request, actual_used_credits):
+    def update_usercredit(request,doc_id, actual_used_credits):
+        doc = Document.objects.get(id = doc_id)
+        user = doc.doc_credit_debit_user
+        print("Credit User",user)
         present = datetime.now()
         try:
-            user_credit = UserCredits.objects.get(Q(user_id=request.user.id) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+            user_credit = UserCredits.objects.get(Q(user_id=user.id) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits
@@ -839,7 +844,7 @@ class UpdateTaskCreditStatus(APIView):
                     credit_diff = actual_used_credits - user_credit.credits_left
                     user_credit.credits_left = 0
                     user_credit.save()
-                    from_addon = UpdateTaskCreditStatus.update_addon_credit(request, credit_diff)
+                    from_addon = UpdateTaskCreditStatus.update_addon_credit(request,user,credit_diff)
                     return from_addon
             else:
                 raise Exception
@@ -851,7 +856,7 @@ class UpdateTaskCreditStatus(APIView):
     @staticmethod
     def update_credits(request, doc_id, actual_used_credits):
         # task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
-        credit_status = UpdateTaskCreditStatus.update_usercredit(request, actual_used_credits)
+        credit_status = UpdateTaskCreditStatus.update_usercredit(request,doc_id, actual_used_credits)
         # print("CREDIT STATUS----->", credit_status)
         if credit_status:
             msg = "Successfully debited MT credits"

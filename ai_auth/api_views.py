@@ -1,8 +1,10 @@
 from logging import INFO
 import re
+from allauth.account.models import EmailAddress
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from django.urls import reverse
+from os.path import join
 from stripe.api_resources import subscription
 from ai_auth.access_policies import MemberCreationAccess
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
@@ -1270,6 +1272,7 @@ class InternalMemberCreateView(viewsets.ViewSet):
         context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password,'date':today}
         user = AiUser.objects.create(fullname =data.get('name'),email = email,password = hashed,is_internal_member=True)
         user_attribute = UserAttribute.objects.create(user=user)
+        EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
         serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,'functional_identity':functional_identity,'status':1})
         if serializer.is_valid():
             serializer.save()
@@ -1331,8 +1334,11 @@ class ExternalMemberCreateView(viewsets.ViewSet):
                 serializer.save()
                 external_member_id = serializer.data.get('id')
                 ext = ExternalMember.objects.get(id = serializer.data.get('id'))
-                print("TTTTTTTTTTTTTTTTTTTTTTT-------------------->",ext)
-                link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
+                # print("TTTTTTTTTTTTTTTTTTTTTTT-------------------->",ext)
+                uid = urlsafe_base64_encode(force_bytes(external_member_id))
+                token = invite_accept_token.make_token(ext)
+                link = join(settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
+                # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
                 # template = 'External_member_invite_email.html'
                 subject='Ailaysa MarketPlace Invite'
                 context = {'name':vendor.fullname,'team':user,'role':role_name,'link':link}
@@ -1359,8 +1365,12 @@ class ExternalMemberCreateView(viewsets.ViewSet):
         external_member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def invite_accept(request,uid,token):
+def invite_accept(request):#,uid,token):
+    uid = request.POST.get('uid')
+    token = request.POST.get('token')
     vendor_id = urlsafe_base64_decode(uid)
     vendor = ExternalMember.objects.get(id=vendor_id)
     # user = AiUser.objects.get(id=vendor.external_member_id)
@@ -1371,7 +1381,7 @@ def invite_accept(request,uid,token):
         print("success & updated")
         return JsonResponse({"msg":"success"},safe=False)
     else:
-        return JsonResponse({"msg":'Accept link is invalid!'},safe=False)
+        return JsonResponse({"msg":'Either link is already used or link is invalid!'},safe=False)
     # return JsonResponse({"msg":"Failed"},safe=False)
 
 
