@@ -93,7 +93,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
             carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
                 Q(ended_at__isnull=False)).last()
-            
+
             if sub_credits.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 subscription += carry_on_credits.credits_left
         except:
@@ -375,3 +375,6 @@ class ExternalMember(models.Model):
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
         unique_together = ['user', 'external_member','role']
+
+class ReferredUsers(models.Model):
+    email = models.EmailField()

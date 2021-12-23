@@ -10,12 +10,18 @@ from django.db.models import Q
 from django.utils import timezone
 import calendar
 
-# def add_credits(user,price,data):
-#     pass
+def check_referred(user):
+    try:
+        ss = models.ReferredUsers.objects.get(email=user.email)
+        ref_cred= 18000
+    except models.ReferredUsers.DoesNotExist:
+        ref_cred =0
+    return ref_cred
 
 
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
     carry = 0
+    referral_credits = 0
     if pack.type=="Subscription":
         if subscription.plan.interval=='year':
             expiry = expiry_yearly_sub(subscription)
@@ -31,6 +37,7 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
 
     if pack.type=="Subscription_Trial":
         expiry = subscription.trial_end
+        referral_credits = check_referred(user)
         creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
         for credit in creditsls:
             #check the previous subscription record has unused credits before expiry
@@ -46,8 +53,8 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     'user':user,
     'stripe_cust_id':cust,
     'price_id':price.id,
-    'buyed_credits':pack.credits*quants,
-    'credits_left':(pack.credits*quants)+carry,
+    'buyed_credits':(pack.credits*quants)+referral_credits,
+    'credits_left':(pack.credits*quants)+carry+referral_credits,
     'expiry': expiry,
     'paymentintent':payment.id if payment else None,
     'invoice':invoice.id if invoice else None,
