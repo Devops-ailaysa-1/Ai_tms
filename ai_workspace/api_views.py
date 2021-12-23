@@ -1080,7 +1080,7 @@ class ProjectAnalysis(APIView):
             return ProjectAnalysis.get_analysed_data(project_id)
         else:
             return ProjectAnalysis.analyse_project(project_id)
-            
+
 #######################################
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
@@ -1156,7 +1156,7 @@ def find_vendor(team,job):
 @api_view(['GET',])
 def project_list(request):
     proj_list=[]
-    queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = request.user)|Q(ai_user = request.user)).distinct().order_by("-id")
+    queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct().order_by('-id')
     serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request})
     data = serializer.data
     for i in data:

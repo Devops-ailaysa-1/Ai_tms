@@ -64,6 +64,7 @@ def get_vendor_detail(request):
         source_lang=Job.objects.get(id=job_id).source_language
         target_lang=Job.objects.get(id=job_id).target_language
     uid=request.POST.get('vendor_id')
+    print(uid)
     try:
         user=AiUser.objects.get(uid=uid)
         user_id = user.id
