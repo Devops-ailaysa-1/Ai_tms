@@ -493,3 +493,26 @@ def subscription_credit_carry(user,invoice):
 
 #     return response
  
+def renew_user_credits_yearly(subscription):
+    pack = models.CreditPack.objects.get(product=subscription.plan.product,type='Subscription')
+    prev_cp = models.UserCredits.objects.filter(user=subscription.customer.subscriber,credit_pack_type='Subscription',price_id=subscription.plan.id,ended_at=None).last()
+    expiry = expiry_yearly_sub(subscription)
+    creditsls= models.UserCredits.objects.filter(user=subscription.customer.subscriber).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
+    for credit in creditsls:
+        credit.ended_at=timezone.now()
+        credit.save()
+
+    kwarg = {
+    'user':subscription.customer.subscriber,
+    'stripe_cust_id':subscription.customer,
+    'price_id':subscription.plan.id,
+    'buyed_credits':pack.credits,
+    'credits_left':pack.credits,
+    'expiry': expiry,
+    'paymentintent':prev_cp.paymentintent,
+    'invoice':prev_cp.invoice,
+    'credit_pack_type': pack.type,
+    'ended_at': None
+    }
+    us = models.UserCredits.objects.create(**kwarg)
+    print(us)
