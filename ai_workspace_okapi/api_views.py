@@ -37,6 +37,7 @@ from wiktionaryparser import WiktionaryParser
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.conf import  settings
 from django.urls import reverse
+from json import JSONDecodeError
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -724,25 +725,6 @@ class CommentView(viewsets.ViewSet):
         obj.delete()
         return  Response({},204)
 
-# class ProjectStatusView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request, project_id):
-#         docs = Document.objects.filter(job__project_id=project_id).all()
-#         total_segments = 0
-#         if not docs:
-#             return JsonResponse({"res" : "YET TO START"}, safe=False)
-#         else:
-#             for doc in docs:
-#                 total_segments+=doc.total_segment_count
-
-#         status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) &
-#             Q(status_id__in=[102,104,106])).all().count()
-#         if total_segments == status_count:
-#             return JsonResponse({"res" : "100% COMPLETE"}, safe=False)
-#         else:
-#             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
-
 class GetPageIndexWithFilterApplied(views.APIView):
 
     def get_queryset(self, document_id, status_list):
@@ -773,25 +755,6 @@ class GetPageIndexWithFilterApplied(views.APIView):
             res = ({"page_id": None}, 404)
         return  Response(*res)
 
-# class ProjectStatusView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request, project_id):
-#         docs = Document.objects.filter(job__project_id=project_id).all()
-#         total_segments = 0
-#         if not docs:
-#             return JsonResponse({"res" : "YET TO START"}, safe=False)
-#         else:
-#             for doc in docs:
-#                 total_segments+=doc.total_segment_count
-
-#         status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=project_id) &
-#             Q(status_id__in=[102,104,106])).all().count()
-#         if total_segments == status_count:
-#             return JsonResponse({"res" : "COMPLETED"}, safe=False)
-#         else:
-#             return JsonResponse({"res" : "IN PROGRESS"}, safe=False)
-
 ############ wiktionary quick lookup ##################
 @api_view(['GET', 'POST',])
 def WiktionaryParse(request):
@@ -815,8 +778,9 @@ def WiktionaryParse(request):
     parser.set_default_language(src_lang)
     parser.include_relation('Translations')
     word = parser.fetch(user_input)
-    if word[0].get('definitions')==[]:
-        word=parser.fetch(user_input.lower())
+    if word:
+        if word[0].get('definitions')==[]:
+            word=parser.fetch(user_input.lower())
     res=[]
     tar=""
     for i in word:
@@ -911,7 +875,10 @@ def wiktionary_ws(code,codesrc,user_input):
         "iwlocal":codesrc,
     }
     response = S.get(url=URL, params=PARAMS)
-    data = response.json()
+    try:
+        data = response.json()
+    except JSONDecodeError:
+        return {"source":'',"source-url":''}
     srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input}"
     res=data["query"]["pages"]
     print("RES-------->",res)
