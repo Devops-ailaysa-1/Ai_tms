@@ -53,21 +53,22 @@ from ai_workspace.serializers import TaskSerializer
 # Create your views here.
 
 
-@api_view(['POST',])
+@api_view(['GET','POST',])
 @permission_classes([IsAuthenticated])
 def get_vendor_detail(request):
     out=[]
-    job_id=request.POST.get('job_id')
-    source_lang_id=request.POST.get('source_lang_id')
-    target_lang_id=request.POST.get('target_lang_id')
+    job_id=request.GET.get('job_id')
+    source_lang=request.GET.get('source_lang')
+    target_lang=request.GET.get('target_lang')
     if job_id:
-        source_lang_id=Job.objects.get(id=job_id).source_language_id
-        target_lang_id=Job.objects.get(id=job_id).target_language_id
+        source_lang=Job.objects.get(id=job_id).source_language
+        target_lang=Job.objects.get(id=job_id).target_language
     uid=request.POST.get('vendor_id')
+    print(uid)
     try:
         user=AiUser.objects.get(uid=uid)
         user_id = user.id
-        lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)))
+        lang = VendorLanguagePair.objects.get((Q(source_lang_id__language=source_lang) & Q(target_lang_id__language=target_lang) & Q(user_id=user_id)))
         # serializer1= VendorServiceSerializer(lang)
         # out.append(serializer1.data)
         serializer2= VendorLanguagePairCloneSerializer(lang)
@@ -558,6 +559,7 @@ class GetVendorListViewNew(generics.ListAPIView):
 
 
     def get_queryset(self):
+        user = self.request.user
         # existing_users_id = [i.external_member_id for i in self.request.user.team_info.all()]
         # print(existing_users_id)
         # # self.validate()
@@ -573,7 +575,7 @@ class GetVendorListViewNew(generics.ListAPIView):
             source_lang=Job.objects.get(id=job_id).source_language
             target_lang=Job.objects.get(id=job_id).target_language
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-                    .filter(Q(vendor_lang_pair__source_lang__language=source_lang) & Q(vendor_lang_pair__target_lang__language=target_lang) & Q(vendor_lang_pair__deleted_at=None)).distinct()#.exclude(id__in=existing_users_id)
+                    .filter(Q(vendor_lang_pair__source_lang__language=source_lang) & Q(vendor_lang_pair__target_lang__language=target_lang) & Q(vendor_lang_pair__deleted_at=None)).distinct().exclude(id = user.id)#.exclude(id__in=existing_users_id)
         if max_price and min_price and count_unit:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):

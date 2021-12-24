@@ -1444,13 +1444,15 @@ def TransactionSessionInfo(request):
     else:
         return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         
+
+
 @api_view(['POST'])
 def referral_users(request):
     ref_email = request.POST.get('email')
     try:
         user = AiUser.objects.get(email =ref_email)
         return Response({"msg":"User Already Exists"},status = 400)
-    
+
     except AiUser.DoesNotExist:
         ref =ReferredUsers.objects.create(email=ref_email)
     return Response({"msg":"Successfully Added"},status = 201)
