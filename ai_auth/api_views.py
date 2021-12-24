@@ -1530,3 +1530,12 @@ class GetTeamMemberView(generics.ListAPIView):
             "Internal_list": internal.data,
             "External_list": external.data
         })
+
+@api_view(['GET',])
+def get_team_name(request):
+    user = AiUser.objects.get(id = request.user.id)
+    try:
+        name = user.ai_profile_info.organisation_name
+    except:
+        name = None
+    return JsonResponse({"name":name})

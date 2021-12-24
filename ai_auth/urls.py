@@ -59,7 +59,8 @@ urlpatterns+= [
      path('teamlist/',api_views.teams_list),
      path('transaction-info/',api_views.TransactionSessionInfo),
      path('user-referral/',api_views.referral_users),
-     path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
+     path('get_team_name/',api_views.get_team_name),
+     # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
      # path('external-member-invite/',api_views.external_member_invite),
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
