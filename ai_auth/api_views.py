@@ -5,6 +5,8 @@ from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from django.urls import reverse
 from os.path import join
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 from stripe.api_resources import subscription
 from ai_auth.access_policies import MemberCreationAccess
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
@@ -29,6 +31,7 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 # from django.utils import six
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
 from django.db import IntegrityError
 from django.contrib.auth.hashers import check_password,make_password
@@ -1244,15 +1247,36 @@ class TokenGenerator(PasswordResetTokenGenerator):
 
 invite_accept_token = TokenGenerator()
 
-class InternalMemberCreateView(viewsets.ViewSet):
+class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
+    page_size = 10
+    # filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    search_fields = ['internal_member__fullname']
+
+    def get_queryset(self):
+        team = self.request.query_params.get('team')
+        print(team)
+        if team:
+            queryset=InternalMember.objects.filter(team__name = team)
+        else:
+            queryset =InternalMember.objects.filter(team__owner_id=self.request.user.id)
+        return queryset
+
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+
     def list(self, request):
-        print(request.user.id)
-        queryset =InternalMember.objects.filter(team__owner_id=request.user.id)
-        if not queryset.exists():
+        queryset_all = self.get_queryset()
+        if not queryset_all.exists():
             return Response(status=204)
-        serializer = InternalMemberSerializer(queryset,many=True)
-        return Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = InternalMemberSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
 
     @integrity_error
     def create(self,request):
@@ -1299,15 +1323,36 @@ class InternalMemberCreateView(viewsets.ViewSet):
 
 
 
-class ExternalMemberCreateView(viewsets.ViewSet):
+class ExternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
+    page_size = 10
+    # filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    search_fields = ['external_member__fullname']
+
+    def get_queryset(self):
+        team = self.request.query_params.get('team')
+        if team:
+            team_obj = Team.objects.get(name=team)
+            queryset=ExternalMember.objects.filter(user= team_obj.owner)
+        else:
+            queryset =ExternalMember.objects.filter(Q(user_id=self.request.user.id))
+        return queryset
+
+    def filter_queryset(self, queryset):
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+
     def list(self, request):
-        print(request.user.id)
-        queryset =ExternalMember.objects.filter(Q(user_id=request.user.id))# & Q(status = 2))
-        if not queryset.exists():
+        queryset_all = self.get_queryset()
+        if not queryset_all.exists():
             return Response(status=204)
-        serializer = ExternalMemberSerializer(queryset,many=True)
-        return Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ExternalMemberSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
 
     @integrity_error
     def create(self,request):
@@ -1455,3 +1500,33 @@ def referral_users(request):
     except AiUser.DoesNotExist:
         ref =ReferredUsers.objects.create(email=ref_email)
     return Response({"msg":"Successfully Added"},status = 201)
+
+class GetTeamMemberView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class_External = ExternalMemberSerializer
+    serializer_class_Internal = InternalMemberSerializer
+
+    def get_queryset_Internal(self):
+        team = self.request.query_params.get('team')
+        if team:
+            queryset=InternalMember.objects.filter(team__name = team)
+        else:
+            queryset =InternalMember.objects.filter(team__owner_id=self.request.user.id)
+        return queryset
+
+    def get_queryset_External(self):
+        team = self.request.query_params.get('team')
+        if team:
+            team_obj = Team.objects.get(name=team)
+            queryset=ExternalMember.objects.filter(user= team_obj.owner)
+        else:
+            queryset =ExternalMember.objects.filter(Q(user_id=self.request.user.id))
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        internal = self.serializer_class_Internal(self.get_queryset_Internal(), many=True)
+        external = self.serializer_class_External(self.get_queryset_External(), many=True)
+        return Response({
+            "Internal_list": internal.data,
+            "External_list": external.data
+        })

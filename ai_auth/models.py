@@ -212,6 +212,11 @@ class Professionalidentity(models.Model):
         db_table = 'professional_identity'
 #pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
+    @property
+    def avatar_url(self):
+        if self.avatar and hasattr(self.avatar, 'url'):
+            return self.avatar.url
+
 class UserProfile(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
     description = models.TextField(max_length=1000, blank=True, null=True)

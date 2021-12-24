@@ -514,8 +514,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         queryset = self.filter_queryset(self.get_queryset())
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request})
-        response = self.paginator.get_paginated_response(serializer.data)
+        response = self.get_paginated_response(serializer.data)
         return  response
+
 
     def create(self, request):
         text_data=request.POST.get('text_data')
@@ -1073,7 +1074,7 @@ class ProjectAnalysis(APIView):
                 task_details.task_id = task.id
                 task_details.save()
                 # task_words.append({task.id : task_details.task_word_count})
-                
+
         [task_words.append({task.id : task.task_details.first().task_word_count})for task in project.get_tasks]
         out = TaskDetails.objects.filter(project_id=project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
         return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
