@@ -375,3 +375,5 @@ class ExternalMember(models.Model):
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
         unique_together = ['user', 'external_member','role']
+class ReferredUsers(models.Model):
+    email = models.EmailField()

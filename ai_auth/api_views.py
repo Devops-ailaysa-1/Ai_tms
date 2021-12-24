@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import (AiUser, BillingAddress, Professionalidentity,
+from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
                             Team,InternalMember,ExternalMember)
@@ -1443,3 +1443,14 @@ def TransactionSessionInfo(request):
         return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"amount":charge.amount, "paid":charge.paid ,"payment_type":charge.payment_method.type, "txn_id":charge.balance_transaction_id},status=200,safe = False)
     else:
         return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+        
+@api_view(['POST'])
+def referral_users(request):
+    ref_email = request.POST.get('email')
+    try:
+        user = AiUser.objects.get(email =ref_email)
+        return Response({"msg":"User Already Exists"},status = 400)
+    
+    except AiUser.DoesNotExist:
+        ref =ReferredUsers.objects.create(email=ref_email)
+    return Response({"msg":"Successfully Added"},status = 201)
