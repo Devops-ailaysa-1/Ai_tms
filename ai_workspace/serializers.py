@@ -278,7 +278,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Task
-		fields = ("source_file_path", "source_language",
+		fields = ("id","source_file_path", "source_language",
 				  "target_language", "document_url","filename",
 				  "file", "job", "version", "assign_to", 'output_file_path',
 				  "source_language_id", "target_language_id", "extension", "processor_name"
