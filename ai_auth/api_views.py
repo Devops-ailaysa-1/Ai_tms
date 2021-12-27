@@ -1299,7 +1299,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
         serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,\
                                                     'functional_identity':functional_identity,'status':1,\
-                                                    'added_by':request.user})
+                                                    'added_by':request.user.id})
         if serializer.is_valid():
             serializer.save()
             send_email_user(subject,template,context,email)
