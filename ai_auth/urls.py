@@ -25,7 +25,7 @@ router.register(r'general-support',api_views.GeneralSupportCreateView,basename="
 router.register(r'vendor-onboarding',api_views.VendorOnboardingCreateView,basename="vendor-onboarding")
 router.register(r'team',api_views.TeamCreateView,basename="team")
 router.register(r'internal-member',api_views.InternalMemberCreateView,basename="internal-member")
-router.register(r'external-member',api_views.ExternalMemberCreateView,basename="external-member")
+router.register(r'hired-editor',api_views.HiredEditorsCreateView,basename="hired-editor")
 
 
 
