@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from ai_vendor.models import VendorLanguagePair
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_auth.models import AiUser, UserCredits, Team, InternalMember, ExternalMember
+from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEditors
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
@@ -1135,27 +1135,36 @@ def get_assign_to_list(request):
     job = Job.objects.get(id = job_id)
     proj = Project.objects.get(id = project)
     internalmembers = []
-    externalmembers = []
-    if proj.team:
-        internal_team = proj.team.internal_member_team_info.filter(role = 2)
+    hirededitors = []
+    try:
+        internal_team = proj.ai_user.team_owner.internal_member_team_info.filter(role = 2)
         for i in internal_team:
-            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.status})
-        external_team = proj.team.owner.team_info.filter(role =2)
-        print(external_team)
-        externalmembers = find_vendor(external_team,job)
-    else:
-        external_team = proj.ai_user.team_info.filter(role=2)
-        print(external_team)
-        externalmembers = find_vendor(external_team,job)
+            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.get_status_display()})
+    except:
+        print("No team")
+    external_team = proj.ai_user.user_info.filter(role=2)
+    print(external_team)
+    hirededitors = find_vendor(external_team,job)
+    # if proj.team:
+    #     internal_team = proj.team.internal_member_team_info.filter(role = 2)
+    #     for i in internal_team:
+    #         internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.status})
+    #     external_team = proj.team.owner.user_info.filter(role =2)
+    #     print(external_team)
+    #     HiredEditors = find_vendor(external_team,job)
+    # else:
+    #     external_team = proj.ai_user.user_info.filter(role=2)
+    #     print(external_team)
+    #     HiredEditors = find_vendor(external_team,job)
 
-    return JsonResponse({'internal_members':internalmembers,'external_members':externalmembers})
+    return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
 
 def find_vendor(team,job):
     externalmembers=[]
     for j in team:
-        vendor = j.external_member.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
+        vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
         if vendor:
-            externalmembers.append({'name':j.external_member.fullname,'id':j.external_member_id,'status':j.status})
+            externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display()})
     return externalmembers
 
 
@@ -1170,3 +1179,21 @@ def project_list(request):
         if i.get('assign_enable')==True:
             proj_list.append(i)
     return Response(proj_list)
+
+
+@permission_classes([IsAuthenticated])
+@api_view(['GET',])
+def tasks_list(request):
+    job_id = request.GET.get("job")
+    try:
+        job = Job.objects.get(id = job_id)
+        tasks = job.job_tasks_set.all()
+        ser = TaskSerializer(tasks,many=True)
+        return Response(ser.data)
+    except:
+        return JsonResponse({"msg":"No job exists"})
+
+
+    # for i in tasks:
+    #     task_list.append({'id':i.id,'task':i.job,'file':i.file})
+    # return Response(task_list)
