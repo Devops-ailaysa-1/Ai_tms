@@ -11,7 +11,7 @@ from enum import Enum
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import settings
-import os
+import os, re
 from ai_auth.models import AiUser
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields
@@ -322,8 +322,6 @@ def get_file_upload_path(instance, filename):
     instance.filename = filename
     return os.path.join(file_path, filename)
 
-
-
 use_spaces = os.environ.get("USE_SPACES")
 
 class CustomFileField(models.FileField, Field):
@@ -361,6 +359,7 @@ class File(models.Model):
                 on_delete=models.CASCADE, related_name="project_usage_type")
     file = CustomFileField(upload_to=get_file_upload_path, null=False,\
                 blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
+    # output_file =
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
@@ -397,7 +396,17 @@ class File(models.Model):
 
     @property
     def output_file_path(self):
+        if settings.USE_SPACES:
+            comp = re.compile("media/[^?]*")
+            return "_out".join(os.path.splitext(
+                os.path.join(settings.BASE_DIR, comp.findall\
+                    (self.get_source_file_path)[0])) )
         return '_out'.join( os.path.splitext(self.get_source_file_path))
+
+    def get_aws_file_path(_string):
+        comp = re.compile("/media/.*")
+        return  comp.findall \
+            (_string)[0].replace("/media/", "")
 
     @property
     def get_file_name(self):
