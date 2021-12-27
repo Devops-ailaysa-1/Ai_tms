@@ -128,11 +128,15 @@ class UserAttribute(models.Model):
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
-        # managed=False
+        managed = True
         db_table='user_attribute'
         permissions = (
                 ("user-attribute-exist", "user attribute exist"),
             )
+    #
+    # @property
+    # def allocated_dir(self):
+    #     return
 
     def save(self, *args, **kwargs):
         content_type = ContentType.objects.get_for_model(UserAttribute)

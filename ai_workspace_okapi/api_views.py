@@ -16,8 +16,8 @@ from ai_workspace.models import Task, TaskCreditStatus
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
-import requests
-import json, os, re, time, jwt, time
+import requests, boto3
+import json, os, re, time, jwt
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -36,8 +36,12 @@ from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.conf import  settings
+<<<<<<< HEAD
 from django.urls import reverse
 from json import JSONDecodeError
+=======
+from ai_workspace.models import File
+>>>>>>> origin/feature/spaces
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -368,10 +372,11 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
             res = self.document_data_to_file(request, document_id)
-            print("RES CODE ====> ", res)
+            print("RES CODE ====> ", res.status_code)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 print("file_path---->", file_path)
+<<<<<<< HEAD
                 if os.path.isfile(res.text):
                     if os.path.exists(file_path):
                         with open(file_path, 'rb') as fh:
@@ -386,6 +391,25 @@ class DocumentToFile(views.APIView):
                             response["Access-Control-Allow-Headers"] = "*"
                             print("cont-disp--->", response.get("Content-Disposition"))
                             return response
+=======
+                try:
+                    if os.path.isfile(res.text):
+                        if os.path.exists(file_path):
+                            with open(file_path, 'rb') as fh:
+                                response = HttpResponse(fh.read(), content_type=\
+                                    "application/vnd.ms-excel")          
+                                encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
+                                        encoding='utf-8')                             
+                                response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
+                                                    .format(encoded_filename)
+                                response['X-Suggested-Filename'] = encoded_filename
+                                response["Access-Control-Allow-Origin"] = "*"
+                                response["Access-Control-Allow-Headers"] = "*"
+                                print("cont-disp--->", response.get("Content-Disposition"))
+                                return response
+                except Exception as e:
+                    print("Exception ------> ", e)
+>>>>>>> origin/feature/spaces
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
         else:
@@ -415,6 +439,8 @@ class DocumentToFile(views.APIView):
             ext = ".tmx"
         task_data["output_file_path"] = pre + "(" + task_data["source_language"] + "-" + task_data["target_language"] + ")" + ext
 
+        print("task-data------>", task_data["output_file_path"])
+
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None
@@ -429,6 +455,22 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),
             }
         )
+        session = boto3.session.Session()
+        client = session.client(
+            's3',
+            region_name='ams3',
+            endpoint_url='https://ailaysa.ams3.digitaloceanspaces.com',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        )
+
+        with open(task_data["output_file_path"], "rb") as f:
+            print("file path---->", File.get_aws_file_path(task_data["output_file_path"]))
+            obj = client.put_object(
+                Bucket='media',
+                Key=File.get_aws_file_path(task_data["output_file_path"]),
+                Body=f.read())
+            # obj.
 
         return res
 

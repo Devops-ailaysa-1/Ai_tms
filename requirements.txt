@@ -135,3 +135,5 @@ wiktionaryparser==0.0.97
 pyspellchecker==0.6.2
 redis
 django-dbbackup
+django-storages==1.12.3
+boto3==1.20.11 
