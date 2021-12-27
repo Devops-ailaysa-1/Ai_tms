@@ -396,14 +396,19 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
-	team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	# team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )# "project_analysis",)#,'ai_user')
+		fields = ("id", "project_name", "jobs","assign_enable","files",'project_manager_id',"files_jobs_choice_url",
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )
+
+	# class Meta:
+	# 	model = Project
+	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
+	# 	 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )# "project_analysis",)#,'ai_user')
 
 	def run_validation(self,data):
 		if data.get('target_languages')!=None:
@@ -431,12 +436,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			return True if ((instance.team.owner == user)\
 				or(instance.team.internal_member_team_info.all().\
 				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-				or(instance.team.owner.team_info.all()\
-				.filter(Q(external_member_id = user.id) & Q(role_id=1))))\
+				or(instance.team.owner.user_info.all()\
+				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 				else False
 		else:
 			return True if ((instance.ai_user == user) or\
-			(instance.ai_user.team_info.all().filter(Q(external_member_id = user.id) & Q(role_id=1))))\
+			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 			else False
 
 	def create(self, validated_data):
@@ -624,3 +629,9 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskDetails
         fields = "__all__"
+
+
+# class TasklistSerializer(serializers.ModelSerializer):
+# 	class Meta:
+# 		model = Task
+# 		fields = "__all__"

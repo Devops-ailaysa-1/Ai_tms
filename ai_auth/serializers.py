@@ -9,7 +9,7 @@ from django.contrib.auth.password_validation import validate_password
 from ai_auth.models import (AiUser, BillingAddress,UserAttribute,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
-                            VendorOnboarding,GeneralSupport,Team,ExternalMember,InternalMember)
+                            VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -395,11 +395,11 @@ class InternalMemberSerializer(serializers.ModelSerializer):
     professional_identity= serializers.ReadOnlyField(source='internal_member.professional_identity_info.avatar_url')
     class Meta:
         model = InternalMember
-        fields = ('id','team','team_name','role','functional_identity','professional_identity',
+        fields = ('id','team','team_name','added_by','role','functional_identity','professional_identity',
                 'status','current_status','internal_member','internal_member_detail',)
         extra_kwargs = {
             'internal_member':{'write_only':True},
-            # 'team':{'write_only':True},
+            'added_by':{'write_only':True},
             'status':{'write_only':True},
             }
 
@@ -407,18 +407,18 @@ class InternalMemberSerializer(serializers.ModelSerializer):
         return {'name':obj.internal_member.fullname,'email':obj.internal_member.email}
 
 
-class ExternalMemberSerializer(serializers.ModelSerializer):
-    external_member_detail = serializers.SerializerMethodField(source='get_external_member_detail')
+class HiredEditorSerializer(serializers.ModelSerializer):
+    hired_editor_detail = serializers.SerializerMethodField(source='get_hired_editor_detail')
     current_status = serializers.ReadOnlyField(source='get_status_display')
-    professional_identity= serializers.ReadOnlyField(source='external_member.professional_identity_info.avatar_url')
+    professional_identity= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
     class Meta:
-        model = ExternalMember
+        model = HiredEditors
         fields = ('id','role','user','professional_identity',
-                'status','current_status','external_member','external_member_detail',)
+                'status','current_status','hired_editor','hired_editor_detail',)
         extra_kwargs = {
-            'external_member':{'write_only':True},
+            'hired_editor':{'write_only':True},
             'user':{'write_only':True},
             'status':{'write_only':True},
             }
-    def get_external_member_detail(self, obj):
-        return {'name':obj.external_member.fullname,'email':obj.external_member.email}
+    def get_hired_editor_detail(self, obj):
+        return {'name':obj.hired_editor.fullname,'email':obj.hired_editor.email}

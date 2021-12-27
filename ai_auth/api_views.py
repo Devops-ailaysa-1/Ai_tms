@@ -14,7 +14,7 @@ from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
                                 TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
-                                TeamSerializer,InternalMemberSerializer,ExternalMemberSerializer)
+                                TeamSerializer,InternalMemberSerializer,HiredEditorSerializer)
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -25,7 +25,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,ExternalMember)
+                            Team,InternalMember,HiredEditors)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -1297,7 +1297,9 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         user = AiUser.objects.create(fullname =data.get('name'),email = email,password = hashed,is_internal_member=True)
         user_attribute = UserAttribute.objects.create(user=user)
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
-        serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,'functional_identity':functional_identity,'status':1})
+        serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,\
+                                                    'functional_identity':functional_identity,'status':1,\
+                                                    'added_by':request.user})
         if serializer.is_valid():
             serializer.save()
             send_email_user(subject,template,context,email)
@@ -1323,19 +1325,19 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
 
 
 
-class ExternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
+class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
     page_size = 10
     # filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
-    search_fields = ['external_member__fullname']
+    search_fields = ['hired_editor__fullname']
 
     def get_queryset(self):
-        team = self.request.query_params.get('team')
-        if team:
-            team_obj = Team.objects.get(name=team)
-            queryset=ExternalMember.objects.filter(user= team_obj.owner)
-        else:
-            queryset =ExternalMember.objects.filter(Q(user_id=self.request.user.id))
+        # team = self.request.query_params.get('team')
+        # if team:
+        #     team_obj = Team.objects.get(name=team)
+        #     queryset=ExternalMember.objects.filter(user= team_obj.owner)
+        # else:
+        queryset =HiredEditors.objects.filter(Q(user_id=self.request.user.id))
         return queryset
 
     def filter_queryset(self, queryset):
@@ -1350,7 +1352,7 @@ class ExternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             return Response(status=204)
         queryset = self.filter_queryset(self.get_queryset())
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = ExternalMemberSerializer(pagin_tc,many=True)
+        serializer = HiredEditorSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         return response
 
@@ -1358,7 +1360,7 @@ class ExternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         # team = request.POST.get('team')
         # if team == None:
-        team = Team.objects.get(owner_id=request.user.id).id
+        # team = Team.objects.get(owner_id=request.user.id).id
         user = request.user.fullname
         template = 'External_member_pro_invite_email.html'
         # else:
@@ -1367,20 +1369,20 @@ class ExternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role',2)
         vendor = AiUser.objects.get(uid=uid)
-        existing = ExternalMember.objects.filter(user=request.user,external_member=vendor)
+        existing = HiredEditors.objects.filter(user=request.user,hired_editor=vendor)
         if existing:
-            return JsonResponse({"msg":"vendor already existed in your hired_vendors list.check his availability in chat and assign"},safe = False)
+            return JsonResponse({"msg":"editor already existed in your hired_editors list.check his availability in chat and assign"},safe = False)
         else:
         # team_name = Team.objects.get(id=team).name
             role_name = Role.objects.get(id=role).name
             email = vendor.email
-            serializer = ExternalMemberSerializer(data={'user':request.user.id,'role':role,'external_member':vendor.id,'status':1})
+            serializer = HiredEditorSerializer(data={'user':request.user.id,'role':role,'hired_editor':vendor.id,'status':1})
             if serializer.is_valid():
                 serializer.save()
-                external_member_id = serializer.data.get('id')
-                ext = ExternalMember.objects.get(id = serializer.data.get('id'))
+                hired_editor_id = serializer.data.get('id')
+                ext = HiredEditors.objects.get(id = serializer.data.get('id'))
                 # print("TTTTTTTTTTTTTTTTTTTTTTT-------------------->",ext)
-                uid = urlsafe_base64_encode(force_bytes(external_member_id))
+                uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
                 token = invite_accept_token.make_token(ext)
                 link = join(settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
@@ -1395,19 +1397,19 @@ class ExternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
 
     def update(self, request, pk):
         try:
-            queryset = ExternalMember.objects.get(Q(id=pk))
-        except ExternalMember.DoesNotExist:
+            queryset = HiredEditors.objects.get(Q(id=pk))
+        except HiredEditors.DoesNotExist:
             return Response(status=204)
-        serializer =ExternalMemberSerializer(queryset,data={**request.POST.dict()},partial=True)
+        serializer =HiredEditorSerializer(queryset,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request,pk):
-        queryset = ExternalMember.objects.all()
-        external_member = get_object_or_404(queryset, pk=pk)
-        external_member.delete()
+        queryset = HiredEditors.objects.all()
+        hired_editor = get_object_or_404(queryset, pk=pk)
+        hired_editor.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -1417,7 +1419,7 @@ def invite_accept(request):#,uid,token):
     uid = request.POST.get('uid')
     token = request.POST.get('token')
     vendor_id = urlsafe_base64_decode(uid)
-    vendor = ExternalMember.objects.get(id=vendor_id)
+    vendor = HiredEditors.objects.get(id=vendor_id)
     # user = AiUser.objects.get(id=vendor.external_member_id)
     # if user is not None and invite_accept_token.check_token(user, token):
     if vendor is not None and invite_accept_token.check_token(vendor, token):
@@ -1439,7 +1441,7 @@ def teams_list(request):
         teams.append({'team_id':my_team.id,'team':my_team.name+'(self)'})
     except:
         print('No self team')
-    ext = ExternalMember.objects.filter(Q(external_member = request.user.id)&Q(status=2))#.distinct('user_id')
+    ext =HiredEditors.objects.filter(Q(hired_editor = request.user.id)&Q(status=2))#.distinct('user_id')
     print(ext)
     for j in ext:
         try:
@@ -1503,7 +1505,7 @@ def referral_users(request):
 
 class GetTeamMemberView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class_External = ExternalMemberSerializer
+    serializer_class_External = HiredEditorSerializer
     serializer_class_Internal = InternalMemberSerializer
 
     def get_queryset_Internal(self):
@@ -1518,9 +1520,9 @@ class GetTeamMemberView(generics.ListAPIView):
         team = self.request.query_params.get('team')
         if team:
             team_obj = Team.objects.get(name=team)
-            queryset=ExternalMember.objects.filter(user= team_obj.owner)
+            queryset=HiredEditors.objects.filter(user= team_obj.owner)
         else:
-            queryset =ExternalMember.objects.filter(Q(user_id=self.request.user.id))
+            queryset =HiredEditors.objects.filter(Q(user_id=self.request.user.id))
         return queryset
 
     def list(self, request, *args, **kwargs):

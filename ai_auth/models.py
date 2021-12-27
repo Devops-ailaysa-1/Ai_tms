@@ -359,13 +359,14 @@ class InternalMember(models.Model):
     internal_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='internal_member')
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     functional_identity = models.CharField(max_length=255, blank=True, null=True)
+    added_by = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='internal_team_manager',blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
 
     def __str__(self):
         return self.internal_member.email
 
 
-class ExternalMember(models.Model):
+class HiredEditors(models.Model):
     INVITE_SENT = 1
     INVITE_ACCEPTED = 2
     # INVITE_DECLINED = 3
@@ -375,11 +376,12 @@ class ExternalMember(models.Model):
         # (INVITE_DECLINED, 'Invite Declined'),
     ]
     status = models.IntegerField(choices=STATUS_CHOICES)
-    user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='team_info')
-    external_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='team_member')
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_info')
+    hired_editor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='hired_editor')
+    #added_by = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='external_team_manager',blank=True, null=True)
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
-        unique_together = ['user', 'external_member','role']
+        unique_together = ['user', 'hired_editor','role']
 
 class ReferredUsers(models.Model):
     email = models.EmailField()

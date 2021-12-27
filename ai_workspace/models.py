@@ -12,7 +12,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.contrib.auth import settings
 import os,time
-from ai_auth.models import AiUser,Team,ExternalMember
+from ai_auth.models import AiUser,Team,HiredEditors
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
 from ai_staff.models import ContentTypes, Languages, SubjectFields
