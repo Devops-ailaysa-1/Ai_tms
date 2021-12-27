@@ -217,6 +217,7 @@ class VendorsBankInfoCreateView(APIView):
         if serializer.is_valid():
             serializer.save(user_id=user_id)
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self,request):
         user_id=request.user.id
@@ -226,6 +227,7 @@ class VendorsBankInfoCreateView(APIView):
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET','POST',])
