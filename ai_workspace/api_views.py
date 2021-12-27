@@ -1139,7 +1139,12 @@ def get_assign_to_list(request):
     try:
         internal_team = proj.ai_user.team_owner.internal_member_team_info.filter(role = 2)
         for i in internal_team:
-            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.get_status_display()})
+            try:
+                profile = i.internal_member.professional_identity_info.avatar_url
+            except:
+                profile = None
+            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,\
+                                    'status':i.get_status_display(),'avatar': profile})
     except:
         print("No team")
     external_team = proj.ai_user.user_info.filter(role=2)
@@ -1162,9 +1167,13 @@ def get_assign_to_list(request):
 def find_vendor(team,job):
     externalmembers=[]
     for j in team:
+        try:
+            profile = j.hired_editor.professional_identity_info.avatar_url
+        except:
+            profile = None
         vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
         if vendor:
-            externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display()})
+            externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
     return externalmembers
 
 
