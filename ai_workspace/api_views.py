@@ -960,7 +960,7 @@ def create_project_from_temp_project_new(request):
 
 ##############   PROJECT ANALYSIS BY STORING ONLY COUNT DATA   ###########
 
-class ProjectAnalysis(APIView):
+class ProjectAnalysisProperty(APIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -974,7 +974,7 @@ class ProjectAnalysis(APIView):
 
     @staticmethod
     def correct_fields(data):
-        check_fields = ProjectAnalysis.erfogd()
+        check_fields = ProjectAnalysisProperty.erfogd()
         remove_keys = []
         for i in data.keys():
             if i in check_fields:
@@ -999,8 +999,8 @@ class ProjectAnalysis(APIView):
 
             task_words.append({task.id:doc.total_word_count})
 
-        return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
-                                "task_words" : task_words }, status=status.HTTP_200_OK)
+        return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
+                                "task_words" : task_words }
 
     @staticmethod
     def get_data_from_analysis(project):
@@ -1008,17 +1008,17 @@ class ProjectAnalysis(APIView):
         task_words = []
         for task in project.get_tasks:
             task_words.append({task.id : task.task_details.first().task_word_count})
-        return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+        return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
-                        "task_words":task_words}, status=status.HTTP_200_OK)
+                        "task_words":task_words}
 
     @staticmethod
     def get_analysed_data(project_id):
         project = Project.objects.get(id=project_id)
         if project.is_all_doc_opened:
-            return ProjectAnalysis.get_data_from_docs(project)
+            return ProjectAnalysisProperty.get_data_from_docs(project)
         else:
-            return ProjectAnalysis.get_data_from_analysis(project)
+            return ProjectAnalysisProperty.get_data_from_analysis(project)
 
     @staticmethod
     def analyse_project(project_id):
@@ -1037,7 +1037,7 @@ class ProjectAnalysis(APIView):
 
                 ser = TaskSerializer(task)
                 data = ser.data
-                ProjectAnalysis.correct_fields(data)
+                ProjectAnalysisProperty.correct_fields(data)
                 params_data = {**data, "output_type": None}
                 res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None
@@ -1077,18 +1077,35 @@ class ProjectAnalysis(APIView):
 
         [task_words.append({task.id : task.task_details.first().task_word_count})for task in project.get_tasks]
         out = TaskDetails.objects.filter(project_id=project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-        return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+        return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
-                        "task_words":task_words}, status=status.HTTP_200_OK)
+                        "task_words":task_words}
 
-    def get(self, request, project_id):
+    # def get(self, request, project_id):
+
+    #     if bool(Project.objects.get(id=project_id).is_proj_analysed):
+    #         return ProjectAnalysis.get_analysed_data(project_id)
+    #     else:
+    #         return ProjectAnalysis.analyse_project(project_id)
+    
+    @staticmethod
+    def get(project_id):
 
         if bool(Project.objects.get(id=project_id).is_proj_analysed):
-            return ProjectAnalysis.get_analysed_data(project_id)
+            return ProjectAnalysisProperty.get_analysed_data(project_id)
         else:
-            return ProjectAnalysis.analyse_project(project_id)
+            return ProjectAnalysisProperty.analyse_project(project_id)
 
 #######################################
+
+class ProjectAnalysis(APIView):
+    
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id):
+        return Response(ProjectAnalysisProperty.get(project_id))
+
+#########################################
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1189,6 +1206,18 @@ def tasks_list(request):
         job = Job.objects.get(id = job_id)
         tasks = job.job_tasks_set.all()
         ser = TaskSerializer(tasks,many=True)
+        
+
+        if job.project.is_proj_analysed:
+            pass
+            # out = TaskDetails.objects.filter(project_id=job.project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+            # task_words = []
+            # for task in job.project.get_tasks:
+            #     task_words.append({task.id : task.task_details.first().task_word_count})
+            # return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+            #     "proj_seg_count":out.get('task_seg_count__sum'),
+            #                 "task_words":task_words}
+
         return Response(ser.data)
     except:
         return JsonResponse({"msg":"No job exists"})
