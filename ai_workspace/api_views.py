@@ -1135,11 +1135,11 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        file=request.FILES.get('reference_file')
+        file=request.FILES.get('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         Receiver = AiUser.objects.get(id = receiver)
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'reference_file':file,'task':request.POST.getlist('task')},context={'request':request})
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task')
@@ -1148,14 +1148,14 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     def update(self, request,pk=None):
         task = request.POST.getlist('task')
-        file = request.FILES.get('reference_file')
+        file = request.FILES.get('instruction_file')
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
         for i in task:
             try:
                 task_assign_info = TaskAssignInfo.objects.get(task_id = i)
                 if file:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'reference_file':file},context={'request':request},partial=True)
+                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
                 else:
                     serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
                 if serializer.is_valid():

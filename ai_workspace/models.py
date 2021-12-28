@@ -537,7 +537,7 @@ class Task(models.Model):
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
 
-def reference_file_upload_path(instance, filename):
+def ref_file_upload_path(instance, filename):
     file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,\
             "references", filename)
     return file_path
@@ -546,7 +546,7 @@ class TaskAssignInfo(models.Model):
     task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
-    reference_file = models.FileField (upload_to=reference_file_upload_path,blank=True, null=True)
+    instruction_file = models.FileField (upload_to=ref_file_upload_path,blank=True, null=True)
     assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)

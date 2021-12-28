@@ -501,7 +501,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','reference_file','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
+        fields = ('id','instruction','instruction_file','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
         extra_kwargs = {
             'assigned_by':{'write_only':True},
              }
