@@ -50,6 +50,17 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             # team_info = InternalMember.objects.get(internal_member_id = self.id).team
             return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
 
+    @property
+    def team(self):
+        if self.is_internal_member == True:
+            obj = InternalMember.objects.get(internal_member_id = self.id)
+            return obj.team
+        else:
+            try:
+                team = Team.objects.get(owner_id = self.id)
+                return team
+            except:
+                return None
 
 
 
@@ -345,7 +356,7 @@ class Team(models.Model):
 
     @property
     def get_project_manager(self):
-        self.internal_member_team_info.filter(role__name = "project owner")
+        return [i.internal_member for i in self.internal_member_team_info.filter(role__name = "project owner")]
 
 
 class InternalMember(models.Model):
@@ -357,7 +368,7 @@ class InternalMember(models.Model):
     ]
     team = models.ForeignKey(Team,on_delete=models.CASCADE,related_name='internal_member_team_info')
     internal_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='internal_member')
-    role = models.ForeignKey(Role,on_delete=models.CASCADE)
+    role = models.ForeignKey(Role,on_delete=models.CASCADE,related_name='member_role')
     functional_identity = models.CharField(max_length=255, blank=True, null=True)
     added_by = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='internal_team_manager',blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)

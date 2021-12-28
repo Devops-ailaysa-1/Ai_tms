@@ -1490,6 +1490,7 @@ def TransactionSessionInfo(request):
         return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"amount":charge.amount, "paid":charge.paid ,"payment_type":charge.payment_method.type, "txn_id":charge.balance_transaction_id},status=200,safe = False)
     else:
         return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+        
 
 
 @api_view(['POST'])

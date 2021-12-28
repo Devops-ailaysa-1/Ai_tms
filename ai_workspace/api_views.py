@@ -20,7 +20,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer)
+    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
@@ -504,7 +504,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
+        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         return queryset
 
         # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
@@ -580,8 +583,14 @@ class VendorDashBoardView(viewsets.ModelViewSet):
                     id=pk)
         if project.ai_user == self.request.user:
             return project.get_tasks
-        elif project.team.owner == self.request.user:
-            return project.get_tasks
+        if project.team:
+            if ((project.team.owner == self.request.user)|(self.request.user in project.team.get_project_manager)):
+                return project.get_tasks
+            # elif self.request.user in project.team.get_project_manager:
+            #     return project.get_tasks
+            else:
+                return [task for job in project.project_jobs_set.all() for task \
+                        in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
         else:
             return [task for job in project.project_jobs_set.all() for task \
                     in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
@@ -599,7 +608,9 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
+        print("%%%%")
         tasks = self.get_tasks_by_projectid(pk=pk)
+        print(tasks)
         serlzr = VendorDashBoardSerializer(tasks, many=True)
         return Response(serlzr.data, status=200)
 
@@ -960,7 +971,7 @@ def create_project_from_temp_project_new(request):
 
 ##############   PROJECT ANALYSIS BY STORING ONLY COUNT DATA   ###########
 
-class ProjectAnalysis(APIView):
+class ProjectAnalysisProperty(APIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -974,7 +985,7 @@ class ProjectAnalysis(APIView):
 
     @staticmethod
     def correct_fields(data):
-        check_fields = ProjectAnalysis.erfogd()
+        check_fields = ProjectAnalysisProperty.erfogd()
         remove_keys = []
         for i in data.keys():
             if i in check_fields:
@@ -999,8 +1010,8 @@ class ProjectAnalysis(APIView):
 
             task_words.append({task.id:doc.total_word_count})
 
-        return Response({"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
-                                "task_words" : task_words }, status=status.HTTP_200_OK)
+        return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
+                                "task_words" : task_words }
 
     @staticmethod
     def get_data_from_analysis(project):
@@ -1008,17 +1019,17 @@ class ProjectAnalysis(APIView):
         task_words = []
         for task in project.get_tasks:
             task_words.append({task.id : task.task_details.first().task_word_count})
-        return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+        return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
-                        "task_words":task_words}, status=status.HTTP_200_OK)
+                        "task_words":task_words}
 
     @staticmethod
     def get_analysed_data(project_id):
         project = Project.objects.get(id=project_id)
         if project.is_all_doc_opened:
-            return ProjectAnalysis.get_data_from_docs(project)
+            return ProjectAnalysisProperty.get_data_from_docs(project)
         else:
-            return ProjectAnalysis.get_data_from_analysis(project)
+            return ProjectAnalysisProperty.get_data_from_analysis(project)
 
     @staticmethod
     def analyse_project(project_id):
@@ -1032,12 +1043,11 @@ class ProjectAnalysis(APIView):
         file_ids = []
 
         for task in tasks:
-
             if task.file_id not in file_ids:
 
                 ser = TaskSerializer(task)
                 data = ser.data
-                ProjectAnalysis.correct_fields(data)
+                ProjectAnalysisProperty.correct_fields(data)
                 params_data = {**data, "output_type": None}
                 res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None
@@ -1046,24 +1056,26 @@ class ProjectAnalysis(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-                if doc.status_code == 200 :
-                    doc_data = doc.json()
-                    # task_words.append({task.id : doc_data.get('total_word_count')})
+                try:
+                    if doc.status_code == 200 :
+                        doc_data = doc.json()
+                        # task_words.append({task.id : doc_data.get('total_word_count')})
 
-                    task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
-                                                            "task_char_count":doc_data.get('total_char_count', 0),
-                                                            "task_seg_count":doc_data.get('total_segment_count', 0),
-                                                            "task": task.id,"project":project_id}
-                                                                 )
+                        task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
+                                                                "task_char_count":doc_data.get('total_char_count', 0),
+                                                                "task_seg_count":doc_data.get('total_segment_count', 0),
+                                                                "task": task.id,"project":project_id}
+                                                                     )
 
-                    if task_detail_serializer.is_valid(raise_exception=True):
-                        task_detail_serializer.save()
+                        if task_detail_serializer.is_valid(raise_exception=True):
+                            task_detail_serializer.save()
+                        else:
+                            print("error-->", task_detail_serializer.errors)
                     else:
-                        print("error-->", task_detail_serializer.errors)
-                else:
-                    logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                    raise  ValueError("Sorry! Something went wrong with file processing.")
-
+                        logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                        raise  ValueError("Sorry! Something went wrong with file processing.")
+                except:
+                    print("No entry")
                 file_ids.append(task.file_id)
 
             else:
@@ -1077,21 +1089,49 @@ class ProjectAnalysis(APIView):
 
         [task_words.append({task.id : task.task_details.first().task_word_count})for task in project.get_tasks]
         out = TaskDetails.objects.filter(project_id=project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-        return Response({"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+        return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
-                        "task_words":task_words}, status=status.HTTP_200_OK)
+                        "task_words":task_words}
 
-    def get(self, request, project_id):
+    # def get(self, request, project_id):
+
+    #     if bool(Project.objects.get(id=project_id).is_proj_analysed):
+    #         return ProjectAnalysis.get_analysed_data(project_id)
+    #     else:
+    #         return ProjectAnalysis.analyse_project(project_id)
+
+    @staticmethod
+    def get(project_id):
 
         if bool(Project.objects.get(id=project_id).is_proj_analysed):
-            return ProjectAnalysis.get_analysed_data(project_id)
+            return ProjectAnalysisProperty.get_analysed_data(project_id)
         else:
-            return ProjectAnalysis.analyse_project(project_id)
+            return ProjectAnalysisProperty.analyse_project(project_id)
 
 #######################################
 
+class ProjectAnalysis(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id):
+        return Response(ProjectAnalysisProperty.get(project_id))
+
+#########################################
+
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        tasks = request.GET.getlist('tasks')
+        print(tasks)
+        try:
+            task_assign_info = TaskAssignInfo.objects.filter(task_id__in = tasks)
+        except TaskAssignInfo.DoesNotExist:
+            return HttpResponse(status=404)
+        ser = TaskAssignInfoSerializer(task_assign_info,many=True)
+        return Response(ser.data)
+
 
     @integrity_error
     def create(self,request):
@@ -1137,14 +1177,24 @@ def get_assign_to_list(request):
     internalmembers = []
     hirededitors = []
     try:
-        internal_team = proj.ai_user.team_owner.internal_member_team_info.filter(role = 2)
+        internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2)
         for i in internal_team:
-            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,'status':i.get_status_display()})
+            try:
+                profile = i.internal_member.professional_identity_info.avatar_url
+            except:
+                profile = None
+            internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,\
+                                    'status':i.get_status_display(),'avatar': profile})
     except:
         print("No team")
-    external_team = proj.ai_user.user_info.filter(role=2)
-    print(external_team)
-    hirededitors = find_vendor(external_team,job)
+    if proj.ai_user.team:
+        external_team = proj.ai_user.team.owner.user_info.filter(role=2)
+        print(external_team)
+        hirededitors = find_vendor(external_team,job)
+    else:
+        external_team = proj.ai_user.user_info.filter(role=2)
+        print(external_team)
+        hirededitors = find_vendor(external_team,job)
     # if proj.team:
     #     internal_team = proj.team.internal_member_team_info.filter(role = 2)
     #     for i in internal_team:
@@ -1162,23 +1212,31 @@ def get_assign_to_list(request):
 def find_vendor(team,job):
     externalmembers=[]
     for j in team:
+        try:
+            profile = j.hired_editor.professional_identity_info.avatar_url
+        except:
+            profile = None
         vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
         if vendor:
-            externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display()})
+            externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
     return externalmembers
 
 
-@permission_classes([IsAuthenticated])
-@api_view(['GET',])
-def project_list(request):
-    proj_list=[]
-    queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = request.user)|Q(ai_user = request.user)|Q(team__owner = request.user)).distinct().order_by('-id')
-    serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request})
-    data = serializer.data
-    for i in data:
-        if i.get('assign_enable')==True:
-            proj_list.append(i)
-    return Response(proj_list)
+class ProjectListView(viewsets.ModelViewSet):
+    serializer_class = ProjectListSerializer
+
+    def get_queryset(self):
+        print(self.request.user)
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
+        return  Response(serializer.data)
+
 
 
 @permission_classes([IsAuthenticated])
@@ -1188,7 +1246,7 @@ def tasks_list(request):
     try:
         job = Job.objects.get(id = job_id)
         tasks = job.job_tasks_set.all()
-        ser = TaskSerializer(tasks,many=True)
+        ser = VendorDashBoardSerializer(tasks,many=True)
         return Response(ser.data)
     except:
         return JsonResponse({"msg":"No job exists"})
