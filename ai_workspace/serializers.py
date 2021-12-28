@@ -555,19 +555,22 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
 	task_assign_info = TaskAssignInfoSerializer(required=False)
+	task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
+	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
 
 	class Meta:
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "project_name",\
-			"document_url", "progress","task_assign_info")
+			"document_url", "progress","task_assign_info","task_word_count",)
 
-	# def get_assigned_to(self,instance):
-	# 	if instance.job.project.ai_user == instance.assign_to:
-	# 		return self
-	# 	else:
-	# 		return instance.assign_to.fullname
+	def get_task_word_count(self,instance):
+		try:
+			t = TaskDetails.objects.get(task_id = instance.id)
+			return t.task_word_count
+		except:
+			return None
 
 class ProjectSerializerV2(serializers.ModelSerializer):
 	class Meta:

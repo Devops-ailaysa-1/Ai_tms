@@ -1043,7 +1043,6 @@ class ProjectAnalysisProperty(APIView):
         file_ids = []
 
         for task in tasks:
-
             if task.file_id not in file_ids:
 
                 ser = TaskSerializer(task)
@@ -1057,24 +1056,26 @@ class ProjectAnalysisProperty(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-                if doc.status_code == 200 :
-                    doc_data = doc.json()
-                    # task_words.append({task.id : doc_data.get('total_word_count')})
+                try:
+                    if doc.status_code == 200 :
+                        doc_data = doc.json()
+                        # task_words.append({task.id : doc_data.get('total_word_count')})
 
-                    task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
-                                                            "task_char_count":doc_data.get('total_char_count', 0),
-                                                            "task_seg_count":doc_data.get('total_segment_count', 0),
-                                                            "task": task.id,"project":project_id}
-                                                                 )
+                        task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
+                                                                "task_char_count":doc_data.get('total_char_count', 0),
+                                                                "task_seg_count":doc_data.get('total_segment_count', 0),
+                                                                "task": task.id,"project":project_id}
+                                                                     )
 
-                    if task_detail_serializer.is_valid(raise_exception=True):
-                        task_detail_serializer.save()
+                        if task_detail_serializer.is_valid(raise_exception=True):
+                            task_detail_serializer.save()
+                        else:
+                            print("error-->", task_detail_serializer.errors)
                     else:
-                        print("error-->", task_detail_serializer.errors)
-                else:
-                    logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                    raise  ValueError("Sorry! Something went wrong with file processing.")
-
+                        logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                        raise  ValueError("Sorry! Something went wrong with file processing.")
+                except:
+                    print("No entry")
                 file_ids.append(task.file_id)
 
             else:
@@ -1098,7 +1099,7 @@ class ProjectAnalysisProperty(APIView):
     #         return ProjectAnalysis.get_analysed_data(project_id)
     #     else:
     #         return ProjectAnalysis.analyse_project(project_id)
-    
+
     @staticmethod
     def get(project_id):
 
@@ -1110,7 +1111,7 @@ class ProjectAnalysisProperty(APIView):
 #######################################
 
 class ProjectAnalysis(APIView):
-    
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, project_id):
