@@ -188,10 +188,11 @@ class GetVendorListSerializer(serializers.ModelSerializer):
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
     # vendor_lang_pair = VendorServiceSerializer(many=True,read_only = True)
     vendor_info = VendorInfoListSerializer(read_only=True)
-    professional_identity_info = ProfessionalidentitySerializer(read_only=True)
+    # professional_identity_info = ProfessionalidentitySerializer(read_only=True)
+    professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','email','country','vendor_info','professional_identity_info','vendor_lang_pair',)
+        fields = ('id','uid','fullname','email','country','vendor_info','professional_identity','vendor_lang_pair',)
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
