@@ -1200,7 +1200,6 @@ def find_vendor(team,job):
             profile = None
         vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
         if vendor:
-            print("!!!",vendor)
             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
     return externalmembers
 
