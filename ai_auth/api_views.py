@@ -8,7 +8,7 @@ from os.path import join
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from stripe.api_resources import subscription
-from ai_auth.access_policies import MemberCreationAccess
+from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,TeamAccess
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,

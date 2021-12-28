@@ -1,28 +1,42 @@
-from ai_auth.models import Team
+from ai_auth.models import Team,InternalMember
 
 
-def is_project_owner(self, request, view, action) -> bool:
+def is_project_owner(self, request, view, action: str) -> bool:
     team = request.POST.get('team')
     managers = Team.objects.get(id=team).internal_member_team_info.filter(role__role = "project owner")
     print("view",view)
-    print("action",action)
+    #print("action",action)
     return request.user in managers 
 
 
-def is_team_owner(self,request, view, action) -> bool:
+def is_team_owner(request, view, action: str) -> bool:
     team = request.POST.get('team')
+    print(repr(request))
+    print(request.user)
     print("inside team")
     print(team)
+    if not team:
+        team = request.user.team_owner.id
     print(request.user.team_owner.id)
-
     return request.user.team_owner.id == int(team)
 
-def is_internalmember(self,request, view, action) -> bool:
+def is_internalmember(request, view, action: str) -> bool:
     return request.user.is_internal_member
 
-def is_vendor(self,request, view, action) -> bool:
+def is_vendor(request, view, action) -> bool:
     return request.user.is_vendor
 
-def is_assigned_vendor(self,request, view, action) -> bool:
+def is_assigned_vendor(request, view, action) -> bool:
     
     return request.user.is_vendor
+
+def is_added(request, view, action) -> bool:
+    try:
+        pk = request.kwargs['pk']
+        in_mem=InternalMember.objects.get(id=int(pk))
+    except:
+        print("In except")
+    return request.user == in_mem.added_by
+
+def is_admin(self,request, view, action) -> bool:
+    return request.user.is_superuser
