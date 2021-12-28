@@ -188,13 +188,12 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
             # return Response(data={"Message":"VendorExpertiseInfo Created"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self,request,pk=None):
-        queryset = AiUser.objects.filter(id=self.request.user.id).all()
-        User = get_object_or_404(queryset, pk=request.user.id)
+    def update(self,request,pk):
+        queryset = AiUser.objects.filter(id=pk).all()
+        User = get_object_or_404(queryset, pk=pk)
         ser= ServiceExpertiseSerializer(User,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
             ser.save()
-            # ser.update(vendor,validated_data=request.data)
             return Response(ser.data)
         else:
             return Response(ser.errors)

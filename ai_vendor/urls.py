@@ -29,6 +29,6 @@ urlpatterns+= [
     # path('send_email/',views.shortlisted_vendor_list_send_email,name='send-email'),
     path('clone/<int:id>/',views.clone_lang_pair,name='clone'),
     # path('vendorexpertiseinfo/',views.VendorExpertiseListCreate.as_view({'get': 'list'})),
-    path('vendorexpertiseinfo/update/',views.VendorExpertiseListCreate.as_view({'put':'update'})),
+    # path('vendorexpertiseinfo/update/',views.VendorExpertiseListCreate.as_view({'put':'update'})),
     # path('vendor_service_update/<int:pk>',views.VendorServiceUpdateDeleteView.as_view(),name='vendor-servicepdate'),
     ]

@@ -241,10 +241,10 @@ class Project(models.Model):
     @property
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
-            print("Doc opened")
+            # print("Doc opened")
             return True
         if len(self.get_tasks) == self.task_project.count() and len(self.get_tasks) != 0:
-            print("Project analysed")
+            # print("Project analysed")
             return True
         else:
             return False
