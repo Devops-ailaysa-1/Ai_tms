@@ -13,7 +13,7 @@ from rest_framework.validators import UniqueTogetherValidator
 from ai_auth.models import AiUser,Team
 from ai_auth.validators import project_file_size
 from django.db.models import Q
-
+from ai_workspace_okapi.models import Document
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -566,11 +566,13 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			"document_url", "progress","task_assign_info","task_word_count",)
 
 	def get_task_word_count(self,instance):
-		try:
+		if instance.document_id:
+			document = Document.objects.get(id = instance.document_id)
+			return document.total_word_count
+		else:
 			t = TaskDetails.objects.get(task_id = instance.id)
 			return t.task_word_count
-		except:
-			return None
+
 
 class ProjectSerializerV2(serializers.ModelSerializer):
 	class Meta:
@@ -668,3 +670,31 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 # 	task_assign_info = TaskAssignInfoSerializer(required=False)
 # 	class Meta(TaskSerializer.Meta):
 # 		fields = ("task_assign_info",)
+
+
+
+
+
+
+class ProjectListSerializer(serializers.ModelSerializer):
+	assign_enable = serializers.SerializerMethodField(method_name='check_role')
+
+	class Meta:
+		model = Project
+		fields = ("id", "project_name","assign_enable","files_jobs_choice_url", )
+
+	def check_role(self, instance):
+		if self.context.get("request")!=None:
+			user = self.context.get("request").user
+		else:user = self.context.get("ai_user", None)
+		if instance.team :
+			return True if ((instance.team.owner == user)\
+				or(instance.team.internal_member_team_info.all().\
+				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+				or(instance.team.owner.user_info.all()\
+				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+				else False
+		else:
+			return True if ((instance.ai_user == user) or\
+			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+			else False

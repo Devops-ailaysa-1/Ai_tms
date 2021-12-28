@@ -20,7 +20,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,)
+    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
@@ -1222,17 +1222,21 @@ def find_vendor(team,job):
     return externalmembers
 
 
-@permission_classes([IsAuthenticated])
-@api_view(['GET',])
-def project_list(request):
-    proj_list=[]
-    queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = request.user)|Q(ai_user = request.user)|Q(team__owner = request.user)).distinct().order_by('-id')
-    serializer = ProjectQuickSetupSerializer(queryset, many=True, context={'request': request})
-    data = serializer.data
-    for i in data:
-        if i.get('assign_enable')==True:
-            proj_list.append(i)
-    return Response(proj_list)
+class ProjectListView(viewsets.ModelViewSet):
+    serializer_class = ProjectListSerializer
+
+    def get_queryset(self):
+        print(self.request.user)
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        return queryset
+
+    def list(self,request):
+        queryset = self.get_queryset()
+        serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
+        return  Response(serializer.data)
+
 
 
 @permission_classes([IsAuthenticated])
