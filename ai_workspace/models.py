@@ -241,64 +241,68 @@ class Project(models.Model):
     @property
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
+            # print("Doc opened")
             return True
-        if len(self.get_tasks) == self.task_project.count():
+        if len(self.get_tasks) == self.task_project.count() and len(self.get_tasks) != 0:
+            # print("Project analysed")
             return True
         else:
             return False
 
-    @property
-    def project_analysis(self):
-        if self.is_proj_analysed == True:
-            proj_word_count = proj_char_count = proj_seg_count = 0
-            task_words = []
-
-            if self.is_all_doc_opened:
-                for task in self.get_tasks:
-                    doc = Document.objects.get(id=task.document_id)
-                    proj_word_count += doc.total_word_count
-                    proj_char_count += doc.total_char_count
-                    proj_seg_count += doc.total_segment_count
-
-                    task_words.append({task.id:doc.total_word_count})
-                return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
-                                  "task_words" : task_words }
-            else:
-                out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-                task_words = []
-                for task in self.get_tasks:
-                    task_words.append({task.id : task.task_details.first().task_word_count})
-                return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-                    "proj_seg_count":out.get('task_seg_count__sum'),
-                                "task_words":task_words}
-        else:
-            return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
-                                  "task_words" : [] }
-
     # @property
     # def project_analysis(self):
     #     if self.is_proj_analysed == True:
+    #         proj_word_count = proj_char_count = proj_seg_count = 0
     #         task_words = []
 
     #         if self.is_all_doc_opened:
-    #             [task_words.append({i.id:i.document.total_word_count}) for i in self.get_tasks]
-    #             out=Document.objects.filter(id__in=[j.document_id for j in self.get_tasks]).aggregate(Sum('total_word_count'),\
-    #                 Sum('total_char_count'),Sum('total_segment_count'))
+    #             for task in self.get_tasks:
+    #                 doc = Document.objects.get(id=task.document_id)
+    #                 proj_word_count += doc.total_word_count
+    #                 proj_char_count += doc.total_char_count
+    #                 proj_seg_count += doc.total_segment_count
 
-    #             return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
-    #                 "proj_seg_count":out.get('total_segment_count__sum'),\
+    #                 task_words.append({task.id:doc.total_word_count})
+    #             return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
     #                               "task_words" : task_words }
     #         else:
     #             out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
     #             task_words = []
-    #             [task_words.append({i.id:i.task_details.first().total_word_count}) for i in self.get_tasks]
-
+    #             for task in self.get_tasks:
+    #                 task_words.append({task.id : task.task_details.first().task_word_count})
     #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
     #                 "proj_seg_count":out.get('task_seg_count__sum'),
     #                             "task_words":task_words}
     #     else:
     #         return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
     #                               "task_words" : [] }
+
+    @property
+    def project_analysis(self):
+        if self.is_proj_analysed == True:
+            task_words = []
+
+            if self.is_all_doc_opened:
+                # print("Inside doccsssssssssssss")
+                [task_words.append({i.id:i.document.total_word_count}) for i in self.get_tasks]
+                out=Document.objects.filter(id__in=[j.document_id for j in self.get_tasks]).aggregate(Sum('total_word_count'),\
+                    Sum('total_char_count'),Sum('total_segment_count'))
+
+                return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+                    "proj_seg_count":out.get('total_segment_count__sum'),\
+                                  "task_words" : task_words }
+            else:
+                # print("Inside task detailssssss")
+                out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+                task_words = []
+                [task_words.append({i.id:i.task_details.first().task_word_count}) for i in self.get_tasks]
+
+                return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+                    "proj_seg_count":out.get('task_seg_count__sum'),
+                                "task_words":task_words}
+        else:
+            from .api_views import ProjectAnalysisProperty
+            return ProjectAnalysisProperty.get(self.id)
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -549,6 +553,8 @@ class TaskAssignInfo(models.Model):
     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
+    assigned_by = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True, blank=True,
+            related_name="user_assign_info")
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:

@@ -452,8 +452,15 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 	ai_user = self.context.get("ai_user", None)
 		if not validated_data.get('project_manager_id'):
 			validated_data['project_manager_id'] = ai_user.id
-		# if not validated_data.get('team_id'):
-		# 	validated_data['team_id'] = Team.objects.get(owner=ai_user).id
+		if not validated_data.get('team_id'):
+			if ai_user.team:
+				validated_data['team_id'] = ai_user.team.id
+
+			# try:
+			# 	team = Team.objects.get(owner=ai_user).id
+			# 	validated_data['team_id'] = Team.objects.get(owner=ai_user).id
+			# except:
+			# 	print("None")
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
 			f_klass=File,j_klass=Job, ai_user=ai_user)#,team=team,project_manager=project_manager)
@@ -489,9 +496,16 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
+    assigned_by_name = serializers.ReadOnlyField(source='assigned_by.fullname')
+    # assigned_to_name = serializers.ReadOnlyField(source='task.assign_to.fullname')
+    # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','reference_file','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count')
+        fields = ('id','instruction','reference_file','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
+        extra_kwargs = {
+            'assigned_by':{'write_only':True},
+             }
+
 
     def run_validation(self, data):
         if data.get('assign_to'):
@@ -501,8 +515,10 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         else:
            data['tasks'] = [json.loads(data.pop('task'))]
         print(data['tasks'])
+        data['assigned_by'] = self.context['request'].user.id
         print("validated data run validation----->",data)
         return super().run_validation(data)
+
 
     def create(self, data):
         print('validated data==>',data)
@@ -520,6 +536,13 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
             task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
         return super().update(instance, data)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        print(instance)
+        data["assign_to"] = instance.task.assign_to.id
+        # data['assigned_by'] = instance.task.job.project.ai_user.fullname
+        return data
+
 
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
@@ -532,12 +555,22 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
 	task_assign_info = TaskAssignInfoSerializer(required=False)
+	task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
+	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
+	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
 
 	class Meta:
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "project_name",\
-			"document_url", "progress","task_assign_info")
+			"document_url", "progress","task_assign_info","task_word_count",)
+
+	def get_task_word_count(self,instance):
+		try:
+			t = TaskDetails.objects.get(task_id = instance.id)
+			return t.task_word_count
+		except:
+			return None
 
 class ProjectSerializerV2(serializers.ModelSerializer):
 	class Meta:
@@ -631,7 +664,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-# class TasklistSerializer(serializers.ModelSerializer):
-# 	class Meta:
-# 		model = Task
-# 		fields = "__all__"
+# class TasklistSerializer(TaskSerializer):
+# 	task_assign_info = TaskAssignInfoSerializer(required=False)
+# 	class Meta(TaskSerializer.Meta):
+# 		fields = ("task_assign_info",)
