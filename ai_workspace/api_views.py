@@ -20,7 +20,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer)
+    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
@@ -504,7 +504,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
+        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         return queryset
 
         # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
@@ -580,8 +583,14 @@ class VendorDashBoardView(viewsets.ModelViewSet):
                     id=pk)
         if project.ai_user == self.request.user:
             return project.get_tasks
-        elif project.team.owner == self.request.user:
-            return project.get_tasks
+        if project.team:
+            if ((project.team.owner == self.request.user)|(self.request.user in project.team.get_project_manager)):
+                return project.get_tasks
+            # elif self.request.user in project.team.get_project_manager:
+            #     return project.get_tasks
+            else:
+                return [task for job in project.project_jobs_set.all() for task \
+                        in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
         else:
             return [task for job in project.project_jobs_set.all() for task \
                     in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
@@ -599,7 +608,9 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
+        print("%%%%")
         tasks = self.get_tasks_by_projectid(pk=pk)
+        print(tasks)
         serlzr = VendorDashBoardSerializer(tasks, many=True)
         return Response(serlzr.data, status=200)
 
@@ -1093,6 +1104,17 @@ class ProjectAnalysis(APIView):
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    def list(self,request):
+        tasks = request.GET.getlist('tasks')
+        print(tasks)
+        try:
+            task_assign_info = TaskAssignInfo.objects.filter(task_id__in = tasks)
+        except TaskAssignInfo.DoesNotExist:
+            return HttpResponse(status=404)
+        ser = TaskAssignInfoSerializer(task_assign_info,many=True)
+        return Response(ser.data)
+
+
     @integrity_error
     def create(self,request):
         file=request.FILES.get('reference_file')
@@ -1137,7 +1159,7 @@ def get_assign_to_list(request):
     internalmembers = []
     hirededitors = []
     try:
-        internal_team = proj.ai_user.team_owner.internal_member_team_info.filter(role = 2)
+        internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2)
         for i in internal_team:
             try:
                 profile = i.internal_member.professional_identity_info.avatar_url
@@ -1147,9 +1169,14 @@ def get_assign_to_list(request):
                                     'status':i.get_status_display(),'avatar': profile})
     except:
         print("No team")
-    external_team = proj.ai_user.user_info.filter(role=2)
-    print(external_team)
-    hirededitors = find_vendor(external_team,job)
+    if proj.ai_user.team:
+        external_team = proj.ai_user.team.owner.user_info.filter(role=2)
+        print(external_team)
+        hirededitors = find_vendor(external_team,job)
+    else:
+        external_team = proj.ai_user.user_info.filter(role=2)
+        print(external_team)
+        hirededitors = find_vendor(external_team,job)
     # if proj.team:
     #     internal_team = proj.team.internal_member_team_info.filter(role = 2)
     #     for i in internal_team:
@@ -1173,6 +1200,7 @@ def find_vendor(team,job):
             profile = None
         vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
         if vendor:
+            print("!!!",vendor)
             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
     return externalmembers
 
@@ -1197,7 +1225,7 @@ def tasks_list(request):
     try:
         job = Job.objects.get(id = job_id)
         tasks = job.job_tasks_set.all()
-        ser = TaskSerializer(tasks,many=True)
+        ser = VendorDashBoardSerializer(tasks,many=True)
         return Response(ser.data)
     except:
         return JsonResponse({"msg":"No job exists"})
