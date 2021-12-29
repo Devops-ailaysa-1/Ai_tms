@@ -350,8 +350,8 @@ class Files_Jobs_List(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self, project_id):
-        project = get_object_or_404(Project.objects.all(), id=project_id,
-                        ai_user=self.request.user)
+        project = get_object_or_404(Project.objects.all(), id=project_id)
+                        # ai_user=self.request.user)
         project_name = project.project_name
         jobs = project.project_jobs_set.all()
         files = project.project_files_set.filter(usage_type__use_type="source").all()
