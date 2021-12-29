@@ -369,10 +369,10 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
             res = self.document_data_to_file(request, document_id)
-            print("RES CODE ====> ", res.status_code)
+            print("Doc to file res code ====> ", res.status_code)
             if res.status_code in [200, 201]:
                 file_path = res.text
-                print("file_path---->", file_path)
+                # print("file_path---->", file_path)
                 try:
                     if os.path.isfile(res.text):
                         if os.path.exists(file_path):
@@ -411,7 +411,7 @@ class DocumentToFile(views.APIView):
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
-        print("task_data---->", task_data)
+        # print("task_data---->", task_data)
         pre, ext = os.path.splitext(task_data["output_file_path"])
         if output_type == "XLIFF":
             ext = ".xliff"
@@ -419,13 +419,13 @@ class DocumentToFile(views.APIView):
             ext = ".tmx"
         task_data["output_file_path"] = pre + "(" + task_data["source_language"] + "-" + task_data["target_language"] + ")" + ext
 
-        print("task-data------>", task_data["output_file_path"])
+        # print("task-data------>", task_data["output_file_path"])
 
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None
                      }
-        print("params data--->", params_data)
+        # print("params data--->", params_data)
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
