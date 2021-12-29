@@ -51,7 +51,6 @@ class Segment(models.Model):
 
     @property
     def get_id(self):
-        print("called!!!")
         return self.id
 
     @property

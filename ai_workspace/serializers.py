@@ -158,7 +158,7 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 			}
 		}
 	def run_validation(self, data):
-		print("run_validation")
+		# print("run_validation")
 		return super().run_validation(data=data)
 
 	def to_representation(self, instance):
@@ -418,7 +418,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 
 	def create(self, validated_data):
-		print("data-->",validated_data)
+		# print("data-->",validated_data)
 		if self.context.get("request")!=None:
 			ai_user = self.context.get("request", None).user
 		else:

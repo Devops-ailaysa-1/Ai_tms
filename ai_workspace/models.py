@@ -232,7 +232,7 @@ class Project(models.Model):
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
             return True
-        if len(self.get_tasks) == self.task_project.count():
+        if len(self.get_tasks) == self.task_project.count() and len(self.get_tasks) != 0:
             return True
         else:
             return False
@@ -391,28 +391,11 @@ class FileTypes(models.Model):
 def get_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
             instance.usage_type.type_path)
+    print("Upload file path ----> ", file_path)
     instance.filename = filename
     return os.path.join(file_path, filename)
 
 use_spaces = os.environ.get("USE_SPACES")
-
-class CustomFileField(models.FileField, Field):
-    def path(self):
-        if not use_spaces == 'TRUE':
-            print('  ************ Local *********  ')
-            return super(CustomFileField).path()
-        else:
-            print('  ************ Spaces *********  ')
-            return self.url()
-
-# def path(self):
-#         self._require_file()
-#         return self.storage.path(self.name)
-
-# @property
-#     def url(self):
-#         self._require_file()
-#         return self.storage.url(self.name)
 
 # class CustomFileField(models.FileField):
 #     def __init__(self, *args, **kwargs):
@@ -429,7 +412,7 @@ class File(models.Model):
 
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="project_usage_type")
-    file = CustomFileField(upload_to=get_file_upload_path, null=False,\
+    file = FileField(upload_to=get_file_upload_path, null=False,\
                 blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
     # output_file =
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
@@ -464,7 +447,9 @@ class File(models.Model):
 
     @property
     def get_source_file_path(self):
-        return self.file.url
+        if settings.USE_SPACES:
+            return self.file.url
+        return self.file.path
 
     @property
     def output_file_path(self):

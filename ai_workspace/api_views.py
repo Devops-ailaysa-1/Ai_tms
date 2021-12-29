@@ -484,7 +484,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 return Response(serlzr.data, status=201)
-            return Response(serializer.errors, status=409)
+            return Response(serlzr.errors, status=409)
 
     def update(self, request, pk, format=None):
         instance = self.get_object()
