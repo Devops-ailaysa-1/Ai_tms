@@ -379,9 +379,9 @@ class DocumentToFile(views.APIView):
                         if os.path.exists(file_path):
                             with open(file_path, 'rb') as fh:
                                 response = HttpResponse(fh.read(), content_type=\
-                                    "application/vnd.ms-excel")          
+                                    "application/vnd.ms-excel")
                                 encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                        encoding='utf-8')                             
+                                        encoding='utf-8')
                                 response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
                                                     .format(encoded_filename)
                                 response['X-Suggested-Filename'] = encoded_filename
@@ -436,7 +436,7 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),
             }
         )
-        
+
         if settings.USE_SPACES:
             session = boto3.session.Session()
             client = session.client(
@@ -446,7 +446,7 @@ class DocumentToFile(views.APIView):
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             )
-            
+
             with open(task_data["output_file_path"], "rb") as f:
                 print("Spaces file path---->", File.get_aws_file_path(task_data["output_file_path"]))
                 obj = client.put_object(
