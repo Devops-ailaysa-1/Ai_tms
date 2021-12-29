@@ -575,10 +575,10 @@ class GetVendorListViewNew(generics.ListAPIView):
         contenttype = self.request.query_params.get('content')
         subject=self.request.query_params.get('subject')
         if job_id:
-            source_lang=Job.objects.get(id=job_id).source_language
-            target_lang=Job.objects.get(id=job_id).target_language
+            source_lang=Job.objects.get(id=job_id).source_language_id
+            target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-                    .filter(Q(vendor_lang_pair__source_lang__language=source_lang) & Q(vendor_lang_pair__target_lang__language=target_lang) & Q(vendor_lang_pair__deleted_at=None)).distinct().exclude(id = user.id).exclude(id__in=internal_list)
+                    .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None)).distinct().exclude(id = user.id).exclude(id__in=internal_list)
         if max_price and min_price and count_unit:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):
@@ -586,8 +586,8 @@ class GetVendorListViewNew(generics.ListAPIView):
             queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
         if  contenttype:
             contentlist = contenttype.split(',')
-            queryset = queryset.filter(Q(vendor_contentype__contenttype_id__name__in=contentlist)&Q(vendor_contentype__deleted_at=None)).annotate(number_of_match=Count('vendor_contentype__contenttype_id__name',0)).order_by('-number_of_match').distinct()
+            queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=contentlist)&Q(vendor_contentype__deleted_at=None)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
         if subject:
             subjectlist=subject.split(',')
-            queryset = queryset.filter(Q(vendor_subject__subject_id__name__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id__name',0)).order_by('-number_of_match').distinct()
+            queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset

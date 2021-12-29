@@ -88,7 +88,7 @@ class Project(models.Model):
     max_hits = models.IntegerField(default=5)
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
     project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
-    # created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
+    created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -583,7 +583,7 @@ class TaskAssignInfo(models.Model):
     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
-    assigned_by = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True, blank=True,
+    assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
             related_name="user_assign_info")
 
     def save(self, *args, **kwargs):

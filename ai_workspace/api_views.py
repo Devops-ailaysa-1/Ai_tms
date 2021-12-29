@@ -506,7 +506,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print(self.request.user)
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
         queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
-                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)|Q(created_by = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         return queryset
 
@@ -1241,9 +1241,15 @@ class ProjectListView(viewsets.ModelViewSet):
         return queryset
 
     def list(self,request):
+        proj_list=[]
         queryset = self.get_queryset()
         serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
-        return  Response(serializer.data)
+        data = serializer.data
+        for i in data:
+            if i.get('assign_enable')==True:
+                proj_list.append(i)
+        return Response(proj_list)
+        # return  Response(serializer.data)
 
 
 

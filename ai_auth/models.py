@@ -374,7 +374,7 @@ class InternalMember(models.Model):
     internal_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='internal_member')
     role = models.ForeignKey(Role,on_delete=models.CASCADE,related_name='member_role')
     functional_identity = models.CharField(max_length=255, blank=True, null=True)
-    added_by = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='internal_team_manager',blank=True, null=True)
+    added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='internal_team_manager',blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
 
     def __str__(self):

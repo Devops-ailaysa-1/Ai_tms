@@ -200,9 +200,9 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         source_lang = request.query_params.get('source_lang')
         target_lang = request.query_params.get('target_lang')
         if job_id:
-            source_lang=Job.objects.get(id=job_id).source_language
-            target_lang=Job.objects.get(id=job_id).target_language
-        return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang__language=source_lang)&Q(target_lang__language=target_lang)), many=True, read_only=True).data
+            source_lang=Job.objects.get(id=job_id).source_language_id
+            target_lang=Job.objects.get(id=job_id).target_language_id
+        return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
