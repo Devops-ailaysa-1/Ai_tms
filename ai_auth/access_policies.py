@@ -3,7 +3,7 @@ from django.db.models import manager
 from ai_auth import managers
 from rest_access_policy import AccessPolicy
 from ai_auth.models import Team
-
+from ai_workspace.models import TaskAssignInfo
 
 
 class InternalTeamAccess(AccessPolicy):
@@ -105,23 +105,59 @@ class TeamAccess(AccessPolicy):
 
 class ProjectAccess(AccessPolicy):
     statements = [
-        {"action": ["*"], 
-        "principal": ["group:vendor"],  
+        {"action": ["create"], 
+        "principal": ["group:account_owners",],  
         "effect": "allow",
-        "condition":["is_assigned"]
+        "condition":["(is_internalmember and is_project_owner_internal) or (not is_internalmember) "]
         #"condition_expression": ["(is_project_owner or is_team_owner)"]
          },
-        {"action": ["*"], 
-        "principal": ["group:account_owner"],  
+        {"action": ["list"], 
+        "principal": ["*"],  
         "effect": "allow",
-        "condition":["is_team_owner"]
+     #   "condition":["*"]
         #"condition_expression": ["(is_project_owner or is_team_owner)"]
          },
-        {"action": ["*"], 
+        {"action": ["update"], 
         "principal": ["group:project_owners"],  
         "effect": "allow",
         #"condition":["is_project_owner"]
-        "condition_expression": ["(is_project_owner and is_project_owner)"]
+        "condition_expression": ["(is_project_created or is_project_owner_internal) or team_owner_project"]
          },
     ]
 
+class ProjectAssignment(AccessPolicy):
+    statements = [
+        {"action": ["create"], 
+        "principal": ["group:account_owners","group:project_owners"],  
+        "effect": "allow",
+        "condition":["(is_internalmember and is_project_owner_internal) or (not is_internalmember) "]
+        #"condition_expression": ["(is_project_owner or is_team_owner)"]
+         },
+        {"action": ["update"], 
+        "principal": ["group:project_owners","group:account_owners"],  
+        "effect": "allow",
+        #"condition":["is_project_owner"]
+        "condition_expression": ["is_assigned or is_team_owner_task"]
+         },
+    ]
+
+    def is_assigned(request, view, action) -> bool:
+        tasks = request.POST.getlist('task')
+        result = False
+        for iter in tasks:
+            task_assign_info = TaskAssignInfo.objects.get(task_id = iter)
+            if task_assign_info.assigned_by == request.user:
+                result = True
+            else:
+                result = False     
+        return result 
+    
+    def is_team_owner_task(request, view, action) -> bool:
+        tasks = request.POST.getlist('task')
+        for iter in tasks:
+            task_assign_info = TaskAssignInfo.objects.get(task_id = iter)
+            if task_assign_info.job.project.team == request.user.team:
+                result = True
+            else:
+                result = False     
+        return result 
