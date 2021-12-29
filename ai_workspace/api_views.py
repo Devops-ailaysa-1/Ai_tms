@@ -1198,7 +1198,8 @@ def find_vendor(team,jobs):
             vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
             if vendor:
                 externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile,\
-                                        'lang_pair':job.source_language.language+'->'+job.target_language.language})
+                                        'lang_pair':job.source_language.language+'->'+job.target_language.language,\
+                                        'unique_id':j.hired_editor.uid})
     return externalmembers
     # if proj.team:
     #     internal_team = proj.team.internal_member_team_info.filter(role = 2)
