@@ -1186,6 +1186,7 @@ def get_assign_to_list(request):
     except:
         print("No team")
     external_team = proj.ai_user.team.owner.user_info.filter(role=2) if proj.ai_user.team else proj.ai_user.user_info.filter(role=2)
+    print(external_team)
     hirededitors = find_vendor(external_team,jobs)
     return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
 
