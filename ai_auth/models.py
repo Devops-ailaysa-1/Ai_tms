@@ -393,7 +393,7 @@ class HiredEditors(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES)
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_info')
     hired_editor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='hired_editor')
-    #added_by = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='external_team_manager',blank=True, null=True)
+    added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='external_team_manager',blank=True, null=True)
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
         unique_together = ['user', 'hired_editor','role']
