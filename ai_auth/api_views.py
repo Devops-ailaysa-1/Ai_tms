@@ -1278,18 +1278,29 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         response = self.get_paginated_response(serializer.data)
         return response
 
+    def check_user(self,email,team_name):
+        try:
+            user = AiUser.objects.get(email = email)
+            if user.is_internal_member == True:
+                if user.team.name == team_name:
+                    return {"msg":"Already team member"}
+            else:
+                return {"msg":"Ailaysa User"}
+        except:
+            return None
+
     @integrity_error
     def create(self,request):
         data = request.POST.dict()
         team = data.get('team')
         email = data.get('email')
-        existing_user = AiUser.objects.filter(email = email)
-        if existing_user:
-            return Response(status=status.HTTP_412_PRECONDITION_FAILED)
+        team_name = Team.objects.get(id=team).name
+        existing = self.check_user(email,team_name)
+        if existing:
+            return Response(existing,status = status.HTTP_409_CONFLICT)
         role = data.get('role')
         role_name = Role.objects.get(id=role).name
         today = date.today()
-        team_name = Team.objects.get(id=team).name
         functional_identity = request.POST.get('functional_identity')
         password = AiUser.objects.make_random_password()
         print("randowm pass",password)
@@ -1323,6 +1334,11 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def delete(self,request,pk):
         queryset = InternalMember.objects.all()
         internal_member = get_object_or_404(queryset, pk=pk)
+        user = AiUser.objects.get(id = internal_member.internal_member_id)
+        EmailAddress.objects.get(email = user.email).delete()
+        user.is_active = False
+        user.email = user.email+"_deleted_"+user.uid
+        user.save()
         internal_member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

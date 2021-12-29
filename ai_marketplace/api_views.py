@@ -530,7 +530,7 @@ def general_notifications(request):
     notification_details=[]
     notification_details.append({'count':count})
     for i in notifications:
-        notification_details.append({'message':i.description,'time':i.timesince(),'sender':i.actor.fullname})
+        notification_details.append({'message':i.description,'time':i.timestamp,'sender':i.actor.fullname})#'time':i.timesince()
     return JsonResponse({'notifications':notification_details})
 
 
