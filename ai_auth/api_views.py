@@ -1291,15 +1291,29 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         response = self.get_paginated_response(serializer.data)
         return response
 
+    def check_user(self,email,team_name):
+        try:
+            user = AiUser.objects.get(email = email)
+            if user.is_internal_member == True:
+                if user.team.name == team_name:
+                    return {"msg":"Already team member"}
+            else:
+                return {"msg":"Ailaysa User"}
+        except:
+            return None
+
     @integrity_error
     def create(self,request):
         data = request.POST.dict()
         team = data.get('team')
         email = data.get('email')
+        team_name = Team.objects.get(id=team).name
+        existing = self.check_user(email,team_name)
+        if existing:
+            return Response(existing,status = status.HTTP_409_CONFLICT)
         role = data.get('role')
         role_name = Role.objects.get(id=role).name
         today = date.today()
-        team_name = Team.objects.get(id=team).name
         functional_identity = request.POST.get('functional_identity')
         password = AiUser.objects.make_random_password()
         print("randowm pass",password)
@@ -1333,6 +1347,11 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def delete(self,request,pk):
         queryset = InternalMember.objects.all()
         internal_member = get_object_or_404(queryset, pk=pk)
+        user = AiUser.objects.get(id = internal_member.internal_member_id)
+        EmailAddress.objects.get(email = user.email).delete()
+        user.is_active = False
+        user.email = user.email+"_deleted_"+user.uid
+        user.save()
         internal_member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1503,7 +1522,7 @@ def TransactionSessionInfo(request):
         return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"amount":charge.amount, "paid":charge.paid ,"payment_type":charge.payment_method.type, "txn_id":charge.balance_transaction_id},status=200,safe = False)
     else:
         return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
-        
+
 
 
 @api_view(['POST'])

@@ -160,7 +160,7 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 			}
 		}
 	def run_validation(self, data):
-		print("run_validation")
+		# print("run_validation")
 		return super().run_validation(data=data)
 
 	def to_representation(self, instance):
@@ -445,7 +445,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
-		print("data-->",validated_data)
+		# print("data-->",validated_data)
 		if self.context.get("request")!=None:
 			ai_user = self.context.get("request", None).user
 		else:
@@ -501,7 +501,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','reference_file','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
+        fields = ('id','instruction','instruction_file','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
         extra_kwargs = {
             'assigned_by':{'write_only':True},
              }

@@ -16,8 +16,8 @@ from ai_workspace.models import Task, TaskCreditStatus
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
-import requests
-import json, os, re, time, jwt, time
+import requests, boto3
+import json, os, re, time, jwt
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -35,9 +35,10 @@ import urllib.parse
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 from ai_workspace.api_views import UpdateTaskCreditStatus
-from django.conf import  settings
 from django.urls import reverse
 from json import JSONDecodeError
+from ai_workspace.models import File
+from django.contrib.auth import settings
 
 
 logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -369,24 +370,27 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
             res = self.document_data_to_file(request, document_id)
-            print("RES CODE ====> ", res)
+            print("Doc to file res code ====> ", res.status_code)
             if res.status_code in [200, 201]:
                 file_path = res.text
-                print("file_path---->", file_path)
-                if os.path.isfile(res.text):
-                    if os.path.exists(file_path):
-                        with open(file_path, 'rb') as fh:
-                            response = HttpResponse(fh.read(), content_type=\
-                                "application/vnd.ms-excel")
-                            encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                    encoding='utf-8')
-                            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
-                                                .format(encoded_filename)
-                            response['X-Suggested-Filename'] = encoded_filename
-                            response["Access-Control-Allow-Origin"] = "*"
-                            response["Access-Control-Allow-Headers"] = "*"
-                            print("cont-disp--->", response.get("Content-Disposition"))
-                            return response
+                # print("file_path---->", file_path)
+                try:
+                    if os.path.isfile(res.text):
+                        if os.path.exists(file_path):
+                            with open(file_path, 'rb') as fh:
+                                response = HttpResponse(fh.read(), content_type=\
+                                    "application/vnd.ms-excel")          
+                                encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
+                                        encoding='utf-8')                             
+                                response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
+                                                    .format(encoded_filename)
+                                response['X-Suggested-Filename'] = encoded_filename
+                                response["Access-Control-Allow-Origin"] = "*"
+                                response["Access-Control-Allow-Headers"] = "*"
+                                print("cont-disp--->", response.get("Content-Disposition"))
+                                return response
+                except Exception as e:
+                    print("Exception ------> ", e)
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
         else:
@@ -398,7 +402,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
-        print("Data ---> ", data)
+        print("Data for writing file ---> ", data)
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -416,11 +420,13 @@ class DocumentToFile(views.APIView):
             ext = ".tmx"
         task_data["output_file_path"] = pre + "(" + task_data["source_language"] + "-" + task_data["target_language"] + ")" + ext
 
+        # print("task-data------>", task_data["output_file_path"])
+
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None
                      }
-        print("params data--->", params_data)
+        # print("params data--->", params_data)
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
@@ -430,6 +436,23 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),
             }
         )
+        
+        if settings.USE_SPACES:
+            session = boto3.session.Session()
+            client = session.client(
+                's3',
+                region_name='ams3',
+                endpoint_url='https://ailaysa.ams3.digitaloceanspaces.com',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            )
+            
+            with open(task_data["output_file_path"], "rb") as f:
+                print("Spaces file path---->", File.get_aws_file_path(task_data["output_file_path"]))
+                obj = client.put_object(
+                    Bucket='media',
+                    Key=File.get_aws_file_path(task_data["output_file_path"]),
+                    Body=f.read())
 
         return res
 

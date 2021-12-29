@@ -11,7 +11,7 @@ from enum import Enum
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.contrib.auth import settings
-import os,time
+import os, re,time
 from ai_auth.models import AiUser,Team,HiredEditors
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
@@ -24,6 +24,8 @@ from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from django.db.models import Q, Sum
 from django.utils.functional import cached_property
 
+from django.db.models.fields.files import FieldFile, FileField
+
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
 from .signals import (create_allocated_dirs, create_project_dir, \
@@ -31,6 +33,7 @@ from .signals import (create_allocated_dirs, create_project_dir, \
     check_job_file_version_has_same_project,)
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager
+from django.db.models.fields import Field
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -77,7 +80,7 @@ class Project(models.Model):
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
-    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)#created_by
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)#if team team_owner
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
         on_delete=models.CASCADE, related_name="proj_mt_engine")
@@ -85,7 +88,7 @@ class Project(models.Model):
     max_hits = models.IntegerField(default=5)
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
     project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
-
+    # created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -241,10 +244,9 @@ class Project(models.Model):
     @property
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
-            print("Doc opened")
+            # print("Doc opened")
             return True
         if len(self.get_tasks) == self.task_project.count() and len(self.get_tasks) != 0:
-            print("Project analysed")
             return True
         else:
             return False
@@ -411,14 +413,30 @@ class FileTypes(models.Model):
 def get_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
             instance.usage_type.type_path)
+    print("Upload file path ----> ", file_path)
     instance.filename = filename
     return os.path.join(file_path, filename)
 
+use_spaces = os.environ.get("USE_SPACES")
+
+# class CustomFileField(models.FileField):
+#     def __init__(self, *args, **kwargs):
+#         if use_spaces == 'True':
+#             print("******  Spaces  *******")
+#             # return super(CustomFileField).path()
+#             # super().__init__(*args, **kwargs)
+#         else:
+#             print("******  Local *******")
+#             return self.url(self)
+#             # super().__init__(*args, **kwargs)
+
 class File(models.Model):
+
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="project_usage_type")
-    file = models.FileField(upload_to=get_file_upload_path, null=False,\
+    file = FileField(upload_to=get_file_upload_path, null=False,\
                 blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
+    # output_file =
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
@@ -451,11 +469,23 @@ class File(models.Model):
 
     @property
     def get_source_file_path(self):
+        if settings.USE_SPACES:
+            return self.file.url
         return self.file.path
 
     @property
     def output_file_path(self):
+        if settings.USE_SPACES:
+            comp = re.compile("media/[^?]*")
+            return "_out".join(os.path.splitext(
+                os.path.join(settings.BASE_DIR, comp.findall\
+                    (self.get_source_file_path)[0])) )
         return '_out'.join( os.path.splitext(self.get_source_file_path))
+
+    def get_aws_file_path(_string):
+        comp = re.compile("/media/.*")
+        return  comp.findall \
+            (_string)[0].replace("/media/", "")
 
     @property
     def get_file_name(self):
@@ -519,7 +549,7 @@ class Task(models.Model):
 
     @property
     def processor_name(self):
-        return  get_processor_name(self.file.file.path).get("processor_name", None)
+        return  get_processor_name(self.file.file.name).get("processor_name", None)
 
     @property
     def get_progress(self):
@@ -537,7 +567,7 @@ class Task(models.Model):
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
 
-def reference_file_upload_path(instance, filename):
+def ref_file_upload_path(instance, filename):
     file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,\
             "references", filename)
     return file_path
@@ -546,7 +576,7 @@ class TaskAssignInfo(models.Model):
     task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
-    reference_file = models.FileField (upload_to=reference_file_upload_path,blank=True, null=True)
+    instruction_file = models.FileField (upload_to=ref_file_upload_path,blank=True, null=True)
     assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)

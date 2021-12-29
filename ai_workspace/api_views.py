@@ -1135,11 +1135,11 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        file=request.FILES.get('reference_file')
+        file=request.FILES.get('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         Receiver = AiUser.objects.get(id = receiver)
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'reference_file':file,'task':request.POST.getlist('task')},context={'request':request})
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task')
@@ -1148,14 +1148,14 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     def update(self, request,pk=None):
         task = request.POST.getlist('task')
-        file = request.FILES.get('reference_file')
+        file = request.FILES.get('instruction_file')
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
         for i in task:
             try:
                 task_assign_info = TaskAssignInfo.objects.get(task_id = i)
                 if file:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'reference_file':file},context={'request':request},partial=True)
+                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
                 else:
                     serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
                 if serializer.is_valid():
@@ -1171,30 +1171,36 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 @permission_classes([IsAuthenticated])
 def get_assign_to_list(request):
     project = request.GET.get('project')
-    job_id = request.GET.get('job')
-    job = Job.objects.get(id = job_id)
+    job_id = request.GET.get('job',None)
     proj = Project.objects.get(id = project)
+    jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
     internalmembers = []
     hirededitors = []
     try:
         internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2)
         for i in internal_team:
-            try:
-                profile = i.internal_member.professional_identity_info.avatar_url
-            except:
-                profile = None
+            try:profile = i.internal_member.professional_identity_info.avatar_url
+            except:profile = None
             internalmembers.append({'name':i.internal_member.fullname,'id':i.internal_member_id,\
                                     'status':i.get_status_display(),'avatar': profile})
     except:
         print("No team")
-    if proj.ai_user.team:
-        external_team = proj.ai_user.team.owner.user_info.filter(role=2)
-        print(external_team)
-        hirededitors = find_vendor(external_team,job)
-    else:
-        external_team = proj.ai_user.user_info.filter(role=2)
-        print(external_team)
-        hirededitors = find_vendor(external_team,job)
+    external_team = proj.ai_user.team.owner.user_info.filter(role=2) if proj.ai_user.team else proj.ai_user.user_info.filter(role=2)
+    hirededitors = find_vendor(external_team,jobs)
+    return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
+
+def find_vendor(team,jobs):
+    externalmembers=[]
+    for j in team:
+        for job in jobs:
+            try:profile = j.hired_editor.professional_identity_info.avatar_url
+            except:profile = None
+            vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
+            if vendor:
+                externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile,\
+                                        'lang_pair':job.source_language.language+'->'+job.target_language.language,\
+                                        'unique_id':j.hired_editor.uid})
+    return externalmembers
     # if proj.team:
     #     internal_team = proj.team.internal_member_team_info.filter(role = 2)
     #     for i in internal_team:
@@ -1207,19 +1213,21 @@ def get_assign_to_list(request):
     #     print(external_team)
     #     HiredEditors = find_vendor(external_team,job)
 
-    return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
+    # return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
 
-def find_vendor(team,job):
-    externalmembers=[]
-    for j in team:
-        try:
-            profile = j.hired_editor.professional_identity_info.avatar_url
-        except:
-            profile = None
-        vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
-        if vendor:
-            externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
-    return externalmembers
+# def find_vendor(team,job):
+#     externalmembers=[]
+#     for j in team:
+#         try:
+#             profile = j.hired_editor.professional_identity_info.avatar_url
+#         except:
+#             profile = None
+#         vendor = j.hired_editor.vendor_lang_pair.filter(Q(source_lang_id=job.source_language.id)&Q(target_lang_id=job.target_language.id)&Q(deleted_at=None))
+#         if vendor:
+#             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
+#     return externalmembers
+
+
 
 
 class ProjectListView(viewsets.ModelViewSet):
