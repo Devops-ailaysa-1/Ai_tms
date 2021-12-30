@@ -50,9 +50,10 @@ class VendorCATsoftwareSerializer(serializers.ModelSerializer):
         fields=('software',)
 
 class VendorSubjectFieldSerializer(serializers.ModelSerializer):
+    subject_name = serializers.ReadOnlyField(source='subject.name')
     class Meta:
         model=VendorSubjectFields
-        fields=('subject',)
+        fields=('subject','subject_name')
 
 class VendorMembershipSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,9 +66,10 @@ class VendorMtpeEngineSerializer(serializers.ModelSerializer):
         fields=('mtpe_engines',)
 
 class VendorContentTypeSerializer(serializers.ModelSerializer):
+    contenttype_name = serializers.ReadOnlyField(source='contenttype.name')
     class Meta:
         model=VendorContentTypes
-        fields=('contenttype',)
+        fields=('contenttype','contenttype_name')
 
 class TranslationSampleSerializer(serializers.ModelSerializer):
     class Meta:

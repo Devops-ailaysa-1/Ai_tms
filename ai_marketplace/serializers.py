@@ -11,8 +11,8 @@ import json
 from rest_framework.response import Response
 from dj_rest_auth.serializers import UserDetailsSerializer
 from ai_auth.serializers import ProfessionalidentitySerializer
-from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer
-from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo
+from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer
+from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
 
 class AvailableJobSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,23 +93,49 @@ class ThreadSerializer(serializers.ModelSerializer):
         return super().run_validation(data)
 
 
-class VendorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VendorsInfo
-        fields = ('type','currency','proz_link','native_lang','year_of_experience',)
+# class VendorSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = VendorsInfo
+#         fields = ('type','currency','native_lang','year_of_experience',)
 
-class OfficialInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AiUserProfile
-        fields = ('organisation_name',)
+# class OfficialInfoSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = AiUserProfile
+#         fields = ('organisation_name',)
+
+
+# class VendorSubjectSerializer(serializers.ModelSerializer):
+#     subject = serializers.ReadOnlyField(source='subject.name')
+#     class Meta:
+#         model=VendorSubjectFields
+#         fields=('subject',)
+
+
 
 class GetVendorDetailSerializer(serializers.Serializer):
     fullname = serializers.CharField(read_only=True)
-    ai_profile_info = OfficialInfoSerializer(read_only=True,required=False)
+    organisation_name = serializers.ReadOnlyField(source='ai_profile_info.organisation_name')
+    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
+    country = serializers.ReadOnlyField(source = 'country.sortname')
+    native_lang = serializers.ReadOnlyField(source = 'vendor_info.native_lang.language')
+    year_of_experience = serializers.ReadOnlyField(source = 'vendor_info.year_of_experience')
+    professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
     vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True)
-    vendor_info = VendorSerializer(read_only=True)
-    professional_identity_info = ProfessionalidentitySerializer(read_only=True)
+    vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
+
+    def get_vendor_lang_pair(self, obj):
+        request = self.context['request']
+        job_id= request.query_params.get('job')
+        source_lang = request.query_params.get('source_lang')
+        target_lang = request.query_params.get('target_lang')
+        if job_id:
+            source_lang=Job.objects.get(id=job_id).source_language_id
+            target_lang=Job.objects.get(id=job_id).target_language_id
+        return VendorLanguagePairCloneSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
+
+
 
 
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
