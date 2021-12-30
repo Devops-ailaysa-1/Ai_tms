@@ -538,7 +538,7 @@ class VendorFilterNew(django_filters.FilterSet):
     year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
     fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
     email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
-    country = django_filters.CharFilter(field_name='country__name',lookup_expr='icontains')
+    country = django_filters.CharFilter(field_name='country_id',lookup_expr='in')
     class Meta:
         model = AiUser
         fields = ('fullname', 'email','year_of_experience','country')

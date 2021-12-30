@@ -256,6 +256,8 @@ CLIENT_BASE_URL = os.getenv("CLIENT_BASE_URL")
 
 SIGNUP_CONFIRM_URL = os.getenv("SIGNUP_CONFIRM_URL")
 
+TRANSEDITOR_BASE_URL = os.getenv("TRANSEDITOR_BASE_URL")
+
 EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
 
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}

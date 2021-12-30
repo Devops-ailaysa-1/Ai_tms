@@ -172,9 +172,11 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
         return super().run_validation(data)
 
 class VendorInfoListSerializer(serializers.ModelSerializer):
+    legal_category = serializers.ReadOnlyField(source='type.name')
+    currency = serializers.ReadOnlyField(source='currency.currency_code')
     class Meta:
         model = VendorsInfo
-        fields = ('type','currency')
+        fields = ('legal_category','currency')
 
 
 class VendorServiceSerializer(serializers.ModelSerializer):
@@ -186,13 +188,13 @@ class VendorServiceSerializer(serializers.ModelSerializer):
 
 class GetVendorListSerializer(serializers.ModelSerializer):
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
-    # vendor_lang_pair = VendorServiceSerializer(many=True,read_only = True)
-    vendor_info = VendorInfoListSerializer(read_only=True)
-    # professional_identity_info = ProfessionalidentitySerializer(read_only=True)
+    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
+    country = serializers.ReadOnlyField(source = 'country.sortname')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','email','country','vendor_info','professional_identity','vendor_lang_pair',)
+        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair',)
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']

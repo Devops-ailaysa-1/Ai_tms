@@ -1375,8 +1375,8 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
     @integrity_error
     def create(self,request):
-        if request.user.team:user = request.user.team.owner
-        else:user = request.user
+        if request.user.team: user = request.user.team.owner
+        else: user = request.user
         template = 'External_member_pro_invite_email.html'
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role',2)
@@ -1394,7 +1394,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
                 ext = HiredEditors.objects.get(id = serializer.data.get('id'))
                 uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
                 token = invite_accept_token.make_token(ext)
-                link = join(settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
+                link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
                 # template = 'External_member_invite_email.html'
                 subject='Ailaysa MarketPlace Invite'
@@ -1422,7 +1422,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def invite_accept(request):#,uid,token):
     uid = request.POST.get('uid')
     token = request.POST.get('token')
