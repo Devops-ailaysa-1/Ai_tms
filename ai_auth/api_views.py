@@ -8,7 +8,7 @@ from os.path import join
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from stripe.api_resources import subscription
-from ai_auth.access_policies import MemberCreationAccess
+from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,TeamAccess
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
@@ -809,7 +809,11 @@ def get_user_currency(request):
 
 class UserSubscriptionCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    def create(self,request):
+    def create(self,request,price_id=None):
+        livemode = settings.STRIPE_LIVE_MODE
+        #price_id = self.kwargs.get('price_id')
+        price_id =request.query_params.get('price_id', None)
+        print("price---id",price_id)
         user=request.user
         is_active = is_active_subscription(user=request.user)
         if is_active[0] == False:
@@ -838,16 +842,25 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except (TempPricingPreference.DoesNotExist,ValueError):
                 #free=CreditPack.objects.get(name='Free')
-                pro=CreditPack.objects.get(name='Pro')
+
+                pro = CreditPack.objects.get(name='Pro')
+
                 if user.country.id == 101 :
                     currency = 'inr'
                 else:
                     currency ='usd'
-                price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month').last()
+                
+                if price_id:
+                    price = Plan.objects.get(id=price_id)
+                    if (price.currency != currency) or (price.interval != 'month'):
+                        price = Plan.objects.get(product=price.product,interval='month',currency=currency,livemode=livemode)
+
+                else:
+                    price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
                 response=subscribe_trial(price,customer)
                 print(response)
                 #customer.subscribe(price=price)
-                return Response({'msg':'User Successfully created','subscription':'Pro_Trial'}, status=201)
+                return Response({'msg':'User Successfully created','subscription':price.product.name+"_Trial"}, status=201)
         elif is_active == (True,True):
             return Response({'msg':'User already Registerd'}, status=400)
 
