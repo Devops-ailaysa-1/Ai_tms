@@ -561,8 +561,8 @@ class GetVendorListViewNew(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        internal = AiUser.objects.filter(is_internal_member=True)
-        internal_list =[i.id for i in internal]
+        # internal = AiUser.objects.filter(is_internal_member=True)
+        # internal_list =[i.id for i in internal]
         # existing_users_id = [i.external_member_id for i in self.request.user.team_info.all()]
         # print(existing_users_id)
         # # self.validate()
@@ -578,7 +578,8 @@ class GetVendorListViewNew(generics.ListAPIView):
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-                    .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None)).distinct().exclude(id = user.id).exclude(id__in=internal_list)
+                    .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
+                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
         if max_price and min_price and count_unit:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):
