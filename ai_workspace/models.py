@@ -80,7 +80,7 @@ class Project(models.Model):
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
-    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)#if team team_owner
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)# Main account owner,if team team_owner
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
         on_delete=models.CASCADE, related_name="proj_mt_engine")

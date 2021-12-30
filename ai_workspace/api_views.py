@@ -350,8 +350,8 @@ class Files_Jobs_List(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self, project_id):
-        project = get_object_or_404(Project.objects.all(), id=project_id,
-                        ai_user=self.request.user)
+        project = get_object_or_404(Project.objects.all(), id=project_id)
+                        # ai_user=self.request.user)
         project_name = project.project_name
         jobs = project.project_jobs_set.all()
         files = project.project_files_set.filter(usage_type__use_type="source").all()
@@ -1186,6 +1186,7 @@ def get_assign_to_list(request):
     except:
         print("No team")
     external_team = proj.ai_user.team.owner.user_info.filter(role=2) if proj.ai_user.team else proj.ai_user.user_info.filter(role=2)
+    print(external_team)
     hirededitors = find_vendor(external_team,jobs)
     return JsonResponse({'internal_members':internalmembers,'Hired_Editors':hirededitors})
 

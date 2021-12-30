@@ -1364,12 +1364,10 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     search_fields = ['hired_editor__fullname']
 
     def get_queryset(self):
-        # team = self.request.query_params.get('team')
-        # if team:
-        #     team_obj = Team.objects.get(name=team)
-        #     queryset=ExternalMember.objects.filter(user= team_obj.owner)
-        # else:
-        queryset =HiredEditors.objects.filter(Q(user_id=self.request.user.id))
+        if self.request.user.team:
+            queryset =HiredEditors.objects.filter(Q(user_id=self.request.user.team.owner.id))
+        else:
+            queryset =HiredEditors.objects.filter(Q(user_id=self.request.user.id))
         return queryset
 
     def filter_queryset(self, queryset):
@@ -1390,41 +1388,32 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
     @integrity_error
     def create(self,request):
-        # team = request.POST.get('team')
-        # if team == None:
-        # team = Team.objects.get(owner_id=request.user.id).id
-        user = request.user.fullname
+        if request.user.team: user = request.user.team.owner
+        else: user = request.user
         template = 'External_member_pro_invite_email.html'
-        # else:
-        #     template = 'External_member_business_invite_email.html'
-        #     team_name = Team.objects.get(id=team).name
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role',2)
         vendor = AiUser.objects.get(uid=uid)
-        existing = HiredEditors.objects.filter(user=request.user,hired_editor=vendor)
+        existing = HiredEditors.objects.filter(user=user,hired_editor=vendor)
         if existing:
             return JsonResponse({"msg":"editor already existed in your hired_editors list.check his availability in chat and assign"},safe = False)
         else:
-        # team_name = Team.objects.get(id=team).name
             role_name = Role.objects.get(id=role).name
             email = vendor.email
-            serializer = HiredEditorSerializer(data={'user':request.user.id,'role':role,'hired_editor':vendor.id,'status':1})
+            serializer = HiredEditorSerializer(data={'user':user.id,'role':role,'hired_editor':vendor.id,'status':1,'added_by':request.user.id})
             if serializer.is_valid():
                 serializer.save()
                 hired_editor_id = serializer.data.get('id')
                 ext = HiredEditors.objects.get(id = serializer.data.get('id'))
-                # print("TTTTTTTTTTTTTTTTTTTTTTT-------------------->",ext)
                 uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
                 token = invite_accept_token.make_token(ext)
-                link = join(settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
+                link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
                 # template = 'External_member_invite_email.html'
                 subject='Ailaysa MarketPlace Invite'
-                context = {'name':vendor.fullname,'team':user,'role':role_name,'link':link}
+                context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
                 send_email_user(subject,template,context,email)
                 return JsonResponse({"msg":"email sent successfully"},safe = False)
-        # # link = request.build_absolute_uri('/team/external_member/accept/'+urlsafe_base64_encode(force_bytes(vendor.id))+'/'+urlsafe_base64_encode(force_bytes(team.id))+'/'+invite_accept_token.make_token(user)+'/')
-        # # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(vendor.id)),'teamid':urlsafe_base64_encode(force_bytes(team)),'roleid':urlsafe_base64_encode(force_bytes(role)),'token':invite_accept_token.make_token(vendor)}))
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, pk):
@@ -1446,7 +1435,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def invite_accept(request):#,uid,token):
     uid = request.POST.get('uid')
     token = request.POST.get('token')
