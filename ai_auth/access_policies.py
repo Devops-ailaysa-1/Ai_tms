@@ -8,7 +8,7 @@ from ai_workspace.models import TaskAssignInfo
 
 class InternalTeamAccess(AccessPolicy):
     statements = [
-        {"action": ["list","create","update","delete"], 
+        {"action": ["*"], 
         "principal": ["*"],  
         "effect": "allow",
         #"condition":["is_admin"]
