@@ -56,28 +56,28 @@ from ai_workspace.serializers import TaskSerializer
 @api_view(['GET','POST',])
 @permission_classes([IsAuthenticated])
 def get_vendor_detail(request):
-    out=[]
-    job_id=request.GET.get('job_id')
-    source_lang=request.GET.get('source_lang')
-    target_lang=request.GET.get('target_lang')
-    if job_id:
-        source_lang=Job.objects.get(id=job_id).source_language
-        target_lang=Job.objects.get(id=job_id).target_language
     uid=request.POST.get('vendor_id')
-    print(uid)
-    try:
-        user=AiUser.objects.get(uid=uid)
-        user_id = user.id
-        lang = VendorLanguagePair.objects.get((Q(source_lang_id__language=source_lang) & Q(target_lang_id__language=target_lang) & Q(user_id=user_id)))
-        # serializer1= VendorServiceSerializer(lang)
-        # out.append(serializer1.data)
-        serializer2= VendorLanguagePairCloneSerializer(lang)
-        out.append(serializer2.data)
-        serializer = GetVendorDetailSerializer(user)
-        out.append(serializer.data)
-    except:
-        out = "Matching details does not exist"
-    return Response({"out":out})
+    user=AiUser.objects.get(uid=uid)
+    serializer = GetVendorDetailSerializer(user,context={'request':request})
+    return Response(serializer.data)
+    # job_id=request.GET.get('job_id')
+    # source_lang=request.GET.get('source_lang')
+    # target_lang=request.GET.get('target_lang')
+    # uid=request.POST.get('vendor_id')
+    # print(uid)
+    # try:
+    #     user=AiUser.objects.get(uid=uid)
+    #     user_id = user.id
+    #     lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang) & Q(target_lang_id=target_lang) & Q(user_id=user_id)))
+    #     # serializer1= VendorServiceSerializer(lang)
+    #     # out.append(serializer1.data)
+    #     serializer2= VendorLanguagePairCloneSerializer(lang)
+    #     out.append(serializer2.data)
+    #     serializer = GetVendorDetailSerializer(user,context={'request':request})
+    #     out.append(serializer.data)
+    # except:
+    #     out = "Matching details does not exist"
+    # return Response({"out":out})
 
 
 
