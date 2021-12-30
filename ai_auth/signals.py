@@ -176,11 +176,11 @@ def password_changed_handler(request, user,instance, **kwargs):
 
     )
 
-def add_internal_member_group(user) -> bool:
-    # add a user into member group
-    internal_group = Group.objects.get_or_create(name = 'internal_members')
-    internal_group.user_set.add(user)
-    return True
+# def add_internal_member_group(user) -> bool:
+#     # add a user into member group
+#     internal_group = Group.objects.get_or_create(name = 'internal_members')
+#     internal_group.user_set.add(user)
+#     return True
 
 def update_internal_member_status(sender, instance, *args, **kwargs):
     if instance.is_internal_member:
@@ -188,7 +188,7 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
             obj = auth_model.InternalMember.objects.get(internal_member = instance)
             obj.status = 2
             obj.save()
-            add_internal_member_group(user=instance.internal_member)
+            # add_internal_member_group(user=instance.internal_member)
             print("status updated")
 
 
