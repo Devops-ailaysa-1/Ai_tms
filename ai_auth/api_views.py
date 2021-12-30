@@ -852,7 +852,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                     currency = 'inr'
                 else:
                     currency ='usd'
-                
+
                 if price_id:
                     price = Plan.objects.get(id=price_id)
                     if (price.currency != currency) or (price.interval != 'month'):
@@ -1266,16 +1266,16 @@ invite_accept_token = TokenGenerator()
 class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
     page_size = 10
-    # filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    ordering = ('id')
     search_fields = ['internal_member__fullname']
 
     def get_queryset(self):
         team = self.request.query_params.get('team')
-        print(team)
         if team:
             queryset=InternalMember.objects.filter(team__name = team)
         else:
-            queryset =InternalMember.objects.filter(team__owner_id=self.request.user.id)
+            queryset =InternalMember.objects.filter(team=self.request.user.team)
         return queryset
 
     def filter_queryset(self, queryset):
