@@ -348,54 +348,6 @@ def get_available_job_details(request):
     return JsonResponse({'out':out},safe=False)
 
 
-
-class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
-    pass
-
-class CharInFilter(django_filters.BaseInFilter, django_filters.CharFilter):
-    pass
-
-# class VendorFilter(django_filters.FilterSet):
-#     content_type = NumberInFilter(field_name="vendor_contentype__contenttype_id",lookup_expr='in')
-#     subject = NumberInFilter(field_name='vendor_subject__subject_id',lookup_expr='in')
-#     year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
-#     fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
-#     class Meta:
-#         model = AiUser
-#         fields = ('fullname', 'email', 'content_type','subject','year_of_experience',)
-
-class VendorFilter(django_filters.FilterSet):
-    source_lang = django_filters.CharFilter(field_name="vendor_lang_pair__source_lang__language")#,lookup_expr='in')
-    target_lang = django_filters.CharFilter(field_name="vendor_lang_pair__target_lang__language")#,lookup_expr='in')
-    content_type = CharInFilter(field_name="vendor_contentype__contenttype_id__name",lookup_expr='in')
-    subject = CharInFilter(field_name='vendor_subject__subject_id__name',lookup_expr='in')
-    year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
-    fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
-    class Meta:
-        model = AiUser
-        fields = ('fullname', 'email', 'content_type','subject','year_of_experience','source_lang','target_lang',)
-
-
-class GetVendorListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = GetVendorListSerializer
-    filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
-    filterset_class = VendorFilter
-    ordering_fields = ('vendor_contentype__contenttype_id', 'vendor_subject__subject_id')
-    page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
-
-    def get_queryset(self):
-        # self.validate()
-        job_id= self.request.query_params.get('job')
-        source_lang_id=self.request.query_params.get('source_lang')
-        target_lang_id=self.request.query_params.get('target_lang')
-        if job_id:
-            source_lang_id=Job.objects.get(id=job_id).source_language_id
-            target_lang_id=Job.objects.get(id=job_id).target_language_id
-        queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-                    .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None)).distinct()
-        return queryset
-
 def notification_read(thread_id):
     list = Notification.objects.filter(data={'thread_id':thread_id})
     list.mark_all_as_read()
@@ -534,16 +486,21 @@ def general_notifications(request):
     return JsonResponse({'notifications':notification_details})
 
 
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
+class CharInFilter(django_filters.BaseInFilter, django_filters.CharFilter):
+    pass
+
+
 class VendorFilterNew(django_filters.FilterSet):
-    year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
+    year_of_experience =django_filters.NumberFilter(field_name='vendor_info__year_of_experience',lookup_expr='gte')
     fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
     email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
-    country = NumberInFilter(field_name='country_id')
+    country = django_filters.NumberFilter(field_name='country_id')
     class Meta:
         model = AiUser
         fields = ('fullname', 'email','year_of_experience','country')
-
-
 
 
 class GetVendorListViewNew(generics.ListAPIView):
@@ -560,12 +517,8 @@ class GetVendorListViewNew(generics.ListAPIView):
 
 
     def get_queryset(self):
+         # self.validate()
         user = self.request.user
-        # internal = AiUser.objects.filter(is_internal_member=True)
-        # internal_list =[i.id for i in internal]
-        # existing_users_id = [i.external_member_id for i in self.request.user.team_info.all()]
-        # print(existing_users_id)
-        # # self.validate()
         job_id= self.request.query_params.get('job')
         min_price =self.request.query_params.get('min_price')
         max_price =self.request.query_params.get('max_price')
