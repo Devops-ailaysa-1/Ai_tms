@@ -12,6 +12,7 @@ import stripe
 from allauth.account.signals import email_confirmed, password_changed
 from ai_auth import forms as auth_forms
 from django.contrib.sites.shortcuts import get_current_site
+from django.contrib.auth.models import Group
 
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
@@ -175,11 +176,23 @@ def password_changed_handler(request, user,instance, **kwargs):
 
     )
 
+def add_internal_member_group(user) -> bool:
+    # add a user into member group
+    internal_group = Group.objects.get_or_create(name = 'internal_members')
+    internal_group.user_set.add(user)
+    return True
 
 def update_internal_member_status(sender, instance, *args, **kwargs):
-	if instance.is_internal_member:
-		if instance.last_login:
-			obj = auth_model.InternalMember.objects.get(internal_member = instance)
-			obj.status = 2
-			obj.save()
-			print("status updated")
+    if instance.is_internal_member:
+        if instance.last_login:           
+            obj = auth_model.InternalMember.objects.get(internal_member = instance)
+            obj.status = 2
+            obj.save()
+            add_internal_member_group(user=instance.internal_member)
+            print("status updated")
+
+
+
+# def updated_user_taxid(sender, instance, *args, **kwargs):
+
+
