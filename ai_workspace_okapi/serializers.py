@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize, Comment
-import json
+import json, copy
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
 from ai_workspace.models import  Project,Job
+from django.db.models import Q
 
 client = translate.Client()
 
@@ -151,25 +152,57 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         }
 
     def to_internal_value(self, data):
-        # print(""data)
         data["text_unit_ser"] = [
             {key:value} for key, value in data.pop("text", {}).items()
         ]
         data["created_by"] = 8
-        # data["total_word_count"] = data["total_char_count"] = 0; #data["total_segment_count"] = 0
         return super().to_internal_value(data=data)
 
 
     def create(self, validated_data, **kwargs):
-        text_unit_ser_data  = validated_data.pop("text_unit_ser", [])  
+        text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
+        text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
+
         document = Document.objects.create(**validated_data)
+
+        # for text_unit in text_unit_ser_data:
+        #     segs = text_unit.pop("segment_ser", [])
+        #     text_unit = TextUnit.objects.create(**text_unit, document=document)
+        #     # print("text unit data--->", text_unit)
+        #     for seg  in segs:
+        #         # print("seg data---->", seg)
+        #         seg = Segment.objects.create(**seg, text_unit=text_unit)
+
+        text_unit_instances = []
+        segment_instances = []
+
         for text_unit in text_unit_ser_data:
-            segs = text_unit.pop("segment_ser", [])
-            text_unit = TextUnit.objects.create(**text_unit, document=document)
-            # print("text unit data--->", text_unit)
-            for seg  in segs:
-                # print("seg data---->", seg)
-                seg = Segment.objects.create(**seg, text_unit=text_unit)
+            text_unit.pop("segment_ser", [])
+            text_unit_instances.append(TextUnit(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"], document=document))
+
+        TextUnit.objects.bulk_create(text_unit_instances)
+        print("***** Textunits bulk created ******")
+
+        for text_unit2 in text_unit_ser_data2:
+            segs = text_unit2.pop("segment_ser", [])
+            text_unit_instance = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit2["okapi_ref_translation_unit_id"]) & \
+                                        Q(document_id=document.id))
+
+            for seg in segs:
+                segment_instances.append(Segment(
+                    source = seg["source"],
+                    target = None,
+                    coded_source = seg["coded_source"],
+                    coded_brace_pattern = seg["coded_brace_pattern"],
+                    coded_ids_sequence = seg["coded_ids_sequence"],
+                    temp_target = None,
+                    text_unit = text_unit_instance,
+                    okapi_ref_segment_id = text_unit2["okapi_ref_translation_unit_id"]
+                    ))
+
+        Segment.objects.bulk_create(segment_instances)
+        print("********** Created segments **********")
+
         return document
 
 class DocumentSerializerV2(DocumentSerializer):
@@ -179,13 +212,9 @@ class DocumentSerializerV2(DocumentSerializer):
     def to_internal_value(self, data):
         job_id=data["job"]
         job = Job.objects.get(id=job_id)
-        print(job)
         data["text_unit_ser"] = [
             {key:value} for key, value in data.pop("text", {}).items()
         ]
-        # data["created_by"] = (self.context.get("request").user.id \
-        #                       if self.context.get("request", None)\
-        #                       else None)
         data["created_by"] = (job.project.ai_user_id)
         return super(DocumentSerializer, self).to_internal_value(data=data)
 
