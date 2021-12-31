@@ -165,43 +165,41 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
         document = Document.objects.create(**validated_data)
 
-        # for text_unit in text_unit_ser_data:
-        #     segs = text_unit.pop("segment_ser", [])
-        #     text_unit = TextUnit.objects.create(**text_unit, document=document)
-        #     # print("text unit data--->", text_unit)
-        #     for seg  in segs:
-        #         # print("seg data---->", seg)
-        #         seg = Segment.objects.create(**seg, text_unit=text_unit)
-
-        text_unit_instances = []
-        segment_instances = []
-
         for text_unit in text_unit_ser_data:
-            text_unit.pop("segment_ser", [])
-            text_unit_instances.append(TextUnit(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"], document=document))
+            segs = text_unit.pop("segment_ser", [])
+            text_unit = TextUnit.objects.create(**text_unit, document=document)
+            for seg  in segs:
+                seg = Segment.objects.create(**seg, text_unit=text_unit)
 
-        TextUnit.objects.bulk_create(text_unit_instances)
-        print("***** Textunits bulk created ******")
+        # text_unit_instances = []
+        # segment_instances = []
 
-        for text_unit2 in text_unit_ser_data2:
-            segs = text_unit2.pop("segment_ser", [])
-            text_unit_instance = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit2["okapi_ref_translation_unit_id"]) & \
-                                        Q(document_id=document.id))
+        # for text_unit in text_unit_ser_data:
+        #     text_unit.pop("segment_ser", [])
+        #     text_unit_instances.append(TextUnit(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"], document=document))
 
-            for seg in segs:
-                segment_instances.append(Segment(
-                    source = seg["source"],
-                    target = None,
-                    coded_source = seg["coded_source"],
-                    coded_brace_pattern = seg["coded_brace_pattern"],
-                    coded_ids_sequence = seg["coded_ids_sequence"],
-                    temp_target = None,
-                    text_unit = text_unit_instance,
-                    okapi_ref_segment_id = text_unit2["okapi_ref_translation_unit_id"]
-                    ))
+        # TextUnit.objects.bulk_create(text_unit_instances)
+        # print("***** Textunits bulk created ******")
 
-        Segment.objects.bulk_create(segment_instances)
-        print("********** Created segments **********")
+        # for text_unit2 in text_unit_ser_data2:
+        #     segs = text_unit2.pop("segment_ser", [])
+        #     text_unit_instance = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit2["okapi_ref_translation_unit_id"]) & \
+        #                                 Q(document_id=document.id))
+
+        #     for seg in segs:
+        #         segment_instances.append(Segment(
+        #             source = seg["source"],
+        #             target = "",
+        #             coded_source = seg["coded_source"],
+        #             coded_brace_pattern = seg["coded_brace_pattern"],
+        #             coded_ids_sequence = seg["coded_ids_sequence"],
+        #             temp_target = "",
+        #             text_unit = text_unit_instance,
+        #             okapi_ref_segment_id = text_unit2["okapi_ref_translation_unit_id"]
+        #             ))
+
+        # Segment.objects.bulk_create(segment_instances)
+        # print("********** Created segments **********")
 
         return document
 
