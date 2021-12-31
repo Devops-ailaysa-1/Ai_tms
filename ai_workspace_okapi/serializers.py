@@ -6,6 +6,9 @@ from ai_workspace.serializers import PentmWriteSerializer
 from ai_workspace.models import  Project,Job
 from django.db.models import Q
 from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids
+from contextlib import closing
+from django.db import connection
+from django.utils import timezone
 
 client = translate.Client()
 
@@ -165,51 +168,90 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
         document = Document.objects.create(**validated_data)
-
+        
+        # USING DJANGO SAVE() METHOD
         # for text_unit in text_unit_ser_data:
         #     segs = text_unit.pop("segment_ser", [])
         #     text_unit = TextUnit.objects.create(**text_unit, document=document)
         #     for seg  in segs:
         #         seg = Segment.objects.create(**seg, text_unit=text_unit)
 
-        text_unit_instances = []
-        segment_instances = []
+        # USING BULK CREATE METHOD
+        # text_unit_instances = []
+        # segment_instances = []
 
+        # for text_unit in text_unit_ser_data:
+        #     text_unit.pop("segment_ser", [])
+        #     text_unit_instances.append(TextUnit(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"], document=document))
+
+        # TextUnit.objects.bulk_create(text_unit_instances)
+        # print("***** Textunits bulk created ******")
+
+        # for text_unit2 in text_unit_ser_data2:
+        #     segs = text_unit2.pop("segment_ser", [])
+        #     text_unit_instance = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit2["okapi_ref_translation_unit_id"]) & \
+        #                                 Q(document_id=document.id))
+
+        #     for seg in segs:
+                
+        #         tagged_source, _ , target_tags = (
+        #                 set_ref_tags_to_runs(seg["coded_source"], 
+        #                 get_runs_and_ref_ids(seg["coded_brace_pattern"],
+        #                 json.loads(seg["coded_ids_sequence"])))
+        #             )
+
+        #         segment_instances.append(Segment(
+        #             source = seg["source"],
+        #             target = "",
+        #             coded_source = seg["coded_source"],
+        #             coded_brace_pattern = seg["coded_brace_pattern"],
+        #             coded_ids_sequence = seg["coded_ids_sequence"],
+        #             temp_target = "",
+        #             text_unit = text_unit_instance,
+        #             okapi_ref_segment_id = text_unit2["okapi_ref_translation_unit_id"],
+        #             tagged_source = tagged_source,
+        #             target_tags = target_tags,
+        #             ))
+
+        # Segment.objects.bulk_create(segment_instances)
+        # print("********** Created segments **********")
+
+        # USING SQL BATCH INSERT
+        text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
+        ', '.join(['(%s, %s)'] * len(text_unit_ser_data)),
+        )
+        tu_params = []        
         for text_unit in text_unit_ser_data:
-            text_unit.pop("segment_ser", [])
-            text_unit_instances.append(TextUnit(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"], document=document))
+            tu_params.extend([text_unit["okapi_ref_translation_unit_id"], document.id])
 
-        TextUnit.objects.bulk_create(text_unit_instances)
-        print("***** Textunits bulk created ******")
-
-        for text_unit2 in text_unit_ser_data2:
-            segs = text_unit2.pop("segment_ser", [])
-            text_unit_instance = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit2["okapi_ref_translation_unit_id"]) & \
-                                        Q(document_id=document.id))
+        with closing(connection.cursor()) as cursor:
+            cursor.execute(text_unit_sql, tu_params)        
+        
+        seg_params = []
+        seg_count = 0
+        for text_unit in text_unit_ser_data:
+            text_unit_id = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
+                                            Q(document_id=document.id)).id
+            segs = text_unit.pop("segment_ser", [])
 
             for seg in segs:
-                
+                seg_count += 1                
                 tagged_source, _ , target_tags = (
                         set_ref_tags_to_runs(seg["coded_source"], 
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
 
-                segment_instances.append(Segment(
-                    source = seg["source"],
-                    target = "",
-                    coded_source = seg["coded_source"],
-                    coded_brace_pattern = seg["coded_brace_pattern"],
-                    coded_ids_sequence = seg["coded_ids_sequence"],
-                    temp_target = "",
-                    text_unit = text_unit_instance,
-                    okapi_ref_segment_id = text_unit2["okapi_ref_translation_unit_id"],
-                    tagged_source = tagged_source,
-                    target_tags = target_tags,
-                    ))
+                seg_params.extend([str(seg["source"]), str(seg["target"]), "", str(seg["coded_source"]), str(tagged_source), \
+                    str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
+                        timezone.now(), text_unit_id])
+        
+        segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
+                       coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id) VALUES {}'.format(
+                           ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
 
-        Segment.objects.bulk_create(segment_instances)
-        print("********** Created segments **********")
+        with closing(connection.cursor()) as cursor:
+            cursor.execute(segment_sql, seg_params)
 
         return document
 
@@ -348,53 +390,3 @@ class PentmUpdateSerializer(serializers.ModelSerializer):
 
     def get_pentm_update_params(self, object):
         return json.dumps(PentmUpdateParamSerializer(object).data)
-
-
-# //////////////////////////////////// References  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-
-
-# DocumentSerializer(<Document: Document object (19)>):
-#     text_unit_ser = TextUnitSerializer(many=True, source='document_text_unit_set'):
-#         okapi_ref_translation_unit_id = CharField(style={'base_template': 'textarea.html'})
-#         document = PrimaryKeyRelatedField(queryset=Document.objects.all(), required=False, write_only=True)
-#         segment_ser = SegmentSerializer(many=True, write_only=True):
-#             source = CharField(style={'base_template': 'textarea.html'}, write_only=True)
-#             target = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'})
-#             coded_source = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
-#             coded_brace_pattern = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
-#             coded_ids_sequence = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
-#             tagged_source = CharField(read_only=True, style={'base_template': 'textarea.html'})
-#             target_tags = CharField(read_only=True, style={'base_template': 'textarea.html'})
-#             segment_id = IntegerField(read_only=True, source='id')
-#     file = PrimaryKeyRelatedField(queryset=File.objects.all(), write_only=True)
-#     job = PrimaryKeyRelatedField(queryset=Job.objects.all(), write_only=True)
-#     total_word_count = IntegerField()
-#     total_char_count = IntegerField()
-#     total_segment_count = IntegerField()
-#     created_by = PrimaryKeyRelatedField(allow_null=True, queryset=AiUser.objects.all(), required=False, write_only=True)
-#     id = IntegerField(label='ID', read_only=True)
-
-
-# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ ////////////////////////////////////////////////////////
-#
-# DocumentSerializer(<Document: Document object (19)>):
-#     text_unit_ser = TextUnitSerializer(many=True, source='document_text_unit_set', write_only=True):
-#         okapi_ref_translation_unit_id = CharField(style={'base_template': 'textarea.html'})
-#         document = PrimaryKeyRelatedField(queryset=Document.objects.all(), required=False, write_only=True)
-#         segment_ser = SegmentSerializer(many=True, write_only=True):
-#             source = CharField(style={'base_template': 'textarea.html'}, write_only=True)
-#             target = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'})
-#             coded_source = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
-#             coded_brace_pattern = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
-#             coded_ids_sequence = CharField(allow_blank=True, allow_null=True, required=False, style={'base_template': 'textarea.html'}, write_only=True)
-#             tagged_source = CharField(read_only=True, style={'base_template': 'textarea.html'})
-#             target_tags = CharField(read_only=True, style={'base_template': 'textarea.html'})
-#             segment_id = IntegerField(read_only=True, source='id')
-#     file = PrimaryKeyRelatedField(queryset=File.objects.all(), write_only=True)
-#     job = PrimaryKeyRelatedField(queryset=Job.objects.all(), write_only=True)
-#     total_word_count = IntegerField()
-#     total_char_count = IntegerField()
-#     total_segment_count = IntegerField()
-#     created_by = PrimaryKeyRelatedField(allow_null=True, queryset=AiUser.objects.all(), required=False, write_only=True)
-#     id = IntegerField(label='ID', read_only=True)
