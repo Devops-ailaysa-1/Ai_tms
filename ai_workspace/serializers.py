@@ -490,11 +490,13 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
     assigned_by_name = serializers.ReadOnlyField(source='assigned_by.fullname')
+    job = serializers.ReadOnlyField(source='task.job.id')
+    project = serializers.ReadOnlyField(source='task.job.project.id')
     # assigned_to_name = serializers.ReadOnlyField(source='task.assign_to.fullname')
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_file','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
+        fields = ('id','instruction','instruction_file','job','project','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
         extra_kwargs = {
             'assigned_by':{'write_only':True},
              }
