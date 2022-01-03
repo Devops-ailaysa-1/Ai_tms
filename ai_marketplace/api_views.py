@@ -1,5 +1,7 @@
 from rest_framework import filters,generics
+import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter as SF, OrderingFilter as OF
 from django.shortcuts import render
 from ai_auth.models import AiUser
 from ai_staff.models import Languages,ContentTypes
@@ -348,23 +350,34 @@ def get_available_job_details(request):
     return JsonResponse({'out':out},safe=False)
 
 
-def notification_read(thread_id):
-    list = Notification.objects.filter(data={'thread_id':thread_id})
+def notification_read(thread_id,user):
+    list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
+    print(list)
     list.mark_all_as_read()
 
-class ChatMessageListView(APIView):
+class ChatMessageListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    def get(self, request,thread_id):
-        try:
-            queryset = ChatMessage.objects.filter(thread_id = thread_id).all()
-            print(queryset)
-            serializer = ChatMessageSerializer(queryset,many=True)
-            notification_read(thread_id)
+    serializer_class = ChatMessageSerializer
+    filter_backends = [DjangoFilterBackend,SF,OF]
+    ordering_fields = ['timestamp']
+    search_fields = ['message',]
+    # ordering=('-timestamp')
+
+    def list(self, request,thread_id):
+        # try:
+        queryset = ChatMessage.objects.filter(thread_id = thread_id).all()
+        print(queryset)
+        if queryset:
+            queryset_1=self.filter_queryset(queryset)
+            print(queryset_1)
+            serializer = ChatMessageSerializer(queryset_1,many=True)
+            user = self.request.user
+            notification_read(thread_id,user)
             return Response(serializer.data)
-        except:
+        else:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def post(self, request,thread_id):
+    def create(self, request,thread_id):
         user = request.user.id
         sender = AiUser.objects.get(id = user)
         tt = Thread.objects.get(id=thread_id)
@@ -382,13 +395,20 @@ class ChatMessageListView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors)
 
-    def put(self,request,chatmessage_id):
+    def update(self,request,chatmessage_id):
         user=request.user.id
         chat_info = ChatMessage.objects.get(id=chatmessage_id)
         serializer = ChatMessageSerializer(chat_info,data={**request.POST.dict()},context={'request':request},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+
+    def destroy(self, request,chatmessage_id):
+        obj = ChatMessage.objects.get(id=chatmessage_id)
+        obj.message='[DELETED MESSAGE]'
+        obj.save()
+        return Response({'msg':'deleted'})
+
 
 
 @api_view(['GET',])
@@ -469,15 +489,12 @@ def chat_unread_notifications(request):
        sender = AiUser.objects.get(id =i.actor_object_id)
        try:profile = sender.professional_identity_info.avatar_url
        except:profile = None
-       notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'message':i.description,'timestamp':i.timestamp,'count':count})
+       notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
     # notifications= user.notifications.filter(verb='Message').unread().values('data','actor_object_id').annotate(count= Count('actor_object_id')).order_by()
     # for i in notifications:
     #     print(i.get('actor_object_id'))
     #     sender = AiUser.objects.get(id =i.get('actor_object_id'))
     #     notification_details.append({'thread_id':i.get('data').get('thread_id'),'count':i.get('count'),'sender':sender.fullname})
-    # for i in notifications:
-    #     notification_details.append({'message':i.description,'time':i.timesince(),'sender':i.actor.fullname,\
-    #                                 'thread':i.data.get('thread_id')})
     return JsonResponse({'notifications':notification,'notification_details':notification_details})
 
 @api_view(['GET',])
