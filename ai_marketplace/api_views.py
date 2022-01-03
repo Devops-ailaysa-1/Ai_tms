@@ -463,11 +463,18 @@ def chat_unread_notifications(request):
     notification_details=[]
     notification=[]
     notification.append({'total_count':count})
-    notifications= user.notifications.filter(verb='Message').unread().values('data','actor_object_id').annotate(count= Count('actor_object_id')).order_by()
+    notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
     for i in notifications:
-        print(i.get('actor_object_id'))
-        sender = AiUser.objects.get(id =i.get('actor_object_id'))
-        notification_details.append({'thread_id':i.get('data').get('thread_id'),'count':i.get('count'),'sender':sender.fullname})
+       count = user.notifications.filter(data=i.data).unread().count()
+       sender = AiUser.objects.get(id =i.actor_object_id)
+       try:profile = sender.professional_identity_info.avatar_url
+       except:profile = None
+       notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'message':i.description,'timestamp':i.timestamp,'count':count})
+    # notifications= user.notifications.filter(verb='Message').unread().values('data','actor_object_id').annotate(count= Count('actor_object_id')).order_by()
+    # for i in notifications:
+    #     print(i.get('actor_object_id'))
+    #     sender = AiUser.objects.get(id =i.get('actor_object_id'))
+    #     notification_details.append({'thread_id':i.get('data').get('thread_id'),'count':i.get('count'),'sender':sender.fullname})
     # for i in notifications:
     #     notification_details.append({'message':i.description,'time':i.timesince(),'sender':i.actor.fullname,\
     #                                 'thread':i.data.get('thread_id')})
