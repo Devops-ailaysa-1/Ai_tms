@@ -490,7 +490,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
     ordering_fields = ['project_name','team__name','id']
     filterset_class = ProjectFilter
-    search_fields = ['project_name']
+    search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
+                    'project_jobs_set__target_language__language']
     ordering = ('-id')
     paginator.page_size = 20
 
@@ -1165,6 +1166,14 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             except TaskAssignInfo.DoesNotExist:
                 print('not exist')
         return Response(task, status=status.HTTP_200_OK)
+
+    def delete(self,request):
+        task = request.GET.get('task')
+        instance = TaskAssignInfo.objects.get(task_id=task)
+        if request.POST.get('instruction_file',None) != None :
+            instance.instruction_file=None
+        instance.save()
+        return Response({"msg":"Deleted Successfully"},status=200)
 
 
 @api_view(['GET',])

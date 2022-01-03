@@ -45,6 +45,7 @@ def integrity_error(func):
 
 class VendorsInfoCreateView(APIView):
     parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             queryset = VendorsInfo.objects.get(user_id=request.user.id)
@@ -85,7 +86,7 @@ class VendorsInfoCreateView(APIView):
         return Response({"msg":"Deleted Successfully"},status=200)
 
 class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
-    # permission_classes =[IsAuthenticated]
+    permission_classes =[IsAuthenticated]
     # page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
     # def get_custom_page_size(self, request, view):
     #     try:
@@ -171,6 +172,7 @@ def clone_lang_pair(request,id):
 
 
 class VendorExpertiseListCreate(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = self.get_queryset()
         serializer = ServiceExpertiseSerializer(queryset,many=True)
@@ -204,7 +206,7 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
 
 
 class VendorsBankInfoCreateView(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             queryset = VendorBankDetails.objects.get(user_id=request.user.id)
