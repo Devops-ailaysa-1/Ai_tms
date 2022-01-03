@@ -234,9 +234,10 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
 
 class ChatMessageSerializer(serializers.ModelSerializer):
+    user_avatar = serializers.ReadOnlyField(source='user.professional_identity_info.avatar_url')
     class Meta:
         model = ChatMessage
-        fields = '__all__'
+        fields = ('id','thread','user','message','timestamp','user_avatar',)
 
     def run_validation(self,data):
         if self.context['request']._request.method == 'POST':
