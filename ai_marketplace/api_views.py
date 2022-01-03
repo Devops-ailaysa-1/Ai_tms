@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
@@ -498,9 +498,10 @@ class VendorFilterNew(django_filters.FilterSet):
     fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
     email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
     country = django_filters.NumberFilter(field_name='country_id')
+    location = django_filters.CharFilter(field_name='vendor_info__location',lookup_expr='icontains')
     class Meta:
         model = AiUser
-        fields = ('fullname', 'email','year_of_experience','country')
+        fields = ('fullname', 'email','year_of_experience','country','location',)
 
 
 class GetVendorListViewNew(generics.ListAPIView):
@@ -510,19 +511,21 @@ class GetVendorListViewNew(generics.ListAPIView):
     filterset_class = VendorFilterNew
     page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
 
-    # def validate(self):
-    #     if 'min_price' or 'max_price' or 'count_unit' in self.request.GET:
-    #         print("########")
-    #         raise ValidationError({"msg":"max_price,min_price,count_unit all fields are required"})
+    def validate(self):
+        data = self.request.GET
+        if (('min_price' in data) or ('max_price' in data) or ('count_unit' in data) or ('currency' in data)):
+            if not (('min_price' in data) and ('max_price' in data) and ('count_unit' in data) and ('currency' in data)):
+                raise ValidationError({"error":"max_price,min_price,count_unit,currency all fields are required"})
 
 
     def get_queryset(self):
-         # self.validate()
+        self.validate()
         user = self.request.user
         job_id= self.request.query_params.get('job')
         min_price =self.request.query_params.get('min_price')
         max_price =self.request.query_params.get('max_price')
         count_unit = self.request.query_params.get('count_unit')
+        currency = self.request.query_params.get('currency')
         source_lang=self.request.query_params.get('source_lang')
         target_lang=self.request.query_params.get('target_lang')
         contenttype = self.request.query_params.get('content')
@@ -533,11 +536,11 @@ class GetVendorListViewNew(generics.ListAPIView):
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                     .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
                     .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
-        if max_price and min_price and count_unit:
+        if max_price and min_price and count_unit and currency:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):
                 ids.append(i.get('vendor_lang_pair__id'))
-            queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
+            queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_info__currency = currency)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
         if  contenttype:
             contentlist = contenttype.split(',')
             queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=contentlist)&Q(vendor_contentype__deleted_at=None)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
