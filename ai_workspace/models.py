@@ -251,6 +251,18 @@ class Project(models.Model):
         else:
             return False
 
+    @property
+    def assigned(self):
+        if self.get_tasks:
+            for task in self.get_tasks:
+                try:
+                    if task.task_assign_info:
+                        return True
+                except:
+                    return False
+        else:
+            return False
+
     # @property
     # def project_analysis(self):
     #     if self.is_proj_analysed == True:
