@@ -1170,8 +1170,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     def delete(self,request):
         task = request.GET.get('task')
         instance = TaskAssignInfo.objects.get(task_id=task)
-        if request.POST.get('instruction_file',None) != None :
-            instance.instruction_file=None
+        # if request.POST.get('instruction_file',None) != None :
+        instance.instruction_file=None
         instance.save()
         return Response({"msg":"Deleted Successfully"},status=200)
 

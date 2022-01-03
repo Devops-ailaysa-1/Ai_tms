@@ -591,6 +591,13 @@ class TaskAssignInfo(models.Model):
             self.assignment_id = self.task.job.project.ai_project_id+"t"+str(TaskAssignInfo.objects.filter(task=self.task).count()+1)
         super().save()
 
+    @property
+    def filename(self):
+        try:
+            return  os.path.basename(self.instruction_file.file.name)
+        except:
+            return None
+
 class TaskAssignHistory(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_history")
