@@ -7,24 +7,11 @@ from rest_framework.response import Response
 
 
 class VendorsInfoSerializer(serializers.ModelSerializer):
-
+    cv_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
     class Meta:
         model = VendorsInfo
-        fields = (
-            'id',
-            'vendor_unique_id',
-            'type',
-            'currency',
-            'vm_status',
-            'status',
-            'token',
-            'skype',
-            'proz_link',
-            'cv_file',
-            'native_lang',
-            'year_of_experience',
-            'rating',
-        )
+        fields = ('id','vendor_unique_id','type','currency','vm_status','status','token','skype',
+                'proz_link','cv_file','native_lang','year_of_experience','rating','location',)
         extra_kwargs = {'id':{"read_only":True},}
 
     def save(self, user_id):

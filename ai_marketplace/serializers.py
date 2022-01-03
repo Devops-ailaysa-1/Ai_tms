@@ -118,6 +118,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
     legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.sortname')
+    location = serializers.ReadOnlyField(source = 'vendor_info.location')
     native_lang = serializers.ReadOnlyField(source = 'vendor_info.native_lang.language')
     year_of_experience = serializers.ReadOnlyField(source = 'vendor_info.year_of_experience')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')

@@ -1,4 +1,5 @@
 from ai_auth.models import AiUser
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
@@ -43,7 +44,7 @@ def integrity_error(func):
     return decorator
 
 class VendorsInfoCreateView(APIView):
-
+    parser_classes = [MultiPartParser, FormParser]
     def get(self, request):
         try:
             queryset = VendorsInfo.objects.get(user_id=request.user.id)
@@ -55,20 +56,17 @@ class VendorsInfoCreateView(APIView):
     def post(self, request):
         cv_file=request.FILES.get('cv_file')
         user_id = request.user.id
-        # data = request.POST.dict()
         print("cv_file------->",cv_file)
         serializer = VendorsInfoSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save(user_id = user_id)
             return Response(serializer.data)
-        print("errors", serializer.errors)
+        # print("errors", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self,request):
         user_id=request.user.id
-        print("cv_file---->",request.FILES.get('cv_file'))
         cv_file=request.FILES.get('cv_file')
-        # data = request.POST.dict()
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
         if cv_file:
             serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
@@ -79,6 +77,12 @@ class VendorsInfoCreateView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self,request):
+        instance = VendorsInfo.objects.get(user_id=request.user.id)
+        if request.POST.get('cv_file',None) != None :
+            instance.cv_file=None
+        instance.save()
+        return Response({"msg":"Deleted Successfully"},status=200)
 
 class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
     # permission_classes =[IsAuthenticated]
