@@ -1221,7 +1221,7 @@ class TeamCreateView(viewsets.ViewSet):
         try:
             queryset =Team.objects.get(owner_id=request.user.id)
         except Team.DoesNotExist:
-            return Response(status=204)
+            return Response({'msg':'team not exists'},status=204)
         serializer = TeamSerializer(queryset)
         return Response(serializer.data)
 
