@@ -67,3 +67,4 @@ backupdb
 /repeat_imp.py
 api_automation
 .idea/
+logs
