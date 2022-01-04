@@ -366,10 +366,10 @@ class ChatMessageListView(viewsets.ModelViewSet):
     def list(self, request,thread_id):
         # try:
         queryset = ChatMessage.objects.filter(thread_id = thread_id).all()
-        print(queryset)
+        # print(queryset)
         if queryset:
             queryset_1=self.filter_queryset(queryset)
-            print(queryset_1)
+            # print(queryset_1)
             serializer = ChatMessageSerializer(queryset_1,many=True)
             user = self.request.user
             notification_read(thread_id,user)
