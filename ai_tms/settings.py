@@ -435,7 +435,7 @@ LOGGING = {
         'file' : {
             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
             'class' : 'logging.FileHandler',
-            'filename' : './logs/{}.log'.format(os.environ.get("LOG_FILE_NAME")), #filename to be received from .env
+            'filename' : BASE_DIR + '/logs/{}.log'.format(os.environ.get("LOG_FILE_NAME")), #filename to be received from .env
             'formatter' : 'dev_formatter',
         },
 
@@ -444,8 +444,6 @@ LOGGING = {
         #     'class': 'django.utils.log.AdminEmailHandler',
         #     'formatter' : 'dev_formatter',
         # }
-
-
     },  
 
 
