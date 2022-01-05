@@ -470,7 +470,7 @@ def get_available_threads(request):
             chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
             if chats:
                 count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
-                notification = chats.order_by('-timestamp').last()
+                notification = chats.order_by('-timestamp').first()
                 message = notification.description
                 time = notification.timestamp
             receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
