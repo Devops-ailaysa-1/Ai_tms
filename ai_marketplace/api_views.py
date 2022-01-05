@@ -464,7 +464,7 @@ def get_available_threads(request):
         for i in threads:
             receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
             Receiver = AiUser.objects.get(id = receiver)
-            try:profile = receiver.professional_identity_info.avatar_url
+            try:profile = Receiver.professional_identity_info.avatar_url
             except:profile = None
             data = {'thread_id':i.id}
             chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
