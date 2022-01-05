@@ -241,8 +241,8 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
-
-                seg_params.extend([str(seg["source"]), str(seg["target"]), "", str(seg["coded_source"]), str(tagged_source), \
+                target = "" if seg["target"] == None else seg["target"]
+                seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
                         timezone.now(), text_unit_id])
         

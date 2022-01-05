@@ -68,3 +68,4 @@ backupdb
 api_automation
 .idea/
 logs
+*.log
