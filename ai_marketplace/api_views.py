@@ -460,8 +460,8 @@ def get_available_threads(request):
     try:
         threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
         receivers_list =[]
-        message,time,count=None,None,None
         for i in threads:
+            message,time,count=None,None,None
             receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
             Receiver = AiUser.objects.get(id = receiver)
             try:profile = Receiver.professional_identity_info.avatar_url
