@@ -467,13 +467,16 @@ def get_available_threads(request):
             try:profile = Receiver.professional_identity_info.avatar_url
             except:profile = None
             data = {'thread_id':i.id}
+            print(data)
             chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
             print(chats)
             if chats:
                 count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
+                print(count)
                 notification = chats.order_by('-timestamp').first()
                 message = notification.description
                 time = notification.timestamp
+            print(message,time)
             receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
                                     'message':message,'timestamp':time,'unread_count':count})
         return JsonResponse({"receivers_list":receivers_list})
