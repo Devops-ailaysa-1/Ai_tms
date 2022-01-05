@@ -42,7 +42,7 @@ from django.contrib.auth import settings
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
-# logger = logging.getLogger('django')
+logger = logging.getLogger('django')
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -139,7 +139,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task.save()
             else:
                 # logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                # logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
+                logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
         return document
@@ -253,7 +253,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
             segment_serlzr.save()
             return segment_serlzr
         else:
-            # logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
+            logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
             return segment_serlzr.errors
 
     def update_pentm(self, segment):
@@ -300,7 +300,7 @@ class MT_RawAndTM_View(views.APIView):
             print("Word count --->", res.json())
             consumable_credits = res.json()
         else:
-            # logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
+            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
             raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
         if initial_credit > consumable_credits :
@@ -397,7 +397,7 @@ class DocumentToFile(views.APIView):
                                 return response
                 except Exception as e:
                     print("Exception ------> ", e)
-            # logger.info(">>>>>>>> Error in output file writing <<<<<<<<<")
+            logger.info(">>>>>>>> Error in output file writing <<<<<<<<<")
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
         else:
@@ -409,7 +409,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
-        print("Data for writing file ---> ", data)
+        # print("Data for writing file ---> ", data)
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
