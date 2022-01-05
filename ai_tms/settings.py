@@ -418,48 +418,9 @@ CHANNEL_LAYERS = {
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 # DBBACKUP_STORAGE_OPTIONS = {'location': 'backupdb/'}
 
-<<<<<<< HEAD
-# LOGGING = {
-#     'version' : 1,
-#     'disable_existing_loggers' : False,
-
-#     'formatters' : {
-#         'dev_formatter' : {
-#             'format' : '{levelname} {asctime} {pathname} {message}',
-#             'style' : '{',
-#         }
-#     },
-
-#     'loggers' : {
-#         'django' : {
-#             'handlers' : ['file',],
-#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-#             'propogate' : True,
-#         }
-#     },
-
-#     'handlers' : {
-
-#         'file' : {
-#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-#             'class' : 'logging.FileHandler',
-#             'filename' : BASE_DIR + '/logs/{}.log'.format(os.environ.get("LOG_FILE_NAME")), #filename to be received from .env
-#             'formatter' : 'dev_formatter',
-#         },
-
-#         # 'mail_admins' : {
-#         #     'level' : 'ERROR',
-#         #     'class': 'django.utils.log.AdminEmailHandler',
-#         #     'formatter' : 'dev_formatter',
-#         # }
-#     },
-
-
-# }
-=======
 LOGGING = {
     'version' : 1,
-    'disable_existing_loggers' : False, 
+    'disable_existing_loggers' : False,
 
     'formatters' : {
         'dev_formatter' : {
@@ -490,8 +451,7 @@ LOGGING = {
         #     'class': 'django.utils.log.AdminEmailHandler',
         #     'formatter' : 'dev_formatter',
         # }
-    },  
+    },
 
 
 }
->>>>>>> origin/merged
