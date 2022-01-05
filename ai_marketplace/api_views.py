@@ -468,6 +468,7 @@ def get_available_threads(request):
             except:profile = None
             data = {'thread_id':i.id}
             chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
+            print(chats)
             if chats:
                 count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
                 notification = chats.order_by('-timestamp').first()
