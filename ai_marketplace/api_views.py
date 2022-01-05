@@ -457,6 +457,7 @@ def get_my_jobs(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_threads(request):
+    print(request.user)
     try:
         threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
         receivers_list =[]
@@ -471,7 +472,8 @@ def get_available_threads(request):
             chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
             print(chats)
             if chats:
-                count =Notifications.objects.filter(Q(data=data) & Q(verb='Message')).unread().count()
+                count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
+                # count =Notifications.objects.filter(Q(data=data) & Q(verb='Message') & Q(unread = True)).count()
                 print(count)
                 notification = chats.order_by('-timestamp').first()
                 message = notification.description
