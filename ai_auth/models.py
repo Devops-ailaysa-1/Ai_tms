@@ -62,7 +62,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             except:
                 return None
 
-
+    @property
+    def get_hired_editors(self):
+        return [i.hired_editor for i in self.user_info.all()]  
 
     @property
     def credit_balance(self):
@@ -362,6 +364,10 @@ class Team(models.Model):
     def get_project_manager(self):
         return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1)]
 
+    @property
+    def get_team_members(self):
+        return [i.internal_member for i in self.internal_member_team_info.all()]
+
 
 class InternalMember(models.Model):
     CRDENTIALS_SENT = 1
@@ -397,6 +403,8 @@ class HiredEditors(models.Model):
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
         unique_together = ['user', 'hired_editor','role']
+
+
 
 class ReferredUsers(models.Model):
     email = models.EmailField()

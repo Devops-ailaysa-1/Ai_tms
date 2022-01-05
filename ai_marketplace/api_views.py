@@ -26,7 +26,7 @@ from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,B
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
                         AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
-                        GetVendorListSerializer,ChatMessageSerializer
+                        GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
                         )
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -360,17 +360,14 @@ class ChatMessageListView(viewsets.ModelViewSet):
     serializer_class = ChatMessageSerializer
     filter_backends = [DjangoFilterBackend,SF,OF]
     ordering_fields = ['timestamp']
-    search_fields = ['message',]
+    # search_fields = ['chatmessage_thread__message',]
     # ordering=('-timestamp')
 
     def list(self, request,thread_id):
-        # try:
-        queryset = ChatMessage.objects.filter(thread_id = thread_id).all()
-        # print(queryset)
+        queryset = Thread.objects.filter(id = thread_id).all()
         if queryset:
-            queryset_1=self.filter_queryset(queryset)
-            # print(queryset_1)
-            serializer = ChatMessageSerializer(queryset_1,many=True)
+            # queryset_1=self.filter_queryset(queryset)
+            serializer = ChatMessageByDateSerializer(queryset,many=True,context={'request':request})
             user = self.request.user
             notification_read(thread_id,user)
             return Response(serializer.data)
@@ -381,13 +378,9 @@ class ChatMessageListView(viewsets.ModelViewSet):
         user = request.user.id
         sender = AiUser.objects.get(id = user)
         tt = Thread.objects.get(id=thread_id)
-        if tt.first_person_id == request.user.id:
-            receiver = tt.second_person_id
-        else:
-            receiver = tt.first_person_id
+        receiver = tt.second_person_id if tt.first_person_id == request.user.id else tt.first_person_id
         Receiver = AiUser.objects.get(id = receiver)
         serializer = ChatMessageSerializer(data={**request.POST.dict(),'thread':thread_id,'user':user},context={'request':request})
-        print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
             thread_id = serializer.data.get('thread')
@@ -457,7 +450,6 @@ def get_my_jobs(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_threads(request):
-    print(request.user)
     try:
         threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
         receivers_list =[]
@@ -468,17 +460,13 @@ def get_available_threads(request):
             try:profile = Receiver.professional_identity_info.avatar_url
             except:profile = None
             data = {'thread_id':i.id}
-            print(data)
             chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
-            print(chats)
             if chats:
                 count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
                 # count =Notifications.objects.filter(Q(data=data) & Q(verb='Message') & Q(unread = True)).count()
-                print(count)
                 notification = chats.order_by('-timestamp').first()
                 message = notification.description
                 time = notification.timestamp
-            print(message,time)
             receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
                                     'message':message,'timestamp':time,'unread_count':count})
         return JsonResponse({"receivers_list":receivers_list})

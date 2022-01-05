@@ -200,8 +200,12 @@ class DocumentViewByDocumentId(views.APIView):
         return  document
 
     def get(self, request, document_id):
-        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        if request.user.id == doc_user:
+        #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
+        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        print("doc--->",doc_user)
+        print("user---->",request.user)
+        team = doc_user.team
+        if (request.user == doc_user) or (request.user in doc_user.team.get_team_members) or (request.user in doc_user.get_hired_editors):
             document = self.get_object(document_id)
             return Response(DocumentSerializerV2(document).data, status=200)
         else:
