@@ -460,13 +460,24 @@ def get_available_threads(request):
     try:
         threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
         receivers_list =[]
+        message,time,count=None,None,None
         for i in threads:
             if i.first_person_id == request.user.id:
                 receiver = i.second_person_id
             else:
                 receiver = i.first_person_id
             Receiver = AiUser.objects.get(id = receiver)
-            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname})
+            try:profile = receiver.professional_identity_info.avatar_url
+            except:profile = None
+            data = {'thread_id':i.id}
+            chats = request.user.notifications.filter(Q(data=data) & Q(verb='Message'))
+            if chats:
+                count = chats.unread().count()
+                notification = chats.order_by('-timestamp').last()
+                message = notification.description
+                time = notification.timestamp
+            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
+                                    'message':message,'timestamp':time,'unread_count':count})
         return JsonResponse({"receivers_list":receivers_list})
     except:
         return JsonResponse({"receivers_list":[]})
@@ -485,7 +496,7 @@ def chat_unread_notifications(request):
     notification.append({'total_count':count})
     notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
     for i in notifications:
-       count = user.notifications.filter(data=i.data).unread().count()
+       count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
        sender = AiUser.objects.get(id =i.actor_object_id)
        try:profile = sender.professional_identity_info.avatar_url
        except:profile = None
