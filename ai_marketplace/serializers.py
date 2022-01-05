@@ -275,7 +275,7 @@ class ChatMessageByDateSerializer(serializers.ModelSerializer):
     def get_message(self, obj):
         message = self.context['request'].query_params.get('message')
         if message:
-            messages = ChatMessage.objects.filter(Q(thread_id = obj.id) & Q(message__contains=message))
+            messages = ChatMessage.objects.filter(Q(thread_id = obj.id) & Q(message__icontains=message))
         else:
             messages = ChatMessage.objects.filter(thread_id = obj.id)
         messages_grouped_by_date = groupby(messages.iterator(), lambda m: m.timestamp.date())
