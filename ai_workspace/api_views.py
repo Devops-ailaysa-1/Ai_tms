@@ -585,6 +585,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         if project.ai_user == self.request.user:
             return project.get_tasks
         if project.team:
+            print(project.team.get_project_manager)
             if ((project.team.owner == self.request.user)|(self.request.user in project.team.get_project_manager)):
                 return project.get_tasks
             # elif self.request.user in project.team.get_project_manager:

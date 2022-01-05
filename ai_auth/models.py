@@ -360,7 +360,7 @@ class Team(models.Model):
 
     @property
     def get_project_manager(self):
-        return [i.internal_member for i in self.internal_member_team_info.filter(role__name = "project owner")]
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1)]
 
 
 class InternalMember(models.Model):
