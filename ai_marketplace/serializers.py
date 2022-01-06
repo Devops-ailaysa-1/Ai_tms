@@ -264,11 +264,12 @@ class ChatMessageByDateSerializer(serializers.ModelSerializer):
         fields = ('user_name','avatar','message',)
 
     def get_user_name(self,obj):
-        user = self.context['request'].user
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
+        # user = self.context['request'].user
         return user.fullname
 
     def get_avatar(self,obj):
-        user = self.context['request'].user
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
         try: return user.professional_identity_info.avatar_url
         except: return None
 
