@@ -259,9 +259,10 @@ class ChatMessageByDateSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
     message = serializers.SerializerMethodField()
+    organisation_name = serializers.SerializerMethodField()
     class Meta:
         model = Thread
-        fields = ('user_name','avatar','message',)
+        fields = ('user_name','avatar','organisation_name','message',)
 
     def get_user_name(self,obj):
         user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
@@ -271,6 +272,11 @@ class ChatMessageByDateSerializer(serializers.ModelSerializer):
     def get_avatar(self,obj):
         user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
         try: return user.professional_identity_info.avatar_url
+        except: return None
+
+    def get_organisation_name(self,obj):
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
+        try: return user.ai_profile_info.organisation_name
         except: return None
 
     def get_message(self, obj):
