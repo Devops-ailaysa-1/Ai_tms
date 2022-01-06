@@ -493,7 +493,9 @@ def chat_unread_notifications(request):
     notification=[]
     notification.append({'total_count':count})
     notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
+    print(notifications)
     for i in notifications:
+       print(i.id)
        count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
        sender = AiUser.objects.get(id =i.actor_object_id)
        try:profile = sender.professional_identity_info.avatar_url

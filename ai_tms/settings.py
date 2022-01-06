@@ -170,6 +170,7 @@ except Exception as e:
     DATABASES={
         'default':{
             'ENGINE':'django.db.backends.postgresql_psycopg2',
+            'DISABLE_SERVER_SIDE_CURSORS': True,
             'NAME':os.getenv( "psql_database" ),
             'USER':os.getenv( "psql_user" ),
             'PASSWORD':os.getenv( "psql_password" ),
