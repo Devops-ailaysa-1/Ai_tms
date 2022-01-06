@@ -25,7 +25,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors)
+                            Team,InternalMember,HiredEditors,VendorOnboarding)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -1157,16 +1157,33 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         name = request.POST.get("name")
         email = request.POST.get("email")
         cv_file = request.FILES.get('cv_file')
+        message = request.POST.get("message")
         today = date.today()
         template = 'vendor_onboarding_email.html'
         subject='Regarding Vendor Onboarding'
-        context = {'email': email,'name':name,'file':cv_file,'date':today}
-        serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file})
+        context = {'email': email,'name':name,'file':cv_file,'date':today,'message':message}
+        serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
             send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['POST'])
+# def vendor_invite_accept(request):
+#     uid = request.POST.get('uid')
+#     token = request.POST.get('token')
+#     vendor_request_id = urlsafe_base64_decode(uid)
+#     request = VendorOnboarding.objects.get(id=vendor_request_id )
+#     if request is not None and invite_accept_token.check_token(request, token):
+#         request.status = 2
+#         request.save()
+#         print("Request Accepted")
+#         return JsonResponse({"msg":"Request Accepted"},safe=False)
+#     else:
+#         return JsonResponse({"msg":'Either link is already used or link is invalid!'},safe=False)
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
