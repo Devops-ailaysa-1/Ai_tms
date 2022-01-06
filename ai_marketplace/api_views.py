@@ -8,7 +8,7 @@ from ai_staff.models import Languages,ContentTypes
 from django.conf import settings
 from notifications.signals import notify
 from notifications.models import Notification
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.shortcuts import get_object_or_404, render
 from django.test.client import RequestFactory
 from rest_framework import pagination, status, viewsets
