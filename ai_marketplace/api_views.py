@@ -450,8 +450,15 @@ def get_my_jobs(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_threads(request):
+    # name = request.GET.get('name')
     try:
-        threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
+        # if name:
+        #     threads = Thread.objects.filter(Q(first_person__fullname__icontains=name) or Q(first_person__fullname__icontains=name))\
+        #                 .prefetch_related('chatmessage_thread').order_by('timestamp')
+        # else:
+        # threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
+        threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread')\
+                    .annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
         receivers_list =[]
         for i in threads:
             message,time,count=None,None,None
