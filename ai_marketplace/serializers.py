@@ -240,9 +240,9 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatMessage
         fields = ('id','thread','user','user_name','message','timestamp',)
-        extra_kwargs = {
-            'user':{'write_only':True},
-             }
+        # extra_kwargs = {
+        #     'user':{'write_only':True},
+        #      }
 
     def run_validation(self,data):
         if self.context['request']._request.method == 'POST':
