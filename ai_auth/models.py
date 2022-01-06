@@ -64,7 +64,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
     @property
     def get_hired_editors(self):
-        return [i.hired_editor for i in self.user_info.all()]  
+        return [i.hired_editor for i in self.user_info.all()]
 
     @property
     def credit_balance(self):
@@ -331,11 +331,24 @@ def file_path_vendor(instance, filename):
     return '{0}/{1}/{2}'.format(instance.email,"vendor_cv_file",filename)
 
 class VendorOnboarding(models.Model):
+    REQUEST_SENT = 1
+    ACCEPTED = 2
+    HOLD = 3
+    REJECTED = 4
+    STATUS_CHOICES = [
+        (REQUEST_SENT,'Request Sent'),
+        (ACCEPTED, 'Accepted'),
+        (HOLD, 'Hold'),
+        (REJECTED, 'Rejected'),
+    ]
     name = models.CharField(max_length=250)
     email = models.EmailField()
     cv_file = models.FileField(upload_to=file_path_vendor)
+    message = models.TextField(max_length=1000,blank=True, null=True)
+    status = models.IntegerField(choices=STATUS_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 
 def support_file_path(instance, filename):
