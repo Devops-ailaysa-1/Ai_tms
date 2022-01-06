@@ -256,13 +256,18 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 
 
 class ChatMessageByDateSerializer(serializers.ModelSerializer):
+    logged_in_user = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
     message = serializers.SerializerMethodField()
     organisation_name = serializers.SerializerMethodField()
     class Meta:
         model = Thread
-        fields = ('user_name','avatar','organisation_name','message',)
+        fields = ('logged_in_user','user_name','avatar','organisation_name','message',)
+
+    def get_logged_in_user(self,obj):
+        user = self.context['request'].user
+        return user.id
 
     def get_user_name(self,obj):
         user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
