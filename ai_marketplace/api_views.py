@@ -467,7 +467,7 @@ def get_available_threads(request):
         receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
                                 'message':message,'timestamp':time,'unread_count':count})
     contacts_list = []
-    thread_empty = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = True)
+    thread_empty = Thread.objects.by_user(user=request.user).all()
     for thread in thread_empty:
         receiver = thread.second_person_id if thread.first_person_id == request.user.id else thread.first_person_id
         Receiver = AiUser.objects.get(id = receiver)
