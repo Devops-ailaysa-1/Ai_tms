@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
+from django.db.models import OuterRef, Subquery
 from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
@@ -451,34 +452,32 @@ def get_my_jobs(request):
 @permission_classes([IsAuthenticated])
 def get_available_threads(request):
     # name = request.GET.get('name')
-    try:
-        # if name:
-        #     threads = Thread.objects.filter(Q(first_person__fullname__icontains=name) or Q(first_person__fullname__icontains=name))\
-        #                 .prefetch_related('chatmessage_thread').order_by('timestamp')
-        # else:
-        # threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
-        threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread')\
-                    .annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
-        receivers_list =[]
-        for i in threads:
-            message,time,count=None,None,None
-            receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
-            Receiver = AiUser.objects.get(id = receiver)
-            try:profile = Receiver.professional_identity_info.avatar_url
-            except:profile = None
-            data = {'thread_id':i.id}
-            chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
-            if chats:
-                count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
-                # count =Notifications.objects.filter(Q(data=data) & Q(verb='Message') & Q(unread = True)).count()
-                notification = chats.order_by('-timestamp').first()
-                message = notification.description
-                time = notification.timestamp
-            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
-                                    'message':message,'timestamp':time,'unread_count':count})
-        return JsonResponse({"receivers_list":receivers_list})
-    except:
-        return JsonResponse({"receivers_list":[]})
+    threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
+    receivers_list =[]
+    for i in threads:
+        receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
+        Receiver = AiUser.objects.get(id = receiver)
+        try:profile = Receiver.professional_identity_info.avatar_url
+        except:profile = None
+        data = {'thread_id':i.id}
+        chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
+        count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
+        notification = chats.order_by('-timestamp').first()
+        message = notification.description
+        time = notification.timestamp
+        receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
+                                'message':message,'timestamp':time,'unread_count':count})
+    contacts_list = []
+    all_threads = Thread.objects.by_user(user=request.user).all()
+    for thread in all_threads:
+        receiver = thread.second_person_id if thread.first_person_id == request.user.id else thread.first_person_id
+        Receiver = AiUser.objects.get(id = receiver)
+        try:profile = Receiver.professional_identity_info.avatar_url
+        except:profile = None
+        contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
+        contacts = sorted(contacts_list, key = lambda i: (i['receiver']))
+    return JsonResponse({"receivers_list":receivers_list})#"contacts_list":contacts})
+
 
 
 
@@ -487,25 +486,19 @@ def get_available_threads(request):
 @permission_classes([IsAuthenticated])
 def chat_unread_notifications(request):
     user = AiUser.objects.get(pk=request.user.id)
-    # notifications = user.notifications.filter(verb='Message').unread()
     count = user.notifications.filter(verb='Message').unread().count()
     notification_details=[]
     notification=[]
     notification.append({'total_count':count})
-    notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
-    print(notifications)
+    # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
+    notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
+            user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
     for i in notifications:
-       print(i.id)
        count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
        sender = AiUser.objects.get(id =i.actor_object_id)
        try:profile = sender.professional_identity_info.avatar_url
        except:profile = None
        notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
-    # notifications= user.notifications.filter(verb='Message').unread().values('data','actor_object_id').annotate(count= Count('actor_object_id')).order_by()
-    # for i in notifications:
-    #     print(i.get('actor_object_id'))
-    #     sender = AiUser.objects.get(id =i.get('actor_object_id'))
-    #     notification_details.append({'thread_id':i.get('data').get('thread_id'),'count':i.get('count'),'sender':sender.fullname})
     return JsonResponse({'notifications':notification,'notification_details':notification_details})
 
 @api_view(['GET',])
@@ -534,9 +527,10 @@ class VendorFilterNew(django_filters.FilterSet):
     email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
     country = django_filters.NumberFilter(field_name='country_id')
     location = django_filters.CharFilter(field_name='vendor_info__location',lookup_expr='icontains')
+    category = django_filters.CharFilter(field_name='vendor_info__type__name',lookup_expr='icontains')
     class Meta:
         model = AiUser
-        fields = ('fullname', 'email','year_of_experience','country','location',)
+        fields = ('fullname', 'email','year_of_experience','country','location','category',)
 
 
 class GetVendorListViewNew(generics.ListAPIView):
