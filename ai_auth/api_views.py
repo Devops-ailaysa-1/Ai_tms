@@ -1322,6 +1322,8 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             if user.is_internal_member == True:
                 if user.team.name == team_name:
                     return {"msg":"Already team member"}
+                else:
+                    return {"msg":"Already Another team member"}
             else:
                 return {"msg":"Ailaysa User"}
         except:
