@@ -114,11 +114,12 @@ class ThreadSerializer(serializers.ModelSerializer):
 
 
 class GetVendorDetailSerializer(serializers.Serializer):
+    uid = serializers.CharField(read_only=True)
     fullname = serializers.CharField(read_only=True)
     organisation_name = serializers.ReadOnlyField(source='ai_profile_info.organisation_name')
     legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
-    country = serializers.ReadOnlyField(source = 'country.sortname')
+    country = serializers.ReadOnlyField(source = 'country.name')
     location = serializers.ReadOnlyField(source = 'vendor_info.location')
     native_lang = serializers.ReadOnlyField(source = 'vendor_info.native_lang.language')
     year_of_experience = serializers.ReadOnlyField(source = 'vendor_info.year_of_experience')
