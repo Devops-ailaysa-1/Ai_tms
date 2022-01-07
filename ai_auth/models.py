@@ -62,7 +62,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             except:
                 return None
 
-
+    @property
+    def get_hired_editors(self):
+        return [i.hired_editor for i in self.user_info.all()]
 
     @property
     def credit_balance(self):
@@ -329,11 +331,24 @@ def file_path_vendor(instance, filename):
     return '{0}/{1}/{2}'.format(instance.email,"vendor_cv_file",filename)
 
 class VendorOnboarding(models.Model):
+    REQUEST_SENT = 1
+    ACCEPTED = 2
+    HOLD = 3
+    REJECTED = 4
+    STATUS_CHOICES = [
+        (REQUEST_SENT,'Request Sent'),
+        (ACCEPTED, 'Accepted'),
+        (HOLD, 'Hold'),
+        (REJECTED, 'Rejected'),
+    ]
     name = models.CharField(max_length=250)
     email = models.EmailField()
     cv_file = models.FileField(upload_to=file_path_vendor)
+    message = models.TextField(max_length=1000,blank=True, null=True)
+    status = models.IntegerField(choices=STATUS_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
 
 
 def support_file_path(instance, filename):
@@ -360,7 +375,11 @@ class Team(models.Model):
 
     @property
     def get_project_manager(self):
-        return [i.internal_member for i in self.internal_member_team_info.filter(role__name = "project owner")]
+        return [i.internal_member for i in self.internal_member_team_info.filter(role_id=1)]
+
+    @property
+    def get_team_members(self):
+        return [i.internal_member for i in self.internal_member_team_info.all()]
 
 
 class InternalMember(models.Model):
@@ -374,7 +393,7 @@ class InternalMember(models.Model):
     internal_member = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='internal_member')
     role = models.ForeignKey(Role,on_delete=models.CASCADE,related_name='member_role')
     functional_identity = models.CharField(max_length=255, blank=True, null=True)
-    added_by = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='internal_team_manager',blank=True, null=True)
+    added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='internal_team_manager',blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
 
     def __str__(self):
@@ -393,10 +412,12 @@ class HiredEditors(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES)
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_info')
     hired_editor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='hired_editor')
-    #added_by = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='external_team_manager',blank=True, null=True)
+    added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='external_team_manager',blank=True, null=True)
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
         unique_together = ['user', 'hired_editor','role']
+
+
 
 class ReferredUsers(models.Model):
     email = models.EmailField()

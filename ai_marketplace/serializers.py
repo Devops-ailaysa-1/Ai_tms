@@ -8,11 +8,12 @@ from django.db.models import Q
 from ai_workspace.models import Project,Job
 from drf_writable_nested import WritableNestedModelSerializer
 import json
+from itertools import groupby
 from rest_framework.response import Response
 from dj_rest_auth.serializers import UserDetailsSerializer
 from ai_auth.serializers import ProfessionalidentitySerializer
-from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer
-from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo
+from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer
+from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
 
 class AvailableJobSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,23 +94,50 @@ class ThreadSerializer(serializers.ModelSerializer):
         return super().run_validation(data)
 
 
-class VendorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VendorsInfo
-        fields = ('type','currency','proz_link','native_lang','year_of_experience',)
+# class VendorSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = VendorsInfo
+#         fields = ('type','currency','native_lang','year_of_experience',)
 
-class OfficialInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AiUserProfile
-        fields = ('organisation_name',)
+# class OfficialInfoSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = AiUserProfile
+#         fields = ('organisation_name',)
+
+
+# class VendorSubjectSerializer(serializers.ModelSerializer):
+#     subject = serializers.ReadOnlyField(source='subject.name')
+#     class Meta:
+#         model=VendorSubjectFields
+#         fields=('subject',)
+
+
 
 class GetVendorDetailSerializer(serializers.Serializer):
     fullname = serializers.CharField(read_only=True)
-    ai_profile_info = OfficialInfoSerializer(read_only=True,required=False)
+    organisation_name = serializers.ReadOnlyField(source='ai_profile_info.organisation_name')
+    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
+    country = serializers.ReadOnlyField(source = 'country.sortname')
+    location = serializers.ReadOnlyField(source = 'vendor_info.location')
+    native_lang = serializers.ReadOnlyField(source = 'vendor_info.native_lang.language')
+    year_of_experience = serializers.ReadOnlyField(source = 'vendor_info.year_of_experience')
+    professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
     vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True)
-    vendor_info = VendorSerializer(read_only=True)
-    professional_identity_info = ProfessionalidentitySerializer(read_only=True)
+    vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
+
+    def get_vendor_lang_pair(self, obj):
+        request = self.context['request']
+        job_id= request.query_params.get('job')
+        source_lang = request.query_params.get('source_lang')
+        target_lang = request.query_params.get('target_lang')
+        if job_id:
+            source_lang=Job.objects.get(id=job_id).source_language_id
+            target_lang=Job.objects.get(id=job_id).target_language_id
+        return VendorLanguagePairCloneSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
+
+
 
 
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
@@ -172,9 +200,11 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
         return super().run_validation(data)
 
 class VendorInfoListSerializer(serializers.ModelSerializer):
+    legal_category = serializers.ReadOnlyField(source='type.name')
+    currency = serializers.ReadOnlyField(source='currency.currency_code')
     class Meta:
         model = VendorsInfo
-        fields = ('type','currency')
+        fields = ('legal_category','currency')
 
 
 class VendorServiceSerializer(serializers.ModelSerializer):
@@ -186,12 +216,13 @@ class VendorServiceSerializer(serializers.ModelSerializer):
 
 class GetVendorListSerializer(serializers.ModelSerializer):
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
-    # vendor_lang_pair = VendorServiceSerializer(many=True,read_only = True)
-    vendor_info = VendorInfoListSerializer(read_only=True)
-    professional_identity_info = ProfessionalidentitySerializer(read_only=True)
+    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
+    country = serializers.ReadOnlyField(source = 'country.sortname')
+    professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','email','country','vendor_info','professional_identity_info','vendor_lang_pair',)
+        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair',)
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
@@ -199,14 +230,19 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         source_lang = request.query_params.get('source_lang')
         target_lang = request.query_params.get('target_lang')
         if job_id:
-            source_lang=Job.objects.get(id=job_id).source_language
-            target_lang=Job.objects.get(id=job_id).target_language
-        return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang__language=source_lang)&Q(target_lang__language=target_lang)), many=True, read_only=True).data
+            source_lang=Job.objects.get(id=job_id).source_language_id
+            target_lang=Job.objects.get(id=job_id).target_language_id
+        return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
 
 class ChatMessageSerializer(serializers.ModelSerializer):
+    user_name = serializers.ReadOnlyField(source='user.fullname')
+    # user_avatar = serializers.ReadOnlyField(source='user.professional_identity_info.avatar_url')
     class Meta:
         model = ChatMessage
-        fields = '__all__'
+        fields = ('id','thread','user','user_name','message','timestamp',)
+        # extra_kwargs = {
+        #     'user':{'write_only':True},
+        #      }
 
     def run_validation(self,data):
         if self.context['request']._request.method == 'POST':
@@ -217,3 +253,46 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             if (user!=user1) and (user!=user2):
                 raise serializers.ValidationError({"msg":'This person is not in this thread,he cannot send messages here'})
         return super().run_validation(data)
+
+
+class ChatMessageByDateSerializer(serializers.ModelSerializer):
+    logged_in_user = serializers.SerializerMethodField()
+    user_name = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
+    message = serializers.SerializerMethodField()
+    organisation_name = serializers.SerializerMethodField()
+    class Meta:
+        model = Thread
+        fields = ('logged_in_user','user_name','avatar','organisation_name','message',)
+
+    def get_logged_in_user(self,obj):
+        user = self.context['request'].user
+        return user.id
+
+    def get_user_name(self,obj):
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
+        # user = self.context['request'].user
+        return user.fullname
+
+    def get_avatar(self,obj):
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
+        try: return user.professional_identity_info.avatar_url
+        except: return None
+
+    def get_organisation_name(self,obj):
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
+        try: return user.ai_profile_info.organisation_name
+        except: return None
+
+    def get_message(self, obj):
+        message = self.context['request'].query_params.get('message')
+        if message:
+            messages = ChatMessage.objects.filter(Q(thread_id = obj.id) & Q(message__icontains=message))
+        else:
+            messages = ChatMessage.objects.filter(thread_id = obj.id)
+        messages_grouped_by_date = groupby(messages.iterator(), lambda m: m.timestamp.date())
+        messages_dict = {}
+        for date, group_of_messages in messages_grouped_by_date:
+            dict_key = date.strftime('%Y-%m-%d')
+            messages_dict[dict_key] = ChatMessageSerializer(group_of_messages,many=True).data
+        return messages_dict

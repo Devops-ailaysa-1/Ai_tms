@@ -200,8 +200,12 @@ class DocumentViewByDocumentId(views.APIView):
         return  document
 
     def get(self, request, document_id):
-        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        if request.user.id == doc_user:
+        #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
+        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        print("doc--->",doc_user)
+        print("user---->",request.user)
+        team = doc_user.team
+        if (request.user == doc_user) or (request.user in doc_user.team.get_team_members) or (request.user in doc_user.get_hired_editors):
             document = self.get_object(document_id)
             return Response(DocumentSerializerV2(document).data, status=200)
         else:
@@ -385,9 +389,9 @@ class DocumentToFile(views.APIView):
                         if os.path.exists(file_path):
                             with open(file_path, 'rb') as fh:
                                 response = HttpResponse(fh.read(), content_type=\
-                                    "application/vnd.ms-excel")          
+                                    "application/vnd.ms-excel")
                                 encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                        encoding='utf-8')                             
+                                        encoding='utf-8')
                                 response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
                                                     .format(encoded_filename)
                                 response['X-Suggested-Filename'] = encoded_filename
@@ -443,7 +447,7 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),
             }
         )
-        
+
         if settings.USE_SPACES:
             session = boto3.session.Session()
             client = session.client(
@@ -453,7 +457,7 @@ class DocumentToFile(views.APIView):
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             )
-            
+
             with open(task_data["output_file_path"], "rb") as f:
                 print("Spaces file path---->", File.get_aws_file_path(task_data["output_file_path"]))
                 obj = client.put_object(

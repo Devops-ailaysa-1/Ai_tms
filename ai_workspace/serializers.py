@@ -13,7 +13,7 @@ from rest_framework.validators import UniqueTogetherValidator
 from ai_auth.models import AiUser,Team
 from ai_auth.validators import project_file_size
 from django.db.models import Q
-
+from ai_workspace_okapi.models import Document
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -397,13 +397,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
 	# team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
-	project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	# project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name", "jobs","assign_enable","files",'project_manager_id',"files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )
+		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed",)
 
 	# class Meta:
 	# 	model = Project
@@ -423,9 +423,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			target_language} for target_language in data.get("target_languages", [])]
 		# print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-		data['team_id'] = data.get('team',[None])[0]
-		data['project_manager_id'] = data.get('project_manager')
-		print(data)
+		# data['team_id'] = data.get('team',[None])[0]
+		# data['project_manager_id'] = data.get('project_manager')
 		return super().to_internal_value(data=data)
 
 	def check_role(self, instance):
@@ -445,32 +444,26 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
-		# print("data-->",validated_data)
+		print("data-->",validated_data)
 		if self.context.get("request")!=None:
-			ai_user = self.context.get("request", None).user
+			created_by = self.context.get("request", None).user
 		else:
-		 	ai_user = self.context.get("ai_user", None)
-		if not validated_data.get('project_manager_id'):
-			validated_data['project_manager_id'] = ai_user.id
-		if not validated_data.get('team_id'):
-			if ai_user.team:
-				validated_data['team_id'] = ai_user.team.id
-
-			# try:
-			# 	team = Team.objects.get(owner=ai_user).id
-			# 	validated_data['team_id'] = Team.objects.get(owner=ai_user).id
-			# except:
-			# 	print("None")
+		 	created_by = self.context.get("ai_user", None)
+		if created_by.team:ai_user = created_by.team.owner
+		else:ai_user = created_by
+		team = created_by.team if created_by.team else None
+		project_manager = created_by
+		print("validated_data---->",validated_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
-			f_klass=File,j_klass=Job, ai_user=ai_user)#,team=team,project_manager=project_manager)
+			f_klass=File,j_klass=Job, ai_user=ai_user,\
+			team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
 
 		tasks = Task.objects.create_tasks_of_files_and_jobs(
 			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
 		return  project
 
 	def update(self, instance, validated_data):
-		print("TTTTTTTtt",validated_data)
 		if validated_data.get('project_name'):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)
@@ -497,11 +490,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
     assigned_by_name = serializers.ReadOnlyField(source='assigned_by.fullname')
+    job = serializers.ReadOnlyField(source='task.job.id')
+    project = serializers.ReadOnlyField(source='task.job.project.id')
+    instruction_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
     # assigned_to_name = serializers.ReadOnlyField(source='task.assign_to.fullname')
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','reference_file','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
+        fields = ('id','instruction','instruction_file','filename','job','project','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
         extra_kwargs = {
             'assigned_by':{'write_only':True},
              }
@@ -555,19 +551,24 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
 	task_assign_info = TaskAssignInfoSerializer(required=False)
+	task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
+	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
 
 	class Meta:
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "project_name",\
-			"document_url", "progress","task_assign_info")
+			"document_url", "progress","task_assign_info","task_word_count",)
 
-	# def get_assigned_to(self,instance):
-	# 	if instance.job.project.ai_user == instance.assign_to:
-	# 		return self
-	# 	else:
-	# 		return instance.assign_to.fullname
+	def get_task_word_count(self,instance):
+		if instance.document_id:
+			document = Document.objects.get(id = instance.document_id)
+			return document.total_word_count
+		else:
+			t = TaskDetails.objects.get(task_id = instance.id)
+			return t.task_word_count
+
 
 class ProjectSerializerV2(serializers.ModelSerializer):
 	class Meta:
@@ -665,3 +666,31 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 # 	task_assign_info = TaskAssignInfoSerializer(required=False)
 # 	class Meta(TaskSerializer.Meta):
 # 		fields = ("task_assign_info",)
+
+
+
+
+
+
+class ProjectListSerializer(serializers.ModelSerializer):
+	assign_enable = serializers.SerializerMethodField(method_name='check_role')
+
+	class Meta:
+		model = Project
+		fields = ("id", "project_name","assign_enable","files_jobs_choice_url", )
+
+	def check_role(self, instance):
+		if self.context.get("request")!=None:
+			user = self.context.get("request").user
+		else:user = self.context.get("ai_user", None)
+		if instance.team :
+			return True if ((instance.team.owner == user)\
+				or(instance.team.internal_member_team_info.all().\
+				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+				or(instance.team.owner.user_info.all()\
+				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+				else False
+		else:
+			return True if ((instance.ai_user == user) or\
+			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+			else False

@@ -170,6 +170,7 @@ except Exception as e:
     DATABASES={
         'default':{
             'ENGINE':'django.db.backends.postgresql_psycopg2',
+            'DISABLE_SERVER_SIDE_CURSORS': True,
             'NAME':os.getenv( "psql_database" ),
             'USER':os.getenv( "psql_user" ),
             'PASSWORD':os.getenv( "psql_password" ),
@@ -256,6 +257,8 @@ CLIENT_BASE_URL = os.getenv("CLIENT_BASE_URL")
 
 SIGNUP_CONFIRM_URL = os.getenv("SIGNUP_CONFIRM_URL")
 
+TRANSEDITOR_BASE_URL = os.getenv("TRANSEDITOR_BASE_URL")
+
 EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
 
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
@@ -271,7 +274,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 12,
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 
@@ -416,10 +419,9 @@ CHANNEL_LAYERS = {
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 # DBBACKUP_STORAGE_OPTIONS = {'location': 'backupdb/'}
 
-DRF_ACCESS_POLICY = {"reusable_conditions": ["ai_auth.global_access_conditions"]}
 LOGGING = {
     'version' : 1,
-    'disable_existing_loggers' : False, 
+    'disable_existing_loggers' : False,
 
     'formatters' : {
         'dev_formatter' : {
@@ -450,7 +452,7 @@ LOGGING = {
         #     'class': 'django.utils.log.AdminEmailHandler',
         #     'formatter' : 'dev_formatter',
         # }
-    },  
+    },
 
 
 }

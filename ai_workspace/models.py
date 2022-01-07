@@ -11,10 +11,8 @@ from enum import Enum
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.contrib.auth import settings
-import os,time
+import os, re,time
 from ai_auth.models import AiUser,Team,HiredEditors
-import os, re
-from ai_auth.models import AiUser
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
 from ai_staff.models import ContentTypes, Languages, SubjectFields
@@ -26,7 +24,7 @@ from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from django.db.models import Q, Sum
 from django.utils.functional import cached_property
 
-from django.db.models.fields.files import FieldFile, FileField 
+from django.db.models.fields.files import FieldFile, FileField
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
@@ -82,7 +80,7 @@ class Project(models.Model):
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
-    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)#created_by
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)# Main account owner,if team team_owner
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
         on_delete=models.CASCADE, related_name="proj_mt_engine")
@@ -90,7 +88,7 @@ class Project(models.Model):
     max_hits = models.IntegerField(default=5)
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
     project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
-
+    created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -250,6 +248,18 @@ class Project(models.Model):
             return True
         if len(self.get_tasks) == self.task_project.count() and len(self.get_tasks) != 0:
             return True
+        else:
+            return False
+
+    @property
+    def assigned(self):
+        if self.get_tasks:
+            for task in self.get_tasks:
+                try:
+                    if task.task_assign_info:
+                        return True
+                except:
+                    return False
         else:
             return False
 
@@ -569,7 +579,7 @@ class Task(models.Model):
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
 
-def reference_file_upload_path(instance, filename):
+def ref_file_upload_path(instance, filename):
     file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,\
             "references", filename)
     return file_path
@@ -578,20 +588,27 @@ class TaskAssignInfo(models.Model):
     task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
-    reference_file = models.FileField (upload_to=reference_file_upload_path,blank=True, null=True)
+    instruction_file = models.FileField (upload_to=ref_file_upload_path,blank=True, null=True)
     assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)
     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
-    assigned_by = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True, blank=True,
+    assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
             related_name="user_assign_info")
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
             self.assignment_id = self.task.job.project.ai_project_id+"t"+str(TaskAssignInfo.objects.filter(task=self.task).count()+1)
         super().save()
+
+    @property
+    def filename(self):
+        try:
+            return  os.path.basename(self.instruction_file.file.name)
+        except:
+            return None
 
 class TaskAssignHistory(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,

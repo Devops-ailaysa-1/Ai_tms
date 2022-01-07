@@ -413,12 +413,13 @@ class HiredEditorSerializer(serializers.ModelSerializer):
     professional_identity= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
     class Meta:
         model = HiredEditors
-        fields = ('id','role','user','professional_identity',
-                'status','current_status','hired_editor','hired_editor_detail',)
+        fields = ('id','role','user','professional_identity',\
+                'status','current_status','hired_editor','hired_editor_detail','added_by',)
         extra_kwargs = {
             'hired_editor':{'write_only':True},
             'user':{'write_only':True},
             'status':{'write_only':True},
+            'added_by':{'write_only':True},
             }
     def get_hired_editor_detail(self, obj):
         return {'name':obj.hired_editor.fullname,'email':obj.hired_editor.email}

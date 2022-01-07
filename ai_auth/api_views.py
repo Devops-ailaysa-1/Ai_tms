@@ -8,7 +8,7 @@ from os.path import join
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from stripe.api_resources import subscription
-from ai_auth.access_policies import MemberCreationAccess
+from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,TeamAccess
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
@@ -25,7 +25,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors)
+                            Team,InternalMember,HiredEditors,VendorOnboarding)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -809,7 +809,11 @@ def get_user_currency(request):
 
 class UserSubscriptionCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    def create(self,request):
+    def create(self,request,price_id=None):
+        livemode = settings.STRIPE_LIVE_MODE
+        #price_id = self.kwargs.get('price_id')
+        price_id =request.query_params.get('price_id', None)
+        print("price---id",price_id)
         user=request.user
         is_active = is_active_subscription(user=request.user)
         if is_active[0] == False:
@@ -822,6 +826,9 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 # check user is from pricing page
                 pre_price = TempPricingPreference.objects.filter(email=user.email).last()
                 if pre_price == None:
+                    raise ValueError('No Prefernece Given')
+                else:
+                    price_id = pre_price.price_id
                     raise ValueError('No Prefernece Given')
                 if user.country.id == 101 :
                     currency = 'inr'
@@ -838,16 +845,25 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 return Response({'msg':'Payment Needed','stripe_url':session.url}, status=307)
             except (TempPricingPreference.DoesNotExist,ValueError):
                 #free=CreditPack.objects.get(name='Free')
-                pro=CreditPack.objects.get(name='Pro')
+
+                pro = CreditPack.objects.get(name='Pro')
+
                 if user.country.id == 101 :
                     currency = 'inr'
                 else:
                     currency ='usd'
-                price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month').last()
+
+                if price_id:
+                    price = Plan.objects.get(id=price_id)
+                    if (price.currency != currency) or (price.interval != 'month'):
+                        price = Plan.objects.get(product=price.product,interval='month',currency=currency,livemode=livemode)
+
+                else:
+                    price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
                 response=subscribe_trial(price,customer)
                 print(response)
                 #customer.subscribe(price=price)
-                return Response({'msg':'User Successfully created','subscription':'Pro_Trial'}, status=201)
+                return Response({'msg':'User Successfully created','subscription':price.product.name+"_Trial"}, status=201)
         elif is_active == (True,True):
             return Response({'msg':'User already Registerd'}, status=400)
 
@@ -1141,16 +1157,33 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         name = request.POST.get("name")
         email = request.POST.get("email")
         cv_file = request.FILES.get('cv_file')
+        message = request.POST.get("message")
         today = date.today()
         template = 'vendor_onboarding_email.html'
         subject='Regarding Vendor Onboarding'
-        context = {'email': email,'name':name,'file':cv_file,'date':today}
-        serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file})
+        context = {'email': email,'name':name,'file':cv_file,'date':today,'message':message}
+        serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
             send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['POST'])
+# def vendor_invite_accept(request):
+#     uid = request.POST.get('uid')
+#     token = request.POST.get('token')
+#     vendor_request_id = urlsafe_base64_decode(uid)
+#     request = VendorOnboarding.objects.get(id=vendor_request_id )
+#     if request is not None and invite_accept_token.check_token(request, token):
+#         request.status = 2
+#         request.save()
+#         print("Request Accepted")
+#         return JsonResponse({"msg":"Request Accepted"},safe=False)
+#     else:
+#         return JsonResponse({"msg":'Either link is already used or link is invalid!'},safe=False)
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1205,7 +1238,7 @@ class TeamCreateView(viewsets.ViewSet):
         try:
             queryset =Team.objects.get(owner_id=request.user.id)
         except Team.DoesNotExist:
-            return Response(status=204)
+            return Response({'msg':'team not exists'},status=204)
         serializer = TeamSerializer(queryset)
         return Response(serializer.data)
 
@@ -1250,16 +1283,16 @@ invite_accept_token = TokenGenerator()
 class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
     page_size = 10
-    # filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    ordering = ('id')
     search_fields = ['internal_member__fullname']
 
     def get_queryset(self):
         team = self.request.query_params.get('team')
-        print(team)
         if team:
             queryset=InternalMember.objects.filter(team__name = team)
         else:
-            queryset =InternalMember.objects.filter(team__owner_id=self.request.user.id)
+            queryset =InternalMember.objects.filter(team=self.request.user.team)
         return queryset
 
     def filter_queryset(self, queryset):
@@ -1268,25 +1301,44 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
 
+    # def list(self, request):
+    #     queryset_all = self.get_queryset()
+    #     if not queryset_all.exists():
+    #         return Response(status=204)
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
+    #     serializer = InternalMemberSerializer(pagin_tc,many=True)
+    #     response = self.get_paginated_response(serializer.data)
+    #     return response
+
     def list(self, request):
-        queryset_all = self.get_queryset()
-        if not queryset_all.exists():
-            return Response(status=204)
-        queryset = self.filter_queryset(self.get_queryset())
-        pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = InternalMemberSerializer(pagin_tc,many=True)
-        response = self.get_paginated_response(serializer.data)
-        return response
+        queryset = self.get_queryset()
+        serializer = InternalMemberSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def check_user(self,email,team_name):
+        try:
+            user = AiUser.objects.get(email = email)
+            if user.is_internal_member == True:
+                if user.team.name == team_name:
+                    return {"msg":"Already team member"}
+            else:
+                return {"msg":"Ailaysa User"}
+        except:
+            return None
 
     @integrity_error
     def create(self,request):
         data = request.POST.dict()
         team = data.get('team')
         email = data.get('email')
+        team_name = Team.objects.get(id=team).name
+        existing = self.check_user(email,team_name)
+        if existing:
+            return Response(existing,status = status.HTTP_409_CONFLICT)
         role = data.get('role')
         role_name = Role.objects.get(id=role).name
         today = date.today()
-        team_name = Team.objects.get(id=team).name
         functional_identity = request.POST.get('functional_identity')
         password = AiUser.objects.make_random_password()
         print("randowm pass",password)
@@ -1320,6 +1372,11 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     def delete(self,request,pk):
         queryset = InternalMember.objects.all()
         internal_member = get_object_or_404(queryset, pk=pk)
+        user = AiUser.objects.get(id = internal_member.internal_member_id)
+        EmailAddress.objects.get(email = user.email).delete()
+        user.is_active = False
+        user.email = user.email+"_deleted_"+user.uid
+        user.save()
         internal_member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1332,12 +1389,10 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     search_fields = ['hired_editor__fullname']
 
     def get_queryset(self):
-        # team = self.request.query_params.get('team')
-        # if team:
-        #     team_obj = Team.objects.get(name=team)
-        #     queryset=ExternalMember.objects.filter(user= team_obj.owner)
-        # else:
-        queryset =HiredEditors.objects.filter(Q(user_id=self.request.user.id))
+        if self.request.user.team:
+            queryset =HiredEditors.objects.filter(Q(user_id=self.request.user.team.owner.id))
+        else:
+            queryset =HiredEditors.objects.filter(Q(user_id=self.request.user.id))
         return queryset
 
     def filter_queryset(self, queryset):
@@ -1358,41 +1413,32 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
     @integrity_error
     def create(self,request):
-        # team = request.POST.get('team')
-        # if team == None:
-        # team = Team.objects.get(owner_id=request.user.id).id
-        user = request.user.fullname
+        if request.user.team: user = request.user.team.owner
+        else: user = request.user
         template = 'External_member_pro_invite_email.html'
-        # else:
-        #     template = 'External_member_business_invite_email.html'
-        #     team_name = Team.objects.get(id=team).name
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role',2)
         vendor = AiUser.objects.get(uid=uid)
-        existing = HiredEditors.objects.filter(user=request.user,hired_editor=vendor)
+        existing = HiredEditors.objects.filter(user=user,hired_editor=vendor)
         if existing:
             return JsonResponse({"msg":"editor already existed in your hired_editors list.check his availability in chat and assign"},safe = False)
         else:
-        # team_name = Team.objects.get(id=team).name
             role_name = Role.objects.get(id=role).name
             email = vendor.email
-            serializer = HiredEditorSerializer(data={'user':request.user.id,'role':role,'hired_editor':vendor.id,'status':1})
+            serializer = HiredEditorSerializer(data={'user':user.id,'role':role,'hired_editor':vendor.id,'status':1,'added_by':request.user.id})
             if serializer.is_valid():
                 serializer.save()
                 hired_editor_id = serializer.data.get('id')
                 ext = HiredEditors.objects.get(id = serializer.data.get('id'))
-                # print("TTTTTTTTTTTTTTTTTTTTTTT-------------------->",ext)
                 uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
                 token = invite_accept_token.make_token(ext)
-                link = join(settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
+                link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
                 # template = 'External_member_invite_email.html'
                 subject='Ailaysa MarketPlace Invite'
-                context = {'name':vendor.fullname,'team':user,'role':role_name,'link':link}
+                context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
                 send_email_user(subject,template,context,email)
                 return JsonResponse({"msg":"email sent successfully"},safe = False)
-        # # link = request.build_absolute_uri('/team/external_member/accept/'+urlsafe_base64_encode(force_bytes(vendor.id))+'/'+urlsafe_base64_encode(force_bytes(team.id))+'/'+invite_accept_token.make_token(user)+'/')
-        # # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(vendor.id)),'teamid':urlsafe_base64_encode(force_bytes(team)),'roleid':urlsafe_base64_encode(force_bytes(role)),'token':invite_accept_token.make_token(vendor)}))
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, pk):
@@ -1414,7 +1460,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def invite_accept(request):#,uid,token):
     uid = request.POST.get('uid')
     token = request.POST.get('token')
@@ -1452,45 +1498,45 @@ def teams_list(request):
     return JsonResponse({'team_list':teams})
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def TransactionSessionInfo(request):
-    session_id = request.POST.get('session_id')
-    if settings.STRIPE_LIVE_MODE == True :
-        api_key = settings.STRIPE_LIVE_SECRET_KEY
-    else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def TransactionSessionInfo(request):
+#     session_id = request.POST.get('session_id')
+#     if settings.STRIPE_LIVE_MODE == True :
+#         api_key = settings.STRIPE_LIVE_SECRET_KEY
+#     else:
+#         api_key = settings.STRIPE_TEST_SECRET_KEY
 
-    stripe.api_key = api_key
+#     stripe.api_key = api_key
 
-    response = stripe.checkout.Session.retrieve(
-                 session_id
-                    )
-    # print("Bank Details")
-    # print()
-    # print(response)
-    if response.mode == "subscription":
-        try:
-            invoice =Invoice.objects.get(subscription=response.subscription)
-        except Invoice.DoesNotExist:
-             return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
-        charge = invoice.charge
-        # if invoice == None:
+#     response = stripe.checkout.Session.retrieve(
+#                  session_id
+#                     )
+#     # print("Bank Details")
+#     # print()
+#     # print(response)
+#     if response.mode == "subscription":
+#         try:
+#             invoice =Invoice.objects.get(subscription=response.subscription)
+#         except Invoice.DoesNotExist:
+#              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+#         charge = invoice.charge
+#         # if invoice == None:
 
-        #     return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
-        pack = CreditPack.objects.get(product__prices__id=invoice.plan.id,type="Subscription")
-        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"amount":charge.amount,"plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"paid":charge.paid,"payment_type":charge.payment_method.type,"txn_id":charge.balance_transaction_id},status=200,safe = False)
+#         #     return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+#         pack = CreditPack.objects.get(product__prices__id=invoice.plan.id,type="Subscription")
+#         return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"amount":charge.amount,"plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"paid":charge.paid,"payment_type":charge.payment_method.type,"txn_id":charge.balance_transaction_id},status=200,safe = False)
 
-    elif response.mode == "payment":
-        try:
-            charge = Charge.objects.get(payment_intent=response.payment_intent)
-        except Charge.DoesNotExist:
-             return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
-        pack = CreditPack.objects.get(product__prices__id=charge.metadata.get("price"),type="Addon")
-        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"amount":charge.amount, "paid":charge.paid ,"payment_type":charge.payment_method.type, "txn_id":charge.balance_transaction_id},status=200,safe = False)
-    else:
-        return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
-        
+#     elif response.mode == "payment":
+#         try:
+#             charge = Charge.objects.get(payment_intent=response.payment_intent)
+#         except Charge.DoesNotExist:
+#              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+#         pack = CreditPack.objects.get(product__prices__id=charge.metadata.get("price"),type="Addon")
+#         return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"amount":charge.amount, "paid":charge.paid ,"payment_type":charge.payment_method.type, "txn_id":charge.balance_transaction_id},status=200,safe = False)
+#     else:
+#         return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
+
 
 
 @api_view(['POST'])

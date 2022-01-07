@@ -30,10 +30,12 @@ class AilzaManager(BaseUserManager):
 
 class ProjectManager(models.Manager):
     def create_and_jobs_files_bulk_create(self,\
-            data, files_key, jobs_key, f_klass, j_klass, ai_user):
+            data, files_key, jobs_key, f_klass, j_klass,\
+            ai_user, team, project_manager, created_by):
         files_data = data.pop(files_key)
         jobs_data = data.pop(jobs_key)
-        project = self.create(**data, ai_user=ai_user)
+        project = self.create(**data, ai_user=ai_user,project_manager=project_manager,\
+                                team=team,created_by=created_by)
         return self.create_and_jobs_files_bulk_create_for_project(
             project, files_data, jobs_data, f_klass, j_klass
         )

@@ -7,24 +7,11 @@ from rest_framework.response import Response
 
 
 class VendorsInfoSerializer(serializers.ModelSerializer):
-
+    cv_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
     class Meta:
         model = VendorsInfo
-        fields = (
-            'id',
-            'vendor_unique_id',
-            'type',
-            'currency',
-            'vm_status',
-            'status',
-            'token',
-            'skype',
-            'proz_link',
-            'cv_file',
-            'native_lang',
-            'year_of_experience',
-            'rating',
-        )
+        fields = ('id','vendor_unique_id','type','currency','vm_status','status','token','skype',
+                'proz_link','cv_file','native_lang','year_of_experience','rating','location',)
         extra_kwargs = {'id':{"read_only":True},}
 
     def save(self, user_id):
@@ -50,9 +37,10 @@ class VendorCATsoftwareSerializer(serializers.ModelSerializer):
         fields=('software',)
 
 class VendorSubjectFieldSerializer(serializers.ModelSerializer):
+    subject_name = serializers.ReadOnlyField(source='subject.name')
     class Meta:
         model=VendorSubjectFields
-        fields=('subject',)
+        fields=('subject','subject_name')
 
 class VendorMembershipSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,9 +53,10 @@ class VendorMtpeEngineSerializer(serializers.ModelSerializer):
         fields=('mtpe_engines',)
 
 class VendorContentTypeSerializer(serializers.ModelSerializer):
+    contenttype_name = serializers.ReadOnlyField(source='contenttype.name')
     class Meta:
         model=VendorContentTypes
-        fields=('contenttype',)
+        fields=('contenttype','contenttype_name')
 
 class TranslationSampleSerializer(serializers.ModelSerializer):
     class Meta:

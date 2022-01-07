@@ -1,4 +1,5 @@
 from ai_auth.models import AiUser
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
@@ -43,7 +44,8 @@ def integrity_error(func):
     return decorator
 
 class VendorsInfoCreateView(APIView):
-
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             queryset = VendorsInfo.objects.get(user_id=request.user.id)
@@ -55,20 +57,17 @@ class VendorsInfoCreateView(APIView):
     def post(self, request):
         cv_file=request.FILES.get('cv_file')
         user_id = request.user.id
-        # data = request.POST.dict()
         print("cv_file------->",cv_file)
         serializer = VendorsInfoSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save(user_id = user_id)
             return Response(serializer.data)
-        print("errors", serializer.errors)
+        # print("errors", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self,request):
         user_id=request.user.id
-        print("cv_file---->",request.FILES.get('cv_file'))
         cv_file=request.FILES.get('cv_file')
-        # data = request.POST.dict()
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
         if cv_file:
             serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
@@ -79,9 +78,15 @@ class VendorsInfoCreateView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self,request):
+        instance = VendorsInfo.objects.get(user_id=request.user.id)
+        if request.POST.get('cv_file',None) != None :
+            instance.cv_file=None
+        instance.save()
+        return Response({"msg":"Deleted Successfully"},status=200)
 
 class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
-    # permission_classes =[IsAuthenticated]
+    permission_classes =[IsAuthenticated]
     # page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
     # def get_custom_page_size(self, request, view):
     #     try:
@@ -167,6 +172,7 @@ def clone_lang_pair(request,id):
 
 
 class VendorExpertiseListCreate(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = self.get_queryset()
         serializer = ServiceExpertiseSerializer(queryset,many=True)
@@ -188,20 +194,19 @@ class VendorExpertiseListCreate(viewsets.ViewSet):
             # return Response(data={"Message":"VendorExpertiseInfo Created"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self,request,pk=None):
-        queryset = AiUser.objects.filter(id=self.request.user.id).all()
-        User = get_object_or_404(queryset, pk=request.user.id)
+    def update(self,request,pk):
+        queryset = AiUser.objects.filter(id=pk).all()
+        User = get_object_or_404(queryset, pk=pk)
         ser= ServiceExpertiseSerializer(User,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
             ser.save()
-            # ser.update(vendor,validated_data=request.data)
             return Response(ser.data)
         else:
             return Response(ser.errors)
 
 
 class VendorsBankInfoCreateView(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             queryset = VendorBankDetails.objects.get(user_id=request.user.id)
