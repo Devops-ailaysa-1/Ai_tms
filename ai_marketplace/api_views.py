@@ -532,9 +532,10 @@ class VendorFilterNew(django_filters.FilterSet):
     email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
     country = django_filters.NumberFilter(field_name='country_id')
     location = django_filters.CharFilter(field_name='vendor_info__location',lookup_expr='icontains')
+    category = django_filters.CharFilter(field_name='vendor_info__type__name',lookup_expr='icontains')
     class Meta:
         model = AiUser
-        fields = ('fullname', 'email','year_of_experience','country','location',)
+        fields = ('fullname', 'email','year_of_experience','country','location','category',)
 
 
 class GetVendorListViewNew(generics.ListAPIView):
