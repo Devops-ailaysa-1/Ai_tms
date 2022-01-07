@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
+from django.db.models import OuterRef, Subquery
 from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
@@ -474,7 +475,8 @@ def get_available_threads(request):
         try:profile = Receiver.professional_identity_info.avatar_url
         except:profile = None
         contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
-    return JsonResponse({"receivers_list":receivers_list})#,"contacts_list":contacts_list})
+        contacts = sorted(contacts_list, key = lambda i: (i['receiver']))
+    return JsonResponse({"receivers_list":receivers_list})#"contacts_list":contacts})
 
 
 
@@ -484,25 +486,19 @@ def get_available_threads(request):
 @permission_classes([IsAuthenticated])
 def chat_unread_notifications(request):
     user = AiUser.objects.get(pk=request.user.id)
-    # notifications = user.notifications.filter(verb='Message').unread()
     count = user.notifications.filter(verb='Message').unread().count()
     notification_details=[]
     notification=[]
     notification.append({'total_count':count})
-    notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
-    print(notifications)
+    # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
+    notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
+            user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
     for i in notifications:
-       print(i.id)
        count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
        sender = AiUser.objects.get(id =i.actor_object_id)
        try:profile = sender.professional_identity_info.avatar_url
        except:profile = None
        notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
-    # notifications= user.notifications.filter(verb='Message').unread().values('data','actor_object_id').annotate(count= Count('actor_object_id')).order_by()
-    # for i in notifications:
-    #     print(i.get('actor_object_id'))
-    #     sender = AiUser.objects.get(id =i.get('actor_object_id'))
-    #     notification_details.append({'thread_id':i.get('data').get('thread_id'),'count':i.get('count'),'sender':sender.fullname})
     return JsonResponse({'notifications':notification,'notification_details':notification_details})
 
 @api_view(['GET',])
@@ -531,9 +527,10 @@ class VendorFilterNew(django_filters.FilterSet):
     email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
     country = django_filters.NumberFilter(field_name='country_id')
     location = django_filters.CharFilter(field_name='vendor_info__location',lookup_expr='icontains')
+    category = django_filters.CharFilter(field_name='vendor_info__type__name',lookup_expr='icontains')
     class Meta:
         model = AiUser
-        fields = ('fullname', 'email','year_of_experience','country','location',)
+        fields = ('fullname', 'email','year_of_experience','country','location','category',)
 
 
 class GetVendorListViewNew(generics.ListAPIView):

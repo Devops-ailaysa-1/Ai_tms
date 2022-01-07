@@ -679,6 +679,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
 		model = Project
 		fields = ("id", "project_name","assign_enable","files_jobs_choice_url", )
 
+
 	def check_role(self, instance):
 		if self.context.get("request")!=None:
 			user = self.context.get("request").user
