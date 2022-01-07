@@ -251,6 +251,18 @@ class Project(models.Model):
         else:
             return False
 
+    @property
+    def assigned(self):
+        if self.get_tasks:
+            for task in self.get_tasks:
+                try:
+                    if task.task_assign_info:
+                        return True
+                except:
+                    return False
+        else:
+            return False
+
     # @property
     # def project_analysis(self):
     #     if self.is_proj_analysed == True:
@@ -590,6 +602,13 @@ class TaskAssignInfo(models.Model):
         if not self.assignment_id:
             self.assignment_id = self.task.job.project.ai_project_id+"t"+str(TaskAssignInfo.objects.filter(task=self.task).count()+1)
         super().save()
+
+    @property
+    def filename(self):
+        try:
+            return  os.path.basename(self.instruction_file.file.name)
+        except:
+            return None
 
 class TaskAssignHistory(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,

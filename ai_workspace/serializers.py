@@ -402,7 +402,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name", "jobs","assign_enable","files","files_jobs_choice_url",
+		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed",)
 
 	# class Meta:
@@ -490,11 +490,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
     assigned_by_name = serializers.ReadOnlyField(source='assigned_by.fullname')
+    job = serializers.ReadOnlyField(source='task.job.id')
+    project = serializers.ReadOnlyField(source='task.job.project.id')
+    instruction_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
     # assigned_to_name = serializers.ReadOnlyField(source='task.assign_to.fullname')
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_file','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
+        fields = ('id','instruction','instruction_file','filename','job','project','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
         extra_kwargs = {
             'assigned_by':{'write_only':True},
              }

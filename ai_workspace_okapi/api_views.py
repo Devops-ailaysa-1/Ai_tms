@@ -41,7 +41,8 @@ from ai_workspace.models import File
 from django.contrib.auth import settings
 
 
-logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
+# logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
+logger = logging.getLogger('django')
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -125,7 +126,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
-            print("Time taken for spring ==========>", time.process_time() - start)
+            # print("Time taken for spring ==========>", time.process_time() - start)
             if doc.status_code == 200 :
                 doc_data = doc.json()
                 # print("Doc data ---> ", doc_data)
@@ -137,7 +138,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task.document = document
                     task.save()
             else:
-                logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                # logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
         return document
@@ -198,8 +200,12 @@ class DocumentViewByDocumentId(views.APIView):
         return  document
 
     def get(self, request, document_id):
-        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        if request.user.id == doc_user:
+        #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
+        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        print("doc--->",doc_user)
+        print("user---->",request.user)
+        team = doc_user.team
+        if (request.user == doc_user) or (request.user in doc_user.team.get_team_members) or (request.user in doc_user.get_hired_editors):
             document = self.get_object(document_id)
             return Response(DocumentSerializerV2(document).data, status=200)
         else:
@@ -250,6 +256,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
         if segment_serlzr.is_valid(raise_exception=True):
             segment_serlzr.save()
             return segment_serlzr
+        else:
+            logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
+            return segment_serlzr.errors
 
     def update_pentm(self, segment):
         data = PentmUpdateSerializer(segment).data
@@ -295,6 +304,7 @@ class MT_RawAndTM_View(views.APIView):
             print("Word count --->", res.json())
             consumable_credits = res.json()
         else:
+            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
             raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
         if initial_credit > consumable_credits :
@@ -370,7 +380,7 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
             res = self.document_data_to_file(request, document_id)
-            print("Doc to file res code ====> ", res.status_code)
+            # print("Doc to file res code ====> ", res.status_code)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 # print("file_path---->", file_path)
@@ -391,6 +401,7 @@ class DocumentToFile(views.APIView):
                                 return response
                 except Exception as e:
                     print("Exception ------> ", e)
+            logger.info(">>>>>>>> Error in output file writing <<<<<<<<<")
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
         else:
@@ -402,7 +413,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
-        print("Data for writing file ---> ", data)
+        # print("Data for writing file ---> ", data)
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future

@@ -25,7 +25,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors)
+                            Team,InternalMember,HiredEditors,VendorOnboarding)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -852,7 +852,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                     currency = 'inr'
                 else:
                     currency ='usd'
-                
+
                 if price_id:
                     price = Plan.objects.get(id=price_id)
                     if (price.currency != currency) or (price.interval != 'month'):
@@ -1157,16 +1157,33 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         name = request.POST.get("name")
         email = request.POST.get("email")
         cv_file = request.FILES.get('cv_file')
+        message = request.POST.get("message")
         today = date.today()
         template = 'vendor_onboarding_email.html'
         subject='Regarding Vendor Onboarding'
-        context = {'email': email,'name':name,'file':cv_file,'date':today}
-        serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file})
+        context = {'email': email,'name':name,'file':cv_file,'date':today,'message':message}
+        serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
             send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['POST'])
+# def vendor_invite_accept(request):
+#     uid = request.POST.get('uid')
+#     token = request.POST.get('token')
+#     vendor_request_id = urlsafe_base64_decode(uid)
+#     request = VendorOnboarding.objects.get(id=vendor_request_id )
+#     if request is not None and invite_accept_token.check_token(request, token):
+#         request.status = 2
+#         request.save()
+#         print("Request Accepted")
+#         return JsonResponse({"msg":"Request Accepted"},safe=False)
+#     else:
+#         return JsonResponse({"msg":'Either link is already used or link is invalid!'},safe=False)
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1221,7 +1238,7 @@ class TeamCreateView(viewsets.ViewSet):
         try:
             queryset =Team.objects.get(owner_id=request.user.id)
         except Team.DoesNotExist:
-            return Response(status=204)
+            return Response({'msg':'team not exists'},status=204)
         serializer = TeamSerializer(queryset)
         return Response(serializer.data)
 
@@ -1266,16 +1283,16 @@ invite_accept_token = TokenGenerator()
 class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
     page_size = 10
-    # filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    ordering = ('id')
     search_fields = ['internal_member__fullname']
 
     def get_queryset(self):
         team = self.request.query_params.get('team')
-        print(team)
         if team:
             queryset=InternalMember.objects.filter(team__name = team)
         else:
-            queryset =InternalMember.objects.filter(team__owner_id=self.request.user.id)
+            queryset =InternalMember.objects.filter(team=self.request.user.team)
         return queryset
 
     def filter_queryset(self, queryset):
@@ -1284,15 +1301,20 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
 
+    # def list(self, request):
+    #     queryset_all = self.get_queryset()
+    #     if not queryset_all.exists():
+    #         return Response(status=204)
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     pagin_tc = self.paginate_queryset(queryset, request , view=self)
+    #     serializer = InternalMemberSerializer(pagin_tc,many=True)
+    #     response = self.get_paginated_response(serializer.data)
+    #     return response
+
     def list(self, request):
-        queryset_all = self.get_queryset()
-        if not queryset_all.exists():
-            return Response(status=204)
-        queryset = self.filter_queryset(self.get_queryset())
-        pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = InternalMemberSerializer(pagin_tc,many=True)
-        response = self.get_paginated_response(serializer.data)
-        return response
+        queryset = self.get_queryset()
+        serializer = InternalMemberSerializer(queryset,many=True)
+        return Response(serializer.data)
 
     def check_user(self,email,team_name):
         try:

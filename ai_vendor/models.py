@@ -31,6 +31,7 @@ class VendorsInfo(models.Model):
     native_lang = models.ForeignKey(Languages,blank=True, null=True, related_name='native_lang', on_delete=models.CASCADE)
     year_of_experience = models.DecimalField(max_digits=5,decimal_places=1 , blank=True, null=True)
     rating = models.IntegerField(blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 

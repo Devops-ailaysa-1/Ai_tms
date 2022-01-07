@@ -8,6 +8,7 @@ from django.db.models import Q
 from ai_workspace.models import Project,Job
 from drf_writable_nested import WritableNestedModelSerializer
 import json
+from itertools import groupby
 from rest_framework.response import Response
 from dj_rest_auth.serializers import UserDetailsSerializer
 from ai_auth.serializers import ProfessionalidentitySerializer
@@ -118,6 +119,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
     legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.sortname')
+    location = serializers.ReadOnlyField(source = 'vendor_info.location')
     native_lang = serializers.ReadOnlyField(source = 'vendor_info.native_lang.language')
     year_of_experience = serializers.ReadOnlyField(source = 'vendor_info.year_of_experience')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
@@ -233,9 +235,14 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
 
 class ChatMessageSerializer(serializers.ModelSerializer):
+    user_name = serializers.ReadOnlyField(source='user.fullname')
+    # user_avatar = serializers.ReadOnlyField(source='user.professional_identity_info.avatar_url')
     class Meta:
         model = ChatMessage
-        fields = '__all__'
+        fields = ('id','thread','user','user_name','message','timestamp',)
+        # extra_kwargs = {
+        #     'user':{'write_only':True},
+        #      }
 
     def run_validation(self,data):
         if self.context['request']._request.method == 'POST':
@@ -246,3 +253,46 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             if (user!=user1) and (user!=user2):
                 raise serializers.ValidationError({"msg":'This person is not in this thread,he cannot send messages here'})
         return super().run_validation(data)
+
+
+class ChatMessageByDateSerializer(serializers.ModelSerializer):
+    logged_in_user = serializers.SerializerMethodField()
+    user_name = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
+    message = serializers.SerializerMethodField()
+    organisation_name = serializers.SerializerMethodField()
+    class Meta:
+        model = Thread
+        fields = ('logged_in_user','user_name','avatar','organisation_name','message',)
+
+    def get_logged_in_user(self,obj):
+        user = self.context['request'].user
+        return user.id
+
+    def get_user_name(self,obj):
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
+        # user = self.context['request'].user
+        return user.fullname
+
+    def get_avatar(self,obj):
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
+        try: return user.professional_identity_info.avatar_url
+        except: return None
+
+    def get_organisation_name(self,obj):
+        user = obj.first_person if obj.second_person == self.context['request'].user else obj.second_person
+        try: return user.ai_profile_info.organisation_name
+        except: return None
+
+    def get_message(self, obj):
+        message = self.context['request'].query_params.get('message')
+        if message:
+            messages = ChatMessage.objects.filter(Q(thread_id = obj.id) & Q(message__icontains=message))
+        else:
+            messages = ChatMessage.objects.filter(thread_id = obj.id)
+        messages_grouped_by_date = groupby(messages.iterator(), lambda m: m.timestamp.date())
+        messages_dict = {}
+        for date, group_of_messages in messages_grouped_by_date:
+            dict_key = date.strftime('%Y-%m-%d')
+            messages_dict[dict_key] = ChatMessageSerializer(group_of_messages,many=True).data
+        return messages_dict
