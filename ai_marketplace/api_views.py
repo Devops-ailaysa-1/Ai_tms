@@ -467,14 +467,14 @@ def get_available_threads(request):
         receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
                                 'message':message,'timestamp':time,'unread_count':count})
     contacts_list = []
-    thread_empty = Thread.objects.by_user(user=request.user).all()
-    for thread in thread_empty:
+    all_threads = Thread.objects.by_user(user=request.user).all()
+    for thread in all_threads:
         receiver = thread.second_person_id if thread.first_person_id == request.user.id else thread.first_person_id
         Receiver = AiUser.objects.get(id = receiver)
         try:profile = Receiver.professional_identity_info.avatar_url
         except:profile = None
         contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
-    return JsonResponse({"recent_list":receivers_list,"contacts_list":contacts_list})
+    return JsonResponse({"receivers_list":receivers_list})#,"contacts_list":contacts_list})
 
 
 
