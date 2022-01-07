@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
+from django.db.models import OuterRef, Subquery
 from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
@@ -490,10 +491,10 @@ def chat_unread_notifications(request):
     notification_details=[]
     notification=[]
     notification.append({'total_count':count})
-    notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
-    print(notifications)
+    # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
+    notifications = user.notifications.filter(pk__in=Subquery(
+            user.notifications.order_by("data").distinct("data").values('id'))).order_by("-timestamp")
     for i in notifications:
-       print(i.id)
        count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
        sender = AiUser.objects.get(id =i.actor_object_id)
        try:profile = sender.professional_identity_info.avatar_url
