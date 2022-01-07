@@ -451,34 +451,31 @@ def get_my_jobs(request):
 @permission_classes([IsAuthenticated])
 def get_available_threads(request):
     # name = request.GET.get('name')
-    try:
-        # if name:
-        #     threads = Thread.objects.filter(Q(first_person__fullname__icontains=name) or Q(first_person__fullname__icontains=name))\
-        #                 .prefetch_related('chatmessage_thread').order_by('timestamp')
-        # else:
-        # threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
-        threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread')\
-                    .annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
-        receivers_list =[]
-        for i in threads:
-            message,time,count=None,None,None
-            receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
-            Receiver = AiUser.objects.get(id = receiver)
-            try:profile = Receiver.professional_identity_info.avatar_url
-            except:profile = None
-            data = {'thread_id':i.id}
-            chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
-            if chats:
-                count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
-                # count =Notifications.objects.filter(Q(data=data) & Q(verb='Message') & Q(unread = True)).count()
-                notification = chats.order_by('-timestamp').first()
-                message = notification.description
-                time = notification.timestamp
-            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
-                                    'message':message,'timestamp':time,'unread_count':count})
-        return JsonResponse({"receivers_list":receivers_list})
-    except:
-        return JsonResponse({"receivers_list":[]})
+    threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
+    receivers_list =[]
+    for i in threads:
+        receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
+        Receiver = AiUser.objects.get(id = receiver)
+        try:profile = Receiver.professional_identity_info.avatar_url
+        except:profile = None
+        data = {'thread_id':i.id}
+        chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
+        count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
+        notification = chats.order_by('-timestamp').first()
+        message = notification.description
+        time = notification.timestamp
+        receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
+                                'message':message,'timestamp':time,'unread_count':count})
+    contacts_list = []
+    thread_empty = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = True)
+    for thread in thread_empty:
+        receiver = thread.second_person_id if thread.first_person_id == request.user.id else thread.first_person_id
+        Receiver = AiUser.objects.get(id = receiver)
+        try:profile = Receiver.professional_identity_info.avatar_url
+        except:profile = None
+        contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
+    return JsonResponse({"recent_list":receivers_list,"contacts_list":contacts_list})
+
 
 
 
