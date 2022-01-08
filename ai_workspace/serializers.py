@@ -396,6 +396,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
+	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
 	# team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	# project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
@@ -403,8 +404,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed",)
-
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist",)
 	# class Meta:
 	# 	model = Project
 	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
@@ -418,12 +418,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return super().run_validation(data)
 
 	def to_internal_value(self, data):
+		print("DTATA------>",data)
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
 		# print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-		# data['team_id'] = data.get('team',[None])[0]
+		data['team_exist'] = data.get('team',[None])[0]
 		# data['project_manager_id'] = data.get('project_manager')
 		return super().to_internal_value(data=data)
 
@@ -453,6 +454,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:ai_user = created_by
 		team = created_by.team if created_by.team else None
 		project_manager = created_by
+		validated_data.pop('team_exist')
 		print("validated_data---->",validated_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
@@ -468,9 +470,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)
 			instance.save()
-		if validated_data.get('team_id'):
-			instance.team_id = validated_data.get('team_id')
+		if 'team_exist' in validated_data:
+			instance.team_id = None if validated_data.get('team_exist') == False else instance.created_by.team.id
 			instance.save()
+
 		if validated_data.get('project_manager_id'):
 			instance.project_manager_id = validated_data.get('project_manager_id')
 			instance.save()
@@ -489,7 +492,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
-    assigned_by_name = serializers.ReadOnlyField(source='assigned_by.fullname')
+    # assigned_by_name = serializers.ReadOnlyField(source='assigned_by.fullname')
+    assign_to_details = serializers.SerializerMethodField()
+    assigned_by_details = serializers.SerializerMethodField()
     job = serializers.ReadOnlyField(source='task.job.id')
     project = serializers.ReadOnlyField(source='task.job.project.id')
     instruction_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
@@ -497,10 +502,22 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_file','filename','job','project','assigned_by','assigned_by_name','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count',)#,'assigned_to_name',)
+        fields = ('id','instruction','instruction_file','filename',\
+                   'job','project','assigned_by','assignment_id','deadline',\
+                   'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
+                    'total_word_count','assign_to_details','assigned_by_details',)
         extra_kwargs = {
             'assigned_by':{'write_only':True},
+            # 'assign_to':{'write_only':True}
              }
+
+    def get_assign_to_details(self,instance):
+        email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
+        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email}
+
+    def get_assigned_by_details(self,instance):
+        return {"id":instance.assigned_by_id,"name":instance.assigned_by.fullname,"email":instance.assigned_by.email}
+
 
 
     def run_validation(self, data):
@@ -532,12 +549,12 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
             task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
         return super().update(instance, data)
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        print(instance)
-        data["assign_to"] = instance.task.assign_to.id
-        # data['assigned_by'] = instance.task.job.project.ai_user.fullname
-        return data
+    # def to_representation(self, instance):
+    #     data = super().to_representation(instance)
+    #     print(instance)
+    #     data["assign_to"] = instance.task.assign_to.id
+    #     # data['assigned_by'] = instance.task.job.project.ai_user.fullname
+    #     return data
 
 
 class VendorDashBoardSerializer(serializers.ModelSerializer):
