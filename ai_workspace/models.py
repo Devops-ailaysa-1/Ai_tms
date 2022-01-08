@@ -535,7 +535,7 @@ class Task(models.Model):
             related_name="job_tasks_set")
     version = models.ForeignKey(Version, on_delete=models.CASCADE, null=False, blank=False,
             related_name="version_tasks_set")
-    assign_to = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=False, blank=False,
+    assign_to = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True,
             related_name="user_tasks_set")
     document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
 

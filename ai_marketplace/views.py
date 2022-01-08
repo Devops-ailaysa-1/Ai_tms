@@ -3,6 +3,9 @@ from rest_framework.decorators import api_view, permission_classes
 
 # Create your views here.
 from .models import Thread
+from notifications.signals import notify
+from notifications.models import Notification
+from django.db.models import OuterRef, Subquery
 from ai_auth.models import Professionalidentity
 
 
@@ -11,7 +14,9 @@ def messages_page(request):
     user=request.user
     bid_id =request.GET.get('bid_id')
     threads = Thread.objects.by_user(user=request.user).filter(bid_id=bid_id).prefetch_related('chatmessage_thread').order_by('timestamp')
+    count = user.notifications.filter(verb='Message').unread().count()
     context = {
-        'Threads': threads
+        'Threads': threads,
+        'count':count
     }
     return render(request, 'messages.html', context)

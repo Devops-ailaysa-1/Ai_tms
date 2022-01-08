@@ -3,5 +3,6 @@ from . import consumers
 
 
 websocket_urlpatterns = [
-    path('marketplace/chat/', consumers.ChatConsumer.as_asgi()),
+    path('marketplace/messages/', consumers.ChatConsumer.as_asgi()),
+    # path("notifications/", consumers.NotificationConsumer.as_asgi()),
 ]
