@@ -37,6 +37,7 @@
                                         <div class="user_info">
                                             {% if thread.first_person == user %}
                                                 <span>{{ thread.second_person.fullname }}</span>
+																								<span>{{count}}</span>
                                             {% else %}
                                                 <span>{{ thread.first_person.fullname }}</span>
                                             {% endif %}
