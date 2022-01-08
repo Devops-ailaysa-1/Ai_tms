@@ -224,11 +224,9 @@ class Project(models.Model):
     @property
     def get_team(self):
         if self.team == None:
-            return None
-        elif self.team.owner == self.ai_user:
-            return self.team.name+"(self)"
+            return False
         else:
-            return self.team.name
+            return True
 
     @property
     def is_all_doc_opened(self):
