@@ -514,7 +514,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     def get_assign_to_details(self,instance):
         email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
-        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email}
+        try:avatar = instance.task.assign_to.professional_identity_info.avatar_url
+        except:avatar = None
+        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email,"avatar":avatar}
 
     def get_assigned_by_details(self,instance):
         return {"id":instance.assigned_by_id,"name":instance.assigned_by.fullname,"email":instance.assigned_by.email}
