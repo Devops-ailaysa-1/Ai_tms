@@ -1195,7 +1195,7 @@ def get_assign_to_list(request):
         # for user in assigned_users:
         #     if set(proj.get_tasks).intersection(user.internal_member.user_tasks_set.all()):
         #         existing.append(user)
-        internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2)
+        internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2).order_by('id')
         # internal_list = set(existing).union(internal_team)
         for i in internal_team:
             try:profile = i.internal_member.professional_identity_info.avatar_url
