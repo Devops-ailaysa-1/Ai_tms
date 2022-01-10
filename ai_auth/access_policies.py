@@ -2,8 +2,9 @@
 from django.db.models import manager
 from ai_auth import managers
 from rest_access_policy import AccessPolicy
-from ai_auth.models import Team
+from ai_auth.models import Team,AiUser
 from ai_workspace.models import TaskAssignInfo
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class InternalTeamAccess(AccessPolicy):
@@ -16,7 +17,7 @@ class InternalTeamAccess(AccessPolicy):
          },
         {
         "action": ["create",], 
-        "principal": ["group:member","group:project_owner","group:account_owners"],  
+        "principal": ["*"],  
         "effect": "allow",
         #"condition":[""]
         "condition_expression": ["(is_project_owner and is_internalmember) or is_team_owner)"]
@@ -26,11 +27,11 @@ class InternalTeamAccess(AccessPolicy):
         "principal": ["*"],  
         "effect": "allow",
         #"condition":["is_project_owner"]
-        "condition_expression": ["is_internalmember or is_team_owner"]
+        "condition_expression": ["(is_project_owner or is_team_owner)"]
          },
          {
         "action": ["update","delete"], 
-        "principal": ["group:member","group:project_owner","group:account_owner"],  
+        "principal": ["*"],  
         "effect": "allow",
         #"condition":[""]
         "condition_expression": ["(is_project_owner and is_added) or is_team_owner)"]
@@ -41,16 +42,50 @@ class InternalTeamAccess(AccessPolicy):
         return request.user.is_superuser
 
     def is_project_owner(self, request, view, action: str) -> bool:
-        team = request.POST.get('team')
+        team = request.POST.get('team' ,None)
+        if not team:
+            team = request.query_params.get('team', None)
         print(team)
         print(action)
-        managers = Team.objects.get(id=team).internal_member_team_info.filter(role__role = "project owner")
+        managers = Team.objects.get(name = team).internal_member_team_info.filter(role__name = "project owner")
+        print("project_manager",managers)
         print("view",view)
         #print("action",action) 
-        return request.user in managers
+        return request.user.internal_member.last() in managers
 
     # def is_internalmember(self,request, view, action) -> bool:
     #     return request.user.is_internal_member
+
+    def is_team_owner(self, request, view, action: str) -> bool:
+        team = request.POST.get('team' ,None)
+        if not team:
+            team = request.query_params.get('team', None)
+
+        if team:
+            team = Team.objects.get(name = team).id
+        print(repr(request))
+        print(request.user)
+        print("inside team")
+        print(team)
+        if team:
+            try:
+                team_owner = request.user.team_owner.id
+                print("id",request.user.team_owner.id)
+            except ObjectDoesNotExist:
+                print("team Doesn't exists")
+                return False
+        else:
+            team_owner = None
+                
+        # print(request.user.team_owner.id)
+
+        print("team",team)
+        if (team_owner == team) and (team_owner != None):
+            return True
+        else:
+            return False
+
+         
 
 class MemberCreationAccess(AccessPolicy):
     statements = [

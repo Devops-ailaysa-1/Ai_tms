@@ -1,4 +1,6 @@
 import random 
+from djstripe.models import Customer,Subscription
+from django.db.models import Q
 
 max_iter = ((10**6)/3)
 
@@ -28,3 +30,11 @@ def get_unique_pid(klass, iter_count=1):
 # import random  ---> None
 # random.randint(1,100)  ---> 58
 # random.randint(1000,10000)  ---> 4579
+
+
+def get_plan_name(user):
+	customer = Customer.objects.get(subscriber=user)
+	#subscriptions = Subscription.objects.filter(customer=customer).last()
+	sub = customer.subscriptions.filter(Q(status='active')|Q(status='trialing')).last()
+	name = sub.plan.product.name
+	return name
