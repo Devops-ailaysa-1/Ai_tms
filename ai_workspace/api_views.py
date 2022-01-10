@@ -353,18 +353,18 @@ class Files_Jobs_List(APIView):
         project = get_object_or_404(Project.objects.all(), id=project_id)
                         # ai_user=self.request.user)
         project_name = project.project_name
-        get_team =project.get_team
-        assigned = project.assigned
+        # get_team =project.get_team
+        # assigned = project.assigned
         jobs = project.project_jobs_set.all()
         files = project.project_files_set.filter(usage_type__use_type="source").all()
-        return jobs, files, project_name, get_team, assigned
+        return jobs, files, project_name#, get_team, assigned
 
     def get(self, request, project_id):
-        jobs, files, project_name, get_team, assigned = self.get_queryset(project_id)
-        team_edit = False if assigned == True else True
+        jobs, files, project_name= self.get_queryset(project_id)#, get_team, assigned
+        # team_edit = False if assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
-        return Response({"files":files.data, "jobs": jobs.data, "project_name": project_name, "team":get_team, "team_edit":team_edit}, status=200)
+        return Response({"files":files.data, "jobs": jobs.data, "project_name": project_name}, status=200)#, "team":get_team, "team_edit":team_edit
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):
@@ -1190,7 +1190,7 @@ def get_assign_to_list(request):
     internalmembers = []
     hirededitors = []
     try:
-        internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2)
+        internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2).order_by('id')
         for i in internal_team:
             try:profile = i.internal_member.professional_identity_info.avatar_url
             except:profile = None

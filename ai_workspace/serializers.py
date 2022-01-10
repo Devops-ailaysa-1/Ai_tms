@@ -396,15 +396,15 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
-	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
-	# team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
-	# project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	# team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
+	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist",)
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed",)#"team_exist",)
 	# class Meta:
 	# 	model = Project
 	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
@@ -424,8 +424,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			target_language} for target_language in data.get("target_languages", [])]
 		# print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-		data['team_exist'] = data.get('team',[None])[0]
-		# data['project_manager_id'] = data.get('project_manager')
+		data['team'] = data.get('team',[None])[0]
+		# data['team_exist'] = data.get('team',[None])[0]
+		# # data['project_manager_id'] = data.get('project_manager')
 		return super().to_internal_value(data=data)
 
 	def check_role(self, instance):
@@ -454,7 +455,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:ai_user = created_by
 		team = created_by.team if created_by.team else None
 		project_manager = created_by
-		validated_data.pop('team_exist')
+		# validated_data.pop('team_exist')
 		print("validated_data---->",validated_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
@@ -470,9 +471,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)
 			instance.save()
-		if 'team_exist' in validated_data:
-			instance.team_id = None if validated_data.get('team_exist') == False else instance.created_by.team.id
-			instance.save()
+		# if 'team_exist' in validated_data:
+		# 	instance.team_id = None if validated_data.get('team_exist') == False else instance.created_by.team.id
+		# 	instance.save()
 
 		if validated_data.get('project_manager_id'):
 			instance.project_manager_id = validated_data.get('project_manager_id')
@@ -513,7 +514,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     def get_assign_to_details(self,instance):
         email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
-        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email}
+        try:avatar = instance.task.assign_to.professional_identity_info.avatar_url
+        except:avatar = None
+        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email,"avatar":avatar}
 
     def get_assigned_by_details(self,instance):
         return {"id":instance.assigned_by_id,"name":instance.assigned_by.fullname,"email":instance.assigned_by.email}
