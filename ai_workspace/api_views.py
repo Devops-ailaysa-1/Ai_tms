@@ -364,7 +364,7 @@ class Files_Jobs_List(APIView):
         team_edit = False if assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
-        return Response({"files":files.data, "jobs": jobs.data, "project_name": project_name, "team":get_team, "team_edit":team_edit}, status=200)#, "team":get_team, "team_edit":team_edit
+        return Response({"files":files.data, "jobs": jobs.data, "project_name": project_name, "team":get_team, "team_edit":team_edit}, status=200)
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):
