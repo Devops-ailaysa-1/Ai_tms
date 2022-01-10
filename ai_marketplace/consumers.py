@@ -7,9 +7,6 @@ from ai_auth.models import AiUser
 
 User = get_user_model()
 
-
-
-
 class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
         print('connected', event)
