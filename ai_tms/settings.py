@@ -22,23 +22,24 @@ TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 TEMPLATE_DIR_2 = os.path.join(BASE_DIR,'ai_vendor','templates')
 TEMPLATE_DIR_3 = os.path.join(BASE_DIR,'ai_marketplace','templates')
 TEMPLATE_DIR_4 = os.path.join(BASE_DIR,'ai_auth','templates')
+TEMPLATE_DIR_5 = os.path.join(BASE_DIR,'ai_tms','templates')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("django_secret_key")
+SECRET_KEY = os.getenv("django_secret_key", "fwevbsuio")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split()
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
 
 
 CORS_ORIGIN_ALLOW_ALL= False
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split()
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split()
 
-CORS_ORIGIN_WHITELIST = os.getenv("CORS_ORIGIN_WHITELIST").split()
+CORS_ORIGIN_WHITELIST = os.getenv("CORS_ORIGIN_WHITELIST", "").split()
 
 CORS_ALLOW_CREDENTIALS = (True if os.getenv( "CORS_ALLOW_CREDENTIALS" ) == 'True' else False)
 
@@ -106,16 +107,19 @@ INSTALLED_APPS = [
     'ai_staff',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.github',
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
     "ai_workspace_okapi",
+    "integerations.github_",
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
     'djstripe',
     'django_filters',
     'storages',
+
     #'dbbackup',
     # 'channels',
     #'django_q',
@@ -133,6 +137,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "middlewares.error_middleware.error_middleware",
+    "middlewares.error_middleware.StackOverflowMiddleware"
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
@@ -141,7 +147,7 @@ AUTH_USER_MODEL="ai_auth.AiUser"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,TEMPLATE_DIR_3,TEMPLATE_DIR_4],
+        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,TEMPLATE_DIR_3,TEMPLATE_DIR_4, TEMPLATE_DIR_5],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -194,6 +200,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = [
     'ai_auth.authentication.MysqlBackend',
     'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 
@@ -213,7 +220,7 @@ REST_USE_JWT = True
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv( "EMAIL_HOST" )
-EMAIL_PORT = int(os.getenv( "EMAIL_PORT" ))
+EMAIL_PORT = int(os.getenv( "EMAIL_PORT" )) if os.getenv("EMAIL_PORT") else None
 EMAIL_USE_TLS = (True if os.getenv( "EMAIL_TLS" ) == 'True' else False)
 EMAIL_HOST_USER = os.getenv( "EMAIL_HOST_USER" )
 EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
@@ -265,6 +272,17 @@ REST_FRAMEWORK = {
         'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+}
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'github': {
+        'SCOPE': [
+            'user',
+            'repo',
+            'read:org',
+        ],
+    }
 }
 
 
@@ -377,7 +395,7 @@ SIMPLE_JWT = {
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
 CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
-CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT").split()
+CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
 CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
 CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
 
@@ -393,6 +411,8 @@ DJSTRIPE_USE_NATIVE_JSONFIELD = (True if os.getenv( "DJSTRIPE_USE_NATIVE_JSONFIE
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
 
 
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 
 
 CHANNEL_LAYERS = {

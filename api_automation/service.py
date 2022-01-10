@@ -3,7 +3,12 @@ from api_automation.project_setup import ProjectSetup
 from api_automation.file_and_job_setup import FilesAndJobsSetup
 from api_automation.task_setup import TaskSetup
 from api_automation.document_setup import DocumentSetup
+
+from api_automation.integerations.github import Github
+
 import json
+
+# from ai_auth.models import AiUser
 
 class Service:
 
@@ -40,3 +45,11 @@ class Service:
 
     def get_key_from_data(json_dump_str, key):
         return Service.json_dump_str_to_data(json_dump_str)[key]
+
+    def get_github_oauth_of_user():
+        gs = Github()
+        records = gs.get_github_oauth_records()
+        return records
+
+    # def get_last_user():
+    #     return AiUser.objects.last()

@@ -2,7 +2,10 @@ from argparse import ArgumentParser
 from api_automation import account_setup,\
     project_setup, file_and_job_setup, task_setup,\
     document_setup, output_file_api
-from api_automation.utils import Service
+
+from api_automation.integerations import github
+
+from api_automation.service import Service
 
 
 parser = ArgumentParser(description="API testing automation scripts...")
@@ -25,6 +28,9 @@ parser.add_argument("-ds", "--document_setup", type=bool, default=False,
 
 parser.add_argument("-of", "--output_file", type=bool, default=False,
                     help="output file response check...")
+
+parser.add_argument("-gh", "--github", type=bool, default=False,
+                    help="github oauth list...")
 
 
 args = parser.parse_args()
@@ -54,4 +60,9 @@ if __name__ == "__main__":
     if args.output_file:
         of = output_file_api.OutputFile(service=Service)
         of.run()
+
+    if args.github:
+        gh = github.Github(service=Service)
+        print("------>", gh.run())
+
 

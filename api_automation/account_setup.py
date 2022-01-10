@@ -33,12 +33,18 @@ class AccountSetup(BaseUtils):
         payload = {'email': USER_EMAIL,
             'password': USER_PASSWORD }
 
+        print("payload----->", payload)
+
         headers, files = {}, []
 
         response = requests.request("POST", url, headers=headers,
             data=payload, files=files)
 
+
+
         data = json.loads(response.text)
+
+        print("data---->", data)
 
         self.token = data["access_token"]
 

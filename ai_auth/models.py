@@ -20,7 +20,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
     email = models.EmailField(_('email address'), unique=True)
     fullname=models.CharField(max_length=191)
-    country= models.ForeignKey(Countries,related_name='aiuser_country', on_delete=models.CASCADE,blank=True, null=True)
+    country= models.ForeignKey(Countries,related_name='aiuser_country',
+        on_delete=models.CASCADE,blank=True, null=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     deactivation_date = models.DateTimeField(null=True,blank=True)
@@ -37,6 +38,10 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         return self.email
 
     def save(self, *args, **kwargs):
+
+        print("args---->", args)
+        print("kwargs---->", kwargs)
+
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
@@ -83,6 +88,11 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             return total_buyed_credits
 
         return total_buyed_credits
+
+    @property
+    def username(self):
+        print("username field not available.so it is returning fullname")
+        return self.fullname
 
 
 class BaseAddress(models.Model):

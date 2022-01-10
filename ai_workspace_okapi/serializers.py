@@ -237,8 +237,9 @@ class MT_RawSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         segment = validated_data["segment"]
         validated_data["mt_raw"]= client.translate(segment.source,
-                                    target_language=segment.target_language_code, format_="text")\
-                                    .get("translatedText")
+            target_language=segment.target_language_code, format_="text")\
+            .get("translatedText")
+
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
 

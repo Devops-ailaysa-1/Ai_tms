@@ -1,0 +1,2 @@
+GITHUB_REPO_LIST_REFRESH_TIME = 2 * ( 3600* 24) # 2 Days
+
