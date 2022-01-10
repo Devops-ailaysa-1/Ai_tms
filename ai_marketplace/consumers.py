@@ -9,9 +9,6 @@ from ai_auth.models import AiUser
 from django.db.models import Q
 User = get_user_model()
 
-
-
-
 class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
         print('connected', event)

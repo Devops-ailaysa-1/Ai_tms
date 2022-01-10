@@ -39,6 +39,7 @@ from django.urls import reverse
 from json import JSONDecodeError
 from ai_workspace.models import File
 from django.contrib.auth import settings
+from ai_auth.utils import get_plan_name
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -278,6 +279,14 @@ class SegmentsUpdateView(viewsets.ViewSet):
 class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
+    def can_translate(request, debit_user):      
+        if (request.user.is_internal_member or request.user.id in debit_user.get_hired_editors) and \
+            (get_plan_name(debit_user) == "Business") and \
+            (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
+                                     & Q(credit_pack_type__icontains="Subscription") ).last().ended_at != None):
+            return {"data" : "Subscription not active"}, 424
+
+    @staticmethod
     def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
@@ -285,11 +294,14 @@ class MT_RawAndTM_View(views.APIView):
 
         # sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
         #                         & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
+
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
-        initial_credit = user.credit_balance
 
+        if doc.job.project.team : MT_RawAndTM_View.can_translate(request, user)
+        
+        initial_credit = user.credit_balance
 
         # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
         # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
@@ -311,7 +323,6 @@ class MT_RawAndTM_View(views.APIView):
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
-                # mt_raw_serlzr.validated_data[""]
                 mt_raw_serlzr.save()
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
                 # print("DEBIT STATUS -----> ", debit_status["msg"])
