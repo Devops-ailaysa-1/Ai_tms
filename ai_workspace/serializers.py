@@ -517,7 +517,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         try:
             avatar = instance.task.assign_to.professional_identity_info.avatar_url
         except:avatar = None
-        print(avatar)
+        print("Avatar---->",avatar)
         return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email,"avatar":avatar}
 
     def get_assigned_by_details(self,instance):
