@@ -907,10 +907,11 @@ class UpdateTaskCreditStatus(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_credit_status(request):
+    if (request.user.is_internal_member) and (InternalMember.objects.get(internal_member=request.user.id).role.id == 1):
+        return Response({"credits_left" : request.user.added_by.credit_balance,
+                            "total_available" : request.user.added_by.buyed_credits}, status=200)
     return Response({"credits_left" : request.user.credit_balance,
                             "total_available" : request.user.buyed_credits}, status=200)
-
-
 
 #############Tasks Assign to vendor#################
 class TaskView(APIView):
