@@ -1,8 +1,105 @@
 from django.contrib import admin
 from .models import (AiUser, UserAttribute,
                     TempPricingPreference,CreditPack,UserCredits,
-                    BillingAddress,UserTaxInfo,Team,InternalMember)
+                    BillingAddress,UserTaxInfo,Team,InternalMember, VendorOnboarding)
 from django.contrib.auth.models import Permission
+# from django.contrib.admin import AdminSite
+# from django.contrib.auth.admin import UserAdmin 
+# from django.contrib.auth import get_user_model
+# from django.utils.translation import ugettext_lazy as _
+# from ai_auth.forms import AiUserCreationForm, AiUserChangeForm
+
+
+
+# Custom Admin page #
+
+# User = get_user_model()
+
+
+# class MyUserChangeForm(UserChangeForm):
+#     class Meta(UserChangeForm.Meta):
+#         model = User
+
+
+
+# class UserAdmin(BaseUserAdmin):
+#     add_form =  UserCreationForm
+
+#     list_display = ('username', 'email', 'is_admin')
+#     list_filter = ('is_admin',)
+
+#     fieldsets = (
+#         (None, {'fields': ('username', 'email','password')}),
+
+#         ('Permissions', {'fields': ('is_admin',)}),
+#     )
+
+#     search_fields =  ('username', 'email')
+#     ordering = ('username','email')
+
+#     filter_horizontal = ()
+
+# admin.site.register(MyUser,UserAdmin)
+
+
+
+
+# def has_superuser_permission(request):
+#     return request.user.is_active and request.user.is_superuser
+
+# # Only superuser can access root admin site (default)
+# admin.site.has_permission = has_superuser_permission
+
+# class StaffAdminSite(AdminSite):
+#     """HR admin page definition"""
+#     site_header = "Ailaysa Staff"
+
+# staff_admin_site = StaffAdminSite(name='ai_staff')
+
+# # available only to super_users
+# @admin.register(AiUser)
+# class RootUserAdmin(UserAdmin):
+#     # model = AiUser
+#     # list_display = ('email','fullname','is_staff')
+#     # fieldsets = UserAdmin.fieldsets + (
+#     #         (None, {'fields': ('country','fullname')}),
+#     #          ('Permissions', {'fields': ('is_admin',)}),
+#     # )
+#     # search_fields =  ('fullname', 'email')
+#     # ordering = ('email',)
+
+#     # def get_form(self, request, obj=None, **kwargs):
+#     #     kwargs['exclude'] = ['first_name','last_name','is_admin']
+#     #     kwargs['fields'] = ['']
+#     #     return super(RootUserAdmin, self).get_form(request, obj, **kwargs)
+
+#     fieldsets = (
+#         (None, {'fields': ( 'email', 'password')}),
+#         (_('Personal info'), {'fields': ('fullname')}),
+#         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
+#                                        'groups', 'user_permissions')}),
+#         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+#     )
+#     add_filedsets = (
+#         (None, {
+#             'classes': ('wide',),
+#             'fields': ('email', 'password', 'password2')}
+#         ),
+#     )
+#     form = AiUserCreationForm
+#     add_form = AiUserChangeForm
+#     list_display = ('email', 'first_name', 'last_name', 'is_staff')
+#     search_fields = ('email', 'first_name', 'last_name')
+#     ordering = ('email',)
+
+# # available to both types of admins hr (is_staff) and root (is_superuser)
+# @admin.register(VendorOnboarding)
+# @admin.register(VendorOnboarding, site=staff_admin_site)
+# class VAAdmin(admin.ModelAdmin):
+#     list_display = ("name", "email", "cv_file","message","status")
+
+
+# Custom Admin Page  #
 
 # Register your models here.
 admin.site.register(AiUser)

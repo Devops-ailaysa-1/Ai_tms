@@ -14,6 +14,10 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.sites.shortcuts import get_current_site
 from datetime import date
 
+# from ai_auth import models as auth_models
+# from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+# from django.utils.translation import ugettext_lazy as _
+
 
 
 class SendInviteForm(ResetPasswordForm):
@@ -137,3 +141,34 @@ def send_password_change_mail(current_site,user):
         [email],
         html_message=msg_html,
     )
+
+
+
+# class AiUserCreationForm(UserCreationForm):
+#     """
+#     A form that creats a custom user with no privilages
+#     form a provided email and password.
+#     """
+
+#     def __init__(self, *args, **kargs):
+#         super(AiUserCreationForm, self).__init__(*args, **kargs)
+#         del self.fields['username']
+
+#     class Meta:
+#         model = auth_models.AiUser
+#         fields = ('email',)
+
+# class AiUserChangeForm(UserChangeForm):
+#     """
+#     A form for updating users. Includes all the fields on
+#     the user, but replaces the password field with admin's
+#     password hash display field.
+#     """
+
+#     def __init__(self, *args, **kargs):
+#         super(AiUserChangeForm, self).__init__(*args, **kargs)
+#         del self.fields['username']
+
+#     class Meta:
+#         model = auth_models.AiUser
+#         fields = '__all__'

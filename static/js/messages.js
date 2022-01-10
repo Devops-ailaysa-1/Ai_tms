@@ -111,3 +111,19 @@ function get_active_thread_id(){
     let thread_id = chat_id.replace('chat_', '')
     return thread_id
 }
+
+
+
+
+$(document).ready(function() {
+      // $('div[id^="notification-"]')
+      $("message_body").click(function() {
+          var id = '{{ request.user.id }}'
+          var thread_id = get_active_thread_id()
+          var data = {
+            "type": "notification_read",
+            "user_id": id,
+            "thread_id" : thread_id,
+          }
+          socket.send(JSON.stringify(data));
+    });

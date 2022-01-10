@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
                     AvailableJobs,BidChat,BidPropasalDetails,BidProposalServicesRates,
                     Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage)
-from ai_auth.models import AiUser,AiUserProfile
+from ai_auth.models import AiUser,AiUserProfile,HiredEditors
 from ai_staff.models import Languages
 from django.db.models import Q
 from ai_workspace.models import Project,Job
@@ -127,6 +127,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
     vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
     vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True)
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
+    status = serializers.SerializerMethodField()
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
@@ -138,7 +139,15 @@ class GetVendorDetailSerializer(serializers.Serializer):
             target_lang=Job.objects.get(id=job_id).target_language_id
         return VendorLanguagePairCloneSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
 
-
+    def get_status(self,obj):
+        request_user = self.context['request'].user
+        user = request_user.team.owner if request_user.is_internal_member == True else request_user
+        editor = AiUser.objects.get(uid = obj.uid)
+        if editor in user.get_hired_editors:
+            hired = HiredEditors.objects.get(Q(hired_editor = editor)&Q(user = user))
+            return hired.get_status_display()
+        else:
+            return None
 
 
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
@@ -177,6 +186,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'cust_pc_name','cust_pc_email','rate_range_min','rate_range_max','currency',
                  'unit','milestone','bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',)
+
     def get_bid_count(self, obj):
         bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
         print(obj.bidproject_details.count())
@@ -221,9 +231,23 @@ class GetVendorListSerializer(serializers.ModelSerializer):
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.sortname')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
+    status = serializers.SerializerMethodField()
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair',)
+        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status',)
+
+
+    def get_status(self,obj):
+        request_user = self.context['request'].user
+        user = request_user.team.owner if request_user.is_internal_member == True else request_user
+        editor = AiUser.objects.get(uid = obj.uid)
+        if editor in user.get_hired_editors:
+            hired = HiredEditors.objects.get(Q(hired_editor = editor)&Q(user = user))
+            return hired.get_status_display()
+        else:
+            return None
+
+
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
