@@ -1062,6 +1062,7 @@ class ProjectAnalysisProperty(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
+#                print("STATUS CODE ==========>", doc.status_code)
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
@@ -1074,6 +1075,7 @@ class ProjectAnalysisProperty(APIView):
                                                                      )
 
                         if task_detail_serializer.is_valid(raise_exception=True):
+#                            print("Serializer is  validddddddd")
                             task_detail_serializer.save()
                         else:
                             print("error-->", task_detail_serializer.errors)

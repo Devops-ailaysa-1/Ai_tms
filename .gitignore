@@ -69,3 +69,9 @@ api_automation
 .idea/
 logs
 *.log
+.env.staging.proxy-companion
+.server_dev.log.swp
+Dockerfile.bak1
+docker-compose.staging.yml
+nginx.zip
+nginx/
