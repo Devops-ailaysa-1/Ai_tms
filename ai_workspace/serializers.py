@@ -446,7 +446,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
-		print("data-->",validated_data)
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
 		else:
@@ -482,16 +481,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
-		print("files_data---->",files_data )
-		print("jobs_data----->",jobs_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
 								files_data, jobs_data, f_klass=File, j_klass=Job)
-		print("project---->",project)
-		print("Files--->",files)
-		print("jobs--->",jobs)
 		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 			project=project)  # For self assign quick setup run)
-		print("Tasks---->",tasks)
 		return  project
 
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
