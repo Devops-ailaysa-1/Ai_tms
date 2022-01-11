@@ -476,7 +476,7 @@ def get_available_threads(request):
         except:profile = None
         contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
         contacts = sorted(contacts_list, key = lambda i: (i['receiver']))
-    return JsonResponse({"receivers_list":receivers_list})#"contacts_list":contacts})
+    return JsonResponse({"receivers_list":receivers_list,"contacts_list":contacts})
 
 
 
