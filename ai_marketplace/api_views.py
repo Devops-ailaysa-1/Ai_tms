@@ -469,7 +469,7 @@ def get_available_threads(request):
                                 'message':message,'timestamp':time,'unread_count':count})
     contacts_list = []
     all_threads = Thread.objects.by_user(user=request.user).all()
-    print(all_threads)
+    print("Threads-------->",all_threads)
     for thread in all_threads:
         receiver = thread.second_person_id if thread.first_person_id == request.user.id else thread.first_person_id
         Receiver = AiUser.objects.get(id = receiver)
