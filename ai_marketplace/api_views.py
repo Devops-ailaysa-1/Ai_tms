@@ -453,6 +453,7 @@ def get_my_jobs(request):
 def get_available_threads(request):
     # name = request.GET.get('name')
     threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
+    print("Receiver----->",threads)
     receivers_list =[]
     for i in threads:
         receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
