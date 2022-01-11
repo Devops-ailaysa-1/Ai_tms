@@ -364,7 +364,7 @@ class Files_Jobs_List(APIView):
         team_edit = False if assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
-        return Response({"files":files.data, "jobs": jobs.data, "project_name": project_name, "team":get_team, "team_edit":team_edit}, status=200)#, "team":get_team, "team_edit":team_edit
+        return Response({"files":files.data, "jobs": jobs.data, "project_name": project_name, "team":get_team, "team_edit":team_edit}, status=200)
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):
@@ -908,8 +908,8 @@ class UpdateTaskCreditStatus(APIView):
 @permission_classes([IsAuthenticated])
 def dashboard_credit_status(request):
     if (request.user.is_internal_member) and (InternalMember.objects.get(internal_member=request.user.id).role.id == 1):
-        return Response({"credits_left" : request.user.added_by.credit_balance,
-                            "total_available" : request.user.added_by.buyed_credits}, status=200)
+        return Response({"credits_left" : request.user.internal_team_manager.credit_balance,
+                            "total_available" : request.user.internal_team_manager.buyed_credits}, status=200)
     return Response({"credits_left" : request.user.credit_balance,
                             "total_available" : request.user.buyed_credits}, status=200)
 

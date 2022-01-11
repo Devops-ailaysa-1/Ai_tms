@@ -159,7 +159,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ai_tms.wsgi.application'
-ASGI_APPLICATION = 'ai_tms.asgi.application'
+# ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
@@ -406,14 +406,14 @@ DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installat
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        # 'CONFIG': {
-        #     'hosts': [('127.0.0.1', 6379)],
-        # }
-    }
-}
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [("redis", 6379)],
+#         },
+#     },
+# }
 
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'

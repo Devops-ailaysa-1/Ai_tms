@@ -27,17 +27,17 @@ class ChatConsumer(AsyncConsumer):
         print('receive', event)
         message_type = json.loads(event.get('text')).get('type')
         print("MSG TYPE-------->",message_type)
-        if message_type == "notification_read":
-            data = json.loads(event['text'])
-            user = self.scope['user']
-            id =data.get('id')
-            thread_id = data.get('thread_id')
-            user = AiUser.objects.filter(id = id)
-            # id = id if user.is_authenticated else 'default'
-            # Update the notification read status flag in Notification model.
-            list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
-
-            print("notification read")
+        # if message_type == "notification_read":
+        #     data = json.loads(event['text'])
+        #     user = self.scope['user']
+        #     id =data.get('id')
+        #     thread_id = data.get('thread_id')
+        #     user = AiUser.objects.filter(id = id)
+        #     # id = id if user.is_authenticated else 'default'
+        #     # Update the notification read status flag in Notification model.
+        #     list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
+        #
+        #     print("notification read")
 
         received_data = json.loads(event['text'])
         msg = received_data.get('message')

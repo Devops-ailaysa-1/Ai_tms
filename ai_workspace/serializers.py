@@ -471,6 +471,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)
 			instance.save()
+
 		if 'team_exist' in validated_data:
 			instance.team_id = None if validated_data.get('team_exist') == False else instance.created_by.team.id
 			instance.save()
