@@ -451,10 +451,8 @@ def get_my_jobs(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_threads(request):
-    print("User-------->",request.user)
     # name = request.GET.get('name')
     threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
-    print("Receiver----->",threads)
     receivers_list =[]
     for i in threads:
         receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
@@ -471,7 +469,6 @@ def get_available_threads(request):
                                 'message':message,'timestamp':time,'unread_count':count})
     contacts_list = []
     all_threads = Thread.objects.by_user(user=request.user).all()
-    print("Threads-------->",all_threads)
     for thread in all_threads:
         receiver = thread.second_person_id if thread.first_person_id == request.user.id else thread.first_person_id
         Receiver = AiUser.objects.get(id = receiver)
@@ -479,8 +476,6 @@ def get_available_threads(request):
         except:profile = None
         contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
     contacts = sorted(contacts_list, key = lambda i: (i['receiver']))
-    print("Receiver---->",receivers_list)
-    print("Contacts----->",contacts)
     return JsonResponse({"receivers_list":receivers_list,"contacts_list":contacts})
 
 
