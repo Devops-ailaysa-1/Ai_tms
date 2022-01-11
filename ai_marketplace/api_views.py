@@ -469,13 +469,14 @@ def get_available_threads(request):
                                 'message':message,'timestamp':time,'unread_count':count})
     contacts_list = []
     all_threads = Thread.objects.by_user(user=request.user).all()
+    print(all_threads)
     for thread in all_threads:
         receiver = thread.second_person_id if thread.first_person_id == request.user.id else thread.first_person_id
         Receiver = AiUser.objects.get(id = receiver)
         try:profile = Receiver.professional_identity_info.avatar_url
         except:profile = None
         contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
-        contacts = sorted(contacts_list, key = lambda i: (i['receiver']))
+    contacts = sorted(contacts_list, key = lambda i: (i['receiver']))
     return JsonResponse({"receivers_list":receivers_list,"contacts_list":contacts})
 
 
