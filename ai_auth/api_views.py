@@ -1448,9 +1448,6 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
                 uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
                 token = invite_accept_token.make_token(ext)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
-                # notify.send(user, recipient=vendor, verb='Accept Invite', description=link)
-                # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
-                # template = 'External_member_invite_email.html'
                 subject='Ailaysa MarketPlace Invite'
                 context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
                 send_email_user(subject,template,context,email)
