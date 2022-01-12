@@ -775,9 +775,15 @@ class GetAssignToSerializer(serializers.Serializer):
 			team = obj.team.internal_member_team_info.filter(role=2)
 			return InternalEditorDetailSerializer(team,many=True,context={'request': request}).data
 		else:
-			return None
+			return []
 
 	def get_external_editors(self,obj):
 		request = self.context['request']
-		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.self.filter(role=2)
-		return HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data
+		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+		ser = HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data
+		tt = []
+		for i in ser:
+			if i.get("vendor_lang_pair")!=[]:
+				tt.append(i)
+		return tt
+		# return HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data

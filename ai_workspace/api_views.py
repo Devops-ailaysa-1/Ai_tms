@@ -1307,8 +1307,6 @@ class AssignToListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def list(self, request, *args, **kwargs):
         project = self.request.GET.get('project')
-        print(project)
-        proj = Project.objects.get(id = project)
-        user = proj.ai_user
+        user = Project.objects.get(id = project).ai_user
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
