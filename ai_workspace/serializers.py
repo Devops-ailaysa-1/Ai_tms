@@ -10,10 +10,13 @@ from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from ai_marketplace.models import AvailableVendors
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
-from ai_auth.models import AiUser,Team
+from ai_auth.models import AiUser,Team,HiredEditors
 from ai_auth.validators import project_file_size
 from django.db.models import Q
 from ai_workspace_okapi.models import Document
+from ai_auth.serializers import InternalMemberSerializer,HiredEditorSerializer
+from ai_vendor.models import VendorLanguagePair
+from django.db.models import OuterRef, Subquery
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -713,3 +716,65 @@ class ProjectListSerializer(serializers.ModelSerializer):
 			return True if ((instance.ai_user == user) or\
 			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 			else False
+
+
+class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
+	source_lang = serializers.ReadOnlyField(source = 'source_lang.language')
+	target_lang = serializers.ReadOnlyField(source = 'target_lang.language')
+	class Meta:
+		model = VendorLanguagePair
+		fields = ('source_lang','target_lang',)
+
+class HiredEditorDetailSerializer(serializers.Serializer):
+	name = serializers.ReadOnlyField(source='hired_editor.fullname')
+	id = serializers.ReadOnlyField(source='hired_editor_id')
+	status = serializers.ReadOnlyField(source='get_status_display')
+	avatar= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
+	vendor_lang_pair = serializers.SerializerMethodField()
+
+	def get_vendor_lang_pair(self,obj):
+		request = self.context['request']
+		job_id= request.query_params.get('job')
+		project_id= request.query_params.get('project')
+		proj = Project.objects.get(id = project_id)
+		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
+		lang_pair = VendorLanguagePair.objects.none()
+		for i in jobs:
+			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None))
+			lang_pair = lang_pair.union(tr)
+		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
+
+class InternalEditorDetailSerializer(serializers.Serializer):
+	name = serializers.ReadOnlyField(source='internal_member.fullname')
+	id = serializers.ReadOnlyField(source='internal_member_id')
+	status = serializers.ReadOnlyField(source='get_status_display')
+	avatar= serializers.ReadOnlyField(source='internal_member.professional_identity_info.avatar_url')
+	vendor_lang_pair = serializers.SerializerMethodField()
+
+	def get_vendor_lang_pair(self,obj):
+		request = self.context['request']
+		job_id= request.query_params.get('job')
+		project_id= request.query_params.get('project')
+		proj = Project.objects.get(id = project_id)
+		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
+		lang_pair = VendorLanguagePair.objects.none()
+		for i in jobs:
+			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.internal_member_id) &Q(deleted_at=None))
+			lang_pair = lang_pair.union(tr)
+		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
+
+
+
+class GetAssignToSerializer(serializers.Serializer):
+	internal_editors = serializers.SerializerMethodField()
+	external_editors = serializers.SerializerMethodField()
+
+	def get_internal_editors(self,obj):
+		request = self.context['request']
+		team = obj.team.internal_member_team_info.filter(role=2)
+		return InternalEditorDetailSerializer(team,many=True,context={'request': request}).data
+
+	def get_external_editors(self,obj):
+		request = self.context['request']
+		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.self.filter(role=2)
+		return HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data

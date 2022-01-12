@@ -257,7 +257,7 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         if job_id:
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
-        return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
+        return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None)), many=True, read_only=True).data
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source='user.fullname')
