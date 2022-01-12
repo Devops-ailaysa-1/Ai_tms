@@ -1152,7 +1152,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task')
-            return Response({"msg":"Task Assigned and Notification Sent"})
+            return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request,pk=None):
