@@ -771,7 +771,7 @@ class GetAssignToSerializer(serializers.Serializer):
 
 	def get_internal_editors(self,obj):
 		request = self.context['request']
-		if obj.team
+		if obj.team:
 			team = obj.team.internal_member_team_info.filter(role=2)
 			return InternalEditorDetailSerializer(team,many=True,context={'request': request}).data
 		else:
