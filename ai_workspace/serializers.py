@@ -484,8 +484,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		jobs_data = validated_data.pop("project_jobs_set")
 
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
-
 		files_data, jobs_data, f_klass=File, j_klass=Job)
+		
 		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 			project=project)  # For self assign quick setup run)
 

@@ -284,7 +284,7 @@ class MT_RawAndTM_View(views.APIView):
             (get_plan_name(debit_user) == "Business") and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription") ).last().ended_at != None):
-            return {"data" : "Subscription not active"}, 424
+            return {}, 424, "cannot_translate"
 
     @staticmethod
     def get_data(request, segment_id):
@@ -299,7 +299,7 @@ class MT_RawAndTM_View(views.APIView):
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
 
-        if doc.job.project.team : MT_RawAndTM_View.can_translate(request, user)
+        if doc.job.project.team : return MT_RawAndTM_View.can_translate(request, user)
         
         initial_credit = user.credit_balance
 
@@ -326,9 +326,9 @@ class MT_RawAndTM_View(views.APIView):
                 mt_raw_serlzr.save()
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
                 # print("DEBIT STATUS -----> ", debit_status["msg"])
-                return mt_raw_serlzr.data, 201
+                return mt_raw_serlzr.data, 201, "available"
         else:
-            return {}, 424
+            return {}, 424, "unavailable"
 
         # else:
         #     return {"data":"No active subscription"}, 424
@@ -347,9 +347,10 @@ class MT_RawAndTM_View(views.APIView):
         return []
 
     def get(self, request, segment_id):
-        data, status_code = self.get_data(request, segment_id)
+        data, status_code, type = self.get_data(request, segment_id)
         mt_alert = True if status_code == 424 else False
-        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if status_code == 424 else ""
+        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
+            type == "unavailable") else "Team subscription inactive"
         tm_data = self.get_tm_data(request, segment_id)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert, "alert_msg":alert_msg}, status=status_code)
 
