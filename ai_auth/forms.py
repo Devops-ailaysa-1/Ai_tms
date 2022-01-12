@@ -172,3 +172,29 @@ def send_password_change_mail(current_site,user):
 #     class Meta:
 #         model = auth_models.AiUser
 #         fields = '__all__'
+
+
+
+def user_trial_end(user,sub):
+    date1 = sub.trial_start.strftime("%B %d, %Y")
+    date2 = sub.trial_end.strftime("%B %d, %Y")
+    time1= sub.trial_start.strftime("%I:%M:%S %p")
+    time2= sub.trial_end.strftime("%I:%M:%S %p")
+    context = {
+        "user":user,
+        "start_date" : date1,
+        "start_time": time1,
+        "end_date" : date2,
+        "end_time":time2
+        }
+    print("inside trial form")
+    email =user.email
+   # msg_plain = render_to_string("account/email/password_change.txt", context)
+    msg_html = render_to_string("account/email/trial_ending.html", context)
+    ms =send_mail(
+        " Your Trial Ends Soon",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>",ms)

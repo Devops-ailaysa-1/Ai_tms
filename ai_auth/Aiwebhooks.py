@@ -6,6 +6,7 @@ from djstripe import webhooks
 from djstripe.models import Customer,Price,Invoice,PaymentIntent
 from djstripe.models.billing import Plan, Subscription, TaxRate
 from ai_auth import models
+from ai_auth import forms as auth_forms
 from django.db.models import Q
 from django.utils import timezone
 import calendar
@@ -328,8 +329,12 @@ def modify_subscription_data(subscription):
 @webhooks.handler("customer.subscription.trial_will_end")
 def my_handler(event, **kwargs):
     print("**** customer trial_end *****")
+    data = event.data
     print(event.data)
     print("**** customer trial_end   End *****")
+    sub = Subscription.objects.get(id=data.get('object').get('id'))
+    user = sub.customer.subscriber
+    auth_forms.user_trial_end(user=user,sub=sub)
     # stripe.Subscription.modify(
     # "sub_C6Am1ELc0KQvPV",
     #  metadata={"order_id": "6735"},
