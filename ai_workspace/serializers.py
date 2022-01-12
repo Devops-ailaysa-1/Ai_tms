@@ -541,7 +541,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         print('validated data==>',data)
         task_list = data.pop('tasks')
         assign_to = data.pop('assign_to')
-		task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
+        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
         task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
         return task_assign_info
 
