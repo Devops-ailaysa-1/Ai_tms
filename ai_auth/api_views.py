@@ -1386,15 +1386,16 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 def msg_send(user,vendor,link):
-    thread_ser = ThreadSerializer(data={'first_person':user,'second_person':vendor})
+    thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
     if thread_ser.is_valid():
         thread_ser.save()
         thread_id = thread_ser.data.get('id')
     else:
         thread_id = thread_ser.errors.get('thread_id')
+    print("Thread--->",thread_id)
     message = "you are invited by "+user.fullname+" click link to accept invite "+ link
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
-    notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=thread_id)
+    notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
 class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
