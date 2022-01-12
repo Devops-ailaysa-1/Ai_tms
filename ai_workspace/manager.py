@@ -73,13 +73,6 @@ class TaskManager(models.Manager):
         if not assign_to:
             raise ValueError("You should send parameter either project "
                              "object or assign_to user")
-        # for file in files:
-        #     for job in jobs:
-        #         try:
-        #             self.get(file=file, job=job,version_id=1)
-        #         except:
-        #             tasks = self.create(file=file, job=job, assign_to=assign_to,\
-        #                        version_id=1)                                                            # POSTEDIT
         tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
         return tasks
 

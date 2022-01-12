@@ -203,12 +203,12 @@ class DocumentViewByDocumentId(views.APIView):
     def get(self, request, document_id):
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
-        print("doc--->",doc_user)
-        print("user---->",request.user)
-        team = doc_user.team
         if (request.user == doc_user) or (request.user in doc_user.team.get_team_members) or (request.user in doc_user.get_hired_editors):
+            dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
             document = self.get_object(document_id)
-            return Response(DocumentSerializerV2(document).data, status=200)
+            data = DocumentSerializerV2(document).data
+            data.update(dict)
+            return Response(data, status=200)
         else:
             return Response({"msg" : "Unauthorised"}, status=401)
 
@@ -279,7 +279,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
 class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
-    def can_translate(request, debit_user):      
+    def can_translate(request, debit_user):
         if (request.user.is_internal_member or request.user.id in debit_user.get_hired_editors) and \
             (get_plan_name(debit_user) == "Business") and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
@@ -299,8 +299,13 @@ class MT_RawAndTM_View(views.APIView):
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
 
+<<<<<<< HEAD
         if doc.job.project.team : return MT_RawAndTM_View.can_translate(request, user)
         
+=======
+        if doc.job.project.team : MT_RawAndTM_View.can_translate(request, user)
+
+>>>>>>> origin/feature/teams
         initial_credit = user.credit_balance
 
         # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)

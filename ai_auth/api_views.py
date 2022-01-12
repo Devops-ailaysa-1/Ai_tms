@@ -33,6 +33,7 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 # from django.utils import six
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
+from notifications.signals import notify
 from django.db import IntegrityError
 from django.contrib.auth.hashers import check_password,make_password
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -51,6 +52,8 @@ from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
+from ai_marketplace.models import Thread,ChatMessage
+from ai_marketplace.serializers import ThreadSerializer
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -1382,7 +1385,17 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         internal_member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
+def msg_send(user,vendor,link):
+    thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    print("Thread--->",thread_id)
+    message = "you are invited by "+user.fullname+" click link to accept invite "+ link
+    msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
+    notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
 class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
@@ -1435,12 +1448,14 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
                 uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
                 token = invite_accept_token.make_token(ext)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
+                # notify.send(user, recipient=vendor, verb='Accept Invite', description=link)
                 # link = request.build_absolute_uri(reverse('accept', kwargs={'uid':urlsafe_base64_encode(force_bytes(external_member_id)),'token':invite_accept_token.make_token(ext)}))
                 # template = 'External_member_invite_email.html'
                 subject='Ailaysa MarketPlace Invite'
                 context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
                 send_email_user(subject,template,context,email)
-                return JsonResponse({"msg":"email sent successfully"},safe = False)
+                msg_send(user,vendor,link)
+                return JsonResponse({"msg":"email and msg sent successfully"},safe = False)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, pk):
@@ -1474,9 +1489,9 @@ def invite_accept(request):#,uid,token):
         vendor.status = 2
         vendor.save()
         print("success & updated")
-        return JsonResponse({"msg":"success"},safe=False)
+        return JsonResponse({"type":"success","msg":"status updated"},safe=False)
     else:
-        return JsonResponse({"msg":'Either link is already used or link is invalid!'},safe=False)
+        return JsonResponse({"type":"failure","msg":'Either link is already used or link is invalid!'},safe=False)
     # return JsonResponse({"msg":"Failed"},safe=False)
 
 

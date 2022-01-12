@@ -55,8 +55,10 @@ urlpatterns += [
 	path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
 	path('get_assign_to_list/',api_views.get_assign_to_list),
 	path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
+	path('assign_to/',api_views.AssignToListView.as_view({'get': 'list'}),name='assign-list'),
 	path('tasks_list/',api_views.tasks_list),
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
+	path("instruction_file_download/<int:task_assign_info_id>", api_views.instruction_file_download, name="instruction-file-download"),
 ]
 # views urls adding for local testing
 urlpatterns += [

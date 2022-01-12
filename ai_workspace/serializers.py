@@ -10,10 +10,13 @@ from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from ai_marketplace.models import AvailableVendors
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
-from ai_auth.models import AiUser,Team
+from ai_auth.models import AiUser,Team,HiredEditors
 from ai_auth.validators import project_file_size
 from django.db.models import Q
 from ai_workspace_okapi.models import Document
+from ai_auth.serializers import InternalMemberSerializer,HiredEditorSerializer
+from ai_vendor.models import VendorLanguagePair
+from django.db.models import OuterRef, Subquery
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -446,7 +449,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
-		print("data-->",validated_data)
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
 		else:
@@ -482,13 +484,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
-
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
-		files_data, jobs_data, f_klass=File, j_klass=Job)
-		
+								files_data, jobs_data, f_klass=File, j_klass=Job)
 		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 			project=project)  # For self assign quick setup run)
-
 		return  project
 
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
@@ -542,8 +541,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         print('validated data==>',data)
         task_list = data.pop('tasks')
         assign_to = data.pop('assign_to')
-        task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
         task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
+        task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
         return task_assign_info
 
     def update(self,instance,data):
@@ -717,3 +716,74 @@ class ProjectListSerializer(serializers.ModelSerializer):
 			return True if ((instance.ai_user == user) or\
 			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
 			else False
+
+
+class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
+	source_lang = serializers.ReadOnlyField(source = 'source_lang.language')
+	target_lang = serializers.ReadOnlyField(source = 'target_lang.language')
+	class Meta:
+		model = VendorLanguagePair
+		fields = ('source_lang','target_lang',)
+
+class HiredEditorDetailSerializer(serializers.Serializer):
+	name = serializers.ReadOnlyField(source='hired_editor.fullname')
+	id = serializers.ReadOnlyField(source='hired_editor_id')
+	status = serializers.ReadOnlyField(source='get_status_display')
+	avatar= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
+	vendor_lang_pair = serializers.SerializerMethodField()
+
+	def get_vendor_lang_pair(self,obj):
+		request = self.context['request']
+		job_id= request.query_params.get('job')
+		project_id= request.query_params.get('project')
+		proj = Project.objects.get(id = project_id)
+		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
+		lang_pair = VendorLanguagePair.objects.none()
+		for i in jobs:
+			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None))
+			lang_pair = lang_pair.union(tr)
+		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
+
+class InternalEditorDetailSerializer(serializers.Serializer):
+	name = serializers.ReadOnlyField(source='internal_member.fullname')
+	id = serializers.ReadOnlyField(source='internal_member_id')
+	status = serializers.ReadOnlyField(source='get_status_display')
+	avatar= serializers.ReadOnlyField(source='internal_member.professional_identity_info.avatar_url')
+	vendor_lang_pair = serializers.SerializerMethodField()
+
+	def get_vendor_lang_pair(self,obj):
+		request = self.context['request']
+		job_id= request.query_params.get('job')
+		project_id= request.query_params.get('project')
+		proj = Project.objects.get(id = project_id)
+		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
+		lang_pair = VendorLanguagePair.objects.none()
+		for i in jobs:
+			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.internal_member_id) &Q(deleted_at=None))
+			lang_pair = lang_pair.union(tr)
+		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
+
+
+
+class GetAssignToSerializer(serializers.Serializer):
+	internal_editors = serializers.SerializerMethodField()
+	external_editors = serializers.SerializerMethodField()
+
+	def get_internal_editors(self,obj):
+		request = self.context['request']
+		if obj.team:
+			team = obj.team.internal_member_team_info.filter(role=2)
+			return InternalEditorDetailSerializer(team,many=True,context={'request': request}).data
+		else:
+			return []
+
+	def get_external_editors(self,obj):
+		request = self.context['request']
+		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+		ser = HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data
+		tt = []
+		for i in ser:
+			if i.get("vendor_lang_pair")!=[]:
+				tt.append(i)
+		return tt
+		# return HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data

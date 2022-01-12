@@ -168,7 +168,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
         document = Document.objects.create(**validated_data)
-        
+
         # USING DJANGO SAVE() METHOD
         # for text_unit in text_unit_ser_data:
         #     segs = text_unit.pop("segment_ser", [])
@@ -193,9 +193,9 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         #                                 Q(document_id=document.id))
 
         #     for seg in segs:
-                
+
         #         tagged_source, _ , target_tags = (
-        #                 set_ref_tags_to_runs(seg["coded_source"], 
+        #                 set_ref_tags_to_runs(seg["coded_source"],
         #                 get_runs_and_ref_ids(seg["coded_brace_pattern"],
         #                 json.loads(seg["coded_ids_sequence"])))
         #             )
@@ -220,13 +220,13 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
         ', '.join(['(%s, %s)'] * len(text_unit_ser_data)),
         )
-        tu_params = []        
+        tu_params = []
         for text_unit in text_unit_ser_data:
             tu_params.extend([text_unit["okapi_ref_translation_unit_id"], document.id])
 
         with closing(connection.cursor()) as cursor:
-            cursor.execute(text_unit_sql, tu_params)        
-        
+            cursor.execute(text_unit_sql, tu_params)
+
         seg_params = []
         seg_count = 0
         for text_unit in text_unit_ser_data:
@@ -235,9 +235,9 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             segs = text_unit.pop("segment_ser", [])
 
             for seg in segs:
-                seg_count += 1                
+                seg_count += 1
                 tagged_source, _ , target_tags = (
-                        set_ref_tags_to_runs(seg["coded_source"], 
+                        set_ref_tags_to_runs(seg["coded_source"],
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
@@ -245,7 +245,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
                         timezone.now(), text_unit_id])
-        
+
         segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
                        coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id) VALUES {}'.format(
                            ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
@@ -274,7 +274,7 @@ class DocumentSerializerV2(DocumentSerializer):
                   "total_segment_count", "created_by", "document_id",
                   "source_language", "target_language", "source_language_id",
                   "target_language_id", "source_language_code", "target_language_code", "doc_credit_check_open_alert",
-                  "is_first_doc_view", 
+                  "is_first_doc_view",
                   "target_language_script",
                   )
 

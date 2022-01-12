@@ -20,7 +20,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer)
+    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
+    GetAssignToSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
@@ -1151,7 +1152,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task')
-            return Response({"msg":"Task Assigned and Notification Sent"})
+            return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request,pk=None):
@@ -1286,3 +1287,26 @@ def tasks_list(request):
     # for i in tasks:
     #     task_list.append({'id':i.id,'task':i.job,'file':i.file})
     # return Response(task_list)
+@api_view(['GET',])
+def instruction_file_download(request,task_assign_info_id):
+    instruction_file = TaskAssignInfo.objects.get(id=task_assign_info_id).instruction_file
+    if instruction_file:
+        fl_path = instruction_file.path
+        filename = os.path.basename(fl_path)
+        print(os.path.dirname(fl_path))
+        fl = open(fl_path, 'rb')
+        mime_type, _ = mimetypes.guess_type(fl_path)
+        response = HttpResponse(fl, content_type=mime_type)
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        return response
+    else:
+        return JsonResponse({"msg":"no file associated with it"})
+
+
+class AssignToListView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self, request, *args, **kwargs):
+        project = self.request.GET.get('project')
+        user = Project.objects.get(id = project).ai_user
+        serializer = GetAssignToSerializer(user,context={'request':request})
+        return Response(serializer.data, status=201)
