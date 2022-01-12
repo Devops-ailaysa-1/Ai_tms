@@ -8,6 +8,7 @@ file.sql
 db002.sqlite3-journal
 Dockerfile
 media
+mediafiles
 */migrations
 *.*.pyc
 */__pycache__/*
@@ -69,3 +70,10 @@ api_automation
 .idea/
 logs
 *.log
+.env.staging.proxy-companion
+.server_dev.log.swp
+Dockerfile.bak1
+docker-compose.staging.yml
+nginx.zip
+nginx/
+mediafiles

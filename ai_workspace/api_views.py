@@ -20,7 +20,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer)
+    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
+    GetAssignToSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
@@ -360,7 +361,7 @@ class Files_Jobs_List(APIView):
         return jobs, files, project_name, get_team, assigned
 
     def get(self, request, project_id):
-        jobs, files, project_name, get_team, assigned = self.get_queryset(project_id)
+        jobs, files, project_name, get_team, assigned= self.get_queryset(project_id)#
         team_edit = False if assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
@@ -826,7 +827,7 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_addon_credit(request,user, actual_used_credits=None, credit_diff=None):
-        add_ons = UserCredits.objects.filter(Q(user_id=user.id) & Q(credit_pack_type="Addon"))
+        add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon"))
         if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
             for addon in add_ons:
@@ -851,7 +852,7 @@ class UpdateTaskCreditStatus(APIView):
         print("Credit User",user)
         present = datetime.now()
         try:
-            user_credit = UserCredits.objects.get(Q(user_id=user.id) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+            user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits
@@ -907,10 +908,11 @@ class UpdateTaskCreditStatus(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_credit_status(request):
+    # if (request.user.is_internal_member) and (InternalMember.objects.get(internal_member=request.user.id).role.id == 1):
+    #     return Response({"credits_left" : request.user.internal_team_manager.credit_balance,
+    #                         "total_available" : request.user.internal_team_manager.buyed_credits}, status=200)
     return Response({"credits_left" : request.user.credit_balance,
                             "total_available" : request.user.buyed_credits}, status=200)
-
-
 
 #############Tasks Assign to vendor#################
 class TaskView(APIView):
@@ -1061,6 +1063,7 @@ class ProjectAnalysisProperty(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
+#                print("STATUS CODE ==========>", doc.status_code)
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
@@ -1073,6 +1076,7 @@ class ProjectAnalysisProperty(APIView):
                                                                      )
 
                         if task_detail_serializer.is_valid(raise_exception=True):
+#                            print("Serializer is  validddddddd")
                             task_detail_serializer.save()
                         else:
                             print("error-->", task_detail_serializer.errors)
@@ -1148,7 +1152,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task')
-            return Response({"msg":"Task Assigned and Notification Sent"})
+            return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request,pk=None):
@@ -1190,7 +1194,7 @@ def get_assign_to_list(request):
     internalmembers = []
     hirededitors = []
     try:
-        internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2)
+        internal_team = proj.ai_user.team.internal_member_team_info.filter(role = 2).order_by('id')
         for i in internal_team:
             try:profile = i.internal_member.professional_identity_info.avatar_url
             except:profile = None
@@ -1283,3 +1287,26 @@ def tasks_list(request):
     # for i in tasks:
     #     task_list.append({'id':i.id,'task':i.job,'file':i.file})
     # return Response(task_list)
+@api_view(['GET',])
+def instruction_file_download(request,task_assign_info_id):
+    instruction_file = TaskAssignInfo.objects.get(id=task_assign_info_id).instruction_file
+    if instruction_file:
+        fl_path = instruction_file.path
+        filename = os.path.basename(fl_path)
+        print(os.path.dirname(fl_path))
+        fl = open(fl_path, 'rb')
+        mime_type, _ = mimetypes.guess_type(fl_path)
+        response = HttpResponse(fl, content_type=mime_type)
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        return response
+    else:
+        return JsonResponse({"msg":"no file associated with it"})
+
+
+class AssignToListView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self, request, *args, **kwargs):
+        project = self.request.GET.get('project')
+        user = Project.objects.get(id = project).ai_user
+        serializer = GetAssignToSerializer(user,context={'request':request})
+        return Response(serializer.data, status=201)

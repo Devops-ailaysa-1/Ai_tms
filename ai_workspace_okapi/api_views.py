@@ -39,6 +39,7 @@ from django.urls import reverse
 from json import JSONDecodeError
 from ai_workspace.models import File
 from django.contrib.auth import settings
+from ai_auth.utils import get_plan_name
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -202,12 +203,12 @@ class DocumentViewByDocumentId(views.APIView):
     def get(self, request, document_id):
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
-        print("doc--->",doc_user)
-        print("user---->",request.user)
-        team = doc_user.team
         if (request.user == doc_user) or (request.user in doc_user.team.get_team_members) or (request.user in doc_user.get_hired_editors):
+            dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
             document = self.get_object(document_id)
-            return Response(DocumentSerializerV2(document).data, status=200)
+            data = DocumentSerializerV2(document).data
+            data.update(dict)
+            return Response(data, status=200)
         else:
             return Response({"msg" : "Unauthorised"}, status=401)
 
@@ -278,6 +279,14 @@ class SegmentsUpdateView(viewsets.ViewSet):
 class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
+    def can_translate(request, debit_user):
+        if (request.user.is_internal_member or request.user.id in debit_user.get_hired_editors) and \
+            (get_plan_name(debit_user) == "Business") and \
+            (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
+                                     & Q(credit_pack_type__icontains="Subscription") ).last().ended_at != None):
+            return {}, 424, "cannot_translate"
+
+    @staticmethod
     def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
@@ -285,11 +294,14 @@ class MT_RawAndTM_View(views.APIView):
 
         # sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
         #                         & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
+
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
-        initial_credit = user.credit_balance
 
+        if doc.job.project.team : return MT_RawAndTM_View.can_translate(request, user)
+
+        initial_credit = user.credit_balance
 
         # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
         # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
@@ -311,13 +323,12 @@ class MT_RawAndTM_View(views.APIView):
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
-                # mt_raw_serlzr.validated_data[""]
                 mt_raw_serlzr.save()
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
                 # print("DEBIT STATUS -----> ", debit_status["msg"])
-                return mt_raw_serlzr.data, 201
+                return mt_raw_serlzr.data, 201, "available"
         else:
-            return {}, 424
+            return {}, 424, "unavailable"
 
         # else:
         #     return {"data":"No active subscription"}, 424
@@ -336,9 +347,10 @@ class MT_RawAndTM_View(views.APIView):
         return []
 
     def get(self, request, segment_id):
-        data, status_code = self.get_data(request, segment_id)
+        data, status_code, type = self.get_data(request, segment_id)
         mt_alert = True if status_code == 424 else False
-        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if status_code == 424 else ""
+        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
+            type == "unavailable") else "Team subscription inactive"
         tm_data = self.get_tm_data(request, segment_id)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert, "alert_msg":alert_msg}, status=status_code)
 
