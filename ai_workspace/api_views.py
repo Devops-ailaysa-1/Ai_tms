@@ -849,7 +849,7 @@ class UpdateTaskCreditStatus(APIView):
     def update_usercredit(request,doc_id, actual_used_credits):
         doc = Document.objects.get(id = doc_id)
         user = doc.doc_credit_debit_user
-        print("Credit User",user)
+        print("Credit User",type(user))
         present = datetime.now()
         try:
             user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))

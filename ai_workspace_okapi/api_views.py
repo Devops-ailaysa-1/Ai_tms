@@ -284,27 +284,24 @@ class MT_RawAndTM_View(views.APIView):
             (get_plan_name(debit_user) == "Business") and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription") ).last().ended_at != None):
+            print("For internal members only")
             return {}, 424, "cannot_translate"
 
     @staticmethod
     def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
-            return MT_RawSerializer(mt_raw).data, 200
-
-        # sub_active = UserCredits.objects.filter(Q(user_id=request.user.id)  \
-        #                         & Q(credit_pack_type__icontains="Subscription") ).last().ended_at
+            return MT_RawSerializer(mt_raw).data, 200, "available"
 
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
 
-        if doc.job.project.team : return MT_RawAndTM_View.can_translate(request, user)
+        # Checking if the request user is account owner or not
+        if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)): 
+            return MT_RawAndTM_View.can_translate(request, user)
 
         initial_credit = user.credit_balance
-
-        # word_char_ratio = round(doc.total_char_count / doc.total_word_count, 2)
-        # consumable_credits = int(len(Segment.objects.get(id=segment_id).source) / word_char_ratio)
 
         segment_source = Segment.objects.get(id=segment_id).source
         seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
@@ -330,9 +327,6 @@ class MT_RawAndTM_View(views.APIView):
         else:
             return {}, 424, "unavailable"
 
-        # else:
-        #     return {"data":"No active subscription"}, 424
-
     @staticmethod
     def get_tm_data(request, segment_id):
         segment = Segment.objects.filter(id=segment_id).first()
@@ -347,10 +341,11 @@ class MT_RawAndTM_View(views.APIView):
         return []
 
     def get(self, request, segment_id):
-        data, status_code, type = self.get_data(request, segment_id)
+        data, status_code, can_team = self.get_data(request, segment_id)
+        # print("MT Data -----> ", data)
         mt_alert = True if status_code == 424 else False
         alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
-            type == "unavailable") else "Team subscription inactive"
+            can_team == "unavailable") else "Team subscription inactive"
         tm_data = self.get_tm_data(request, segment_id)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert, "alert_msg":alert_msg}, status=status_code)
 
