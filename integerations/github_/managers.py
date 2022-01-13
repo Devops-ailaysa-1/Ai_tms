@@ -16,3 +16,7 @@ class GithubTokenManager(models.Manager):
                     objects.append(obj)
 
         return objects
+
+# class RepositoryManager(models.Manager):
+#
+#     def create

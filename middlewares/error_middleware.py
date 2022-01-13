@@ -7,6 +7,7 @@ import requests
 
 from rest_framework.response import Response
 from django.http import JsonResponse
+from rest_framework.response import Response
 
 def error_middleware(get_response):
     def middleware(request):
@@ -24,21 +25,7 @@ def error_middleware(get_response):
         client.close()
         return JsonResponse({"error": str(exception)}, status=400)
 
-    def process_response( request, response):
-        print("---->")
-        if request.status_code == 400:
-            client = MongoClient("localhost", 27017)
-            db = client["log"]
-            coll = db["error_log"]
-            coll.insert_one({"url": request.get_raw_uri(),
-                             "data": request.POST.dict(), "user": request.user.username,
-                             "url_params": request.GET.dict()})
-
-            client.close()
-        return response
-
     middleware.process_exception = process_exception
-    middleware.process_response = process_response
 
     return middleware
 

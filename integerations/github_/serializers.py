@@ -1,14 +1,19 @@
 from rest_framework import serializers
 import json
 from .models import GithubOAuthToken, FetchInfo,\
-    Repository
+    Repository, Branch, ContentFile
+from ai_workspace.models import  Project, File, Job
+from ai_staff.models import AssetUsageTypes, Languages
 
 from github import Github
+from collections import OrderedDict
+from ai_auth.models import AiUser
+
 
 class GithubOAuthTokenSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ("oauth_token", "ai_user", \
-                  "is_token_expired", "username")
+                  "is_token_expired", "username", "id")
         model = GithubOAuthToken
 
         extra_kwargs = {
@@ -30,6 +35,180 @@ class GithubOAuthTokenSerializer(serializers.ModelSerializer):
         g = Github(data["oauth_token"])
         username = g.get_user().login
         data["username"] = username
+
+        if GithubOAuthToken.objects.filter(
+            ai_user=data["ai_user"],
+            username=username
+        ).first():
+            raise ValueError("Already github account registered!!!")
         return super().create(data)
+
+class RepositorySerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ['id', 'github_token', 'repository_name', \
+                  'is_localize_registered', 'is_alive_in_github',\
+                  'repository_fullname']
+        model = Repository
+        extra_kwargs = {
+        }
+
+    def create(self, validated_data):
+        data = validated_data
+        return super().create(data)
+
+
+class BranchSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ['id', 'branch_name', 'is_localize_registered', 'repo',
+                  # 'created_on', 'accessed_on', 'updated_on'
+                  ]
+        model = Branch
+
+    def create(self, validated_data):
+        data = validated_data
+        return super().create(data)
+
+
+class ContentFileListSerializer(serializers.ListSerializer):
+    def update(self, instance, validated_data):
+        print("list update called")
+        instance_mapping = {this.id: this for this in instance}
+        data_mapping = {item['id']: item for item in validated_data}
+
+        # Perform creations and updates.
+        ret = []
+        for data_id, data in data_mapping.items():
+            ins = instance_mapping.get(data_id, None)
+            if ins is not None:
+                ret.append(self.child.update(ins, data))
+        return ret
+
+
+class ContentFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ['id', 'branch', 'is_localize_registered', 'file',
+                  "file_path",
+                  # 'created_on', 'accessed_on', 'updated_on'
+                  ]
+
+        extra_kwargs = {
+            "id":{
+                "read_only": False, "required": False
+            }
+        }
+
+        model = ContentFile
+        list_serializer_class = ContentFileListSerializer
+
+    def create(self, validated_data):
+        data = validated_data
+        return super().create(data)
+
+
+
+class LocalizeIdsSerializer(serializers.Serializer):
+    localizable_ids = serializers.ListField()
+
+class ProjectSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        fields = ["id", 'project_name',
+                  #'project_dir_path', 'created_at',
+                  'ai_user',
+                  #'ai_project_id', 'mt_engine', 'max_hits',
+                  'threshold'
+                  ]
+        model = Project
+
+        extra_kwargs = {
+            "ai_user": {
+                "required": False}}
+
+        validators = []
+
+    def create(self, validated_data):
+        print("create")
+        data = validated_data
+        project = Project.objects.create(**data)
+        return project
+
+    # def create(self, validated_data):
+    #     data = validated_data
+    #     return super().create(data)
+
+class FileListSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        ret = []
+        for s_data in validated_data:
+            ret.append(self.child.create(s_data))
+        return ret
+
+class FileSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ['id', 'usage_type', 'file',
+                  'project',]
+        model = File
+        list_serializer_class = FileListSerializer
+
+        extra_kwargs = {
+            "project": {
+                "required": False}}
+
+        validators = []
+
+
+    def create(self, validated_data):
+        data = validated_data
+        return super().create(data)
+
+class FileDataPrepareSerializer(serializers.Serializer):
+    DEFAULT_ASSET = 1  #Need to add test
+
+    usage_type = serializers.PrimaryKeyRelatedField(
+        queryset=AssetUsageTypes.objects.all(),
+        default=AssetUsageTypes.objects.get(id=DEFAULT_ASSET))
+    files = serializers.ListField()
+
+    def to_representation(self, instance):
+        ret = super(FileDataPrepareSerializer, self)\
+            .to_representation(instance=instance)
+        ret = [{"usage_type":ret["usage_type"], "file":file} for
+               file in ret.get("files")]
+        return ret
+
+class JobListSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        ret = []
+        for s_data in validated_data:
+            ret.append(self.child.create(s_data))
+        return ret
+
+class JobSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ['id', 'source_language', 'target_language',
+                  'project', ]
+        model = Job
+        list_serializer_class = JobListSerializer
+
+        extra_kwargs = {
+            "project": {
+                "required": False}}
+
+        validators = []
+
+    def create(self, validated_data):
+        data = validated_data
+        return super().create(data)
+
+class JobDataPrepareSerializer(serializers.Serializer):
+    source_language = serializers.IntegerField()
+    target_languages = serializers.ListField()
+
+    def to_representation(self, instance):
+        ret = super(JobDataPrepareSerializer, self)\
+            .to_representation(instance=instance)
+        ret = [{"source_language":ret["source_language"], "target_language":target_language} for
+               target_language in ret.get("target_languages")]
+        return ret
 
 

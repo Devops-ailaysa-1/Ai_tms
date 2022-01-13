@@ -34,6 +34,11 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
+    def remove_anonymous_user():
+        user = AiUser.objects.filter(email="AnonymousUser").first()
+        if user:
+            user.delete()
+
     def __str__(self):
         return self.email
 

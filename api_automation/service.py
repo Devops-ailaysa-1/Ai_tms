@@ -12,8 +12,8 @@ import json
 
 class Service:
 
-    def get_a_access_token():
-        account_setup = AccountSetup()
+    def get_a_access_token(email=None, pwd=None):
+        account_setup = AccountSetup(email=email, pwd=pwd)
         account_setup.run()
 
         return account_setup.token

@@ -66,3 +66,5 @@ docker-compose_prod.yml
 backupdb
 /repeat_imp.py
 /automate/
+/repeat-sh-commands.txt
+/test-fixtures-create.sh

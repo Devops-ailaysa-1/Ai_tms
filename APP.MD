@@ -26,6 +26,8 @@
   - Screenshots and its reference keys 
   - Notifications for every user while login(Notification separate model) 
   - Admin view on behalf of a user 
+  - django object level permissions to be added  
+  - obsolete database records finding and removing by periodic signals
   
 ## Usual issues
   - Migration version issues while git pushing other developer commits 

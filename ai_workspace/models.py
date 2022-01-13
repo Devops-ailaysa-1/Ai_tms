@@ -78,11 +78,14 @@ pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 class Project(models.Model):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
-        path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
+        path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
+        allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
-    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False,
+        on_delete=models.CASCADE)
     ai_project_id = models.TextField()
-    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,
+        null=True, blank=True, \
         on_delete=models.CASCADE, related_name="proj_mt_engine")
     threshold = models.IntegerField(default=85)
     max_hits = models.IntegerField(default=5)

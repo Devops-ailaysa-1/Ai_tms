@@ -119,6 +119,7 @@ INSTALLED_APPS = [
     'djstripe',
     'django_filters',
     'storages',
+    "guardian",
 
     #'dbbackup',
     # 'channels',
@@ -200,9 +201,9 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = [
     'ai_auth.authentication.MysqlBackend',
     'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
-
 
 #REST_FRAMEWORK = {
 
