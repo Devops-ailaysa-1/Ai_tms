@@ -257,7 +257,7 @@ class Project(models.Model):
                     if task.task_assign_info:
                         return True
                 except:
-                    print("False")
+                    pass
             return False
         else:
             return False

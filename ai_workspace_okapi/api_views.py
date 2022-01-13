@@ -282,12 +282,13 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def can_translate(request, debit_user):
+
         if (request.user.is_internal_member or request.user.id in debit_user.get_hired_editors) and \
-            (get_plan_name(debit_user) == "Business") and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription") ).last().ended_at != None):
             print("For internal members only")
             return {}, 424, "cannot_translate"
+
 
     @staticmethod
     def get_data(request, segment_id):

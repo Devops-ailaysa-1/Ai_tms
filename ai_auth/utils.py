@@ -36,5 +36,7 @@ def get_plan_name(user):
 	customer = Customer.objects.get(subscriber=user)
 	#subscriptions = Subscription.objects.filter(customer=customer).last()
 	sub = customer.subscriptions.filter(Q(status='active')|Q(status='trialing')).last()
-	name = sub.plan.product.name
-	return name
+	if sub:
+		name = sub.plan.product.name
+		return name
+	else: return None
