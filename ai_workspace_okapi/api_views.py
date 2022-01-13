@@ -299,7 +299,7 @@ class MT_RawAndTM_View(views.APIView):
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
 
-        if doc.job.project.team : MT_RawAndTM_View.can_translate(request, user)
+        if doc.job.project.team : return MT_RawAndTM_View.can_translate(request, user)
 
         initial_credit = user.credit_balance
 
