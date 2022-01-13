@@ -203,7 +203,9 @@ class DocumentViewByDocumentId(views.APIView):
     def get(self, request, document_id):
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
-        if (request.user == doc_user) or (request.user in doc_user.team.get_team_members) or (request.user in doc_user.get_hired_editors):
+        team_members = doc_user.get_team_members if doc_user.get_team_members else []
+        hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
+        if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
             dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
             document = self.get_object(document_id)
             data = DocumentSerializerV2(document).data
