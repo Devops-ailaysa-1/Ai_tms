@@ -67,6 +67,12 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         return [i.hired_editor for i in self.user_info.all()]
 
     @property
+    def get_team_members(self):
+        if self.team:
+            return [i.internal_member for i in self.team.internal_member_team_info.all()]
+
+
+    @property
     def credit_balance(self):
         total_credit_left = 0
         present = datetime.now()

@@ -826,7 +826,7 @@ class UpdateTaskCreditStatus(APIView):
     #         return HttpResponse(status=404)
 
     @staticmethod
-    def update_addon_credit(request,user, actual_used_credits=None, credit_diff=None):
+    def update_addon_credit(request, user, actual_used_credits=None, credit_diff=None):
         add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon"))
         if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
@@ -849,7 +849,7 @@ class UpdateTaskCreditStatus(APIView):
     def update_usercredit(request,doc_id, actual_used_credits):
         doc = Document.objects.get(id = doc_id)
         user = doc.doc_credit_debit_user
-        print("Credit User",user)
+        print("Credit User",type(user))
         present = datetime.now()
         try:
             user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
@@ -868,7 +868,7 @@ class UpdateTaskCreditStatus(APIView):
                 raise Exception
 
         except Exception as e:
-            from_addon = UpdateTaskCreditStatus.update_addon_credit(request, actual_used_credits)
+            from_addon = UpdateTaskCreditStatus.update_addon_credit(request, user, actual_used_credits)
             return from_addon
 
     @staticmethod
