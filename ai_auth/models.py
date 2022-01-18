@@ -48,12 +48,12 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     def internal_member_team_detail(self):
         if self.is_internal_member == True:
             obj = InternalMember.objects.get(internal_member_id = self.id)
-            plan = get_plan_name(obj.team.owner)
-            # team_info = InternalMember.objects.get(internal_member_id = self.id).team
-            if plan == "Business":
-                return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"active":"True"}
-            else:
-                return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"active":"False"}
+            return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
+            # plan = get_plan_name(obj.team.owner)
+            # if plan == "Business":
+            #     return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"active":"True"}
+            # else:
+            #     return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"active":"False"}
 
 
     @property
