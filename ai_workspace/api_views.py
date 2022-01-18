@@ -818,13 +818,6 @@ class UpdateTaskCreditStatus(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    # @staticmethod
-    # def get_object(doc_id):
-    #     try:
-    #         return TaskCreditStatus.objects.get(task__document=doc_id)
-    #     except TaskCreditStatus.DoesNotExist:
-    #         return HttpResponse(status=404)
-
     @staticmethod
     def update_addon_credit(request, user, actual_used_credits=None, credit_diff=None):
         add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon"))
@@ -852,17 +845,29 @@ class UpdateTaskCreditStatus(APIView):
         print("Credit User",type(user))
         present = datetime.now()
         try:
+
+            carry_on_credits = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & \
+                Q(ended_at__isnull=False)).last()
+
             user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+
+            # Check whether to debit from carry-on-credit or current subscription credit record
+            if (carry_on_credits.exists()) and \
+                (user_credit.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S')):
+                credit_record = carry_on_credits
+            else:
+                credit_record = user_credit
+            
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                if not actual_used_credits > user_credit.credits_left:
-                    user_credit.credits_left -= actual_used_credits
-                    user_credit.save()
+                if not actual_used_credits > credit_record.credits_left:
+                    credit_record.credits_left -= actual_used_credits
+                    credit_record.save()
                     return True
                 else:
-                    credit_diff = actual_used_credits - user_credit.credits_left
-                    user_credit.credits_left = 0
-                    user_credit.save()
-                    from_addon = UpdateTaskCreditStatus.update_addon_credit(request,user,credit_diff)
+                    credit_diff = actual_used_credits - credit_record.credits_left
+                    credit_record.credits_left = 0
+                    credit_record.save()
+                    from_addon = UpdateTaskCreditStatus.update_addon_credit(request, user, credit_diff)
                     return from_addon
             else:
                 raise Exception
@@ -874,7 +879,7 @@ class UpdateTaskCreditStatus(APIView):
     @staticmethod
     def update_credits(request, doc_id, actual_used_credits):
         # task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
-        credit_status = UpdateTaskCreditStatus.update_usercredit(request,doc_id, actual_used_credits)
+        credit_status = UpdateTaskCreditStatus.update_usercredit(request, doc_id, actual_used_credits)
         # print("CREDIT STATUS----->", credit_status)
         if credit_status:
             msg = "Successfully debited MT credits"
