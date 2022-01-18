@@ -12,6 +12,7 @@ from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
 from djstripe.models import Customer,Subscription,PaymentIntent,Invoice,Price,Product,Charge
 from ai_auth import Aiwebhooks
+from ai_auth.utils import get_plan_name
 # from djstripe import webhooks
 from django.db.models import Q
 from datetime import datetime
@@ -47,18 +48,25 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     def internal_member_team_detail(self):
         if self.is_internal_member == True:
             obj = InternalMember.objects.get(internal_member_id = self.id)
+            plan = get_plan_name(obj.team.owner)
             # team_info = InternalMember.objects.get(internal_member_id = self.id).team
-            return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
+            if plan == "Business":
+                return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"active":"True"}
+            else:
+                return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"active":"False"}
+
 
     @property
     def team(self):
         if self.is_internal_member == True:
             obj = InternalMember.objects.get(internal_member_id = self.id)
-            return obj.team
+            plan = get_plan_name(obj.team.owner)
+            return obj.team if plan == "Business" else None
         else:
             try:
                 team = Team.objects.get(owner_id = self.id)
-                return team
+                plan = get_plan_name(self)
+                return team if plan == "Business" else None
             except:
                 return None
 
