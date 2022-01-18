@@ -108,7 +108,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             if serializer.is_valid(raise_exception=True):
                 start = time.process_time()
                 document = serializer.save()
-                print("Time taken to write ==========>", time.process_time() - start)
+                # print("Time taken to write ==========>", time.process_time() - start)
                 task.document = document
                 print("********   Document written using existing file  ***********")
                 task.save()
@@ -282,13 +282,20 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def can_translate(request, debit_user):
+        hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
 
-        if (request.user.is_internal_member or request.user.id in debit_user.get_hired_editors) and \
-            (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
-                                     & Q(credit_pack_type__icontains="Subscription") ).last().ended_at != None):
-            print("For internal members only")
+        # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
+        if get_plan_name(debit_user) != "Business":
             return {}, 424, "cannot_translate"
 
+        elif (request.user.is_internal_member or request.user.id in hired_editors) and \
+            (get_plan_name(debit_user)=="Business") and \
+            (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
+                                     & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
+            print("For internal & hired editors only")
+            return {}, 424, "cannot_translate"
+        else:
+            return None
 
     @staticmethod
     def get_data(request, segment_id):
@@ -302,7 +309,11 @@ class MT_RawAndTM_View(views.APIView):
 
         # Checking if the request user is account owner or not
         if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)): 
-            return MT_RawAndTM_View.can_translate(request, user)
+            can_translate = MT_RawAndTM_View.can_translate(request, user)
+            if can_translate == None:
+                pass
+            else:
+                return MT_RawAndTM_View.can_translate(request, user)      
 
         initial_credit = user.credit_balance
 
