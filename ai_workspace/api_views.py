@@ -845,14 +845,13 @@ class UpdateTaskCreditStatus(APIView):
         print("Credit User",type(user))
         present = datetime.now()
         try:
-
             carry_on_credits = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & \
                 Q(ended_at__isnull=False)).last()
 
             user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-
+            
             # Check whether to debit from carry-on-credit or current subscription credit record
-            if (carry_on_credits.exists()) and \
+            if (carry_on_credits) and \
                 (user_credit.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S')):
                 credit_record = carry_on_credits
             else:
