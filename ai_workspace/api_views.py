@@ -845,27 +845,27 @@ class UpdateTaskCreditStatus(APIView):
         print("Credit User",type(user))
         present = datetime.now()
         try:
-            carry_on_credits = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & \
-                Q(ended_at__isnull=False)).last()
+            # carry_on_credits = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & \
+            #     Q(ended_at__isnull=False)).last()
 
             user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-            
+
             # Check whether to debit from carry-on-credit or current subscription credit record
-            if (carry_on_credits) and \
-                (user_credit.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S')):
-                credit_record = carry_on_credits
-            else:
-                credit_record = user_credit
+            # if (carry_on_credits) and \
+            #     (user_credit.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S')):
+            #     credit_record = carry_on_credits
+            # else:
+            #     credit_record = user_credit
             
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                if not actual_used_credits > credit_record.credits_left:
-                    credit_record.credits_left -= actual_used_credits
-                    credit_record.save()
+                if not actual_used_credits > user_credit.credits_left:
+                    user_credit.credits_left -= actual_used_credits
+                    user_credit.save()
                     return True
                 else:
-                    credit_diff = actual_used_credits - credit_record.credits_left
-                    credit_record.credits_left = 0
-                    credit_record.save()
+                    credit_diff = actual_used_credits - user_credit.credits_left
+                    user_credit.credits_left = 0
+                    user_credit.save()
                     from_addon = UpdateTaskCreditStatus.update_addon_credit(request, user, credit_diff)
                     return from_addon
             else:

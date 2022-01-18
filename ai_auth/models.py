@@ -98,11 +98,11 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 total_credit_left += sub_credits.credits_left
 
-            carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
-                Q(ended_at__isnull=False)).last()
+            # carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
+            #     Q(ended_at__isnull=False)).last()
 
-            if sub_credits.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                total_credit_left += carry_on_credits.credits_left
+            # if sub_credits.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+            #     total_credit_left += carry_on_credits.credits_left
 
         except:
             print("No active subscription")
@@ -129,7 +129,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
                 Q(ended_at__isnull=False)).last()
 
             if sub_credits.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                subscription += carry_on_credits.buyed_credits
+                subscription += carry_on_credits.credits_left
         except:
             print("No active subscription")
             return {"addon":addons, "subscription":subscription}
