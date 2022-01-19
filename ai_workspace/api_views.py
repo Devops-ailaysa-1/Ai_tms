@@ -1152,10 +1152,14 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         Receiver = AiUser.objects.get(id = receiver)
+        task = request.POST.getlist('task')
+        tasks= [json.loads(i) for i in task]
+        obj = Task.objects.get(id=tasks[0])
+        proj = obj.job.project
         serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
-            notify.send(sender, recipient=Receiver, verb='Message', description='You are assigned to new task.check in your project list')
+            notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
             return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
