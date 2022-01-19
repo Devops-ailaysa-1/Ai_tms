@@ -533,14 +533,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
            data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
         else:
            data['tasks'] = [json.loads(data.pop('task'))]
-        print(data['tasks'])
+        # print(data['tasks'])
         data['assigned_by'] = self.context['request'].user.id
-        print("validated data run validation----->",data)
+        # print("validated data run validation----->",data)
         return super().run_validation(data)
 
 
     def create(self, data):
-        print('validated data==>',data)
+        # print('validated data==>',data)
         task_list = data.pop('tasks')
         assign_to = data.pop('assign_to')
         task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]

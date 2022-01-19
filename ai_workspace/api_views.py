@@ -35,7 +35,7 @@ from django.http import JsonResponse
 import requests, json, os, time
 from .models import Task,Tbxfiles
 from lxml import etree as ET
-from ai_marketplace.models import AvailableVendors
+from ai_marketplace.models import AvailableVendors,ChatMessage
 from django.http import JsonResponse,HttpResponse
 import requests, json, os,mimetypes
 from ai_workspace import serializers
@@ -54,6 +54,7 @@ from django.db.models import Q, Sum
 from rest_framework.decorators import permission_classes
 from notifications.signals import notify
 from notifications.models import Notification
+from ai_marketplace.serializers import ThreadSerializer
 # from ai_workspace_okapi.api_views import DocumentViewByTask
 
 spring_host = os.environ.get("SPRING_HOST")
@@ -1132,12 +1133,27 @@ class ProjectAnalysis(APIView):
 
 #########################################
 
+def msg_send(sender,receiver,task):
+    obj = Task.objects.get(id=task)
+    proj = obj.job.project.project_name
+    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    # print("Thread--->",thread_id)
+    message = "you are assigned to new task in Project named "+proj+". check in your project list "
+    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+
+
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
         tasks = request.GET.getlist('tasks')
-        print(tasks)
+        # print(tasks)
         try:
             task_assign_info = TaskAssignInfo.objects.filter(task_id__in = tasks)
         except TaskAssignInfo.DoesNotExist:
@@ -1154,12 +1170,11 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         Receiver = AiUser.objects.get(id = receiver)
         task = request.POST.getlist('task')
         tasks= [json.loads(i) for i in task]
-        obj = Task.objects.get(id=tasks[0])
-        proj = obj.job.project
         serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
-            notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
+            msg_send(sender,Receiver,tasks[0])
+            # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
             return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
