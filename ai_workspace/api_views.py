@@ -35,7 +35,7 @@ from django.http import JsonResponse
 import requests, json, os, time
 from .models import Task,Tbxfiles
 from lxml import etree as ET
-from ai_marketplace.models import AvailableVendors
+from ai_marketplace.models import AvailableVendors,ChatMessage
 from django.http import JsonResponse,HttpResponse
 import requests, json, os,mimetypes
 from ai_workspace import serializers
@@ -54,6 +54,7 @@ from django.db.models import Q, Sum
 from rest_framework.decorators import permission_classes
 from notifications.signals import notify
 from notifications.models import Notification
+from ai_marketplace.serializers import ThreadSerializer
 # from ai_workspace_okapi.api_views import DocumentViewByTask
 
 spring_host = os.environ.get("SPRING_HOST")
@@ -818,13 +819,6 @@ class UpdateTaskCreditStatus(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    # @staticmethod
-    # def get_object(doc_id):
-    #     try:
-    #         return TaskCreditStatus.objects.get(task__document=doc_id)
-    #     except TaskCreditStatus.DoesNotExist:
-    #         return HttpResponse(status=404)
-
     @staticmethod
     def update_addon_credit(request, user, actual_used_credits=None, credit_diff=None):
         add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon"))
@@ -852,7 +846,18 @@ class UpdateTaskCreditStatus(APIView):
         print("Credit User",type(user))
         present = datetime.now()
         try:
+            # carry_on_credits = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & \
+            #     Q(ended_at__isnull=False)).last()
+
             user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+
+            # Check whether to debit from carry-on-credit or current subscription credit record
+            # if (carry_on_credits) and \
+            #     (user_credit.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S')):
+            #     credit_record = carry_on_credits
+            # else:
+            #     credit_record = user_credit
+
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits
@@ -862,7 +867,7 @@ class UpdateTaskCreditStatus(APIView):
                     credit_diff = actual_used_credits - user_credit.credits_left
                     user_credit.credits_left = 0
                     user_credit.save()
-                    from_addon = UpdateTaskCreditStatus.update_addon_credit(request,user,credit_diff)
+                    from_addon = UpdateTaskCreditStatus.update_addon_credit(request, user, credit_diff)
                     return from_addon
             else:
                 raise Exception
@@ -874,7 +879,7 @@ class UpdateTaskCreditStatus(APIView):
     @staticmethod
     def update_credits(request, doc_id, actual_used_credits):
         # task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
-        credit_status = UpdateTaskCreditStatus.update_usercredit(request,doc_id, actual_used_credits)
+        credit_status = UpdateTaskCreditStatus.update_usercredit(request, doc_id, actual_used_credits)
         # print("CREDIT STATUS----->", credit_status)
         if credit_status:
             msg = "Successfully debited MT credits"
@@ -1128,12 +1133,27 @@ class ProjectAnalysis(APIView):
 
 #########################################
 
+def msg_send(sender,receiver,task):
+    obj = Task.objects.get(id=task)
+    proj = obj.job.project.project_name
+    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    # print("Thread--->",thread_id)
+    message = "you are assigned to new task in Project named "+proj+". check in your project list "
+    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+
+
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
         tasks = request.GET.getlist('tasks')
-        print(tasks)
+        # print(tasks)
         try:
             task_assign_info = TaskAssignInfo.objects.filter(task_id__in = tasks)
         except TaskAssignInfo.DoesNotExist:
@@ -1148,10 +1168,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         Receiver = AiUser.objects.get(id = receiver)
+        task = request.POST.getlist('task')
+        tasks= [json.loads(i) for i in task]
         serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
-            notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task')
+            msg_send(sender,Receiver,tasks[0])
+            # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
             return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
