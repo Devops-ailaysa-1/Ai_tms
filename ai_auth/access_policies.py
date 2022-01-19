@@ -162,9 +162,9 @@ class TeamAccess(AccessPolicy):
 class ProjectAccess(AccessPolicy):
     statements = [
         {"action": ["create"], 
-        "principal": ["group:account_owners",],  
+        "principal": ["*",],  
         "effect": "allow",
-        "condition":["(is_internalmember and is_project_owner_internal) or (not is_internalmember) "]
+        "condition":["(is_internalmember and is_project_owner_internal) or (is_team_owner) "]
         #"condition_expression": ["(is_project_owner or is_team_owner)"]
          },
         {"action": ["list"], 
@@ -180,6 +180,7 @@ class ProjectAccess(AccessPolicy):
         "condition_expression": ["(is_project_created or is_project_owner_internal) or team_owner_project"]
          },
     ]
+
 
 class ProjectAssignment(AccessPolicy):
     statements = [

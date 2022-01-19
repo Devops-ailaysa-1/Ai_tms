@@ -106,20 +106,36 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
         try:
-            sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-            if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                subscription += sub_credits.buyed_credits
+            #sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+            # if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+            #     subscription += sub_credits.buyed_credits
 
-            carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
-                Q(ended_at__isnull=False)).last()
+            #carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
+            #    Q(ended_at__isnull=False)).last()
+            carry_credits =UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription")).order_by('-id')
+            avai_cp= 0
+            for credits in carry_credits:
+                if credits.ended_at == None:
+                    enddate = credits.expiry
+                    startdate = credits.created_at
+                    print("inside if")
+                    avai_cp = credits.buyed_credits
+                else:
+                    print("else")
+                    if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
+                        startdate = credits.created_at
+                        enddate = credits.expiry
+                        print("inside else")
+                        avai_cp += credits.buyed_credits
 
-            if sub_credits.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                subscription += carry_on_credits.credits_left
+
+            # if sub_credits.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
+            #     subscription += carry_on_credits.credits_left
         except:
             print("No active subscription")
-            return {"addon":addons, "subscription":subscription}
+            return {"addon":addons, "subscription":avai_cp}
 
-        return {"addon":addons, "subscription":subscription}
+        return {"addon":addons, "subscription":avai_cp}
 
     # @property
     # def buyed_credits(self):
