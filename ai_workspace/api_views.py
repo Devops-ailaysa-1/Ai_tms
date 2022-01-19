@@ -856,7 +856,7 @@ class UpdateTaskCreditStatus(APIView):
             #     credit_record = carry_on_credits
             # else:
             #     credit_record = user_credit
-            
+
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
                     user_credit.credits_left -= actual_used_credits
@@ -1155,7 +1155,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
-            notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task')
+            notify.send(sender, recipient=Receiver, verb='Message', description='You are assigned to new task.check in your project list')
             return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
