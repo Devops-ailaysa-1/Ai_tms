@@ -68,3 +68,4 @@ backupdb
 /automate/
 /repeat-sh-commands.txt
 /test-fixtures-create.sh
+/documentation/

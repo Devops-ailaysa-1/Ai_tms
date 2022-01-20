@@ -4,20 +4,28 @@ from django.dispatch import receiver
 from guardian.shortcuts import assign_perm
 
 from ai_auth.models import AiUser
-from .managers import GithubTokenManager
+from .managers import GithubTokenManager, HookDeckManager
+from .enums import GITHUB_PREFIX_NAME, HOOK_PREFIX_NAME,\
+    HOOK_DESTINATION_GITHUB_PREFIX_NAME
 
 from github import Github
 from django.shortcuts import get_object_or_404
+from django.utils.crypto import get_random_string
 
 from .utils import GithubUtils
 from datetime import datetime
 import pytz
+import cryptocode
+import os, re
+import uuid
+import requests
+from requests.auth import HTTPBasicAuth
 
+CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
 # custom lokalize_user models should have
 # last github repo fetch timestamp
 # periodically fetch
-
 
 class GithubOAuthToken(models.Model):
     oauth_token = models.CharField(max_length=255,)
@@ -229,7 +237,6 @@ class ContentFile(models.Model):
 
 @receiver(post_save, sender=ContentFile)
 def contentfile_post_save(sender, **kwargs):
-
     obj, created = kwargs["instance"], kwargs["created"]
     if created :
         assign_perm("change_contentfile",
@@ -243,6 +250,85 @@ def contentfile_localize_register_update(sender, **kwargs):
         if not branch.is_localize_registered:
             branch.is_localize_registered = True
             branch.save()
+
+class HookDeck(models.Model):
+
+    source_name = models.TextField() #Programmatically to be setted
+    project = models.ForeignKey("ai_workspace.Project",
+        on_delete=models.CASCADE, related_name="project_hookdeck_set")
+    hook_name = models.TextField() #Programmatically to be setted
+    destination_name = models.TextField() #Programmatically to be setted
+    hook_cli_path = models.URLField() #URL
+    password = models.TextField()
+    hookdeck_url = models.TextField() #Programmatically to be setted
+
+    objects = HookDeckManager()
+
+    @classmethod
+    def create_hookdeck_for_project(cls, project):
+        obj = cls()
+        obj.project = project
+        obj.set_fields()
+        obj.save()
+        return obj
+
+    def set_fields(self):
+        self.set_source_name()
+        self.set_hookname_and_destname()
+        self.set_clipath_and_password()
+
+    def save(self, *args, **kwargs):
+        print("You may need to call set fields function before save. please ensure")
+        return super().save(*args, **kwargs)
+
+    def set_source_name(self):
+
+        if not self.source_name:
+            self.source_name = HookDeck.objects. \
+                get_hookdeck_source_name_for_user(user= \
+                self.project.ai_user)
+
+    def set_hookname_and_destname(self):
+        if not self.hook_name and (not self.destination_name):
+            base_name = HookDeck.objects.\
+                get_unique_base_name()
+            self.hook_name, self.destination_name = \
+                HOOK_PREFIX_NAME +base_name, HOOK_DESTINATION_GITHUB_PREFIX_NAME+\
+                base_name
+
+        elif not self.hook_name:
+            raise ValueError(
+                "Something went to wrong.Destination name setted already and hookname"
+                "not setted")
+        else:
+            raise ValueError(
+                "Something went to wrong.Hook name setted already and destination name"
+                "not setted")
+
+    def set_clipath_and_password(self):
+        url_regex = "^(\\/)+([\\/.a-zA-Z0-9-_]*)$"
+        if not self.hook_cli_path:
+            for i in range(1000):
+                encoded = "".join([get_random_string(10) for i in range(3)])
+                if ("?" not in encoded) and ("/" not in encoded) \
+                    and (re.match(url_regex, "/integerations/hooks/repo_update/"+ encoded)):
+                    break
+            else:
+                raise ValueError("Cannot generate url for match regex!!!")
+
+            self.hook_cli_path = "/integerations/hooks/repo_update/"+ encoded
+            self.password = uuid.uuid4().__str__().split("-")[-1]
+
+    @staticmethod
+    def create_or_get_hookdeck_url_for_data(data):
+        res = requests.post("http://api.hookdeck.com/2021-08-01/connections",
+            data=data, headers= {'Content-Type': 'application/json'
+            }, auth=HTTPBasicAuth('0uiz4mw193y0'
+            'bp52b177rch275878cbnbsr60uleytgdv1gzo6','')  )
+        try:
+            return res.json()
+        except:
+            raise ValueError("hookdeck new connection create or get api failed!!!")
 
 
 

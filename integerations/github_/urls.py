@@ -6,7 +6,6 @@ from django.conf.urls import url
 
 router = DefaultRouter()
 
-
 urlpatterns=[
     path("github/<int:pk>", api_views.GithubOAuthTokenViewset.as_view(
         {"get": "retrieve"})),
@@ -19,7 +18,8 @@ urlpatterns=[
     path("github/repository/branch/contentfile/<int:pk>", api_views.ContentFileViewset.as_view(
         {"get": "list", "post":"create"})),
     path("github/test/project", api_views.TestProjectView.as_view({"post": "create"})),
-    path("github/test/project", api_views.TestProjectView.as_view({"post": "create"}))
+    path("github/test/project", api_views.TestProjectView.as_view({"post": "create"})),
+    path("hooks/repo_update/<str:slug>", api_views.repo_update_view, )
 ]
 
 

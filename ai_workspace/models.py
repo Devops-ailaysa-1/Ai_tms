@@ -28,12 +28,15 @@ from django.db.models.fields.files import FieldFile, FileField
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
+from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
     check_job_file_version_has_same_project)
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager
 from django.db.models.fields import Field
+from integerations.github_.models import ContentFile
+from integerations.github_.utils import DjRestUtils
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -362,12 +365,32 @@ class File(models.Model):
                 on_delete=models.CASCADE, related_name="project_usage_type")
     file = CustomFileField(upload_to=get_file_upload_path, null=False,\
                 blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
-    # output_file =
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
+    content_file = models.ForeignKey(ContentFile, on_delete=models.SET_NULL, null=True,
+        related_name="contentfile_files_set")
+
+    def update_file(self, file_content):
+        if not self.is_upload_from_integeration:
+            raise ValueError( "This file cannot be update. Since it"
+            " is not uploaded from integeration!!!" )
+        upload_file_name = self.file.name.split("/")[-1]
+        print("file path---->", self.file.name)
+        SpacesService.delete_object(file_path=self.file.name)
+        im = DjRestUtils.convert_content_to_inmemoryfile(filecontent=file_content,
+            file_name=upload_file_name)
+        self.file = im
+        self.save()
+
+    class Meta:
+        managed = False
+
+    @property
+    def is_upload_from_integeration(self):
+        return self.content_file!=None
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''

@@ -19,6 +19,12 @@
   - One Sample Project with Some data to user understand the software to use
   - All Projects Summary in one single window 
       ![Project info dash](./documentation/data/screenshots/Screenshot%20from%202021-12-29%2016-57-19.png)
+  - Integeration Page
+    ![integeration page](./documentation/data/screenshots/Screenshot%20from%202022-01-24%2014-06-35.png)
+  - Advanced Pull options
+    ![Pull Options](./documentation/data/screenshots/Screenshot%20from%202022-01-24%2014-12-55.png)
+  - lokalize github and workspace comparing view
+    ![compare view](/home/langscape/Documents/ailaysa_github/Ai_TMS/documentation/data/screenshots/Screenshot from 2022-01-24 17-57-57.png) 
   - email notification 
   - url generate to user open any specific page from 3rd party site like url sending in slack
   - Users data backup periodically
@@ -28,6 +34,12 @@
   - Admin view on behalf of a user 
   - django object level permissions to be added  
   - obsolete database records finding and removing by periodic signals
+  - github expired token find and create notification
+  - TM management for approved translations
+  - WebHook url and secret create 
+  - Request count for one specific user and identify misuse customer
+  - archieve records while records save failure 
+   
   
 ## Usual issues
   - Migration version issues while git pushing other developer commits 
@@ -54,7 +66,9 @@
     ![Create and assign task oprions](documentation/data/screenshots/Screenshot%20from%202021-12-30%2011-58-57.png)
   - Apply specific filters and assign as tasks 
   - Vendors and Usergroups 
-
+  - github oauth login included without conflict with existing user account 
+  - Application scale point to be determined  
+  
 ## Additional Features to be included
   - Caches the api data where applicable 
   - Stripe payment integeration
@@ -63,7 +77,6 @@
   - variables tracking using decorator or any other simple methods 
     to get variable value very easy 
    
-    
 ## App Important features to include:
   - api only testing 
   - debugging the request
@@ -115,3 +128,9 @@
   
 Useful Links:
   - [dj rest github integeration](https://django-rest-auth.readthedocs.io/en/latest/installation.html)
+  - [hookdeck api](https://hookdeck.com/api-ref#create-a-webhook-connection)
+  
+  
+ Architect:
+  - Parallel processing if typically large...  
+  - 

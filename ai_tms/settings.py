@@ -120,7 +120,7 @@ INSTALLED_APPS = [
     'django_filters',
     'storages',
     "guardian",
-
+    'django_celery_results',
     #'dbbackup',
     # 'channels',
     #'django_q',
@@ -392,13 +392,16 @@ SIMPLE_JWT = {
 #     'AUTH_COOKIE_PATH': '/',        # The path of the auth cookie.
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
 
-
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
+# CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+# CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
 CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
 CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
 CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
+
+
 
 
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''

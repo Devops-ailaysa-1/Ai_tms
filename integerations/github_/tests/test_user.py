@@ -3,7 +3,8 @@ from rest_framework.test import APITestCase
 # Create your tests here.
 import requests
 
-from integerations.github_.models import GithubOAuthToken, Repository
+from integerations.github_.models import GithubOAuthToken, Repository, Branch
+from ai_workspace.models import Project
 from ai_auth.models import AiUser
 from guardian.shortcuts import assign_perm
 from guardian.models import UserObjectPermission
@@ -11,6 +12,7 @@ from guardian.models import UserObjectPermission
 from unittest import skip, skipIf
 
 from api_automation.service import Service
+import random
 
 def get_a_token():
     return  Service.get_a_access_token(
@@ -20,7 +22,10 @@ def get_a_token():
 
 SKIP = not True
 
-class GithubApiTestCase(APITestCase):
+class GithubApiTestCase(
+   APITestCase
+):
+
     fixtures = ["fixtures.json"]
 
     token = get_a_token()
@@ -136,4 +141,30 @@ class TestCasesV2(APITestCase):
         print("data---->", res.data)
         print("test_branch_api passed")
 
+    def test_content_file_api(self):
+        for branch in Branch.objects.all():
+            print("branch--->", branch.id)
+        url = f"/integerations/github/repository/branch/contentfile/12"
+        res = self.client.get(url, HTTP_AUTHORIZATION="Bearer " + self.token)
+        self.assertTrue(res.status_code == 200, msg=res.data)
+        self.assertTrue(res.data.get("count")>0,
+            msg="res--->"+ str(res.data.get("count"))+"Branches count "
+                        "is empty or zero!!!")
+        print("res--->", res.data)
+
+        files_id = []
+        for result in res.data.get("results"):
+            if random.choice([True, False]):
+                files_id.append(result["id"])
+
+        target_languages = [2,3, 4, 5]
+
+        data = {"localizable_ids":files_id, "project_name": "test-11", "source_language": 1,
+                "target_languages": target_languages}
+
+        res = self.client.post(url, HTTP_AUTHORIZATION="Bearer " + self.token, data=data)
+        self.assertTrue(res.status_code == 200, msg="create project, file, job, task is not success!!!")
+        project_id = res.data.get("id")
+        self.assertTrue((Project.objects.get(id=project_id).tasks_count == len(files_id)* len(target_languages)),
+                        msg="created task count is not matching with requested input data!!!")
 

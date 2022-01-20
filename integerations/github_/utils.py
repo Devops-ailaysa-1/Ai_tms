@@ -51,6 +51,13 @@ class GithubUtils:
         g = Github(github_token)
         return g.get_user(git_user).get_repo(repo_name)
 
+    @staticmethod
+    def create_new_branch(repo, branch_name, from_commit_hash):
+        ref_branch = repo.create_git_ref(
+            f"refs/heads/{branch_name}", sha=from_commit_hash
+        )
+        return ref_branch
+
 class DjRestUtils:
 
     def get_a_inmemoryuploaded_file():
@@ -62,5 +69,31 @@ class DjRestUtils:
                 sys.getsizeof(io), None)
         return im
 
+    def convert_content_to_inmemoryfile(filecontent, file_name):
+        # text/plain hardcoded may be needs to be change as generic...
+        io = BytesIO()
+        io.write(filecontent)
+        io.seek(0)
+        im = InMemoryUploadedFile(io, None, file_name,
+                                  "text/plain", sys.getsizeof(io), None)
+        return im
+
+class MongoDbUtils:
 
 
+
+
+
+    # secret = '1234'
+    # signature_header = request.headers['X-Hub-Signature']
+    # sha_name, github_signature = signature_header.split('=')
+    # if sha_name != 'sha1':
+    #     print('ERROR: X-Hub-Signature in payload headers was not sha1=****')
+    #     print("match--->", False)
+    #
+    # # Create our own signature
+    # body = request.body
+    # local_signature = hmac.new(secret.encode('utf-8'), msg=body, digestmod=hashlib.sha1)
+    #
+    # # See if they match
+    # print("match-->", hmac.compare_digest(local_signature.hexdigest(), github_signature))

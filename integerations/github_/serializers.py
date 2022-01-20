@@ -1,14 +1,13 @@
 from rest_framework import serializers
 import json
 from .models import GithubOAuthToken, FetchInfo,\
-    Repository, Branch, ContentFile
+    Repository, Branch, ContentFile, HookDeck
 from ai_workspace.models import  Project, File, Job
 from ai_staff.models import AssetUsageTypes, Languages
 
 from github import Github
 from collections import OrderedDict
 from ai_auth.models import AiUser
-
 
 class GithubOAuthTokenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,8 +16,7 @@ class GithubOAuthTokenSerializer(serializers.ModelSerializer):
         model = GithubOAuthToken
 
         extra_kwargs = {
-            "username": {"read_only": True}
-        }
+            "username": {"read_only": True}}
 
     def validate_oauth_token(self, value):
         g = Github(value)
@@ -146,7 +144,7 @@ class FileListSerializer(serializers.ListSerializer):
 class FileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ['id', 'usage_type', 'file',
-                  'project',]
+                  'project', 'content_file']
         model = File
         list_serializer_class = FileListSerializer
 
@@ -156,24 +154,31 @@ class FileSerializer(serializers.ModelSerializer):
 
         validators = []
 
-
     def create(self, validated_data):
         data = validated_data
         return super().create(data)
 
 class FileDataPrepareSerializer(serializers.Serializer):
-    DEFAULT_ASSET = 1  #Need to add test
+    DEFAULT_ASSET = 1  # Need to add test
 
     usage_type = serializers.PrimaryKeyRelatedField(
         queryset=AssetUsageTypes.objects.all(),
-        default=AssetUsageTypes.objects.get(id=DEFAULT_ASSET))
+        # default=AssetUsageTypes.objects.get(id=DEFAULT_ASSET)
+    )
     files = serializers.ListField()
+    content_files = serializers.ListField()
+
+    @classmethod
+    def get_dynamic_obj(cls, *args, **kwargs):
+        cls.usage_type = serializers.CharField()
+        obj = cls(*args, **kwargs)
+        return obj
 
     def to_representation(self, instance):
         ret = super(FileDataPrepareSerializer, self)\
             .to_representation(instance=instance)
-        ret = [{"usage_type":ret["usage_type"], "file":file} for
-               file in ret.get("files")]
+        ret = [{"usage_type":ret["usage_type"], "file":file, "content_file": content_file} for
+               file, content_file in zip(ret.get("files"), ret.get("content_files"))]
         return ret
 
 class JobListSerializer(serializers.ListSerializer):
@@ -211,4 +216,74 @@ class JobDataPrepareSerializer(serializers.Serializer):
                target_language in ret.get("target_languages")]
         return ret
 
+class GithubHookSerializerD1(serializers.Serializer):
+    payload = serializers.JSONField()
 
+class GithubHookSerializerD3(serializers.Serializer):
+    name = serializers.CharField()
+    full_name = serializers.CharField()
+
+class GithubHookSerializerD4(serializers.Serializer):
+    modified = serializers.ListField()
+
+class GithubHookSerializerD2(serializers.Serializer):
+    ref = serializers.CharField()
+    repository = GithubHookSerializerD3()
+    commits = GithubHookSerializerD4(many=True)
+
+    def validate_ref(self, value):
+        if 'refs/heads' in value:
+            return value
+        raise ValueError("refs/heads is missing in value. So you should modify "
+                         "the validation prefix content or someother fix..." )
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret["ref"] = ret["ref"].replace("refs/heads/", "")
+        return ret
+
+class HookDeckSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        fields = ['id', 'source_name', 'project', 'hook_name',
+            'destination_name', 'hook_cli_path', "hookdeck_url"]
+        model = HookDeck
+        read_only_fields =  ['id', 'hook_name',
+            'destination_name', 'hook_cli_path', "hookdeck_url",
+            # 'source_name'
+            ]
+
+    def create(self, validated_data):
+        data = validated_data
+        return super().create(data)
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance=instance)
+        if self.context.get("for_hook_api_call", False):
+            ret["name"] = instance.hook_name
+            ret["source"] = {}
+            ret["source"]["name"] = instance.source_name
+            ret["destination"] = {}
+            ret["destination"]["name"] = instance.destination_name
+            ret["destination"]["cli_path"] = instance.hook_cli_path
+
+        return ret
+
+class HookDeckCallSerializerSub2(serializers.Serializer):
+    name = serializers.CharField()
+    cli_path = serializers.CharField()
+
+class HookDeckCallSerializerSub1(serializers.Serializer):
+    name = serializers.CharField()
+
+class HookDeckCallSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    source = HookDeckCallSerializerSub1()
+    destination = HookDeckCallSerializerSub2()
+
+class HookDeckResponseSerializer(serializers.Serializer):
+    url = serializers.CharField()
+
+    def to_internal_value(self, data):
+        url_data = data["source"]
+        return super().to_internal_value(data=url_data)

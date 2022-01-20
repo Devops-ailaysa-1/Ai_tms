@@ -12,18 +12,78 @@ from rest_framework.decorators import permission_classes
 from rest_framework import serializers
 from django.http import JsonResponse, Http404, HttpResponse
 import rest_framework
+from rest_framework.renderers import JSONRenderer
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from .serializers import GithubOAuthTokenSerializer, RepositorySerializer,\
     BranchSerializer, ContentFileSerializer, LocalizeIdsSerializer,ProjectSerializer,\
-    FileSerializer, JobSerializer, JobDataPrepareSerializer, FileDataPrepareSerializer
-from .models import GithubOAuthToken, Repository, FetchInfo, Branch, ContentFile
+    FileSerializer, JobSerializer, JobDataPrepareSerializer, FileDataPrepareSerializer,\
+    GithubHookSerializerD1, GithubHookSerializerD2, HookDeckCallSerializer, \
+    HookDeckResponseSerializer, HookDeckSerializer
+from .models import GithubOAuthToken, Repository, FetchInfo, Branch, ContentFile, HookDeck
+from .utils import DjRestUtils
+from .tasks import update_files
 from guardian.shortcuts import get_objects_for_user
 from ai_workspace.models import Project, Task
+from ai_auth.models import AiUser
 
 import pytz, pickle,sys
 from io import BytesIO
+import pickle
+from pymongo import MongoClient
+cli = MongoClient ( 'localhost', 27017)
+import hmac, hashlib
+import os
+import uuid
+import cryptocode
 
+CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
+
+@api_view(["POST"])
+def repo_update_view(request, slug):
+    decoded = cryptocode.decrypt(slug, CRYPT_PASSWORD)
+
+    if not decoded:
+        raise ValueError("Hook URL invalid!!!")
+
+    user = AiUser.objects.filter(email=decoded).first()
+
+    if (not user) or (user != request.user):
+        raise ValueError("URL user doest not match with request user!!!")
+
+    dump_data = pickle.dumps(request.data)
+    db = cli["samples"]
+    coll = db["github_hook_data"]
+    coll.insert_one({"data": dump_data})
+    gd = GithubHookSerializerD1(data=request.data)
+    gd.is_valid(raise_exception=True)
+    gd2 = GithubHookSerializerD2(data=gd.data.get("payload"))
+    gd2.is_valid(raise_exception=True)
+    data = gd2.data
+    data["updated_files"] = { file for _ in data.get("commits") for file in _.get("modified") }
+
+    repo_fullname, branch_name = data["repository"]["full_name"], data["ref"]
+
+    for file_path in data["updated_files"] :
+        update_files.delay(repo_fullname=repo_fullname,
+            branch_name=branch_name, file_path=file_path)
+
+    return Response(data)
+
+def validate_signature(payload, secret):
+    # Get the signature from the payload
+    signature_header = payload['headers']['X-Hub-Signature']
+    sha_name, github_signature = signature_header.split('=')
+    if sha_name != 'sha1':
+        print('ERROR: X-Hub-Signature in payload headers was not sha1=****')
+        return False
+
+    # Create our own signature
+    body = payload['body']
+    local_signature = hmac.new(secret.encode('utf-8'), msg=body.encode('utf-8'), digestmod=hashlib.sha1)
+
+    # See if they match
+    return hmac.compare_digest(local_signature.hexdigest(), github_signature)
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -208,19 +268,18 @@ class ContentFileViewset(viewsets.ModelViewSet):
             serlzr.save(project=project)
             job_data, jobs = serlzr.data, serlzr.instance
 
-        im_uploads = []
+        im_uploads, contentfile_ids = [], []
         for _ in data:
+            contentfile_ids.append(_.get("id"))
             content_file = ContentFile.objects.get(id=_.get("id"))
             # print("contents---->", content_file.get_content_of_file.decoded_content)
-            io = BytesIO()
-
-            io.write(content_file.get_content_of_file.decoded_content)
-            io.seek(0)
-            im =  InMemoryUploadedFile(io, None, _.get("file"),
-                                       "text/plain", sys.getsizeof(io), None)
+            im = DjRestUtils.convert_content_to_inmemoryfile(
+                filecontent=content_file.get_content_of_file.decoded_content,
+                file_name=_.get("file"))
             im_uploads.append(im)
 
-        serlzr = FileDataPrepareSerializer(data=[{"files": im_uploads}], many=True)
+        serlzr = FileDataPrepareSerializer(data=[{"files": im_uploads,
+            "content_files": contentfile_ids,"usage_type": 1}], many=True)
         if serlzr.is_valid(raise_exception=True):
             file_serlz_data = serlzr.data[0]
 
@@ -230,8 +289,26 @@ class ContentFileViewset(viewsets.ModelViewSet):
             file_data, files = serlzr.data, serlzr.instance
 
         tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(project=project)
-        print("tasks--->" ,tasks)
-        return  Response(project_data)
+
+        hookdeck = HookDeck.create_hookdeck_for_project(project=project)
+
+        data = HookDeckSerializer(hookdeck,context={"for_hook_api_call": True}).data
+
+        hookdeck_req_data = HookDeckCallSerializer(data=data)
+
+        hookdeck_req_data.is_valid(raise_exception=True)
+
+        res_json = HookDeck.create_or_get_hookdeck_url_for_data(
+            data= JSONRenderer().render(data=hookdeck_req_data.data).decode())
+
+        ser = HookDeckResponseSerializer(data=res_json)
+        if ser.is_valid(raise_exception=True):
+            url = ser.data["url"]
+
+        hookdeck.hookdeck_url = url
+        hookdeck.save()
+
+        return  Response({"project":project_data, "hook": HookDeckSerializer(hookdeck).data})
 
 class TestProjectView(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
