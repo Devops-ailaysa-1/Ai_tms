@@ -1,10 +1,31 @@
 
 from django.db.models import manager
 from ai_auth import managers
+from ai_auth.utils import get_plan_name
 from rest_access_policy import AccessPolicy
 from ai_auth.models import Team,AiUser
 from ai_workspace.models import TaskAssignInfo
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.permissions import BasePermission
+
+
+class IsBusinessUser(BasePermission):
+    """
+    Allows access only to Business Plan users.
+    """
+
+    def has_permission(self, request, view):
+        if request.user.is_internal_member == True:
+            user = request.user.team.owner
+        else:
+            user = request.user
+        plan_name = get_plan_name(user=user)
+        if plan_name!=None and plan_name == "Business":
+            return True
+        else:
+            return False
+
+
 
 
 class InternalTeamAccess(AccessPolicy):
@@ -141,9 +162,9 @@ class TeamAccess(AccessPolicy):
 class ProjectAccess(AccessPolicy):
     statements = [
         {"action": ["create"], 
-        "principal": ["group:account_owners",],  
+        "principal": ["*",],  
         "effect": "allow",
-        "condition":["(is_internalmember and is_project_owner_internal) or (not is_internalmember) "]
+        "condition":["(is_internalmember and is_project_owner_internal) or (is_team_owner) "]
         #"condition_expression": ["(is_project_owner or is_team_owner)"]
          },
         {"action": ["list"], 
@@ -159,6 +180,7 @@ class ProjectAccess(AccessPolicy):
         "condition_expression": ["(is_project_created or is_project_owner_internal) or team_owner_project"]
          },
     ]
+
 
 class ProjectAssignment(AccessPolicy):
     statements = [
