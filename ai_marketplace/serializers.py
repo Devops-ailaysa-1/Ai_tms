@@ -141,7 +141,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
 
     def get_status(self,obj):
         request_user = self.context['request'].user
-        user = request_user.team.owner if request_user.is_internal_member == True else request_user
+        user = request_user.team.owner if ((request_user.team) and (request_user.is_internal_member == True)) else request_user
         editor = AiUser.objects.get(uid = obj.uid)
         if editor in user.get_hired_editors:
             hired = HiredEditors.objects.get(Q(hired_editor = editor)&Q(user = user))
@@ -239,7 +239,7 @@ class GetVendorListSerializer(serializers.ModelSerializer):
 
     def get_status(self,obj):
         request_user = self.context['request'].user
-        user = request_user.team.owner if request_user.is_internal_member == True else request_user
+        user = request_user.team.owner if ((request_user.team) and (request_user.is_internal_member == True)) else request_user
         editor = AiUser.objects.get(uid = obj.uid)
         if editor in user.get_hired_editors:
             hired = HiredEditors.objects.get(Q(hired_editor = editor)&Q(user = user))

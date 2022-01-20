@@ -1316,7 +1316,7 @@ def instruction_file_download(request,task_assign_info_id):
     if instruction_file:
         fl_path = instruction_file.path
         filename = os.path.basename(fl_path)
-        print(os.path.dirname(fl_path))
+        # print(os.path.dirname(fl_path))
         fl = open(fl_path, 'rb')
         mime_type, _ = mimetypes.guess_type(fl_path)
         response = HttpResponse(fl, content_type=mime_type)
