@@ -429,7 +429,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		# print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 		# data['team'] = data.get('team',[None])[0]
-		data['team_exist'] = data.get('team',[False])[0]
+		data['team_exist'] = data.get('team',[None])[0]
 		# # data['project_manager_id'] = data.get('project_manager')
 		return super().to_internal_value(data=data)
 
