@@ -290,25 +290,25 @@ class Project(models.Model):
     #         return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
     #                               "task_words" : [] }
 
-    @property
-    def project_analysis(self):
+
+    def project_analysis(self,tasks):
         if self.is_proj_analysed == True:
             task_words = []
-
             if self.is_all_doc_opened:
                 # print("Inside doccsssssssssssss")
-                [task_words.append({i.id:i.document.total_word_count}) for i in self.get_tasks]
-                out=Document.objects.filter(id__in=[j.document_id for j in self.get_tasks]).aggregate(Sum('total_word_count'),\
+                [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
+                out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
                     Sum('total_char_count'),Sum('total_segment_count'))
-
+                print("Out---->",out)
                 return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
                     "proj_seg_count":out.get('total_segment_count__sum'),\
                                   "task_words" : task_words }
             else:
                 # print("Inside task detailssssss")
-                out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+                # out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+                out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
                 task_words = []
-                [task_words.append({i.id:i.task_details.first().task_word_count}) for i in self.get_tasks]
+                [task_words.append({i.id:i.task_details.first().task_word_count}) for i in tasks]
 
                 return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                     "proj_seg_count":out.get('task_seg_count__sum'),
@@ -316,6 +316,32 @@ class Project(models.Model):
         else:
             from .api_views import ProjectAnalysisProperty
             return ProjectAnalysisProperty.get(self.id)
+    # @property
+    # def project_analysis(self):
+    #     if self.is_proj_analysed == True:
+    #         task_words = []
+    #
+    #         if self.is_all_doc_opened:
+    #             # print("Inside doccsssssssssssss")
+    #             [task_words.append({i.id:i.document.total_word_count}) for i in self.get_tasks]
+    #             out=Document.objects.filter(id__in=[j.document_id for j in self.get_tasks]).aggregate(Sum('total_word_count'),\
+    #                 Sum('total_char_count'),Sum('total_segment_count'))
+    #
+    #             return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+    #                 "proj_seg_count":out.get('total_segment_count__sum'),\
+    #                               "task_words" : task_words }
+    #         else:
+    #             # print("Inside task detailssssss")
+    #             out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+    #             task_words = []
+    #             [task_words.append({i.id:i.task_details.first().task_word_count}) for i in self.get_tasks]
+    #
+    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+    #                 "proj_seg_count":out.get('task_seg_count__sum'),
+    #                             "task_words":task_words}
+    #     else:
+    #         from .api_views import ProjectAnalysisProperty
+    #         return ProjectAnalysisProperty.get(self.id)
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
