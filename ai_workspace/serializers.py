@@ -403,6 +403,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
+	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 
 	class Meta:
 		model = Project
@@ -431,6 +432,22 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['team_exist'] = data.get('team',[None])[0]
 		# # data['project_manager_id'] = data.get('project_manager')
 		return super().to_internal_value(data=data)
+
+	def get_project_analysis(self,instance):
+		user = self.context.get("request").user if self.context.get("request")!=None else self.context.get("ai_user", None)
+		if instance.ai_user == user:
+			tasks = instance.get_tasks
+		elif instance.team:
+			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+				tasks = instance.get_tasks
+			else:
+				tasks = [task for job in instance.project_jobs_set.all() for task \
+						in job.job_tasks_set.all().filter(assign_to_id = user)]
+		else:
+			tasks = [task for job in instance.project_jobs_set.all() for task \
+						in job.job_tasks_set.all().filter(assign_to_id = user)]
+		res = instance.project_analysis(tasks)
+		return res
 
 	def check_role(self, instance):
 		if self.context.get("request")!=None:
@@ -475,7 +492,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.save()
 
 		if 'team_exist' in validated_data:
-			instance.team_id = None if validated_data.get('team_exist') == False else instance.ai_user.team.id
+			instance.team_id = None if (Q(validated_data.get('team_exist') == False) | Q(validated_data.get('team_exist') == None)) else instance.ai_user.team.id
 			instance.save()
 
 		if validated_data.get('project_manager_id'):
