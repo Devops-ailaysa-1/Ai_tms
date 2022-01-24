@@ -60,6 +60,7 @@ urlpatterns+= [
      path('transaction-info/',api_views.TransactionSessionInfo),
      path('user-referral/',api_views.referral_users),
      path('get_team_name/',api_views.get_team_name),
+     path('vendor_form_filling_status/',api_views.vendor_form_filling_status),
      #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")
      # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
      # path('external-member-invite/',api_views.external_member_invite),
