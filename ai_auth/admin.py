@@ -3,11 +3,11 @@ from .models import (AiUser, UserAttribute,
                     TempPricingPreference,CreditPack,UserCredits,
                     BillingAddress,UserTaxInfo,Team,InternalMember, VendorOnboarding)
 from django.contrib.auth.models import Permission
-# from django.contrib.admin import AdminSite
-# from django.contrib.auth.admin import UserAdmin 
-# from django.contrib.auth import get_user_model
-# from django.utils.translation import ugettext_lazy as _
-# from ai_auth.forms import AiUserCreationForm, AiUserChangeForm
+from django.contrib.admin import AdminSite
+#from django.contrib.auth.admin import UserAdmin 
+from django.utils.translation import ugettext_lazy as _
+# from ai_staff.forms import AiUserCreationForm, AiUserChangeForm
+#from django.contrib.auth import get_user_model
 
 
 
@@ -50,13 +50,14 @@ from django.contrib.auth.models import Permission
 # # Only superuser can access root admin site (default)
 # admin.site.has_permission = has_superuser_permission
 
-# class StaffAdminSite(AdminSite):
-#     """HR admin page definition"""
-#     site_header = "Ailaysa Staff"
+class StaffAdminSite(AdminSite):
+    """Staff admin page definition"""
+    site_header = "Ailaysa Staff"
+    index_title = 'Staff administration'
 
-# staff_admin_site = StaffAdminSite(name='ai_staff')
+staff_admin_site = StaffAdminSite(name='ai_staff')
 
-# # available only to super_users
+# available only to super_users
 # @admin.register(AiUser)
 # class RootUserAdmin(UserAdmin):
 #     # model = AiUser
@@ -69,34 +70,40 @@ from django.contrib.auth.models import Permission
 #     # ordering = ('email',)
 
 #     # def get_form(self, request, obj=None, **kwargs):
-#     #     kwargs['exclude'] = ['first_name','last_name','is_admin']
-#     #     kwargs['fields'] = ['']
+#     #     kwargs['exclude'] = ['first_name','last_name','username','password2', 'password1']
+#     #     #kwargs['fields'] = ['']
 #     #     return super(RootUserAdmin, self).get_form(request, obj, **kwargs)
 
 #     fieldsets = (
 #         (None, {'fields': ( 'email', 'password')}),
-#         (_('Personal info'), {'fields': ('fullname')}),
+#         (_('Personal info'), {'fields': ('fullname',)}),
 #         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
 #                                        'groups', 'user_permissions')}),
 #         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
 #     )
-#     add_filedsets = (
+#     add_fieldsets = (
 #         (None, {
 #             'classes': ('wide',),
-#             'fields': ('email', 'password', 'password2')}
+#             'fields': ('email', 'password')}
 #         ),
 #     )
 #     form = AiUserCreationForm
 #     add_form = AiUserChangeForm
-#     list_display = ('email', 'first_name', 'last_name', 'is_staff')
-#     search_fields = ('email', 'first_name', 'last_name')
+#     list_display = ('email', 'is_staff')
+#     search_fields = ('email',)
 #     ordering = ('email',)
 
-# # available to both types of admins hr (is_staff) and root (is_superuser)
-# @admin.register(VendorOnboarding)
-# @admin.register(VendorOnboarding, site=staff_admin_site)
-# class VAAdmin(admin.ModelAdmin):
-#     list_display = ("name", "email", "cv_file","message","status")
+# available to both types of admins hr (is_staff) and root (is_superuser)
+@admin.register(VendorOnboarding)
+@admin.register(VendorOnboarding, site=staff_admin_site)
+class VAAdmin(admin.ModelAdmin):
+#     fieldsets = (
+#     (None, {'fields': ( 'name', 'email','cv_file','status')}),
+#     #(_('Personal info'), {'fields': ('fullname',)}),
+#     #(_('Permissions'), {'fields': (,)}),
+#    # (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+#     )
+    list_display = ("name", "email", "cv_file","status")
 
 
 # Custom Admin Page  #
