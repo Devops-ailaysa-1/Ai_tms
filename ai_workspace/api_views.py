@@ -512,7 +512,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         print(self.request.user)
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
         queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
-                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)|Q(created_by = self.request.user)\
+                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         return queryset
 
@@ -1316,7 +1316,7 @@ def instruction_file_download(request,task_assign_info_id):
     if instruction_file:
         fl_path = instruction_file.path
         filename = os.path.basename(fl_path)
-        print(os.path.dirname(fl_path))
+        # print(os.path.dirname(fl_path))
         fl = open(fl_path, 'rb')
         mime_type, _ = mimetypes.guess_type(fl_path)
         response = HttpResponse(fl, content_type=mime_type)
