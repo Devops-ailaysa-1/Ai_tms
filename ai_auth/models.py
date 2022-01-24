@@ -379,7 +379,7 @@ class VendorOnboarding(models.Model):
         (REJECTED, 'Rejected'),
     ]
     name = models.CharField(max_length=250)
-    email = models.EmailField()
+    email = models.EmailField(_('email address'), unique=True)
     cv_file = models.FileField(upload_to=file_path_vendor)
     message = models.TextField(max_length=1000,blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
