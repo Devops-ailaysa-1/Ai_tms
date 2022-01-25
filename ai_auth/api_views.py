@@ -1611,4 +1611,4 @@ def vendor_form_filling_status(request):
         obj = VendorOnboarding.objects.get(email = email)
         return JsonResponse({'email':email,'status':obj.get_status_display()})
     except VendorOnboarding.DoesNotExist:
-        return JsonResponse({'msg':'Not exists'},status=204)
+        return Response(status=204)
