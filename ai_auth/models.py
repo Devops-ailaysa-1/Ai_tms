@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role
 from django.db.models.signals import post_save, pre_save
-from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status
+from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -386,7 +386,7 @@ class VendorOnboarding(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-
+post_save.connect(vendor_status_send_email, sender=VendorOnboarding)
 
 def support_file_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.email,"support_file",filename)

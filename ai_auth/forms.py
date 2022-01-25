@@ -55,7 +55,7 @@ class SendInviteForm(ResetPasswordForm):
             uri = path.join(settings.CLIENT_BASE_URL, settings.PASSWORD_RESET_URL)
             current_site = get_current_site(request)
             self.send_email_invite(email, uri, user_pk_to_url_str(user), temp_key,current_site,user)
-            
+
         return self.cleaned_data["email"]
 
 
@@ -167,3 +167,27 @@ def user_trial_end(user,sub):
         html_message=msg_html,
     )
     print("mailsent>>",ms)
+
+
+
+def vendor_status_mail(user,status):
+    print("In form-------->",status)
+    print(status)
+    context = {
+        "user":user,
+        "status": status,
+    }
+    email = user
+    # msg_plain = render_to_string("account/email/vendor_status.txt", context)
+    if status == "Accepted":
+        msg_html = render_to_string("account/email/vendor_status.html", context)
+    else:
+        msg_html = render_to_string("account/email/vendor_status_fail.html", context)
+    send_mail(
+        "Ailaysa,Become an Editor",None,
+        # msg_plain,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")

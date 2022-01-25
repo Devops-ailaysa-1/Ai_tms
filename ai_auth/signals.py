@@ -29,6 +29,17 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
         instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)
 
 
+
+def  vendor_status_send_email(sender, instance, *args, **kwargs):
+    print("status----->",instance.get_status_display())
+    if instance.get_status_display() == "Accepted":
+       user = instance.email
+       auth_forms.vendor_status_mail(user,instance.get_status_display())
+    elif (instance.get_status_display() == "Hold") or (instance.get_status_display() == "Rejected"):
+       user = instance.email
+       status = instance.get_status_display() if instance.get_status_display() =="Rejected" else "Held"
+       auth_forms.vendor_status_mail(user,status)
+
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''
 #     res=update_billing_address(address=instance)
@@ -184,7 +195,7 @@ def add_internal_member_group(user) -> bool:
 
 def update_internal_member_status(sender, instance, *args, **kwargs):
     if instance.is_internal_member:
-        if instance.last_login:           
+        if instance.last_login:
             obj = auth_model.InternalMember.objects.get(internal_member = instance)
             obj.status = 2
             obj.save()
@@ -194,5 +205,3 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
 
 
 # def updated_user_taxid(sender, instance, *args, **kwargs):
-
-

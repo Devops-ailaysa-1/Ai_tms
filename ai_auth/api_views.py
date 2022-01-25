@@ -1607,5 +1607,8 @@ def get_team_name(request):
 @api_view(['GET',])
 def vendor_form_filling_status(request):
     email = request.GET.get('email')
-    obj = VendorOnboarding.objects.get(email = email)
-    return JsonResponse({'email':email,'status':obj.get_status_display()})
+    try:
+        obj = VendorOnboarding.objects.get(email = email)
+        return JsonResponse({'email':email,'status':obj.get_status_display()})
+    except VendorOnboarding.DoesNotExist:
+        return Response({'msg':'Not exists'},status=204)
