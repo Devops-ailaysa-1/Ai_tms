@@ -1169,18 +1169,10 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
-        # name = request.POST.get("name")
-        # email = request.POST.get("email")
         cv_file = request.FILES.get('cv_file')
-        # message = request.POST.get("message")
-        # today = date.today()
-        # template = 'vendor_onboarding_email.html'
-        # subject='Regarding Vendor Onboarding'
-        # context = {'email': email,'name':name,'file':cv_file,'date':today,'message':message}
         serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
-            # send_email(subject,template,context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

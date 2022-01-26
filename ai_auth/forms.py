@@ -209,7 +209,7 @@ def vendor_renewal_mail(link,email):
     msg_html = render_to_string("vendor_renewal.html",context)
     send_mail(
         "Ailaysa has become a translators marketplace. Please update your account",None,
-        'support@ailaysa.com',
+        settings.DEFAULT_FROM_EMAIL,
         [email],
         html_message=msg_html,
     )
