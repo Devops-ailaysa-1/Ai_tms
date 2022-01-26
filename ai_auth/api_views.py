@@ -1667,9 +1667,7 @@ def vendor_renewal_invite_accept(request):
     uid = request.POST.get('uid')
     token = request.POST.get('token')
     user_id = urlsafe_base64_decode(uid)
-    print(user_id)
     user = AiUser.objects.get(id=user_id)
-    print(user)
     if user is not None and vendor_renewal_accept_token.check_token(user, token):
         user.is_vendor=True
         user.save()
