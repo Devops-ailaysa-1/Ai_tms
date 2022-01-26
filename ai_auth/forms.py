@@ -171,14 +171,11 @@ def user_trial_end(user,sub):
 
 
 def vendor_status_mail(user,status):
-    print("In form-------->",status)
-    print(status)
     context = {
         "user":user,
         "status": status,
     }
     email = user
-    # msg_plain = render_to_string("account/email/vendor_status.txt", context)
     if status == "Accepted":
         msg_html = render_to_string("account/email/vendor_status.html", context)
     else:
@@ -187,6 +184,32 @@ def vendor_status_mail(user,status):
         "Ailaysa,Become an Editor",None,
         # msg_plain,
         settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def vendor_request_admin_mail(instance):
+    today = date.today()
+    context = {'email': instance.email,'name':instance.name,'date':today,'message':instance.message}
+    msg_html = render_to_string("vendor_onboarding_email.html", context)
+    send_mail(
+        "Regarding Vendor Onboarding",None,
+        settings.DEFAULT_FROM_EMAIL,
+        ['support@ailaysa.com'],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+
+def vendor_renewal_mail(link,email):
+    context = {'link':link}
+    msg_html = render_to_string("vendor_renewal.html",context)
+    send_mail(
+        "Ailaysa has become a translators marketplace. Please update your account",None,
+        'support@ailaysa.com',
         [email],
         html_message=msg_html,
     )

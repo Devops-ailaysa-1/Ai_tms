@@ -383,6 +383,7 @@ class VendorOnboarding(models.Model):
     cv_file = models.FileField(upload_to=file_path_vendor)
     message = models.TextField(max_length=1000,blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
+    rejected_count = models.IntegerField(blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 

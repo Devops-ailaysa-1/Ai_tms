@@ -261,6 +261,8 @@ TRANSEDITOR_BASE_URL = os.getenv("TRANSEDITOR_BASE_URL")
 
 EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
 
+VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
+
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
 ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
