@@ -1604,9 +1604,9 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-@api_view(['GET',])
+@api_view(['POST',])
 def vendor_form_filling_status(request):
-    email = request.GET.get('email')
+    email = request.POST.get('email')
     print("Email---->",email)
     try:
         obj = VendorOnboarding.objects.get(email = email)
