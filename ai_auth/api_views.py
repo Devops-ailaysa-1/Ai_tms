@@ -55,7 +55,6 @@ from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
-from ai_marketplace.serializers import ThreadSerializer
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -518,6 +517,30 @@ def subscribe_trial(price,customer=None):
 
     return subscription
 
+
+def subscribe(price,customer=None):
+    product_name = Price.objects.get(id = price).product.name
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+
+    stripe.api_key = api_key
+   # tax_rate=find_taxrate(customer.subscriber,trial=False)
+    subscription = stripe.Subscription.create(
+    customer=customer.id,
+    items=[
+    {
+        'price': price,
+    },
+    ],
+    #default_tax_rates=tax_rate,
+    #trial_period_days=14,
+
+    metadata={'price':price.id,'product':product_name,'type':'subscription'}
+    )
+
+    return subscription
 
 
 
@@ -1403,6 +1426,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 def msg_send(user,vendor,link):
+    from ai_marketplace.serializers import ThreadSerializer
     thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
     if thread_ser.is_valid():
         thread_ser.save()

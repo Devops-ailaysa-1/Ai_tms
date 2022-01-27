@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
+from ai_marketplace.models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
                     AvailableJobs,BidChat,BidPropasalDetails,BidProposalServicesRates,
                     Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage)
 from ai_auth.models import AiUser,AiUserProfile,HiredEditors

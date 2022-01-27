@@ -113,7 +113,7 @@ class VendorLanguagePair(ParanoidModel):
        constraints = [
             UniqueConstraint(fields=['user', 'source_lang', 'target_lang'], condition=Q(deleted_at=None), name='unique_if_not_deleted')
         ]
-# post_save.connect(user_update, sender=VendorLanguagePair)
+post_save.connect(user_update, sender=VendorLanguagePair)
 
 class VendorServiceInfo(ParanoidModel):
      lang_pair=models.ForeignKey(VendorLanguagePair,related_name='service', on_delete=models.CASCADE)
