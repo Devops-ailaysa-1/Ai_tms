@@ -101,12 +101,6 @@ $('.contact-li').on('click', function (){
 })
 
 
-$(#notification-element).on("click", function(){
-     data = {"type":"notification_read", "username": username, "notification_id": notification_id};
-     socket.send(JSON.stringify(data));
- });
-
-
 function get_active_other_user_id(){
     let other_user_id = $('.messages-wrapper.is_active').attr('other-user-id')
     other_user_id = $.trim(other_user_id)
