@@ -1,5 +1,7 @@
 from logging import INFO
 import re
+from django.core.mail import send_mail
+from ai_auth import forms as auth_forms
 from allauth.account.models import EmailAddress
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
@@ -1156,19 +1158,34 @@ class GeneralSupportCreateView(viewsets.ViewSet):
 
 class VendorOnboardingCreateView(viewsets.ViewSet):
 
+    def list(self, request):
+        email = request.POST.get('email')
+        try:
+            queryset = VendorOnboarding.objects.get(email = email)
+        except VendorOnboarding.DoesNotExist:
+            return Response(status=204)
+
+        serializer = VendorOnboardingSerializer(queryset)
+        return Response(serializer.data)
+
     def create(self,request):
-        name = request.POST.get("name")
-        email = request.POST.get("email")
         cv_file = request.FILES.get('cv_file')
-        message = request.POST.get("message")
-        today = date.today()
-        template = 'vendor_onboarding_email.html'
-        subject='Regarding Vendor Onboarding'
-        context = {'email': email,'name':name,'file':cv_file,'date':today,'message':message}
         serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
-            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk):
+        cv_file=request.FILES.get('cv_file')
+        try:
+            queryset = VendorOnboarding.objects.get(id=pk)
+        except VendorOnboarding.DoesNotExist:
+            return Response(status=204)
+        rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
+        serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
+        if serializer.is_valid():
+            serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1604,8 +1621,49 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-@api_view(['GET',])
+@api_view(['POST',])
 def vendor_form_filling_status(request):
-    email = request.GET.get('email')
-    obj = VendorOnboarding.objects.get(email = email)
-    return JsonResponse({'email':email,'status':obj.get_status_display()})
+    email = request.POST.get('email')
+    print("Email---->",email)
+    try:
+        obj = VendorOnboarding.objects.get(email = email)
+        print(obj)
+        return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
+    except VendorOnboarding.DoesNotExist:
+        return Response(status=204)
+
+class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
+    def _make_hash_value(self, user, timestamp):
+        return (
+            six.text_type(user.pk) + six.text_type(timestamp) + six.text_type(user.is_vendor)
+        )
+
+
+vendor_renewal_accept_token = VendorRenewalTokenGenerator()
+
+@api_view(['POST',])
+def vendor_renewal(request):
+    email = request.POST.get('email')
+    print(email)
+    user = AiUser.objects.get(email=email)
+    uid = urlsafe_base64_encode(force_bytes(user.id))
+    token = vendor_renewal_accept_token.make_token(user)
+    link = join(settings.TRANSEDITOR_BASE_URL,settings.VENDOR_RENEWAL_ACCEPT_URL, uid,token)
+    auth_forms.vendor_renewal_mail(link,email)
+    return JsonResponse({"msg":"email sent successfully"},safe = False)
+
+
+
+@api_view(['POST'])
+def vendor_renewal_invite_accept(request):
+    uid = request.POST.get('uid')
+    token = request.POST.get('token')
+    user_id = urlsafe_base64_decode(uid)
+    user = AiUser.objects.get(id=user_id)
+    if user is not None and vendor_renewal_accept_token.check_token(user, token):
+        user.is_vendor=True
+        user.save()
+        print("success & updated")
+        return JsonResponse({"type":"success","msg":"status updated"},safe=False)
+    else:
+        return JsonResponse({"type":"failure","msg":'Either link is already used or link is invalid!'},safe=False)

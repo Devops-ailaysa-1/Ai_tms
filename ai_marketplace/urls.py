@@ -35,7 +35,7 @@ urlpatterns+= [
     path('get_my_jobs/',api_views.get_my_jobs),
     path('get_available_threads/',api_views.get_available_threads),
     url('^notifications/', include(notifications.urls, namespace='notifications')),
-    path('chat/unread/notifications/',api_views.chat_unread_notifications),
+    path('chat/unread/notifications/',api_views.chat_unread_notifications,name='chat-notifications'),
     path('general/unread/notifications/',api_views.general_notifications),
     path('messages/',views.messages_page),
     # path('bid_proposal_status_update/<int:bid_id>/',api_views.BidProposalPostStatusUpdateView.as_view(),name='status-update'),
