@@ -1664,6 +1664,6 @@ def vendor_renewal_invite_accept(request):
         user.is_vendor=True
         user.save()
         print("success & updated")
-        return JsonResponse({"type":"success","msg":"status updated"},safe=False)
+        return JsonResponse({"type":"success","msg":"Thank you for joining Ailaysa's freelancer marketplace"},safe=False)
     else:
-        return JsonResponse({"type":"failure","msg":'Either link is already used or link is invalid!'},safe=False)
+        return JsonResponse({"type":"failure","msg":'Link expired. Please contact at support@ailaysa.com'},safe=False)
