@@ -77,3 +77,4 @@ docker-compose.staging.yml
 nginx.zip
 nginx/
 mediafiles
+config
