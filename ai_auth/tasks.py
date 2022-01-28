@@ -94,6 +94,6 @@ def delete_inactive_user_account():
 # def find_renewals():
 @task
 def delete_hired_editors():
-    HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry = date.today())).delete()
+    HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry__lte = date.today())).delete()
     print("deleted")
     logger.info("Delete Hired Editor")
