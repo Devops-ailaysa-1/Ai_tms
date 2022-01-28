@@ -77,3 +77,7 @@ docker-compose.staging.yml
 nginx.zip
 nginx/
 mediafiles
+.env.prod.proxy-companion
+docker-compose.prod.yml
+exp.zip
+staticfiles/
