@@ -45,7 +45,7 @@ from django.core.mail import EmailMessage
 from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
-from datetime import datetime,date
+from datetime import datetime,date,timedelta
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
@@ -1443,7 +1443,7 @@ def msg_send(user,vendor,link):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "you are invited by "+user.fullname+" click link to accept invite "+ link
+    message = "You are invited as an editor by "+user.fullname+".\n"+ "click link to accept invite \n"+ link
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
@@ -1654,16 +1654,29 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-@api_view(['POST',])
-def vendor_form_filling_status(request):
-    email = request.POST.get('email')
-    print("Email---->",email)
+def vendor_onboard_check(email):
     try:
         obj = VendorOnboarding.objects.get(email = email)
         print(obj)
         return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
     except VendorOnboarding.DoesNotExist:
         return Response(status=204)
+
+
+@api_view(['POST',])
+def vendor_form_filling_status(request):
+    email = request.POST.get('email')
+    print("Email---->",email)
+    try:
+        user = AiUser.objects.get(email=email)
+        if user.is_vendor == True:
+            return JsonResponse({"msg":"Already a vendor"})
+        else:
+            res = vendor_onboard_check(email)
+            return res
+    except:
+        res = vendor_onboard_check(email)
+        return res
 
 class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
