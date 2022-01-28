@@ -1,4 +1,4 @@
-import random 
+import random
 from djstripe.models import Customer,Subscription
 from django.db.models import Q
 
@@ -35,7 +35,7 @@ def get_unique_pid(klass, iter_count=1):
 def get_plan_name(user):
 	customer = Customer.objects.get(subscriber=user)
 	#subscriptions = Subscription.objects.filter(customer=customer).last()
-	sub = customer.subscriptions.filter(Q(status='active')|Q(status='trialing')).last()
+	sub = customer.subscriptions.filter(Q(status='active')|Q(status='trialing')|Q(status='past_due')).last()
 	if sub:
 		name = sub.plan.product.name
 		return name
