@@ -1,4 +1,5 @@
 let input_message = $('#input-message')
+print("%%%%%%%%%%%%%%%%",input_message)
 let message_body = $('.msg_card_body')
 let send_message_form = $('#send-message-form')
 const USER_ID = $('#logged-in-user').val()
@@ -99,6 +100,7 @@ $('.contact-li').on('click', function (){
     $('.messages-wrapper[chat-id="' + chat_id +'"]').addClass('is_active')
 
 })
+
 
 function get_active_other_user_id(){
     let other_user_id = $('.messages-wrapper.is_active').attr('other-user-id')

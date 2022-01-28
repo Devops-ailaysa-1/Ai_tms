@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role
 from django.db.models.signals import post_save, pre_save
-from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status
+from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -15,7 +15,7 @@ from ai_auth import Aiwebhooks
 from ai_auth.utils import get_plan_name
 # from djstripe import webhooks
 from django.db.models import Q
-from datetime import datetime
+from datetime import datetime,date,timedelta
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -379,14 +379,15 @@ class VendorOnboarding(models.Model):
         (REJECTED, 'Rejected'),
     ]
     name = models.CharField(max_length=250)
-    email = models.EmailField()
+    email = models.EmailField(_('email address'), unique=True)
     cv_file = models.FileField(upload_to=file_path_vendor)
     message = models.TextField(max_length=1000,blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
+    rejected_count = models.IntegerField(blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-
+post_save.connect(vendor_status_send_email, sender=VendorOnboarding)
 
 def support_file_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.email,"support_file",filename)
@@ -449,6 +450,8 @@ class HiredEditors(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES)
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_info')
     hired_editor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='hired_editor')
+    date_of_link_sent = models.DateField(blank= True, default=timezone.now)
+    date_of_expiry = models.DateField(blank= True, default=date.today() + timedelta(days=7))
     added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='external_team_manager',blank=True, null=True)
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:

@@ -14,9 +14,10 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.sites.shortcuts import get_current_site
 from datetime import date
 
-# from ai_auth import models as auth_models
-# from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-# from django.utils.translation import ugettext_lazy as _
+from ai_auth import models as auth_models
+
+from django.utils.translation import ugettext_lazy as _
+
 
 
 
@@ -54,7 +55,7 @@ class SendInviteForm(ResetPasswordForm):
             uri = path.join(settings.CLIENT_BASE_URL, settings.PASSWORD_RESET_URL)
             current_site = get_current_site(request)
             self.send_email_invite(email, uri, user_pk_to_url_str(user), temp_key,current_site,user)
-            
+
         return self.cleaned_data["email"]
 
 
@@ -143,38 +144,6 @@ def send_password_change_mail(current_site,user):
     )
 
 
-
-# class AiUserCreationForm(UserCreationForm):
-#     """
-#     A form that creats a custom user with no privilages
-#     form a provided email and password.
-#     """
-
-#     def __init__(self, *args, **kargs):
-#         super(AiUserCreationForm, self).__init__(*args, **kargs)
-#         del self.fields['username']
-
-#     class Meta:
-#         model = auth_models.AiUser
-#         fields = ('email',)
-
-# class AiUserChangeForm(UserChangeForm):
-#     """
-#     A form for updating users. Includes all the fields on
-#     the user, but replaces the password field with admin's
-#     password hash display field.
-#     """
-
-#     def __init__(self, *args, **kargs):
-#         super(AiUserChangeForm, self).__init__(*args, **kargs)
-#         del self.fields['username']
-
-#     class Meta:
-#         model = auth_models.AiUser
-#         fields = '__all__'
-
-
-
 def user_trial_end(user,sub):
     date1 = sub.trial_start.strftime("%B %d, %Y")
     date2 = sub.trial_end.strftime("%B %d, %Y")
@@ -198,3 +167,50 @@ def user_trial_end(user,sub):
         html_message=msg_html,
     )
     print("mailsent>>",ms)
+
+
+
+def vendor_status_mail(user,status):
+    context = {
+        "user":user,
+        "status": status,
+    }
+    email = user
+    if status == "Accepted":
+        msg_html = render_to_string("account/email/vendor_status.html", context)
+    else:
+        msg_html = render_to_string("account/email/vendor_status_fail.html", context)
+    send_mail(
+        "Ailaysa,Become an Editor",None,
+        # msg_plain,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def vendor_request_admin_mail(instance):
+    today = date.today()
+    context = {'email': instance.email,'name':instance.name,'date':today,'message':instance.message}
+    msg_html = render_to_string("vendor_onboarding_email.html", context)
+    send_mail(
+        "Regarding Vendor Onboarding",None,
+        settings.DEFAULT_FROM_EMAIL,
+        ['support@ailaysa.com'],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+
+def vendor_renewal_mail(link,email):
+    context = {'link':link}
+    msg_html = render_to_string("vendor_renewal.html",context)
+    send_mail(
+        "Ailaysa has become a translators marketplace. Please update your account",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")

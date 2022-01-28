@@ -81,3 +81,4 @@ mediafiles
 docker-compose.prod.yml
 exp.zip
 staticfiles/
+config

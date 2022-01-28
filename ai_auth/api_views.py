@@ -1,5 +1,7 @@
 from logging import INFO
 import re
+from django.core.mail import send_mail
+from ai_auth import forms as auth_forms
 from allauth.account.models import EmailAddress
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
@@ -43,7 +45,7 @@ from django.core.mail import EmailMessage
 from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
-from datetime import datetime,date
+from datetime import datetime,date,timedelta
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
@@ -53,7 +55,7 @@ from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
-from ai_marketplace.serializers import ThreadSerializer
+from ai_auth.utils import get_plan_name
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -516,6 +518,38 @@ def subscribe_trial(price,customer=None):
 
     return subscription
 
+def subscribe_vendor(user):
+    plan = get_plan_name(user)
+    cust = Customer.objects.get(subscriber=user)
+    price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
+    if plan != "Pro - V" and plan.startswith('Pro'):
+        sub=subscribe(price=price,customer=cust)
+        return sub
+
+
+def subscribe(price,customer=None):
+    product_name = Price.objects.get(id = price).product.name
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+
+    stripe.api_key = api_key
+   # tax_rate=find_taxrate(customer.subscriber,trial=False)
+    subscription = stripe.Subscription.create(
+    customer=customer.id,
+    items=[
+    {
+        'price': price,
+    },
+    ],
+    #default_tax_rates=tax_rate,
+    #trial_period_days=14,
+
+    metadata={'price':price.id,'product':product_name,'type':'subscription'}
+    )
+
+    return subscription
 
 
 
@@ -1156,19 +1190,34 @@ class GeneralSupportCreateView(viewsets.ViewSet):
 
 class VendorOnboardingCreateView(viewsets.ViewSet):
 
+    def list(self, request):
+        email = request.POST.get('email')
+        try:
+            queryset = VendorOnboarding.objects.get(email = email)
+        except VendorOnboarding.DoesNotExist:
+            return Response(status=204)
+
+        serializer = VendorOnboardingSerializer(queryset)
+        return Response(serializer.data)
+
     def create(self,request):
-        name = request.POST.get("name")
-        email = request.POST.get("email")
         cv_file = request.FILES.get('cv_file')
-        message = request.POST.get("message")
-        today = date.today()
-        template = 'vendor_onboarding_email.html'
-        subject='Regarding Vendor Onboarding'
-        context = {'email': email,'name':name,'file':cv_file,'date':today,'message':message}
         serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
-            send_email(subject,template,context)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk):
+        cv_file=request.FILES.get('cv_file')
+        try:
+            queryset = VendorOnboarding.objects.get(id=pk)
+        except VendorOnboarding.DoesNotExist:
+            return Response(status=204)
+        rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
+        serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
+        if serializer.is_valid():
+            serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1386,6 +1435,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 def msg_send(user,vendor,link):
+    from ai_marketplace.serializers import ThreadSerializer
     thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
     if thread_ser.is_valid():
         thread_ser.save()
@@ -1393,7 +1443,7 @@ def msg_send(user,vendor,link):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "you are invited by "+user.fullname+" click link to accept invite "+ link
+    message = "You are invited as an editor by "+user.fullname+".\n"+ "click link to accept invite \n"+ link
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
@@ -1602,3 +1652,65 @@ def get_team_name(request):
     except:
         name = None
     return JsonResponse({"name":name})
+
+
+def vendor_onboard_check(email):
+    try:
+        obj = VendorOnboarding.objects.get(email = email)
+        print(obj)
+        return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
+    except VendorOnboarding.DoesNotExist:
+        return Response(status=204)
+
+
+@api_view(['POST',])
+def vendor_form_filling_status(request):
+    email = request.POST.get('email')
+    print("Email---->",email)
+    try:
+        user = AiUser.objects.get(email=email)
+        if user.is_vendor == True:
+            return JsonResponse({"msg":"Already a vendor"})
+        else:
+            res = vendor_onboard_check(email)
+            return res
+    except:
+        res = vendor_onboard_check(email)
+        return res
+
+class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
+    def _make_hash_value(self, user, timestamp):
+        return (
+            six.text_type(user.pk) + six.text_type(timestamp) + six.text_type(user.is_vendor)
+        )
+
+
+vendor_renewal_accept_token = VendorRenewalTokenGenerator()
+
+@api_view(['POST',])
+def vendor_renewal(request):
+    email = request.POST.get('email')
+    print(email)
+    user = AiUser.objects.get(email=email)
+    uid = urlsafe_base64_encode(force_bytes(user.id))
+    token = vendor_renewal_accept_token.make_token(user)
+    link = join(settings.TRANSEDITOR_BASE_URL,settings.VENDOR_RENEWAL_ACCEPT_URL, uid,token)
+    auth_forms.vendor_renewal_mail(link,email)
+    return JsonResponse({"msg":"email sent successfully"},safe = False)
+
+
+
+@api_view(['POST'])
+def vendor_renewal_invite_accept(request):
+    uid = request.POST.get('uid')
+    token = request.POST.get('token')
+    user_id = urlsafe_base64_decode(uid)
+    user = AiUser.objects.get(id=user_id)
+    if user is not None and vendor_renewal_accept_token.check_token(user, token):
+        user.is_vendor=True
+        user.save()
+        sub = subscribe_vendor(user)
+        print("success & updated")
+        return JsonResponse({"type":"success","msg":"Thank you for joining Ailaysa's freelancer marketplace"},safe=False)
+    else:
+        return JsonResponse({"type":"failure","msg":'Link expired. Please contact at support@ailaysa.com'},safe=False)
