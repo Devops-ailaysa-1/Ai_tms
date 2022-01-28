@@ -81,7 +81,7 @@ def renew_user_credits(sub_id):
 @task
 def delete_inactive_user_account():
     # AiUser.objects.filter(deactivation_date__date = date.today()).delete()
-    users_list = AiUser.objects.filter(deactivation_date__date = date.today())
+    users_list = AiUser.objects.filter(deactivation_date__date_lte = date.today())
     for i in users_list:
         i.is_active=False
         i.save()
