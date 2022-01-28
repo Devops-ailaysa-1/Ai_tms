@@ -33,7 +33,7 @@ app.conf.beat_schedule = {
     },
     'run-every': {
         'task': 'ai_auth.tasks.delete_hired_editors',
-        'schedule': crontab(hour=7, minute=50),#crontab(hour=1, minute=15),
+        'schedule': crontab(hour=8, minute=12),#crontab(hour=1, minute=15),
         'args': (),
     },
 
