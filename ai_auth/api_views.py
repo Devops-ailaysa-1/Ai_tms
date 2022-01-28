@@ -1645,16 +1645,29 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-@api_view(['POST',])
-def vendor_form_filling_status(request):
-    email = request.POST.get('email')
-    print("Email---->",email)
+def vendor_onboard_check(email):
     try:
         obj = VendorOnboarding.objects.get(email = email)
         print(obj)
         return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
     except VendorOnboarding.DoesNotExist:
         return Response(status=204)
+
+
+@api_view(['POST',])
+def vendor_form_filling_status(request):
+    email = request.POST.get('email')
+    print("Email---->",email)
+    try:
+        user = AiUser.objects.get(email=email)
+        if user.is_vendor == True:
+            return JsonResponse({"msg":"Already a vendor"})
+        else:
+            res = vendor_onboard_check(email)
+            return res
+    except:
+        res = vendor_onboard_check(email)
+        return res
 
 class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
