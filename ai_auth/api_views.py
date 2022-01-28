@@ -522,7 +522,7 @@ def subscribe_vendor(user):
     plan = get_plan_name(user)
     cust = Customer.objects.get(subscriber=user)
     price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
-    if plan != "Pro - V" and plan.startswith('Pro'):
+    if plan!= None and (plan != "Pro - V" and plan.startswith('Pro')):
         sub=subscribe(price=price,customer=cust)
         return sub
 
