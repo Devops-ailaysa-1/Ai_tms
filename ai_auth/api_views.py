@@ -55,6 +55,7 @@ from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
+from ai_auth.utils import get_plan_name
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -516,6 +517,14 @@ def subscribe_trial(price,customer=None):
     )
 
     return subscription
+
+def subscribe_vendor(user):
+    plan = get_plan_name(user)
+    cust = Customer.objects.get(subscriber=user)
+    price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
+    if plan != "Pro - V" and plan.startswith('Pro'):
+        sub=subscribe(price=price,customer=cust)
+        return sub
 
 
 def subscribe(price,customer=None):
@@ -1687,6 +1696,7 @@ def vendor_renewal_invite_accept(request):
     if user is not None and vendor_renewal_accept_token.check_token(user, token):
         user.is_vendor=True
         user.save()
+        sub = subscribe_vendor(user)
         print("success & updated")
         return JsonResponse({"type":"success","msg":"Thank you for joining Ailaysa's freelancer marketplace"},safe=False)
     else:

@@ -412,9 +412,9 @@ ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 #     "default": {
 #         "BACKEND": "channels_redis.core.RedisChannelLayer",
 #         "CONFIG": {
-#               "hosts": [("redis", 6379)],
-#              # "hosts": ["redis://redis:6379/0"],
-#             # "hosts": ["redis://:yssss@redis:6379/0"],
+#               #"hosts": [("redis", 6379)],
+#              "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
+             
 #         },
 #     },
 # }
