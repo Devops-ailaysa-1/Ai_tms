@@ -31,6 +31,12 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=12, minute=57),#crontab(hour=1, minute=15),
         'args': (),
     },
+    'run-every': {
+        'task': 'ai_auth.tasks.delete_hired_editors',
+        'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
+        'args': (),
+    },
+
 }
 app.conf.timezone = 'UTC'
 
@@ -51,6 +57,3 @@ app.conf.timezone = 'UTC'
 @app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')
-
-
-

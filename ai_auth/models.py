@@ -15,7 +15,7 @@ from ai_auth import Aiwebhooks
 from ai_auth.utils import get_plan_name
 # from djstripe import webhooks
 from django.db.models import Q
-from datetime import datetime
+from datetime import datetime,date,timedelta
 
 class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -450,6 +450,8 @@ class HiredEditors(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES)
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_info')
     hired_editor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='hired_editor')
+    date_of_link_sent = models.DateField(blank= True, default=timezone.now)
+    date_of_expiry = models.DateField(blank= True, default=date.today() + timedelta(days=7))
     added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='external_team_manager',blank=True, null=True)
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
