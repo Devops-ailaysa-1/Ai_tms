@@ -1143,7 +1143,7 @@ def msg_send(sender,receiver,task):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     # print("Thread--->",thread_id)
-    message = "you are assigned to new task in Project named "+proj+". check in your project list "
+    message = "You have been assigned a new task in "+proj+"."
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
