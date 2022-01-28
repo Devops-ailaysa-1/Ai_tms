@@ -1434,7 +1434,7 @@ def msg_send(user,vendor,link):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "you are invited by "+user.fullname+" click link to accept invite \n"+ link
+    message = "You are invited as an editor by "+user.fullname+".\n"+ "click link to accept invite \n"+ link
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
