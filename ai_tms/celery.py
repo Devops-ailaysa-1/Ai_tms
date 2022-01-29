@@ -23,14 +23,20 @@ app.conf.beat_schedule = {
     # Executes every day at  7:00 am.
     'run-every-day': {
         'task': 'ai_auth.tasks.delete_inactive_user_account',
-        'schedule': crontab(hour=7, minute=00),#crontab(hour=1, minute=15),
+        'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
         'args': (),
     },
     'renew-test': {
         'task': 'ai_auth.tasks.renewal_list',
-        'schedule': crontab(hour=12, minute=57),#crontab(hour=1, minute=15),
+        'schedule': crontab(hour=23, minute=57),#crontab(hour=1, minute=15),
         'args': (),
     },
+    'run-every': {
+        'task': 'ai_auth.tasks.delete_hired_editors',
+        'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
+        'args': (),
+    },
+
 }
 app.conf.timezone = 'UTC'
 
@@ -51,6 +57,3 @@ app.conf.timezone = 'UTC'
 @app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')
-
-
-

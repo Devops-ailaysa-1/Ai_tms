@@ -1,4 +1,5 @@
 let input_message = $('#input-message')
+print("%%%%%%%%%%%%%%%%",input_message)
 let message_body = $('.msg_card_body')
 let send_message_form = $('#send-message-form')
 const USER_ID = $('#logged-in-user').val()

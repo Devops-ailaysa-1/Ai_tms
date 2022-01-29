@@ -7,8 +7,8 @@ logger = get_task_logger(__name__)
 from celery.decorators import task
 from datetime import date
 from django.utils import timezone
-
-from .models import AiUser,UserAttribute
+from django.db.models import Q
+from .models import AiUser,UserAttribute,HiredEditors
 import datetime
 from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
@@ -55,19 +55,19 @@ from datetime import datetime, timedelta
 # for sub in subs:
 #     time =1
 #     tomorrow = datetime.utcnow() + timedelta(minutes=time)
-    
+
 #     time+=1
 # @task
 # def test_tar():
 #     for r in range(0,10):
-#         tomorrow = datetime.utcnow() + timedelta(minutes=1+r)  
+#         tomorrow = datetime.utcnow() + timedelta(minutes=1+r)
 #         add.apply_async((r, r+2), eta=tomorrow)
 
 
 @task
 def renewal_list():
     cycle_date = timezone.now()
-    subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year, 
+    subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
                         billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active')
     print(subs)
     for sub in subs:
@@ -81,7 +81,7 @@ def renew_user_credits(sub_id):
 @task
 def delete_inactive_user_account():
     # AiUser.objects.filter(deactivation_date__date = date.today()).delete()
-    users_list = AiUser.objects.filter(deactivation_date__date = date.today())
+    users_list = AiUser.objects.filter(deactivation_date__date_lte = date.today())
     for i in users_list:
         i.is_active=False
         i.save()
@@ -92,3 +92,8 @@ def delete_inactive_user_account():
 
 # @task
 # def find_renewals():
+@task
+def delete_hired_editors():
+    HiredEditors.objects.filter(Q(status = 1)&Q(date_of_expiry__lte = date.today())).delete()
+    print("deleted")
+    logger.info("Delete Hired Editor")

@@ -45,7 +45,7 @@ from django.core.mail import EmailMessage
 from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
-from datetime import datetime,date
+from datetime import datetime,date,timedelta
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
@@ -55,6 +55,7 @@ from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
+from ai_auth.utils import get_plan_name
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -516,6 +517,14 @@ def subscribe_trial(price,customer=None):
     )
 
     return subscription
+
+def subscribe_vendor(user):
+    plan = get_plan_name(user)
+    cust = Customer.objects.get(subscriber=user)
+    price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
+    if plan!= None and (plan != "Pro - V" and plan.startswith('Pro')):
+        sub=subscribe(price=price,customer=cust)
+        return sub
 
 
 def subscribe(price,customer=None):
@@ -1434,7 +1443,7 @@ def msg_send(user,vendor,link):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "you are invited by "+user.fullname+" click link to accept invite "+ link
+    message = "You are invited as an editor by "+user.fullname+".\n"+ "click link to accept invite \n"+ link
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
@@ -1645,16 +1654,29 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-@api_view(['POST',])
-def vendor_form_filling_status(request):
-    email = request.POST.get('email')
-    print("Email---->",email)
+def vendor_onboard_check(email):
     try:
         obj = VendorOnboarding.objects.get(email = email)
         print(obj)
         return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
     except VendorOnboarding.DoesNotExist:
         return Response(status=204)
+
+
+@api_view(['POST',])
+def vendor_form_filling_status(request):
+    email = request.POST.get('email')
+    print("Email---->",email)
+    try:
+        user = AiUser.objects.get(email=email)
+        if user.is_vendor == True:
+            return JsonResponse({"msg":"Already a vendor"})
+        else:
+            res = vendor_onboard_check(email)
+            return res
+    except:
+        res = vendor_onboard_check(email)
+        return res
 
 class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
@@ -1687,6 +1709,7 @@ def vendor_renewal_invite_accept(request):
     if user is not None and vendor_renewal_accept_token.check_token(user, token):
         user.is_vendor=True
         user.save()
+        sub = subscribe_vendor(user)
         print("success & updated")
         return JsonResponse({"type":"success","msg":"Thank you for joining Ailaysa's freelancer marketplace"},safe=False)
     else:

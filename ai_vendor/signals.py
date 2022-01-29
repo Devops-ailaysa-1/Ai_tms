@@ -5,7 +5,7 @@ from ai_auth import models as auth_models
 from django.conf import settings
 from ai_auth.utils import get_plan_name
 from djstripe.models import Price,Customer
-from ai_auth.api_views import subscribe
+from ai_auth.api_views import subscribe,subscribe_vendor
 
 
 def user_update(sender, instance, *args, **kwargs):
@@ -18,10 +18,3 @@ def user_update(sender, instance, *args, **kwargs):
 
 
 
-def subscribe_vendor(user):
-    plan = get_plan_name(user)
-    cust = Customer.objects.get(subscriber=user)
-    price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
-    if plan != "Pro - V" and plan.startswith('Pro'):
-        sub=subscribe(price=price,customer=cust)
-        return sub
