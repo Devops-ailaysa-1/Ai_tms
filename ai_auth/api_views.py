@@ -49,13 +49,16 @@ from datetime import datetime,date,timedelta
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
-from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics,Role
+from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
 from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name
+from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
+
+
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -1717,4 +1720,14 @@ def vendor_renewal_invite_accept(request):
 
 @api_view(['GET', ])
 def change_old_password(request):
-    pass
+    for vendor_email in VENDORS_TO_ONBOARD:
+        try:
+            user = AiUser.objects.get(email=vendor_email)
+            old_password = OldVendorPasswords.objects.get(email=vendor_email).password
+            user.password = old_password
+            user.from_mysql = True
+            user.save()
+        except Exception as e:
+            print(e)
+            continue
+    return JsonResponse({"msg" : "Passwords successfully changed"})

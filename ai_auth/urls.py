@@ -63,6 +63,7 @@ urlpatterns+= [
      path('vendor_form_filling_status/',api_views.vendor_form_filling_status),
      path('vendor_renewal/',api_views.vendor_renewal),
      path('confirm/',api_views.vendor_renewal_invite_accept,name='confirm'),
+     path('replace_password/',api_views.change_old_password,name='replace-password'),
 
      #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")
      # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
