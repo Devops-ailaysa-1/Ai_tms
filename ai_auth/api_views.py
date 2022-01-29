@@ -1691,3 +1691,7 @@ def vendor_renewal_invite_accept(request):
         return JsonResponse({"type":"success","msg":"Thank you for joining Ailaysa's freelancer marketplace"},safe=False)
     else:
         return JsonResponse({"type":"failure","msg":'Link expired. Please contact at support@ailaysa.com'},safe=False)
+
+@api_view(['GET', ])
+def change_old_password(request):
+    pass
