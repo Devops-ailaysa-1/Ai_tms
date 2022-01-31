@@ -1211,18 +1211,18 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self, request, pk):
-        cv_file=request.FILES.get('cv_file')
-        try:
-            queryset = VendorOnboarding.objects.get(id=pk)
-        except VendorOnboarding.DoesNotExist:
-            return Response(status=204)
-        rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
-        serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def update(self, request, pk):
+    #     cv_file=request.FILES.get('cv_file')
+    #     try:
+    #         queryset = VendorOnboarding.objects.get(id=pk)
+    #     except VendorOnboarding.DoesNotExist:
+    #         return Response(status=204)
+    #     rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
+    #     serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # @api_view(['POST'])
 # def vendor_invite_accept(request):
@@ -1446,7 +1446,7 @@ def msg_send(user,vendor,link):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "You are invited as an editor by "+user.fullname+".\n"+ "click link to accept invite \n"+ link
+    message = "You are invited as an editor by "+user.fullname+".\n"+ "Click link to accept invite \n"+ link
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 

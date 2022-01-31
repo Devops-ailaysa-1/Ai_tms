@@ -376,7 +376,7 @@ class VendorOnboardingSerializer(serializers.ModelSerializer):
     cv_file = serializers.FileField(validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
     class Meta:
         model = VendorOnboarding
-        fields  = ('id','name','email','cv_file','message','status','rejected_count','current_status',)
+        fields  = ('id','name','email','cv_file','message','status','current_status',)
         extra_kwargs = {
             'status':{'write_only':True},
             }

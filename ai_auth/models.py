@@ -365,25 +365,27 @@ class CarrierSupport(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 def file_path_vendor(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.email,"vendor_cv_file",filename)
+    user = AiUser.objects.get(email = instance.email)
+    return '{0}/{1}/{2}'.format(user.uid,"vendor_cv_file",filename)
 
 class VendorOnboarding(models.Model):
     REQUEST_SENT = 1
     ACCEPTED = 2
     HOLD = 3
-    REJECTED = 4
+    WAITLISTED = 4
     STATUS_CHOICES = [
         (REQUEST_SENT,'Request Sent'),
         (ACCEPTED, 'Accepted'),
         (HOLD, 'Hold'),
-        (REJECTED, 'Rejected'),
+        (WAITLISTED, 'Waitlisted'),
     ]
     name = models.CharField(max_length=250)
     email = models.EmailField(_('email address'), unique=True)
+    # user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
     cv_file = models.FileField(upload_to=file_path_vendor)
     message = models.TextField(max_length=1000,blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
-    rejected_count = models.IntegerField(blank=True,null=True)
+    # rejected_count = models.IntegerField(blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
