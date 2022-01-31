@@ -10,10 +10,10 @@ VENDORS_TO_ONBOARD = [
 
 
 #staging
-'acilangoven+8@gmail.com',
-'acilangoven+10@gmail.com',
-'acilangoven+11@gmail.com',
-'acilangoven+23@gmail.com',
+# 'acilangoven+8@gmail.com',
+# 'acilangoven+10@gmail.com',
+# 'acilangoven+11@gmail.com',
+# 'acilangoven+23@gmail.com',
 
 # production
 
