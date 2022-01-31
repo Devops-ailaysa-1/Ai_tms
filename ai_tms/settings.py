@@ -263,6 +263,8 @@ EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
 
 VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
 
+APPLICATION_URL = os.getenv("APPLICATION_URL")
+
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
 ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
@@ -414,7 +416,7 @@ ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 #         "CONFIG": {
 #               #"hosts": [("redis", 6379)],
 #              "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
-             
+
 #         },
 #     },
 # }

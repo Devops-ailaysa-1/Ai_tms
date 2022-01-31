@@ -1,5 +1,5 @@
 from logging import INFO
-import re
+import re , requests
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
 from allauth.account.models import EmailAddress
@@ -1731,3 +1731,10 @@ def change_old_password(request):
             print(e)
             continue
     return JsonResponse({"msg" : "Passwords successfully changed"})
+
+
+@api_view(['GET'])
+def vendor_renewal_bulk_sent(request):
+    for vendor_email in VENDORS_TO_ONBOARD:
+        res = requests.post(f"{settings.APPLICATION_URL}auth/vendor_renewal/",data={"email":vendor_email})
+    return JsonResponse({"msg": "Email sent successfully"})
