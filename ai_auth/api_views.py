@@ -1384,34 +1384,31 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         except:
             return None
 
-    @integrity_error
-    def create(self,request):
-        data = request.POST.dict()
-        team = data.get('team')
-        email = data.get('email')
-        team_name = Team.objects.get(id=team).name
-        existing = self.check_user(email,team_name)
-        if existing:
-            return Response(existing,status = status.HTTP_409_CONFLICT)
-        role = data.get('role')
-        role_name = Role.objects.get(id=role).name
-        today = date.today()
-        functional_identity = request.POST.get('functional_identity')
+    def create_internal_user(self,name,email):
         password = AiUser.objects.make_random_password()
         print("randowm pass",password)
         hashed = make_password(password)
-        template = 'Internal_member_credential_email.html'
-        subject='Regarding Login credentials'
-        context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password,'date':today}
-        user = AiUser.objects.create(fullname =data.get('name'),email = email,password = hashed,is_internal_member=True)
+        user = AiUser.objects.create(fullname =name,email = email,password = hashed,is_internal_member=True)
         user_attribute = UserAttribute.objects.create(user=user)
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
-        serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,\
-                                                    'functional_identity':functional_identity,'status':1,\
-                                                    'added_by':request.user.id})
+        return user,password
+
+    @integrity_error
+    def create(self,request):
+        data = request.POST.dict()
+        email = data.get('email')
+        team_name = Team.objects.get(id=data.get('team')).name
+        role_name = Role.objects.get(id=data.get('role')).name
+        existing = self.check_user(email,team_name)
+        if existing:
+            return Response(existing,status = status.HTTP_409_CONFLICT)
+        user,password = self.create_internal_user(data.get('name'),email)
+        context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password}
+        serializer = InternalMemberSerializer(data={**request.POST.dict(),'internal_member':user.id,'status':1,\
+                                              'added_by':request.user.id})
         if serializer.is_valid():
             serializer.save()
-            send_email_user(subject,template,context,email)
+            auth_forms.internal_user_credential_mail(context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1483,7 +1480,6 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         if request.user.team: user = request.user.team.owner
         else: user = request.user
-        template = 'External_member_pro_invite_email.html'
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role',2)
         vendor = AiUser.objects.get(uid=uid)
@@ -1501,9 +1497,8 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
                 uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
                 token = invite_accept_token.make_token(ext)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
-                subject='Ailaysa MarketPlace Invite'
                 context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
-                send_email_user(subject,template,context,email)
+                auth_forms.external_member_invite_mail(context,email)
                 msg_send(user,vendor,link)
                 return JsonResponse({"msg":"email and msg sent successfully"},safe = False)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1539,7 +1534,7 @@ def invite_accept(request):#,uid,token):
         vendor.status = 2
         vendor.save()
         print("success & updated")
-        return JsonResponse({"type":"success","msg":"status updated"},safe=False)
+        return JsonResponse({"type":"success","msg":"You have successfully accepted the invite"},safe=False)
     else:
         return JsonResponse({"type":"failure","msg":'Either link is already used or link is invalid!'},safe=False)
     # return JsonResponse({"msg":"Failed"},safe=False)
