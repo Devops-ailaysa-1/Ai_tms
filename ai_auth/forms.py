@@ -119,7 +119,7 @@ def send_welcome_mail(current_site,user):
     send_mail(
         "Welcome to Ailaysa!",
         msg_plain,
-       settings.DEFAULT_FROM_EMAIL,
+       settings.CEO_EMAIL,
         [email],
         html_message=msg_html,
     )
@@ -180,7 +180,7 @@ def vendor_status_mail(email,status):
     else:
         msg_html = render_to_string("account/email/vendor_status_fail.html", context)
     send_mail(
-        "Ailaysa,Become an Editor",None,
+        "Become an Editor application status with Ailaysa",None,
         # msg_plain,
         settings.DEFAULT_FROM_EMAIL,
         [email],
