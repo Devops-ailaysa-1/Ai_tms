@@ -388,11 +388,31 @@ class ConcordanceSearchView(views.APIView):
         return Response(concordance, status=200)
 
 class DocumentToFile(views.APIView):
+    
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
         return  document
+    
+    # FOR DOWNLOADING SOURCE FILE
+
+    # @staticmethod
+    # def download_source_file(request, document_id):
+    #     doc = DocumentToFile.get_object(document_id)
+    #     source_file_path = File.objects.get(file_document_set=doc).file.path
+    #     with open(source_file_path, 'rb') as fh:
+    #         response = HttpResponse(fh.read(), content_type=\
+    #                                             "application/vnd.ms-excel")
+    #         encoded_filename = urllib.parse.quote(os.path.basename(source_file_path),\
+    #                 encoding='utf-8')
+    #         response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
+    #                             .format(encoded_filename)
+    #         response['X-Suggested-Filename'] = encoded_filename
+    #         response["Access-Control-Allow-Origin"] = "*"
+    #         response["Access-Control-Allow-Headers"] = "*"
+    #         print("cont-disp--->", response.get("Content-Disposition"))
+    #         return response
 
     def get(self, request, document_id):
         token = request.GET.get("token")
@@ -400,6 +420,12 @@ class DocumentToFile(views.APIView):
         user_id_payload = payload.get("user_id", 0)
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
+
+            # FOR DOWNLOADING SOURCE FILE
+            
+            # if request.GET.get("output_type", "") == "SOURCE":
+            #     DocumentToFile.download_source_file(request, document_id)
+
             res = self.document_data_to_file(request, document_id)
             # print("Doc to file res code ====> ", res.status_code)
             if res.status_code in [200, 201]:
@@ -492,6 +518,7 @@ OUTPUT_TYPES = dict(
     ORIGINAL = "ORIGINAL",
     XLIFF = "XLIFF",
     TMX = "TMX",
+    # SOURCE = "SOURCE"
 )
 
 def output_types(request):
