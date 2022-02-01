@@ -306,9 +306,9 @@ class SubscriptionPricingPrices(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class SubscriptionFeatures(ParanoidModel):
+    set = models.IntegerField()
     features = models.TextField(max_length=1000)
     description = models.TextField(max_length=1000,null=True,blank=True)
-    set = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     subscriptionplan = models.ForeignKey(SubscriptionPricing,on_delete = models.CASCADE,related_name='subscription_feature')

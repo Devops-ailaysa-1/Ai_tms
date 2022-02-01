@@ -213,6 +213,10 @@ class SubscriptionPricingPriceSerializer(serializers.ModelSerializer):
         "subscriptionplan": {"write_only": True}
         }
 
+# class subscriptionPricingGroup(serializers.ModelSerializer):
+#     events = serializers.SerializerMethodField(method_name='get_events')
+#     class Meta:
+
 
 class SubscriptionFeatureSerializer(serializers.ModelSerializer):
     class Meta:
@@ -222,6 +226,12 @@ class SubscriptionFeatureSerializer(serializers.ModelSerializer):
 		 	"subscriptionplan": {"write_only": True},
             'set':{'write_only': True},
             }
+
+    # def to_representation(self, value):
+    #     data = super().to_representation(value)
+    #     user_type_serializer = AiUserTypeSerializer(value.user_type)
+    #     data['user_type'] = user_type_serializer.data
+    #     return data
 
 
 class CreditAddonPriceSerializer(serializers.ModelSerializer):
@@ -237,7 +247,8 @@ class CreditsAddonSerializer(serializers.ModelSerializer):
 
 
 
-class SubscriptionPricingPageSerializer(serializers.Serializer):
+class  SubscriptionPricingPageSerializer(serializers.Serializer):
+    #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
     id = serializers.IntegerField()
     plan = serializers.CharField(max_length=200)
     stripe_product_id = serializers.CharField(max_length=200)
