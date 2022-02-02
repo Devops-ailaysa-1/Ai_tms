@@ -25,6 +25,7 @@ class ChatConsumer(AsyncConsumer):
 
     async def websocket_receive(self, event):
         print('receive', event)
+        # is_notify = 'chat_message' if self.room_group_name == room else 'notification'
         message_type = json.loads(event.get('text')).get('type')
         print("MSG TYPE-------->",message_type)
         # if message_type == "notification_read":
@@ -60,7 +61,7 @@ class ChatConsumer(AsyncConsumer):
             print('Error:: Thread id is incorrect')
 
         await self.create_chat_message(thread_obj, sent_by_user, msg)
-        await self.create_chat_notification(thread_id, sent_by_user,send_to_user, msg)
+        tt = await self.create_chat_notification(thread_id, sent_by_user,send_to_user, msg)
 
 
         other_user_chat_room = f'user_chatroom_{send_to_id}'
@@ -69,7 +70,7 @@ class ChatConsumer(AsyncConsumer):
             'message': msg,
             'sent_by': self_user.id,
             'thread_id': thread_id,
-            #'notification': notification_id,
+            'notification': tt,
         }
 
         await self.channel_layer.group_send(
@@ -78,7 +79,14 @@ class ChatConsumer(AsyncConsumer):
                 'type': 'chat_message',
                 'text': json.dumps(response)
             },
-        )
+            )
+        # await self.channel_layer.group_send(
+        #     other_user_chat_room,
+        #     {
+        #         "type":"send_notification",
+        #         "text":json.dumps(tt)
+        #     }
+        # )
 
         await self.channel_layer.group_send(
             self.chat_room,
@@ -100,7 +108,14 @@ class ChatConsumer(AsyncConsumer):
             'text': event['text']
         })
 
-
+    async def send_notification(self,event):
+        print("In")
+        await self.send(json.dumps({
+            "type":"websocket.send",
+            "data":event
+        }))
+        print('I am here')
+        print(event)
 
     @database_sync_to_async
     def get_user_object(self, user_id):
@@ -126,4 +141,5 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def create_chat_notification(self, thread, sender, receiver, msg):
-        notify.send(sender, recipient=receiver, verb='Message', description=msg, thread_id=int(thread))
+        res = notify.send(sender, recipient=receiver, verb='Message', description=msg, thread_id=int(thread))
+        return res[0][1][0].id

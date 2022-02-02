@@ -1,6 +1,12 @@
 VENDORS_TO_ONBOARD = [
 
 # local
+# 'warunvijay@gmail.com',
+# 'thenmozhivijay20@gmail.com',
+# 'warunvijay123@gmail.com',
+# 'warunvijay123456@gmail.com',
+# 'warunvijay1@gmail.com',
+# 'warunvijay1234@gmail.com'
 # "dev@ailaysa.com",
 # "dev1@ailaysa.com",
 # "dev2@ailaysa.com",

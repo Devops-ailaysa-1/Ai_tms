@@ -129,3 +129,7 @@ function get_active_thread_id(){
 //           }
 //           socket.send(JSON.stringify(data));
 //     });
+$(#notification-element).on("click", function(){
+data = {"type":"notification_read", "username": {{ user.fullname }}, "notification": notification_id};
+socket.send(JSON.stringify(data));
+});

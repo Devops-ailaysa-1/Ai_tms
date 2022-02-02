@@ -159,7 +159,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ai_tms.wsgi.application'
-# ASGI_APPLICATION = 'ai_tms.asgi.application'
+#ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
@@ -415,9 +415,9 @@ ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 #     "default": {
 #         "BACKEND": "channels_redis.core.RedisChannelLayer",
 #         "CONFIG": {
-#               #"hosts": [("redis", 6379)],
+#              # "hosts": [("redis", 6379)],
 #              "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
-
+#
 #         },
 #     },
 # }
