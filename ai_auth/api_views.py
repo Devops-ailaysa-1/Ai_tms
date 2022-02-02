@@ -1534,7 +1534,7 @@ def invite_accept(request):#,uid,token):
         vendor.status = 2
         vendor.save()
         print("success & updated")
-        return JsonResponse({"type":"success","msg":"status updated"},safe=False)
+        return JsonResponse({"type":"success","msg":"You have successfully accepted the invite"},safe=False)
     else:
         return JsonResponse({"type":"failure","msg":'Either link is already used or link is invalid!'},safe=False)
     # return JsonResponse({"msg":"Failed"},safe=False)
