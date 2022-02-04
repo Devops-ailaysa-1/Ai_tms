@@ -93,6 +93,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -121,7 +122,7 @@ INSTALLED_APPS = [
     'notifications',
     'storages',
     #'dbbackup',
-    'channels',
+   
     #'django_q',
 ]
 

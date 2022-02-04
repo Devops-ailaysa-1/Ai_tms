@@ -31,12 +31,12 @@ def get_available_threads(user):
 @api_view(['GET',])
 def messages_page(request):
     user=request.user
-    tt = get_available_threads(user)
-    threads = tt.get('threads')
-    receivers_list = tt.get('receivers_list')
-    # threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
+    # tt = get_available_threads(user)
+    # threads = tt.get('threads')
+    # receivers_list = tt.get('receivers_list')
+    threads = Thread.objects.by_user(user=request.user).prefetch_related('chatmessage_thread').order_by('timestamp')
     context = {
         'Threads': threads,
-        'receivers_list':receivers_list
+        #'receivers_list':receivers_list
     }
     return render(request, 'messages.html', context)
