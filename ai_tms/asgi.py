@@ -15,11 +15,44 @@ from channels.auth import AuthMiddlewareStack
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_tms.settings')
 
+django_asgi_app = get_asgi_application()
+
 application = ProtocolTypeRouter({
-    'http': get_asgi_application(),
+    'http': django_asgi_app,
     'websocket': AuthMiddlewareStack(
         URLRouter(
             ai_marketplace.routing.websocket_urlpatterns
         )
     )
 })
+# import os
+#
+# from channels.auth import AuthMiddlewareStack
+# from channels.routing import ProtocolTypeRouter, URLRouter
+# from channels.security.websocket import AllowedHostsOriginValidator
+# from django.conf.urls import url
+# from django.urls import path
+# from django.core.asgi import get_asgi_application
+#
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_tms.settings")
+# # Initialize Django ASGI application early to ensure the AppRegistry
+# # is populated before importing code that may import ORM models.
+# django_asgi_app = get_asgi_application()
+#
+# from ai_marketplace.consumers import ChatConsumer
+#
+# application = ProtocolTypeRouter({
+#     # Django's ASGI application to handle traditional HTTP requests
+#     "http": django_asgi_app,
+#
+#     # WebSocket chat handler
+#     "websocket":  AllowedHostsOriginValidator(
+#     AuthMiddlewareStack(
+#         URLRouter([
+#             path('marketplace/messages/', ChatConsumer.as_asgi()),
+#             # url(r"^chat/admin/$", AdminChatConsumer.as_asgi()),
+#             # url(r"^chat/$", PublicChatConsumer.as_asgi()),
+#         ])
+#     )
+# ),
+# })

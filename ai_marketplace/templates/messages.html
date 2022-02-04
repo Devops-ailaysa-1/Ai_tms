@@ -41,7 +41,7 @@
 						</div>
 					</div>
 					<div class="card-body contacts_body">
-						<ui class="contacts">
+						<!-- <ui class="contacts">
                             {% for thread in Threads %}
                                 <li class="{% if forloop.first %}active{% endif %} contact-li" chat-id="chat_{{ thread.id }}" style="cursor: pointer">
                                     <div class="d-flex bd-highlight">
@@ -57,26 +57,26 @@
                                     </div>
                                 </li>
                             {% endfor %}
-						</ui>
-						<!-- <ui class="contacts">
+						</ui> -->
+						<ui class="contacts">
 														{% for i in receivers_list %}
 																<li class="{% if forloop.first %}active{% endif %} contact-li" chat-id="chat_{{ i.thread_id }}" style="cursor: pointer">
 																		<div class="d-flex bd-highlight">
 																				<div class="user_info">
 																					<span>{{ i.receiver }}</span>
 																					<span>{{i.unread_count}}</span>
-																						<! {% if thread.first_person == user %}
+																						<!-- {% if thread.first_person == user %}
 																								<span>{{ thread.second_person.fullname }}</span>
 																								<span></span>
 																						{% else %}
 																								<span>{{ thread.first_person.fullname }}</span>
-																						{% endif %} >
+																						{% endif %} -->
 
 																				</div>
 																		</div>
 																</li>
 														{% endfor %}
-						</ui> -->
+						</ui>
 					</div>
 					<div class="card-footer"></div>
 				</div></div>

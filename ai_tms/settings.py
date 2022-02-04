@@ -127,6 +127,10 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
+WSGI_APPLICATION = 'ai_tms.wsgi.application'
+ASGI_APPLICATION = 'ai_tms.asgi.application'
+
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -158,8 +162,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ai_tms.wsgi.application'
-ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
