@@ -267,7 +267,7 @@ class  SubscriptionPricingPageSerializer(serializers.Serializer):
             dict_key = 'set_'+str(set_id)
             print("dict_key",dict_key)
             #dict_val[dict_key] = SubscriptionFeatureSerializer(group_of_features,many=True).data
-            dict_val.setdefault(dict_key,[]).append(SubscriptionFeatureSerializer(group_of_features,many=True).data)
+            dict_val.setdefault(dict_key,[]).extend(SubscriptionFeatureSerializer(group_of_features,many=True).data)
         #print("final==",dict_val)
         return dict_val
 
