@@ -25,6 +25,16 @@ function getUnreadChatNotifications(){
   }
 }
 
+function getAvailableThreads(){
+  // print("get_read")
+  if("{{request.user.is_authenticated}}"){
+    socket.send(JSON.stringify({
+      "command": "get_available_threads",
+    }));
+  }
+}
+
+
 socket.onopen = async function(e){
     console.log('open', e)
     send_message_form.on('submit', function (e){
@@ -45,6 +55,7 @@ socket.onopen = async function(e){
         $(this)[0].reset()
     })
 setInterval(getUnreadChatNotifications, CHAT_NOTIFICATION_INTERVAL)
+setInterval(getAvailableThreads, CHAT_NOTIFICATION_INTERVAL)
 }
 
 socket.onmessage = async function(e){
