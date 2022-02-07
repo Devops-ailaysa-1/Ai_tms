@@ -221,10 +221,12 @@ class SubscriptionPricingPriceSerializer(serializers.ModelSerializer):
 class SubscriptionFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionFeatures
-        fields = ('id','features','subscriptionplan','description','set')
+        fields = ('id','features','subscriptionplan','description','set_id','sequence_id')
         extra_kwargs = {
 		 	"subscriptionplan": {"write_only": True},
-            'set':{'write_only': True},
+            'set_id':{'write_only': True},
+            'sequence_id':{'write_only': True},
+
             }
 
     # def to_representation(self, value):
@@ -256,13 +258,18 @@ class  SubscriptionPricingPageSerializer(serializers.Serializer):
     subscription_feature = serializers.SerializerMethodField()
 
     def get_subscription_feature(self, obj):
-        features = obj.subscription_feature.all()
-        features_grouped_by_set = groupby(features.iterator(), lambda m: m.set)
-        dict = {}
-        for set, group_of_features in features_grouped_by_set:
-            dict_key = 'set_'+str(set)
-            dict[dict_key] = SubscriptionFeatureSerializer(group_of_features,many=True).data
-        return dict
+        features = obj.subscription_feature.all().order_by('sequence_id')
+        print('features',features)
+        features_grouped_by_set = groupby(features.iterator(), lambda m: m.set_id)
+        dict_val = {}
+        print("dict_value",dict_val)
+        for set_id, group_of_features in features_grouped_by_set:
+            dict_key = 'set_'+str(set_id)
+            print("dict_key",dict_key)
+            #dict_val[dict_key] = SubscriptionFeatureSerializer(group_of_features,many=True).data
+            dict_val.setdefault(dict_key,[]).append(SubscriptionFeatureSerializer(group_of_features,many=True).data)
+        #print("final==",dict_val)
+        return dict_val
 
 
 
