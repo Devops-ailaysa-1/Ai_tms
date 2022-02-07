@@ -93,6 +93,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -121,11 +122,15 @@ INSTALLED_APPS = [
     'notifications',
     'storages',
     #'dbbackup',
-    'channels',
+   
     #'django_q',
 ]
 
 SITE_ID = 1
+
+WSGI_APPLICATION = 'ai_tms.wsgi.application'
+ASGI_APPLICATION = 'ai_tms.asgi.application'
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -158,8 +163,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ai_tms.wsgi.application'
-ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
