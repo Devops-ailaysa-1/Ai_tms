@@ -1729,7 +1729,10 @@ def change_old_password(request):
 
 
 @api_view(['GET'])
-def vendor_renewal_bulk_sent(request):
+def vendor_renewal_change(request):
+    data = request.GET.get('data')
     for vendor_email in VENDORS_TO_ONBOARD:
-        res = requests.post(f"{settings.APPLICATION_URL}auth/vendor_renewal/",data={"email":vendor_email})
-    return JsonResponse({"msg": "Email sent successfully"})
+        user = AiUser.objects.get(email = vendor_email)
+        user.is_vendor = data
+        user.save()
+    return JsonResponse({"msg": "changed successfully"})

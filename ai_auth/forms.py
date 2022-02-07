@@ -119,7 +119,7 @@ def send_welcome_mail(current_site,user):
     send_mail(
         "Welcome to Ailaysa!",
         msg_plain,
-       settings.CEO_EMAIL,
+        settings.CEO_EMAIL,
         [email],
         html_message=msg_html,
     )

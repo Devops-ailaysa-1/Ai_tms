@@ -1,11 +1,12 @@
 import json
+from django.db.models import OuterRef, Subquery,Q,Max
 from channels.consumer import AsyncConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from notifications.signals import notify
 from notifications.models import Notification
 from .models import Thread, ChatMessage
-from ai_auth.models import AiUser
+from ai_auth.models import AiUser,Professionalidentity
 from django.db.models import Q
 User = get_user_model()
 
@@ -24,69 +25,95 @@ class ChatConsumer(AsyncConsumer):
         })
 
     async def websocket_receive(self, event):
-        print('receive', event)
-        message_type = json.loads(event.get('text')).get('type')
-        print("MSG TYPE-------->",message_type)
-        # if message_type == "notification_read":
-        #     data = json.loads(event['text'])
-        #     user = self.scope['user']
-        #     id =data.get('id')
-        #     thread_id = data.get('thread_id')
-        #     user = AiUser.objects.filter(id = id)
-        #     # id = id if user.is_authenticated else 'default'
-        #     # Update the notification read status flag in Notification model.
-        #     list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
-        #
-        #     print("notification read")
+        # print('receive', event)
+        command = json.loads(event.get('text')).get('command')
+        print("command---->",command)
+        if command == "get_unread_chat_notifications":
+            try:
+                payload = await self.get_unread_chat_notification(self.scope["user"])
+                if payload != None:
+                    payload = json.dumps(payload,default=str)
+                    await self.channel_layer.group_send(
+                        self.chat_room,
+                        {
+                            'type': 'notification',
+                            'text': payload
+                        },
+                        )
+            except Exception as e:
+                print("UNREAD CHAT MESSAGE COUNT EXCEPTION: " + str(e))
+                pass
 
-        received_data = json.loads(event['text'])
-        msg = received_data.get('message')
-        sent_by_id = received_data.get('sent_by')
-        send_to_id = received_data.get('send_to')
-        thread_id = received_data.get('thread_id')
+        elif command == "mark_messages_read":
+            data = json.loads(event['text'])
+            user = self.scope['user']
+            thread_id = data.get('thread_id')
+            # Update the notification read status flag in Notification model.
+            await self.mark_all_read(thread_id,user)
+            print("notification read")
 
-        if not msg:
-            print('Error:: empty message')
-            return False
+        elif command == "get_available_threads":
+            try:
+                res = await self.get_available_threads(self.scope["user"])
+                await self.channel_layer.group_send(
+                    self.chat_room,
+                    {
+                        'type': 'threads',
+                        'text': res
+                    },
+                    )
+            except Exception as e:
+                print("Available thread EXCEPTION: " + str(e))
+                pass
 
-        sent_by_user = await self.get_user_object(sent_by_id)
-        send_to_user = await self.get_user_object(send_to_id)
-        thread_obj = await self.get_thread(thread_id)
-        if not sent_by_user:
-            print('Error:: sent by user is incorrect')
-        if not send_to_user:
-            print('Error:: send to user is incorrect')
-        if not thread_obj:
-            print('Error:: Thread id is incorrect')
+        elif command == "message":
+            received_data = json.loads(event['text'])
+            msg = received_data.get('message')
+            sent_by_id = received_data.get('sent_by')
+            send_to_id = received_data.get('send_to')
+            thread_id = received_data.get('thread_id')
 
-        await self.create_chat_message(thread_obj, sent_by_user, msg)
-        await self.create_chat_notification(thread_id, sent_by_user,send_to_user, msg)
+            if not msg:
+                print('Error:: empty message')
+                return False
+
+            sent_by_user = await self.get_user_object(sent_by_id)
+            send_to_user = await self.get_user_object(send_to_id)
+            thread_obj = await self.get_thread(thread_id)
+            if not sent_by_user:
+                print('Error:: sent by user is incorrect')
+            if not send_to_user:
+                print('Error:: send to user is incorrect')
+            if not thread_obj:
+                print('Error:: Thread id is incorrect')
+
+            await self.create_chat_message(thread_obj, sent_by_user, msg)
+            await self.create_chat_notification(thread_id, sent_by_user,send_to_user, msg)
 
 
-        other_user_chat_room = f'user_chatroom_{send_to_id}'
-        self_user = self.scope['user']
-        response = {
-            'message': msg,
-            'sent_by': self_user.id,
-            'thread_id': thread_id,
-            #'notification': notification_id,
-        }
-
-        await self.channel_layer.group_send(
-            other_user_chat_room,
-            {
-                'type': 'chat_message',
-                'text': json.dumps(response)
-            },
-        )
-
-        await self.channel_layer.group_send(
-            self.chat_room,
-            {
-                'type': 'chat_message',
-                'text': json.dumps(response)
+            other_user_chat_room = f'user_chatroom_{send_to_id}'
+            self_user = self.scope['user']
+            response = {
+                'message': msg,
+                'sent_by': self_user.id,
+                'thread_id': thread_id,
             }
-        )
+
+            await self.channel_layer.group_send(
+                other_user_chat_room,
+                {
+                    'type': 'chat_message',
+                    'text': json.dumps(response)
+                },
+                )
+
+            await self.channel_layer.group_send(
+                self.chat_room,
+                {
+                    'type': 'chat_message',
+                    'text': json.dumps(response)
+                }
+            )
 
 
 
@@ -100,7 +127,19 @@ class ChatConsumer(AsyncConsumer):
             'text': event['text']
         })
 
+    async def notification(self, event):
+        print('notification', event)
+        await self.send({
+            'type': 'websocket.send',
+            'text': event['text']
+        })
 
+    async def threads(self, event):
+        print('threads', event)
+        await self.send({
+            'type': 'websocket.send',
+            'text': event['text']
+        })
 
     @database_sync_to_async
     def get_user_object(self, user_id):
@@ -126,4 +165,65 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def create_chat_notification(self, thread, sender, receiver, msg):
-        notify.send(sender, recipient=receiver, verb='Message', description=msg, thread_id=int(thread))
+        res = notify.send(sender, recipient=receiver, verb='Message', description=msg, thread_id=int(thread))
+        # return res[0][1][0].id
+
+    @database_sync_to_async
+    def mark_all_read(self,thread_id,user):
+        list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
+        list.mark_all_as_read()
+        print("done")
+
+    @database_sync_to_async
+    def get_available_threads(user):
+        threads = Thread.objects.by_user(user=user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
+        receivers_list =[]
+        for i in threads:
+            receiver = i.second_person_id if i.first_person_id == user.id else i.first_person_id
+            Receiver = AiUser.objects.get(id = receiver)
+            try:profile = Receiver.professional_identity_info.avatar_url
+            except:profile = None
+            data = {'thread_id':i.id}
+            chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
+            count = user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
+            try:
+                notification = chats.order_by('-timestamp').first()
+                message = notification.description
+                time = notification.timestamp
+            except:
+                message,time = None,None
+            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
+                                    'message':message,'timestamp':time,'unread_count':count})
+        return {"receivers_list":receivers_list}
+
+    @database_sync_to_async
+    def get_unread_chat_notification(self,user):
+        if user.is_authenticated:
+            # user = AiUser.objects.get(pk=request.user.id)
+            count = user.notifications.filter(verb='Message').unread().count()
+            notification_details=[]
+            notification=[]
+            notification.append({'total_count':count})
+            notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct()
+            # notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
+                    # user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
+            for i in notifications:
+               count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
+               sender = AiUser.objects.get(id =i.actor_object_id)
+               try:profile = sender.professional_identity_info.avatar_url
+               except:profile = None
+               notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
+            return {'notifications':notification,'notification_details':notification_details}
+        else:
+            raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
+        return None
+
+
+    # async def send_unread_chat_notification(self,payload):
+    #     await self.send(
+    #     {
+    #     'type': 'unread_chat_notification',
+    #     "res": payload,
+    #     },
+    #     print("Done")
+    # )
