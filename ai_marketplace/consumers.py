@@ -192,7 +192,7 @@ class ChatConsumer(AsyncConsumer):
                 time = notification.timestamp
             except:
                 message,time = None,None
-            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
+            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'receiver_id':receiver,'avatar':profile,\
                                     'message':message,'timestamp':time,'unread_count':count})
         return {"receivers_list":receivers_list}
 
