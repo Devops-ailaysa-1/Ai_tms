@@ -55,11 +55,13 @@ class ChatConsumer(AsyncConsumer):
         elif command == "get_available_threads":
             try:
                 res = await self.get_available_threads(self.scope["user"])
+                print("re--->",res)
+                result = json.dumps(res,default=str)
                 await self.channel_layer.group_send(
                     self.chat_room,
                     {
                         'type': 'threads',
-                        'text': res
+                        'text': result
                     },
                     )
             except Exception as e:
@@ -175,7 +177,7 @@ class ChatConsumer(AsyncConsumer):
         print("done")
 
     @database_sync_to_async
-    def get_available_threads(user):
+    def get_available_threads(self,user):
         threads = Thread.objects.by_user(user=user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
         receivers_list =[]
         for i in threads:
@@ -192,7 +194,7 @@ class ChatConsumer(AsyncConsumer):
                 time = notification.timestamp
             except:
                 message,time = None,None
-            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'avatar':profile,\
+            receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'receiver_id':receiver,'avatar':profile,\
                                     'message':message,'timestamp':time,'unread_count':count})
         return {"receivers_list":receivers_list}
 
@@ -206,13 +208,14 @@ class ChatConsumer(AsyncConsumer):
             notification.append({'total_count':count})
             notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct()
             # notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
-                    # user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
+            #         user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
             for i in notifications:
                count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
                sender = AiUser.objects.get(id =i.actor_object_id)
                try:profile = sender.professional_identity_info.avatar_url
                except:profile = None
                notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
+            print("NNNN------->",notification_details)
             return {'notifications':notification,'notification_details':notification_details}
         else:
             raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")

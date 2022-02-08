@@ -52,7 +52,7 @@ class SubscriptionPricingPricesAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionFeatures)
 class SubscriptionPricingAdmin(admin.ModelAdmin):
-   list_display = ('subscriptionplan','features','description','set')
+   list_display = ('subscriptionplan','features','description','set_id','sequence_id')
 
 admin.site.register(AiUserType)
 admin.site.register(Languages,LanguagesAdmin)
