@@ -580,3 +580,16 @@ class GetVendorListViewNew(generics.ListAPIView):
             subjectlist=subject.split(',')
             queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset
+
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_last_messages(request):
+    threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
+    data=[]
+    for i in threads:
+        tt =  ChatMessage.objects.filter(thread_id = i.id).last()
+        data.append({'thread_id':i.id,'last_message':tt.message})
+    return JsonResponse({"data":data},safe=False)

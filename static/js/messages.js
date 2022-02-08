@@ -42,7 +42,6 @@ socket.onopen = async function(e){
     //   'typing': 'true',
     //   }));
     // })
-
     send_message_form.on('submit', function (e){
         e.preventDefault()
         let message = input_message.val()
