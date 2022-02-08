@@ -28,7 +28,6 @@ router.register(r'internal-member',api_views.InternalMemberCreateView,basename="
 router.register(r'hired-editor',api_views.HiredEditorsCreateView,basename="hired-editor")
 
 
-
 urlpatterns = router.urls
 
 urlpatterns+= [
