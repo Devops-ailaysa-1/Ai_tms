@@ -37,6 +37,12 @@ function getAvailableThreads(){
 
 socket.onopen = async function(e){
     console.log('open', e)
+    // send_message_form.on('keyup' ,function (e){
+    //   socket.send(JSON.stringify({
+    //   'typing': 'true',
+    //   }));
+    // })
+
     send_message_form.on('submit', function (e){
         e.preventDefault()
         let message = input_message.val()

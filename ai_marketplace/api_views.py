@@ -477,7 +477,7 @@ def get_available_threads(request):
         Receiver = AiUser.objects.get(id = receiver)
         try:profile = Receiver.professional_identity_info.avatar_url
         except:profile = None
-        contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
+        contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'receiver_id':receiver,'avatar':profile})
     contacts = sorted(contacts_list, key = lambda i: i['receiver'].lower())
     return JsonResponse({"receivers_list":receivers_list,"contacts_list":contacts})
 
