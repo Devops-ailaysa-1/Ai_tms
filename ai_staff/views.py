@@ -4,7 +4,8 @@ from ai_vendor.models import (VendorBankDetails, VendorCATsoftware,
                               VendorContentTypes, VendorLanguagePair,
                               VendorMembership, VendorMtpeEngines,
                               VendorServiceInfo, VendorServiceTypes,
-                              VendorsInfo, VendorSubjectFields, TranslationSamples, MtpeSamples)
+                              VendorsInfo, VendorSubjectFields, TranslationSamples, MtpeSamples,
+                              )
 from django.http import JsonResponse
 from django.shortcuts import render
 from tablib import Dataset
@@ -13,7 +14,7 @@ from .forms import UploadFileForm
 from .models import (AiUserType, Billingunits, ContentTypes, Countries, 
                      Currencies, Languages, LanguagesLocale, MtpeEngines,
                      ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates,StripeTaxId,
-                     LanguageMetaDetails)
+                     LanguageMetaDetails, OldVendorPasswords)
 from ai_auth.models import AiUser
 
 
@@ -30,9 +31,9 @@ def Bulk_insert(request):
             imported_data = dataset.load(filedata.read(), format='xlsx')
             # print(imported_data)
             for data in imported_data:
-                value = ContentTypes(
-                            name = data[0],
-                            # lang_name_in_script =data[1],
+                value = OldVendorPasswords(
+                            email = data[0],
+                            password =data[1],
                             # script_id = data[2],
                             # ime = data[3],
                             # uid =data[4],

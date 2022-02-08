@@ -119,7 +119,7 @@ def send_welcome_mail(current_site,user):
     send_mail(
         "Welcome to Ailaysa!",
         msg_plain,
-       settings.DEFAULT_FROM_EMAIL,
+        settings.CEO_EMAIL,
         [email],
         html_message=msg_html,
     )
@@ -170,18 +170,17 @@ def user_trial_end(user,sub):
 
 
 
-def vendor_status_mail(user,status):
+def vendor_status_mail(email,status):
     context = {
-        "user":user,
+        "user":email,
         "status": status,
     }
-    email = user
     if status == "Accepted":
         msg_html = render_to_string("account/email/vendor_status.html", context)
     else:
         msg_html = render_to_string("account/email/vendor_status_fail.html", context)
     send_mail(
-        "Ailaysa,Become an Editor",None,
+        "Become an Editor application status with Ailaysa",None,
         # msg_plain,
         settings.DEFAULT_FROM_EMAIL,
         [email],
@@ -209,6 +208,31 @@ def vendor_renewal_mail(link,email):
     msg_html = render_to_string("vendor_renewal.html",context)
     send_mail(
         "Ailaysa has become a translators marketplace. Please update your account",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def internal_user_credential_mail(context):
+    context = context
+    email = context.get('email')
+    msg_html = render_to_string("Internal_member_credential_email.html",context)
+    send_mail(
+        "Regarding Login Credentials",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def external_member_invite_mail(context,email):
+    context = context
+    msg_html = render_to_string("External_member_invite_email.html",context)
+    send_mail(
+        'Ailaysa MarketPlace Invite',None,
         settings.DEFAULT_FROM_EMAIL,
         [email],
         html_message=msg_html,

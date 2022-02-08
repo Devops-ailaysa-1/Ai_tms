@@ -1,5 +1,5 @@
 from logging import INFO
-import re
+import re , requests
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
 from allauth.account.models import EmailAddress
@@ -49,13 +49,16 @@ from datetime import datetime,date,timedelta
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
-from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics,Role
+from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
 from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name
+from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
+
+
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -1208,18 +1211,18 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self, request, pk):
-        cv_file=request.FILES.get('cv_file')
-        try:
-            queryset = VendorOnboarding.objects.get(id=pk)
-        except VendorOnboarding.DoesNotExist:
-            return Response(status=204)
-        rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
-        serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def update(self, request, pk):
+    #     cv_file=request.FILES.get('cv_file')
+    #     try:
+    #         queryset = VendorOnboarding.objects.get(id=pk)
+    #     except VendorOnboarding.DoesNotExist:
+    #         return Response(status=204)
+    #     rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
+    #     serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # @api_view(['POST'])
 # def vendor_invite_accept(request):
@@ -1381,34 +1384,31 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         except:
             return None
 
-    @integrity_error
-    def create(self,request):
-        data = request.POST.dict()
-        team = data.get('team')
-        email = data.get('email')
-        team_name = Team.objects.get(id=team).name
-        existing = self.check_user(email,team_name)
-        if existing:
-            return Response(existing,status = status.HTTP_409_CONFLICT)
-        role = data.get('role')
-        role_name = Role.objects.get(id=role).name
-        today = date.today()
-        functional_identity = request.POST.get('functional_identity')
+    def create_internal_user(self,name,email):
         password = AiUser.objects.make_random_password()
         print("randowm pass",password)
         hashed = make_password(password)
-        template = 'Internal_member_credential_email.html'
-        subject='Regarding Login credentials'
-        context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password,'date':today}
-        user = AiUser.objects.create(fullname =data.get('name'),email = email,password = hashed,is_internal_member=True)
+        user = AiUser.objects.create(fullname =name,email = email,password = hashed,is_internal_member=True)
         user_attribute = UserAttribute.objects.create(user=user)
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
-        serializer = InternalMemberSerializer(data={'team':team,'role':role,'internal_member':user.id,\
-                                                    'functional_identity':functional_identity,'status':1,\
-                                                    'added_by':request.user.id})
+        return user,password
+
+    @integrity_error
+    def create(self,request):
+        data = request.POST.dict()
+        email = data.get('email')
+        team_name = Team.objects.get(id=data.get('team')).name
+        role_name = Role.objects.get(id=data.get('role')).name
+        existing = self.check_user(email,team_name)
+        if existing:
+            return Response(existing,status = status.HTTP_409_CONFLICT)
+        user,password = self.create_internal_user(data.get('name'),email)
+        context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password}
+        serializer = InternalMemberSerializer(data={**request.POST.dict(),'internal_member':user.id,'status':1,\
+                                              'added_by':request.user.id})
         if serializer.is_valid():
             serializer.save()
-            send_email_user(subject,template,context,email)
+            auth_forms.internal_user_credential_mail(context)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1443,7 +1443,7 @@ def msg_send(user,vendor,link):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "You are invited as an editor by "+user.fullname+".\n"+ "click link to accept invite \n"+ link
+    message = "You are invited as an editor by "+user.fullname+".\n"+ "Click link to accept invite \n"+ link
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
@@ -1480,7 +1480,6 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     def create(self,request):
         if request.user.team: user = request.user.team.owner
         else: user = request.user
-        template = 'External_member_pro_invite_email.html'
         uid=request.POST.get('vendor_id')
         role = request.POST.get('role',2)
         vendor = AiUser.objects.get(uid=uid)
@@ -1498,9 +1497,8 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
                 uid = urlsafe_base64_encode(force_bytes(hired_editor_id))
                 token = invite_accept_token.make_token(ext)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
-                subject='Ailaysa MarketPlace Invite'
                 context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
-                send_email_user(subject,template,context,email)
+                auth_forms.external_member_invite_mail(context,email)
                 msg_send(user,vendor,link)
                 return JsonResponse({"msg":"email and msg sent successfully"},safe = False)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1536,7 +1534,7 @@ def invite_accept(request):#,uid,token):
         vendor.status = 2
         vendor.save()
         print("success & updated")
-        return JsonResponse({"type":"success","msg":"status updated"},safe=False)
+        return JsonResponse({"type":"success","msg":"You have successfully accepted the invite"},safe=False)
     else:
         return JsonResponse({"type":"failure","msg":'Either link is already used or link is invalid!'},safe=False)
     # return JsonResponse({"msg":"Failed"},safe=False)
@@ -1714,3 +1712,27 @@ def vendor_renewal_invite_accept(request):
         return JsonResponse({"type":"success","msg":"Thank you for joining Ailaysa's freelancer marketplace"},safe=False)
     else:
         return JsonResponse({"type":"failure","msg":'Link expired. Please contact at support@ailaysa.com'},safe=False)
+
+@api_view(['GET', ])
+def change_old_password(request):
+    for vendor_email in VENDORS_TO_ONBOARD:
+        try:
+            user = AiUser.objects.get(email=vendor_email)
+            old_password = OldVendorPasswords.objects.get(email=vendor_email).password
+            user.password = old_password
+            user.from_mysql = True
+            user.save()
+        except Exception as e:
+            print(e)
+            continue
+    return JsonResponse({"msg" : "Passwords successfully changed"})
+
+
+@api_view(['GET'])
+def vendor_renewal_change(request):
+    data = request.GET.get('data')
+    for vendor_email in VENDORS_TO_ONBOARD:
+        user = AiUser.objects.get(email = vendor_email)
+        user.is_vendor = data
+        user.save()
+    return JsonResponse({"msg": "changed successfully"})

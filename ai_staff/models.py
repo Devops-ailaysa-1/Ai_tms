@@ -306,6 +306,8 @@ class SubscriptionPricingPrices(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class SubscriptionFeatures(ParanoidModel):
+    set_id = models.IntegerField()
+    sequence_id = models.IntegerField()
     features = models.TextField(max_length=1000)
     description = models.TextField(max_length=1000,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
@@ -397,3 +399,10 @@ class Role(ParanoidModel):
 
     def __str__(self):
         return self.name
+
+class OldVendorPasswords(models.Model):
+    email = models.EmailField(max_length=100, null=True, blank=True)
+    password = models.CharField(max_length=500, null=True, blank=True)
+
+    def __str__(self):
+        return self.email

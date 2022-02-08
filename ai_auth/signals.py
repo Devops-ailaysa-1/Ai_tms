@@ -14,6 +14,7 @@ from ai_auth import forms as auth_forms
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.models import Group
 
+
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
 		os.makedirs(path)
@@ -31,17 +32,21 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 
 
 def  vendor_status_send_email(sender, instance, *args, **kwargs):
+    from ai_auth.api_views import subscribe_vendor
     print("status----->",instance.get_status_display())
     if instance.get_status_display() == "Accepted":
-       user = instance.email
-       auth_forms.vendor_status_mail(user,instance.get_status_display())
-    elif (instance.get_status_display() == "Hold") or (instance.get_status_display() == "Rejected"):
-       user = instance.email
-       status = instance.get_status_display() if instance.get_status_display() =="Rejected" else "Held"
-       auth_forms.vendor_status_mail(user,status)
+       user = auth_model.AiUser.objects.get(email = instance.email)
+       user.is_vendor = True
+       user.save()
+       sub = subscribe_vendor(user)
+       email = instance.email
+       auth_forms.vendor_status_mail(email,instance.get_status_display())
+    elif (instance.get_status_display() == "Waitlisted"):
+       email = instance.email
+       status = instance.get_status_display() #if instance.get_status_display() =="Rejected" else "Held"
+       auth_forms.vendor_status_mail(email,status)
     elif instance.get_status_display() == "Request Sent":
        auth_forms.vendor_request_admin_mail(instance)
-
 
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''

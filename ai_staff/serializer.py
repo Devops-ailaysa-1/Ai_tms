@@ -7,6 +7,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role)
 import json
+from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
 
 class ServiceTypesSerializer(serializers.ModelSerializer):
@@ -212,14 +213,27 @@ class SubscriptionPricingPriceSerializer(serializers.ModelSerializer):
         "subscriptionplan": {"write_only": True}
         }
 
+# class subscriptionPricingGroup(serializers.ModelSerializer):
+#     events = serializers.SerializerMethodField(method_name='get_events')
+#     class Meta:
+
 
 class SubscriptionFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionFeatures
-        fields = ('id','features','subscriptionplan','description')
+        fields = ('id','features','subscriptionplan','description','set_id','sequence_id')
         extra_kwargs = {
-		 	"subscriptionplan": {"write_only": True}
+		 	"subscriptionplan": {"write_only": True},
+            'set_id':{'write_only': True},
+            'sequence_id':{'write_only': True},
+
             }
+
+    # def to_representation(self, value):
+    #     data = super().to_representation(value)
+    #     user_type_serializer = AiUserTypeSerializer(value.user_type)
+    #     data['user_type'] = user_type_serializer.data
+    #     return data
 
 
 class CreditAddonPriceSerializer(serializers.ModelSerializer):
@@ -235,15 +249,27 @@ class CreditsAddonSerializer(serializers.ModelSerializer):
 
 
 
-class SubscriptionPricingPageSerializer(serializers.Serializer):
+class  SubscriptionPricingPageSerializer(serializers.Serializer):
     #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
     id = serializers.IntegerField()
     plan = serializers.CharField(max_length=200)
     stripe_product_id = serializers.CharField(max_length=200)
     subscription_price=SubscriptionPricingPriceSerializer(many=True,read_only=True)
-    subscription_feature=SubscriptionFeatureSerializer(many=True,read_only=True)
-    # class Meta:
-    #     fields = ('subscriptionplan','prices','features')
+    subscription_feature = serializers.SerializerMethodField()
+
+    def get_subscription_feature(self, obj):
+        features = obj.subscription_feature.all().order_by('sequence_id')
+        print('features',features)
+        features_grouped_by_set = groupby(features.iterator(), lambda m: m.set_id)
+        dict_val = {}
+        print("dict_value",dict_val)
+        for set_id, group_of_features in features_grouped_by_set:
+            dict_key = 'set_'+str(set_id)
+            print("dict_key",dict_key)
+            #dict_val[dict_key] = SubscriptionFeatureSerializer(group_of_features,many=True).data
+            dict_val.setdefault(dict_key,[]).extend(SubscriptionFeatureSerializer(group_of_features,many=True).data)
+        #print("final==",dict_val)
+        return dict_val
 
 
 

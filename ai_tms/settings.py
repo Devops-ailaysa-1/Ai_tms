@@ -93,6 +93,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -121,11 +122,15 @@ INSTALLED_APPS = [
     'notifications',
     'storages',
     #'dbbackup',
-    # 'channels',
+   
     #'django_q',
 ]
 
 SITE_ID = 1
+
+WSGI_APPLICATION = 'ai_tms.wsgi.application'
+ASGI_APPLICATION = 'ai_tms.asgi.application'
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -158,8 +163,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ai_tms.wsgi.application'
-# ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
@@ -262,6 +265,8 @@ TRANSEDITOR_BASE_URL = os.getenv("TRANSEDITOR_BASE_URL")
 EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
 
 VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
+
+APPLICATION_URL = os.getenv("APPLICATION_URL")
 
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
@@ -397,6 +402,7 @@ CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
 
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
+CEO_EMAIL = os.getenv("CEO_EMAIL")
 
 STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
 STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
@@ -408,16 +414,16 @@ DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installat
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",
-#         "CONFIG": {
-#               #"hosts": [("redis", 6379)],
-#              "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
-             
-#         },
-#     },
-# }
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+             # "hosts": [("redis", 6379)],
+             "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
+
+        },
+    },
+}
 
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'

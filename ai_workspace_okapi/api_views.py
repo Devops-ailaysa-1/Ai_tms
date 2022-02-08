@@ -308,12 +308,12 @@ class MT_RawAndTM_View(views.APIView):
         user = doc.doc_credit_debit_user
 
         # Checking if the request user is account owner or not
-        if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)): 
+        if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
             can_translate = MT_RawAndTM_View.can_translate(request, user)
             if can_translate == None:
                 pass
             else:
-                return MT_RawAndTM_View.can_translate(request, user)      
+                return MT_RawAndTM_View.can_translate(request, user)
 
         initial_credit = user.credit_balance
 
@@ -898,17 +898,20 @@ def wikipedia_ws(code,codesrc,user_input):
 def WikipediaWorkspace(request,doc_id):
     data=request.GET.dict()
     print(data)
+    lang_list = ["zh-Hans","zh-Hant"]
     user_input=data.get("term")
     term_type=data.get("term_type","source")
     user_input=user_input.strip()
     user_input=user_input.strip('0123456789')
     doc = Document.objects.get(id=doc_id)
+    src = doc.source_language_code if doc.source_language_code not in lang_list else "zh"
+    tar = doc.target_language_code if doc.target_language_code not in lang_list else "zh"
     if term_type=="source":
-        codesrc =doc.source_language_code
-        code = doc.target_language_code
+        codesrc = src
+        code = tar
     elif term_type=="target":
-        codesrc = doc.target_language_code
-        code = doc.source_language_code
+        codesrc = tar
+        code = src
     print("src--->",codesrc)
     res=wikipedia_ws(code,codesrc,user_input)
     print("tt-->",res.get("target"))
@@ -961,18 +964,21 @@ def wiktionary_ws(code,codesrc,user_input):
 # @permission_classes((HasToken,))
 def WiktionaryWorkSpace(request,doc_id):
     data=request.GET.dict()
+    lang_list = ["zh-Hans","zh-Hant"]
     user_input=data.get("term")
     term_type=data.get("term_type")
     print(term_type)
     user_input=user_input.strip()
     user_input=user_input.strip('0123456789')
     doc = Document.objects.get(id=doc_id)
+    src = doc.source_language_code if doc.source_language_code not in lang_list else "zh"
+    tar = doc.target_language_code if doc.target_language_code not in lang_list else "zh"
     if term_type=="source":
-        codesrc =doc.source_language_code
-        code = doc.target_language_code
+        codesrc =src
+        code = tar
     elif term_type=="target":
-        codesrc = doc.target_language_code
-        code = doc.source_language_code
+        codesrc = tar
+        code = src
     res=wiktionary_ws(code,codesrc,user_input)
     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
 
