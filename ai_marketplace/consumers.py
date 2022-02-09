@@ -31,10 +31,16 @@ class ChatConsumer(AsyncConsumer):
         print("command---->",command)
         if command == "get_unread_chat_notifications":
             try:
+<<<<<<< HEAD
                 # user = json.loads(event.get('text')).get('user')
                 payload = await self.get_unread_chat_notification(self.scope["user"])
+=======
+                user = json.loads(event.get('text')).get('user')
+                payload = await self.get_unread_chat_notification(user)
+>>>>>>> origin/v3_ailaysa
                 if payload != None:
                     payload = json.dumps(payload,default=str)
+                    print("payload---->",payload)
                     await self.channel_layer.group_send(
                         self.chat_room,
                         {
