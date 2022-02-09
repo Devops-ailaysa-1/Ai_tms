@@ -353,7 +353,7 @@ def get_available_job_details(request):
 
 def notification_read(thread_id,user):
     list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
-    print(list)
+    # print(list)
     list.mark_all_as_read()
 
 class ChatMessageListView(viewsets.ModelViewSet):
