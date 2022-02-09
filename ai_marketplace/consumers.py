@@ -30,9 +30,11 @@ class ChatConsumer(AsyncConsumer):
         print("command---->",command)
         if command == "get_unread_chat_notifications":
             try:
-                payload = await self.get_unread_chat_notification(self.scope["user"])
+                user = json.loads(event.get('text')).get('user')
+                payload = await self.get_unread_chat_notification(user)
                 if payload != None:
                     payload = json.dumps(payload,default=str)
+                    print("payload---->",payload)
                     await self.channel_layer.group_send(
                         self.chat_room,
                         {
@@ -201,7 +203,8 @@ class ChatConsumer(AsyncConsumer):
     @database_sync_to_async
     def get_unread_chat_notification(self,user):
         #if user.is_authenticated:
-            # user = AiUser.objects.get(pk=request.user.id)
+        user = AiUser.objects.get(pk=user)
+        print("User---->",user)
         count = user.notifications.filter(verb='Message').unread().count()
         notification_details=[]
         notification=[]
