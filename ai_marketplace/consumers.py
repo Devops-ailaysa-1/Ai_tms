@@ -203,26 +203,26 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def get_unread_chat_notification(self,user):
-        if user.is_authenticated:
+        # if user.is_authenticated:
             # user = AiUser.objects.get(pk=request.user.id)
-            count = user.notifications.filter(verb='Message').unread().count()
-            notification_details=[]
-            notification=[]
-            notification.append({'total_count':count})
-            # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct()
-            notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
-                    user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
-            for i in notifications:
-                count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
-                sender = AiUser.objects.get(id =i.actor_object_id)
-                try:profile = sender.professional_identity_info.avatar_url
-                except:profile = None
-                notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
-            print("NNNN------->",notification_details)
-            return {'notifications':notification,'notification_details':notification_details}
-        else:
-            raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
-        return None
+        count = user.notifications.filter(verb='Message').unread().count()
+        notification_details=[]
+        notification=[]
+        notification.append({'total_count':count})
+        # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct()
+        notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
+                user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
+        for i in notifications:
+            count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
+            sender = AiUser.objects.get(id =i.actor_object_id)
+            try:profile = sender.professional_identity_info.avatar_url
+            except:profile = None
+            notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
+        print("NNNN------->",notification_details)
+        return {'notifications':notification,'notification_details':notification_details}
+        # else:
+        #     raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
+        # return None
 
 
     # async def send_unread_chat_notification(self,payload):
