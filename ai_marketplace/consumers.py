@@ -92,7 +92,7 @@ class ChatConsumer(AsyncConsumer):
             if not thread_obj:
                 print('Error:: Thread id is incorrect')
 
-            await self.create_chat_message(thread_obj, sent_by_user, msg)
+            chat = await self.create_chat_message(thread_obj, sent_by_user, msg)
             await self.create_chat_notification(thread_id, sent_by_user,send_to_user, msg)
 
 
@@ -102,13 +102,18 @@ class ChatConsumer(AsyncConsumer):
                 'message': msg,
                 'sent_by': self_user.id,
                 'thread_id': thread_id,
+                'id':chat.id,
+                'user':chat.user.id,
+                'user_name':chat.user.fullname,
+                'timestamp':chat.timestamp,
+                'date':chat.timestamp.date().strftime('%Y-%m-%d')
             }
 
             await self.channel_layer.group_send(
                 other_user_chat_room,
                 {
                     'type': 'chat_message',
-                    'text': json.dumps(response)
+                    'text': json.dumps(response,default=str)
                 },
                 )
 
@@ -116,7 +121,7 @@ class ChatConsumer(AsyncConsumer):
                 self.chat_room,
                 {
                     'type': 'chat_message',
-                    'text': json.dumps(response)
+                    'text': json.dumps(response,default=str)
                 }
             )
 
@@ -166,7 +171,8 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def create_chat_message(self, thread, user, msg):
-        ChatMessage.objects.create(thread=thread, user=user, message=msg)
+        obj = ChatMessage.objects.create(thread=thread, user=user, message=msg)
+        return obj
 
     @database_sync_to_async
     def create_chat_notification(self, thread, sender, receiver, msg):
