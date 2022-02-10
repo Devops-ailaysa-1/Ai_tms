@@ -592,7 +592,7 @@ def get_last_messages(request):
     for i in threads:
         ins = {'thread_id':i.id}
         count = request.user.notifications.filter(Q(data=ins) & Q(verb='Message')).unread().count()
-        print("RR--->",count)
-        tt =  ChatMessage.objects.filter(thread_id = i.id).last()
-        data.append({'thread_id':i.id,'last_message':tt.message,'unread_count':count})
+        # print("RR--->",count)
+        obj =  ChatMessage.objects.filter(thread_id = i.id).last()
+        data.append({'thread_id':i.id,'last_message':obj.message,'unread_count':count,'last_timestamp':obj.timestamp})
     return JsonResponse({"data":data},safe=False)
