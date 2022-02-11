@@ -217,7 +217,7 @@ class ChatConsumer(AsyncConsumer):
         notification.append({'total_count':count})
         # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct()
         notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
-                user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
+                user.notifications.unread().filter(verb='Message').order_by("data",'-timestamp').distinct("data").values('id'))).order_by("-timestamp")
         for i in notifications:
             count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
             sender = AiUser.objects.get(id =i.actor_object_id)
