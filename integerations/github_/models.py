@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.crypto import get_random_string
 
 from .utils import GithubUtils
+from controller.bases import DownloadBase
 from datetime import datetime
 import pytz
 import cryptocode
@@ -20,6 +21,7 @@ import os, re
 import uuid
 import requests
 from requests.auth import HTTPBasicAuth
+from django.apps import apps
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -111,7 +113,7 @@ class Repository(models.Model):
         return  Repository.objects.last()
 
     @property
-    def get_repo_obj(self):
+    def get_repo_obj(self): # get_repo_gh_obj
 
         git_user, repo_name = self.repository_fullname.split("/")
         return GithubUtils.get_repo(
@@ -164,6 +166,10 @@ class Branch(models.Model):
     #     self.accessed_on = datetime.now(tz=pytz.UTC)
     #     self.save()
 
+    @property
+    def get_branch_gh_obj(self):
+        return self.repo.get_repo_obj.get_branch(self.branch_name)
+
     def create_all_branches(repo):
         exist, fresh_created = 0, 0
         repo_obj = repo.get_repo_obj
@@ -197,21 +203,28 @@ def branch_localize_register_update(sender, **kwargs):
             repo.is_localize_registered = True
             repo.save()
 
-
 class ContentFile(models.Model):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE,
                 related_name="branch_contentfiles_set")
     is_localize_registered = models.BooleanField(default=False)
     file = models.CharField(max_length=255)
-    file_path = models.TextField()
+    file_path = models.TextField() #github file stored path
     created_on = models.DateTimeField(auto_now_add=True,)
     accessed_on =  models.DateTimeField(blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True, )
+    uploaded_file = models.OneToOneField("ai_workspace.File",
+            on_delete=models.SET_NULL, null=True, default=None)
+    controller = models.OneToOneField("controller.FileController",
+            on_delete=models.SET_NULL, null=True, default=None,
+            related_name="controller_contentfile")
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.accessed_on = datetime.now(tz=pytz.UTC)
-    #     self.save()
+    def update_file(self, file):
+        self.uploaded_file = file
+        fc = apps.get_model("controller.FileController")\
+            (file = file, related_model_string="github_.ContentFile")
+        fc.save()
+        self.controller = fc
+        self.save()
 
     @property
     def get_content_of_file(self):
@@ -329,6 +342,27 @@ class HookDeck(models.Model):
             return res.json()
         except:
             raise ValueError("hookdeck new connection create or get api failed!!!")
+
+class DownloadProject(DownloadBase):
+    project = models.OneToOneField("ai_workspace.Project", on_delete=models.CASCADE,
+                related_name="project_downloadproject", null=True)
+    controller = models.OneToOneField("controller.DownloadController",
+                on_delete=models.CASCADE, related_name="controller_downloadproject", null=True)
+    commit_hash = models.TextField(null=True)
+
+    def push_to_github(self):
+        pass
+
+    def download(self):
+        self.push_to_github()
+
+    def update_project(self, project):
+        self.project = project
+        dc = apps.get_model("controller.DownloadController")\
+            (project = project, related_model_string="github_.DownloadProject")
+        dc.save()
+        self.controller = dc
+        self.save()
 
 
 

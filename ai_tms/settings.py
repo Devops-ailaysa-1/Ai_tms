@@ -113,6 +113,7 @@ INSTALLED_APPS = [
     'ai_workspace',
     "ai_workspace_okapi",
     "integerations.github_",
+    "controller",
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
@@ -121,9 +122,9 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
-    #'dbbackup',
+    # 'dbbackup',
     # 'channels',
-    #'django_q',
+    # 'django_q',
 ]
 
 SITE_ID = 1
@@ -138,8 +139,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "middlewares.error_middleware.error_middleware",
-    "middlewares.error_middleware.StackOverflowMiddleware"
+    # "middlewares.error_middleware.error_middleware",
+    # "middlewares.error_middleware.StackOverflowMiddleware"
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'

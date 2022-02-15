@@ -20,7 +20,8 @@ from .serializers import GithubOAuthTokenSerializer, RepositorySerializer,\
     FileSerializer, JobSerializer, JobDataPrepareSerializer, FileDataPrepareSerializer,\
     GithubHookSerializerD1, GithubHookSerializerD2, HookDeckCallSerializer, \
     HookDeckResponseSerializer, HookDeckSerializer
-from .models import GithubOAuthToken, Repository, FetchInfo, Branch, ContentFile, HookDeck
+from .models import GithubOAuthToken, Repository, FetchInfo, Branch, ContentFile, HookDeck,\
+    DownloadProject
 from .utils import DjRestUtils
 from .tasks import update_files
 from guardian.shortcuts import get_objects_for_user
@@ -51,10 +52,10 @@ def repo_update_view(request, slug):
     if (not user) or (user != request.user):
         raise ValueError("URL user doest not match with request user!!!")
 
-    dump_data = pickle.dumps(request.data)
-    db = cli["samples"]
-    coll = db["github_hook_data"]
-    coll.insert_one({"data": dump_data})
+    # dump_data = pickle.dumps(request.data)
+    # db = cli["samples"]
+    # coll = db["github_hook_data"]
+    # coll.insert_one({"data": dump_data})
     gd = GithubHookSerializerD1(data=request.data)
     gd.is_valid(raise_exception=True)
     gd2 = GithubHookSerializerD2(data=gd.data.get("payload"))
@@ -236,7 +237,12 @@ class ContentFileViewset(viewsets.ModelViewSet):
 
         qs = self.get_queryset()
 
-        print("--->", qs[0].id)
+        branch = get_object_or_404(Branch.objects.all(), id=kwargs.get("pk"))
+
+        latest_commit_sha = branch.get_branch_gh_obj.commit.sha
+
+        download_project = DownloadProject(commit_hash=latest_commit_sha)
+        download_project.save()
 
         serlzr1 = LocalizeIdsSerializer(data=request.data)
 
@@ -254,7 +260,7 @@ class ContentFileViewset(viewsets.ModelViewSet):
 
         serlzr = ProjectSerializer(data=request.data, )
         if serlzr.is_valid(raise_exception=True):
-            serlzr.save(ai_user=request.user)
+            serlzr.save(ai_user=request.user, project_downloadproject=download_project)
             # return Response(serlzr.data, status=200)
             project_data = serlzr.data
             project = serlzr.instance
@@ -279,9 +285,9 @@ class ContentFileViewset(viewsets.ModelViewSet):
             im_uploads.append(im)
 
         serlzr = FileDataPrepareSerializer(data=[{"files": im_uploads,
-            "content_files": contentfile_ids,"usage_type": 1}], many=True)
+            "content_files": contentfile_ids, "usage_type": 1}], many=True)
         if serlzr.is_valid(raise_exception=True):
-            file_serlz_data = serlzr.data[0]
+            file_serlz_data = serlzr.data[0] # unnecessary nested remove
 
         serlzr = FileSerializer(data=file_serlz_data, many=True)
         if serlzr.is_valid(raise_exception=True):

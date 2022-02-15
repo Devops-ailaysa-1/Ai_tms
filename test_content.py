@@ -10,8 +10,6 @@ from Classifiers.allClassifiers import (
     AdaBoosting, KNN, GaussianNB_, GradientBoosting,
     LinearSVC_, RandomForest, DecisionTree, LogisticRegression_
 )
-
-
 print("test branch create")
 
 class Test():
