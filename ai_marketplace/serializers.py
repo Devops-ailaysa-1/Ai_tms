@@ -114,6 +114,7 @@ class ThreadSerializer(serializers.ModelSerializer):
 
 
 class GetVendorDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
     uid = serializers.CharField(read_only=True)
     fullname = serializers.CharField(read_only=True)
     organisation_name = serializers.ReadOnlyField(source='ai_profile_info.organisation_name')

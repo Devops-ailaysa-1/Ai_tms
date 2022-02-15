@@ -9,7 +9,8 @@ let wsStart = 'wss://'
 if(loc.protocol === 'https') {
     wsStart = 'wss://'
 }
-let endpoint = wsStart + loc.host + loc.pathname
+let id = '?'+USER_ID
+let endpoint = wsStart + loc.host + loc.pathname+ id
 
 const CHAT_NOTIFICATION_INTERVAL = 4000
 
@@ -21,6 +22,7 @@ function getUnreadChatNotifications(){
   if("{{request.user.is_authenticated}}"){
     socket.send(JSON.stringify({
       "command": "get_unread_chat_notifications",
+      // "user":USER_ID
     }));
   }
 }
@@ -37,6 +39,11 @@ function getAvailableThreads(){
 
 socket.onopen = async function(e){
     console.log('open', e)
+    // send_message_form.on('keyup' ,function (e){
+    //   socket.send(JSON.stringify({
+    //   'typing': 'true',
+    //   }));
+    // })
     send_message_form.on('submit', function (e){
         e.preventDefault()
         let message = input_message.val()
@@ -54,8 +61,8 @@ socket.onopen = async function(e){
         socket.send(data)
         $(this)[0].reset()
     })
-setInterval(getUnreadChatNotifications, CHAT_NOTIFICATION_INTERVAL)
-setInterval(getAvailableThreads, CHAT_NOTIFICATION_INTERVAL)
+//setInterval(getUnreadChatNotifications, CHAT_NOTIFICATION_INTERVAL)
+//setInterval(getAvailableThreads, CHAT_NOTIFICATION_INTERVAL)
 }
 
 socket.onmessage = async function(e){

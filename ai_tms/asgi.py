@@ -18,13 +18,14 @@ django_asgi_app = get_asgi_application()
 
 import ai_marketplace.routing
 from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
+# from channels.auth import AuthMiddlewareStack
+from ai_marketplace.channels_auth import QueryAuthMiddleware
 
 django_asgi_app = get_asgi_application()
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
-    'websocket': AuthMiddlewareStack(
+    'websocket': QueryAuthMiddleware(
         URLRouter(
             ai_marketplace.routing.websocket_urlpatterns
         )
