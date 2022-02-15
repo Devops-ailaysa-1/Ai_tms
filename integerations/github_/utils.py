@@ -2,6 +2,12 @@ from github import Github
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from io import StringIO, BytesIO
 import sys
+import pickle
+from pymongo import MongoClient
+cli = MongoClient ( 'localhost', 27017)
+
+from datetime import datetime
+import time
 
 class GithubUtils:
 
@@ -21,13 +27,15 @@ class GithubUtils:
     @staticmethod
     def get_file_contents(repo, ref_branch, file_path=""):
         print("ref_branch--->", ref_branch)
+        print("path---->", file_path)
         contents = repo.get_contents(file_path, ref= ref_branch)
         file_contents = []
 
         while contents:
             file_content = contents.pop(0)
+            print("content---->", file_content)
             if file_content.type == "dir":
-                contents.extend(repo.get_contents(file_content.path))
+                contents.extend(repo.get_contents(file_content.path, ref=ref_branch))
             else:
                 file_contents.append(file_content)
 
@@ -54,9 +62,19 @@ class GithubUtils:
     @staticmethod
     def create_new_branch(repo, branch_name, from_commit_hash):
         ref_branch = repo.create_git_ref(
-            f"refs/heads/{branch_name}", sha=from_commit_hash
-        )
+            f"refs/heads/{branch_name}", sha=from_commit_hash)
         return ref_branch
+
+    @staticmethod
+    def updatefile_in_branch(repo, file_path, branch_name,
+        commit_message="more +++++ tests", content="more ----- tests"):
+
+        content =  repo.get_contents(file_path, ref=branch_name)
+        now_str = datetime.today().strftime("%Y_%m_%d_%H_%M_") \
+                  + str(int(time.time()))
+        new_unique_branch ="ailaysa_"+ now_str +"_localisation"
+        return repo.update_file(content.path,
+            commit_message, content, content.sha, new_unique_branch)
 
 class DjRestUtils:
 
@@ -79,9 +97,21 @@ class DjRestUtils:
         return im
 
 class MongoDbUtils:
+    @staticmethod
+    def get_pickle_load_data(db_name, coll_name):
 
+        db = cli[db_name]
+        coll = db[coll_name]
+        data = coll.find_one()
 
+        return pickle.loads(data["data"])
 
+class ApiViewService:
+    @staticmethod
+    def get_pickle_load_data():
+        return MongoDbUtils\
+            .get_pickle_load_data(db_name="samples",
+                coll_name="github_hook_data")
 
 
     # secret = '1234'

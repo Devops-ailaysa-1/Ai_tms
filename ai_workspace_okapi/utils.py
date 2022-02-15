@@ -149,3 +149,11 @@ class SpacesService:
         print("FIle is deleted successfully!!!")
 
 
+class OkapiUtils:
+    def get_translated_file_(self):
+        pass
+
+
+
+
+

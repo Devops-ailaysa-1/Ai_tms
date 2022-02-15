@@ -113,6 +113,7 @@ INSTALLED_APPS = [
     'ai_workspace',
     "ai_workspace_okapi",
     "integerations.github_",
+    "controller",
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
@@ -121,10 +122,15 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
-    #'dbbackup',
+    # 'dbbackup',
     # 'channels',
-    #'django_q',
+    # 'django_q',
 ]
+
+MANAGEMENT = True
+
+if MANAGEMENT:
+    INSTALLED_APPS += ["ai_management", ]
 
 SITE_ID = 1
 
@@ -138,8 +144,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "middlewares.error_middleware.error_middleware",
-    "middlewares.error_middleware.StackOverflowMiddleware"
+    # "middlewares.error_middleware.error_middleware",
+    # "middlewares.error_middleware.StackOverflowMiddleware"
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
@@ -314,7 +320,7 @@ USE_TZ = True
 
 USE_SPACES = (True if os.getenv( "USE_SPACES" ) == 'True' else False)
 
-if USE_SPACES:
+if not USE_SPACES:
     # settings
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
@@ -431,3 +437,9 @@ CHANNEL_LAYERS = {
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 # DBBACKUP_STORAGE_OPTIONS = {'location': 'backupdb/'}
+
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
+

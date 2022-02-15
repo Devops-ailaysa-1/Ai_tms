@@ -102,8 +102,6 @@ class ContentFileSerializer(serializers.ModelSerializer):
         data = validated_data
         return super().create(data)
 
-
-
 class LocalizeIdsSerializer(serializers.Serializer):
     localizable_ids = serializers.ListField()
 
@@ -114,20 +112,23 @@ class ProjectSerializer(serializers.ModelSerializer):
                   #'project_dir_path', 'created_at',
                   'ai_user',
                   #'ai_project_id', 'mt_engine', 'max_hits',
-                  'threshold'
+                  'threshold', "project_downloadproject"
                   ]
         model = Project
 
         extra_kwargs = {
             "ai_user": {
+                "required": False,},
+            "project_downloadproject":{
                 "required": False}}
 
         validators = []
 
     def create(self, validated_data):
-        print("create")
         data = validated_data
         project = Project.objects.create(**data)
+        rel_obj = data['project_downloadproject']
+        rel_obj.update_project(project=project)
         return project
 
     # def create(self, validated_data):
@@ -144,19 +145,21 @@ class FileListSerializer(serializers.ListSerializer):
 class FileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ['id', 'usage_type', 'file',
-                  'project', 'content_file']
+                  'project', "contentfile"]
         model = File
         list_serializer_class = FileListSerializer
 
         extra_kwargs = {
-            "project": {
-                "required": False}}
+            "project": {"required": False}}
 
         validators = []
 
     def create(self, validated_data):
         data = validated_data
-        return super().create(data)
+        ret = super().create(data)
+        cf = data['contentfile']
+        cf.update_file(ret)
+        return ret
 
 class FileDataPrepareSerializer(serializers.Serializer):
     DEFAULT_ASSET = 1  # Need to add test
@@ -177,8 +180,8 @@ class FileDataPrepareSerializer(serializers.Serializer):
     def to_representation(self, instance):
         ret = super(FileDataPrepareSerializer, self)\
             .to_representation(instance=instance)
-        ret = [{"usage_type":ret["usage_type"], "file":file, "content_file": content_file} for
-               file, content_file in zip(ret.get("files"), ret.get("content_files"))]
+        ret = [{"usage_type":ret["usage_type"], "file":file, "contentfile": contentfile} for
+               file, contentfile in zip(ret.get("files"), ret.get("content_files"))]
         return ret
 
 class JobListSerializer(serializers.ListSerializer):
@@ -226,10 +229,14 @@ class GithubHookSerializerD3(serializers.Serializer):
 class GithubHookSerializerD4(serializers.Serializer):
     modified = serializers.ListField()
 
+class GithubHookSerializerD5(serializers.Serializer):
+    id = serializers.CharField()
+
 class GithubHookSerializerD2(serializers.Serializer):
     ref = serializers.CharField()
     repository = GithubHookSerializerD3()
     commits = GithubHookSerializerD4(many=True)
+    head_commit = GithubHookSerializerD5()
 
     def validate_ref(self, value):
         if 'refs/heads' in value:
@@ -240,6 +247,7 @@ class GithubHookSerializerD2(serializers.Serializer):
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret["ref"] = ret["ref"].replace("refs/heads/", "")
+        ret["commit_hash"] = ret["head_commit"]["id"]
         return ret
 
 class HookDeckSerializer(serializers.ModelSerializer):

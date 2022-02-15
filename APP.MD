@@ -39,6 +39,8 @@
   - WebHook url and secret create 
   - Request count for one specific user and identify misuse customer
   - archieve records while records save failure 
+  - Webhook update new files or branch or create 
+  - Refresh repository, branches, content files etc...
    
   
 ## Usual issues
@@ -118,10 +120,11 @@
   - [supported apps by lokalize](https://app.lokalise.com/apps/)
   - [Github Automation](https://youtu.be/G8hMe9NHfhY)
   - [Lokalise Github Integeration](https://youtu.be/AKaE_2Q4yBY)
+  - [Supported file formats](https://docs.lokalise.com/en/collections/2909121-keys-and-files#supported-file-formats)
+  
 
 ## Discussion To be Requiered
   - Enable cleanup mode
-
 
 ## COMMANDS
   - hookdeck listen 8000 github 
@@ -134,3 +137,5 @@ Useful Links:
  Architect:
   - Parallel processing if typically large...  
   - 
+  
+  

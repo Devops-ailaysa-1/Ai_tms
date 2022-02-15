@@ -370,27 +370,27 @@ class File(models.Model):
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
-    content_file = models.ForeignKey(ContentFile, on_delete=models.SET_NULL, null=True,
-        related_name="contentfile_files_set")
+    # content_file = models.ForeignKey(ContentFile, on_delete=models.SET_NULL, null=True,
+    #     related_name="contentfile_files_set")
 
-    def update_file(self, file_content):
-        if not self.is_upload_from_integeration:
-            raise ValueError( "This file cannot be update. Since it"
-            " is not uploaded from integeration!!!" )
-        upload_file_name = self.file.name.split("/")[-1]
-        print("file path---->", self.file.name)
-        SpacesService.delete_object(file_path=self.file.name)
-        im = DjRestUtils.convert_content_to_inmemoryfile(filecontent=file_content,
-            file_name=upload_file_name)
-        self.file = im
-        self.save()
+    # def update_file(self, file_content):
+    #     if not self.is_upload_from_integeration:
+    #         raise ValueError( "This file cannot be update. Since it"
+    #         " is not uploaded from integeration!!!" )
+    #     upload_file_name = self.file.name.split("/")[-1]
+    #     print("file path---->", self.file.name)
+    #     SpacesService.delete_object(file_path=self.file.name)
+    #     im = DjRestUtils.convert_content_to_inmemoryfile(filecontent=file_content,
+    #         file_name=upload_file_name)
+    #     self.file = im
+    #     self.save()
 
     class Meta:
         managed = False
-
-    @property
-    def is_upload_from_integeration(self):
-        return self.content_file!=None
+    #
+    # @property
+    # def is_upload_from_integeration(self):
+    #     return self.content_file!=None
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''

@@ -22,6 +22,7 @@ from django.conf.urls.static import static
 from django.views.static import serve
 from django.urls import re_path
 from django.views.generic import TemplateView
+from allauth.socialaccount.providers.github import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -38,5 +39,10 @@ urlpatterns = [
     path("integerations/", include("integerations.github_.urls")),
 ]
 
+if settings.MANAGEMENT:
+    urlpatterns += [path("management/", include("ai_management.urls"))]
+
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+

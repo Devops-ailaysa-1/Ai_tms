@@ -14,13 +14,15 @@ from django.http import JsonResponse, Http404, HttpResponse
 import rest_framework
 from rest_framework.renderers import JSONRenderer
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.db import transaction
 
 from .serializers import GithubOAuthTokenSerializer, RepositorySerializer,\
     BranchSerializer, ContentFileSerializer, LocalizeIdsSerializer,ProjectSerializer,\
     FileSerializer, JobSerializer, JobDataPrepareSerializer, FileDataPrepareSerializer,\
     GithubHookSerializerD1, GithubHookSerializerD2, HookDeckCallSerializer, \
     HookDeckResponseSerializer, HookDeckSerializer
-from .models import GithubOAuthToken, Repository, FetchInfo, Branch, ContentFile, HookDeck
+from .models import GithubOAuthToken, Repository, FetchInfo, Branch, ContentFile, HookDeck,\
+    DownloadProject
 from .utils import DjRestUtils
 from .tasks import update_files
 from guardian.shortcuts import get_objects_for_user
@@ -41,20 +43,20 @@ CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
 @api_view(["POST"])
 def repo_update_view(request, slug):
-    decoded = cryptocode.decrypt(slug, CRYPT_PASSWORD)
+    # decoded = cryptocode.decrypt(slug, CRYPT_PASSWORD)
+    #
+    # if not decoded:
+    #     raise ValueError("Hook URL invalid!!!")
+    #
+    # user = AiUser.objects.filter(email=decoded).first()
+    #
+    # if (not user) or (user != request.user):
+    #     raise ValueError("URL user doest not match with request user!!!")
 
-    if not decoded:
-        raise ValueError("Hook URL invalid!!!")
-
-    user = AiUser.objects.filter(email=decoded).first()
-
-    if (not user) or (user != request.user):
-        raise ValueError("URL user doest not match with request user!!!")
-
-    dump_data = pickle.dumps(request.data)
-    db = cli["samples"]
-    coll = db["github_hook_data"]
-    coll.insert_one({"data": dump_data})
+    # dump_data = pickle.dumps(request.data)
+    # db = cli["samples"]
+    # coll = db["github_hook_data"]
+    # coll.insert_one({"data": dump_data})
     gd = GithubHookSerializerD1(data=request.data)
     gd.is_valid(raise_exception=True)
     gd2 = GithubHookSerializerD2(data=gd.data.get("payload"))
@@ -92,13 +94,14 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
+        print("checked")
         return request.user.has_perm(f"github_.change_"
             f"{obj.__class__.__name__.lower()}", obj)
 
 
 class GithubOAuthTokenViewset(viewsets.ModelViewSet):
     serializer_class = GithubOAuthTokenSerializer
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [IsOwnerOrReadOnly, IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         data = request.data.dict()
@@ -115,22 +118,13 @@ class GithubOAuthTokenViewset(viewsets.ModelViewSet):
     def get_queryset(self):
         return  get_objects_for_user(self.request.user,
             'github_.change_githuboauthtoken')
-        # return GithubOAuthToken.objects\
-            #.all()#.filter(ai_user=self.request.user)\
-
-
-    # def get_object(self):
-    #     obj = super(GithubOAuthTokenViewset, self).get_object()
-    #     if obj.ai_user == self.request.user:
-    #         return obj
-    #     raise Http404
 
 class RepositoryViewset(viewsets.ModelViewSet):
     serializer_class = RepositorySerializer
     permission_classes = [IsOwnerOrReadOnly]
     model = Repository
 
-    def get_queryset(self):
+    def get_queryset(self, refresh=False):
         pk = self.kwargs.get("pk", None)
         if pk == None:
             raise ValueError("Primary Key is missing to fetch...")
@@ -148,7 +142,7 @@ class RepositoryViewset(viewsets.ModelViewSet):
             get_or_create(github_token=github_oauth_token)
 
         if created or (datetime.now(tz=pytz.UTC) - timedelta(days=2) >
-                fetch_info.last_fetched_on):
+                fetch_info.last_fetched_on) or refresh:
             Repository.create_all_repositories_of_github(github_token_id=pk)
             fetch_info.save() # updating last fetch time
 
@@ -157,6 +151,10 @@ class RepositoryViewset(viewsets.ModelViewSet):
 
         objects = get_list_or_404(qs, github_token_id=pk)
         return objects
+
+    def list_refresh(self, request, *args, **kwargs):
+        objects = self.get_queryset(refresh=True)
+        return Response(self.serializer_class(objects, many=True).data, status=200)
 
     # def get_object(self):
     #     pk = self.kwargs.get("pk", None)
@@ -175,7 +173,7 @@ class RepositoryViewset(viewsets.ModelViewSet):
 class BranchViewset(viewsets.ModelViewSet):
     serializer_class = BranchSerializer
 
-    def get_queryset(self):
+    def get_queryset(self, refresh=False):
         print("this qs")
         pk = self.kwargs.get("pk", None)
         if pk == None:
@@ -190,7 +188,7 @@ class BranchViewset(viewsets.ModelViewSet):
             raise ValueError("You have not permitted to access....")
 
         qs = Branch.objects.filter(repo=repo).all()
-        if not qs:
+        if (not qs )or (refresh):
             print("if loop")
             Branch.create_all_branches(repo=repo)
 
@@ -200,13 +198,14 @@ class BranchViewset(viewsets.ModelViewSet):
         objects = get_list_or_404(qs, repo_id=pk)
         return objects
 
-    # def list(self, request, *args, **kwargs):
-
+    def list_refresh(self, request, *args, **kwargs):
+        objects = self.get_queryset(refresh=True)
+        return Response(self.serializer_class(objects, many=True).data, status=200)
 
 class ContentFileViewset(viewsets.ModelViewSet):
     serializer_class = ContentFileSerializer
 
-    def get_queryset(self):
+    def get_queryset(self, refresh=False):
 
         pk = self.kwargs.get("pk", None)
         if pk == None:
@@ -221,7 +220,7 @@ class ContentFileViewset(viewsets.ModelViewSet):
             raise ValueError("You have not permitted to access....")
 
         qs = ContentFile.objects.filter(branch=branch).all()
-        if not qs:
+        if (not qs ) or refresh:
             print("if loop")
             ContentFile.create_all_contentfiles(branch=branch)
 
@@ -232,11 +231,21 @@ class ContentFileViewset(viewsets.ModelViewSet):
 
         return objects
 
+    def list_refresh(self, request, *args, **kwargs):
+        objects = self.get_queryset(refresh=True)
+        return Response(self.serializer_class(objects, many=True).data, status=200)
+
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
 
         qs = self.get_queryset()
 
-        print("--->", qs[0].id)
+        branch = get_object_or_404(Branch.objects.all(), id=kwargs.get("pk"))
+
+        latest_commit_sha = branch.get_branch_gh_obj.commit.sha
+
+        download_project = DownloadProject(commit_hash=latest_commit_sha)
+        download_project.save()
 
         serlzr1 = LocalizeIdsSerializer(data=request.data)
 
@@ -254,7 +263,7 @@ class ContentFileViewset(viewsets.ModelViewSet):
 
         serlzr = ProjectSerializer(data=request.data, )
         if serlzr.is_valid(raise_exception=True):
-            serlzr.save(ai_user=request.user)
+            serlzr.save(ai_user=request.user, project_downloadproject=download_project)
             # return Response(serlzr.data, status=200)
             project_data = serlzr.data
             project = serlzr.instance
@@ -279,9 +288,9 @@ class ContentFileViewset(viewsets.ModelViewSet):
             im_uploads.append(im)
 
         serlzr = FileDataPrepareSerializer(data=[{"files": im_uploads,
-            "content_files": contentfile_ids,"usage_type": 1}], many=True)
+            "content_files": contentfile_ids, "usage_type": 1}], many=True)
         if serlzr.is_valid(raise_exception=True):
-            file_serlz_data = serlzr.data[0]
+            file_serlz_data = serlzr.data[0] # unnecessary nested remove
 
         serlzr = FileSerializer(data=file_serlz_data, many=True)
         if serlzr.is_valid(raise_exception=True):

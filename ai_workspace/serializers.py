@@ -287,8 +287,7 @@ class TaskSerializer(serializers.ModelSerializer):
 			"file":{"write_only": True},
 			"job": {"write_only": True},
 			"version": {"write_only": True},
-			"assign_to": {"write_only": True},
-		}
+			"assign_to": {"write_only": True},}
 
 		validators = [
 			UniqueTogetherValidator(
