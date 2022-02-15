@@ -22,16 +22,17 @@ TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 TEMPLATE_DIR_2 = os.path.join(BASE_DIR,'ai_vendor','templates')
 TEMPLATE_DIR_3 = os.path.join(BASE_DIR,'ai_marketplace','templates')
 TEMPLATE_DIR_4 = os.path.join(BASE_DIR,'ai_auth','templates')
+TEMPLATE_DIR_5 = os.path.join(BASE_DIR,'ai_tms','templates')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("django_secret_key")
+SECRET_KEY = os.getenv("django_secret_key", "fwevbsuio")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split()
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
 
 # SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE')
 # CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE')
@@ -39,9 +40,9 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split()
 
 CORS_ORIGIN_ALLOW_ALL= False
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split()
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split()
 
-CORS_ORIGIN_WHITELIST = os.getenv("CORS_ORIGIN_WHITELIST").split()
+CORS_ORIGIN_WHITELIST = os.getenv("CORS_ORIGIN_WHITELIST", "").split()
 
 CORS_ALLOW_CREDENTIALS = (True if os.getenv( "CORS_ALLOW_CREDENTIALS" ) == 'True' else False)
 
@@ -110,10 +111,13 @@ INSTALLED_APPS = [
     'ai_staff',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.github',
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
     "ai_workspace_okapi",
+    "integerations.github_",
+    "controller",
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
@@ -121,9 +125,11 @@ INSTALLED_APPS = [
     'django_filters',
     'notifications',
     'storages',
-    #'dbbackup',
-   
-    #'django_q',
+    "guardian",
+    'django_celery_results',
+    # 'dbbackup',
+    # 'channels',
+    # 'django_q',
 ]
 
 SITE_ID = 1
@@ -142,6 +148,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # "middlewares.error_middleware.error_middleware",
+    # "middlewares.error_middleware.StackOverflowMiddleware"
 ]
 
 ROOT_URLCONF = 'ai_tms.urls'
@@ -150,7 +158,7 @@ AUTH_USER_MODEL="ai_auth.AiUser"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,TEMPLATE_DIR_3,TEMPLATE_DIR_4],
+        'DIRS': [TEMPLATE_DIR,TEMPLATE_DIR_2,TEMPLATE_DIR_3,TEMPLATE_DIR_4, TEMPLATE_DIR_5],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -202,6 +210,8 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = [
     'ai_auth.authentication.MysqlBackend',
     'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 DJANGO_NOTIFICATIONS_CONFIG = {
@@ -223,7 +233,7 @@ REST_USE_JWT = True
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv( "EMAIL_HOST" )
-EMAIL_PORT = int(os.getenv( "EMAIL_PORT" ))
+EMAIL_PORT = int(os.getenv( "EMAIL_PORT" )) if os.getenv("EMAIL_PORT") else None
 EMAIL_USE_TLS = (True if os.getenv( "EMAIL_TLS" ) == 'True' else False)
 EMAIL_HOST_USER = os.getenv( "EMAIL_HOST_USER" )
 EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
@@ -283,6 +293,17 @@ REST_FRAMEWORK = {
         'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+}
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'github': {
+        'SCOPE': [
+            'user',
+            'repo',
+            'read:org',
+        ],
+    }
 }
 
 
@@ -391,13 +412,16 @@ SIMPLE_JWT = {
 #     'AUTH_COOKIE_PATH': '/',        # The path of the auth cookie.
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
 
-
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
-CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT").split()
+# CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+# CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
+CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
 CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
 CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
+
+
 
 
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''

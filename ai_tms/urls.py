@@ -24,6 +24,8 @@ from django.urls import re_path
 
 from ai_auth.admin import staff_admin_site
 
+from django.views.generic import TemplateView
+from allauth.socialaccount.providers.github import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -36,7 +38,12 @@ urlpatterns = [
     path("workspace_okapi/", include("ai_workspace_okapi.urls")),
     path('marketplace/',include('ai_marketplace.urls')),
     path("stripe/", include("djstripe.urls", namespace="djstripe")),
+    path("accounts/", include("allauth.urls")),
+    path("", TemplateView.as_view(template_name="index.html"), ),
+    path("integerations/", include("integerations.github_.urls")),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+
