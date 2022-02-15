@@ -24,12 +24,19 @@ ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
      ('.resx',): 'resx-processor',
      ('.srt',): 'srt-processor',
      ('.csv', '.tsv'): 'table-processor',
-     ('.strings',): 'strings-processor'
+     ('.strings',): 'strings-processor',
+     ('.md',): 'mark-down-processor',
+     ('.xml',) : "android-resources-processor", #java-properties-xml-processor
+     ('.stringsdict',) : "apple-strings-dict-processor",
+     ('.dtd',) : "dtd-processor",
+     ('.php',) : "php-processor",
+     ('.yaml', '.yml') : "yaml-processor",
  }
 
 
 CURRENT_SUPPORT_FILE_EXTENSIONS_LIST = [
     ".txt", ".html", ".tsv", ".csv", ".odp", ".ods", ".odt", ".json",
     ".properties", ".po", ".docx", ".xlsx", ".pptx", ".xliff", ".xlf",
-    ".idml", ".srt", ".strings"
+    ".idml", ".srt", ".strings", ".md", ".xml", ".stringsdict", ".dtd",
+    ".php", ".yaml", ".yml",
 ]#".dotx" -> file processing pending
