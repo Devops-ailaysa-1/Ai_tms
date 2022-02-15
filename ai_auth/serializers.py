@@ -8,9 +8,10 @@ from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 from ai_auth.models import (AiUser, BillingAddress,UserAttribute,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
-                            TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,VendorOnboarding,GeneralSupport)
+                            TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
+                            VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember)
 from rest_framework import status
-from ai_staff.serializer import AiUserTypeSerializer
+from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -264,7 +265,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
         if hasattr(UserModel, 'country'):
             extra_fields.append('country')
         model = UserModel
-        fields = ('pk','deactivate', *extra_fields)
+        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail', *extra_fields)
         read_only_fields = ('email',)
 
 
@@ -371,13 +372,58 @@ class CarrierSupportSerializer(serializers.ModelSerializer):
         fields  = "__all__"
 
 class VendorOnboardingSerializer(serializers.ModelSerializer):
+    current_status = serializers.ReadOnlyField(source='get_status_display')
     cv_file = serializers.FileField(validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
     class Meta:
         model = VendorOnboarding
-        fields  = "__all__"
+        fields  = ('id','name','email','cv_file','message','status','current_status',)
+        extra_kwargs = {
+            'status':{'write_only':True},
+            }
 
 class GeneralSupportSerializer(serializers.ModelSerializer):
     support_file = serializers.FileField(allow_null=True,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx','jpg','png','jpeg'])])
     class Meta:
         model = GeneralSupport
         fields = "__all__"
+
+class TeamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        fields = "__all__"
+
+class InternalMemberSerializer(serializers.ModelSerializer):
+    internal_member_detail = serializers.SerializerMethodField(source='get_internal_member_detail')
+    team_name = serializers.ReadOnlyField(source='team.name')
+    current_status = serializers.ReadOnlyField(source='get_status_display')
+    professional_identity= serializers.ReadOnlyField(source='internal_member.professional_identity_info.avatar_url')
+    class Meta:
+        model = InternalMember
+        fields = ('id','team','team_name','added_by','role','functional_identity','professional_identity',
+                'status','current_status','internal_member','internal_member_detail',)
+        extra_kwargs = {
+            'internal_member':{'write_only':True},
+            'added_by':{'write_only':True},
+            'status':{'write_only':True},
+            }
+
+    def get_internal_member_detail(self, obj):
+        return {'name':obj.internal_member.fullname,'email':obj.internal_member.email}
+
+
+class HiredEditorSerializer(serializers.ModelSerializer):
+    hired_editor_detail = serializers.SerializerMethodField(source='get_hired_editor_detail')
+    current_status = serializers.ReadOnlyField(source='get_status_display')
+    professional_identity= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
+    class Meta:
+        model = HiredEditors
+        fields = ('id','role','user','professional_identity',\
+                'status','current_status','hired_editor','hired_editor_detail','added_by',)
+        extra_kwargs = {
+            'hired_editor':{'write_only':True},
+            'user':{'write_only':True},
+            'status':{'write_only':True},
+            'added_by':{'write_only':True},
+            }
+    def get_hired_editor_detail(self, obj):
+        return {'name':obj.hired_editor.fullname,'email':obj.hired_editor.email}

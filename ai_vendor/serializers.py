@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware
+from ai_vendor.models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
@@ -7,24 +7,11 @@ from rest_framework.response import Response
 
 
 class VendorsInfoSerializer(serializers.ModelSerializer):
-
+    cv_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
     class Meta:
         model = VendorsInfo
-        fields = (
-            'id',
-            'vendor_unique_id',
-            'type',
-            'currency',
-            'vm_status',
-            'status',
-            'token',
-            'skype',
-            'proz_link',
-            'cv_file',
-            'native_lang',
-            'year_of_experience',
-            'rating',
-        )
+        fields = ('id','vendor_unique_id','type','currency','vm_status','status','token','skype',
+                'proz_link','cv_file','native_lang','year_of_experience','rating','location',)
         extra_kwargs = {'id':{"read_only":True},}
 
     def save(self, user_id):
@@ -50,9 +37,10 @@ class VendorCATsoftwareSerializer(serializers.ModelSerializer):
         fields=('software',)
 
 class VendorSubjectFieldSerializer(serializers.ModelSerializer):
+    subject_name = serializers.ReadOnlyField(source='subject.name')
     class Meta:
         model=VendorSubjectFields
-        fields=('subject',)
+        fields=('subject','subject_name')
 
 class VendorMembershipSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,9 +53,10 @@ class VendorMtpeEngineSerializer(serializers.ModelSerializer):
         fields=('mtpe_engines',)
 
 class VendorContentTypeSerializer(serializers.ModelSerializer):
+    contenttype_name = serializers.ReadOnlyField(source='contenttype.name')
     class Meta:
         model=VendorContentTypes
-        fields=('contenttype',)
+        fields=('contenttype','contenttype_name')
 
 class TranslationSampleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -94,9 +83,12 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
      existing_lang_pair_id=serializers.PrimaryKeyRelatedField(queryset=VendorLanguagePair.objects.all().values_list('pk', flat=True),required=False,write_only=True)
      apply_for_reverse=serializers.IntegerField(write_only=True,required=False)
      user_id=serializers.IntegerField()
+     source_lang_name = serializers.ReadOnlyField(source ='source_lang.language')
+     target_lang_name = serializers.ReadOnlyField(source ='target_lang.language')
+
      class Meta:
          model = VendorLanguagePair
-         fields=('id','user_id','source_lang','target_lang','service','servicetype','translationfile','mtpesamples','existing_lang_pair_id','apply_for_reverse',)
+         fields=('id','user_id','source_lang','target_lang','source_lang_name','target_lang_name','service','servicetype','translationfile','mtpesamples','existing_lang_pair_id','apply_for_reverse',)
          extra_kwargs = {
             'translationfile':{'read_only':True},
             'MtpeSamples':{'read_only':True},
@@ -194,7 +186,7 @@ class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.Model
         if data.get("vendor_software") and isinstance( data.get("vendor_software"), str):
             data["vendor_software"] = json.loads(data["vendor_software"])
         print("validated data----->",data)
-        return data
+        return super().run_validation(data)
 
 class VendorBankDetailSerializer(serializers.ModelSerializer):
     class Meta:

@@ -34,6 +34,9 @@ DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
 
+# SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE')
+# CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE')
+# SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT")
 
 CORS_ORIGIN_ALLOW_ALL= False
 
@@ -91,6 +94,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -119,6 +123,7 @@ INSTALLED_APPS = [
     'ai_marketplace',
     'djstripe',
     'django_filters',
+    'notifications',
     'storages',
     "guardian",
     'django_celery_results',
@@ -133,6 +138,10 @@ if MANAGEMENT:
     INSTALLED_APPS += ["ai_management", ]
 
 SITE_ID = 1
+
+WSGI_APPLICATION = 'ai_tms.wsgi.application'
+ASGI_APPLICATION = 'ai_tms.asgi.application'
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -167,8 +176,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ai_tms.wsgi.application'
-ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
@@ -179,6 +186,7 @@ except Exception as e:
     DATABASES={
         'default':{
             'ENGINE':'django.db.backends.postgresql_psycopg2',
+            'DISABLE_SERVER_SIDE_CURSORS': True,
             'NAME':os.getenv( "psql_database" ),
             'USER':os.getenv( "psql_user" ),
             'PASSWORD':os.getenv( "psql_password" ),
@@ -211,6 +219,9 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
+DJANGO_NOTIFICATIONS_CONFIG = {
+      'USE_JSONFIELD': True,
+}
 #REST_FRAMEWORK = {
 
 #    'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -264,6 +275,14 @@ CLIENT_BASE_URL = os.getenv("CLIENT_BASE_URL")
 
 SIGNUP_CONFIRM_URL = os.getenv("SIGNUP_CONFIRM_URL")
 
+TRANSEDITOR_BASE_URL = os.getenv("TRANSEDITOR_BASE_URL")
+
+EXTERNAL_MEMBER_ACCEPT_URL = os.getenv("EXTERNAL_MEMBER_ACCEPT_URL")
+
+VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
+
+APPLICATION_URL = os.getenv("APPLICATION_URL")
+
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
 ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
@@ -277,7 +296,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 12,
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 
@@ -344,7 +363,7 @@ else:
     ]
 
 
-    MEDIA_ROOT =  os.path.join(BASE_DIR, 'media')
+    MEDIA_ROOT =  os.path.join(BASE_DIR, 'mediafiles')
     MEDIA_URL = '/media/'
 
 # ------------------------------------------------
@@ -412,6 +431,7 @@ CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
 
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
+CEO_EMAIL = os.getenv("CEO_EMAIL")
 
 STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
 STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
@@ -424,14 +444,17 @@ DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installat
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        # 'CONFIG': {
-        #     'hosts': [('127.0.0.1', 6379)],
-        # }
-    }
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+             # "hosts": [("redis", 6379)],
+             "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
+
+        },
+    },
 }
 
 
@@ -443,3 +466,55 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
 
+
+LOGGING = {
+    'version' : 1,
+    'disable_existing_loggers' : False,
+
+    'formatters' : {
+        'dev_formatter' : {
+            'format' : '{levelname} {asctime} {pathname} {message}',
+            'style' : '{',
+        }
+    },
+
+    'loggers' : {
+        'django' : {
+            'handlers' : ['file',],
+            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+            'propogate' : True,
+        },
+
+        'django' : {
+            'handlers' : ['file_prod',],
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'propogate' : True,
+        }
+        
+    },
+
+    'handlers' : {
+
+        'file' : {
+            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+        'file_prod' : {
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+        # 'mail_admins' : {
+        #     'level' : 'ERROR',
+        #     'class': 'django.utils.log.AdminEmailHandler',
+        #     'formatter' : 'dev_formatter',
+        # }
+    },
+
+
+}

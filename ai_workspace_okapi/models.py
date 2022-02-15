@@ -41,7 +41,7 @@ class Segment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
     # segment_count = models.TextField(null=True, blank=True)
-    
+
     class Meta:
         ordering = ['id',]
 
@@ -51,7 +51,6 @@ class Segment(models.Model):
 
     @property
     def get_id(self):
-        print("called!!!")
         return self.id
 
     @property
@@ -167,6 +166,14 @@ class Document(models.Model):
     def project(self):
         return self.job.project.id
 
+    @property
+    def doc_credit_debit_user(self):
+        project = self.job.project
+        if project.team:
+            return project.team.owner
+        else:
+            return project.ai_user
+
     @cached_property
     def tm_fetch_configs(self):
         return dict(threshold=self.job.project.threshold,\
@@ -178,12 +185,12 @@ class Document(models.Model):
 
     @property
     def target_language(self):
-        return str(self.job.target_language)        
-    
-    # @property
-    # def target_language_script(self):
-    #     target_lang_id = self.job.target_language.id
-    #     return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script        
+        return str(self.job.target_language)
+
+    @property
+    def target_language_script(self):
+        target_lang_id = self.job.target_language.id
+        return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script
 
     @property
     def source_language_id(self):
@@ -209,18 +216,18 @@ class Document(models.Model):
     def mt_usage(self):
         return sum([len(seg.source) for seg in self.segments.all()\
                 if hasattr(seg, "mt_rawtranslation")])
-    
+
     @property
     def doc_credit_check_open_alert(self):
         total_credit_left = self.created_by.credit_balance
         open_alert = False if (self.total_word_count < total_credit_left) else True
         return open_alert
-    
+
     @property
     def is_first_doc_view(self):
         user = self.job.project.ai_user.id
         ai_user_first_doc_id = Document.objects.filter(job__project__ai_user_id=user).first().id
-        return True if self.id == ai_user_first_doc_id else False    
+        return True if self.id == ai_user_first_doc_id else False
 
 class FontSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,
@@ -228,5 +235,3 @@ class FontSize(models.Model):
     font_size = models.IntegerField()
     language = models.ForeignKey(Languages, on_delete=models.CASCADE,
                                  related_name="language_font_size_set")
-
-

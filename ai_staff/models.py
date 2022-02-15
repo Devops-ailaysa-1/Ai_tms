@@ -1,4 +1,5 @@
 from django import db
+from django.db.models.fields import NullBooleanField
 from django.utils import timezone
 from django.db import models
 from django.db.models.query import QuerySet
@@ -259,7 +260,7 @@ class SpellcheckerLanguages(ParanoidModel):
         db_table = 'spellchecker_languages'
 
 class LanguageScripts(models.Model):
-    # Currently scripts listed are used for filtering 
+    # Currently scripts listed are used for filtering
     # IME icon will be displayed for languages that are not available in this model
     script_name = models.CharField(max_length=200, null=True, blank=True)
 
@@ -273,10 +274,12 @@ class LanguageMetaDetails(models.Model):
     language = models.ForeignKey(Languages, related_name="language_meta_details", on_delete=models.CASCADE, null=True, blank=True)
     lang_name_in_script = models.CharField(max_length=200, null=True, blank=True)
     script = models.ForeignKey(LanguageScripts, related_name="language_meta_details", on_delete=models.SET_NULL, null=True, blank=True)
+    # ner = models.BooleanField(null=True, blank=True)
+    ime = models.BooleanField(null=True, blank=True, default=False)
 
     def __str__(self):
         return self.language.language
-    
+
     class Meta:
         db_table = "language_meta_details"
 
@@ -303,6 +306,8 @@ class SubscriptionPricingPrices(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 class SubscriptionFeatures(ParanoidModel):
+    set_id = models.IntegerField()
+    sequence_id = models.IntegerField()
     features = models.TextField(max_length=1000)
     description = models.TextField(max_length=1000,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
@@ -314,6 +319,7 @@ class CreditsAddons(ParanoidModel):
     pack = models.CharField(max_length=200,null=True,blank=True)
     description = models.TextField(max_length=1000, blank=True, null=True)
     credits = models.IntegerField(null=True,blank=True)
+    expiry =  models.CharField(max_length=200,null=True,blank=True)
     discount = models.CharField(max_length=100,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -384,3 +390,19 @@ class SupportTopics(ParanoidModel):
     topic = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class Role(ParanoidModel):
+    name = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class OldVendorPasswords(models.Model):
+    email = models.EmailField(max_length=100, null=True, blank=True)
+    password = models.CharField(max_length=500, null=True, blank=True)
+
+    def __str__(self):
+        return self.email

@@ -11,13 +11,15 @@ from django.http import Http404,JsonResponse
 from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
-                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,IndianStates,SupportTopics,JobPositions)
+                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
+                    IndianStates,SupportTopics,JobPositions,Role)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
-                         SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,SupportTopicSerializer,JobPositionSerializer)
+                         SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
+                         SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -720,4 +722,34 @@ class JobPositionsView(viewsets.ViewSet):
         queryset = JobPositions.objects.all()
         jobname = get_object_or_404(queryset, pk=pk)
         jobname.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class TeamRoleView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = Role.objects.all()
+        serializer = TeamRoleSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = TeamRoleSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = Role.objects.all()
+        role = get_object_or_404(queryset, pk=pk)
+        serializer= TeamRoleSerializer(role,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = Role.objects.all()
+        role = get_object_or_404(queryset, pk=pk)
+        role.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

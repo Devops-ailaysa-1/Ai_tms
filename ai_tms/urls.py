@@ -24,8 +24,12 @@ from django.urls import re_path
 from django.views.generic import TemplateView
 from allauth.socialaccount.providers.github import views
 
+from ai_auth.admin import staff_admin_site
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("staff/", staff_admin_site.urls),
     path('app/',include('ai_staff.urls')),
     path('auth/',include('ai_auth.urls')),
     path('vendor/',include('ai_vendor.urls')),

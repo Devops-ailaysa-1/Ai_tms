@@ -14,6 +14,11 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.sites.shortcuts import get_current_site
 from datetime import date
 
+from ai_auth import models as auth_models
+
+from django.utils.translation import ugettext_lazy as _
+
+
 
 
 class SendInviteForm(ResetPasswordForm):
@@ -50,7 +55,7 @@ class SendInviteForm(ResetPasswordForm):
             uri = path.join(settings.CLIENT_BASE_URL, settings.PASSWORD_RESET_URL)
             current_site = get_current_site(request)
             self.send_email_invite(email, uri, user_pk_to_url_str(user), temp_key,current_site,user)
-            
+
         return self.cleaned_data["email"]
 
 
@@ -114,7 +119,7 @@ def send_welcome_mail(current_site,user):
     send_mail(
         "Welcome to Ailaysa!",
         msg_plain,
-       settings.DEFAULT_FROM_EMAIL,
+        settings.CEO_EMAIL,
         [email],
         html_message=msg_html,
     )
@@ -137,3 +142,110 @@ def send_password_change_mail(current_site,user):
         [email],
         html_message=msg_html,
     )
+
+
+def user_trial_end(user,sub):
+    date1 = sub.trial_start.strftime("%B %d, %Y")
+    date2 = sub.trial_end.strftime("%B %d, %Y")
+    time1= sub.trial_start.strftime("%I:%M:%S %p")
+    time2= sub.trial_end.strftime("%I:%M:%S %p")
+    context = {
+        "user":user,
+        "start_date" : date1,
+        "start_time": time1,
+        "end_date" : date2,
+        "end_time":time2
+        }
+    print("inside trial form")
+    email =user.email
+   # msg_plain = render_to_string("account/email/password_change.txt", context)
+    msg_html = render_to_string("account/email/trial_ending.html", context)
+    ms =send_mail(
+        " Your Trial Ends Soon",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>",ms)
+
+
+
+def vendor_status_mail(email,status):
+    context = {
+        "user":email,
+        "status": status,
+    }
+    if status == "Accepted":
+        msg_html = render_to_string("account/email/vendor_status.html", context)
+    else:
+        msg_html = render_to_string("account/email/vendor_status_fail.html", context)
+    send_mail(
+        "Become an Editor application status with Ailaysa",None,
+        # msg_plain,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def vendor_request_admin_mail(instance):
+    today = date.today()
+    context = {'email': instance.email,'name':instance.name,'date':today,'message':instance.message}
+    msg_html = render_to_string("vendor_onboarding_email.html", context)
+    send_mail(
+        "Regarding Vendor Onboarding",None,
+        settings.DEFAULT_FROM_EMAIL,
+        ['support@ailaysa.com'],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+def vendor_accepted_freelancer_mail(user):
+    # print("User----<>",user)
+    today = date.today()
+    context = {'email': user.email,'name':user.fullname,'date':today}
+    msg_html = render_to_string("vendor_accepted_freelancer_mail.html", context)
+    send_mail(
+        "Regarding Vendor Joining Freelancers Marketplace",None,
+        settings.DEFAULT_FROM_EMAIL,
+        ['support@ailaysa.com'],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+def vendor_renewal_mail(link,email):
+    context = {'link':link}
+    msg_html = render_to_string("vendor_renewal.html",context)
+    send_mail(
+        "Ailaysa has become a translators marketplace. Please update your account",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def internal_user_credential_mail(context):
+    context = context
+    email = context.get('email')
+    msg_html = render_to_string("Internal_member_credential_email.html",context)
+    send_mail(
+        "Regarding Login Credentials",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def external_member_invite_mail(context,email):
+    context = context
+    msg_html = render_to_string("External_member_invite_email.html",context)
+    send_mail(
+        'Ailaysa MarketPlace Invite',None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")

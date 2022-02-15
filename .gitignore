@@ -8,6 +8,7 @@ file.sql
 db002.sqlite3-journal
 Dockerfile
 media
+mediafiles
 */migrations
 *.*.pyc
 */__pycache__/*
@@ -65,6 +66,19 @@ celerybeat-schedule
 docker-compose_prod.yml
 backupdb
 /repeat_imp.py
+api_automation
+.idea/
+logs
+*.log
+.env.staging.proxy-companion
+.server_dev.log.swp
+Dockerfile.bak1
+docker-compose.staging.yml
+nginx.zip
+nginx/
+mediafiles
+config
+fprm
 /automate/
 /repeat-sh-commands.txt
 /test-fixtures-create.sh

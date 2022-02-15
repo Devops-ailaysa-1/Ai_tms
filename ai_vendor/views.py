@@ -1,4 +1,5 @@
 from ai_auth.models import AiUser
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
@@ -43,7 +44,8 @@ def integrity_error(func):
     return decorator
 
 class VendorsInfoCreateView(APIView):
-
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             queryset = VendorsInfo.objects.get(user_id=request.user.id)
@@ -55,19 +57,17 @@ class VendorsInfoCreateView(APIView):
     def post(self, request):
         cv_file=request.FILES.get('cv_file')
         user_id = request.user.id
-        # data = request.POST.dict()
         print("cv_file------->",cv_file)
         serializer = VendorsInfoSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save(user_id = user_id)
             return Response(serializer.data)
-        print("errors", serializer.errors)
+        # print("errors", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self,request):
         user_id=request.user.id
-        print("cv_file---->",request.FILES.get('cv_file'))
         cv_file=request.FILES.get('cv_file')
-        # data = request.POST.dict()
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
         if cv_file:
             serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
@@ -76,10 +76,17 @@ class VendorsInfoCreateView(APIView):
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self,request):
+        instance = VendorsInfo.objects.get(user_id=request.user.id)
+        if request.POST.get('cv_file',None) != None :
+            instance.cv_file=None
+        instance.save()
+        return Response({"msg":"Deleted Successfully"},status=200)
 
 class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
-    # permission_classes =[IsAuthenticated]
+    permission_classes =[IsAuthenticated]
     # page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
     # def get_custom_page_size(self, request, view):
     #     try:
@@ -165,37 +172,41 @@ def clone_lang_pair(request,id):
 
 
 class VendorExpertiseListCreate(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = self.get_queryset()
         serializer = ServiceExpertiseSerializer(queryset,many=True)
         return Response(serializer.data)
     def get_queryset(self):
+        print(self.request.user.id)
         queryset=AiUser.objects.filter(id=self.request.user.id).all()
         return queryset
+
     def create(self,request):
         id = request.user.id
+        print(id)
         # data = request.data
-        serializer = ServiceExpertiseSerializer(data={**request.POST.dict()})
+        serializer = ServiceExpertiseSerializer(data={**request.POST.dict()},context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
-            serializer.save(id=id)
+            serializer.save()
             return Response(serializer.data)
             # return Response(data={"Message":"VendorExpertiseInfo Created"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    def update(self,request,pk=None):
-        queryset = AiUser.objects.filter(id=self.request.user.id).all()
-        User = get_object_or_404(queryset, pk=request.user.id)
+
+    def update(self,request,pk):
+        queryset = AiUser.objects.filter(id=pk).all()
+        User = get_object_or_404(queryset, pk=pk)
         ser= ServiceExpertiseSerializer(User,data={**request.POST.dict()},partial=True)
         if ser.is_valid():
             ser.save()
-            # ser.update(vendor,validated_data=request.data)
             return Response(ser.data)
         else:
             return Response(ser.errors)
 
 
 class VendorsBankInfoCreateView(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             queryset = VendorBankDetails.objects.get(user_id=request.user.id)
@@ -211,6 +222,7 @@ class VendorsBankInfoCreateView(APIView):
         if serializer.is_valid():
             serializer.save(user_id=user_id)
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self,request):
         user_id=request.user.id
@@ -220,27 +232,31 @@ class VendorsBankInfoCreateView(APIView):
         if serializer.is_valid():
             serializer.save_update()
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET','POST',])
 def feature_availability(request):
     doc_id= request.POST.get("doc_id")
     target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
+    source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
+
+    # CHECK FOR SPELLCHECKER AVAILABILITY
     try:
         spellchecker_id = SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
         data = 1
-        show_ime = False
-    except: 
+        # show_ime = False
+    except:
         data = 0
-        show_ime = True
-    # if LanguageMetaDetails.objects.get(language_id=target_lang_id).script_id == None:
-    #     show_ime = True # Show IME only for languages OTHER THAN Roman & Cyrillic script languages
-    # else:
-    # #     show_ime = False
-    # if target_lang_id in [ 17, 22, 26, 63, 66, 73 ]: #temporarily hard-coded, later will be queried from language meta details model
-    #      show_ime = False
-    # else:
-    #     show_ime = True
+        # show_ime = True
+
+    # CHECK FOR IME
+    show_ime = True if LanguageMetaDetails.objects.get(language_id=target_lang_id).ime == True else False
+
+
+    # CHECK FOR NER AVAILABILITY
+    # show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False
+
     return JsonResponse({"out":data, "show_ime":show_ime}, safe = False)
 
 @api_view(['GET',])

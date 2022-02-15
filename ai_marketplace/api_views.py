@@ -1,9 +1,14 @@
 from rest_framework import filters,generics
+import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter as SF, OrderingFilter as OF
 from django.shortcuts import render
 from ai_auth.models import AiUser
+from ai_staff.models import Languages,ContentTypes
 from django.conf import settings
-from django.db.models import Q
+from notifications.signals import notify
+from notifications.models import Notification
+from django.db.models import Q, Max
 from django.shortcuts import get_object_or_404, render
 from django.test.client import RequestFactory
 from rest_framework import pagination, status, viewsets
@@ -13,7 +18,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
-from django.core.exceptions import ValidationError
+from django.db.models import OuterRef, Subquery
+from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
@@ -21,7 +27,7 @@ from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,B
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
                         AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
-                        GetVendorListSerializer,ChatMessageSerializer
+                        GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
                         )
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -50,28 +56,31 @@ from ai_workspace.serializers import TaskSerializer
 # Create your views here.
 
 
-@api_view(['POST',])
+@api_view(['GET','POST',])
 @permission_classes([IsAuthenticated])
 def get_vendor_detail(request):
-    out=[]
-    job_id=request.POST.get('job_id')
-    source_lang_id=request.POST.get('source_lang_id')
-    target_lang_id=request.POST.get('target_lang_id')
-    if job_id:
-        source_lang_id=Job.objects.get(id=job_id).source_language_id
-        target_lang_id=Job.objects.get(id=job_id).target_language_id
     uid=request.POST.get('vendor_id')
-    try:
-        user=AiUser.objects.get(uid=uid)
-        user_id = user.id
-        lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang_id) & Q(target_lang_id=target_lang_id) & Q(user_id=user_id)))
-        serializer1= VendorServiceSerializer(lang)
-        out.append(serializer1.data)
-        serializer = GetVendorDetailSerializer(user)
-        out.append(serializer.data)
-    except:
-        out = "Matching details does not exist"
-    return Response({"out":out})
+    user=AiUser.objects.get(uid=uid)
+    serializer = GetVendorDetailSerializer(user,context={'request':request})
+    return Response(serializer.data)
+    # job_id=request.GET.get('job_id')
+    # source_lang=request.GET.get('source_lang')
+    # target_lang=request.GET.get('target_lang')
+    # uid=request.POST.get('vendor_id')
+    # print(uid)
+    # try:
+    #     user=AiUser.objects.get(uid=uid)
+    #     user_id = user.id
+    #     lang = VendorLanguagePair.objects.get((Q(source_lang_id=source_lang) & Q(target_lang_id=target_lang) & Q(user_id=user_id)))
+    #     # serializer1= VendorServiceSerializer(lang)
+    #     # out.append(serializer1.data)
+    #     serializer2= VendorLanguagePairCloneSerializer(lang)
+    #     out.append(serializer2.data)
+    #     serializer = GetVendorDetailSerializer(user,context={'request':request})
+    #     out.append(serializer.data)
+    # except:
+    #     out = "Matching details does not exist"
+    # return Response({"out":out})
 
 
 
@@ -258,10 +267,10 @@ def addingthread(request):
     serializer = ThreadSerializer(data={'first_person':user1,'second_person':user2,'bid':bid_id})
     if serializer.is_valid():
         serializer.save()
-        Bid_info = BidPropasalDetails.objects.get(id=bid_id)
-        serializer2 = BidPropasalDetailSerializer(Bid_info,data={'status':2},partial=True)
-        if serializer2.is_valid():
-            serializer2.save()
+        # Bid_info = BidPropasalDetails.objects.get(id=bid_id)
+        # serializer2 = BidPropasalDetailSerializer(Bid_info,data={'status':2},partial=True)
+        # if serializer2.is_valid():
+        #     serializer2.save()
         return JsonResponse(serializer.data, status=201)
     else:
         return JsonResponse(serializer.errors, status=400)
@@ -342,90 +351,58 @@ def get_available_job_details(request):
     return JsonResponse({'out':out},safe=False)
 
 
+def notification_read(thread_id,user):
+    list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
+    # print(list)
+    list.mark_all_as_read()
 
-class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
-    pass
-
-
-class VendorFilter(django_filters.FilterSet):
-    content_type = NumberInFilter(field_name="vendor_contentype__contenttype_id",lookup_expr='in')
-    subject = NumberInFilter(field_name='vendor_subject__subject_id',lookup_expr='in')
-    year_of_experience =NumberInFilter(field_name='vendor_info__year_of_experience')
-    fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
-    class Meta:
-        model = AiUser
-        fields = ('fullname', 'email', 'content_type','subject','year_of_experience',)
-
-
-class GetVendorListView(generics.ListAPIView):
+class ChatMessageListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = GetVendorListSerializer
-    filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
-    filterset_class = VendorFilter
-    ordering_fields = ('vendor_contentype__contenttype_id', 'vendor_subject__subject_id')
-    page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+    serializer_class = ChatMessageSerializer
+    filter_backends = [DjangoFilterBackend,SF,OF]
+    ordering_fields = ['timestamp']
+    # search_fields = ['chatmessage_thread__message',]
+    # ordering=('-timestamp')
 
-    # def validate(self):
-    #     if 'min_price' or 'max_price' or 'count_unit' in self.request.GET:
-    #         print("########")
-    #         raise ValidationError({"msg":"max_price,min_price,count_unit all fields are required"})
-
-    def get_queryset(self):
-        # self.validate()
-        job_id= self.request.query_params.get('job_id')
-        min_price =self.request.query_params.get('min_price')
-        max_price =self.request.query_params.get('max_price')
-        count_unit = self.request.query_params.get('count_unit')
-        source_lang_id=self.request.query_params.get('source_lang_id')
-        target_lang_id=self.request.query_params.get('target_lang_id')
-        contenttype_id = self.request.query_params.get('content_type')
-        subject=self.request.query_params.get('subject')
-        if job_id:
-            source_lang_id=Job.objects.get(id=job_id).source_language_id
-            target_lang_id=Job.objects.get(id=job_id).target_language_id
-        queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-                    .filter(Q(vendor_lang_pair__source_lang=source_lang_id) & Q(vendor_lang_pair__target_lang=target_lang_id) & Q(vendor_lang_pair__deleted_at=None)).distinct()
-        if max_price and min_price and count_unit:
-            ids=[]
-            for i in queryset.values('vendor_lang_pair__id'):
-                ids.append(i.get('vendor_lang_pair__id'))
-            queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
-        if  contenttype_id:
-            contentlist = contenttype_id.split(',')
-            queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=contentlist)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
-        if subject:
-            subjectlist=subject.split(',')
-            queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
-        return queryset
-
-
-
-class ChatMessageListView(APIView):
-    permission_classes = [IsAuthenticated]
-    def get(self, request,thread_id):
-        try:
-            queryset = ChatMessage.objects.filter(thread_id = thread_id).all()
-            print(queryset)
-            serializer = ChatMessageSerializer(queryset,many=True)
+    def list(self, request,thread_id):
+        queryset = Thread.objects.filter(id = thread_id).all()
+        if queryset:
+            # queryset_1=self.filter_queryset(queryset)
+            serializer = ChatMessageByDateSerializer(queryset,many=True,context={'request':request})
+            user = self.request.user
+            notification_read(thread_id,user)
             return Response(serializer.data)
-        except:
+        else:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def post(self, request,thread_id):
-        serializer = ChatMessageSerializer(data={**request.POST.dict(),'thread':thread_id},context={'request':request})
-        print(serializer.is_valid())
+    def create(self, request,thread_id):
+        user = request.user.id
+        sender = AiUser.objects.get(id = user)
+        tt = Thread.objects.get(id=thread_id)
+        receiver = tt.second_person_id if tt.first_person_id == request.user.id else tt.first_person_id
+        Receiver = AiUser.objects.get(id = receiver)
+        serializer = ChatMessageSerializer(data={**request.POST.dict(),'thread':thread_id,'user':user},context={'request':request})
         if serializer.is_valid():
             serializer.save()
+            thread_id = serializer.data.get('thread')
+            notify.send(sender, recipient=Receiver, verb='Message', description=request.POST.get('message'),thread_id=thread_id)
             return Response(serializer.data)
         return Response(serializer.errors)
 
-    def put(self,request,chatmessage_id):
+    def update(self,request,chatmessage_id):
         user=request.user.id
         chat_info = ChatMessage.objects.get(id=chatmessage_id)
         serializer = ChatMessageSerializer(chat_info,data={**request.POST.dict()},context={'request':request},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+
+    def destroy(self, request,chatmessage_id):
+        obj = ChatMessage.objects.get(id=chatmessage_id)
+        obj.message='[DELETED MESSAGE]'
+        obj.save()
+        return Response({'msg':'deleted'})
+
 
 
 @api_view(['GET',])
@@ -470,3 +447,152 @@ def get_my_jobs(request):
     # tasks = Task.objects.filter(assign_to_id=request.user.id)
     tasks_serlzr = TaskSerializer(tasks, many=True)
     return Response(tasks_serlzr.data, status=200)
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_available_threads(request):
+    # name = request.GET.get('name')
+    threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
+    receivers_list =[]
+    for i in threads:
+        receiver = i.second_person_id if i.first_person_id == request.user.id else i.first_person_id
+        Receiver = AiUser.objects.get(id = receiver)
+        try:profile = Receiver.professional_identity_info.avatar_url
+        except:profile = None
+        data = {'thread_id':i.id}
+        chats = Notification.objects.filter(Q(data=data) & Q(verb='Message'))
+        count = request.user.notifications.filter(Q(data=data) & Q(verb='Message')).unread().count()
+        # try:
+        notification = chats.order_by('-timestamp').first()
+        message = notification.description
+        time = notification.timestamp
+        # except:
+        #     message,time=None,None
+        receivers_list.append({'thread_id':i.id,'receiver':Receiver.fullname,'receiver_id':receiver,'avatar':profile,\
+                                'message':message,'timestamp':time,'unread_count':count})
+    contacts_list = []
+    all_threads = Thread.objects.by_user(user=request.user).all()
+    for thread in all_threads:
+        receiver = thread.second_person_id if thread.first_person_id == request.user.id else thread.first_person_id
+        Receiver = AiUser.objects.get(id = receiver)
+        try:profile = Receiver.professional_identity_info.avatar_url
+        except:profile = None
+        contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'receiver_id':receiver,'avatar':profile})
+    contacts = sorted(contacts_list, key = lambda i: i['receiver'].lower())
+    return JsonResponse({"receivers_list":receivers_list,"contacts_list":contacts})
+
+
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def chat_unread_notifications(request):
+    user = AiUser.objects.get(pk=request.user.id)
+    count = user.notifications.filter(verb='Message').unread().count()
+    notification_details=[]
+    notification=[]
+    notification.append({'total_count':count})
+    # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
+    notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
+            user.notifications.unread().filter(verb='Message').order_by("data",'-timestamp').distinct("data").values('id'))).order_by("-timestamp")
+    for i in notifications:
+       count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
+       sender = AiUser.objects.get(id =i.actor_object_id)
+       try:profile = sender.professional_identity_info.avatar_url
+       except:profile = None
+       notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
+    return JsonResponse({'notifications':notification,'notification_details':notification_details})
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def general_notifications(request):
+    user = AiUser.objects.get(pk=request.user.id)
+    notifications = user.notifications.exclude(verb='Message').unread()
+    count = user.notifications.exclude(verb='Message').unread().count()
+    notification_details=[]
+    notification_details.append({'count':count})
+    for i in notifications:
+        notification_details.append({'message':i.description,'time':i.timestamp,'sender':i.actor.fullname})#'time':i.timesince()
+    return JsonResponse({'notifications':notification_details})
+
+
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
+class CharInFilter(django_filters.BaseInFilter, django_filters.CharFilter):
+    pass
+
+
+class VendorFilterNew(django_filters.FilterSet):
+    year_of_experience =django_filters.NumberFilter(field_name='vendor_info__year_of_experience',lookup_expr='gte')
+    fullname =django_filters.CharFilter(field_name='fullname',lookup_expr='icontains')
+    email = django_filters.CharFilter(field_name='email',lookup_expr='exact')
+    country = django_filters.NumberFilter(field_name='country_id')
+    location = django_filters.CharFilter(field_name='vendor_info__location',lookup_expr='icontains')
+    category = django_filters.CharFilter(field_name='vendor_info__type')
+    class Meta:
+        model = AiUser
+        fields = ('fullname', 'email','year_of_experience','country','location','category',)
+
+
+class GetVendorListViewNew(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = GetVendorListSerializer
+    filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
+    filterset_class = VendorFilterNew
+    page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+
+    def validate(self):
+        data = self.request.GET
+        if (('min_price' in data) or ('max_price' in data) or ('count_unit' in data) or ('currency' in data)):
+            if not (('min_price' in data) and ('max_price' in data) and ('count_unit' in data) and ('currency' in data)):
+                raise ValidationError({"error":"max_price,min_price,count_unit,currency all fields are required"})
+
+
+    def get_queryset(self):
+        self.validate()
+        user = self.request.user
+        job_id= self.request.query_params.get('job')
+        min_price =self.request.query_params.get('min_price')
+        max_price =self.request.query_params.get('max_price')
+        count_unit = self.request.query_params.get('count_unit')
+        currency = self.request.query_params.get('currency')
+        source_lang=self.request.query_params.get('source_lang')
+        target_lang=self.request.query_params.get('target_lang')
+        contenttype = self.request.query_params.get('content')
+        subject=self.request.query_params.get('subject')
+        if job_id:
+            source_lang=Job.objects.get(id=job_id).source_language_id
+            target_lang=Job.objects.get(id=job_id).target_language_id
+        queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
+                    .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
+                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
+        if max_price and min_price and count_unit and currency:
+            ids=[]
+            for i in queryset.values('vendor_lang_pair__id'):
+                ids.append(i.get('vendor_lang_pair__id'))
+            queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_info__currency = currency)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
+        if  contenttype:
+            contentlist = contenttype.split(',')
+            queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=contentlist)&Q(vendor_contentype__deleted_at=None)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
+        if subject:
+            subjectlist=subject.split(',')
+            queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
+        return queryset
+
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_last_messages(request):
+    threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
+    data=[]
+    for i in threads:
+        ins = {'thread_id':i.id}
+        count = request.user.notifications.filter(Q(data=ins) & Q(verb='Message')).unread().count()
+        # print("RR--->",count)
+        obj =  ChatMessage.objects.filter(thread_id = i.id).last()
+        data.append({'thread_id':i.id,'last_message':obj.message,'unread_count':count,'last_timestamp':obj.timestamp})
+    return JsonResponse({"data":data},safe=False)

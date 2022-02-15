@@ -4,17 +4,25 @@ import stripe
 from ai_staff.models import IndianStates,Countries
 from djstripe import webhooks
 from djstripe.models import Customer,Price,Invoice,PaymentIntent
-from djstripe.models.billing import Subscription, TaxRate
+from djstripe.models.billing import Plan, Subscription, TaxRate
 from ai_auth import models
+from ai_auth import forms as auth_forms
 from django.db.models import Q
 from django.utils import timezone
 import calendar
 
-# def add_credits(user,price,data):
-#     pass
+def check_referred(user):
+    try:
+        ss = models.ReferredUsers.objects.get(email=user.email)
+        ref_cred= 18000
+    except models.ReferredUsers.DoesNotExist:
+        ref_cred =0
+    return ref_cred
 
 
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
+    carry = 0
+    referral_credits = 0
     if pack.type=="Subscription":
         if subscription.plan.interval=='year':
             expiry = expiry_yearly_sub(subscription)
@@ -22,24 +30,32 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
             expiry = subscription.current_period_end
         creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
         for credit in creditsls:
+            #check the previous subscription record has unused credits before expiry
+            if credit.ended_at==None and (credit.expiry > timezone.now()):
+                carry = credit.credits_left
             credit.ended_at=timezone.now()
             credit.save()
 
     if pack.type=="Subscription_Trial":
         expiry = subscription.trial_end
+        referral_credits = check_referred(user)
         creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
         for credit in creditsls:
+            #check the previous subscription record has unused credits before expiry
+            if credit.ended_at==None and (credit.expiry > timezone.now()):
+                carry = credit.credits_left
             credit.ended_at=timezone.now()
             credit.save()
 
     if pack.type=="Addon":
         expiry = None
+   
     kwarg = {
     'user':user,
     'stripe_cust_id':cust,
     'price_id':price.id,
-    'buyed_credits':pack.credits*quants,
-    'credits_left':pack.credits*quants,
+    'buyed_credits':(pack.credits*quants)+referral_credits,
+    'credits_left':(pack.credits*quants)+carry+referral_credits,
     'expiry': expiry,
     'paymentintent':payment.id if payment else None,
     'invoice':invoice.id if invoice else None,
@@ -48,8 +64,7 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     }
     us = models.UserCredits.objects.create(**kwarg)
     print(us)
-
-
+ 
 
 @webhooks.handler("payment_intent.succeeded")
 def my_handler(event, **kwargs):
@@ -266,13 +281,36 @@ def my_handler(event, **kwargs):
 
 @webhooks.handler("customer.subscription.updated")
 def my_handler(event, **kwargs):
-    print("**** customer updated *****")
+    print("**** customer subscription updated *****")
     print(event.data)
-    print("**** customer updated   End *****")
-    # stripe.Subscription.modify(
-    # "sub_C6Am1ELc0KQvPV",
-    #  metadata={"order_id": "6735"},
-    # )
+    data = event.data
+    print("**** customer subscription updated   End *****")
+    # subscription_prices = data.get('object').get('items').get('data')[0].get('price')
+    # subscription_id = data.get('object').get('id')
+    # print("subscription prices",subscription_prices)
+    # print("subscription_id",subscription_id)
+    # # customer_id = data.get('object').get('customer')
+    # #price_id = data.get('object').get('items').get('data')[0].get('price').get('id')
+    # try:
+    #     price_id = data.get('object').get('pending_update').get("subscription_items")[0].get("price").get("id")
+
+    # except AttributeError:
+    #     price_id = None
+
+    # sub = Subscription.objects.get(id=subscription_id)
+
+    # if price_id:
+    #     plan=Plan.objects.get(id=price_id)
+    #     print("upcoming_plan",plan.interval)
+    #     if sub.plan.interval == "month" and plan.interval == "year": 
+    #         response = schedule_downgrading_subscription(subscription_id,price_id)
+    #         print("***schedule interval start***")
+    #         print(response)
+    #         print("***schedule interval end***")
+    # # stripe.Subscription.modify(
+    # # "sub_C6Am1ELc0KQvPV",
+    # #  metadata={"order_id": "6735"},
+    # # )
 
 
 def modify_subscription_data(subscription):
@@ -291,8 +329,12 @@ def modify_subscription_data(subscription):
 @webhooks.handler("customer.subscription.trial_will_end")
 def my_handler(event, **kwargs):
     print("**** customer trial_end *****")
+    data = event.data
     print(event.data)
     print("**** customer trial_end   End *****")
+    sub = Subscription.objects.get(id=data.get('object').get('id'))
+    user = sub.customer.subscriber
+    auth_forms.user_trial_end(user=user,sub=sub)
     # stripe.Subscription.modify(
     # "sub_C6Am1ELc0KQvPV",
     #  metadata={"order_id": "6735"},
@@ -414,3 +456,75 @@ def add_months(sourcedate, months):
     day = min(sourcedate.day, calendar.monthrange(year,month)[1])
     sourcedate=sourcedate.replace(year=year,month=month,day=day)
     return sourcedate
+
+
+def subscription_credit_carry(user,invoice):
+
+    pass
+
+
+# def schedule_downgrading_subscription(subscription_id,price_id):
+#     if settings.STRIPE_LIVE_MODE == True :
+#         api_key = settings.STRIPE_LIVE_SECRET_KEY
+#     else:
+#         api_key = settings.STRIPE_TEST_SECRET_KEY
+
+#     stripe.api_key = api_key
+#     sub = Subscription.objects.get(id=subscription_id)
+    
+
+#     schedule_res = stripe.SubscriptionSchedule.create(
+#     from_subscription=sub.id,
+#     )
+ 
+
+#     # stripe.SubscriptionSchedule.retrieve(
+#     # schedule_res.id,
+#     # )
+
+
+#     response = stripe.SubscriptionSchedule.modify(
+#     schedule_res.id,
+#     end_behavior= "release",
+#     proration_behavior = None,
+#     phases=[
+#         {
+#         'items': [
+#             {'price':  sub.plan.id },
+#         ],
+#         'start_date':int(sub.current_period_start.timestamp()),
+#         'end_date': int(sub.current_period_end.timestamp()),
+#         },
+#         {
+#         'items': [
+#             {'price': price_id},
+#         ],
+#         },
+#     ],
+#     )
+
+#     return response
+ 
+def renew_user_credits_yearly(subscription):
+    pack = models.CreditPack.objects.get(product=subscription.plan.product,type='Subscription')
+    prev_cp = models.UserCredits.objects.filter(user=subscription.customer.subscriber,credit_pack_type='Subscription',price_id=subscription.plan.id,ended_at=None).last()
+    expiry = expiry_yearly_sub(subscription)
+    creditsls= models.UserCredits.objects.filter(user=subscription.customer.subscriber).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
+    for credit in creditsls:
+        credit.ended_at=timezone.now()
+        credit.save()
+
+    kwarg = {
+    'user':subscription.customer.subscriber,
+    'stripe_cust_id':subscription.customer,
+    'price_id':subscription.plan.id,
+    'buyed_credits':pack.credits,
+    'credits_left':pack.credits,
+    'expiry': expiry,
+    'paymentintent':prev_cp.paymentintent,
+    'invoice':prev_cp.invoice,
+    'credit_pack_type': pack.type,
+    'ended_at': None
+    }
+    us = models.UserCredits.objects.create(**kwarg)
+    print(us)

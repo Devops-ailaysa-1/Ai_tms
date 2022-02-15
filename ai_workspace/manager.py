@@ -30,10 +30,12 @@ class AilzaManager(BaseUserManager):
 
 class ProjectManager(models.Manager):
     def create_and_jobs_files_bulk_create(self,\
-            data, files_key, jobs_key, f_klass, j_klass, ai_user):
+            data, files_key, jobs_key, f_klass, j_klass,\
+            ai_user, team, project_manager, created_by):
         files_data = data.pop(files_key)
         jobs_data = data.pop(jobs_key)
-        project = self.create(**data, ai_user=ai_user)
+        project = self.create(**data, ai_user=ai_user,project_manager=project_manager,\
+                                team=team,created_by=created_by)
         return self.create_and_jobs_files_bulk_create_for_project(
             project, files_data, jobs_data, f_klass, j_klass
         )
@@ -71,15 +73,13 @@ class TaskManager(models.Manager):
         if not assign_to:
             raise ValueError("You should send parameter either project "
                              "object or assign_to user")
-                                                                    # POSTEDIT
-        tasks = [self.get_or_create(file=file, job=job, assign_to=assign_to,\
-                    version_id=1) for file in files for job in jobs]
-
+        tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
         return tasks
 
     def create_tasks_of_files_and_jobs_by_project(self, project):
         files = project.project_files_set.all()
         jobs = project.project_jobs_set.all()
+        print(files,jobs,project)
         return self.create_tasks_of_files_and_jobs(
             files=files, jobs=jobs, klass=None, project=project
         )

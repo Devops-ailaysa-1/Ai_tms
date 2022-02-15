@@ -4,17 +4,46 @@ let send_message_form = $('#send-message-form')
 const USER_ID = $('#logged-in-user').val()
 
 let loc = window.location
-let wsStart = 'ws://'
+let wsStart = 'wss://'
 
 if(loc.protocol === 'https') {
     wsStart = 'wss://'
 }
-let endpoint = wsStart + loc.host + loc.pathname
+let id = '?'+USER_ID
+let endpoint = wsStart + loc.host + loc.pathname+ id
+
+const CHAT_NOTIFICATION_INTERVAL = 4000
 
 var socket = new WebSocket(endpoint)
 
+
+function getUnreadChatNotifications(){
+  // print("get_read")
+  if("{{request.user.is_authenticated}}"){
+    socket.send(JSON.stringify({
+      "command": "get_unread_chat_notifications",
+      // "user":USER_ID
+    }));
+  }
+}
+
+function getAvailableThreads(){
+  // print("get_read")
+  if("{{request.user.is_authenticated}}"){
+    socket.send(JSON.stringify({
+      "command": "get_available_threads",
+    }));
+  }
+}
+
+
 socket.onopen = async function(e){
     console.log('open', e)
+    // send_message_form.on('keyup' ,function (e){
+    //   socket.send(JSON.stringify({
+    //   'typing': 'true',
+    //   }));
+    // })
     send_message_form.on('submit', function (e){
         e.preventDefault()
         let message = input_message.val()
@@ -22,6 +51,7 @@ socket.onopen = async function(e){
         let thread_id = get_active_thread_id()
 
         let data = {
+            'command':'message',
             'message': message,
             'sent_by': USER_ID,
             'send_to': send_to,
@@ -31,6 +61,8 @@ socket.onopen = async function(e){
         socket.send(data)
         $(this)[0].reset()
     })
+//setInterval(getUnreadChatNotifications, CHAT_NOTIFICATION_INTERVAL)
+//setInterval(getAvailableThreads, CHAT_NOTIFICATION_INTERVAL)
 }
 
 socket.onmessage = async function(e){
@@ -49,7 +81,6 @@ socket.onerror = async function(e){
 socket.onclose = async function(e){
     console.log('close', e)
 }
-
 
 function newMessage(message, sent_by_id, thread_id) {
 	if ($.trim(message) === '') {
@@ -97,8 +128,11 @@ $('.contact-li').on('click', function (){
     let chat_id = $(this).attr('chat-id')
     $('.messages-wrapper.is_active').removeClass('is_active')
     $('.messages-wrapper[chat-id="' + chat_id +'"]').addClass('is_active')
-
+    socket.send(JSON.stringify({
+      "command": "mark_messages_read",
+    }));
 })
+
 
 function get_active_other_user_id(){
     let other_user_id = $('.messages-wrapper.is_active').attr('other-user-id')

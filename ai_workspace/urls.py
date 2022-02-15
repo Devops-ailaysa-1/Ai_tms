@@ -4,6 +4,7 @@ from . import api_views, views, tbx_read
 
 router = DefaultRouter() #
 router.register(r"project", api_views.ProjectView, basename="project")
+router.register(r'task_assign_info',api_views.TaskAssignInfoCreateView,basename="task-assign-info")
 router.register(r'job', api_views.JobView, basename="job")
 router.register(r'file', api_views.FileView, basename="file")
 router.register(r"project_setup", api_views.ProjectSetupView, basename="project_setup")
@@ -51,6 +52,13 @@ urlpatterns += [
 	path("task_credit_status_update/<int:doc_id>", api_views.UpdateTaskCreditStatus.as_view(), name="task-credit-update"),
 	path("dashboard_credit_status", api_views.dashboard_credit_status, name="dashboard-credit-status"),
 	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
+	path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
+	path('get_assign_to_list/',api_views.get_assign_to_list),
+	path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
+	path('assign_to/',api_views.AssignToListView.as_view({'get': 'list'}),name='assign-list'),
+	path('tasks_list/',api_views.tasks_list),
+	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
+	path("instruction_file_download/<int:task_assign_info_id>", api_views.instruction_file_download, name="instruction-file-download"),
 ]
 # views urls adding for local testing
 urlpatterns += [

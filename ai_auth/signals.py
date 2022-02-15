@@ -12,6 +12,8 @@ import stripe
 from allauth.account.signals import email_confirmed, password_changed
 from ai_auth import forms as auth_forms
 from django.contrib.sites.shortcuts import get_current_site
+from django.contrib.auth.models import Group
+
 
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
@@ -25,8 +27,26 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
     '''
     if instance.allocated_dir == None:
         instance.allocated_dir = os.path.join(settings.MEDIA_ROOT, str(instance.user.uid))
-        instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)   
+        instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)
 
+
+
+def  vendor_status_send_email(sender, instance, *args, **kwargs):
+    from ai_auth.api_views import subscribe_vendor
+    print("status----->",instance.get_status_display())
+    if instance.get_status_display() == "Accepted":
+       user = auth_model.AiUser.objects.get(email = instance.email)
+       user.is_vendor = True
+       user.save()
+       sub = subscribe_vendor(user)
+       email = instance.email
+       auth_forms.vendor_status_mail(email,instance.get_status_display())
+    elif (instance.get_status_display() == "Waitlisted"):
+       email = instance.email
+       status = instance.get_status_display() #if instance.get_status_display() =="Rejected" else "Held"
+       auth_forms.vendor_status_mail(email,status)
+    elif instance.get_status_display() == "Request Sent":
+       auth_forms.vendor_request_admin_mail(instance)
 
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''
@@ -40,7 +60,7 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 #     if settings.STRIPE_LIVE_MODE == True :
 #         api_key = settings.STRIPE_LIVE_SECRET_KEY
 #     else:
-#         api_key = settings.STRIPE_TEST_SECRET_KEY    
+#         api_key = settings.STRIPE_TEST_SECRET_KEY
 #     try:
 #         customer = Customer.objects.get(subscriber=address.user)
 #     except Customer.DoesNotExist:
@@ -72,7 +92,7 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 #                 coun=staff_model.Countries.objects.get(sortname= stipe_addr['country'])
 #                 kwarg['country']=coun
 
-                
+
 #     if len(kwarg)>0:
 #         if coun!= None:
 #             coun_name=coun.sortname
@@ -81,8 +101,8 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 
 #         response =stripe.Customer.modify(
 #         customer.id,
-#         name = address.name if address.name is not None else address.user.fullname, 
-        
+#         name = address.name if address.name is not None else address.user.fullname,
+
 #         address={
 #         "city": address.city,
 #         "line1": address.line1,
@@ -94,7 +114,11 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
 
 #         )
 #     return response
-
+# def team_create(sender, instance,created, *args, **kwargs):
+#     if created:
+#         teamname = instance.fullname + "'s team"
+#         team =auth_model.Team.objects.get_or_create(name=teamname,owner_id=instance.id)
+#         print("Team Created")
 
 def updated_user_taxid(sender, instance, *args, **kwargs):
     # ss=auth_model.UserTaxInfo.objects.get(id=instance.id)
@@ -111,7 +135,7 @@ def update_user_tax_id(taxid):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
+        api_key = settings.STRIPE_TEST_SECRET_KEY
 
     customer = Customer.objects.get(subscriber=taxid.user)
     stripe.api_key = api_key
@@ -128,7 +152,7 @@ def update_user_tax_id(taxid):
 
 @receiver(email_confirmed)
 def email_confirmed_(request, email_address, **kwargs):
-    user = auth_model.AiUser.objects.get(email=email_address) 
+    user = auth_model.AiUser.objects.get(email=email_address)
     current_site = get_current_site(request)
     auth_forms.send_welcome_mail(current_site,user)
 
@@ -146,7 +170,7 @@ def password_changed_handler(request, user,instance, **kwargs):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
-        api_key = settings.STRIPE_TEST_SECRET_KEY    
+        api_key = settings.STRIPE_TEST_SECRET_KEY
     try:
         customer = Customer.objects.get(subscriber=user)
     except Customer.DoesNotExist:
@@ -158,8 +182,8 @@ def password_changed_handler(request, user,instance, **kwargs):
 
     response =stripe.Customer.modify(
     customer.id,
-    name = instance.name if instance.name is not None else instance.user.fullname, 
-    
+    name = instance.name if instance.name is not None else instance.user.fullname,
+
     address={
     "city": instance.city,
     "line1": instance.line1,
@@ -170,3 +194,22 @@ def password_changed_handler(request, user,instance, **kwargs):
     },
 
     )
+
+def add_internal_member_group(user) -> bool:
+    # add a user into member group
+    internal_group = Group.objects.get_or_create(name = 'internal_members')[0]
+    internal_group.user_set.add(user)
+    return True
+
+def update_internal_member_status(sender, instance, *args, **kwargs):
+    if instance.is_internal_member:
+        if instance.last_login:
+            obj = auth_model.InternalMember.objects.get(internal_member = instance)
+            obj.status = 2
+            obj.save()
+            # add_internal_member_group(user=instance.internal_member)
+            print("status updated")
+
+
+
+# def updated_user_taxid(sender, instance, *args, **kwargs):

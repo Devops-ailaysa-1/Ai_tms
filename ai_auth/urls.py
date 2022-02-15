@@ -23,6 +23,9 @@ router.register(r'aiuser-profile',api_views.AiUserProfileView,basename="aiuser-p
 router.register(r'carrier-support',api_views.CarrierSupportCreateView,basename="carrier-support")
 router.register(r'general-support',api_views.GeneralSupportCreateView,basename="general-support")
 router.register(r'vendor-onboarding',api_views.VendorOnboardingCreateView,basename="vendor-onboarding")
+router.register(r'team',api_views.TeamCreateView,basename="team")
+router.register(r'internal-member',api_views.InternalMemberCreateView,basename="internal-member")
+router.register(r'hired-editor',api_views.HiredEditorsCreateView,basename="hired-editor")
 
 
 urlpatterns = router.urls
@@ -51,6 +54,20 @@ urlpatterns+= [
      path('deactivate-account/',api_views.account_deactivation),
      path('activate-account/',api_views.account_activation),
      path('delete-account/',api_views.account_delete),
+     path('accept/',api_views.invite_accept,name='accept'),
+     path('teamlist/',api_views.teams_list),
+     path('transaction-info/',api_views.TransactionSessionInfo),
+     path('user-referral/',api_views.referral_users),
+     path('get_team_name/',api_views.get_team_name),
+     path('vendor_form_filling_status/',api_views.vendor_form_filling_status),
+     path('vendor_renewal/',api_views.vendor_renewal),
+     path('confirm/',api_views.vendor_renewal_invite_accept,name='confirm'),
+     path('replace_password/',api_views.change_old_password,name='replace-password'),
+     path('vendor_renewal_change/',api_views.vendor_renewal_change),
+
+     #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")
+     # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
+     # path('external-member-invite/',api_views.external_member_invite),
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
 ]

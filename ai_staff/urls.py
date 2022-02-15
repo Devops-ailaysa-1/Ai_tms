@@ -14,7 +14,8 @@ router.register(r'addon_details',api_views.CreditsAddonsCreateView,basename='add
 router.register(r'indian-states',api_views.IndianStatesView,basename='indian-states')
 router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax-ids')
 router.register(r'general-support-topics',api_views.SupportTopicsView,basename='general-support-topics')
-router.register(r'job-positions',api_views.JobPositionsView,basename='stripe-tax-ids')
+router.register(r'job-positions',api_views.JobPositionsView,basename='job-positions')
+router.register(r'roles',api_views.TeamRoleView,basename='team-role')
 urlpatterns = router.urls
 
 urlpatterns += [

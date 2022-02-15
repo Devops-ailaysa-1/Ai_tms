@@ -1,17 +1,22 @@
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
 from rest_framework import serializers
-from ai_workspace.models import  Project, Job, File, ProjectContentType, Tbxfiles,\
+from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,TaskAssignHistory,TaskDetails
 import json
-import pickle
+import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from ai_marketplace.models import AvailableVendors
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
-from ai_auth.models import AiUser
+from ai_auth.models import AiUser,Team,HiredEditors
 from ai_auth.validators import project_file_size
+from django.db.models import Q
+from ai_workspace_okapi.models import Document
+from ai_auth.serializers import InternalMemberSerializer,HiredEditorSerializer
+from ai_vendor.models import VendorLanguagePair
+from django.db.models import OuterRef, Subquery
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -95,7 +100,8 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("project_name","jobs", "files", "files_jobs_choice_url", "id", "progress", "files_count", "tasks_count")
+		fields = ("project_name","jobs", "files", "files_jobs_choice_url",
+					"id", "progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", ) #"project_analysis"
 
 	def to_internal_value(self, data):
 		source_language = json.loads(data.pop("source_language", "0"))
@@ -110,8 +116,6 @@ class ProjectSetupSerializer(serializers.ModelSerializer):
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 		print("F------>",data.get('files'))
 		return super().to_internal_value(data=data)
-
-
 
 	def create(self, validated_data):
 		ai_user = self.context["request"].user
@@ -159,7 +163,7 @@ class ProjectCreationSerializer(serializers.ModelSerializer):
 			}
 		}
 	def run_validation(self, data):
-		print("run_validation")
+		# print("run_validation")
 		return super().run_validation(data=data)
 
 	def to_representation(self, instance):
@@ -295,17 +299,17 @@ class TaskSerializer(serializers.ModelSerializer):
 				fields=['file', 'job', 'version']
 			)
 		]
-	def run_validation(self,data):
-		if self.context['request']._request.method == 'POST':
-			assign_to = int(self.context.get("assign_to"))
-			print(assign_to)
-			customer_id = self.context.get("customer")
-			print(customer_id)
-			if assign_to != customer_id:
-				vendors = AvailableVendors.objects.filter(customer_id = customer_id).values_list('vendor_id',flat = True)
-				if assign_to not in (list(vendors)):
-					raise serializers.ValidationError({"message":"This vendor is not hired vendor for customer"})
-		return super().run_validation(data)
+	# def run_validation(self,data):
+	# 	if self.context['request']._request.method == 'POST':
+	# 		assign_to = int(self.context.get("assign_to"))
+	# 		print(assign_to)
+	# 		customer_id = self.context.get("customer")
+	# 		print(customer_id)
+	# 		if assign_to != customer_id:
+	# 			vendors = AvailableVendors.objects.filter(customer_id = customer_id).values_list('vendor_id',flat = True)
+	# 			if assign_to not in (list(vendors)):
+	# 				raise serializers.ValidationError({"message":"This vendor is not hired vendor for customer"})
+	# 	return super().run_validation(data)
 
 
 	def to_internal_value(self, data):
@@ -394,52 +398,186 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
-	# ai_user = serializers.IntegerField(required=False)
+	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
+	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
+	assign_enable = serializers.SerializerMethodField(method_name='check_role')
+	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name", "jobs", "files")#,'ai_user')
+		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist",)
+	# class Meta:
+	# 	model = Project
+	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
+	# 	 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )# "project_analysis",)#,'ai_user')
+
+	def run_validation(self,data):
+		if data.get('target_languages')!=None:
+			comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
+			if True in comparisons:
+				raise serializers.ValidationError({"msg":"source and target languages should not be same"})
+		return super().run_validation(data)
 
 	def to_internal_value(self, data):
+		print("DTATA------>",data)
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
-		print("files-->",data['files'])
+		# print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-
+		# data['team'] = data.get('team',[None])[0]
+		data['team_exist'] = data.get('team',[None])[0]
+		# # data['project_manager_id'] = data.get('project_manager')
 		return super().to_internal_value(data=data)
 
+	def get_project_analysis(self,instance):
+		user = self.context.get("request").user if self.context.get("request")!=None else self.context.get("ai_user", None)
+		if instance.ai_user == user:
+			tasks = instance.get_tasks
+		elif instance.team:
+			if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+				tasks = instance.get_tasks
+			else:
+				tasks = [task for job in instance.project_jobs_set.all() for task \
+						in job.job_tasks_set.all().filter(assign_to_id = user)]
+		else:
+			tasks = [task for job in instance.project_jobs_set.all() for task \
+						in job.job_tasks_set.all().filter(assign_to_id = user)]
+		res = instance.project_analysis(tasks)
+		return res
+
+	def check_role(self, instance):
+		if self.context.get("request")!=None:
+			user = self.context.get("request").user
+		else:user = self.context.get("ai_user", None)
+		if instance.team :
+			return True if ((instance.team.owner == user)\
+				or(instance.team.internal_member_team_info.all().\
+				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+				or(instance.team.owner.user_info.all()\
+				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+				else False
+		else:
+			return True if ((instance.ai_user == user) or\
+			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+			else False
 
 	def create(self, validated_data):
-		print("data-->",validated_data)
 		if self.context.get("request")!=None:
-			ai_user = self.context.get("request", None).user
+			created_by = self.context.get("request", None).user
 		else:
-		 	ai_user = self.context.get("ai_user", None)
+		 	created_by = self.context.get("ai_user", None)
+		if created_by.team:ai_user = created_by.team.owner
+		else:ai_user = created_by
+		team = created_by.team if created_by.team else None
+		project_manager = created_by
+		validated_data.pop('team_exist')
+		print("validated_data---->",validated_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
-			f_klass=File,j_klass=Job, ai_user=ai_user)
+			f_klass=File,j_klass=Job, ai_user=ai_user,\
+			team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
 
 		tasks = Task.objects.create_tasks_of_files_and_jobs(
 			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
 		return  project
 
 	def update(self, instance, validated_data):
+		if validated_data.get('project_name'):
+			instance.project_name = validated_data.get("project_name",\
+									instance.project_name)
+			instance.save()
 
-		instance.project_name = validated_data.get("project_name",\
-								instance.project_name)
-		instance.save()
+		if 'team_exist' in validated_data:
+			instance.team_id = None if validated_data.get('team_exist') == False else instance.ai_user.team.id
+			instance.save()
+
+		if validated_data.get('project_manager_id'):
+			instance.project_manager_id = validated_data.get('project_manager_id')
+			instance.save()
 
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
-
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
-
-		files_data, jobs_data, f_klass=File, j_klass=Job)
+								files_data, jobs_data, f_klass=File, j_klass=Job)
 		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 			project=project)  # For self assign quick setup run)
-
 		return  project
+
+class TaskAssignInfoSerializer(serializers.ModelSerializer):
+    assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
+    tasks = serializers.ListField(required=False)
+    # assigned_by_name = serializers.ReadOnlyField(source='assigned_by.fullname')
+    assign_to_details = serializers.SerializerMethodField()
+    assigned_by_details = serializers.SerializerMethodField()
+    job = serializers.ReadOnlyField(source='task.job.id')
+    project = serializers.ReadOnlyField(source='task.job.project.id')
+    instruction_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
+    # assigned_to_name = serializers.ReadOnlyField(source='task.assign_to.fullname')
+    # assigned_by = serializers.CharField(required=False,read_only=True)
+    class Meta:
+        model = TaskAssignInfo
+        fields = ('id','instruction','instruction_file','filename',\
+                   'job','project','assigned_by','assignment_id','deadline',\
+                   'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
+                    'total_word_count','assign_to_details','assigned_by_details',)
+        extra_kwargs = {
+            'assigned_by':{'write_only':True},
+            # 'assign_to':{'write_only':True}
+             }
+
+    def get_assign_to_details(self,instance):
+	    if instance.task.assign_to:
+	        email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
+	        try:avatar = instance.task.assign_to.professional_identity_info.avatar_url
+	        except:avatar = None
+	        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email,"avatar":avatar}
+
+    def get_assigned_by_details(self,instance):
+        if instance.assigned_by:
+            return {"id":instance.assigned_by_id,"name":instance.assigned_by.fullname,"email":instance.assigned_by.email}
+
+
+
+
+    def run_validation(self, data):
+        if data.get('assign_to'):
+           data["assign_to"] = json.loads(data["assign_to"])
+        if data.get('task') and self.context['request']._request.method=='POST':
+           data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
+        else:
+           data['tasks'] = [json.loads(data.pop('task'))]
+        # print(data['tasks'])
+        data['assigned_by'] = self.context['request'].user.id
+        # print("validated data run validation----->",data)
+        return super().run_validation(data)
+
+
+    def create(self, data):
+        # print('validated data==>',data)
+        task_list = data.pop('tasks')
+        assign_to = data.pop('assign_to')
+        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
+        task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
+        return task_assign_info
+
+    def update(self,instance,data):
+        if 'assign_to' in data:
+            task = Task.objects.get(id = instance.task_id)
+            segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
+            task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
+            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
+        return super().update(instance, data)
+
+    # def to_representation(self, instance):
+    #     data = super().to_representation(instance)
+    #     print(instance)
+    #     data["assign_to"] = instance.task.assign_to.id
+    #     # data['assigned_by'] = instance.task.job.project.ai_user.fullname
+    #     return data
+
 
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
@@ -451,12 +589,25 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
+	task_assign_info = TaskAssignInfoSerializer(required=False)
+	task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
+	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
+	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
 
 	class Meta:
 		model = Task
 		fields = \
-			("filename", "source_language", "target_language", "project_name",\
-			"document_url", "progress")
+			("id","filename", "source_language", "target_language", "project_name",\
+			"document_url", "progress","task_assign_info","task_word_count",)
+
+	def get_task_word_count(self,instance):
+		if instance.document_id:
+			document = Document.objects.get(id = instance.document_id)
+			return document.total_word_count
+		else:
+			t = TaskDetails.objects.get(task_id = instance.id)
+			return t.task_word_count
+
 
 class ProjectSerializerV2(serializers.ModelSerializer):
 	class Meta:
@@ -508,3 +659,149 @@ class TaskCreditStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskCreditStatus
         fields = "__all__"
+
+
+# class TaskAssignInfoSerializer(serializers.ModelSerializer):
+#     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
+#     tasks = serializers.ListField(required=False)
+#     class Meta:
+#         model = TaskAssignInfo
+#         fields = ('id','instruction','reference_file','assignment_id','deadline','assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','total_word_count')
+#
+#     def run_validation(self, data):
+#         if data.get('assign_to'):
+#            data["assign_to"] = json.loads(data["assign_to"])
+#         if data.get('task') and self.context['request']._request.method=='POST':
+#            data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
+#         else:
+#            data['tasks'] = [json.loads(data.pop('task'))]
+#         print(data['tasks'])
+#         print("validated data run validation----->",data)
+#         return super().run_validation(data)
+#
+#     def create(self, data):
+#         print('validated data==>',data)
+#         task_list = data.pop('tasks')
+#         assign_to = data.pop('assign_to')
+#         task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
+#         task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
+#         return task_assign_info
+#
+#     def update(self,instance,data):
+#         if 'assign_to' in data:
+#             task = Task.objects.get(id = instance.task_id)
+#             segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
+#             task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
+#             task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
+#         return super().update(instance, data)
+
+class TaskDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskDetails
+        fields = "__all__"
+
+
+# class TasklistSerializer(TaskSerializer):
+# 	task_assign_info = TaskAssignInfoSerializer(required=False)
+# 	class Meta(TaskSerializer.Meta):
+# 		fields = ("task_assign_info",)
+
+
+
+
+
+
+class ProjectListSerializer(serializers.ModelSerializer):
+	assign_enable = serializers.SerializerMethodField(method_name='check_role')
+
+	class Meta:
+		model = Project
+		fields = ("id", "project_name","assign_enable","files_jobs_choice_url", )
+
+
+	def check_role(self, instance):
+		if self.context.get("request")!=None:
+			user = self.context.get("request").user
+		else:user = self.context.get("ai_user", None)
+		if instance.team :
+			return True if ((instance.team.owner == user)\
+				or(instance.team.internal_member_team_info.all().\
+				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
+				or(instance.team.owner.user_info.all()\
+				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+				else False
+		else:
+			return True if ((instance.ai_user == user) or\
+			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
+			else False
+
+
+class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
+	source_lang = serializers.ReadOnlyField(source = 'source_lang.language')
+	target_lang = serializers.ReadOnlyField(source = 'target_lang.language')
+	class Meta:
+		model = VendorLanguagePair
+		fields = ('source_lang','target_lang',)
+
+class HiredEditorDetailSerializer(serializers.Serializer):
+	name = serializers.ReadOnlyField(source='hired_editor.fullname')
+	id = serializers.ReadOnlyField(source='hired_editor_id')
+	status = serializers.ReadOnlyField(source='get_status_display')
+	avatar= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
+	vendor_lang_pair = serializers.SerializerMethodField()
+
+	def get_vendor_lang_pair(self,obj):
+		request = self.context['request']
+		job_id= request.query_params.get('job')
+		project_id= request.query_params.get('project')
+		proj = Project.objects.get(id = project_id)
+		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
+		lang_pair = VendorLanguagePair.objects.none()
+		for i in jobs:
+			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None))
+			lang_pair = lang_pair.union(tr)
+		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
+
+class InternalEditorDetailSerializer(serializers.Serializer):
+	name = serializers.ReadOnlyField(source='internal_member.fullname')
+	id = serializers.ReadOnlyField(source='internal_member_id')
+	status = serializers.ReadOnlyField(source='get_status_display')
+	avatar= serializers.ReadOnlyField(source='internal_member.professional_identity_info.avatar_url')
+	vendor_lang_pair = serializers.SerializerMethodField()
+
+	def get_vendor_lang_pair(self,obj):
+		request = self.context['request']
+		job_id= request.query_params.get('job')
+		project_id= request.query_params.get('project')
+		proj = Project.objects.get(id = project_id)
+		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
+		lang_pair = VendorLanguagePair.objects.none()
+		for i in jobs:
+			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.internal_member_id) &Q(deleted_at=None))
+			lang_pair = lang_pair.union(tr)
+		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
+
+
+
+class GetAssignToSerializer(serializers.Serializer):
+	internal_editors = serializers.SerializerMethodField()
+	external_editors = serializers.SerializerMethodField()
+
+	def get_internal_editors(self,obj):
+		request = self.context['request']
+		if obj.team:
+			team = obj.team.internal_member_team_info.filter(role=2)
+			return InternalEditorDetailSerializer(team,many=True,context={'request': request}).data
+		else:
+			return []
+
+	def get_external_editors(self,obj):
+		request = self.context['request']
+		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+		ser = HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data
+		tt = []
+		for i in ser:
+			if i.get("vendor_lang_pair")!=[]:
+				tt.append(i)
+		return tt
+		# return HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data
