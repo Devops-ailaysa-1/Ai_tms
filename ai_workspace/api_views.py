@@ -24,8 +24,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     GetAssignToSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails, TaskAssignInfo
+from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
+    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails, TaskAssignInfo,TaskAssign)
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -511,7 +511,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         print(self.request.user)
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         return queryset
@@ -597,10 +597,10 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             #     return project.get_tasks
             else:
                 return [task for job in project.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
+                        in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = self.request.user)]
         else:
             return [task for job in project.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
+                    in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = self.request.user)]
 
 
     def get_object(self):
@@ -1153,7 +1153,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     def list(self,request):
         tasks = request.GET.getlist('tasks')
-        # print(tasks)
         try:
             task_assign_info = TaskAssignInfo.objects.filter(task_id__in = tasks)
         except TaskAssignInfo.DoesNotExist:
@@ -1164,13 +1163,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        file=request.FILES.get('instruction_file')
+        files=request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         Receiver = AiUser.objects.get(id = receiver)
         task = request.POST.getlist('task')
         tasks= [json.loads(i) for i in task]
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'files':files,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             msg_send(sender,Receiver,tasks[0])
@@ -1180,14 +1179,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     def update(self, request,pk=None):
         task = request.POST.getlist('task')
-        file = request.FILES.get('instruction_file')
+        step = request.POST.get('step')
+        file = request.FILES.getlist('instruction_file')
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
         for i in task:
             try:
-                task_assign_info = TaskAssignInfo.objects.get(task_id = i)
+                task_assign = TaskAssign.objects.get(Q(task_id = i) & Q(step_id = step))
+                task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
                 if file:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
+                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
                 else:
                     serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
                 if serializer.is_valid():

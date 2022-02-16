@@ -16,6 +16,8 @@ router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax
 router.register(r'general-support-topics',api_views.SupportTopicsView,basename='general-support-topics')
 router.register(r'job-positions',api_views.JobPositionsView,basename='job-positions')
 router.register(r'roles',api_views.TeamRoleView,basename='team-role')
+router.register(r'steps',api_views.StepsView,basename='steps')
+router.register(r'workflows',api_views.WorkflowsView,basename='workflows')
 urlpatterns = router.urls
 
 urlpatterns += [

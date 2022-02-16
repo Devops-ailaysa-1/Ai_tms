@@ -406,3 +406,23 @@ class OldVendorPasswords(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class Steps(models.Model):
+    name = models.CharField(max_length=191)
+    short_name = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class Workflows(models.Model):
+    name = models.CharField(max_length=191)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class WorkflowSteps(models.Model):
+    workflow = models.ForeignKey(Workflows,on_delete=models.CASCADE,blank=True,null=True,related_name='workflow')
+    steps = models.ForeignKey(Steps,on_delete=models.CASCADE,blank=True,null=True,related_name='step')
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)    

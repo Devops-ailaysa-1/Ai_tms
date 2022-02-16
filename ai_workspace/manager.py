@@ -65,7 +65,7 @@ class JobManager(models.Manager):
 
 class TaskManager(models.Manager):
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
-        assign_to=None,  project = None):
+          project = None):
 
         if hasattr(project, "ai_user"):
             assign_to = project.ai_user
@@ -73,8 +73,10 @@ class TaskManager(models.Manager):
         if not assign_to:
             raise ValueError("You should send parameter either project "
                              "object or assign_to user")
-        tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
+        # tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
+        tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
         return tasks
+
 
     def create_tasks_of_files_and_jobs_by_project(self, project):
         files = project.project_files_set.all()
@@ -83,3 +85,14 @@ class TaskManager(models.Manager):
         return self.create_tasks_of_files_and_jobs(
             files=files, jobs=jobs, klass=None, project=project
         )
+
+class TaskAssignManager(models.Manager):
+
+    def assign_task(self,steps,project):
+        if hasattr(project, "ai_user"):
+            assign_to = project.ai_user
+        tasks = project.get_tasks
+        print("Inside Manager---------->",tasks)
+        print("Inside---->",steps)
+        task_assign = [self.get_or_create(task=task,step=step,defaults = {"assign_to": assign_to,"status":1}) for task in tasks for step in steps]
+        return task_assign

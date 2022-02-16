@@ -4,7 +4,7 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role
+from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role,Steps
 from django.db.models.signals import post_save, pre_save
 from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email
 from django.contrib.auth.models import Permission, User

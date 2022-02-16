@@ -14,7 +14,7 @@ from django.contrib.auth import settings
 import os, re,time
 from ai_auth.models import AiUser,Team,HiredEditors
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
-    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
+    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,Steps,Workflows
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document, Segment
 from ai_staff.models import ParanoidModel
@@ -32,7 +32,7 @@ from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
     check_job_file_version_has_same_project,)
 from .manager import ProjectManager, FileManager, JobManager,\
-    TaskManager
+    TaskManager,TaskAssignManager
 from django.db.models.fields import Field
 
 def set_pentm_dir(instance):
@@ -86,6 +86,7 @@ class Project(models.Model):
         on_delete=models.CASCADE, related_name="proj_mt_engine")
     threshold = models.IntegerField(default=85)
     max_hits = models.IntegerField(default=5)
+    workflows = models.ForeignKey(Workflows,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_workflow')
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
     project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
@@ -560,16 +561,12 @@ class Task(models.Model):
             related_name="file_tasks_set")
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
             related_name="job_tasks_set")
-    version = models.ForeignKey(Version, on_delete=models.CASCADE, null=False, blank=False,
-            related_name="version_tasks_set")
-    assign_to = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True,
-            related_name="user_tasks_set")
     document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['file', 'job', 'version'], name=\
-                'file, job, version combination unique'),
+            models.UniqueConstraint(fields=['file', 'job'], name=\
+                'file, job combination unique'),
         ]
 
     objects = TaskManager()
@@ -605,15 +602,34 @@ pre_save.connect(check_job_file_version_has_same_project, sender=Task)
 
 
 def ref_file_upload_path(instance, filename):
-    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,\
+    file_path = os.path.join(instance.task_assign_info.task_assign.task.job.project.ai_user.uid,instance.task_assign_info.task_assign.task.job.project.ai_project_id,\
             "references", filename)
     return file_path
 
+
+class TaskAssign(models.Model):
+    YET_TO_START = 1
+    IN_PROGRESS = 2
+    COMPLETED = 3
+    STATUS_CHOICES = [
+        (YET_TO_START,'Yet to start'),
+        (IN_PROGRESS, 'In Progress'),
+        (COMPLETED, 'Completed'),
+    ]
+    task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
+            related_name="task_info")
+    step = models.ForeignKey(Steps,on_delete=models.CASCADE, null=False, blank=False,
+            related_name="task_step")
+    assign_to = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True,
+            related_name="user_tasks_set")
+    status = models.IntegerField(choices=STATUS_CHOICES)
+
+    objects = TaskAssignManager()
+
 class TaskAssignInfo(models.Model):
-    task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
+    task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
-    instruction_file = models.FileField (upload_to=ref_file_upload_path,blank=True, null=True)
     assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)
@@ -625,18 +641,25 @@ class TaskAssignInfo(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
-            self.assignment_id = self.task.job.project.ai_project_id+"t"+str(TaskAssignInfo.objects.filter(task=self.task).count()+1)
+            self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
         super().save()
 
-    @property
-    def filename(self):
-        try:
-            return  os.path.basename(self.instruction_file.file.name)
-        except:
-            return None
+    # @property
+    # def filename(self):
+    #     try:
+    #         return  os.path.basename(self.instruction_file.file.name)
+    #     except:
+    #         return None
+
+
+class Instructionfiles(models.Model):
+    instruction_file = models.FileField (upload_to=ref_file_upload_path,blank=True, null=True)
+    task_assign_info = models.ForeignKey("TaskAssignInfo", null=True, blank=True,\
+            on_delete=models.CASCADE,related_name='task_assign_instruction_file')
+
 
 class TaskAssignHistory(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,
+    task_assign = models.ForeignKey(TaskAssign, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_history")
     previous_assign = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=False, blank=False)
     task_segment_confirmed = models.IntegerField(null=True, blank=True)

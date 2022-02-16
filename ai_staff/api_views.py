@@ -12,14 +12,14 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
-                    IndianStates,SupportTopics,JobPositions,Role)
+                    IndianStates,SupportTopics,JobPositions,Role,Steps,Workflows)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
-                         SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer)
+                         SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,StepsSerializer,WorkflowsSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -753,3 +753,19 @@ class TeamRoleView(viewsets.ViewSet):
         role = get_object_or_404(queryset, pk=pk)
         role.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StepsView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = Steps.objects.all()
+        serializer = StepsSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class WorkflowsView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = Workflows.objects.all()
+        serializer = WorkflowsSerializer(queryset,many=True)
+        return Response(serializer.data)

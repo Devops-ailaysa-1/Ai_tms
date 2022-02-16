@@ -1,9 +1,10 @@
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
-from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
+from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, Workflows, Steps, WorkflowSteps
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,TaskAssignHistory,TaskDetails
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,\
+		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles
 import json
 import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -283,21 +284,21 @@ class TaskSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = ("source_file_path", "source_language",
 				  "target_language", "document_url","filename",
-				  "file", "job", "version", "assign_to", 'output_file_path',
+				  "file", "job",'output_file_path',
 				  "source_language_id", "target_language_id", "extension", "processor_name"
 				  )
 
 		extra_kwargs = {
 			"file":{"write_only": True},
 			"job": {"write_only": True},
-			"version": {"write_only": True},
-			"assign_to": {"write_only": True},
+			# "version": {"write_only": True},
+			# "assign_to": {"write_only": True},
 		}
 
 		validators = [
 			UniqueTogetherValidator(
 				queryset=Task.objects.all(),
-				fields=['file', 'job', 'version']
+				fields=['file', 'job']#, 'version']
 			)
 		]
 	# def run_validation(self,data):
@@ -313,10 +314,10 @@ class TaskSerializer(serializers.ModelSerializer):
 	# 	return super().run_validation(data)
 
 
-	def to_internal_value(self, data):
-		data["version"] = 1
-		data["assign_to"] = self.context.get("assign_to", None)
-		return super().to_internal_value(data=data)
+	# def to_internal_value(self, data):
+	# 	data["version"] = 1
+	# 	data["assign_to"] = self.context.get("assign_to", None)
+	# 	return super().to_internal_value(data=data)
 
 	def to_representation(self, instance):
 		representation = super().to_representation(instance)
@@ -400,6 +401,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
+	workflow = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),required=False,allow_null=True, write_only=True)
 	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
@@ -407,7 +409,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
+		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist",)
 	# class Meta:
 	# 	model = Project
@@ -424,6 +426,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def to_internal_value(self, data):
 		print("DTATA------>",data)
 		data["project_name"] = data.get("project_name", [None])[0]
+		data['workflow'] = data.get('workflow',[None])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
 		# print("files-->",data['files'])
@@ -474,6 +477,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:ai_user = created_by
 		team = created_by.team if created_by.team else None
 		project_manager = created_by
+		workflow = validated_data.pop('workflow')
 		validated_data.pop('team_exist')
 		print("validated_data---->",validated_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
@@ -481,8 +485,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			f_klass=File,j_klass=Job, ai_user=ai_user,\
 			team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
 
+		steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]#need to include custom workflows
+		print("STEP---->",steps)
 		tasks = Task.objects.create_tasks_of_files_and_jobs(
-			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
+			files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
+		print("Tasks----->",project.get_tasks)
+		if steps:
+			task_assign = TaskAssign.objects.assign_task(steps=steps,project=project)
 		return  project
 
 	def update(self, instance, validated_data):
@@ -507,20 +516,29 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			project=project)  # For self assign quick setup run)
 		return  project
 
+
+class InstructionfilesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Instructionfiles
+        fields = "__all__"
+
+
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
+    step = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     # assigned_by_name = serializers.ReadOnlyField(source='assigned_by.fullname')
     assign_to_details = serializers.SerializerMethodField()
     assigned_by_details = serializers.SerializerMethodField()
     job = serializers.ReadOnlyField(source='task.job.id')
     project = serializers.ReadOnlyField(source='task.job.project.id')
-    instruction_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
+    files = InstructionfilesSerializer(many=True,required=False)
+    # instruction_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
     # assigned_to_name = serializers.ReadOnlyField(source='task.assign_to.fullname')
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_file','filename',\
+        fields = ('id','instruction','files','step',\
                    'job','project','assigned_by','assignment_id','deadline',\
                    'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
                     'total_word_count','assign_to_details','assigned_by_details',)
@@ -546,30 +564,41 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     def run_validation(self, data):
         if data.get('assign_to'):
            data["assign_to"] = json.loads(data["assign_to"])
+        if data.get('step'):
+           data["step"] = json.loads(data["step"])
         if data.get('task') and self.context['request']._request.method=='POST':
            data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
         else:
            data['tasks'] = [json.loads(data.pop('task'))]
-        # print(data['tasks'])
+        if data.get('files'):
+        	data['files'] = [{'instruction_file':file} for file in data['files']]
         data['assigned_by'] = self.context['request'].user.id
-        # print("validated data run validation----->",data)
+        print("validated data run validation----->",data)
         return super().run_validation(data)
 
 
     def create(self, data):
-        # print('validated data==>',data)
+        print('validated data==>',data)
         task_list = data.pop('tasks')
+        step = data.pop('step')
         assign_to = data.pop('assign_to')
-        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
-        task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
+        files = data.pop('files')
+        task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step)) for task in task_list]
+        task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
+        [Instructionfiles.objects.create(**instruction_file,task_assign_info = assign) for instruction_file in files for assign in task_assign_info]
+        task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(assign_to_id = assign_to) for task in task_list]
         return task_assign_info
 
     def update(self,instance,data):
+        # data.pop('files')
         if 'assign_to' in data:
-            task = Task.objects.get(id = instance.task_id)
+            step = data.get('step')
+            print("STEP---->",step)
+            task = Task.objects.get(id = instance.task_assign.task.id)
+            task_assign = TaskAssign.objects.get(Q(task = task) & Q(step_id = step))
             segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
-            task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
-            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
+            task_info = TaskAssign.objects.filter(Q(task_id = instance.task_assign.task.id) & Q(step_id = step)).update(assign_to = data.get('assign_to'))
+            task_history = TaskAssignHistory.objects.create(task_assign_id =instance.task_assign_id,previous_assign_id=task_assign.assign_to_id,task_segment_confirmed=segment_count)
         return super().update(instance, data)
 
     # def to_representation(self, instance):
