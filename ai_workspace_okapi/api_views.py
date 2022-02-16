@@ -494,21 +494,11 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),})
 
         if settings.USE_SPACES:
-            session = boto3.session.Session()
-            client = session.client(
-                's3',
-                region_name='ams3',
-                endpoint_url='https://ailaysa.ams3.digitaloceanspaces.com',
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            )
-
             with open(task_data["output_file_path"], "rb") as f:
-                print("Spaces file path---->", File.get_aws_file_path(task_data["output_file_path"]))
-                obj = client.put_object(
-                    Bucket='media',
-                    Key=File.get_aws_file_path(task_data["output_file_path"]),
-                    Body=f.read())
+                # print("file path---->", File.get_aws_file_path(task_data["output_file_path"]))
+                # uploading the f stream content to file
+                SpacesService.put_object(output_file_path=File
+                                         .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
 
         return res
 

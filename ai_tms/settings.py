@@ -117,6 +117,7 @@ INSTALLED_APPS = [
     'ai_workspace',
     "ai_workspace_okapi",
     "integerations.github_",
+    "integerations.gitlab_",
     "controller",
     'django_extensions',
     'sqlite3',

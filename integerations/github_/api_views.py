@@ -21,13 +21,14 @@ from .serializers import GithubOAuthTokenSerializer, RepositorySerializer,\
     FileSerializer, JobSerializer, JobDataPrepareSerializer, FileDataPrepareSerializer,\
     GithubHookSerializerD1, GithubHookSerializerD2, HookDeckCallSerializer, \
     HookDeckResponseSerializer, HookDeckSerializer
-from .models import GithubOAuthToken, Repository, FetchInfo, Branch, ContentFile, HookDeck,\
+from .models import GithubApp, Repository, FetchInfo, Branch, ContentFile, HookDeck,\
     DownloadProject
 from .utils import DjRestUtils
 from .tasks import update_files
 from guardian.shortcuts import get_objects_for_user
 from ai_workspace.models import Project, Task
 from ai_auth.models import AiUser
+from .enums import APP_NAME, DJ_APP_NAME
 
 import pytz, pickle,sys
 from io import BytesIO
@@ -95,8 +96,8 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         print("checked")
-        return request.user.has_perm(f"github_.change_"
-            f"{obj.__class__.__name__.lower()}", obj)
+        return request.user.has_perm(f"{DJ_APP_NAME}.change_"
+            f"{APP_NAME}app", obj)
 
 
 class GithubOAuthTokenViewset(viewsets.ModelViewSet):
@@ -106,7 +107,6 @@ class GithubOAuthTokenViewset(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data.dict()
 
-        print("id---->", request.user.id)
         serlzr_obj = GithubOAuthTokenSerializer(data={**data,
             "ai_user": request.user.id})
 
@@ -117,7 +117,7 @@ class GithubOAuthTokenViewset(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return  get_objects_for_user(self.request.user,
-            'github_.change_githuboauthtoken')
+            f'{DJ_APP_NAME}.change_{APP_NAME}app')
 
 class RepositoryViewset(viewsets.ModelViewSet):
     serializer_class = RepositorySerializer

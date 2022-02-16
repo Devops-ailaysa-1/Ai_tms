@@ -4,6 +4,5 @@ HOOK_PREFIX_NAME = "hook-"
 HOOK_DESTINATION_GITHUB_PREFIX_NAME = "github-"
 GITHUB_PREFIX_NAME = "github-"
 
-
-
-
+APP_NAME = "github"
+DJ_APP_NAME = "github_"

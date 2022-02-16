@@ -5,15 +5,13 @@ from guardian.shortcuts import assign_perm
 
 from ai_auth.models import AiUser
 
-
 from github import Github
 from django.shortcuts import get_object_or_404
 
 from datetime import datetime
 import pytz
 
-
-class IntegerationOAuthToken(models.Model):
+class IntegerationAppBase(models.Model):
     oauth_token = models.CharField(max_length=255,)
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     username = models.CharField(max_length=255)
@@ -24,37 +22,39 @@ class IntegerationOAuthToken(models.Model):
     class Meta:
         abstract = True
         constraints = [models.UniqueConstraint(fields=("ai_user", "username"), \
-            name="Duplicate github usernames not allowed for one ai-user ...")]
+            name="Duplicate app usernames not allowed for one user ...")]
 
         permissions = (
             ('assign_task', 'Assign task'),
         )
 
-    objects = GithubTokenManager()
+    def validate_oauth_token(value):
+        raise ValueError("You should implement in child class")
 
     @property
     def is_token_expired(self):
-        g = Github(self.oauth_token)
-
-        try:
-            g.get_user().login
-            return False
-        except:
-            return True
+        raise ValueError("You should implement in child class")
 
     @property
     def check_username_correct(self):
-        g = Github(self.oauth_token)
-        return g.get_user().login == self.username
+        raise ValueError("You should implement in child class")
 
-@receiver(post_save, sender=GithubOAuthToken)
-def githubtoken_post_save(sender, **kwargs):
-    """
-    Create a Profile instance for all newly created User instances. We only
-    run on user creation to avoid having to check for existence on each call
-    to User.save.
-    """
-    print("signals received----")
-    obj, created = kwargs["instance"], kwargs["created"]
-    if created :
-        assign_perm("change_githuboauthtoken", obj.ai_user, obj)
+    @property
+    def get_app_obj(self):
+        raise ValueError("You should implement in child class")
+
+    def permission_signal(app_name="github"):
+        def githubtoken_post_save(sender, **kwargs):
+            """
+            Create a Profile instance for all newly created User instances. We only
+            run on user creation to avoid having to check for existence on each call
+            to User.save.
+            """
+            print("signals received----")
+            obj, created = kwargs["instance"], kwargs["created"]
+            if created:
+                assign_perm(f"change_{app_name}app", obj.ai_user, obj)
+        return githubtoken_post_save
+
+
+

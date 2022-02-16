@@ -1,6 +1,6 @@
 from rest_framework import serializers
 import json
-from .models import GithubOAuthToken, FetchInfo,\
+from .models import GithubApp, FetchInfo,\
     Repository, Branch, ContentFile, HookDeck
 from ai_workspace.models import  Project, File, Job
 from ai_staff.models import AssetUsageTypes, Languages
@@ -13,7 +13,7 @@ class GithubOAuthTokenSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ("oauth_token", "ai_user", \
                   "is_token_expired", "username", "id")
-        model = GithubOAuthToken
+        model = GithubApp
 
         extra_kwargs = {
             "username": {"read_only": True}}
@@ -34,11 +34,12 @@ class GithubOAuthTokenSerializer(serializers.ModelSerializer):
         username = g.get_user().login
         data["username"] = username
 
-        if GithubOAuthToken.objects.filter(
+        if GithubApp.objects.filter(
             ai_user=data["ai_user"],
             username=username
         ).first():
-            raise ValueError("Already github account registered!!!")
+            raise serializers.ValidationError\
+                ("Already github account registered!!!")
         return super().create(data)
 
 class RepositorySerializer(serializers.ModelSerializer):
@@ -53,7 +54,6 @@ class RepositorySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         data = validated_data
         return super().create(data)
-
 
 class BranchSerializer(serializers.ModelSerializer):
     class Meta:

@@ -6,7 +6,7 @@ from guardian.shortcuts import assign_perm
 from ai_auth.models import AiUser
 from .managers import GithubTokenManager, HookDeckManager
 from .enums import GITHUB_PREFIX_NAME, HOOK_PREFIX_NAME,\
-    HOOK_DESTINATION_GITHUB_PREFIX_NAME
+    HOOK_DESTINATION_GITHUB_PREFIX_NAME, APP_NAME
 
 from github import Github
 from django.shortcuts import get_object_or_404
@@ -23,6 +23,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from django.apps import apps
 from django import forms
+from ..base.models import IntegerationAppBase
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -30,7 +31,8 @@ CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 # last github repo fetch timestamp
 # periodically fetch
 
-class GithubOAuthToken(models.Model):
+class GithubApp(IntegerationAppBase):
+
     def validate_oauth_token(value):
         print("value--->", value)
         g = Github(value)
@@ -48,8 +50,6 @@ class GithubOAuthToken(models.Model):
     created_on = models.DateTimeField(auto_now_add=True, )
     accessed_on =  models.DateTimeField(blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True, )
-
-
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -92,25 +92,29 @@ class GithubOAuthToken(models.Model):
         gh = Github(self.oauth_token)
         return gh
 
-@receiver(post_save, sender=GithubOAuthToken)
-def githubtoken_post_save(sender, **kwargs):
-    """
-    Create a Profile instance for all newly created User instances. We only
-    run on user creation to avoid having to check for existence on each call
-    to User.save.
-    """
-    print("signals received----")
-    obj, created = kwargs["instance"], kwargs["created"]
-    if created :
-        assign_perm("change_githuboauthtoken", obj.ai_user, obj)
+    get_app_obj = get_github_obj
+
+post_save.connect(IntegerationAppBase.permission_signal(APP_NAME), sender=GithubApp)
+
+# @receiver(post_save, sender=GithubApp)
+# def githubtoken_post_save(sender, **kwargs):
+#     """
+#     Create a Profile instance for all newly created User instances. We only
+#     run on user creation to avoid having to check for existence on each call
+#     to User.save.
+#     """
+#     print("signals received----")
+#     obj, created = kwargs["instance"], kwargs["created"]
+#     if created :
+#         assign_perm("change_githuboauthtoken", obj.ai_user, obj)
 
 class FetchInfo(models.Model):
-    github_token = models.OneToOneField(GithubOAuthToken,\
+    github_token = models.OneToOneField(GithubApp,\
         on_delete=models.CASCADE, related_name="github_fetch_info")
     last_fetched_on=models.DateTimeField(auto_now=True,)
 
 class Repository(models.Model):
-    github_token = models.ForeignKey(GithubOAuthToken,\
+    github_token = models.ForeignKey(GithubApp,\
         on_delete=models.CASCADE, related_name="github_repository_set")
     repository_name = models.TextField()
     repository_fullname = models.TextField()
