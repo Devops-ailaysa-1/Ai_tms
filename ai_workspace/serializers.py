@@ -533,12 +533,13 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     job = serializers.ReadOnlyField(source='task.job.id')
     project = serializers.ReadOnlyField(source='task.job.project.id')
     files = InstructionfilesSerializer(many=True,required=False)
+    instruction_files = serializers.SerializerMethodField()
     # instruction_file = serializers.FileField(required=False, allow_empty_file=True, allow_null=True)
     # assigned_to_name = serializers.ReadOnlyField(source='task.assign_to.fullname')
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','files','step',\
+        fields = ('id','instruction','files','step','instruction_files',\
                    'job','project','assigned_by','assignment_id','deadline',\
                    'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
                     'total_word_count','assign_to_details','assigned_by_details',)
@@ -548,18 +549,22 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
              }
 
     def get_assign_to_details(self,instance):
-	    if instance.task.assign_to:
-	        email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
-	        try:avatar = instance.task.assign_to.professional_identity_info.avatar_url
+	    if instance.task_assign.assign_to:
+	        email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
+	        try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
 	        except:avatar = None
-	        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email,"avatar":avatar}
+	        return {"id":instance.task_assign.assign_to_id,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar}
 
     def get_assigned_by_details(self,instance):
         if instance.assigned_by:
             return {"id":instance.assigned_by_id,"name":instance.assigned_by.fullname,"email":instance.assigned_by.email}
 
-
-
+    def get_instruction_files(self,instance):
+        files = []
+        queryset = instance.task_assign_instruction_file.all()
+        for obj in queryset:
+            files.append({'id':obj.id,'filename':obj.filename})
+        return files
 
     def run_validation(self, data):
         if data.get('assign_to'):
@@ -599,6 +604,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
             segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
             task_info = TaskAssign.objects.filter(Q(task_id = instance.task_assign.task.id) & Q(step_id = step)).update(assign_to = data.get('assign_to'))
             task_history = TaskAssignHistory.objects.create(task_assign_id =instance.task_assign_id,previous_assign_id=task_assign.assign_to_id,task_segment_confirmed=segment_count)
+        if 'files' in data:
+            [Instructionfiles.objects.create(**instruction_file,task_assign_info_id = instance.id) for instruction_file in data['files']]
         return super().update(instance, data)
 
     # def to_representation(self, instance):
