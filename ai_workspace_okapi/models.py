@@ -63,6 +63,10 @@ class Segment(models.Model):
     @property
     def target_language_code(self):
         return self.text_unit.document.job.target_language_code
+    
+    @property
+    def source_language_code(self):
+        return self.text_unit.document.job.source_language_code
 
     @property
     def tm_fetch_configs(self):

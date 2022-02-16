@@ -17,7 +17,7 @@ from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
 import requests, boto3
-import json, os, re, time, jwt
+import json, os, re, time, jwt, mimetypes
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -40,6 +40,7 @@ from json import JSONDecodeError
 from ai_workspace.models import File
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
+from .utils import download_file
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -292,9 +293,28 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "cannot_translate"
         else:
             return None
+    
+    @staticmethod
+    def get_consumable_credits(doc, segment_id):
+        segment_source = Segment.objects.get(id=segment_id).source
+        seg_data = { "segment_source" : segment_source,  
+                     "source_language" : doc.source_language_code, 
+                     "target_language" : doc.target_language_code,
+                     "processor_name" : "plain-text-processor", 
+                     "extension":".txt"
+                     }
+        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
+            data={"segmentWordCountdata":json.dumps(seg_data)})
+
+        if res.status_code == 200:
+            print("Word count --->", res.json())
+            return res.json()
+        else:
+            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
     @staticmethod
-    def get_data(request, segment_id):
+    def get_data(request, segment_id, mt_engine_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200, "available"
@@ -313,21 +333,10 @@ class MT_RawAndTM_View(views.APIView):
 
         initial_credit = user.credit_balance
 
-        segment_source = Segment.objects.get(id=segment_id).source
-        seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
-                     "processor_name":"plain-text-processor", "extension":".txt"}
-
-        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-            data={"segmentWordCountdata":json.dumps(seg_data)})
-        if res.status_code == 200:
-            print("Word count --->", res.json())
-            consumable_credits = res.json()
-        else:
-            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
-            raise  ValueError("Sorry! Something went wrong with word count calculation.")
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)        
 
         if initial_credit > consumable_credits :
-            mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
+            mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id, "mt_engine": mt_engine_id},\
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
                 mt_raw_serlzr.save()
@@ -351,8 +360,8 @@ class MT_RawAndTM_View(views.APIView):
         return []
 
     def get(self, request, segment_id):
-        data, status_code, can_team = self.get_data(request, segment_id)
-        # print("MT Data -----> ", data)
+        mt_engine_id = request.POST.get("mt_engine", 1)
+        data, status_code, can_team = self.get_data(request, segment_id, mt_engine_id)
         mt_alert = True if status_code == 424 else False
         alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
             can_team == "unavailable") else "Team subscription inactive"
@@ -392,23 +401,10 @@ class DocumentToFile(views.APIView):
         return  document
     
     # FOR DOWNLOADING SOURCE FILE
-
-    # @staticmethod
-    # def download_source_file(request, document_id):
-    #     doc = DocumentToFile.get_object(document_id)
-    #     source_file_path = File.objects.get(file_document_set=doc).file.path
-    #     with open(source_file_path, 'rb') as fh:
-    #         response = HttpResponse(fh.read(), content_type=\
-    #                                             "application/vnd.ms-excel")
-    #         encoded_filename = urllib.parse.quote(os.path.basename(source_file_path),\
-    #                 encoding='utf-8')
-    #         response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
-    #                             .format(encoded_filename)
-    #         response['X-Suggested-Filename'] = encoded_filename
-    #         response["Access-Control-Allow-Origin"] = "*"
-    #         response["Access-Control-Allow-Headers"] = "*"
-    #         print("cont-disp--->", response.get("Content-Disposition"))
-    #         return response
+    def download_source_file(self, document_id):
+        doc = DocumentToFile.get_object(document_id)
+        source_file_path = File.objects.get(file_document_set=doc).file.path
+        return download_file(source_file_path) 
 
     def get(self, request, document_id):
         token = request.GET.get("token")
@@ -417,16 +413,15 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
 
-            # FOR DOWNLOADING SOURCE FILE
-            
-            # if request.GET.get("output_type", "") == "SOURCE":
-            #     DocumentToFile.download_source_file(request, document_id)
+            # FOR DOWNLOADING SOURCE FILE            
+            if request.GET.get("output_type", "") == "SOURCE":
+                return self.download_source_file(document_id)
 
             res = self.document_data_to_file(request, document_id)
-            # print("Doc to file res code ====> ", res.status_code)
+            
             if res.status_code in [200, 201]:
                 file_path = res.text
-                # print("file_path---->", file_path)
+                
                 try:
                     if os.path.isfile(res.text):
                         if os.path.exists(file_path):
@@ -456,7 +451,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
-        # print("Data for writing file ---> ", data)
+        
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -466,7 +461,7 @@ class DocumentToFile(views.APIView):
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
-        # print("task_data---->", task_data)
+
         pre, ext = os.path.splitext(task_data["output_file_path"])
         if output_type == "XLIFF":
             ext = ".xliff"
@@ -474,14 +469,11 @@ class DocumentToFile(views.APIView):
             ext = ".tmx"
         task_data["output_file_path"] = pre + "(" + task_data["source_language"] + "-" + task_data["target_language"] + ")" + ext
 
-        # print("task-data------>", task_data["output_file_path"])
-
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None,
                      "use_spaces" : settings.USE_SPACES
                      }
-        # print("params data--->", params_data)
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
@@ -515,7 +507,7 @@ OUTPUT_TYPES = dict(
     ORIGINAL = "ORIGINAL",
     XLIFF = "XLIFF",
     TMX = "TMX",
-    # SOURCE = "SOURCE"
+    SOURCE = "SOURCE"
 )
 
 def output_types(request):
