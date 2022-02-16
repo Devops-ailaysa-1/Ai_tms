@@ -57,4 +57,39 @@ class IntegerationAppBase(models.Model):
         return githubtoken_post_save
 
 
+class FetchInfoBase(models.Model):
+    last_fetched_on=models.DateTimeField(auto_now=True,)
 
+    class Meta:
+        abstract = True
+
+class RepositoryBase(models.Model):
+    repository_name = models.TextField()
+    repository_fullname = models.TextField()
+    is_localize_registered = models.BooleanField(default=False)
+    is_alive_in_github = models.BooleanField(default=True)
+    created_on = models.DateTimeField(auto_now_add=True,)
+    accessed_on =  models.DateTimeField(blank=True, null=True)
+    updated_on = models.DateTimeField(auto_now=True, )
+
+    class Meta:
+        abstract = True
+        permissions = (
+            ('owner_%(app_label)_%(class)s', 'Owner'),
+        )
+
+    @property
+    def get_repo_obj(self): # get_repo_gh_obj
+        raise ValueError("You should implement in child class!!!")
+
+    def create_all_repositories_of_github(github_token_id):
+        raise ValueError("You should implement in child class!!!")
+
+    def permission_signal(app_name):
+        def repository_post_save(sender, **kwargs):
+            obj, created = kwargs["instance"], kwargs["created"]
+            if created:
+                assign_perm(app_name,
+                            obj.github_token.ai_user, obj)
+
+        return repository_post_save

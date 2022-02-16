@@ -6,7 +6,7 @@ from guardian.shortcuts import assign_perm
 from ai_auth.models import AiUser
 from .managers import GithubTokenManager, HookDeckManager
 from .enums import GITHUB_PREFIX_NAME, HOOK_PREFIX_NAME,\
-    HOOK_DESTINATION_GITHUB_PREFIX_NAME, APP_NAME
+    HOOK_DESTINATION_GITHUB_PREFIX_NAME, APP_NAME, DJ_APP_NAME
 
 from github import Github
 from django.shortcuts import get_object_or_404
@@ -23,7 +23,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from django.apps import apps
 from django import forms
-from ..base.models import IntegerationAppBase
+from ..base.models import IntegerationAppBase, RepositoryBase, FetchInfoBase
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -47,7 +47,7 @@ class GithubApp(IntegerationAppBase):
     # username should be fetched from github library
     # don't set
     username = models.CharField(max_length=255)
-    created_on = models.DateTimeField(auto_now_add=True, )
+    created_on = models.DateTimeField(auto_now_add=True)
     accessed_on =  models.DateTimeField(blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True, )
 
@@ -108,21 +108,13 @@ post_save.connect(IntegerationAppBase.permission_signal(APP_NAME), sender=Github
 #     if created :
 #         assign_perm("change_githuboauthtoken", obj.ai_user, obj)
 
-class FetchInfo(models.Model):
+class FetchInfo(FetchInfoBase):
     github_token = models.OneToOneField(GithubApp,\
         on_delete=models.CASCADE, related_name="github_fetch_info")
-    last_fetched_on=models.DateTimeField(auto_now=True,)
 
-class Repository(models.Model):
+class Repository(RepositoryBase):
     github_token = models.ForeignKey(GithubApp,\
         on_delete=models.CASCADE, related_name="github_repository_set")
-    repository_name = models.TextField()
-    repository_fullname = models.TextField()
-    is_localize_registered = models.BooleanField(default=False)
-    is_alive_in_github = models.BooleanField(default=True)
-    created_on = models.DateTimeField(auto_now_add=True,)
-    accessed_on =  models.DateTimeField(blank=True, null=True)
-    updated_on = models.DateTimeField(auto_now=True, )
 
     def get_last_obj():
         return  Repository.objects.last()
@@ -138,7 +130,7 @@ class Repository(models.Model):
 
     def create_all_repositories_of_github(github_token_id):
         # Should be called from API's
-        gt = get_object_or_404(GithubOAuthToken.objects.all(),
+        gt = get_object_or_404(GithubApp.objects.all(),
             id=github_token_id)
 
         g = Github(gt.oauth_token)
@@ -159,13 +151,8 @@ class Repository(models.Model):
 
         return exist, fresh
 
-@receiver(post_save, sender=Repository)
-def repository_post_save(sender, **kwargs):
-
-    obj, created = kwargs["instance"], kwargs["created"]
-    if created :
-        assign_perm("change_repository",
-            obj.github_token.ai_user, obj)
+post_save.connect(RepositoryBase.permission_signal(f"owner_{DJ_APP_NAME}_repository"),
+                  sender=Repository)
 
 class Branch(models.Model):
     branch_name = models.CharField(max_length=255)

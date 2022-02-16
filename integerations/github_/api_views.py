@@ -130,9 +130,9 @@ class RepositoryViewset(viewsets.ModelViewSet):
             raise ValueError("Primary Key is missing to fetch...")
 
         github_oauth_token = get_object_or_404(
-            GithubOAuthToken.objects.all(), id=pk)
+            GithubApp.objects.all(), id=pk)
         # ================ perm =========================
-        perm = self.request.user.has_perm("github_.change_githuboauthtoken",
+        perm = self.request.user.has_perm(f"{DJ_APP_NAME}.change_{APP_NAME}app",
                 github_oauth_token)
         print("perm--->", perm)
         if not perm:
@@ -141,13 +141,16 @@ class RepositoryViewset(viewsets.ModelViewSet):
         fetch_info, created = FetchInfo.objects.\
             get_or_create(github_token=github_oauth_token)
 
+        print("condition--->", created or (datetime.now(tz=pytz.UTC) - timedelta(days=2) >
+                fetch_info.last_fetched_on) or refresh)
+
         if created or (datetime.now(tz=pytz.UTC) - timedelta(days=2) >
                 fetch_info.last_fetched_on) or refresh:
             Repository.create_all_repositories_of_github(github_token_id=pk)
             fetch_info.save() # updating last fetch time
 
         qs = get_objects_for_user(self.request.user,
-                             'github_.change_repository')
+                             f'{DJ_APP_NAME}.change_repository')
 
         objects = get_list_or_404(qs, github_token_id=pk)
         return objects

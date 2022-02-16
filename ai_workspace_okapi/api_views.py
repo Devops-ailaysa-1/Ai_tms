@@ -498,7 +498,7 @@ class DocumentToFile(views.APIView):
                 # print("file path---->", File.get_aws_file_path(task_data["output_file_path"]))
                 # uploading the f stream content to file
                 SpacesService.put_object(output_file_path=File
-                                         .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
+                                        .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
 
         return res
 

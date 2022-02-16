@@ -162,11 +162,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
         return {"addon":addons, "subscription":avai_cp}
 
-    @property
-    def username(self):
-        print("username field not available.so it is returning fullname")
-        return self.fullname
-
     # @property
     # def buyed_credits(self):
     #     total_buyed_credits = 0
@@ -186,7 +181,14 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     #         return total_buyed_credits
 
         # return total_buyed_credits
-post_save.connect(update_internal_member_status, sender=AiUser)
+
+    @property
+    def username(self):
+        print("username field not available.so it is returning fullname")
+        return self.fullname
+
+post_save.connect(update_internal_member_status, sender=AiUser)    
+
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)

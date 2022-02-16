@@ -31,10 +31,6 @@ class GitlabApp(IntegerationAppBase):
         constraints = [models.UniqueConstraint(fields=("ai_user", "username"), \
             name="Duplicate gitlab usernames not allowed for one ai-user ...")]
 
-        permissions = (
-            ('assign_task', 'Assign task'),
-        )
-
     @property
     def is_token_expired(self):
         gl = Gitlab("http://gitlab.com",self.oauth_token)
@@ -54,3 +50,4 @@ class GitlabApp(IntegerationAppBase):
 
 
 post_save.connect(IntegerationAppBase.permission_signal(APP_NAME), sender=GitlabApp)
+
