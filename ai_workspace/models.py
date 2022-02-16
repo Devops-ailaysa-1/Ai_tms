@@ -657,6 +657,9 @@ class Instructionfiles(models.Model):
     task_assign_info = models.ForeignKey("TaskAssignInfo", null=True, blank=True,\
             on_delete=models.CASCADE,related_name='task_assign_instruction_file')
 
+    @property
+    def filename(self):
+        return  os.path.basename(self.instruction_file.file.name)
 
 class TaskAssignHistory(models.Model):
     task_assign = models.ForeignKey(TaskAssign, on_delete=models.CASCADE, null=False, blank=False,

@@ -21,7 +21,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
     TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer)
+    GetAssignToSerializer,InstructionfilesSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
@@ -30,7 +30,7 @@ from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Task, TbxFile
+from .models import Task, TbxFile, Instructionfiles
 from django.http import JsonResponse
 import requests, json, os, time
 from .models import Task,Tbxfiles
@@ -1147,10 +1147,14 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     def list(self,request):
         tasks = request.GET.getlist('tasks')
+        step = request.GET.get('step')
+        print(tasks)
         try:
-            task_assign_info = TaskAssignInfo.objects.filter(task_id__in = tasks)
+            # task_assign_info = TaskAssignInfo.objects.filter(task_assign__task_id__in = tasks)
+            task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__step_id =step))
         except TaskAssignInfo.DoesNotExist:
             return HttpResponse(status=404)
+        print('trtrt',task_assign_info)
         ser = TaskAssignInfoSerializer(task_assign_info,many=True)
         return Response(ser.data)
 
@@ -1175,8 +1179,19 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task = request.POST.getlist('task')
         step = request.POST.get('step')
         file = request.FILES.getlist('instruction_file')
+        req_copy = copy.copy( request._request)
+        req_copy.method = "DELETE"
+
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+
+        file_delete_ids = self.request.query_params.get(\
+            "file_delete_ids", [])
+
+        if file_delete_ids:
+            file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
+                        pk='0', many="true", ids=file_delete_ids)
+
         for i in task:
             try:
                 task_assign = TaskAssign.objects.get(Q(task_id = i) & Q(step_id = step))
@@ -1328,3 +1343,41 @@ class AssignToListView(viewsets.ModelViewSet):
         user = Project.objects.get(id = project).ai_user
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
+
+
+
+class InstructionFilesView(viewsets.ModelViewSet):
+
+    serializer_class = InstructionfilesSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_object(self, many=False):
+        objs = []
+        obj = None
+        if not many:
+            try:
+                obj = get_object_or_404(Instructionfiles.objects.all(),\
+                    id=self.kwargs.get("pk"))
+            except:
+                raise Http404
+            return  obj
+
+        objs_ids_list =  self.kwargs.get("ids").split(",")
+
+        for obj_id in objs_ids_list:
+            print("obj id--->", obj_id)
+            try:
+                objs.append(get_object_or_404(Instructionfiles.objects.all(),\
+                    id=obj_id))
+            except:
+                raise Http404
+        return objs
+
+    def destroy(self, request, *args, **kwargs):
+        if kwargs.get("many")=="true":
+            objs = self.get_object(many=True)
+            for obj in objs:
+                obj.delete()
+            return Response(status=204)
+        return super().destroy(request, *args, **kwargs)
