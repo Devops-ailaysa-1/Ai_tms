@@ -68,9 +68,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def exact_required_fields_for_okapi_get_document():
-        # {'source_file_path': '/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u98163/u98163p2/source/test1.txt',
-        #  'source_language': 'sq', 'target_language': 'hy', 'document_url': '/workspace_okapi/document/4/',
-        #  'filename': 'test1.txt', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
         fields = ['source_file_path', 'source_language', 'target_language',
                      'extension', 'processor_name', 'output_file_path']
         return fields
@@ -108,7 +105,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             if serializer.is_valid(raise_exception=True):
                 start = time.process_time()
                 document = serializer.save()
-                # print("Time taken to write ==========>", time.process_time() - start)
                 task.document = document
                 print("********   Document written using existing file  ***********")
                 task.save()
@@ -120,14 +116,14 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             # print("data--->", data)
             params_data = {**data, "output_type": None}
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                         "fprm_file_path": None
+                         "fprm_file_path": None,
+                         "use_spaces" : settings.USE_SPACES
                          }
-            start = time.process_time()
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
-            # print("Time taken for spring ==========>", time.process_time() - start)
+    
             if doc.status_code == 200 :
                 doc_data = doc.json()
                 # print("Doc data ---> ", doc_data)
@@ -482,7 +478,8 @@ class DocumentToFile(views.APIView):
 
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                     "fprm_file_path": None
+                     "fprm_file_path": None,
+                     "use_spaces" : settings.USE_SPACES
                      }
         # print("params data--->", params_data)
 

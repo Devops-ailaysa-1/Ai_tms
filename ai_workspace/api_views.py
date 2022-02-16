@@ -1062,7 +1062,8 @@ class ProjectAnalysisProperty(APIView):
                 ProjectAnalysisProperty.correct_fields(data)
                 params_data = {**data, "output_type": None}
                 res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                         "fprm_file_path": None
+                         "fprm_file_path": None,
+                         "use_spaces" : settings.USE_SPACES
                          }
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params":json.dumps(params_data),
@@ -1106,13 +1107,6 @@ class ProjectAnalysisProperty(APIView):
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
                         "task_words":task_words}
-
-    # def get(self, request, project_id):
-
-    #     if bool(Project.objects.get(id=project_id).is_proj_analysed):
-    #         return ProjectAnalysis.get_analysed_data(project_id)
-    #     else:
-    #         return ProjectAnalysis.analyse_project(project_id)
 
     @staticmethod
     def get(project_id):

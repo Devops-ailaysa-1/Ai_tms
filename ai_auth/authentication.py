@@ -26,16 +26,16 @@ class MysqlBackend(BaseBackend):
     def authenticate(self, request, email=None, password=None):
         print("Mysql Backend Autentication")
         ai_user = AiUser.objects.filter(email=email).first()
-        print("Firt if ---> ",password.encode("utf-8"))
+        # print("Firt if ---> ",password.encode("utf-8"))
         if ai_user and (ai_user.from_mysql==True):
-            print("Firt if ---> ",password.encode("utf-8"))
+            # print("Firt if ---> ",password.encode("utf-8"))
             if checkpw( password.encode("utf-8") , ai_user.password.encode("utf-8") ):
-                print("sECOND IF CONDITION-----", ai_user.password.encode("utf-8"))
+                # print("sECOND IF CONDITION-----", ai_user.password.encode("utf-8"))
                 ai_user.set_password(password)
                 
                 ai_user.from_mysql = False  
                 ai_user.save()
-                print("savedddddddddddd")
+                # print("savedddddddddddd")
                 return ai_user
             else: return None 
         else:

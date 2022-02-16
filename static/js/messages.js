@@ -61,7 +61,7 @@ socket.onopen = async function(e){
         socket.send(data)
         $(this)[0].reset()
     })
-setInterval(getUnreadChatNotifications, CHAT_NOTIFICATION_INTERVAL)
+//setInterval(getUnreadChatNotifications, CHAT_NOTIFICATION_INTERVAL)
 //setInterval(getAvailableThreads, CHAT_NOTIFICATION_INTERVAL)
 }
 

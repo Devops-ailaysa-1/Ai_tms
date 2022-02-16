@@ -445,7 +445,14 @@ LOGGING = {
             'handlers' : ['file',],
             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
             'propogate' : True,
+        },
+
+        'django' : {
+            'handlers' : ['file_prod',],
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'propogate' : True,
         }
+        
     },
 
     'handlers' : {
@@ -454,6 +461,13 @@ LOGGING = {
             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
             'class' : 'logging.FileHandler',
             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+        'file_prod' : {
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
             'formatter' : 'dev_formatter',
         },
 
