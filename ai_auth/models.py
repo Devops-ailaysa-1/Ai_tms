@@ -181,11 +181,13 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     #         return total_buyed_credits
 
         # return total_buyed_credits
-post_save.connect(update_internal_member_status, sender=AiUser)
+
     @property
     def username(self):
         print("username field not available.so it is returning fullname")
         return self.fullname
+
+post_save.connect(update_internal_member_status, sender=AiUser)    
 
 
 class BaseAddress(models.Model):
