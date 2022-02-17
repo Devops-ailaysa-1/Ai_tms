@@ -135,7 +135,27 @@ Useful Links:
   
   
  Architect:
-  - Parallel processing if typically large...  
-  - 
+  - Parallel processing if typically large...
   
+  
+```sql
+PRAGMA foreign_keys = OFF;
+BEGIN TRANSACTION;
+
+CREATE TABLE "ai_workspace_project_new" 
+("id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+"project_name" varchar(50) NULL, "created_at" datetime NOT NULL, 
+"ai_project_id" text NOT NULL, "threshold" integer NOT NULL, 
+"max_hits" integer NOT NULL,
+ "ai_user_id" bigint NOT NULL REFERENCES "ai_auth_aiuser" ("id") DEFERRABLE INITIALLY DEFERRED, 
+"mt_engine_id" bigint NULL REFERENCES "ailaysa_mtpe_engines" ("id") DEFERRABLE INITIALLY DEFERRED,
+ "project_dir_path" varchar(1000) NULL,
+"team_id" bigint NULL REFERENCES "ai_auth_team" ("id") DEFERRABLE INITIALLY DEFERRED,
+"project_manager_id" bigint NULL REFERENCES "ai_auth_aiuser" ("id") DEFERRABLE INITIALLY DEFERRED,
+"created_by_id" bigint NULL REFERENCES "ai_auth_aiuser" ("id") DEFERRABLE INITIALLY DEFERRED
+);
+commit;
+PRAGMA foreign_keys = ON;
+.exit
+```
   

@@ -150,7 +150,7 @@ class RepositoryViewset(viewsets.ModelViewSet):
             fetch_info.save() # updating last fetch time
 
         qs = get_objects_for_user(self.request.user,
-                             f'{DJ_APP_NAME}.change_repository')
+                             f'{DJ_APP_NAME}.owner_repository')
 
         objects = get_list_or_404(qs, github_token_id=pk)
         return objects
@@ -184,7 +184,7 @@ class BranchViewset(viewsets.ModelViewSet):
 
         repo = get_object_or_404(Repository.objects.all(), id=pk)
 
-        perm = self.request.user.has_perm("github_.change_repository",
+        perm = self.request.user.has_perm(f"{DJ_APP_NAME}.owner_repository",
                 repo)
 
         if not perm:

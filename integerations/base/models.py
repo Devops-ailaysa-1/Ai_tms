@@ -58,7 +58,7 @@ class IntegerationAppBase(models.Model):
 
 
 class FetchInfoBase(models.Model):
-    last_fetched_on=models.DateTimeField(auto_now=True,)
+    last_fetched_on = models.DateTimeField(auto_now=True,)
 
     class Meta:
         abstract = True
@@ -74,9 +74,6 @@ class RepositoryBase(models.Model):
 
     class Meta:
         abstract = True
-        permissions = (
-            ('owner_%(app_label)_%(class)s', 'Owner'),
-        )
 
     @property
     def get_repo_obj(self): # get_repo_gh_obj
@@ -90,6 +87,34 @@ class RepositoryBase(models.Model):
             obj, created = kwargs["instance"], kwargs["created"]
             if created:
                 assign_perm(app_name,
-                            obj.github_token.ai_user, obj)
+                            obj.get_token.ai_user, obj)
 
         return repository_post_save
+
+class BranchBase(models.Model):
+
+    branch_name = models.CharField(max_length=255)
+    is_localize_registered = models.BooleanField(default=False)
+    created_on = models.DateTimeField(auto_now_add=True,)
+    accessed_on =  models.DateTimeField(blank=True, null=True)
+    updated_on = models.DateTimeField(auto_now=True, )
+
+    class Meta:
+        abstract = True
+
+    @property
+    def get_branch_gh_obj(self):
+        raise ValueError("You should implement in child class!!!")
+
+    def create_all_branches(repo):
+        raise ValueError("You should implement in child class!!!")
+
+    def permission_signal(app_name="change_branch"):
+        def branch_post_save(sender, **kwargs):
+
+            obj, created = kwargs["instance"], kwargs["created"]
+            if created :
+                assign_perm(app_name,
+                    obj.repo.github_token.ai_user, obj)
+        return branch_post_save
+

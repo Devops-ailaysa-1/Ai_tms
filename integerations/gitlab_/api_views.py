@@ -4,9 +4,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from guardian.shortcuts import get_objects_for_user
+from django.shortcuts import get_object_or_404, get_list_or_404
 
-from .serializers import GitlabOAuthTokenSerializer
+from .serializers import GitlabOAuthTokenSerializer, RepositorySerializer
 from .enums import DJ_APP_NAME, APP_NAME
+from .models import GitlabApp, FetchInfo, Repository
+
+import pytz
+from datetime import datetime, timedelta
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
 
@@ -35,42 +40,42 @@ class GitlabOAuthTokenViewset(viewsets.ModelViewSet):
         return  get_objects_for_user(self.request.user,
             f'{DJ_APP_NAME}.change_{APP_NAME}app')
 
-# class RepositoryViewset(viewsets.ModelViewSet):
-#     serializer_class = RepositorySerializer
-#     permission_classes = [IsOwnerOrReadOnly]
-#     model = Repository
-#
-#     def get_queryset(self, refresh=False):
-#         pk = self.kwargs.get("pk", None)
-#         if pk == None:
-#             raise ValueError("Primary Key is missing to fetch...")
-#
-#         github_oauth_token = get_object_or_404(
-#             GithubApp.objects.all(), id=pk)
-#         # ================ perm =========================
-#         perm = self.request.user.has_perm(f"{DJ_APP_NAME}.change_{APP_NAME}app",
-#                 github_oauth_token)
-#         print("perm--->", perm)
-#         if not perm:
-#             raise ValueError("You have not permitted to access")
-#         # ================ perm ========================
-#         fetch_info, created = FetchInfo.objects.\
-#             get_or_create(github_token=github_oauth_token)
-#
-#         print("condition--->", created or (datetime.now(tz=pytz.UTC) - timedelta(days=2) >
-#                 fetch_info.last_fetched_on) or refresh)
-#
-#         if created or (datetime.now(tz=pytz.UTC) - timedelta(days=2) >
-#                 fetch_info.last_fetched_on) or refresh:
-#             Repository.create_all_repositories_of_github(github_token_id=pk)
-#             fetch_info.save() # updating last fetch time
-#
-#         qs = get_objects_for_user(self.request.user,
-#                              f'{DJ_APP_NAME}.change_repository')
-#
-#         objects = get_list_or_404(qs, github_token_id=pk)
-#         return objects
-#
-#     def list_refresh(self, request, *args, **kwargs):
-#         objects = self.get_queryset(refresh=True)
-#         return Response(self.serializer_class(objects, many=True).data, status=200)
+class RepositoryViewset(viewsets.ModelViewSet):
+    serializer_class = RepositorySerializer
+    permission_classes = [IsOwnerOrReadOnly]
+    model = Repository
+
+    def get_queryset(self, refresh=False):
+        pk = self.kwargs.get("pk", None)
+        if pk == None:
+            raise ValueError("Primary Key is missing to fetch...")
+
+        gitlab_oauth_token = get_object_or_404(
+            GitlabApp.objects.all(), id=pk)
+        # ================ perm =========================
+        perm = self.request.user.has_perm(f"{DJ_APP_NAME}.change_{APP_NAME}app",
+                gitlab_oauth_token)
+        print("perm--->", perm)
+        if not perm:
+            raise ValueError("You have not permitted to access")
+        # ================ perm ========================
+        fetch_info, created = FetchInfo.objects.\
+            get_or_create(github_token=gitlab_oauth_token)
+
+        print("condition--->", created or (datetime.now(tz=pytz.UTC) - timedelta(days=2) >
+                fetch_info.last_fetched_on) or refresh)
+
+        if created or (datetime.now(tz=pytz.UTC) - timedelta(days=2) >
+                fetch_info.last_fetched_on) or refresh:
+            Repository.create_all_repositories(gitlab_token_id=pk)
+            fetch_info.save() # updating last fetch time
+
+        qs = get_objects_for_user(self.request.user,
+                             f'{DJ_APP_NAME}.owner_repository')
+
+        objects = get_list_or_404(qs, gitlab_token_id=pk)
+        return objects
+
+    def list_refresh(self, request, *args, **kwargs):
+        objects = self.get_queryset(refresh=True)
+        return Response(self.serializer_class(objects, many=True).data, status=200)

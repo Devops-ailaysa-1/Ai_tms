@@ -23,7 +23,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 from django.apps import apps
 from django import forms
-from ..base.models import IntegerationAppBase, RepositoryBase, FetchInfoBase
+from ..base.models import IntegerationAppBase, RepositoryBase, FetchInfoBase,\
+    BranchBase
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -43,13 +44,6 @@ class GithubApp(IntegerationAppBase):
         return value
 
     oauth_token = models.CharField(max_length=255, validators=[validate_oauth_token])
-    ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    # username should be fetched from github library
-    # don't set
-    username = models.CharField(max_length=255)
-    created_on = models.DateTimeField(auto_now_add=True)
-    accessed_on =  models.DateTimeField(blank=True, null=True)
-    updated_on = models.DateTimeField(auto_now=True, )
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -116,8 +110,18 @@ class Repository(RepositoryBase):
     github_token = models.ForeignKey(GithubApp,\
         on_delete=models.CASCADE, related_name="github_repository_set")
 
+    class Meta:
+
+        permissions = (
+            ('owner_repository', 'Owner'),
+        )
+
     def get_last_obj():
         return  Repository.objects.last()
+
+    @property
+    def get_token(self):
+        return self.github_token
 
     @property
     def get_repo_obj(self): # get_repo_gh_obj
@@ -151,22 +155,15 @@ class Repository(RepositoryBase):
 
         return exist, fresh
 
-post_save.connect(RepositoryBase.permission_signal(f"owner_{DJ_APP_NAME}_repository"),
+    create_all_repositories = create_all_repositories_of_github
+
+post_save.connect(RepositoryBase.permission_signal(f"owner_repository"),
                   sender=Repository)
 
-class Branch(models.Model):
-    branch_name = models.CharField(max_length=255)
-    is_localize_registered = models.BooleanField(default=False)
+class Branch(BranchBase):
+
     repo = models.ForeignKey(Repository, on_delete=models.CASCADE,
             related_name="repo_branches_set")
-    created_on = models.DateTimeField(auto_now_add=True,)
-    accessed_on =  models.DateTimeField(blank=True, null=True)
-    updated_on = models.DateTimeField(auto_now=True, )
-
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.accessed_on = datetime.now(tz=pytz.UTC)
-    #     self.save()
 
     @property
     def get_branch_gh_obj(self):
@@ -188,13 +185,8 @@ class Branch(models.Model):
 
         return exist, fresh_created
 
-@receiver(post_save, sender=Branch)
-def branch_post_save(sender, **kwargs):
-
-    obj, created = kwargs["instance"], kwargs["created"]
-    if created :
-        assign_perm("change_branch",
-            obj.repo.github_token.ai_user, obj)
+post_save.connect(BranchBase.permission_signal(),
+                  sender=Branch)
 
 @receiver(post_save, sender=Branch)
 def branch_localize_register_update(sender, **kwargs):
@@ -353,6 +345,10 @@ class DownloadProject(DownloadBase):
                 on_delete=models.CASCADE, related_name="controller_downloadproject", null=True)
     commit_hash = models.TextField(null=True)
 
+    def save(self, *args, **kwargs):
+        print("project---->", self.project)
+        return super().save(*args, **kwargs)
+
     def push_to_github(self):
         pass
 
@@ -361,6 +357,7 @@ class DownloadProject(DownloadBase):
 
     def update_project(self, project):
         self.project = project
+        print("here----")
         dc = apps.get_model("controller.DownloadController")\
             (project = project, related_model_string="github_.DownloadProject")
         dc.save()

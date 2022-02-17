@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import GitlabApp
+from .models import GitlabApp, Repository
 from gitlab import Gitlab
 
 class GitlabOAuthTokenSerializer(serializers.ModelSerializer):
@@ -37,3 +37,15 @@ class GitlabOAuthTokenSerializer(serializers.ModelSerializer):
                 ("Already github account registered!!!")
         return super().create(data)
 
+class RepositorySerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ['id', 'gitlab_token', 'repository_name', \
+                  'is_localize_registered', 'is_alive_in_github',\
+                  'repository_fullname']
+        model = Repository
+        extra_kwargs = {
+        }
+
+    def create(self, validated_data):
+        data = validated_data
+        return super().create(data)
