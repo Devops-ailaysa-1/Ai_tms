@@ -6,7 +6,7 @@ from guardian.shortcuts import assign_perm
 from ai_auth.models import AiUser
 from .managers import GithubTokenManager, HookDeckManager
 from .enums import GITHUB_PREFIX_NAME, HOOK_PREFIX_NAME,\
-    HOOK_DESTINATION_GITHUB_PREFIX_NAME
+    HOOK_DESTINATION_GITHUB_PREFIX_NAME, APP_NAME, DJ_APP_NAME
 
 from github import Github
 from django.shortcuts import get_object_or_404
@@ -22,6 +22,8 @@ import uuid
 import requests
 from requests.auth import HTTPBasicAuth
 from django.apps import apps
+from django import forms
+from ..base.models import IntegerationAppBase, RepositoryBase, FetchInfoBase
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -29,13 +31,23 @@ CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 # last github repo fetch timestamp
 # periodically fetch
 
-class GithubOAuthToken(models.Model):
-    oauth_token = models.CharField(max_length=255,)
+class GithubApp(IntegerationAppBase):
+
+    def validate_oauth_token(value):
+        print("value--->", value)
+        g = Github(value)
+        try:
+            g.get_user().login
+        except:
+            raise forms.ValidationError("Token is invalid!!!")
+        return value
+
+    oauth_token = models.CharField(max_length=255, validators=[validate_oauth_token])
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     # username should be fetched from github library
     # don't set
     username = models.CharField(max_length=255)
-    created_on = models.DateTimeField(auto_now_add=True, )
+    created_on = models.DateTimeField(auto_now_add=True)
     accessed_on =  models.DateTimeField(blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True, )
 
@@ -75,39 +87,34 @@ class GithubOAuthToken(models.Model):
         g = Github(self.oauth_token)
         return g.get_user().login == self.username
 
-@receiver(post_save, sender=GithubOAuthToken)
-def githubtoken_post_save(sender, **kwargs):
-    """
-    Create a Profile instance for all newly created User instances. We only
-    run on user creation to avoid having to check for existence on each call
-    to User.save.
-    """
-    print("signals received----")
-    obj, created = kwargs["instance"], kwargs["created"]
-    if created :
-        assign_perm("change_githuboauthtoken", obj.ai_user, obj)
+    @property
+    def get_github_obj(self):
+        gh = Github(self.oauth_token)
+        return gh
 
-class FetchInfo(models.Model):
-    github_token = models.OneToOneField(GithubOAuthToken,\
+    get_app_obj = get_github_obj
+
+post_save.connect(IntegerationAppBase.permission_signal(APP_NAME), sender=GithubApp)
+
+# @receiver(post_save, sender=GithubApp)
+# def githubtoken_post_save(sender, **kwargs):
+#     """
+#     Create a Profile instance for all newly created User instances. We only
+#     run on user creation to avoid having to check for existence on each call
+#     to User.save.
+#     """
+#     print("signals received----")
+#     obj, created = kwargs["instance"], kwargs["created"]
+#     if created :
+#         assign_perm("change_githuboauthtoken", obj.ai_user, obj)
+
+class FetchInfo(FetchInfoBase):
+    github_token = models.OneToOneField(GithubApp,\
         on_delete=models.CASCADE, related_name="github_fetch_info")
-    last_fetched_on=models.DateTimeField(auto_now=True,)
 
-class Repository(models.Model):
-    github_token = models.ForeignKey(GithubOAuthToken,\
+class Repository(RepositoryBase):
+    github_token = models.ForeignKey(GithubApp,\
         on_delete=models.CASCADE, related_name="github_repository_set")
-    repository_name = models.TextField()
-    repository_fullname = models.TextField()
-    is_localize_registered = models.BooleanField(default=False)
-    is_alive_in_github = models.BooleanField(default=True)
-    created_on = models.DateTimeField(auto_now_add=True,)
-    accessed_on =  models.DateTimeField(blank=True, null=True)
-    updated_on = models.DateTimeField(auto_now=True, )
-
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.accessed_on = datetime.now(tz=pytz.UTC)
-    #     self.save()
-
 
     def get_last_obj():
         return  Repository.objects.last()
@@ -123,7 +130,7 @@ class Repository(models.Model):
 
     def create_all_repositories_of_github(github_token_id):
         # Should be called from API's
-        gt = get_object_or_404(GithubOAuthToken.objects.all(),
+        gt = get_object_or_404(GithubApp.objects.all(),
             id=github_token_id)
 
         g = Github(gt.oauth_token)
@@ -144,13 +151,8 @@ class Repository(models.Model):
 
         return exist, fresh
 
-@receiver(post_save, sender=Repository)
-def repository_post_save(sender, **kwargs):
-
-    obj, created = kwargs["instance"], kwargs["created"]
-    if created :
-        assign_perm("change_repository",
-            obj.github_token.ai_user, obj)
+post_save.connect(RepositoryBase.permission_signal(f"owner_{DJ_APP_NAME}_repository"),
+                  sender=Repository)
 
 class Branch(models.Model):
     branch_name = models.CharField(max_length=255)
@@ -297,9 +299,10 @@ class HookDeck(models.Model):
     def set_source_name(self):
 
         if not self.source_name:
-            self.source_name = HookDeck.objects. \
-                get_hookdeck_source_name_for_user(user= \
-                self.project.ai_user)
+            self.source_name = "github"
+                # HookDeck.objects. \
+                # get_hookdeck_source_name_for_user(user= \
+                # self.project.ai_user)
 
     def set_hookname_and_destname(self):
         if not self.hook_name and (not self.destination_name):

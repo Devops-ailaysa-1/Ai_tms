@@ -117,6 +117,7 @@ INSTALLED_APPS = [
     'ai_workspace',
     "ai_workspace_okapi",
     "integerations.github_",
+    "integerations.gitlab_",
     "controller",
     'django_extensions',
     'sqlite3',
@@ -131,6 +132,11 @@ INSTALLED_APPS = [
     # 'channels',
     # 'django_q',
 ]
+
+MANAGEMENT = True
+
+if MANAGEMENT:
+    INSTALLED_APPS += ["ai_management", ]
 
 SITE_ID = 1
 
@@ -334,7 +340,7 @@ USE_TZ = True
 
 USE_SPACES = (True if os.getenv( "USE_SPACES" ) == 'True' else False)
 
-if USE_SPACES:
+if not USE_SPACES:
     # settings
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
@@ -436,6 +442,9 @@ DJSTRIPE_USE_NATIVE_JSONFIELD = (True if os.getenv( "DJSTRIPE_USE_NATIVE_JSONFIE
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"  # Set to `"id"` for all new 2.4+ installations
 
 
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
 CHANNEL_LAYERS = {
@@ -452,6 +461,12 @@ CHANNEL_LAYERS = {
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 # DBBACKUP_STORAGE_OPTIONS = {'location': 'backupdb/'}
+
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
+
 
 LOGGING = {
     'version' : 1,

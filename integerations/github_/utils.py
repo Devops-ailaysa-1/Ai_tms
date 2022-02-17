@@ -27,13 +27,15 @@ class GithubUtils:
     @staticmethod
     def get_file_contents(repo, ref_branch, file_path=""):
         print("ref_branch--->", ref_branch)
+        print("path---->", file_path)
         contents = repo.get_contents(file_path, ref= ref_branch)
         file_contents = []
 
         while contents:
             file_content = contents.pop(0)
+            print("content---->", file_content)
             if file_content.type == "dir":
-                contents.extend(repo.get_contents(file_content.path))
+                contents.extend(repo.get_contents(file_content.path, ref=ref_branch))
             else:
                 file_contents.append(file_content)
 
