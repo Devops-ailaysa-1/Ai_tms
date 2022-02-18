@@ -402,17 +402,6 @@ def get_file_upload_path(instance, filename):
 
 use_spaces = os.environ.get("USE_SPACES")
 
-# class CustomFileField(models.FileField):
-#     def __init__(self, *args, **kwargs):
-#         if use_spaces == 'True':
-#             print("******  Spaces  *******")
-#             # return super(CustomFileField).path()
-#             # super().__init__(*args, **kwargs)
-#         else:
-#             print("******  Local *******")
-#             return self.url(self)
-#             # super().__init__(*args, **kwargs)
-
 class File(models.Model):
 
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\

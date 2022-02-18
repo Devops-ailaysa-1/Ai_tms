@@ -5,7 +5,7 @@ from django.db.models.signals import post_save, pre_save
 from .signals import set_segment_tags_in_source_and_target
 import json
 from ai_auth.models import AiUser
-from ai_staff.models import LanguageMetaDetails, Languages
+from ai_staff.models import LanguageMetaDetails, Languages, AilaysaSupportedMtpeEngines
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
 from django.utils.functional import cached_property
 
@@ -101,6 +101,7 @@ class MT_RawTranslation(models.Model):
     segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
     mt_engine = models.ForeignKey(MT_Engine, null=True, blank=True, on_delete=models.SET_NULL)
     mt_raw = models.TextField()
+    task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL)
 
     @property
     def target_language(self):

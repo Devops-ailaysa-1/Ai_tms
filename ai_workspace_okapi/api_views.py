@@ -12,7 +12,7 @@ from rest_framework import permissions
 from ai_auth.models import AiUser, UserAttribute, UserCredits
 from ai_staff.models import AiUserType,SpellcheckerLanguages
 from django.http import HttpResponse
-from ai_workspace.models import Task, TaskCreditStatus
+from ai_workspace.models import Task, TaskCreditStatus, TaskAssign
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
@@ -359,8 +359,15 @@ class MT_RawAndTM_View(views.APIView):
                 return []
         return []
 
+    # def get_mt_engine_for_segment(self, segment_id):
+    #     task_mt_engine_id = TaskAssign.objects.get(
+    #     task_info__job_tasks_set__file_job_set__document_text_unit_set_text_unit_segment_set=segment_id
+    #     ).mt_engine
+    #     return task_mt_engine_id if task_mt_engine_id else 1
+
     def get(self, request, segment_id):
         mt_engine_id = request.POST.get("mt_engine", 1)
+        # mt_engine_id = self.get_mt_engine_for_segment(segment_id)
         data, status_code, can_team = self.get_data(request, segment_id, mt_engine_id)
         mt_alert = True if status_code == 424 else False
         alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
