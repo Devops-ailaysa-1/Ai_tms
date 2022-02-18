@@ -5,7 +5,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
-                    CreditAddonPrice,SupportTopics,JobPositions,Role,Steps,Workflows)
+                    CreditAddonPrice,SupportTopics,JobPositions,Role)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -301,14 +301,4 @@ class JobPositionSerializer(serializers.ModelSerializer):
 class TeamRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
-        fields = "__all__"
-
-class StepsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Steps
-        fields = "__all__"
-
-class WorkflowsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Workflows
         fields = "__all__"

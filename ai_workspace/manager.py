@@ -41,7 +41,7 @@ class ProjectManager(models.Manager):
         )
 
     def create_and_jobs_files_bulk_create_for_project(self, project, files_data,\
-        jobs_data, f_klass, j_klass):
+        jobs_data, contents_data, subjects_data, f_klass, j_klass, c_klass, s_klass):
 
         files = f_klass.objects.bulk_create_of_project(
             files_data, project, f_klass
@@ -49,7 +49,13 @@ class ProjectManager(models.Manager):
         jobs = j_klass.objects.bulk_create_of_project(
             jobs_data, project, j_klass
         )
-        return project, files, jobs
+        contents = c_klass.objects.bulk_create_of_project(
+            contents_data, project, c_klass
+        )
+        subjects = s_klass.objects.bulk_create_of_project(
+            subjects_data, project, s_klass
+        )
+        return project, files, jobs, contents, subjects
 
 class FileManager(models.Manager):
     def bulk_create_of_project(self, \
@@ -62,6 +68,18 @@ class JobManager(models.Manager):
             data, project, klass):
         jobs = [self.create(**item, project=project) for item in data]
         return jobs
+
+class ProjectContentTypeManager(models.Manager):
+    def bulk_create_of_project(self, \
+            data, project, klass):
+        contents = [self.create(**item, project=project) for item in data]
+        return contents
+
+class ProjectSubjectFieldManager(models.Manager):
+    def bulk_create_of_project(self, \
+            data, project, klass):
+        subjects = [self.create(**item, project=project) for item in data]
+        return subjects 
 
 class TaskManager(models.Manager):
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
