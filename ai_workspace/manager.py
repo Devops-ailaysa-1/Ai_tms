@@ -41,7 +41,7 @@ class ProjectManager(models.Manager):
         )
 
     def create_and_jobs_files_bulk_create_for_project(self, project, files_data,\
-        jobs_data, contents_data, subjects_data, f_klass, j_klass, c_klass, s_klass):
+        jobs_data, f_klass, j_klass):
 
         files = f_klass.objects.bulk_create_of_project(
             files_data, project, f_klass
@@ -49,13 +49,18 @@ class ProjectManager(models.Manager):
         jobs = j_klass.objects.bulk_create_of_project(
             jobs_data, project, j_klass
         )
-        contents = c_klass.objects.bulk_create_of_project(
+        return project, files, jobs
+
+    def create_content_and_subject_for_project(self,project,contents_data,\
+         subjects_data,c_klass, s_klass):
+
+         contents = c_klass.objects.bulk_create_of_project(
             contents_data, project, c_klass
-        )
-        subjects = s_klass.objects.bulk_create_of_project(
+            )
+         subjects = s_klass.objects.bulk_create_of_project(
             subjects_data, project, s_klass
-        )
-        return project, files, jobs, contents, subjects
+            )
+         return project, contents, subjects
 
 class FileManager(models.Manager):
     def bulk_create_of_project(self, \
@@ -79,7 +84,7 @@ class ProjectSubjectFieldManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
         subjects = [self.create(**item, project=project) for item in data]
-        return subjects 
+        return subjects
 
 class TaskManager(models.Manager):
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
@@ -110,7 +115,12 @@ class TaskAssignManager(models.Manager):
         if hasattr(project, "ai_user"):
             assign_to = project.ai_user
         tasks = project.get_tasks
+        mt_engine = project.mt_engine_id
+        mt_enable = project.mt_enable
+        pre_translate = project.pre_translate
         print("Inside Manager---------->",tasks)
         print("Inside---->",steps)
-        task_assign = [self.get_or_create(task=task,step=step,defaults = {"assign_to": assign_to,"status":1}) for task in tasks for step in steps]
+        task_assign = [self.get_or_create(task=task,step=step,mt_engine_id=mt_engine,\
+                        mt_enable=mt_enable,pre_translate=pre_translate,defaults = {"assign_to": assign_to,"status":1})\
+                        for task in tasks for step in steps]
         return task_assign

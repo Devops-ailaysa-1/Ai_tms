@@ -100,10 +100,10 @@ class Project(models.Model):
     ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)# Main account owner,if team team_owner
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
-        on_delete=models.CASCADE, related_name="proj_mt_engine")
+        on_delete=models.CASCADE, related_name="proj_mt_engine",default=1)
     threshold = models.IntegerField(default=85)
     max_hits = models.IntegerField(default=5)
-    workflows = models.ForeignKey(Workflows,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_workflow')
+    workflow = models.ForeignKey(Workflows,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_workflow')
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
     project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
@@ -593,6 +593,8 @@ class TaskAssign(models.Model):
             related_name="user_tasks_set")
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
         on_delete=models.CASCADE, related_name="task_mt_engine")
+    pre_translate = models.BooleanField(null=True, blank=True)
+    mt_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
 
     objects = TaskAssignManager()
