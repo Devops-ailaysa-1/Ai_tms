@@ -174,7 +174,7 @@ class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.Model
         }
 
     def run_validation(self, data):
-
+        print('Data---->',data)
         if data.get("vendor_subject") and isinstance( data.get("vendor_subject"), str):
             data["vendor_subject"]=json.loads(data["vendor_subject"])
         if data.get("vendor_membership") and isinstance( data.get("vendor_membership"), str):

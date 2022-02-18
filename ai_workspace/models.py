@@ -14,7 +14,7 @@ from django.contrib.auth import settings
 import os, re,time
 from ai_auth.models import AiUser,Team,HiredEditors
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
-    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,Steps,Workflows
+    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document, Segment
 from ai_staff.models import ParanoidModel
@@ -32,7 +32,7 @@ from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
     check_job_file_version_has_same_project,)
 from .manager import ProjectManager, FileManager, JobManager,\
-    TaskManager,TaskAssignManager
+    TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager
 from django.db.models.fields import Field
 
 def set_pentm_dir(instance):
@@ -75,6 +75,23 @@ class PenseiveTM(models.Model):
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
+
+class Steps(models.Model):
+    name = models.CharField(max_length=191)
+    short_name = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class Workflows(models.Model):
+    name = models.CharField(max_length=191)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    standard = models.BooleanField(default=False)
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE,blank=True,null=True,related_name='user_workflow')
+
+
+
 class Project(models.Model):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
@@ -90,6 +107,9 @@ class Project(models.Model):
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
     project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
+    pre_translate = models.BooleanField(default=False)
+    mt_enable = models.BooleanField(default=True)
+    project_deadline = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -115,14 +135,14 @@ class Project(models.Model):
         if not self.project_name:
             #self.project_name = self.ai_project_id
             self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
-
+        print("Project_name---->",self.project_name)
         if self.id:
-            project_count = Project.objects.filter(project_name=self.project_name, \
+            project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user).exclude(id=self.id).count()
         else:
-            project_count = Project.objects.filter(project_name=self.project_name, \
+            project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user,).count()
-
+        print("ProjectCount------>",project_count)
         if project_count != 0:
             self.project_name = self.project_name + "(" + str(project_count) + ")"
 
@@ -353,11 +373,15 @@ class ProjectContentType(models.Model):
     content_type = models.ForeignKey(ContentTypes, on_delete=models.CASCADE,
                         related_name="proj_content_type_name")
 
+    objects = ProjectContentTypeManager()
+
 class ProjectSubjectField(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
                         related_name="proj_subject")
     subject = models.ForeignKey(SubjectFields, on_delete=models.CASCADE,
                         related_name="proj_sub_name")
+
+    objects = ProjectSubjectFieldManager()
 
 class Job(models.Model):
     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,\
@@ -619,10 +643,12 @@ class TaskAssign(models.Model):
     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_info")
     step = models.ForeignKey(Steps,on_delete=models.CASCADE, null=False, blank=False,
-            related_name="task_step")
+             related_name="task_step")
     assign_to = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True,
             related_name="user_tasks_set")
-    status = models.IntegerField(choices=STATUS_CHOICES)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
+        on_delete=models.CASCADE, related_name="task_mt_engine")
+    status = models.IntegerField(choices=STATUS_CHOICES,default=1)
 
     objects = TaskAssignManager()
 
@@ -785,3 +811,10 @@ class TempFiles(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.files.file.name)
+
+
+class WorkflowSteps(models.Model):
+    workflow = models.ForeignKey(Workflows,on_delete=models.CASCADE,blank=True,null=True,related_name='workflow')
+    steps = models.ForeignKey(Steps,on_delete=models.CASCADE,blank=True,null=True,related_name='step')
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
