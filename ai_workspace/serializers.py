@@ -430,7 +430,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return super().run_validation(data)
 
 	def to_internal_value(self, data):
-		print("DTATA------>",data)
+		# print("DTATA------>",data)
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['workflow_id'] = data.get('workflow',[None])[0]

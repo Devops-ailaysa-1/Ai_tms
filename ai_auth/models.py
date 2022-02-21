@@ -82,13 +82,14 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
     @property
     def credit_balance(self):
-        total_credit_left = 0
+        # total_credit_left = 0
+        addons = subscription = 0
         present = datetime.now()
 
         try:
             addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
-                total_credit_left += addon.credits_left
+                addons += addon.credits_left
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
 
@@ -96,7 +97,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
                                                 & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                total_credit_left += sub_credits.credits_left
+                # total_credit_left += sub_credits.credits_left
+                subscription += sub_credits.credits_left
 
             # carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
             #     Q(ended_at__isnull=False)).last()
@@ -106,9 +108,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
         except:
             print("No active subscription")
-            return total_credit_left
+            return {"addon": addons, "subscription": subscription}
 
-        return total_credit_left
+        return {"addon": addons, "subscription": subscription}
 
     @property
     def buyed_credits(self):
@@ -127,7 +129,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
             #carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
             #    Q(ended_at__isnull=False)).last()
-            carry_credits =UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription")).order_by('-id')
+            carry_credits =UserCredits.objects.filter(Q(user=self) & \
+                Q(credit_pack_type__icontains="Subscription")).order_by('-id')
             avai_cp= 0
             for credits in carry_credits:
                 if credits.ended_at == None:
@@ -137,7 +140,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
                     avai_cp = credits.buyed_credits
                 else:
                     print("else")
-                    if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
+                    if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') \
+                                    <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
                         startdate = credits.created_at
                         enddate = credits.expiry
                         print("inside else")
