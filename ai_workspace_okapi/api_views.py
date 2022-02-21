@@ -361,8 +361,8 @@ class MT_RawAndTM_View(views.APIView):
 
     # def get_mt_engine_for_segment(self, segment_id):
     #     task_mt_engine_id = TaskAssign.objects.get(
-    #     task_info__job_tasks_set__file_job_set__document_text_unit_set_text_unit_segment_set=segment_id
-    #     ).mt_engine
+    #     task_info__job_tasks_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id
+    #     ).mt_engine_id
     #     return task_mt_engine_id if task_mt_engine_id else 1
 
     def get(self, request, segment_id):
@@ -701,7 +701,10 @@ class ProgressView(views.APIView):
 
     @staticmethod
     def get_progress(document, confirm_list):
-        total_segment_count = document.total_segment_count - document.segments_with_blank.count()
+        # total_segment_count = document.total_segment_count - document.segments_with_blank.count()
+        total_segment_count = Segment.objects.filter(
+                        text_unit__document=document
+                ).count()
         segments_confirmed_count = document.segments.filter(
             status__status_id__in=confirm_list
         ).count()

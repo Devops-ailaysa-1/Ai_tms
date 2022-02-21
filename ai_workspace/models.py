@@ -259,7 +259,6 @@ class Project(models.Model):
         else:
             return False
 
-
     @property
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
@@ -544,9 +543,17 @@ class Task(models.Model):
         return  get_processor_name(self.file.file.name).get("processor_name", None)
 
     @property
+    def corrected_segment_count(self):
+        doc = self.document
+        return Segment.objects.filter(
+            text_unit__document=doc
+        ).count()
+
+    @property
     def get_progress(self):
         confirm_list = [102, 104, 106]
-        total_segment_count = self.document.total_segment_count
+        # total_segment_count = self.document.total_segment_count
+        total_segment_count = self.corrected_segment_count
         segments_confirmed_count = self.document.segments.filter(
             status__status_id__in=confirm_list
         ).count()
