@@ -1227,13 +1227,12 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     def list(self,request):
         tasks = request.GET.getlist('tasks')
         step = request.GET.get('step')
-        print(tasks)
         try:
-            # task_assign_info = TaskAssignInfo.objects.filter(task_assign__task_id__in = tasks)
-            task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__step_id =step))
+            task_assign_info = TaskAssignInfo.objects.filter(task_assign__task_id__in = tasks)
+            # task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__step_id =step))
         except TaskAssignInfo.DoesNotExist:
             return HttpResponse(status=404)
-        print('trtrt',task_assign_info)
+        # print('trtrt',task_assign_info)
         ser = TaskAssignInfoSerializer(task_assign_info,many=True)
         return Response(ser.data)
 
@@ -1289,10 +1288,12 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     def delete(self,request):
         task = request.GET.get('task')
-        instance = TaskAssignInfo.objects.get(task_id=task)
-        # if request.POST.get('instruction_file',None) != None :
-        instance.instruction_file=None
-        instance.save()
+        assigns = TaskAssignInfo.objects.filter(task_assign__task_id=task)
+        for obj in assigns:
+            user = obj.task_assign.task.job.project.ai_user
+            obj.task_assign.assign_to = user
+            obj.task_assign.save()
+            obj.delete()
         return Response({"msg":"Deleted Successfully"},status=200)
 
 
@@ -1365,9 +1366,12 @@ class ProjectListView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+        #             |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+        #             |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
         return queryset
 
     def list(self,request):
@@ -1390,6 +1394,7 @@ def tasks_list(request):
     try:
         job = Job.objects.get(id = job_id)
         tasks = job.job_tasks_set.all()
+        print("Task--->",tasks)
         ser = VendorDashBoardSerializer(tasks,many=True)
         return Response(ser.data)
     except:
@@ -1473,8 +1478,32 @@ class StepsView(viewsets.ViewSet):
 
 
 class WorkflowsView(viewsets.ViewSet):
-    permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = Workflows.objects.all()
         serializer = WorkflowsSerializer(queryset,many=True)
         return Response(serializer.data)
+
+    def create(self,request):
+        print("User Id----->",self.request.user.id)
+        serializer = WorkflowsSerializer(data={**request.POST.dict(),"user":self.request.user.id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = Workflows.objects.all()
+        workflow = get_object_or_404(queryset, pk=pk)
+        serializer= WorkflowsSerializer(workflow,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = Workflows.objects.all()
+        obj = get_object_or_404(queryset, pk=pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
