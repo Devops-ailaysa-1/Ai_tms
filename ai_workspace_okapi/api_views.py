@@ -365,13 +365,20 @@ class MT_RawAndTM_View(views.APIView):
     #     ).mt_engine_id
     #     return task_mt_engine_id if task_mt_engine_id else 1
 
+    def get_alert_msg(self, status_code, can_team=None):
+        if (status_code == 424 and can_team == "unavailable"):
+            return "MT doesn't work as the credits are insufficient. Please buy more or upgrade"
+        else:
+            return "Team subscription inactive"
+
     def get(self, request, segment_id):
         mt_engine_id = request.POST.get("mt_engine", 1)
         # mt_engine_id = self.get_mt_engine_for_segment(segment_id)
         data, status_code, can_team = self.get_data(request, segment_id, mt_engine_id)
         mt_alert = True if status_code == 424 else False
-        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
-            can_team == "unavailable") else "Team subscription inactive"
+        # alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
+        #     can_team == "unavailable") else "Team subscription inactive"
+        alert_msg = self.get_alert_msg(status_code, can_team)
         tm_data = self.get_tm_data(request, segment_id)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert, "alert_msg":alert_msg}, status=status_code)
 
