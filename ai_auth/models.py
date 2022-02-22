@@ -108,9 +108,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
         except:
             print("No active subscription")
-            return {"addon": addons, "subscription": subscription}
+            return {"addon": addons, "subscription": subscription, 'total': addons + subscription}
 
-        return {"addon": addons, "subscription": subscription}
+        return {"addon": addons, "subscription": subscription, 'total': addons + subscription}
 
     @property
     def buyed_credits(self):
@@ -152,9 +152,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             #     subscription += carry_on_credits.credits_left
         except:
             print("No active subscription")
-            return {"addon":addons, "subscription":avai_cp}
+            return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
-        return {"addon":addons, "subscription":avai_cp}
+        return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
     # @property
     # def buyed_credits(self):

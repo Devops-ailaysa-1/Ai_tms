@@ -3,7 +3,7 @@ from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSeriali
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer)
-from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer
+from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer, TaskAssignSerializer
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets, authentication
 from rest_framework import views
@@ -314,10 +314,14 @@ class MT_RawAndTM_View(views.APIView):
             raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
     @staticmethod
-    def get_data(request, segment_id, mt_engine_id):
+    def get_data(request, segment_id, mt_params):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200, "available"
+
+        # If MT disabled for the task
+        if mt_params.get("mt_enable", True) != True:
+            return {}, 200, "MT disabled"
 
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
@@ -331,11 +335,12 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 return MT_RawAndTM_View.can_translate(request, user)
 
-        initial_credit = user.credit_balance
+        initial_credit = user.credit_balance.get("total")
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)        
 
         if initial_credit > consumable_credits :
+            mt_engine_id = mt_params.get("mt_engine", 1)            # Google MT selected if MT selection fails
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id, "mt_engine": mt_engine_id},\
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
@@ -359,19 +364,24 @@ class MT_RawAndTM_View(views.APIView):
                 return []
         return []
 
-    # def get_mt_engine_for_segment(self, segment_id):
-    #     task_mt_engine_id = TaskAssign.objects.get(
-    #     task_info__job_tasks_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id
-    #     ).mt_engine_id
-    #     return task_mt_engine_id if task_mt_engine_id else 1
+    def get_segment_MT_params(self, segment_id):
+        task_assign_obj = TaskAssign.objects.get(
+            Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
+            Q(step_id=1)
+        )
+        return TaskAssignSerializer(task_assign_obj).data
+
+    def get_alert_msg(self, status_code, can_team):
+        if (status_code == 424 and can_team == "unavailable"):
+            return "MT doesn't work as the credits are insufficient. Please buy more or upgrade"
+        else:
+            return "Team subscription inactive"
 
     def get(self, request, segment_id):
-        mt_engine_id = request.POST.get("mt_engine", 1)
-        # mt_engine_id = self.get_mt_engine_for_segment(segment_id)
-        data, status_code, can_team = self.get_data(request, segment_id, mt_engine_id)
+        mt_params = self.get_segment_MT_params(segment_id)
+        data, status_code, can_team = self.get_data(request, segment_id, mt_params)
         mt_alert = True if status_code == 424 else False
-        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
-            can_team == "unavailable") else "Team subscription inactive"
+        alert_msg = self.get_alert_msg(status_code, can_team)
         tm_data = self.get_tm_data(request, segment_id)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert, "alert_msg":alert_msg}, status=status_code)
 
