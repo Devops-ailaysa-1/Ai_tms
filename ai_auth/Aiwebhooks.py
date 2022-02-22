@@ -427,11 +427,11 @@ def my_handler(event, **kwargs):
     cust_obj = Customer.objects.get(id=custid)
     user=cust_obj.subscriber
     subid=data.get('object').get('id')
-    invoice_obj = Invoice.objects.get(subscription_id=subid)
-    creditsls= models.UserCredits.objects.filter(user=user).filter(Q(invoice=invoice_obj.id))
-    for credit in creditsls:
-        credit.ended_at=timezone.now()
-        credit.save()
+    #invoice_obj = Invoice.objects.get(subscription_id=subid)
+    #creditsls= models.UserCredits.objects.filter(user=user).filter(Q(invoice=invoice_obj.id))
+    #for credit in creditsls:
+    #    credit.ended_at=timezone.now()
+    #    credit.save()
     # invoice=data.get('object').get('id') 
     # invoice_obj=Invoice.objects.get(id=invoice)
     #sub=data['object']['lines']['data'][0]['subscription']
@@ -527,4 +527,3 @@ def renew_user_credits_yearly(subscription):
     'ended_at': None
     }
     us = models.UserCredits.objects.create(**kwarg)
-    print(us)

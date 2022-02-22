@@ -463,3 +463,7 @@ class HiredEditors(models.Model):
 
 class ReferredUsers(models.Model):
     email = models.EmailField()
+
+class CampaignUsers(models.Model):
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
+    campaign_name = models.CharField(max_length=255, blank=True, null=True)

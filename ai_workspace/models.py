@@ -116,10 +116,10 @@ class Project(models.Model):
             self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
 
         if self.id:
-            project_count = Project.objects.filter(project_name=self.project_name, \
+            project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user).exclude(id=self.id).count()
         else:
-            project_count = Project.objects.filter(project_name=self.project_name, \
+            project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user,).count()
 
         if project_count != 0:
