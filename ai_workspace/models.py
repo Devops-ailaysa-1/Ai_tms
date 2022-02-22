@@ -82,6 +82,8 @@ class Steps(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+    def __str__(self):
+        return self.name
 
 class Workflows(models.Model):
     name = models.CharField(max_length=191)
@@ -90,7 +92,8 @@ class Workflows(models.Model):
     standard = models.BooleanField(default=False)
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,blank=True,null=True,related_name='user_workflow')
 
-
+    def __str__(self):
+        return self.name
 
 class Project(models.Model):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
@@ -761,3 +764,6 @@ class WorkflowSteps(models.Model):
     steps = models.ForeignKey(Steps,on_delete=models.CASCADE,blank=True,null=True,related_name='step')
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.workflow.name + "-" + self.steps.name
