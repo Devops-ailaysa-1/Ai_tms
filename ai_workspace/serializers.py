@@ -433,7 +433,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		# print("DTATA------>",data)
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
-		data['workflow_id'] = data.get('workflow',[None])[0]
+		data['workflow_id'] = data.get('workflow',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['pre_translate'] = data.get('pre_translate',['false'])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
@@ -495,7 +495,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:ai_user = created_by
 		team = created_by.team if created_by.team else None
 		project_manager = created_by
-		workflow = validated_data.get('workflow_id',1)
+		workflow = validated_data.get('workflow_id')
 		validated_data.pop('team_exist')
 		print("validated_data---->",validated_data)
 		proj_subject = validated_data.pop("proj_subject",[])
@@ -943,7 +943,35 @@ class WorkflowsSerializer(serializers.ModelSerializer):
         model = Workflows
         fields = "__all__"
 
-# class WorkflowsStepsSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = WorkflowsSteps
-#         fields = "__all__"
+class WorkflowsStepsSerializer(serializers.ModelSerializer):
+    workflows = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),required=False,write_only=True)
+    steps =  serializers.ListField(required=False)
+    user = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
+    workflow_name = serializers.CharField(required=False)
+    class Meta:
+        model = WorkflowSteps
+        fields = ('workflows','steps','workflow_name','user',)
+
+    def run_validation(self, data):
+        print("Run Data---->",data)
+        # if data.get('workflow_name'):
+        if data.get('steps'):
+           data['steps'] = [step for step in data.pop('steps',[])]
+        return super().run_validation(data)
+
+
+    def create(self,data):
+        print("Data--->",data)
+        workflow_name = data.pop('workflow_name')
+        user = data.pop('user')
+        wf = Workflows.objects.create(name = workflow_name,user_id=user)
+        steps = data.pop('steps')
+        print("Steps--->",steps)
+        tt = [WorkflowSteps.objects.create(workflow = wf,steps_id = i )for i in steps]
+        return wf
+
+    # def update(self,instance,data):
+    #     if data.get('workflow_name'):
+    #        instance.workflow.name = data.get('workflow_name')
+    #        instance.workflow.save()
+    #     return super().update(instance, data)
