@@ -948,6 +948,7 @@ class WorkflowsStepsSerializer(serializers.ModelSerializer):
     steps =  serializers.ListField(required=False)
     user = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     workflow_name = serializers.CharField(required=False)
+
     class Meta:
         model = WorkflowSteps
         fields = ('workflows','steps','workflow_name','user',)
@@ -961,17 +962,17 @@ class WorkflowsStepsSerializer(serializers.ModelSerializer):
 
 
     def create(self,data):
-        print("Data--->",data)
         workflow_name = data.pop('workflow_name')
         user = data.pop('user')
         wf = Workflows.objects.create(name = workflow_name,user_id=user)
         steps = data.pop('steps')
-        print("Steps--->",steps)
         tt = [WorkflowSteps.objects.create(workflow = wf,steps_id = i )for i in steps]
         return wf
 
-    # def update(self,instance,data):
-    #     if data.get('workflow_name'):
-    #        instance.workflow.name = data.get('workflow_name')
-    #        instance.workflow.save()
-    #     return super().update(instance, data)
+    def update(self,instance,data):
+        if data.get('workflow_name'):
+           instance.name = data.get('workflow_name')
+           instance.save()
+        if data.get('steps'):
+           [WorkflowSteps.objects.create(workflow = instance,steps_id = i )for i in data.get('steps')]
+        return super().update(instance, data)
