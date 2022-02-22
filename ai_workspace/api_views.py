@@ -21,12 +21,12 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
     TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer,InstructionfilesSerializer,StepsSerializer,WorkflowsSerializer)
+    GetAssignToSerializer,InstructionfilesSerializer,StepsSerializer,WorkflowsSerializer,WorkflowsStepsSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
     TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
-    TaskAssignInfo,TaskAssign,Workflows,Steps)
+    TaskAssignInfo,TaskAssign,Workflows,Steps,WorkflowSteps)
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -1477,25 +1477,29 @@ class StepsView(viewsets.ViewSet):
         return Response(serializer.data)
 
 
-class WorkflowsView(viewsets.ViewSet):
+class WorkflowStepCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = Workflows.objects.all()
-        serializer = WorkflowsSerializer(queryset,many=True)
+        serializer = WorkflowsStepsSerializer(queryset,many=True)
         return Response(serializer.data)
 
     def create(self,request):
-        print("User Id----->",self.request.user.id)
-        serializer = WorkflowsSerializer(data={**request.POST.dict(),"user":self.request.user.id})
+        steps = request.POST.getlist('steps')
+        serializer = WorkflowsStepsSerializer(data={**request.POST.dict(),"user":self.request.user.id,"steps":steps})
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response({"msg":"workflow created"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self,request,pk):
         queryset = Workflows.objects.all()
+        steps = request.POST.getlist('steps')
+        step_delete_ids = request.POST.getlist('step_delete_ids')
         workflow = get_object_or_404(queryset, pk=pk)
-        serializer= WorkflowsSerializer(workflow,data={**request.POST.dict()},partial=True)
+        if step_delete_ids:
+            [WorkflowSteps.objects.get(workflow=workflow,steps=i).delete() for i in step_delete_ids]
+        serializer= WorkflowsStepsSerializer(workflow,data={**request.POST.dict(),"steps":steps},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

@@ -23,7 +23,7 @@ router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
 				basename="project-reference-files")
 router.register(r'steps',api_views.StepsView,basename='steps')
-router.register(r'workflows',api_views.WorkflowsView,basename='workflows')
+router.register(r'workflow_steps',api_views.WorkflowStepCreateView,basename='workflow-steps')
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
 urlpatterns = router.urls
 
