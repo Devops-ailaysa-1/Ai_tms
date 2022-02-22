@@ -8,6 +8,7 @@ from ai_staff.models import AssetUsageTypes, Languages
 from github import Github
 from collections import OrderedDict
 from ai_auth.models import AiUser
+from .enums import DJ_APP_NAME
 
 class GithubOAuthTokenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -112,14 +113,14 @@ class ProjectSerializer(serializers.ModelSerializer):
                   #'project_dir_path', 'created_at',
                   'ai_user',
                   #'ai_project_id', 'mt_engine', 'max_hits',
-                  'threshold', "project_downloadproject"
+                  'threshold', f"project_{DJ_APP_NAME}downloadproject"
                   ]
         model = Project
 
         extra_kwargs = {
             "ai_user": {
                 "required": False,},
-            "project_downloadproject":{
+            f"project_{DJ_APP_NAME}downloadproject":{
                 "required": False}}
 
         validators = []
@@ -127,7 +128,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         data = validated_data
         project = Project.objects.create(**data)
-        rel_obj = data['project_downloadproject']
+        rel_obj = data[f'project_{DJ_APP_NAME}downloadproject']
         rel_obj.update_project(project=project)
         return project
 
@@ -145,7 +146,7 @@ class FileListSerializer(serializers.ListSerializer):
 class FileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ['id', 'usage_type', 'file',
-                  'project', "contentfile"]
+                  'project', f"{DJ_APP_NAME}contentfile"]
         model = File
         list_serializer_class = FileListSerializer
 
@@ -157,7 +158,7 @@ class FileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         data = validated_data
         ret = super().create(data)
-        cf = data['contentfile']
+        cf = data['github_contentfile']
         cf.update_file(ret)
         return ret
 
@@ -180,7 +181,7 @@ class FileDataPrepareSerializer(serializers.Serializer):
     def to_representation(self, instance):
         ret = super(FileDataPrepareSerializer, self)\
             .to_representation(instance=instance)
-        ret = [{"usage_type":ret["usage_type"], "file":file, "contentfile": contentfile} for
+        ret = [{"usage_type":ret["usage_type"], "file":file, f"{DJ_APP_NAME}contentfile": contentfile} for
                file, contentfile in zip(ret.get("files"), ret.get("content_files"))]
         return ret
 

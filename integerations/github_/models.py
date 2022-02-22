@@ -24,7 +24,7 @@ from requests.auth import HTTPBasicAuth
 from django.apps import apps
 from django import forms
 from ..base.models import IntegerationAppBase, RepositoryBase, FetchInfoBase,\
-    BranchBase
+    BranchBase, ContentFileBase
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -197,20 +197,9 @@ def branch_localize_register_update(sender, **kwargs):
             repo.is_localize_registered = True
             repo.save()
 
-class ContentFile(models.Model):
+class ContentFile(ContentFileBase):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE,
                 related_name="branch_contentfiles_set")
-    is_localize_registered = models.BooleanField(default=False)
-    file = models.CharField(max_length=255)
-    file_path = models.TextField() #github file stored path
-    created_on = models.DateTimeField(auto_now_add=True,)
-    accessed_on =  models.DateTimeField(blank=True, null=True)
-    updated_on = models.DateTimeField(auto_now=True, )
-    uploaded_file = models.OneToOneField("ai_workspace.File",
-            on_delete=models.SET_NULL, null=True, default=None)
-    controller = models.OneToOneField("controller.FileController",
-            on_delete=models.SET_NULL, null=True, default=None,
-            related_name="controller_contentfile")
 
     def update_file(self, file):
         self.uploaded_file = file
@@ -242,12 +231,8 @@ class ContentFile(models.Model):
                 file_path=file_content.path,
             )
 
-@receiver(post_save, sender=ContentFile)
-def contentfile_post_save(sender, **kwargs):
-    obj, created = kwargs["instance"], kwargs["created"]
-    if created :
-        assign_perm("change_contentfile",
-            obj.branch.repo.github_token.ai_user, obj)
+post_save.connect(ContentFileBase.permission_signal(),
+                  sender=ContentFile)
 
 @receiver(post_save, sender=ContentFile)
 def contentfile_localize_register_update(sender, **kwargs):
@@ -339,11 +324,6 @@ class HookDeck(models.Model):
             raise ValueError("hookdeck new connection create or get api failed!!!")
 
 class DownloadProject(DownloadBase):
-    project = models.OneToOneField("ai_workspace.Project", on_delete=models.CASCADE,
-                related_name="project_downloadproject", null=True)
-    controller = models.OneToOneField("controller.DownloadController",
-                on_delete=models.CASCADE, related_name="controller_downloadproject", null=True)
-    commit_hash = models.TextField(null=True)
 
     def save(self, *args, **kwargs):
         print("project---->", self.project)

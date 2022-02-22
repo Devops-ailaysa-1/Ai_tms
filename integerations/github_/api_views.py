@@ -23,7 +23,7 @@ from .serializers import GithubOAuthTokenSerializer, RepositorySerializer,\
     HookDeckResponseSerializer, HookDeckSerializer
 from .models import GithubApp, Repository, FetchInfo, Branch, ContentFile, HookDeck,\
     DownloadProject
-from .utils import DjRestUtils
+from ..base.utils import DjRestUtils
 from .tasks import update_files
 from guardian.shortcuts import get_objects_for_user
 from ai_workspace.models import Project, Task
@@ -266,7 +266,7 @@ class ContentFileViewset(viewsets.ModelViewSet):
 
         serlzr = ProjectSerializer(data=request.data, )
         if serlzr.is_valid(raise_exception=True):
-            serlzr.save(ai_user=request.user, project_downloadproject=download_project)
+            serlzr.save(ai_user=request.user, project_github_downloadproject=download_project)
             # return Response(serlzr.data, status=200)
             project_data = serlzr.data
             project = serlzr.instance

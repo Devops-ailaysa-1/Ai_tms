@@ -36,7 +36,7 @@ from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager
 from django.db.models.fields import Field
 from integerations.github_.models import ContentFile
-from integerations.github_.utils import DjRestUtils
+from integerations.base.utils import DjRestUtils
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")

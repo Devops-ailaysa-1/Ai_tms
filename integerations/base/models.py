@@ -115,6 +115,45 @@ class BranchBase(models.Model):
             obj, created = kwargs["instance"], kwargs["created"]
             if created :
                 assign_perm(app_name,
-                    obj.repo.github_token.ai_user, obj)
+                    obj.repo.get_token.ai_user, obj)
         return branch_post_save
+
+
+
+class ContentFileBase(models.Model):
+
+    is_localize_registered = models.BooleanField(default=False)
+    file = models.CharField(max_length=255)
+    file_path = models.TextField() #github file stored path
+    created_on = models.DateTimeField(auto_now_add=True,)
+    accessed_on =  models.DateTimeField(blank=True, null=True)
+    updated_on = models.DateTimeField(auto_now=True, )
+    uploaded_file = models.OneToOneField("ai_workspace.File",
+            on_delete=models.SET_NULL, null=True, default=None,
+            related_name="%(app_label)s%(class)s")
+    controller = models.OneToOneField("controller.FileController",
+            on_delete=models.SET_NULL, null=True, default=None,
+            related_name="%(app_label)s%(class)s")
+
+    class Meta:
+        abstract = True
+
+    def update_file(self, file):
+        raise ValueError("You should implement in child class!!!")
+
+    @property
+    def get_content_of_file(self):
+        raise ValueError("You should implement in child class!!!")
+
+    def create_all_contentfiles(branch):
+        raise ValueError("You should implement in child class!!!")
+
+    def permission_signal(app_name="change_contentfile"):
+        def contentfile_post_save(sender, **kwargs):
+            obj, created = kwargs["instance"], kwargs["created"]
+            if created:
+                assign_perm(app_name,
+                            obj.branch.repo.get_token.ai_user, obj)
+        return contentfile_post_save
+
 
