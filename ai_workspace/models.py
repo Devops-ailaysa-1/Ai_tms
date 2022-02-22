@@ -309,7 +309,11 @@ class Project(models.Model):
                                 "task_words":task_words}
         else:
             from .api_views import ProjectAnalysisProperty
-            return ProjectAnalysisProperty.get(self.id)
+            try:
+                return ProjectAnalysisProperty.get(self.id)
+            except:
+                return {"proj_word_count": 0, "proj_char_count": 0, \
+                    "proj_seg_count": 0, "task_words":[]}
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
