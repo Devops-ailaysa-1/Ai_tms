@@ -133,7 +133,7 @@ INSTALLED_APPS = [
     # 'django_q',
 ]
 
-MANAGEMENT = True
+MANAGEMENT = False
 
 if MANAGEMENT:
     INSTALLED_APPS += ["ai_management", ]
@@ -491,7 +491,7 @@ LOGGING = {
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'propogate' : True,
         }
-        
+
     },
 
     'handlers' : {

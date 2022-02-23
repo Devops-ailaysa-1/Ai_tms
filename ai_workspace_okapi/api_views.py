@@ -517,13 +517,10 @@ class DocumentToFile(views.APIView):
 OUTPUT_TYPES = dict(
     ORIGINAL = "ORIGINAL",
     XLIFF = "XLIFF",
-<<<<<<< HEAD
     TMX = "TMX",
     SOURCE = "SOURCE"
 )
-=======
-    TMX = "TMX",)
->>>>>>> origin/v3_ailaysa
+
 
 def output_types(request):
     return JsonResponse(OUTPUT_TYPES, safe=False)

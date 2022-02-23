@@ -124,7 +124,6 @@ def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
 
     return text_content
 
-<<<<<<< HEAD
 
 def download_file(file_path):
 
@@ -182,7 +181,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         return ms_translation(source_string, source_lang_code, target_lang_code)
-=======
+
 class SpacesService:
 
     def get_client():
@@ -214,9 +213,3 @@ class SpacesService:
 class OkapiUtils:
     def get_translated_file_(self):
         pass
-
-
-
-
-
->>>>>>> origin/v3_ailaysa
