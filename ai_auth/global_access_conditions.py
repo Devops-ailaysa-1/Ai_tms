@@ -41,7 +41,6 @@ def is_added(request, view, action) -> bool:
 def is_admin(self,request, view, action) -> bool:
     return request.user.is_superuser
 
-
 def is_project_owner_internal(request, view, action: str) -> bool:
     user = request.user
     managers = user.internal_member.filter(role__name="project owner")

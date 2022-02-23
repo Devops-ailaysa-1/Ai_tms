@@ -313,18 +313,10 @@ class MT_RawSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data=data)
 
     def create(self, validated_data):
-        
-        # MT FEED DATA
-        source_string = validated_data["segment"].source
-        source_lang_code = validated_data["segment"].source_language_code
-        target_lang_code = validated_data["segment"].target_language_code
-
-        validated_data["mt_raw"] = get_translation(
-                        validated_data["mt_engine"].id,
-                        source_string,
-                        source_lang_code,
-                        target_lang_code,
-                    )
+        segment = validated_data["segment"]
+        validated_data["mt_raw"]= client.translate(segment.source,
+            target_language=segment.target_language_code, format_="text")\
+            .get("translatedText")
 
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance

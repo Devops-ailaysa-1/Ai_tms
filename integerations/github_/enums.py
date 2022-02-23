@@ -1,0 +1,8 @@
+GITHUB_REPO_LIST_REFRESH_TIME = 2 * ( 3600* 24) # 2 Days
+
+HOOK_PREFIX_NAME = "hook-"
+HOOK_DESTINATION_GITHUB_PREFIX_NAME = "github-"
+GITHUB_PREFIX_NAME = "github-"
+
+APP_NAME = "github"
+DJ_APP_NAME = "github_"
