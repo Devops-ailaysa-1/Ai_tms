@@ -138,14 +138,14 @@ class Project(models.Model):
         if not self.project_name:
             #self.project_name = self.ai_project_id
             self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
-        print("Project_name---->",self.project_name)
+        # print("Project_name---->",self.project_name)
         if self.id:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user).exclude(id=self.id).count()
         else:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user,).count()
-        print("ProjectCount------>",project_count)
+        # print("ProjectCount------>",project_count)
         if project_count != 0:
             self.project_name = self.project_name + "(" + str(project_count) + ")"
 
