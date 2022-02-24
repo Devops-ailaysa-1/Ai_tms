@@ -568,7 +568,7 @@ class TaskAssignSerializer(serializers.ModelSerializer):
 		model = TaskAssign
 		fields =('task_info','step','assign_to','mt_enable','mt_engine','pre_translate','status',)
 
-
+####################Need to change################################
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
@@ -667,6 +667,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         return task_assign_info
 
     def update(self,instance,data):
+        print('Dt--->',data)
         step = data.get('step')
         print("STEP---->",step)
         if 'assign_to' in data:
