@@ -1,6 +1,6 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-import os
-import boto3
+import os, mimetypes, requests, uuid, json
+from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 
 
@@ -152,6 +152,15 @@ class SpacesService:
 class OkapiUtils:
     def get_translated_file_(self):
         pass
+
+def download_file(file_path):
+
+    filename = os.path.basename(file_path)
+    fl = open(file_path, 'rb')
+    mime_type, _ = mimetypes.guess_type(file_path)
+    response = HttpResponse(fl, content_type=mime_type)
+    response['Content-Disposition'] = "attachment; filename=%s" % filename
+    return response
 
 
 

@@ -41,6 +41,7 @@ from ai_workspace.models import File
 from .utils import SpacesService
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
+from .utils import download_file
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -392,25 +393,6 @@ class DocumentToFile(views.APIView):
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
         return  document
-    
-    # FOR DOWNLOADING SOURCE FILE
-
-    # @staticmethod
-    # def download_source_file(request, document_id):
-    #     doc = DocumentToFile.get_object(document_id)
-    #     source_file_path = File.objects.get(file_document_set=doc).file.path
-    #     with open(source_file_path, 'rb') as fh:
-    #         response = HttpResponse(fh.read(), content_type=\
-    #                                             "application/vnd.ms-excel")
-    #         encoded_filename = urllib.parse.quote(os.path.basename(source_file_path),\
-    #                 encoding='utf-8')
-    #         response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
-    #                             .format(encoded_filename)
-    #         response['X-Suggested-Filename'] = encoded_filename
-    #         response["Access-Control-Allow-Origin"] = "*"
-    #         response["Access-Control-Allow-Headers"] = "*"
-    #         print("cont-disp--->", response.get("Content-Disposition"))
-    #         return response
 
     def get_file_response(self, file_path):
         with open(file_path, 'rb') as fh:
@@ -426,6 +408,12 @@ class DocumentToFile(views.APIView):
             # print("cont-disp--->", response.get("Content-Disposition"))
             return response
 
+    # FOR DOWNLOADING SOURCE FILE
+    def download_source_file(self, document_id):
+        doc = DocumentToFile.get_object(document_id)
+        source_file_path = File.objects.get(file_document_set=doc).file.path
+        return download_file(source_file_path)
+
     def get(self, request, document_id):
         token = request.GET.get("token")
         payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
@@ -434,24 +422,22 @@ class DocumentToFile(views.APIView):
         if user_id_payload == user_id_document:
 
             # FOR DOWNLOADING SOURCE FILE
-            
-            # if request.GET.get("output_type", "") == "SOURCE":
-            #     DocumentToFile.download_source_file(request, document_id)
+            if request.GET.get("output_type", "") == "SOURCE":
+                return self.download_source_file(document_id)
 
             res = self.document_data_to_file(request, document_id)
-            # print("Doc to file res code ====> ", res.status_code)
             if res.status_code in [200, 201]:
                 file_path = res.text
-                # print("file_path---->", file_path)
                 try:
                     if os.path.isfile(res.text):
                         if os.path.exists(file_path):
                             return self.get_file_response(file_path)
                 except Exception as e:
-                    print("Exception ------> ", e)
-            logger.info(">>>>>>>> Error in output file writing <<<<<<<<<")
-            return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
-                        status=409)
+                    print("Exception during file output------> ", e)
+            else:
+                logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
+                return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
+                            status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
 
@@ -461,7 +447,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
-        # print("Data for writing file ---> ", data)
+
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -471,20 +457,19 @@ class DocumentToFile(views.APIView):
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
-        # print("task_data---->", task_data)
+
         pre, ext = os.path.splitext(task_data["output_file_path"])
         ext = ".xliff" if output_type == "XLIFF" else \
             (".tmx" if output_type == "TMX" else ext)
 
         task_data["output_file_path"] = pre + "(" + task_data["source_language"] + \
                 "-" + task_data["target_language"] + ")" + ext
-        #print("task-data------>", task_data["output_file_path"])
+
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None,
                      "use_spaces" : settings.USE_SPACES
                      }
-        # print("params data--->", params_data)
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
@@ -496,8 +481,6 @@ class DocumentToFile(views.APIView):
         if settings.USE_SPACES:
     
             with open(task_data["output_file_path"], "rb") as f:
-                # print("file path---->", File.get_aws_file_path(task_data["output_file_path"]))
-                # uploading the f stream content to file
                 SpacesService.put_object(output_file_path=File
                                         .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
 
@@ -506,7 +489,9 @@ class DocumentToFile(views.APIView):
 OUTPUT_TYPES = dict(
     ORIGINAL = "ORIGINAL",
     XLIFF = "XLIFF",
-    TMX = "TMX",)
+    TMX = "TMX",
+    SOURCE = "SOURCE",
+)
 
 def output_types(request):
     return JsonResponse(OUTPUT_TYPES, safe=False)
@@ -695,7 +680,10 @@ class ProgressView(views.APIView):
 
     @staticmethod
     def get_progress(document, confirm_list):
-        total_segment_count = document.total_segment_count - document.segments_with_blank.count()
+        # total_segment_count = document.total_segment_count - document.segments_with_blank.count()
+        total_segment_count = Segment.objects.filter(
+            text_unit__document=document
+        ).count()
         segments_confirmed_count = document.segments.filter(
             status__status_id__in=confirm_list
         ).count()
