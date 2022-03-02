@@ -1,7 +1,8 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-import os, mimetypes, requests, uuid, json
+import os, mimetypes, requests, uuid, json, xlwt
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
+from xlwt import Workbook
 
 
 class DebugVariables(object): # For Class Functions only to use
@@ -161,8 +162,4 @@ def download_file(file_path):
     response = HttpResponse(fl, content_type=mime_type)
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
-
-
-
-
 

@@ -702,15 +702,6 @@ class TmxFile(models.Model):
     def filename(self):
         return  os.path.basename(self.tmx_file.file.name)
 
-    # /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
-    #
-    # from django.core.validators import EmailValidator
-    # EmailValidator().validate_domain_part(".com")  ---> False
-    # EmailValidator().validate_domain_part("l.com")  ---> True
-    # p1 = Project.objects.last()
-    # In [8]: p1.penseivetm.penseive_tm_dir_path
-    # Out[8]: '/ai_home/media/user_2/p14/.pentm'
-
 def tbx_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,"tbx",filename)
     return file_path
