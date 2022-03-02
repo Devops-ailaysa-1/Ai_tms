@@ -10,6 +10,8 @@ Dockerfile
 media
 mediafiles
 */migrations
+*/github_/migrations
+*/gitlab_/migrations
 *.*.pyc
 */__pycache__/*
 dj_ailaysa_slim/config.py
