@@ -15,7 +15,7 @@ import os, re,time
 from ai_auth.models import AiUser,Team,HiredEditors
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
-from ai_staff.models import ContentTypes, Languages, SubjectFields
+from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 from ai_workspace_okapi.models import Document, Segment
 from ai_staff.models import ParanoidModel
 from django.shortcuts import reverse
@@ -98,7 +98,10 @@ class Workflows(models.Model):
     def __str__(self):
         return self.name
 
+##########################Need to add project type################################
 class Project(models.Model):
+    project_type = models.ForeignKey(ProjectType, null=False, blank=False,
+        on_delete=models.CASCADE)
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
