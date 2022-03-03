@@ -21,7 +21,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     uid = models.CharField(max_length=25, null=False, blank=True)
     email = models.EmailField(_('email address'), unique=True)
     fullname=models.CharField(max_length=191)
-    country= models.ForeignKey(Countries,related_name='aiuser_country', on_delete=models.CASCADE,blank=True, null=True)
+    country= models.ForeignKey(Countries,related_name='aiuser_country',
+        on_delete=models.CASCADE,blank=True, null=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     deactivation_date = models.DateTimeField(null=True,blank=True)
@@ -36,10 +37,19 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
+    def remove_anonymous_user():
+        user = AiUser.objects.filter(email="AnonymousUser").first()
+        if user:
+            user.delete()
+
     def __str__(self):
         return self.email
 
     def save(self, *args, **kwargs):
+
+        print("args---->", args)
+        print("kwargs---->", kwargs)
+
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
@@ -171,7 +181,14 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     #         return total_buyed_credits
 
         # return total_buyed_credits
-post_save.connect(update_internal_member_status, sender=AiUser)
+
+    @property
+    def username(self):
+        print("username field not available.so it is returning fullname")
+        return self.fullname
+
+post_save.connect(update_internal_member_status, sender=AiUser)    
+
 
 class BaseAddress(models.Model):
     line1 = models.CharField(max_length=200,blank=True, null=True)

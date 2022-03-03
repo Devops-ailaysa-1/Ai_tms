@@ -25,14 +25,17 @@ class ChatConsumer(AsyncConsumer):
         })
 
     async def websocket_receive(self, event):
+        print("user--->",self.scope["user"])
         # print('receive', event)
         command = json.loads(event.get('text')).get('command')
         print("command---->",command)
         if command == "get_unread_chat_notifications":
             try:
+                # user = json.loads(event.get('text')).get('user')
                 payload = await self.get_unread_chat_notification(self.scope["user"])
                 if payload != None:
                     payload = json.dumps(payload,default=str)
+                    print("payload---->",payload)
                     await self.channel_layer.group_send(
                         self.chat_room,
                         {
@@ -89,7 +92,7 @@ class ChatConsumer(AsyncConsumer):
             if not thread_obj:
                 print('Error:: Thread id is incorrect')
 
-            await self.create_chat_message(thread_obj, sent_by_user, msg)
+            chat = await self.create_chat_message(thread_obj, sent_by_user, msg)
             await self.create_chat_notification(thread_id, sent_by_user,send_to_user, msg)
 
 
@@ -99,13 +102,18 @@ class ChatConsumer(AsyncConsumer):
                 'message': msg,
                 'sent_by': self_user.id,
                 'thread_id': thread_id,
+                'id':chat.id,
+                'user':chat.user.id,
+                'user_name':chat.user.fullname,
+                'timestamp':chat.timestamp,
+                'date':chat.timestamp.date().strftime('%Y-%m-%d')
             }
 
             await self.channel_layer.group_send(
                 other_user_chat_room,
                 {
                     'type': 'chat_message',
-                    'text': json.dumps(response)
+                    'text': json.dumps(response,default=str)
                 },
                 )
 
@@ -113,7 +121,7 @@ class ChatConsumer(AsyncConsumer):
                 self.chat_room,
                 {
                     'type': 'chat_message',
-                    'text': json.dumps(response)
+                    'text': json.dumps(response,default=str)
                 }
             )
 
@@ -163,7 +171,8 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def create_chat_message(self, thread, user, msg):
-        ChatMessage.objects.create(thread=thread, user=user, message=msg)
+        obj = ChatMessage.objects.create(thread=thread, user=user, message=msg)
+        return obj
 
     @database_sync_to_async
     def create_chat_notification(self, thread, sender, receiver, msg):
@@ -200,26 +209,26 @@ class ChatConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def get_unread_chat_notification(self,user):
-        if user.is_authenticated:
+        # if user.is_authenticated:
             # user = AiUser.objects.get(pk=request.user.id)
-            count = user.notifications.filter(verb='Message').unread().count()
-            notification_details=[]
-            notification=[]
-            notification.append({'total_count':count})
-            notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct()
-            # notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
-            #         user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
-            for i in notifications:
-               count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
-               sender = AiUser.objects.get(id =i.actor_object_id)
-               try:profile = sender.professional_identity_info.avatar_url
-               except:profile = None
-               notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
-            print("NNNN------->",notification_details)
-            return {'notifications':notification,'notification_details':notification_details}
-        else:
-            raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
-        return None
+        count = user.notifications.filter(verb='Message').unread().count()
+        notification_details=[]
+        notification=[]
+        notification.append({'total_count':count})
+        # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct()
+        notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
+                user.notifications.unread().filter(verb='Message').order_by("data",'-timestamp').distinct("data").values('id'))).order_by("-timestamp")
+        for i in notifications:
+            count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
+            sender = AiUser.objects.get(id =i.actor_object_id)
+            try:profile = sender.professional_identity_info.avatar_url
+            except:profile = None
+            notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
+        print("NNNN------->",notification_details)
+        return {'notifications':notification,'notification_details':notification_details}
+        # else:
+        #     raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
+        # return None
 
 
     # async def send_unread_chat_notification(self,payload):

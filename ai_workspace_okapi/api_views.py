@@ -17,7 +17,7 @@ from rest_framework.response import  Response
 from rest_framework.views import APIView
 from django.db.models import F, Q
 import requests, boto3
-import json, os, re, time, jwt
+import json, os, re, time, jwt, xlsxwriter
 import pickle
 import logging
 from rest_framework.exceptions import APIException
@@ -38,8 +38,10 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.urls import reverse
 from json import JSONDecodeError
 from ai_workspace.models import File
+from .utils import SpacesService
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
+from .utils import download_file
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -68,9 +70,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def exact_required_fields_for_okapi_get_document():
-        # {'source_file_path': '/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u98163/u98163p2/source/test1.txt',
-        #  'source_language': 'sq', 'target_language': 'hy', 'document_url': '/workspace_okapi/document/4/',
-        #  'filename': 'test1.txt', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
         fields = ['source_file_path', 'source_language', 'target_language',
                      'extension', 'processor_name', 'output_file_path']
         return fields
@@ -106,9 +105,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                                     "file": task.file.id, "job": task.job.id,
                                 },))
             if serializer.is_valid(raise_exception=True):
-                start = time.process_time()
                 document = serializer.save()
-                # print("Time taken to write ==========>", time.process_time() - start)
                 task.document = document
                 print("********   Document written using existing file  ***********")
                 task.save()
@@ -120,14 +117,14 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             # print("data--->", data)
             params_data = {**data, "output_type": None}
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                         "fprm_file_path": None
+                         "fprm_file_path": None,
+                         "use_spaces" : settings.USE_SPACES
                          }
-            start = time.process_time()
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
-            # print("Time taken for spring ==========>", time.process_time() - start)
+    
             if doc.status_code == 200 :
                 doc_data = doc.json()
                 # print("Doc data ---> ", doc_data)
@@ -144,44 +141,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
         return document
-
-
-    # @staticmethod
-    # def create_document_for_task_if_not_exists(task):
-    #     document = task.document
-    #     if (not document) and  (not Document.objects.filter(job=task.job, file=task.file).all()):
-    #         ser = TaskSerializer(task)
-    #         data = ser.data
-    #         DocumentViewByTask.correct_fields(data)
-    #         # print("data--->", data)
-    #         params_data = {**data, "output_type": None}
-    #         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-    #                      "fprm_file_path": None
-    #                      }
-    #         doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-    #             "doc_req_params":json.dumps(params_data),
-    #             "doc_req_res_params": json.dumps(res_paths)
-    #         })
-    #         if doc.status_code == 200 :
-    #             doc_data = doc.json()
-    #             print("Doc data ------------>", doc_data)
-    #             serializer = (DocumentSerializerV2(data={**doc_data,\
-    #                                 "file": task.file.id, "job": task.job.id,
-    #                             },))
-    #             if serializer.is_valid(raise_exception=True):
-    #                 document = serializer.save()
-    #                 task.document = document
-    #                 task.save()
-    #         else:
-    #             logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-    #             raise  ValueError("Sorry! Something went wrong with file processing.")
-
-    #     elif (not document):
-    #         document = Document.objects.get(job=task.job, file=task.file)
-    #         printt("*** DOCUMENT ALREADY PRESENT  ****")
-    #         task.document = document
-    #         task.save()
-    #     return document
 
     def get(self, request, task_id, format=None):
         task = self.get_object(task_id=task_id)
@@ -361,7 +320,8 @@ class MT_RawAndTM_View(views.APIView):
         alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
             can_team == "unavailable") else "Team subscription inactive"
         tm_data = self.get_tm_data(request, segment_id)
-        return Response({**data, "tm":tm_data, "mt_alert": mt_alert, "alert_msg":alert_msg}, status=status_code)
+        return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
+            "alert_msg":alert_msg}, status=status_code)
 
 class ConcordanceSearchView(views.APIView):
 
@@ -394,63 +354,105 @@ class DocumentToFile(views.APIView):
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
         return  document
-    
-    # FOR DOWNLOADING SOURCE FILE
 
-    # @staticmethod
-    # def download_source_file(request, document_id):
-    #     doc = DocumentToFile.get_object(document_id)
-    #     source_file_path = File.objects.get(file_document_set=doc).file.path
-    #     with open(source_file_path, 'rb') as fh:
-    #         response = HttpResponse(fh.read(), content_type=\
-    #                                             "application/vnd.ms-excel")
-    #         encoded_filename = urllib.parse.quote(os.path.basename(source_file_path),\
-    #                 encoding='utf-8')
-    #         response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
-    #                             .format(encoded_filename)
-    #         response['X-Suggested-Filename'] = encoded_filename
-    #         response["Access-Control-Allow-Origin"] = "*"
-    #         response["Access-Control-Allow-Headers"] = "*"
-    #         print("cont-disp--->", response.get("Content-Disposition"))
-    #         return response
+    def get_file_response(self, file_path):
+        with open(file_path, 'rb') as fh:
+            response = HttpResponse(fh.read(), content_type= \
+                "application/vnd.ms-excel")
+            encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
+                                                  encoding='utf-8')
+            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+                .format(encoded_filename)
+            response['X-Suggested-Filename'] = encoded_filename
+            response["Access-Control-Allow-Origin"] = "*"
+            response["Access-Control-Allow-Headers"] = "*"
+            # print("cont-disp--->", response.get("Content-Disposition"))
+            return response
+
+    def get_source_file_path(self, document_id):
+        doc = DocumentToFile.get_object(document_id)
+        return File.objects.get(file_document_set=doc).get_source_file_path
+        # return File.objects.get(file_document_set=doc).file.path
+
+    # FOR DOWNLOADING SOURCE FILE
+    def download_source_file(self, document_id):
+        source_file_path = self.get_source_file_path(document_id)
+        return download_file(source_file_path)
+
+    # FOR DOWNLOADING BILINGUAL FILE
+    def remove_tags(self, string):
+        # return re.sub(r'<')
+        return string
+
+    def get_bilingual_filename(self, document_id):
+        doc = DocumentToFile.get_object(document_id)
+        task = doc.task_set.first()
+        ser = TaskSerializer(task)
+        task_data = ser.data
+
+        pre, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
+
+        return task_data['source_language'], task_data['target_language'], pre
+
+    def download_bilingual_file(self, document_id):
+
+        source_lang, target_lang, filename = self.get_bilingual_filename(document_id)
+
+        bilingual_file_path = self.get_source_file_path(document_id).split('source/')[0] + 'source/' + filename + "_bl_" + \
+                                "(" + source_lang + "-" + target_lang + ")" + ".xlsx"
+
+        workbook = xlsxwriter.Workbook(bilingual_file_path)
+        worksheet = workbook.add_worksheet(source_lang + '-' + target_lang)
+        cell_format = workbook.add_format()
+        cell_format.set_text_wrap()
+        worksheet.write('A1', 'Source language' + '(' + source_lang + ')', cell_format)
+        worksheet.write('B1', 'Target language' + '(' + target_lang + ')', cell_format)
+
+        row = 1
+
+        text_units = TextUnit.objects.filter(document_id=document_id)
+
+        for text_unit in text_units:
+            segments = Segment.objects.filter(text_unit_id=text_unit.id)
+            for segment in segments:
+                worksheet.write(row, 0, segment.source, cell_format)
+                worksheet.write(row, 1, self.remove_tags(segment.target), cell_format)
+                row+=1
+        workbook.close()
+
+        # return JsonResponse({"msg": "file successfully created"}, safe=False)
+        return download_file(bilingual_file_path)
+
 
     def get(self, request, document_id):
         token = request.GET.get("token")
+        output_type = request.GET.get("output_type", "")
         payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
         user_id_payload = payload.get("user_id", 0)
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
 
             # FOR DOWNLOADING SOURCE FILE
-            
-            # if request.GET.get("output_type", "") == "SOURCE":
-            #     DocumentToFile.download_source_file(request, document_id)
+            if output_type == "SOURCE":
+                return self.download_source_file(document_id)
+
+            # FOR DOWNLOADING BILINGUAL FILE
+            if output_type == "BILINGUAL":
+                return self.download_bilingual_file(document_id)
 
             res = self.document_data_to_file(request, document_id)
-            # print("Doc to file res code ====> ", res.status_code)
             if res.status_code in [200, 201]:
                 file_path = res.text
-                # print("file_path---->", file_path)
                 try:
                     if os.path.isfile(res.text):
                         if os.path.exists(file_path):
-                            with open(file_path, 'rb') as fh:
-                                response = HttpResponse(fh.read(), content_type=\
-                                    "application/vnd.ms-excel")
-                                encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                        encoding='utf-8')
-                                response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
-                                                    .format(encoded_filename)
-                                response['X-Suggested-Filename'] = encoded_filename
-                                response["Access-Control-Allow-Origin"] = "*"
-                                response["Access-Control-Allow-Headers"] = "*"
-                                print("cont-disp--->", response.get("Content-Disposition"))
-                                return response
+                            return self.get_file_response(file_path)
                 except Exception as e:
-                    print("Exception ------> ", e)
-            logger.info(">>>>>>>> Error in output file writing <<<<<<<<<")
-            return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
-                        status=409)
+                    print("Exception during file output------> ", e)
+            else:
+                logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
+                return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
+                            status=409)
         else:
             return JsonResponse({"msg": "Unauthorised"}, status=401)
 
@@ -460,7 +462,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
-        # print("Data for writing file ---> ", data)
+
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -470,47 +472,32 @@ class DocumentToFile(views.APIView):
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
-        # print("task_data---->", task_data)
-        pre, ext = os.path.splitext(task_data["output_file_path"])
-        if output_type == "XLIFF":
-            ext = ".xliff"
-        if output_type == "TMX":
-            ext = ".tmx"
-        task_data["output_file_path"] = pre + "(" + task_data["source_language"] + "-" + task_data["target_language"] + ")" + ext
 
-        # print("task-data------>", task_data["output_file_path"])
+        pre, ext = os.path.splitext(task_data["output_file_path"])
+        ext = ".xliff" if output_type == "XLIFF" else \
+            (".tmx" if output_type == "TMX" else ext)
+
+        task_data["output_file_path"] = pre + "(" + task_data["source_language"] + \
+                "-" + task_data["target_language"] + ")" + ext
 
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                     "fprm_file_path": None
+                     "fprm_file_path": None,
+                     "use_spaces" : settings.USE_SPACES
                      }
-        # print("params data--->", params_data)
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
             data={
                 'document-json-dump': json.dumps(data),
                 "doc_req_res_params": json.dumps(res_paths),
-                "doc_req_params": json.dumps(params_data),
-            }
-        )
+                "doc_req_params": json.dumps(params_data),})
 
         if settings.USE_SPACES:
-            session = boto3.session.Session()
-            client = session.client(
-                's3',
-                region_name='ams3',
-                endpoint_url='https://ailaysa.ams3.digitaloceanspaces.com',
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            )
-
+    
             with open(task_data["output_file_path"], "rb") as f:
-                print("Spaces file path---->", File.get_aws_file_path(task_data["output_file_path"]))
-                obj = client.put_object(
-                    Bucket='media',
-                    Key=File.get_aws_file_path(task_data["output_file_path"]),
-                    Body=f.read())
+                SpacesService.put_object(output_file_path=File
+                                        .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
 
         return res
 
@@ -518,7 +505,8 @@ OUTPUT_TYPES = dict(
     ORIGINAL = "ORIGINAL",
     XLIFF = "XLIFF",
     TMX = "TMX",
-    # SOURCE = "SOURCE"
+    SOURCE = "SOURCE",
+    BILINGUAL = "BILINGUAL",
 )
 
 def output_types(request):
@@ -529,7 +517,6 @@ class TranslationStatusList(views.APIView):
         qs = TranslationStatus.objects.all()
         ser = TranslationStatusSerializer(qs, many=True)
         return Response(ser.data, status=200)
-
 
 class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     PAGE_SIZE = page_size = 20
@@ -566,14 +553,18 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
             exact_word = data.get("exact_word", False)
 
             if match_case and exact_word:
-                segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w){search_word}(?!\w)'})
+                segments = segments.filter(**{f'{lookup_field}'
+                    f'__regex':f'(?<!\w){search_word}(?!\w)'})
             elif not(match_case or exact_word):
-                segments = segments.filter(**{f'{lookup_field}__contains':f'{search_word}'})
+                segments = segments.filter(**{f'{lookup_field}'
+                    f'__contains':f'{search_word}'})
             elif match_case:
-                segments = segments.filter(**{f'{lookup_field}__regex':f'{search_word}'})
+                segments = segments.filter(**{f'{lookup_field}'
+                    f'__regex':f'{search_word}'})
             elif exact_word:
                 # segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
-                segments = segments.filter(**{f'{lookup_field}__regex':f'(?i)[^\w]{search_word}[^\w]'})  # temp regex
+                segments = segments.filter(**{f'{lookup_field}'
+                    f'__regex':f'(?i)[^\w]{search_word}[^\w]'})  # temp regex
 
         return segments, 200
 
@@ -705,7 +696,10 @@ class ProgressView(views.APIView):
 
     @staticmethod
     def get_progress(document, confirm_list):
-        total_segment_count = document.total_segment_count - document.segments_with_blank.count()
+        # total_segment_count = document.total_segment_count - document.segments_with_blank.count()
+        total_segment_count = Segment.objects.filter(
+            text_unit__document=document
+        ).count()
         segments_confirmed_count = document.segments.filter(
             status__status_id__in=confirm_list
         ).count()
@@ -870,8 +864,6 @@ def WiktionaryParse(request):
             out=[]
             pos=k.get("partOfSpeech")
             text=k.get("text")
-            print("pos--->",pos)
-            print("definitions----->",text)
             rel=k.get('relatedWords')
             # for n in rel:
             #     if n.get('relationshipType')=='translations':
@@ -880,8 +872,7 @@ def WiktionaryParse(request):
             #                 tar=l
             out=[{'pos':pos,'definitions':text,'target':tar}]
             res.extend(out)
-            print("****************************************")
-    print("final------>",res)
+
     return JsonResponse({"Output":res},safe=False)
 
 
@@ -924,7 +915,6 @@ def wikipedia_ws(code,codesrc,user_input):
 # @permission_classes((HasToken,))
 def WikipediaWorkspace(request,doc_id):
     data=request.GET.dict()
-    print(data)
     lang_list = ["zh-Hans","zh-Hant"]
     user_input=data.get("term")
     term_type=data.get("term_type","source")
@@ -939,9 +929,7 @@ def WikipediaWorkspace(request,doc_id):
     elif term_type=="target":
         codesrc = tar
         code = src
-    print("src--->",codesrc)
     res=wikipedia_ws(code,codesrc,user_input)
-    print("tt-->",res.get("target"))
     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
 
 
@@ -965,7 +953,6 @@ def wiktionary_ws(code,codesrc,user_input):
         return {"source":'',"source-url":''}
     srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input}"
     res=data["query"]["pages"]
-    print("RES-------->",res)
     if "-1" in res:
         PARAMS.update({'titles':user_input.lower()})
         data = S.get(url=URL, params=PARAMS).json()
@@ -975,14 +962,12 @@ def wiktionary_ws(code,codesrc,user_input):
        lang=data["query"]["pages"][i]
        if 'missing' in lang:
            return {"source":'',"source-url":''}
-       print('Lang--------->',lang)
     output=[]
     out=[]
     if (lang.get("iwlinks"))!=None:
          for j in lang.get("iwlinks"):
                 out=[{'target':j.get("*"),'target-url':j.get("url")}]
                 output.extend(out)
-         print(output)
          return {"source":user_input,"source-url":srcURL,"targets":output}
     return {"source":user_input,"source-url":srcURL}
 
@@ -994,7 +979,6 @@ def WiktionaryWorkSpace(request,doc_id):
     lang_list = ["zh-Hans","zh-Hant"]
     user_input=data.get("term")
     term_type=data.get("term_type")
-    print(term_type)
     user_input=user_input.strip()
     user_input=user_input.strip('0123456789')
     doc = Document.objects.get(id=doc_id)

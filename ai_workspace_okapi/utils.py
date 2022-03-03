@@ -1,5 +1,9 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-import os
+import os, mimetypes, requests, uuid, json, xlwt
+from django.http import JsonResponse, Http404, HttpResponse
+from django.contrib.auth import settings
+from xlwt import Workbook
+
 
 class DebugVariables(object): # For Class Functions only to use
     def __init__(self,flags):
@@ -117,3 +121,45 @@ def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
         text_content = text_content.replace(run_id_tag, run)
 
     return text_content
+
+class SpacesService:
+
+    def get_client():
+        session = boto3.session.Session()
+        client = session.client(
+            's3',
+            region_name='ams3',
+            endpoint_url='https://ailaysa.ams3.digitaloceanspaces.com',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        )
+        return client
+
+    def put_object(output_file_path, f_stream, bucket_name="media"):
+        client = SpacesService.get_client()
+        obj = client.put_object(
+            Bucket=bucket_name,
+            Key=output_file_path,
+            Body=f_stream.read()
+        )
+        print("FIle is uploaded successfully!!!")
+
+    def delete_object(file_path, bucket_name="media"):
+        client = SpacesService.get_client()
+        client.delete_object(Bucket=bucket_name, Key=file_path)
+        print("FIle is deleted successfully!!!")
+
+
+class OkapiUtils:
+    def get_translated_file_(self):
+        pass
+
+def download_file(file_path):
+
+    filename = os.path.basename(file_path)
+    fl = open(file_path, 'rb')
+    mime_type, _ = mimetypes.guess_type(file_path)
+    response = HttpResponse(fl, content_type=mime_type)
+    response['Content-Disposition'] = "attachment; filename=%s" % filename
+    return response
+

@@ -10,6 +10,8 @@ Dockerfile
 media
 mediafiles
 */migrations
+*/github_/migrations
+*/gitlab_/migrations
 *.*.pyc
 */__pycache__/*
 dj_ailaysa_slim/config.py
@@ -82,4 +84,14 @@ docker-compose.prod.yml
 exp.zip
 staticfiles/
 config
-*fprm
+fprm
+/automate/
+/repeat-sh-commands.txt
+/test-fixtures-create.sh
+/documentation/
+/ignore/
+/ai_management/
+/db002.sqlite3.bkp
+/my-test-.docx
+/u599082/
+/documentation/

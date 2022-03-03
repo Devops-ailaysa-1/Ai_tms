@@ -353,7 +353,7 @@ def get_available_job_details(request):
 
 def notification_read(thread_id,user):
     list = Notification.objects.filter(Q(data={'thread_id':thread_id})&Q(recipient=user))
-    print(list)
+    # print(list)
     list.mark_all_as_read()
 
 class ChatMessageListView(viewsets.ModelViewSet):
@@ -477,7 +477,7 @@ def get_available_threads(request):
         Receiver = AiUser.objects.get(id = receiver)
         try:profile = Receiver.professional_identity_info.avatar_url
         except:profile = None
-        contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'avatar':profile})
+        contacts_list.append({'thread_id':thread.id,'receiver':Receiver.fullname,'receiver_id':receiver,'avatar':profile})
     contacts = sorted(contacts_list, key = lambda i: i['receiver'].lower())
     return JsonResponse({"receivers_list":receivers_list,"contacts_list":contacts})
 
@@ -495,7 +495,7 @@ def chat_unread_notifications(request):
     notification.append({'total_count':count})
     # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
     notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
-            user.notifications.unread().filter(verb='Message').order_by("data").distinct("data").values('id'))).order_by("-timestamp")
+            user.notifications.unread().filter(verb='Message').order_by("data",'-timestamp').distinct("data").values('id'))).order_by("-timestamp")
     for i in notifications:
        count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
        sender = AiUser.objects.get(id =i.actor_object_id)
@@ -580,3 +580,19 @@ class GetVendorListViewNew(generics.ListAPIView):
             subjectlist=subject.split(',')
             queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset
+
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_last_messages(request):
+    threads = Thread.objects.by_user(user=request.user).filter(chatmessage_thread__isnull = False).annotate(last_message=Max('chatmessage_thread__timestamp')).order_by('-last_message')
+    data=[]
+    for i in threads:
+        ins = {'thread_id':i.id}
+        count = request.user.notifications.filter(Q(data=ins) & Q(verb='Message')).unread().count()
+        # print("RR--->",count)
+        obj =  ChatMessage.objects.filter(thread_id = i.id).last()
+        data.append({'thread_id':i.id,'last_message':obj.message,'unread_count':count,'last_timestamp':obj.timestamp})
+    return JsonResponse({"data":data},safe=False)

@@ -28,12 +28,15 @@ from django.db.models.fields.files import FieldFile, FileField
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
+from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
     check_job_file_version_has_same_project,)
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager
 from django.db.models.fields import Field
+from integerations.github_.models import ContentFile
+from integerations.base.utils import DjRestUtils
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -78,11 +81,14 @@ pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 class Project(models.Model):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
-        path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
+        path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
+        allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
-    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)# Main account owner,if team team_owner
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False,
+        on_delete=models.CASCADE)
     ai_project_id = models.TextField()
-    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,
+        null=True, blank=True, \
         on_delete=models.CASCADE, related_name="proj_mt_engine")
     threshold = models.IntegerField(default=85)
     max_hits = models.IntegerField(default=5)
@@ -473,12 +479,32 @@ class File(models.Model):
                 on_delete=models.CASCADE, related_name="project_usage_type")
     file = FileField(upload_to=get_file_upload_path, null=False,\
                 blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
-    # output_file =
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
+    # content_file = models.ForeignKey(ContentFile, on_delete=models.SET_NULL, null=True,
+    #     related_name="contentfile_files_set")
+
+    # def update_file(self, file_content):
+    #     if not self.is_upload_from_integeration:
+    #         raise ValueError( "This file cannot be update. Since it"
+    #         " is not uploaded from integeration!!!" )
+    #     upload_file_name = self.file.name.split("/")[-1]
+    #     print("file path---->", self.file.name)
+    #     SpacesService.delete_object(file_path=self.file.name)
+    #     im = DjRestUtils.convert_content_to_inmemoryfile(filecontent=file_content,
+    #         file_name=upload_file_name)
+    #     self.file = im
+    #     self.save()
+
+    class Meta:
+        managed = False
+    #
+    # @property
+    # def is_upload_from_integeration(self):
+    #     return self.content_file!=None
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
@@ -589,14 +615,22 @@ class Task(models.Model):
         return  get_processor_name(self.file.file.name).get("processor_name", None)
 
     @property
+    def corrected_segment_count(self):
+        doc = self.document
+        return Segment.objects.filter(
+            text_unit__document=doc
+        ).count()
+
+    @property
     def get_progress(self):
         confirm_list = [102, 104, 106]
-        total_segment_count = self.document.total_segment_count
+        # total_segment_count = self.document.total_segment_count
+        total_segment_count = self.corrected_segment_count
         segments_confirmed_count = self.document.segments.filter(
             status__status_id__in=confirm_list
         ).count()
-        return {"total_segments":total_segment_count,\
-                "confirmed_segments":segments_confirmed_count}
+        return {"total_segments": total_segment_count, \
+                "confirmed_segments": segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
@@ -667,15 +701,6 @@ class TmxFile(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.tmx_file.file.name)
-
-    # /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
-    #
-    # from django.core.validators import EmailValidator
-    # EmailValidator().validate_domain_part(".com")  ---> False
-    # EmailValidator().validate_domain_part("l.com")  ---> True
-    # p1 = Project.objects.last()
-    # In [8]: p1.penseivetm.penseive_tm_dir_path
-    # Out[8]: '/ai_home/media/user_2/p14/.pentm'
 
 def tbx_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,"tbx",filename)

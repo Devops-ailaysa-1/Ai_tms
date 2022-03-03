@@ -201,7 +201,18 @@ def vendor_request_admin_mail(instance):
     )
     print("mailsent>>")
 
-
+def vendor_accepted_freelancer_mail(user):
+    # print("User----<>",user)
+    today = date.today()
+    context = {'email': user.email,'name':user.fullname,'date':today}
+    msg_html = render_to_string("vendor_accepted_freelancer_mail.html", context)
+    send_mail(
+        "Regarding Vendor Joining Freelancers Marketplace",None,
+        settings.DEFAULT_FROM_EMAIL,
+        ['support@ailaysa.com'],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
 
 def vendor_renewal_mail(link,email):
     context = {'link':link}
