@@ -19,6 +19,8 @@ from ai_auth.serializers import InternalMemberSerializer,HiredEditorSerializer
 from ai_vendor.models import VendorLanguagePair
 from django.db.models import OuterRef, Subquery
 
+
+
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
     A ModelSerializer that takes an additional `fields` argument that

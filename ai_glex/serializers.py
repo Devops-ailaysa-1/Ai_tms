@@ -19,7 +19,6 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
         model = GlossaryFiles
         fields = "__all__"
 
-
 class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     glossary = GlossarySerializer()
     # glossary_files = GlossaryFileSerializer(required= False,many= True,allow_null= True)
