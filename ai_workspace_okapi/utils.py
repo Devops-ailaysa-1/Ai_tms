@@ -3,6 +3,7 @@ import os, mimetypes, requests, uuid, json, xlwt
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
+from google.cloud import translate_v2 as translate
 
 client = translate.Client()
 
