@@ -41,7 +41,7 @@ from ai_workspace.models import File
 from .utils import SpacesService
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
-from .utils import download_file
+from .utils import download_file, bl_title_format, bl_cell_format
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -381,8 +381,8 @@ class DocumentToFile(views.APIView):
 
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
-        # return re.sub(r'<')
-        return string
+        return re.sub(r'</?\d>', "", string)
+        # return string
 
     def get_bilingual_filename(self, document_id):
         doc = DocumentToFile.get_object(document_id)
@@ -403,10 +403,13 @@ class DocumentToFile(views.APIView):
 
         workbook = xlsxwriter.Workbook(bilingual_file_path)
         worksheet = workbook.add_worksheet(source_lang + '-' + target_lang)
-        cell_format = workbook.add_format()
-        cell_format.set_text_wrap()
-        worksheet.write('A1', 'Source language' + '(' + source_lang + ')', cell_format)
-        worksheet.write('B1', 'Target language' + '(' + target_lang + ')', cell_format)
+
+        title_format = workbook.add_format(bl_title_format)
+        cell_format = workbook.add_format(bl_cell_format)
+        worksheet.set_column('A:B', 30, cell_format)
+
+        worksheet.write('A1', 'Source language' + '(' + source_lang + ')', title_format)
+        worksheet.write('B1', 'Target language' + '(' + target_lang + ')', title_format)
 
         row = 1
 
@@ -417,7 +420,7 @@ class DocumentToFile(views.APIView):
             for segment in segments:
                 worksheet.write(row, 0, segment.source, cell_format)
                 worksheet.write(row, 1, self.remove_tags(segment.target), cell_format)
-                row+=1
+                row += 1
         workbook.close()
 
         # return JsonResponse({"msg": "file successfully created"}, safe=False)

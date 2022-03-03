@@ -163,3 +163,12 @@ def download_file(file_path):
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
 
+bl_title_format = {
+    'bold': True,
+    'font_color': 'black',
+}
+
+bl_cell_format = {
+    'text_wrap': True,
+    'align': 'left',
+}
