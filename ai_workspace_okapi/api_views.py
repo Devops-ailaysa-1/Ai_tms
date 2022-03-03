@@ -38,6 +38,7 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.urls import reverse
 from json import JSONDecodeError
 from ai_workspace.models import File
+from .utils import SpacesService
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
 from .utils import download_file
@@ -124,7 +125,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
-    
+
             if doc.status_code == 200 :
                 doc_data = doc.json()
                 # print("Doc data ---> ", doc_data)
@@ -293,14 +294,14 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "cannot_translate"
         else:
             return None
-    
+
     @staticmethod
     def get_consumable_credits(doc, segment_id):
         segment_source = Segment.objects.get(id=segment_id).source
-        seg_data = { "segment_source" : segment_source,  
-                     "source_language" : doc.source_language_code, 
+        seg_data = { "segment_source" : segment_source,
+                     "source_language" : doc.source_language_code,
                      "target_language" : doc.target_language_code,
-                     "processor_name" : "plain-text-processor", 
+                     "processor_name" : "plain-text-processor",
                      "extension":".txt"
                      }
         res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
@@ -337,7 +338,7 @@ class MT_RawAndTM_View(views.APIView):
 
         initial_credit = user.credit_balance.get("total")
 
-        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)        
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)
 
         if initial_credit > consumable_credits :
             mt_engine_id = mt_params.get("mt_engine", 1)            # Google MT selected if MT selection fails
@@ -383,7 +384,8 @@ class MT_RawAndTM_View(views.APIView):
         mt_alert = True if status_code == 424 else False
         alert_msg = self.get_alert_msg(status_code, can_team)
         tm_data = self.get_tm_data(request, segment_id)
-        return Response({**data, "tm":tm_data, "mt_alert": mt_alert, "alert_msg":alert_msg}, status=status_code)
+        return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
+            "alert_msg":alert_msg}, status=status_code)
 
 class ConcordanceSearchView(views.APIView):
 
@@ -410,18 +412,32 @@ class ConcordanceSearchView(views.APIView):
         return Response(concordance, status=200)
 
 class DocumentToFile(views.APIView):
-    
+
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
         return  document
-    
+
     # FOR DOWNLOADING SOURCE FILE
     def download_source_file(self, document_id):
         doc = DocumentToFile.get_object(document_id)
         source_file_path = File.objects.get(file_document_set=doc).file.path
-        return download_file(source_file_path) 
+        return download_file(source_file_path)
+
+    def get_file_response(self, file_path):
+        with open(file_path, 'rb') as fh:
+            response = HttpResponse(fh.read(), content_type= \
+                "application/vnd.ms-excel")
+            encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
+                                                  encoding='utf-8')
+            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+                .format(encoded_filename)
+            response['X-Suggested-Filename'] = encoded_filename
+            response["Access-Control-Allow-Origin"] = "*"
+            response["Access-Control-Allow-Headers"] = "*"
+            # print("cont-disp--->", response.get("Content-Disposition"))
+            return response
 
     def get(self, request, document_id):
         token = request.GET.get("token")
@@ -430,30 +446,19 @@ class DocumentToFile(views.APIView):
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         if user_id_payload == user_id_document:
 
-            # FOR DOWNLOADING SOURCE FILE            
+            # FOR DOWNLOADING SOURCE FILE
             if request.GET.get("output_type", "") == "SOURCE":
                 return self.download_source_file(document_id)
 
             res = self.document_data_to_file(request, document_id)
-            
+
             if res.status_code in [200, 201]:
                 file_path = res.text
-                
+
                 try:
                     if os.path.isfile(res.text):
                         if os.path.exists(file_path):
-                            with open(file_path, 'rb') as fh:
-                                response = HttpResponse(fh.read(), content_type=\
-                                    "application/vnd.ms-excel")
-                                encoded_filename = urllib.parse.quote(os.path.basename(file_path),\
-                                        encoding='utf-8')
-                                response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}'\
-                                                    .format(encoded_filename)
-                                response['X-Suggested-Filename'] = encoded_filename
-                                response["Access-Control-Allow-Origin"] = "*"
-                                response["Access-Control-Allow-Headers"] = "*"
-                                print("cont-disp--->", response.get("Content-Disposition"))
-                                return response
+                            return self.get_file_response(file_path)
                 except Exception as e:
                     print("Exception ------> ", e)
             logger.info(">>>>>>>> Error in output file writing <<<<<<<<<")
@@ -468,7 +473,7 @@ class DocumentToFile(views.APIView):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
-        
+
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -480,12 +485,12 @@ class DocumentToFile(views.APIView):
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
         pre, ext = os.path.splitext(task_data["output_file_path"])
-        if output_type == "XLIFF":
-            ext = ".xliff"
-        if output_type == "TMX":
-            ext = ".tmx"
-        task_data["output_file_path"] = pre + "(" + task_data["source_language"] + "-" + task_data["target_language"] + ")" + ext
+        ext = ".xliff" if output_type == "XLIFF" else \
+            (".tmx" if output_type == "TMX" else ext)
 
+        task_data["output_file_path"] = pre + "(" + task_data["source_language"] + \
+                "-" + task_data["target_language"] + ")" + ext
+        #print("task-data------>", task_data["output_file_path"])
         params_data = {**task_data, "output_type": output_type}
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None,
@@ -497,26 +502,15 @@ class DocumentToFile(views.APIView):
             data={
                 'document-json-dump': json.dumps(data),
                 "doc_req_res_params": json.dumps(res_paths),
-                "doc_req_params": json.dumps(params_data),
-            }
-        )
+                "doc_req_params": json.dumps(params_data),})
 
         if settings.USE_SPACES:
-            session = boto3.session.Session()
-            client = session.client(
-                's3',
-                region_name='ams3',
-                endpoint_url='https://ailaysa.ams3.digitaloceanspaces.com',
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            )
 
             with open(task_data["output_file_path"], "rb") as f:
-                print("Spaces file path---->", File.get_aws_file_path(task_data["output_file_path"]))
-                obj = client.put_object(
-                    Bucket='media',
-                    Key=File.get_aws_file_path(task_data["output_file_path"]),
-                    Body=f.read())
+                # print("file path---->", File.get_aws_file_path(task_data["output_file_path"]))
+                # uploading the f stream content to file
+                SpacesService.put_object(output_file_path=File
+                                        .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
 
         return res
 
@@ -527,6 +521,7 @@ OUTPUT_TYPES = dict(
     SOURCE = "SOURCE"
 )
 
+
 def output_types(request):
     return JsonResponse(OUTPUT_TYPES, safe=False)
 
@@ -535,7 +530,6 @@ class TranslationStatusList(views.APIView):
         qs = TranslationStatus.objects.all()
         ser = TranslationStatusSerializer(qs, many=True)
         return Response(ser.data, status=200)
-
 
 class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     PAGE_SIZE = page_size = 20
@@ -572,14 +566,18 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
             exact_word = data.get("exact_word", False)
 
             if match_case and exact_word:
-                segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w){search_word}(?!\w)'})
+                segments = segments.filter(**{f'{lookup_field}'
+                    f'__regex':f'(?<!\w){search_word}(?!\w)'})
             elif not(match_case or exact_word):
-                segments = segments.filter(**{f'{lookup_field}__contains':f'{search_word}'})
+                segments = segments.filter(**{f'{lookup_field}'
+                    f'__contains':f'{search_word}'})
             elif match_case:
-                segments = segments.filter(**{f'{lookup_field}__regex':f'{search_word}'})
+                segments = segments.filter(**{f'{lookup_field}'
+                    f'__regex':f'{search_word}'})
             elif exact_word:
                 # segments = segments.filter(**{f'{lookup_field}__regex':f'(?<!\w)(?i){search_word}(?!\w)'})
-                segments = segments.filter(**{f'{lookup_field}__regex':f'(?i)[^\w]{search_word}[^\w]'})  # temp regex
+                segments = segments.filter(**{f'{lookup_field}'
+                    f'__regex':f'(?i)[^\w]{search_word}[^\w]'})  # temp regex
 
         return segments, 200
 

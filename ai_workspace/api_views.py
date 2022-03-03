@@ -1477,11 +1477,11 @@ class StepsView(viewsets.ViewSet):
         return Response(serializer.data)
 
 
-class WorkflowStepCreateView(viewsets.ViewSet):
+class CustomWorkflowCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def list(self,request):
         queryset = Workflows.objects.all()
-        serializer = WorkflowsStepsSerializer(queryset,many=True)
+        serializer = WorkflowsSerializer(queryset,many=True)
         return Response(serializer.data)
 
     def create(self,request):
@@ -1498,7 +1498,7 @@ class WorkflowStepCreateView(viewsets.ViewSet):
         step_delete_ids = request.POST.getlist('step_delete_ids')
         workflow = get_object_or_404(queryset, pk=pk)
         if step_delete_ids:
-            [WorkflowSteps.objects.get(workflow=workflow,steps=i).delete() for i in step_delete_ids]
+            [WorkflowSteps.objects.filter(workflow=workflow,steps=i).delete() for i in step_delete_ids]
         serializer= WorkflowsStepsSerializer(workflow,data={**request.POST.dict(),"steps":steps},partial=True)
         if serializer.is_valid():
             serializer.save()

@@ -568,7 +568,7 @@ class TaskAssignSerializer(serializers.ModelSerializer):
 		model = TaskAssign
 		fields =('task_info','step','assign_to','mt_enable','mt_engine','pre_translate','status',)
 
-
+####################Need to change################################
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
@@ -667,6 +667,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         return task_assign_info
 
     def update(self,instance,data):
+        print('Dt--->',data)
         step = data.get('step')
         print("STEP---->",step)
         if 'assign_to' in data:
@@ -706,6 +707,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	# task_assign_info = TaskAssignInfoSerializer(required=False)
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
+	can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
 
@@ -713,7 +715,17 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "project_name",\
-			"document_url", "progress","task_assign_info","task_word_count",)
+			"document_url", "progress","task_assign_info","task_word_count",'can_open',)
+
+	def get_can_open(self,obj):
+		if obj.task_info.get(step_id = 1) :
+			can_open = True
+		elif obj.task_info.get(step_id = 1).get_status_display() == "Completed":
+			can_open = True
+		else:
+			can_open = False
+		return can_open
+
 
 	def get_task_assign_info(self, obj):
 		task_assign = obj.task_info.all()

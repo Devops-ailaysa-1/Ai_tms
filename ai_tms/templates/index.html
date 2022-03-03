@@ -1,0 +1,5 @@
+{% if request.user.is_anonymous %}
+	<h3>Please Login...</h3>
+{% else %}
+	<h3>Hi, {{request.user}}</h3>
+{% endif %}

@@ -28,12 +28,15 @@ from django.db.models.fields.files import FieldFile, FileField
 
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists
+from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
     check_job_file_version_has_same_project,)
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager
 from django.db.models.fields import Field
+from integerations.github_.models import ContentFile
+from integerations.base.utils import DjRestUtils
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -98,12 +101,15 @@ class Workflows(models.Model):
 class Project(models.Model):
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
-        path=settings.MEDIA_ROOT, blank=True, allow_folders=True, allow_files=False)
+        path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
+        allow_files=False)
     created_at = models.DateTimeField(auto_now=True)
-    ai_user = models.ForeignKey(AiUser, null=False, blank=False, on_delete=models.CASCADE)# Main account owner,if team team_owner
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False,
+        on_delete=models.CASCADE)
     ai_project_id = models.TextField()
-    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
-        on_delete=models.CASCADE, related_name="proj_mt_engine",default=1)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,
+        null=True, blank=True, \
+        on_delete=models.CASCADE, related_name="proj_mt_engine")
     threshold = models.IntegerField(default=85)
     max_hits = models.IntegerField(default=5)
     workflow = models.ForeignKey(Workflows,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_workflow')
@@ -138,14 +144,14 @@ class Project(models.Model):
         if not self.project_name:
             #self.project_name = self.ai_project_id
             self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
-        print("Project_name---->",self.project_name)
+        # print("Project_name---->",self.project_name)
         if self.id:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user).exclude(id=self.id).count()
         else:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user,).count()
-        print("ProjectCount------>",project_count)
+        # print("ProjectCount------>",project_count)
         if project_count != 0:
             self.project_name = self.project_name + "(" + str(project_count) + ")"
 
@@ -438,12 +444,32 @@ class File(models.Model):
                 on_delete=models.CASCADE, related_name="project_usage_type")
     file = FileField(upload_to=get_file_upload_path, null=False,\
                 blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
-    # output_file =
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files_set")
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     deleted_at = models.BooleanField(default=False)
+    # content_file = models.ForeignKey(ContentFile, on_delete=models.SET_NULL, null=True,
+    #     related_name="contentfile_files_set")
+
+    # def update_file(self, file_content):
+    #     if not self.is_upload_from_integeration:
+    #         raise ValueError( "This file cannot be update. Since it"
+    #         " is not uploaded from integeration!!!" )
+    #     upload_file_name = self.file.name.split("/")[-1]
+    #     print("file path---->", self.file.name)
+    #     SpacesService.delete_object(file_path=self.file.name)
+    #     im = DjRestUtils.convert_content_to_inmemoryfile(filecontent=file_content,
+    #         file_name=upload_file_name)
+    #     self.file = im
+    #     self.save()
+
+    class Meta:
+        managed = False
+    #
+    # @property
+    # def is_upload_from_integeration(self):
+    #     return self.content_file!=None
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''

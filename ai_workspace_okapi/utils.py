@@ -2,6 +2,8 @@ from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
 import os, mimetypes, requests, uuid, json
 from django.http import JsonResponse, Http404, HttpResponse
 from google.cloud import translate_v2 as translate
+import boto3
+from django.contrib.auth import settings
 
 client = translate.Client()
 
@@ -132,7 +134,7 @@ def download_file(file_path):
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
 
-def ms_translation(source_string, source_lang_code, target_lang_code):       
+def ms_translation(source_string, source_lang_code, target_lang_code):
 
     # Add your subscription key and endpoint
     subscription_key = os.getenv("MST_KEY")
@@ -174,8 +176,40 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
     if mt_engine_id == 1:
 
         return client.translate(source_string,
-                                target_language=target_lang_code, 
+                                target_language=target_lang_code,
                                 format_="text").get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         return ms_translation(source_string, source_lang_code, target_lang_code)
+
+class SpacesService:
+
+    def get_client():
+        session = boto3.session.Session()
+        client = session.client(
+            's3',
+            region_name='ams3',
+            endpoint_url='https://ailaysa.ams3.digitaloceanspaces.com',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        )
+        return client
+
+    def put_object(output_file_path, f_stream, bucket_name="media"):
+        client = SpacesService.get_client()
+        obj = client.put_object(
+            Bucket=bucket_name,
+            Key=output_file_path,
+            Body=f_stream.read()
+        )
+        print("FIle is uploaded successfully!!!")
+
+    def delete_object(file_path, bucket_name="media"):
+        client = SpacesService.get_client()
+        client.delete_object(Bucket=bucket_name, Key=file_path)
+        print("FIle is deleted successfully!!!")
+
+
+class OkapiUtils:
+    def get_translated_file_(self):
+        pass

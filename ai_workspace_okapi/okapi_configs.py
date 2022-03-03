@@ -33,6 +33,15 @@ ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
      ('.yaml', '.yml') : "yaml-processor",
  }
 
+def flatten_mapper(data):
+    ret = {}
+    for k, v in data.items():
+        for _ in k:
+            ret[_] = v
+
+    return ret
+
+ALLOWED_FILE_EXTENSIONSFILTER_MAPPER_FLATTEN = flatten_mapper(ALLOWED_FILE_EXTENSIONSFILTER_MAPPER)
 
 CURRENT_SUPPORT_FILE_EXTENSIONS_LIST = [
     ".txt", ".html", ".tsv", ".csv", ".odp", ".ods", ".odt", ".json",
