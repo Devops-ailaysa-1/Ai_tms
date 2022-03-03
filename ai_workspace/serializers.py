@@ -1,5 +1,5 @@
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
-from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
+from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
@@ -403,20 +403,19 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
 	workflow_id = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),required=False,allow_null=True, write_only=True)
-	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
-	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False)
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True)
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
+	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","subjects","contents",)
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","subjects","contents","project_type_id",)
 	# class Meta:
 	# 	model = Project
 	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
@@ -431,6 +430,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def to_internal_value(self, data):
 		# print("DTATA------>",data)
+		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['workflow_id'] = data.get('workflow',[1])[0]
@@ -498,9 +498,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		workflow = validated_data.get('workflow_id')
 		validated_data.pop('team_exist')
 		print("validated_data---->",validated_data)
+		project_type = validated_data.get("project_type_id")
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
-
 
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
@@ -514,11 +514,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]#need to include custom workflows
 		print("STEP---->",steps)
-		tasks = Task.objects.create_tasks_of_files_and_jobs(
-			files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
-		print("Tasks----->",project.get_tasks)
-		if steps:
-			task_assign = TaskAssign.objects.assign_task(steps=steps,project=project)
+
+		if project_type == 1:
+			tasks = Task.objects.create_tasks_of_files_and_jobs(
+				files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
+
+			if steps:
+				task_assign = TaskAssign.objects.assign_task(steps=steps,project=project)
 		return  project
 
 	def update(self, instance, validated_data):
@@ -537,6 +539,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
+		project_type = instance.project_type_id
 
 		project, files, jobs= Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
 							files_data, jobs_data,f_klass=File,\
@@ -548,9 +551,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		project,contents,subjects = Project.objects.create_content_and_subject_for_project(instance,\
 							contents_data, subjects_data,\
 							c_klass=ProjectContentType, s_klass = ProjectSubjectField)
-
-		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
-			project=project)
+		if project_type == 1:
+			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
+					project=project)
 		return  project
 
 

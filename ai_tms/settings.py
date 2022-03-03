@@ -122,6 +122,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
+    'ai_glex',
     'djstripe',
     'django_filters',
     'notifications',

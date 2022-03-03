@@ -406,3 +406,12 @@ class OldVendorPasswords(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class ProjectType(models.Model):
+    type = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.type

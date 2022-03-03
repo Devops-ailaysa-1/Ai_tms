@@ -91,6 +91,7 @@ fprm
 /my-test-.docx
 /u599082/
 /documentation/
+/*/*/migrations/
 APP.MD
 staticfiles
 api_automation

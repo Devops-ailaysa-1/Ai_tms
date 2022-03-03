@@ -1,0 +1,110 @@
+from django.db import models
+from ai_staff.models import Languages
+from ai_auth.models import AiUser
+from django.db.models.fields.files import FieldFile, FileField
+from ai_workspace.models import Project,Job
+import os
+from .manager import GlossaryTasksManager
+from ai_staff.models import AssetUsageTypes
+from django.contrib.auth import settings
+# Create your models here.
+##########  GLOSSARY GENERAL DETAILS #############################
+class Glossary(models.Model):
+    class GlossaryObjects(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(usage_permission='Public')
+    options =(
+        ('Public', 'Public'),
+        ('Private', 'Private'),
+    )
+    project = models.OneToOneField(Project, null=False, blank=False, on_delete=models.CASCADE, related_name="glossary_project")
+    primary_glossary_source_name = models.CharField(max_length=20, null=True, blank=True)
+    details_of_PGS          = models.TextField(null=True, blank=True)
+    source_Copyright_owner  = models.CharField(max_length=50, null=True, blank=True)
+    notes                   = models.TextField(verbose_name = "Glossary General Notes", null=True, blank=True)
+    usage_permission        = models.CharField(max_length=30, verbose_name = "Usage Permission", choices=options, default='Public', null=True, blank=True)
+    public_license          = models.CharField(max_length=30, verbose_name = "Public License", null=True, blank=True)
+    created_date            = models.DateTimeField(auto_now_add=True)
+    modified_date           = models.DateTimeField(auto_now=True)
+    objects = models.Manager() # default built-in manager
+    glossaryobjects = GlossaryObjects() # object manager for Glossary model
+    def __str__(self):
+        return self.project.project_name
+
+
+def get_file_upload_path(instance, filename):
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
+            instance.usage_type.type_path)
+    print("Upload file path ----> ", file_path)
+    instance.filename = filename
+    return os.path.join(file_path, filename)
+
+use_spaces = os.environ.get("USE_SPACES")
+
+
+
+######### GLOSSARY & FILES MODEL ###############
+class GlossaryFiles(models.Model):
+    usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
+                on_delete=models.CASCADE, related_name="glossary_project_usage_type")
+    file = FileField(upload_to=get_file_upload_path, null=False,\
+                blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
+    project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
+                CASCADE, related_name="project_files")
+    filename = models.CharField(max_length=200,null=True)
+    fid = models.TextField(null=True, blank=True)
+    job = models.ForeignKey(Job,on_delete=models.CASCADE,related_name="job")
+    deleted_at = models.BooleanField(default=False)
+    upload_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.file_name
+
+
+###############################################################################
+
+class TermsModel(models.Model):
+    sl_term         = models.CharField(max_length=50, null=False, blank=False)
+    tl_term         = models.CharField(max_length=200, null=True)
+    pos             = models.CharField(max_length=20, null=True)
+    sl_definition   = models.TextField(null=True)
+    tl_definition   = models.TextField(null=True)
+    context         = models.TextField(null=True)
+    note            = models.TextField(null=True)
+    sl_source       = models.CharField(max_length=20, null=True)
+    tl_source       = models.CharField(max_length=20, null=True)
+    gender          = models.CharField(max_length=20, null=True)
+    termtype        = models.CharField(max_length=20, null=True)
+    geographical_usage = models.CharField(max_length=20, null=True)
+    usage_status    = models.CharField(max_length=20, null=True)
+    term_location   = models.CharField(max_length=20, null=True)
+    created_date    = models.DateTimeField(auto_now_add=True)
+    modified_date   = models.DateTimeField(auto_now=True)
+    glossary        = models.ForeignKey(Glossary, null=True, on_delete=models.CASCADE,related_name='term')
+    file            = models.ForeignKey(GlossaryFiles, null=True, on_delete=models.CASCADE,related_name='term_file')
+    job             = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job')
+    # user            = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.sl_term
+
+
+
+##############Glossary Tasks Model###################
+class GlossaryTasks(models.Model):
+    glossary = models.ForeignKey(Glossary, on_delete=models.CASCADE, related_name='task')
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='job_task')
+    # terms = models.ForeignKey(TermsModel, on_delete=models.CASCADE, null=True, blank=True, related_name='job_terms')
+    objects = GlossaryTasksManager()
+#####################################################################################
+
+class Tbx_Download(models.Model):
+    user                    = models.ForeignKey(AiUser, on_delete=models.CASCADE, null=True)
+    glossary                = models.ForeignKey(Glossary, null=True, on_delete=models.CASCADE)
+    termbase_Name           = models.CharField(max_length=20, null=False)
+    customer                = models.TextField()
+    project                 = models.TextField()
+    note                    = models.TextField()
+
+    def __str__(self):
+        return self.termbase_Name
