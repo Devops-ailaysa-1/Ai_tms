@@ -24,6 +24,9 @@ class TranslationStatus(models.Model):
     status_name = models.CharField(max_length=25)
     status_id = models.IntegerField()
 
+    def __str__(self):
+        return self.status_name
+
 class Segment(models.Model):
     source = models.TextField(blank=True)
     target = models.TextField(null=True, blank=True)

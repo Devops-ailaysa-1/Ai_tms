@@ -10,6 +10,8 @@ Dockerfile
 media
 mediafiles
 */migrations
+*/github_/migrations
+*/gitlab_/migrations
 *.*.pyc
 */__pycache__/*
 dj_ailaysa_slim/config.py
@@ -90,3 +92,6 @@ fprm
 /u599082/
 /documentation/
 /*/*/migrations/
+APP.MD
+staticfiles
+api_automation

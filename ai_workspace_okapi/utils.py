@@ -1,9 +1,8 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-import os, mimetypes, requests, uuid, json
+import os, mimetypes, requests, uuid, json, xlwt
 from django.http import JsonResponse, Http404, HttpResponse
-from google.cloud import translate_v2 as translate
-import boto3
 from django.contrib.auth import settings
+from xlwt import Workbook
 
 client = translate.Client()
 
@@ -213,3 +212,22 @@ class SpacesService:
 class OkapiUtils:
     def get_translated_file_(self):
         pass
+
+def download_file(file_path):
+
+    filename = os.path.basename(file_path)
+    fl = open(file_path, 'rb')
+    mime_type, _ = mimetypes.guess_type(file_path)
+    response = HttpResponse(fl, content_type=mime_type)
+    response['Content-Disposition'] = "attachment; filename=%s" % filename
+    return response
+
+bl_title_format = {
+    'bold': True,
+    'font_color': 'black',
+}
+
+bl_cell_format = {
+    'text_wrap': True,
+    'align': 'left',
+}

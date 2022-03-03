@@ -301,22 +301,34 @@ class MT_RawSerializer(serializers.ModelSerializer):
     class Meta:
         model = MT_RawTranslation
         fields = (
-            "segment", 'mt_engine', 'mt_raw', "mt_engine_name", "target_language"
+            "segment", 'mt_engine', 'mt_raw', "mt_engine_name", "target_language", "task_mt_engine"
         )
 
         extra_kwargs = {
             "mt_raw": {"required": False},
+            "mt_engine" : {"required": False},
         }
 
     def to_internal_value(self, data):
-        data["mt_engine"] = data.get("mt_engine", 1)
+
+        # data["mt_engine"] = data.get("mt_engine", 1)
+        data["task_mt_engine"] = data.get("mt_engine", 1)
         return super().to_internal_value(data=data)
 
     def create(self, validated_data):
-        segment = validated_data["segment"]
-        validated_data["mt_raw"]= client.translate(segment.source,
-            target_language=segment.target_language_code, format_="text")\
-            .get("translatedText")
+
+        # MT FEED DATA
+        source_string = validated_data["segment"].source
+        source_lang_code = validated_data["segment"].source_language_code
+        target_lang_code = validated_data["segment"].target_language_code
+
+        validated_data["mt_raw"] = get_translation(
+                        validated_data["task_mt_engine"].id,
+                        # validated_data["mt_engine"].id,
+                        source_string,
+                        source_lang_code,
+                        target_lang_code,
+                    )
 
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
