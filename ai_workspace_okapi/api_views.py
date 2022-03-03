@@ -365,10 +365,10 @@ class MT_RawAndTM_View(views.APIView):
         return []
 
     def get_segment_MT_params(self, segment_id):
-        task_assign_obj = TaskAssign.objects.get(
+        task_assign_obj = TaskAssign.objects.filter(
             Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
             Q(step_id=1)
-        )
+        ).first()
         return TaskAssignSerializer(task_assign_obj).data
 
     def get_alert_msg(self, status_code, can_team):
