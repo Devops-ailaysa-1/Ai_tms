@@ -11,12 +11,9 @@ from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from ai_auth.models import AiUser, UserAttribute, UserCredits
 from ai_staff.models import AiUserType,SpellcheckerLanguages
-from django.http import HttpResponse
 from ai_workspace.models import Task, TaskCreditStatus, TaskAssign
 from rest_framework.response import  Response
-from rest_framework.views import APIView
-from django.db.models import F, Q
-import requests, boto3
+import requests
 import json, os, re, time, jwt, xlsxwriter
 import pickle
 import logging

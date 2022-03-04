@@ -123,6 +123,7 @@ INSTALLED_APPS = [
     'sqlite3',
     'ai_marketplace',
     'ai_glex',
+    'ai_nlp',
     'djstripe',
     'django_filters',
     'notifications',

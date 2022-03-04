@@ -95,3 +95,5 @@ fprm
 APP.MD
 staticfiles
 api_automation
+env
+wordsapi_sample.json
