@@ -558,6 +558,19 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					project=project)
 		return  project
 
+	def to_representation(self, value):
+		from ai_glex.serializers import GlossarySerializer
+		from ai_glex.models import Glossary
+		data = super().to_representation(value)
+		try:
+			ins = Glossary.objects.get(project_id = value.id)
+			print(ins)
+			glossary_serializer = GlossarySerializer(ins)
+			data['glossary'] = glossary_serializer.data
+		except:
+			data['glossary'] = None
+		return data
+
 
 class InstructionfilesSerializer(serializers.ModelSerializer):
     class Meta:

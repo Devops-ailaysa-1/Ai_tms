@@ -20,11 +20,13 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class GlossarySetupSerializer(ProjectQuickSetupSerializer):
-    glossary = GlossarySerializer()
+    glossary = GlossarySerializer(required= False)
     # glossary_files = GlossaryFileSerializer(required= False,many= True,allow_null= True)
 
     class Meta(ProjectQuickSetupSerializer.Meta):
         fields = ProjectQuickSetupSerializer.Meta.fields + ('glossary',)
+
+
 
     def to_internal_value(self, data):
         glossary = {}
@@ -56,6 +58,15 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
                     project = instance, glossary = glossary_instance)
         return super().update(instance, validated_data)
 
+    # def to_representation(self, value):
+    #     data = super().to_representation(value)
+    #     try:
+    #         ins = Glossary.objects.get(project_id = value.id)
+    #         glossary_serializer = GlossarySerializer(ins)
+    #         data['glossary'] = glossary_serializer.data
+    #     except:
+    #         data['glossary'] = None
+    #     return data
 # class FileUploadSerializer(serializers.ModelSerializer):
 #
 #     class Meta:
