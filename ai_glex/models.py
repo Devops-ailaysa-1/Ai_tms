@@ -7,8 +7,8 @@ import os
 from .manager import GlossaryTasksManager
 from ai_staff.models import AssetUsageTypes
 from django.contrib.auth import settings
-from django.db.models.signals import post_save, pre_save
-from ai_glex.signals import update_words_from_template
+from django.db.models.signals import post_save, pre_save, post_delete
+from ai_glex.signals import update_words_from_template,delete_words_from_term_model
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
 class Glossary(models.Model):
@@ -59,10 +59,11 @@ class GlossaryFiles(models.Model):
     deleted_at = models.BooleanField(default=False)
     upload_date = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.file_name
+    # def __str__(self):
+    #     return self.file_name
 
 post_save.connect(update_words_from_template, sender=GlossaryFiles)
+post_delete.connect(delete_words_from_term_model, sender=GlossaryFiles)
 ###############################################################################
 
 class TermsModel(models.Model):
