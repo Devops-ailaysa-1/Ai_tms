@@ -11,8 +11,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.conf import settings
 from .models import Glossary
-from .serializers import GlossarySerializer
-
+from .serializers import GlossarySerializer,GlossaryFileSerializer
+import json
+from ai_workspace.serializers import Job
 # Create your views here.
 ############ GLOSSARY GET & CREATE VIEW #######################
 class GlossaryListCreateView(viewsets.ViewSet, PageNumberPagination):
@@ -80,3 +81,23 @@ class GlossaryListCreateView(viewsets.ViewSet, PageNumberPagination):
         glossary = get_object_or_404(queryset, pk=pk)
         glossary.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+#########  FILE UPLOAD  #######################
+class GlossaryFileView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def create(self, request):
+        files = request.FILES.getlist("glossary_file")
+        job = json.loads(request.POST.get('job'))
+        obj = Job.objects.get(id=job)
+        data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
+        serializer = GlossaryFileSerializer(data=data,many=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        else:
+            return Response (serializer.errors,status=400)
+
+
+# class TermUploadView(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated]

@@ -5,6 +5,7 @@ from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,GlossaryT
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
 from ai_workspace.models import Project,File,Job
+import json
 
 
 class GlossarySerializer(serializers.ModelSerializer):
@@ -18,6 +19,13 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = GlossaryFiles
         fields = "__all__"
+
+
+
+# class GlossaryTaskSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = GlossaryTasks
+#         fields = "__all__"
 
 class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     glossary = GlossarySerializer(required= False)

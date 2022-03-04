@@ -601,6 +601,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
     def create(self, request):
+        print("DT----->",request.data)
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
         if text_data:

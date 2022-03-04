@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 
 router.register(r'glossary_list_create',api_views.GlossaryListCreateView, basename="glossary_list_create")
-
+router.register(r'glossary_file_upload',api_views.GlossaryFileView, basename="glossary_file_upload")
 
 urlpatterns = router.urls
 

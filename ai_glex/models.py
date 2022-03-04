@@ -7,6 +7,8 @@ import os
 from .manager import GlossaryTasksManager
 from ai_staff.models import AssetUsageTypes
 from django.contrib.auth import settings
+from django.db.models.signals import post_save, pre_save
+from ai_glex.signals import update_words_from_template
 # Create your models here.
 ##########  GLOSSARY GENERAL DETAILS #############################
 class Glossary(models.Model):
@@ -60,7 +62,7 @@ class GlossaryFiles(models.Model):
     def __str__(self):
         return self.file_name
 
-
+post_save.connect(update_words_from_template, sender=GlossaryFiles)
 ###############################################################################
 
 class TermsModel(models.Model):
