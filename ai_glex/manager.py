@@ -11,6 +11,5 @@ class GlossaryTasksManager(models.Manager):
 
     def create_tasks_of_glossary_and_jobs_by_project(self, project, glossary):
         jobs = project.project_jobs_set.all()
-        print(jobs,project)
         return self.create_tasks_of_glossary_and_jobs(
             jobs=jobs, klass=None, glossary=glossary)

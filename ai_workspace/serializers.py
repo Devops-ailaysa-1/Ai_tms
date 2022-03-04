@@ -19,6 +19,8 @@ from ai_auth.serializers import InternalMemberSerializer,HiredEditorSerializer
 from ai_vendor.models import VendorLanguagePair
 from django.db.models import OuterRef, Subquery
 
+
+
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
     A ModelSerializer that takes an additional `fields` argument that
@@ -555,6 +557,19 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
 		return  project
+
+	def to_representation(self, value):
+		from ai_glex.serializers import GlossarySerializer
+		from ai_glex.models import Glossary
+		data = super().to_representation(value)
+		try:
+			ins = Glossary.objects.get(project_id = value.id)
+			print(ins)
+			glossary_serializer = GlossarySerializer(ins)
+			data['glossary'] = glossary_serializer.data
+		except:
+			data['glossary'] = None
+		return data
 
 
 class InstructionfilesSerializer(serializers.ModelSerializer):

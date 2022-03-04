@@ -10,9 +10,10 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.conf import settings
-from .models import Glossary
-from .serializers import GlossarySerializer
-
+from .models import Glossary, GlossaryFiles, TermsModel
+from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer
+import json
+from ai_workspace.serializers import Job
 # Create your views here.
 ############ GLOSSARY GET & CREATE VIEW #######################
 class GlossaryListCreateView(viewsets.ViewSet, PageNumberPagination):
@@ -79,4 +80,59 @@ class GlossaryListCreateView(viewsets.ViewSet, PageNumberPagination):
         queryset = Glossary.objects.filter(user=request.user)
         glossary = get_object_or_404(queryset, pk=pk)
         glossary.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+#########  FILE UPLOAD  #######################
+class GlossaryFileView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request):
+        files = request.FILES.getlist("glossary_file")
+        job = json.loads(request.POST.get('job'))
+        obj = Job.objects.get(id=job)
+        data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
+        serializer = GlossaryFileSerializer(data=data,many=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        else:
+            return Response (serializer.errors,status=400)
+
+    def delete(self,request,pk=None):
+        file_delete_ids = request.POST.getlist('file_delete_ids')
+        job = request.POST.get('job')
+        [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in file_delete_ids]
+        return Response({"Msg":"Files Deleted"})
+
+
+class TermUploadView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self, request):
+        job = request.GET.get('job')
+        queryset = TermsModel.objects.filter(job_id = job)
+        serializer = TermsSerializer(queryset, many=True, context={'request': request})
+        return  Response(serializer.data)
+
+    def create(self, request):
+        job = request.POST.get('job')
+        job_obj = Job.objects.get(id=job)
+        glossary = job_obj.project.glossary_project.id
+        serializer = TermsSerializer(data={**request.POST.dict(),"job":job,"glossary":glossary})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk):
+        queryset = TermsModel.objects.get(id=pk)
+        serializer =TermsSerializer(queryset,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk):
+        term = TermsModel.objects.get(id=pk)
+        term.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

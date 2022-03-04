@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from ai_vendor.models import VendorLanguagePair
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
+from ai_glex.serializers import GlossarySetupSerializer
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEditors
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -566,6 +567,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     ordering = ('-id')
     paginator.page_size = 20
 
+    def get_serializer_class(self):
+        project_type = json.loads(self.request.POST.get('project_type'))
+        if project_type == 2:
+            return GlossarySetupSerializer
+        return ProjectQuickSetupSerializer
+
     def get_object(self):
         pk = self.kwargs.get("pk", 0)
         try:
@@ -594,7 +601,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
     def create(self, request):
+        print("DT----->",request.data)
         text_data=request.POST.get('text_data')
+        ser = self.get_serializer_class()
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
@@ -607,8 +616,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
-            serlzr = ProjectQuickSetupSerializer(data=\
-            {**request.data, "files": request.FILES.getlist("files")},context={"request": request})
+            serlzr = ser(data={**request.data, "files": request.FILES.getlist("files")},context={"request": request})
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 return Response(serlzr.data, status=201)
@@ -616,6 +624,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def update(self, request, pk, format=None):
         instance = self.get_object()
+        ser = self.get_serializer_class()
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -644,7 +653,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=subject_delete_ids)
 
-        serlzr = ProjectQuickSetupSerializer(instance, data=\
+        serlzr = ser(instance, data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request}, partial=True)
 
