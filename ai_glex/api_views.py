@@ -116,6 +116,8 @@ class TermUploadView(viewsets.ViewSet):
 
     def create(self, request):
         job = request.POST.get('job')
+        if not job:
+            return Response({'msg':'Job required'},status=status.HTTP_400_BAD_REQUEST)
         job_obj = Job.objects.get(id=job)
         glossary = job_obj.project.glossary_project.id
         serializer = TermsSerializer(data={**request.POST.dict(),"job":job,"glossary":glossary})

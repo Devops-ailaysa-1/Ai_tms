@@ -98,6 +98,7 @@ class TaskManager(models.Manager):
                              "object or assign_to user")
         # tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
         tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
+        print(tasks)
         return tasks
 
 
@@ -109,9 +110,20 @@ class TaskManager(models.Manager):
             files=files, jobs=jobs, klass=None, project=project
         )
 
+    def create_glossary_tasks_of_jobs(self, jobs, klass,\
+          project = None):
+        glossary_tasks = [self.get_or_create(job=job) for job in jobs]
+        return glossary_tasks
+
+    def create_glossary_tasks_of_jobs_by_project(self, project):
+        jobs = project.project_jobs_set.all()
+        return self.create_glossary_tasks_of_jobs(
+            jobs=jobs, klass=None)
+
 class TaskAssignManager(models.Manager):
 
     def assign_task(self,steps,project):
+        print("PRO---->",project.id)
         if hasattr(project, "ai_user"):
             assign_to = project.ai_user
         tasks = project.get_tasks

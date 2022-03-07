@@ -4,7 +4,7 @@ from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,GlossaryT
                     )
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
-from ai_workspace.models import Project,File,Job
+from ai_workspace.models import Project,File,Job,Task,TaskAssign
 import json
 
 
@@ -53,12 +53,14 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     def create(self, validated_data):
         original_validated_data = validated_data.copy()
         glossary_data = original_validated_data.pop('glossary')
-        project = super().create(validated_data = original_validated_data)
+        project,steps = super().create(validated_data = original_validated_data)
         jobs = project.get_jobs
         glossary = Glossary.objects.create(**glossary_data,project=project)
-        tasks = GlossaryTasks.objects.create_tasks_of_glossary_and_jobs(
-                jobs=jobs, glossary=glossary,klass=GlossaryTasks)
-        return glossary
+        tasks = Task.objects.create_glossary_tasks_of_jobs(
+                jobs=jobs,klass=Task)
+        if steps:
+            task_assign = TaskAssign.objects.assign_task(steps=steps,project=project)
+        return project
 
     def update(self, instance, validated_data):
         print("In update",validated_data)
@@ -68,6 +70,6 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
             # glossary_instance = Glossary.objects.get(project_id = instance.id)
             glossary_data = validated_data.pop('glossary')
             glossary_serializer.update(glossary_instance, glossary_data)
-            tasks = GlossaryTasks.objects.create_tasks_of_glossary_and_jobs_by_project(\
-                    project = instance, glossary = glossary_instance)
+            tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
+                    project = instance)
         return super().update(instance, validated_data)

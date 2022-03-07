@@ -550,7 +550,7 @@ class Version(models.Model):
         return self.version_name
 
 class Task(models.Model):
-    file = models.ForeignKey(File, on_delete=models.CASCADE, null=False, blank=False,
+    file = models.ForeignKey(File, on_delete=models.CASCADE, null=True, blank=True,
             related_name="file_tasks_set")
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
             related_name="job_tasks_set")
@@ -559,7 +559,7 @@ class Task(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['file', 'job'], name=\
-                'file, job combination unique'),
+                'file, job combination unique if file not null',condition=Q(file__isnull=False))
         ]
 
     objects = TaskManager()

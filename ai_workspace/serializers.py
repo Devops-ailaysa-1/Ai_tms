@@ -523,7 +523,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 			if steps:
 				task_assign = TaskAssign.objects.assign_task(steps=steps,project=project)
-		return  project
+		return  project,steps
 
 	def update(self, instance, validated_data):
 		if validated_data.get('project_name'):
