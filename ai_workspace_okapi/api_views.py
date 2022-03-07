@@ -406,7 +406,7 @@ class DocumentToFile(views.APIView):
 
         title_format = workbook.add_format(bl_title_format)
         cell_format = workbook.add_format(bl_cell_format)
-        worksheet.set_column('A:B', 30, cell_format)
+        worksheet.set_column('A:B', 100, cell_format)
 
         worksheet.write('A1', 'Source language' + '(' + source_lang + ')', title_format)
         worksheet.write('B1', 'Target language' + '(' + target_lang + ')', title_format)
