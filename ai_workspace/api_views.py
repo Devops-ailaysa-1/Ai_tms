@@ -916,8 +916,9 @@ def dashboard_credit_status(request):
     # if (request.user.is_internal_member) and (InternalMember.objects.get(internal_member=request.user.id).role.id == 1):
     #     return Response({"credits_left" : request.user.internal_team_manager.credit_balance,
     #                         "total_available" : request.user.internal_team_manager.buyed_credits}, status=200)
-    return Response({"credits_left" : request.user.credit_balance,
-                            "total_available" : request.user.buyed_credits}, status=200)
+    # return Response({"credits_left" : request.user.credit_balance,
+    #                         "total_available" : request.user.buyed_credits}, status=200)
+    return Response({"credits_left": request.user.credit_balance,}, status=200)
 
 #############Tasks Assign to vendor#################
 class TaskView(APIView):

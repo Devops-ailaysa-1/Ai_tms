@@ -35,6 +35,7 @@ class Segment(models.Model):
     tagged_source = models.TextField(null=True, blank=True)
     coded_brace_pattern = models.TextField(null=True, blank=True)
     coded_ids_sequence = models.TextField(null=True, blank=True)
+    random_tag_ids = models.TextField(null=True, blank=True)
     target_tags = models.TextField(null=True, blank=True)
     okapi_ref_segment_id = models.CharField(max_length=50)
     status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=\
