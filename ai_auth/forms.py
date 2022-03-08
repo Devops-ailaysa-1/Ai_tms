@@ -160,13 +160,21 @@ def user_trial_end(user,sub):
     email =user.email
    # msg_plain = render_to_string("account/email/password_change.txt", context)
     msg_html = render_to_string("account/email/trial_ending.html", context)
-    ms =send_mail(
-        " Your Trial Ends Soon",None,
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
-        html_message=msg_html,
-    )
-    print("mailsent>>",ms)
+    try:      
+        from .block_list import ven_blocklist
+        block_list=ven_blocklist
+    except Exception as e:
+        block_list=[]
+    if user.email not in block_list:
+        ms =send_mail(
+            " Your Trial Ends Soon",None,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=msg_html,
+        )
+        print("mailsent>>",ms)
+    else:
+        print("user in block list")
 
 
 

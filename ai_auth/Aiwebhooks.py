@@ -165,7 +165,7 @@ def my_handler(event, **kwargs):
     price_obj= Price.objects.get(id=price)
     if price_obj.id != subscription.plan.id:
         print("Subscription not updated yet")
-    sub_type=data['object']['lines']['data'][0]['metadata']['type']
+    #sub_type=data['object']['lines']['data'][0]['metadata']['type']
     if subscription.status == 'trialing':
         trial = True
         cp = models.CreditPack.objects.get(product=price_obj.product,type='Subscription_Trial')

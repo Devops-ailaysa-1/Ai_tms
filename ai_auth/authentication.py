@@ -27,6 +27,11 @@ class MysqlBackend(BaseBackend):
         # print("Mysql Backend Autentication")
         ai_user = AiUser.objects.filter(email=email).first()
         # print("Firt if ---> ",password.encode("utf-8"))
+        if ai_user and ai_user.password.startswith('pbkdf2'):
+            ai_user.from_mysql = False
+            ai_user.save()
+            return None
+            
         if ai_user and (ai_user.from_mysql==True):
             # print("Firt if ---> ",password.encode("utf-8"))
             if checkpw( password.encode("utf-8") , ai_user.password.encode("utf-8") ):

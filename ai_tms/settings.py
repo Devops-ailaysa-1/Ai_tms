@@ -94,7 +94,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
-    # 'channels',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -129,7 +129,6 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     # 'dbbackup',
-    # 'channels',
     # 'django_q',
 ]
 
@@ -141,7 +140,7 @@ if MANAGEMENT:
 SITE_ID = 1
 
 WSGI_APPLICATION = 'ai_tms.wsgi.application'
-# ASGI_APPLICATION = 'ai_tms.asgi.application'
+ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
@@ -447,16 +446,15 @@ LOGOUT_REDIRECT_URL = '/'
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",
-#         "CONFIG": {
-#              # "hosts": [("redis", 6379)],
-#              "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+             "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
 
-#         },
-#     },
-# }
+        },
+    },
+}
 
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
