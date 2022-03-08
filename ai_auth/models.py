@@ -118,10 +118,10 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         except:
             print("No active subscription")
             # return total_credit_left
-            return {"addon": addons, "subscription": subscription}
+            return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
 
         # return total_credit_left
-        return {"addon": addons, "subscription": subscription}
+        return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
 
     @property
     def buyed_credits(self):

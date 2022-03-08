@@ -274,7 +274,7 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 return MT_RawAndTM_View.can_translate(request, user)
 
-        initial_credit = user.credit_balance
+        initial_credit = user.credit_balance.get("total_left")
 
         segment_source = Segment.objects.get(id=segment_id).source
         seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
