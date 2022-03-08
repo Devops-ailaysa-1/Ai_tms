@@ -3,7 +3,7 @@ from tablib import Dataset
 
 def update_words_from_template(sender, instance, *args, **kwargs):
     print("Ins--->",instance)
-    glossary_obj = instance.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
+    glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
     dataset = Dataset()
     imported_data = dataset.load(instance.file.read(), format='xlsx')
     for data in imported_data:

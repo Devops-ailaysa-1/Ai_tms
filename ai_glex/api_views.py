@@ -12,78 +12,84 @@ from rest_framework.response import Response
 from django.conf import settings
 from .models import Glossary, GlossaryFiles, TermsModel
 from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer
-import json
+import json,mimetypes,os
 from ai_workspace.serializers import Job
+from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
+from django.http import JsonResponse,HttpResponse
+import xml.etree.ElementTree as ET
+
+
 # Create your views here.
 ############ GLOSSARY GET & CREATE VIEW #######################
-class GlossaryListCreateView(viewsets.ViewSet, PageNumberPagination):
-    filter_backends = (filters.SearchFilter,DjangoFilterBackend,)
-    search_fields = ('glossary_Name')
-    ordering_fields = ['modified_date']
-    ordering = ['-modified_date']
-    permission_classes = [IsAuthenticated]
-    page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+# class GlossaryListCreateView(viewsets.ViewSet, PageNumberPagination):
+#     filter_backends = (filters.SearchFilter,DjangoFilterBackend,)
+#     search_fields = ('glossary_Name')
+#     ordering_fields = ['modified_date']
+#     ordering = ['-modified_date']
+#     permission_classes = [IsAuthenticated]
+#     page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+#
+#     def get_custom_page_size(self, request, view):
+#         try:
+#             self.page_size = self.request.query_params.get('limit', 10)
+#         except (ValueError, TypeError):
+#             pass
+#         return super().get_page_size(request)
+#
+#     def paginate_queryset(self, queryset, request, view=None):
+#         self.page_size = self.get_custom_page_size(request, view)
+#         return super().paginate_queryset(queryset, request, view)
+#
+#     def get_queryset(self):
+#         queryset = queryset_all = Glossary.glossaryobjects.filter(user=self.request.user.id).all().order_by('-modified_date')
+#         search_word =  self.request.query_params.get('search_word',0)
+#         status = 200
+#         if search_word:
+#             queryset = queryset.filter(
+#                         Q(glossary_Name__contains=search_word) | Q(subject_field__contains=search_word)
+#                     )
+#         if not queryset:
+#             queryset = queryset_all
+#             status = 422
+#         return queryset, status
+#
+#     def list(self, request):
+#         queryset, status = self.get_queryset()
+#         pagin_tc = self.paginate_queryset( queryset, request , view=self )
+#         serializer = GlossarySerializer(pagin_tc, many=True, context={'request': request})
+#         # return  self.get_paginated_response (serializer.data)
+#         response =self.get_paginated_response(serializer.data)
+#         return  Response(response.data, status=status)
+#
+#     def create(self, request):
+#         file = request.FILES.getlist("uploadfile")
+#         print(file)
+#         serializer = GlossarySerializer(data={**request.POST.dict(),"files":file},context={"request": request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(data={"Message":"Glossary created"}, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def update(self, request, pk):
+#         try:
+#             queryset = Glossary.objects.get(Q(id=pk) & Q(user=request.user))
+#         except Glossary.DoesNotExist:
+#             return Response(status=204)
+#         serializer =GlossarySerializer(queryset,data={**request.POST.dict()},partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def delete(self,request,pk):
+#         queryset = Glossary.objects.filter(user=request.user)
+#         glossary = get_object_or_404(queryset, pk=pk)
+#         glossary.delete()
+#         return Response(status=status.HTTP_204_NO_CONTENT)
+#
 
-    def get_custom_page_size(self, request, view):
-        try:
-            self.page_size = self.request.query_params.get('limit', 10)
-        except (ValueError, TypeError):
-            pass
-        return super().get_page_size(request)
+######### Glossary FILE UPLOAD  #####################################
 
-    def paginate_queryset(self, queryset, request, view=None):
-        self.page_size = self.get_custom_page_size(request, view)
-        return super().paginate_queryset(queryset, request, view)
-
-    def get_queryset(self):
-        queryset = queryset_all = Glossary.glossaryobjects.filter(user=self.request.user.id).all().order_by('-modified_date')
-        search_word =  self.request.query_params.get('search_word',0)
-        status = 200
-        if search_word:
-            queryset = queryset.filter(
-                        Q(glossary_Name__contains=search_word) | Q(subject_field__contains=search_word)
-                    )
-        if not queryset:
-            queryset = queryset_all
-            status = 422
-        return queryset, status
-
-    def list(self, request):
-        queryset, status = self.get_queryset()
-        pagin_tc = self.paginate_queryset( queryset, request , view=self )
-        serializer = GlossarySerializer(pagin_tc, many=True, context={'request': request})
-        # return  self.get_paginated_response (serializer.data)
-        response =self.get_paginated_response(serializer.data)
-        return  Response(response.data, status=status)
-
-    def create(self, request):
-        file = request.FILES.getlist("uploadfile")
-        print(file)
-        serializer = GlossarySerializer(data={**request.POST.dict(),"files":file},context={"request": request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(data={"Message":"Glossary created"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def update(self, request, pk):
-        try:
-            queryset = Glossary.objects.get(Q(id=pk) & Q(user=request.user))
-        except Glossary.DoesNotExist:
-            return Response(status=204)
-        serializer =GlossarySerializer(queryset,data={**request.POST.dict()},partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self,request,pk):
-        queryset = Glossary.objects.filter(user=request.user)
-        glossary = get_object_or_404(queryset, pk=pk)
-        glossary.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-#########  FILE UPLOAD  #######################
 class GlossaryFileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -105,6 +111,7 @@ class GlossaryFileView(viewsets.ViewSet):
         [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in file_delete_ids]
         return Response({"Msg":"Files Deleted"})
 
+###############################Terms CRUD########################################
 
 class TermUploadView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -116,6 +123,8 @@ class TermUploadView(viewsets.ViewSet):
 
     def create(self, request):
         job = request.POST.get('job')
+        if not job:
+            return Response({'msg':'Job required'},status=status.HTTP_400_BAD_REQUEST)
         job_obj = Job.objects.get(id=job)
         glossary = job_obj.project.glossary_project.id
         serializer = TermsSerializer(data={**request.POST.dict(),"job":job,"glossary":glossary})
@@ -136,3 +145,74 @@ class TermUploadView(viewsets.ViewSet):
         term = TermsModel.objects.get(id=pk)
         term.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+########################GlossaryTemplateDownload###################################
+@api_view(['GET',])
+def glossary_template_lite(request):
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=Glossary_Lite.xlsx'
+    xlsx_data = WriteToExcel_lite()
+    response.write(xlsx_data)
+    return response
+
+
+@api_view(['GET',])
+def glossary_template(request):
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=Glossary_template.xlsx'
+    xlsx_data = WriteToExcel()
+    response.write(xlsx_data)
+    return response
+
+######################################TBXWrite####################################
+
+@api_view(['GET',])
+def tbx_write(request,job_id):
+    try:
+        job = Job.objects.get(id = job_id)
+        sl_code = job.source_language_code
+        tl_code = job.target_language_code
+        objs = TermsModel.objects.filter(job = job)
+        root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
+                                nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
+        tbxHeader = ET.Element("tbxHeader")
+        root.append (tbxHeader)
+        Filedesc=ET.SubElement(tbxHeader,"fileDesc")
+        TitleStmt=ET.SubElement(Filedesc,"titleStmt")
+        Title=ET.SubElement(TitleStmt,"title")
+        Title.text=job.project.project_name
+        SourceDesc=ET.SubElement(Filedesc,"sourceDesc")
+        Info=ET.SubElement(SourceDesc,"p")
+        Info.text="TBX created from " + job.term_job.last().file.filename
+        EncodingDesc=ET.SubElement(tbxHeader,"encodingDesc")
+        EncodingInfo=ET.SubElement(EncodingDesc,"p",type="XCSURI")
+        EncodingInfo.text="TBXXCSV02.xcs"
+        Text= ET.Element("text")
+        root.append(Text)
+        Body=ET.SubElement(Text,"body")
+        for i,obj in enumerate(objs):
+            i=i+1
+            conceptEntry    = ET.SubElement(Body,"conceptEntry",id="c"+str(i))
+            langSec         = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code})
+            Termsec         = ET.SubElement(langSec,"termSec")
+            Term = ET.SubElement(Termsec,"term")
+            Term.text = obj.sl_term.strip()
+            langSec1 = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": tl_code})
+            termSec1 = ET.SubElement(langSec1,"termSec")
+            Term1 = ET.SubElement(termSec1,"term")
+            Term1.text = obj.tl_term.strip() if obj.tl_term else obj.tl_term
+        out_fileName = job.project.project_name+"(" + sl_code + "-" + tl_code + ")"+ ".tbx"
+        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
+        fl_path=os.getcwd()+"/"+out_fileName
+        filename = out_fileName
+        fl = open(fl_path, 'rb')
+        mime_type, _ = mimetypes.guess_type(fl_path)
+        response = HttpResponse(fl, content_type=mime_type)
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        os.remove(os.getcwd()+"/"+out_fileName)
+        return response
+
+    except Exception as e:
+        print("Exception1-->", e)
+        return Response(data={"Message":"Something wrong in TBX conversion"})
