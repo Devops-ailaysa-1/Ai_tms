@@ -223,7 +223,7 @@ class Document(models.Model):
 
     @property
     def doc_credit_check_open_alert(self):
-        total_credit_left = self.created_by.credit_balance
+        total_credit_left = self.created_by.credit_balance.get("total_left")
         open_alert = False if (self.total_word_count < total_credit_left) else True
         return open_alert
 
