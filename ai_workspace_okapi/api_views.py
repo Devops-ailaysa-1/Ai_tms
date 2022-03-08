@@ -111,8 +111,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             ser = TaskSerializer(task)
             data = ser.data
             DocumentViewByTask.correct_fields(data)
-            # print("data--->", data)
             params_data = {**data, "output_type": None}
+
+            print("Data to spring ===> ", params_data)
+
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None,
                          "use_spaces" : settings.USE_SPACES
@@ -134,7 +136,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task.save()
             else:
                 # logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
+                logger.info(f">>>>>>>> Something went wrong with file reading in --> {task.id}<<<<<<<<<")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
         return document

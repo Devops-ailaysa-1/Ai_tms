@@ -90,14 +90,6 @@ class Segment(models.Model):
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 
-# class TempTargetSave(models.Model):
-#     segment = models.OneToOneField(Segment, null=True, on_delete=models.CASCADE,
-#                                    related_name="segment_temp_target")
-#     target = models.TextField(null=True, blank=True)
-#
-#     @property
-#     def get_target(self):
-#         return '' if self.target == None else self.target
 
 class MT_RawTranslation(models.Model):
 
