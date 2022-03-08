@@ -4,7 +4,7 @@ from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,GlossaryT
                     )
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
-from ai_workspace.models import Project,File,Job,Task,TaskAssign
+from ai_workspace.models import Project,File,Job,Task,TaskAssign,WorkflowSteps
 import json
 
 
@@ -51,13 +51,15 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
+        workflow = validated_data.get('workflow')
         original_validated_data = validated_data.copy()
         glossary_data = original_validated_data.pop('glossary')
-        project,steps = super().create(validated_data = original_validated_data)
+        project = super().create(validated_data = original_validated_data)
         jobs = project.get_jobs
         glossary = Glossary.objects.create(**glossary_data,project=project)
         tasks = Task.objects.create_glossary_tasks_of_jobs(
                 jobs=jobs,klass=Task)
+        steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]
         if steps:
             task_assign = TaskAssign.objects.assign_task(steps=steps,project=project)
         return project

@@ -22,7 +22,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
     TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer,InstructionfilesSerializer,StepsSerializer,WorkflowsSerializer,WorkflowsStepsSerializer)
+    GetAssignToSerializer,InstructionfilesSerializer,StepsSerializer,WorkflowsSerializer,\
+    WorkflowsStepsSerializer,TaskAssignUpdateSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
@@ -1227,6 +1228,40 @@ def msg_send(sender,receiver,task):
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
+class TaskAssignUpdateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def update(self, request,pk=None):
+        task = request.POST.get('task')
+        step = request.POST.get('step')
+        file = request.FILES.getlist('instruction_file')
+        req_copy = copy.copy( request._request)
+        req_copy.method = "DELETE"
+
+        file_delete_ids = self.request.query_params.get(\
+            "file_delete_ids", [])
+
+        if file_delete_ids:
+            file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
+                        pk='0', many="true", ids=file_delete_ids)
+        if not task:
+            return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step))
+        if file:
+            serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
+        else:
+            serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict()},context={'request':request},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # except:
+            # return Response({'msg':'Task Assign details not found'},status=status.HTTP_400_BAD_REQUEST)
+        return Response(task, status=status.HTTP_200_OK)
+
+
+
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1261,7 +1296,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request,pk=None):
-        task = request.POST.getlist('task')
+        task = request.POST.get('task')
         step = request.POST.get('step')
         file = request.FILES.getlist('instruction_file')
         req_copy = copy.copy( request._request)
@@ -1277,20 +1312,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
 
-        for i in task:
-            try:
-                task_assign = TaskAssign.objects.get(Q(task_id = i) & Q(step_id = step))
-                task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
-                if file:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
-                else:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            except TaskAssignInfo.DoesNotExist:
-                print('not exist')
+        task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step))
+        task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
+        if file:
+            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
+        else:
+            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):

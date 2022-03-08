@@ -110,9 +110,8 @@ class Project(models.Model):
     ai_user = models.ForeignKey(AiUser, null=False, blank=False,
         on_delete=models.CASCADE)
     ai_project_id = models.TextField()
-    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,
-        null=True, blank=True, \
-        on_delete=models.CASCADE, related_name="proj_mt_engine")
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, default=1,\
+        null=True, blank=True, on_delete=models.CASCADE, related_name="proj_mt_engine")
     threshold = models.IntegerField(default=85)
     max_hits = models.IntegerField(default=5)
     workflow = models.ForeignKey(Workflows,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_workflow')
