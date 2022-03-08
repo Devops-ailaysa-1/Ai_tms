@@ -35,7 +35,7 @@ class SegmentSerializer(serializers.ModelSerializer):
     temp_target = serializers.CharField(read_only=True, source="get_temp_target")
     status = serializers.IntegerField(read_only=True, source="status.status_id")
     source = serializers.CharField(trim_whitespace=False, allow_blank=True)
-    random_tag_ids = serializers.CharField(read_only=True, allow_blank=True, required=False)
+    random_tag_ids = serializers.CharField(allow_blank=True, required=False)
 
     class Meta:
         model = Segment
@@ -59,7 +59,7 @@ class SegmentSerializer(serializers.ModelSerializer):
             "coded_source": {"write_only": True},
             "coded_brace_pattern": {"write_only": True},
             "coded_ids_sequence": {"write_only": True},
-            "random_tag_ids" : {"read_only": True},
+            # "random_tag_ids" : {"read_only": True},
             "tagged_source": {"read_only": True},
             "target_tags": {"read_only": True},
             # "id",
