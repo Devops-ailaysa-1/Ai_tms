@@ -109,10 +109,11 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
+        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence', "random_tag_ids"]
         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
+        ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
         return ret
 
