@@ -1,22 +1,22 @@
-from django.shortcuts import render
-from rest_framework import pagination
-from rest_framework.pagination import PageNumberPagination
-from django.shortcuts import get_object_or_404
-from rest_framework.authtoken.models import Token
-from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework import viewsets, filters, status
-from django_filters.rest_framework import  DjangoFilterBackend
-from rest_framework.decorators import api_view,permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from django.conf import settings
-from .models import Glossary, GlossaryFiles, TermsModel
-from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer
-import json,mimetypes,os
-from ai_workspace.serializers import Job
-from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
-from django.http import JsonResponse,HttpResponse
+from rest_framework import viewsets, status
+import json
+import mimetypes
+import os
 import xml.etree.ElementTree as ET
+
+from django.http import HttpResponse
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from ai_workspace.excel_utils import WriteToExcel_lite, WriteToExcel
+from ai_workspace.serializers import Job
+from ai_workspace.models import Job, TaskAssign
+from .models import GlossaryFiles, TermsModel
+from .serializers import GlossaryFileSerializer, TermsSerializer
+from ai_workspace_okapi.utils import get_translation
 
 
 # Create your views here.
@@ -216,3 +216,18 @@ def tbx_write(request,job_id):
     except Exception as e:
         print("Exception1-->", e)
         return Response(data={"Message":"Something wrong in TBX conversion"})
+
+class GetTranslation(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, task_id):
+
+        # input data
+        source = request.GET.get("source", "")
+        sl_code = Job.objects.get(job_tasks_set = task_id).source_language_code
+        tl_code = Job.objects.get(job_tasks_set = task_id).target_language_code
+        mt_engine_id = TaskAssign.objects.get(task_info = task_id).mt_engine
+
+        #get translation
+        translation = get_translation(mt_engine_id, source, sl_code, tl_code)
+        return Response({"res": translation}, status=200)

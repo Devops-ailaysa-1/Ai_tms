@@ -1,62 +1,51 @@
-from rest_framework.exceptions import ValidationError
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
 from ai_workspace_okapi.models import Document
 from django.conf import settings
-from django.core.files import File as DJFile
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from ai_vendor.models import VendorLanguagePair
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_glex.serializers import GlossarySetupSerializer
-from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEditors
+from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
-    ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
-    ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
-    TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
-    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer,InstructionfilesSerializer,StepsSerializer,WorkflowsSerializer,\
-    WorkflowsStepsSerializer,TaskAssignUpdateSerializer)
+from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+                          ProjectSerializer, JobSerializer, FileSerializer, FileSerializer, \
+                          ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
+                          TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer, \
+                          PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
+                          VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer, \
+                          TaskCreditStatusSerializer, TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
+                          GetAssignToSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
-    TaskAssignInfo,TaskAssign,Workflows,Steps,WorkflowSteps)
+from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
+                     TaskAssignInfo, TaskAssign, Workflows, Steps, WorkflowSteps)
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Task, TbxFile, Instructionfiles
 from django.http import JsonResponse
-import requests, json, os, time
 from .models import Task,Tbxfiles
 from lxml import etree as ET
 from ai_marketplace.models import AvailableVendors,ChatMessage
-from django.http import JsonResponse,HttpResponse
 import requests, json, os,mimetypes
-from ai_workspace import serializers
 from ai_workspace_okapi.models import Document
-from ai_staff.models import LanguagesLocale, Languages
 from rest_framework.decorators import api_view
 from django.http import JsonResponse, Http404, HttpResponse
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from django.core.files import File as DJFile
 from django.http import JsonResponse
-from tablib import Dataset
-import shutil
 from datetime import datetime
 from django.db.models import Q, Sum
 from rest_framework.decorators import permission_classes
 from notifications.signals import notify
-from notifications.models import Notification
 from ai_marketplace.serializers import ThreadSerializer
 # from ai_workspace_okapi.api_views import DocumentViewByTask
 
