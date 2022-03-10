@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 load_dotenv(".env2")
 from pathlib import Path
 
@@ -516,6 +518,22 @@ LOGGING = {
         #     'formatter' : 'dev_formatter',
         # }
     },
-
-
 }
+
+
+# ERROR MONITORING USING SENTRY
+sentry_sdk.init(
+    dsn = os.getenv("dsn"),
+    integrations=[DjangoIntegration()],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate = os.getenv("traces_sample_rate"),
+
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii = os.getenv("send_default_pii")
+)
+
+
