@@ -633,14 +633,22 @@ class Task(models.Model):
         return  get_processor_name(self.file.file.name).get("processor_name", None)
 
     @property
+    def corrected_segment_count(self):
+        doc = self.document
+        return Segment.objects.filter(
+            text_unit__document=doc
+        ).count()
+
+    @property
     def get_progress(self):
         confirm_list = [102, 104, 106]
-        total_segment_count = self.document.total_segment_count
+        # total_segment_count = self.document.total_segment_count
+        total_segment_count = self.corrected_segment_count
         segments_confirmed_count = self.document.segments.filter(
             status__status_id__in=confirm_list
         ).count()
-        return {"total_segments":total_segment_count,\
-                "confirmed_segments":segments_confirmed_count}
+        return {"total_segments": total_segment_count, \
+                "confirmed_segments": segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
@@ -711,15 +719,6 @@ class TmxFile(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.tmx_file.file.name)
-
-    # /////////////////////// References \\\\\\\\\\\\\\\\\\\\\\\\
-    #
-    # from django.core.validators import EmailValidator
-    # EmailValidator().validate_domain_part(".com")  ---> False
-    # EmailValidator().validate_domain_part("l.com")  ---> True
-    # p1 = Project.objects.last()
-    # In [8]: p1.penseivetm.penseive_tm_dir_path
-    # Out[8]: '/ai_home/media/user_2/p14/.pentm'
 
 def tbx_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,"tbx",filename)
