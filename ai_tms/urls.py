@@ -43,6 +43,8 @@ urlpatterns = [
     path("", TemplateView.as_view(template_name="index.html"), ),
     path("integerations/", include("integerations.github_.urls")),
     path("integerations/", include("integerations.gitlab_.urls")),
+    path("nlp/", include("ai_nlp.urls")),
+
 ]
 
 if settings.MANAGEMENT:

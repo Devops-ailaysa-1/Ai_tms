@@ -16,4 +16,5 @@ urlpatterns += [
     path('tbx_write/<int:task_id>/', api_views.tbx_write, name='tbx_write'),
     path('glossaries/<int:project_id>/',api_views.glossaries_list, name='glossaries-list'),
     path('glossary_term_search/',api_views.glossary_search,name='glossary_term_search'),
+    path('get_translation/<int:task_id>/', api_views.GetTranslation.as_view(), name='get-translation'),
 ]

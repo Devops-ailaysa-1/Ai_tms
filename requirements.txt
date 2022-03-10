@@ -145,3 +145,4 @@ gunicorn
 channels-redis==3.3.1
 python-gitlab==3.1.1
 xlwt==1.3.0
+spacy==3.2.3

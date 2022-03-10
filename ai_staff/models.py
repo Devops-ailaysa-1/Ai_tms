@@ -238,6 +238,9 @@ class AssetUsageTypes(ParanoidModel):
     #deleted_at = models.DateTimeField(blank=True, null=True)
     is_active=models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.use_type
+
     class Meta:
         db_table = 'asset_usage_types'
 

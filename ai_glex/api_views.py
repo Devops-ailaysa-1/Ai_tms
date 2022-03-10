@@ -1,19 +1,20 @@
-from django.shortcuts import render
-from rest_framework import pagination
-from rest_framework.pagination import PageNumberPagination
-from django.shortcuts import get_object_or_404
-from rest_framework.authtoken.models import Token
-from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework import viewsets, filters, status
-from django_filters.rest_framework import  DjangoFilterBackend
-from rest_framework.decorators import api_view,permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import viewsets, status
+import json
+import mimetypes
+import os
+import xml.etree.ElementTree as ET
+
+from django.http import HttpResponse
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.conf import settings
 from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected
 from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer,\
                         GlossaryListSerializer,GlossarySelectedSerializer
 import json,mimetypes,os
+from rest_framework.views import APIView
 from ai_workspace.serializers import Job
 from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
 from django.http import JsonResponse,HttpResponse
@@ -291,3 +292,18 @@ def glossary_search(request):
     else:
         res=None
     return JsonResponse({'res':res},safe=False)
+
+class GetTranslation(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, task_id):
+
+        # input data
+        source = request.GET.get("source", "")
+        sl_code = Job.objects.get(job_tasks_set = task_id).source_language_code
+        tl_code = Job.objects.get(job_tasks_set = task_id).target_language_code
+        mt_engine_id = TaskAssign.objects.get(task_info = task_id).mt_engine
+
+        #get translation
+        translation = get_translation(mt_engine_id, source, sl_code, tl_code)
+        return Response({"res": translation}, status=200)
