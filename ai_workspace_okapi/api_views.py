@@ -381,7 +381,7 @@ class DocumentToFile(views.APIView):
 
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
-        return re.sub(r'</?\d>', "", string)
+        return re.sub(r'</?\d+>', "", string)
         # return string
 
     def get_bilingual_filename(self, document_id):
@@ -418,7 +418,7 @@ class DocumentToFile(views.APIView):
         for text_unit in text_units:
             segments = Segment.objects.filter(text_unit_id=text_unit.id)
             for segment in segments:
-                worksheet.write(row, 0, segment.source, cell_format)
+                worksheet.write(row, 0, segment.source.strip(), cell_format)
                 worksheet.write(row, 1, self.remove_tags(segment.target), cell_format)
                 row += 1
         workbook.close()

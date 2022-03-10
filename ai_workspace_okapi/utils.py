@@ -157,7 +157,6 @@ class OkapiUtils:
         pass
 
 def download_file(file_path):
-
     filename = os.path.basename(file_path)
     fl = open(file_path, 'rb')
     mime_type, _ = mimetypes.guess_type(file_path)
