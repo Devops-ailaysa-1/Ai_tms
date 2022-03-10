@@ -531,7 +531,7 @@ class TbxUploadView(APIView):
 
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
-    # team = django_filters.CharFilter(field_name='team__name',lookup_expr='icontains')
+    filter = django_filters.CharFilter(field_name='glossary_project',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     class Meta:
         model = Project
@@ -544,6 +544,11 @@ class ProjectFilter(django_filters.FilterSet):
         else:
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
+
+    def filter_not_empty(self,queryset, name, value):
+        if value == "glossary":
+            lookup = '__'.join([name, 'isnull'])
+            return queryset.filter(**{lookup: False})
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

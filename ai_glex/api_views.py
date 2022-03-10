@@ -13,11 +13,12 @@ from rest_framework.views import APIView
 
 from ai_workspace.excel_utils import WriteToExcel_lite, WriteToExcel
 from ai_workspace.serializers import Job
-from ai_workspace.models import Job, TaskAssign
-from .models import GlossaryFiles, TermsModel
-from .serializers import GlossaryFileSerializer, TermsSerializer
-from ai_workspace_okapi.utils import get_translation
-
+from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
+from django.http import JsonResponse,HttpResponse
+import xml.etree.ElementTree as ET
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+from ai_workspace.models import Task
 
 # Create your views here.
 ############ GLOSSARY GET & CREATE VIEW #######################
@@ -113,21 +114,29 @@ class GlossaryFileView(viewsets.ViewSet):
 
 ###############################Terms CRUD########################################
 
-class TermUploadView(viewsets.ViewSet):
+class TermUploadView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    serializer_class = TermsSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    ordering_fields = ['created_date','id']
+    search_fields = ['sl_term','tl_term']
+    ordering = ('-id')
+
     def list(self, request):
-        job = request.GET.get('job')
-        queryset = TermsModel.objects.filter(job_id = job)
+        task = request.GET.get('task')
+        job = Task.objects.get(id=task).job
+        queryset = self.filter_queryset(TermsModel.objects.filter(job = job))
         serializer = TermsSerializer(queryset, many=True, context={'request': request})
         return  Response(serializer.data)
 
     def create(self, request):
-        job = request.POST.get('job')
-        if not job:
-            return Response({'msg':'Job required'},status=status.HTTP_400_BAD_REQUEST)
-        job_obj = Job.objects.get(id=job)
-        glossary = job_obj.project.glossary_project.id
-        serializer = TermsSerializer(data={**request.POST.dict(),"job":job,"glossary":glossary})
+        task = request.POST.get('task')
+        job = Task.objects.get(id=task).job
+        if not task:
+            return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
+        # job_obj = Job.objects.get(id=job)
+        glossary = job.project.glossary_project.id
+        serializer = TermsSerializer(data={**request.POST.dict(),"job":job.id,"glossary":glossary})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -168,9 +177,9 @@ def glossary_template(request):
 ######################################TBXWrite####################################
 
 @api_view(['GET',])
-def tbx_write(request,job_id):
+def tbx_write(request,task_id):
     try:
-        job = Job.objects.get(id = job_id)
+        job = Task.objects.get(id = task_id).job
         sl_code = job.source_language_code
         tl_code = job.target_language_code
         objs = TermsModel.objects.filter(job = job)
