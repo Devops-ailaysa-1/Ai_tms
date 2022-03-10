@@ -92,9 +92,12 @@ class Project(models.Model):
         on_delete=models.CASCADE, related_name="proj_mt_engine")
     threshold = models.IntegerField(default=85)
     max_hits = models.IntegerField(default=5)
-    team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
-    project_manager = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.CASCADE, related_name='project_owner')
-    created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'created_by')
+    team = models.ForeignKey(Team,null=True,blank=True,
+        on_delete=models.CASCADE,related_name='proj_team')
+    project_manager = models.ForeignKey(AiUser, null=True, blank=True,
+        on_delete=models.CASCADE, related_name='project_owner')
+    created_by = models.ForeignKey(AiUser, null=True, blank=True,
+        on_delete=models.SET_NULL,related_name = 'created_by')
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -119,7 +122,8 @@ class Project(models.Model):
 
         if not self.project_name:
             #self.project_name = self.ai_project_id
-            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
+            self.project_name = 'Project-'+str(Project.objects.filter\
+                (ai_user=self.ai_user).count()+1).zfill(3)
 
         if self.id:
             project_count = Project.objects.filter(project_name=self.project_name, \
@@ -268,6 +272,10 @@ class Project(models.Model):
         else:
             return False
 
+    @property
+    def get_project_file_create_type(self):
+        return self.project_file_create_type.file_create_type
+
     # @property
     # def project_analysis(self):
     #     if self.is_proj_analysed == True:
@@ -351,6 +359,16 @@ class Project(models.Model):
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
+
+class ProjectFilesCreateType(models.Model):
+    class FileType(models.TextChoices):
+        upload_file = 'upload', "Files from usual upload"
+        integeration = "integeration", "Files from integerations"
+
+    file_create_type = models.TextField(choices=FileType.choices,
+        default=FileType.upload_file)
+    project = models.OneToOneField(Project, on_delete=models.CASCADE,
+        related_name="project_file_create_type")
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -500,7 +518,7 @@ class File(models.Model):
     #     self.save()
 
     class Meta:
-        managed = False
+        managed = True #False
     #
     # @property
     # def is_upload_from_integeration(self):

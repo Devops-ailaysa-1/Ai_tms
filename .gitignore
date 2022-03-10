@@ -89,3 +89,7 @@ fprm
 /my-test-.docx
 /u599082/
 /documentation/
+ignore_data/
+/repeat-snippets.py
+/integerations/github_/migrations/
+/integerations/gitlab_/migrations/

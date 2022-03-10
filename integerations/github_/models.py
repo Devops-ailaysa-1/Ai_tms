@@ -4,16 +4,18 @@ from django.dispatch import receiver
 from guardian.shortcuts import assign_perm
 
 from ai_auth.models import AiUser
-from .managers import GithubTokenManager, HookDeckManager
+from .managers import GithubTokenManager, HookDeckManager,\
+    ContentFileManager
 from .enums import GITHUB_PREFIX_NAME, HOOK_PREFIX_NAME,\
     HOOK_DESTINATION_GITHUB_PREFIX_NAME, APP_NAME, DJ_APP_NAME
+
 
 from github import Github
 from django.shortcuts import get_object_or_404
 from django.utils.crypto import get_random_string
 
 from .utils import GithubUtils
-from controller.bases import DownloadBase
+from controller.bases import DownloadBase, FileBase
 from datetime import datetime
 import pytz
 import cryptocode
@@ -34,16 +36,16 @@ CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
 class GithubApp(IntegerationAppBase):
 
-    def validate_oauth_token(value):
-        print("value--->", value)
-        g = Github(value)
-        try:
-            g.get_user().login
-        except:
-            raise forms.ValidationError("Token is invalid!!!")
-        return value
+    # def validate_oauth_token(value):
+    #     print("value--->", value)
+    #     g = Github(value)
+    #     try:
+    #         g.get_user().login
+    #     except:
+    #         raise forms.ValidationError({"detail":"Token is invalid!!!"})
+    #     return value
 
-    oauth_token = models.CharField(max_length=255, validators=[validate_oauth_token])
+    oauth_token = models.CharField(max_length=255, )#validators=[validate_oauth_token])
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -201,6 +203,9 @@ class ContentFile(ContentFileBase):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE,
                 related_name="branch_contentfiles_set")
 
+    objects = ContentFileManager()
+
+
     def update_file(self, file):
         self.uploaded_file = file
         fc = apps.get_model("controller.FileController")\
@@ -208,6 +213,11 @@ class ContentFile(ContentFileBase):
         fc.save()
         self.controller = fc
         self.save()
+
+    @property
+    def get_contentfile_obj(self):
+        return self.branch.repo.get_repo_obj.get_contents(self.file_path,
+            ref=self.branch.branch_name)
 
     @property
     def get_content_of_file(self):
@@ -229,6 +239,7 @@ class ContentFile(ContentFileBase):
             ContentFile.objects.get_or_create(
                 branch=branch, file=file_content.name,
                 file_path=file_content.path,
+                size_of_file=file_content.size
             )
 
 post_save.connect(ContentFileBase.permission_signal(),
@@ -317,7 +328,7 @@ class HookDeck(models.Model):
         res = requests.post("http://api.hookdeck.com/2021-08-01/connections",
             data=data, headers= {'Content-Type': 'application/json'
             }, auth=HTTPBasicAuth('0uiz4mw193y0'
-            'bp52b177rch275878cbnbsr60uleytgdv1gzo6','')  )
+            'bp52b177rch275878cbnbsr60uleytgdv1gzo6', ''))
         try:
             return res.json()
         except:
@@ -325,8 +336,13 @@ class HookDeck(models.Model):
 
 class DownloadProject(DownloadBase):
 
+    branch = models.OneToOneField(Branch, on_delete=models.CASCADE, null=True)
+
+    serializer_class_str = "github__contentfile_serializer"
+
     def save(self, *args, **kwargs):
-        print("project---->", self.project)
+        self.commit_hash = self.branch.get_branch_gh_obj.commit.sha
+        # print("project---->", self.project)
         return super().save(*args, **kwargs)
 
     def push_to_github(self):
@@ -336,13 +352,24 @@ class DownloadProject(DownloadBase):
         self.push_to_github()
 
     def update_project(self, project):
-        self.project = project
+        self.project.add(project)
         print("here----")
         dc = apps.get_model("controller.DownloadController")\
             (project = project, related_model_string="github_.DownloadProject")
         dc.save()
         self.controller = dc
         self.save()
+
+    def get_content_files_set(self):
+        return self.branch.branch_contentfiles_set
+
+class FileConnector(FileBase):
+    contentfile = models.OneToOneField(ContentFile, on_delete=models.SET_NULL,
+        null=True)
+
+
+
+
 
 
 

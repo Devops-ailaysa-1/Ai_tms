@@ -1,14 +1,17 @@
 from rest_framework import serializers
 import json
 from .models import GithubApp, FetchInfo,\
-    Repository, Branch, ContentFile, HookDeck
-from ai_workspace.models import  Project, File, Job
+    Repository, Branch, ContentFile, HookDeck, FileConnector, \
+    DownloadProject
+from ai_workspace.models import  Project, File, Job, ProjectFilesCreateType
 from ai_staff.models import AssetUsageTypes, Languages
 
 from github import Github
 from collections import OrderedDict
 from ai_auth.models import AiUser
 from .enums import DJ_APP_NAME
+from controller.models import DownloadController, FileController
+
 
 class GithubOAuthTokenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,7 +28,7 @@ class GithubOAuthTokenSerializer(serializers.ModelSerializer):
         try:
             g.get_user().login
         except:
-            raise serializers.ValidationError("Token is invalid!!!")
+            raise serializers.ValidationError({"detail":"Token is invalid!!!3333"})
 
         return value
 
@@ -40,7 +43,7 @@ class GithubOAuthTokenSerializer(serializers.ModelSerializer):
             username=username
         ).first():
             raise serializers.ValidationError\
-                ("Already github account registered!!!")
+                ({"detail": "Already github account registered!!!"})
         return super().create(data)
 
 class RepositorySerializer(serializers.ModelSerializer):
@@ -70,7 +73,6 @@ class BranchSerializer(serializers.ModelSerializer):
 
 class ContentFileListSerializer(serializers.ListSerializer):
     def update(self, instance, validated_data):
-        print("list update called")
         instance_mapping = {this.id: this for this in instance}
         data_mapping = {item['id']: item for item in validated_data}
 
@@ -82,19 +84,17 @@ class ContentFileListSerializer(serializers.ListSerializer):
                 ret.append(self.child.update(ins, data))
         return ret
 
-
 class ContentFileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ['id', 'branch', 'is_localize_registered', 'file',
-                  "file_path",
+                  "file_path", "size_of_file_with_units",
+                  "is_file_size_exceeded", "is_translatable"
                   # 'created_on', 'accessed_on', 'updated_on'
                   ]
 
         extra_kwargs = {
             "id":{
-                "read_only": False, "required": False
-            }
-        }
+                "read_only": False, "required": False } }
 
         model = ContentFile
         list_serializer_class = ContentFileListSerializer
@@ -106,35 +106,6 @@ class ContentFileSerializer(serializers.ModelSerializer):
 class LocalizeIdsSerializer(serializers.Serializer):
     localizable_ids = serializers.ListField()
 
-class ProjectSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        fields = ["id", 'project_name',
-                  #'project_dir_path', 'created_at',
-                  'ai_user',
-                  #'ai_project_id', 'mt_engine', 'max_hits',
-                  'threshold', f"project_{DJ_APP_NAME}downloadproject"
-                  ]
-        model = Project
-
-        extra_kwargs = {
-            "ai_user": {
-                "required": False,},
-            f"project_{DJ_APP_NAME}downloadproject":{
-                "required": False}}
-
-        validators = []
-
-    def create(self, validated_data):
-        data = validated_data
-        project = Project.objects.create(**data)
-        rel_obj = data[f'project_{DJ_APP_NAME}downloadproject']
-        rel_obj.update_project(project=project)
-        return project
-
-    # def create(self, validated_data):
-    #     data = validated_data
-    #     return super().create(data)
 
 class FileListSerializer(serializers.ListSerializer):
     def create(self, validated_data):
@@ -144,46 +115,32 @@ class FileListSerializer(serializers.ListSerializer):
         return ret
 
 class FileSerializer(serializers.ModelSerializer):
+    contentfile_id = serializers.IntegerField()
     class Meta:
-        fields = ['id', 'usage_type', 'file',
-                  'project', f"{DJ_APP_NAME}contentfile"]
+        fields = ['id', 'usage_type', 'file', 'project',
+                  "contentfile_id"]
+                  # f"{DJ_APP_NAME}contentfile"
+
         model = File
         list_serializer_class = FileListSerializer
 
         extra_kwargs = {
-            "project": {"required": False}}
+            "project": {"required": False},
+            "usage_type": {"default":
+                AssetUsageTypes.objects.first()},
+            "file_filecontroller": {"required": False},
+        }
 
         validators = []
 
     def create(self, validated_data):
-        data = validated_data
-        ret = super().create(data)
-        cf = data['github_contentfile']
-        cf.update_file(ret)
-        return ret
-
-class FileDataPrepareSerializer(serializers.Serializer):
-    DEFAULT_ASSET = 1  # Need to add test
-
-    usage_type = serializers.PrimaryKeyRelatedField(
-        queryset=AssetUsageTypes.objects.all(),
-        # default=AssetUsageTypes.objects.get(id=DEFAULT_ASSET)
-    )
-    files = serializers.ListField()
-    content_files = serializers.ListField()
-
-    @classmethod
-    def get_dynamic_obj(cls, *args, **kwargs):
-        cls.usage_type = serializers.CharField()
-        obj = cls(*args, **kwargs)
-        return obj
-
-    def to_representation(self, instance):
-        ret = super(FileDataPrepareSerializer, self)\
-            .to_representation(instance=instance)
-        ret = [{"usage_type":ret["usage_type"], "file":file, f"{DJ_APP_NAME}contentfile": contentfile} for
-               file, contentfile in zip(ret.get("files"), ret.get("content_files"))]
-        return ret
+        contentfile_id = validated_data.pop("contentfile_id")
+        file = super().create(validated_data)
+        rel_obj = FileController()
+        rel_obj.update_file(file=file, related_model_string=\
+            f"{DJ_APP_NAME}.FileConnector",contentfile_id =\
+            contentfile_id)
+        return file
 
 class JobListSerializer(serializers.ListSerializer):
     def create(self, validated_data):
@@ -194,8 +151,7 @@ class JobListSerializer(serializers.ListSerializer):
 
 class JobSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ['id', 'source_language', 'target_language',
-                  'project', ]
+        fields = ['id', 'source_language', 'target_language', 'project', ]
         model = Job
         list_serializer_class = JobListSerializer
 
@@ -209,15 +165,54 @@ class JobSerializer(serializers.ModelSerializer):
         data = validated_data
         return super().create(data)
 
-class JobDataPrepareSerializer(serializers.Serializer):
+class DownloadControllerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DownloadController
+        fields = "__all__"
+        extra_kwargs = {
+            "related_model_string": {"default":"github_.DownloadProject"}
+        }
+
+class FileConnectorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FileConnector
+        fields = "__all__"
+
+class ProjectSerializerV2(serializers.ModelSerializer):
+    # jobs = JobSerializer(many=True)
+    # files = FileSerializer(many=True)
+    branch_id = serializers.IntegerField(write_only=True)
+    file_create_type = serializers.CharField(read_only=True,
+            source="project_file_create_type.file_create_type")
+
+    class Meta:
+        model = Project
+        fields = ( "project_name", "branch_id", "file_create_type")
+        # "download_controller",
+
+    def create(self, validated_data):
+        branch_id = validated_data.pop("branch_id")
+        project = super().create(validated_data)
+        rel_obj = DownloadController()
+        rel_obj.update_project(project=project, related_model_string=
+            f"{DJ_APP_NAME}.DownloadProject", branch_id=branch_id)
+        ProjectFilesCreateType.objects.create(project=project,
+            file_create_type=ProjectFilesCreateType.FileType.integeration)
+        return project
+
+class ProjectCreateReqReslvSerlzr(serializers.Serializer):
+    project_name = serializers.CharField()
     source_language = serializers.IntegerField()
     target_languages = serializers.ListField()
+    localizable_ids = serializers.ListField()
 
     def to_representation(self, instance):
-        ret = super(JobDataPrepareSerializer, self)\
-            .to_representation(instance=instance)
-        ret = [{"source_language":ret["source_language"], "target_language":target_language} for
-               target_language in ret.get("target_languages")]
+        ret = super().to_representation(instance=instance)
+        ret["file_connectors"] = [{"contentfile": _id} for _id in
+            ret.pop("localizable_ids")]
+        sl = ret.pop("source_language")
+        ret["jobs"] = [{"source_language": sl , "target_language": tl}
+            for tl in ret.pop("target_languages")]
         return ret
 
 class GithubHookSerializerD1(serializers.Serializer):
@@ -229,12 +224,15 @@ class GithubHookSerializerD3(serializers.Serializer):
 
 class GithubHookSerializerD4(serializers.Serializer):
     modified = serializers.ListField()
+    added = serializers.ListField()
+    removed = serializers.ListField()
 
 class GithubHookSerializerD5(serializers.Serializer):
     id = serializers.CharField()
 
 class GithubHookSerializerD2(serializers.Serializer):
     ref = serializers.CharField()
+    created = serializers.BooleanField()
     repository = GithubHookSerializerD3()
     commits = GithubHookSerializerD4(many=True)
     head_commit = GithubHookSerializerD5()
@@ -243,7 +241,7 @@ class GithubHookSerializerD2(serializers.Serializer):
         if 'refs/heads' in value:
             return value
         raise ValueError("refs/heads is missing in value. So you should modify "
-                         "the validation prefix content or someother fix..." )
+            "the validation prefix content or someother fix..." )
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

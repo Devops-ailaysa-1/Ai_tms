@@ -128,6 +128,7 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
+    "ai_tm_management",
     # 'dbbackup',
     # 'channels',
     # 'django_q',
@@ -340,7 +341,7 @@ USE_TZ = True
 
 USE_SPACES = (True if os.getenv( "USE_SPACES" ) == 'True' else False)
 
-if not USE_SPACES:
+if USE_SPACES:
     # settings
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')

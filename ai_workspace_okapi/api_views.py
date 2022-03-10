@@ -2,9 +2,10 @@ from datetime import datetime
 from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
-                          TM_FetchSerializer)
+                          TM_FetchSerializer, MergeSegmentSerializer)
 from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus,\
+    FontSize, Comment, MergeSegment
 from rest_framework import viewsets, authentication
 from rest_framework import views
 from django.shortcuts import get_object_or_404
@@ -129,8 +130,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 doc_data = doc.json()
                 # print("Doc data ---> ", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
-                                    "file": task.file.id, "job": task.job.id,
-                                },))
+                    "file": task.file.id, "job": task.job.id,},))
                 if serializer.is_valid(raise_exception=True):
                     document = serializer.save()
                     task.document = document
@@ -141,7 +141,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
         return document
-
 
     # @staticmethod
     # def create_document_for_task_if_not_exists(task):
@@ -189,7 +188,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         doc = DocumentSerializerV2(document).data
         return Response(doc, status=201)
 
-
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
     def get_object(document_id):
@@ -212,7 +210,7 @@ class DocumentViewByDocumentId(views.APIView):
             return Response({"msg" : "Unauthorised"}, status=401)
 
 class SegmentsView(views.APIView, PageNumberPagination):
-    PAGE_SIZE = page_size =  20
+    PAGE_SIZE = page_size =  5
 
     def get_object(self, document_id):
         document = get_object_or_404(\
@@ -221,14 +219,17 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
-        segments = document.segments_without_blank
+        # segments = document.segments_without_blank
+        segments = document.segments_for_workspace
         len_segments = segments.count()
-        page_len = self.paginate_queryset(range(1,len_segments+1), request)
-        # print(page_len)
+        page_len = self.paginate_queryset(range(1, len_segments+1), request)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
-        [i.update({"segment_count":j}) for i,j in  zip(segments_ser.data, page_len)]
-        return self.get_paginated_response(segments_ser.data)
+        data = [ SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
+            if i.get("is_merged")==True else i for i in segments_ser.data]
+        [i.update({"segment_count":j}) for i, j in zip(data, page_len)]
+        res = self.get_paginated_response(data)
+        return res
 
 def get_supported_file_extensions(request):
     return JsonResponse(CURRENT_SUPPORT_FILE_EXTENSIONS_LIST, safe=False)
@@ -242,38 +243,19 @@ class SourceTMXFilesCreate(views.APIView):
     def post(self, request, project_id):
         jobs, files = self.get_queryset(project_id=project_id)
 
-class SegmentsUpdateView(viewsets.ViewSet):
-    @staticmethod
-    def get_object(segment_id):
+
+class SegmentsUpdateView(viewsets.ModelViewSet):
+
+    serializer_class = SegmentSerializerV2
+
+    def get_object(self):
+        segment_id = self.kwargs["pk"]
         qs = Segment.objects.all()
         segment = get_object_or_404(qs, id = segment_id)
+        if segment.is_merged == True:
+            return MergeSegment.objects.get(id=segment_id)
         return segment
 
-    @staticmethod
-    def get_update(segment, data,request):
-        segment_serlzr = SegmentSerializerV2(segment, data=data, partial=True,\
-            context={"request": request})
-        if segment_serlzr.is_valid(raise_exception=True):
-            segment_serlzr.save()
-            return segment_serlzr
-        else:
-            logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
-            return segment_serlzr.errors
-
-    def update_pentm(self, segment):
-        data = PentmUpdateSerializer(segment).data
-        res = requests.post(f"http://{spring_host}:8080/project/pentm/update", data=data)
-        print("Response from spring --- >", res.json())
-        if res.status_code == 200:
-            print("res text--->", res.json())
-        else:
-            print("not successfully update")
-
-    def update(self, request, segment_id):
-        segment = self.get_object(segment_id)
-        segment_serlzr = self.get_update(segment, request.data, request)
-        # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
-        return Response(segment_serlzr.data, status=201)
 
 class MT_RawAndTM_View(views.APIView):
 
@@ -437,8 +419,8 @@ class DocumentToFile(views.APIView):
             
             # if request.GET.get("output_type", "") == "SOURCE":
             #     DocumentToFile.download_source_file(request, document_id)
-
-            res = self.document_data_to_file(request, document_id)
+            output_type = request.GET.get("output_type", "")
+            res = self.document_data_to_file(output_type, document_id)
             # print("Doc to file res code ====> ", res.status_code)
             if res.status_code in [200, 201]:
                 file_path = res.text
@@ -456,8 +438,7 @@ class DocumentToFile(views.APIView):
             return JsonResponse({"msg": "Unauthorised"}, status=401)
 
     @staticmethod
-    def document_data_to_file(request, document_id):
-        output_type = request.GET.get("output_type", "")
+    def document_data_to_file(output_type, document_id):
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
@@ -499,7 +480,7 @@ class DocumentToFile(views.APIView):
                 # print("file path---->", File.get_aws_file_path(task_data["output_file_path"]))
                 # uploading the f stream content to file
                 SpacesService.put_object(output_file_path=File
-                                        .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
+                    .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
 
         return res
 
@@ -997,7 +978,7 @@ def WiktionaryWorkSpace(request,doc_id):
         codesrc = tar
         code = src
     res=wiktionary_ws(code,codesrc,user_input)
-    return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
+    return JsonResponse({"out":res}, safe = False, json_dumps_params={'ensure_ascii':False})
 
 
 ######  USING PY SPELLCHECKER  ######
@@ -1026,3 +1007,20 @@ def spellcheck(request):
             return JsonResponse({"result":res},safe=False)
     except:
         return JsonResponse({"message":"Spellcheck not available"},safe=False)
+
+
+class MergeSegmentView(viewsets.ModelViewSet):
+    serializer_class = MergeSegmentSerializer
+
+    def create(self, request, *args, **kwargs):
+        serlzr = self.serializer_class(data=request.data)
+        if serlzr.is_valid(raise_exception=True):
+            serlzr.save(id=serlzr.validated_data.get("segments")[0].id)
+            obj =  serlzr.instance
+            obj.update_segments(serlzr.validated_data.get("segments"))
+            return Response(MergeSegmentSerializer(obj).data)
+
+
+
+
+

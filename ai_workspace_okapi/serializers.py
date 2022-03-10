@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize, Comment
+from .models import Document, Segment, TextUnit, MT_RawTranslation, \
+    MT_Engine, TranslationStatus, FontSize, Comment, MergeSegment
 import json, copy
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
@@ -49,7 +50,10 @@ class SegmentSerializer(serializers.ModelSerializer):
             "segment_id",
             "temp_target",
             "status",
-            "has_comment"
+            "has_comment",
+            "is_merged",
+            "text_unit",
+            "is_merge_start"
         )
 
         extra_kwargs = {
@@ -59,6 +63,9 @@ class SegmentSerializer(serializers.ModelSerializer):
             "coded_ids_sequence": {"write_only": True},
             "tagged_source": {"read_only": True},
             "target_tags": {"read_only": True},
+            "is_merged": {"required": False, "default": False},
+            "text_unit": {"read_only": True},
+            "is_merge_start": {"read_only": True},
             # "id",
         }
 
@@ -75,11 +82,11 @@ class SegmentSerializer(serializers.ModelSerializer):
 class SegmentSerializerV2(SegmentSerializer):
     temp_target = serializers.CharField(trim_whitespace=False)
     target = serializers.CharField(trim_whitespace=False, required=False)
-    status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
+    status = serializers.PrimaryKeyRelatedField(required=False,
+                queryset=TranslationStatus.objects.all())
     class Meta(SegmentSerializer.Meta):
         fields = ("target", "id", "temp_target", "status")
         #
-
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
@@ -92,12 +99,18 @@ class SegmentSerializerV2(SegmentSerializer):
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
-    target = serializers.CharField(read_only=True, source="coded_target", trim_whitespace=False)
+    target = serializers.CharField(read_only=True, source="get_merge_target_if_have",
+        trim_whitespace=False)
+    merge_segment_count = serializers.IntegerField(read_only=True,
+        source="get_merge_segment_count", )
+
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
-        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
+        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence', "merge_segment_count"]
+        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
@@ -122,13 +135,12 @@ class TextUnitSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data=data)
 
 class TextUnitSerializerV2(serializers.ModelSerializer):
-    segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
+    segment_ser = SegmentSerializerV3(many=True ,read_only=True,
+            source="text_unit_segment_set_exclude_merge_dummies")
 
     class Meta:
         model = TextUnit
-        fields = (
-            "segment_ser","okapi_ref_translation_unit_id"
-        )
+        fields = ("segment_ser", "okapi_ref_translation_unit_id")
 
     def to_representation(self, instance):
         ret = super(TextUnitSerializerV2, self).to_representation(instance=instance)
@@ -136,6 +148,11 @@ class TextUnitSerializerV2(serializers.ModelSerializer):
             ret.pop("segment_ser")
         )
         return ret
+
+class TextUnitSerializerTest(serializers.ModelSerializer):
+    class Meta:
+        model = TextUnit
+        fields = "__all__"
 
 class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
     text_unit_ser = TextUnitSerializer(many=True,  write_only=True)
@@ -391,3 +408,18 @@ class PentmUpdateSerializer(serializers.ModelSerializer):
 
     def get_pentm_update_params(self, object):
         return json.dumps(PentmUpdateParamSerializer(object).data)
+
+
+class MergeSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MergeSegment
+        fields = ("segments", "text_unit")
+
+    def validate(self, data):
+        segments = data["segments"]
+        text_unit = data["text_unit"]
+        if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
+            raise serializers.ValidationError("all segments should be have same text unit id...")
+        return super().validate(data)
+
+
