@@ -254,6 +254,10 @@ class Project(models.Model):
             .filter(is_processed=False).all()}
 
     @property
+    def get_target_languages(self):
+        return [job.target_language for job in self.project_jobs_set.all()]
+
+    @property
     def get_team(self):
         if self.team == None:
             return False

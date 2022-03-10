@@ -10,8 +10,9 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.conf import settings
-from .models import Glossary, GlossaryFiles, TermsModel
-from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer
+from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected
+from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer,\
+                        GlossaryListSerializer,GlossarySelectedSerializer
 import json,mimetypes,os
 from ai_workspace.serializers import Job
 from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
@@ -19,7 +20,9 @@ from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from ai_workspace.models import Task
+from ai_workspace.models import Task,Project
+from ai_workspace_okapi.models import Document
+# from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
 ############ GLOSSARY GET & CREATE VIEW #######################
@@ -102,6 +105,7 @@ class GlossaryFileView(viewsets.ViewSet):
         data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
         serializer = GlossaryFileSerializer(data=data,many=True)
         if serializer.is_valid():
+            print(serializer.is_valid())
             serializer.save()
             return Response(serializer.data, status=201)
         else:
@@ -226,3 +230,64 @@ def tbx_write(request,task_id):
     except Exception as e:
         print("Exception1-->", e)
         return Response(data={"Message":"Something wrong in TBX conversion"})
+
+
+
+@api_view(['GET',])
+def glossaries_list(request,project_id):
+    project = Project.objects.get(id=project_id)
+    target_languages = project.get_target_languages
+    queryset = Project.objects.filter(glossary_project__isnull=False)\
+                .filter(project_jobs_set__target_language__language__in = target_languages).distinct()
+    serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+class GlossarySelectedCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        project = request.GET.get('project')
+        if not project:
+            return Response({"msg":"project_id required"})
+        glossary_selected = GlossarySelected.objects.filter(project_id=project).all()
+        serializer = GlossarySelectedSerializer(glossary_selected, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        glossaries = request.POST.getlist('glossary')
+        project = request.POST.get('project')
+        data = [{"project":project, "glossary": glossary} for glossary in glossaries]
+        serializer = GlossarySelectedSerializer(data=data,many=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        pass
+
+    def delete(self,request,pk):
+        obj = GlossarySelected.objects.get(id = pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['POST',])
+def glossary_search(request):
+    user_input = request.POST.get("user_input")
+    doc_id = request.POST.get("doc_id")
+    doc = Document.objects.get(id=doc_id)
+    glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
+    target_language = doc.job.target_language
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
+                .filter(job__target_language__language=target_language)\
+                .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
+                      params=[user_input]).distinct().values('sl_term','tl_term')
+    if queryset:
+        res=[]
+        for data in queryset:
+           out = [{'source':data.get('sl_term'),'target':data.get('tl_term')}]
+           res.extend(out)
+    else:
+        res=None
+    return JsonResponse({'res':res},safe=False)
