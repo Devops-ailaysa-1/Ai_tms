@@ -3,7 +3,7 @@ import json
 import mimetypes
 import os
 import xml.etree.ElementTree as ET
-
+from ai_workspace_okapi.utils import get_translation
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
@@ -21,7 +21,7 @@ from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from ai_workspace.models import Task,Project
+from ai_workspace.models import Task,Project,TaskAssign
 from ai_workspace_okapi.models import Document
 # from ai_workspace.serializers import ProjectListSerializer
 
@@ -299,11 +299,28 @@ class GetTranslation(APIView):
     def post(self, request, task_id):
 
         # input data
-        source = request.GET.get("source", "")
-        sl_code = Job.objects.get(job_tasks_set = task_id).source_language_code
-        tl_code = Job.objects.get(job_tasks_set = task_id).target_language_code
-        mt_engine_id = TaskAssign.objects.get(task_info = task_id).mt_engine
+        task_obj = Task.objects.get(id=task_id)
+        source = request.POST.get("source", "")
+        sl_code = task_obj.job.source_language_code
+        tl_code = task_obj.job.target_language_code
+        mt_engine_id = task_obj.task_info.get(step__name="PostEditing").mt_engine_id
 
         #get translation
         translation = get_translation(mt_engine_id, source, sl_code, tl_code)
         return Response({"res": translation}, status=200)
+
+
+@api_view(['POST',])
+def adding_term_to_glossary_from_workspace(request):
+    sl_term = request.POST.get('source')
+    tl_term = request.POST.get('target',"")
+    doc_id = request.POST.get("doc_id")
+    glossary_id = request.POST.get('glossary')
+    doc = Document.objects.get(id=doc_id)
+    glossary = Glossary.objects.get(id = glossary_id)
+    job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
+    serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

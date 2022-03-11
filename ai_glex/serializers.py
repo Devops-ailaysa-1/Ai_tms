@@ -28,9 +28,10 @@ class TermsSerializer(serializers.ModelSerializer):
         fields ="__all__"
 
 class GlossarySelectedSerializer(serializers.ModelSerializer):
+    glossary_name = serializers.ReadOnlyField(source="glossary.project.project_name")
     class Meta:
         model = GlossarySelected
-        fields = "__all__"
+        fields = ('id','project','glossary','glossary_name',)
 
 # class GlossaryTaskSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -56,7 +57,8 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
-        workflow = validated_data.get('workflow')
+        workflow = validated_data.get('workflow_id')
+        print("WF-->",workflow)
         original_validated_data = validated_data.copy()
         glossary_data = original_validated_data.pop('glossary')
         project = super().create(validated_data = original_validated_data)
