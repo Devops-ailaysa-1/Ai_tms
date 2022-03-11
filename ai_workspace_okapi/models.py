@@ -168,7 +168,7 @@ class Document(models.Model):
     @property
     def segments_for_workspace(self):
         return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
-                    & Q(is_merge_start=False))).order_by("id")
+                    & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False)))).order_by("id")
 
     @property
     def segments_with_blank(self):
@@ -287,6 +287,12 @@ class MergeSegment(BaseSegment):
         for seg in segs:
             ids_seq+=json.loads(seg.coded_ids_sequence)
         self.coded_ids_sequence = json.dumps(ids_seq)
+
+        random_ids = []
+        for seg in segs:
+            random_ids+=json.loads(seg.random_tag_ids)
+        self.random_tag_ids = json.dumps(random_ids)
+
         self.okapi_ref_segment_id = segs[0].okapi_ref_segment_id
         self.save()
         self.update_segment_is_merged_true(segs=segs)

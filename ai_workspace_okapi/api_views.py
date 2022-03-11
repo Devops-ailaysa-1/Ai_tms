@@ -173,7 +173,7 @@ class DocumentViewByDocumentId(views.APIView):
             return Response({"msg" : "Unauthorised"}, status=401)
 
 class SegmentsView(views.APIView, PageNumberPagination):
-    PAGE_SIZE = page_size =  5
+    PAGE_SIZE = page_size =  20
 
     def get_object(self, document_id):
         document = get_object_or_404(\
@@ -189,7 +189,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
         data = [ SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
-            if i.get("is_merged")==True else i for i in segments_ser.data]
+            if (i.get("is_merged")==True and i.get("is_merge_start")) else i for i in segments_ser.data]
         [i.update({"segment_count":j}) for i, j in zip(data, page_len)]
         res = self.get_paginated_response(data)
         return res
@@ -426,7 +426,8 @@ class DocumentToFile(views.APIView):
             if output_type == "BILINGUAL":
                 return self.download_bilingual_file(document_id)
 
-            res = self.document_data_to_file(request, document_id)
+            output_type = request.GET.get("output_type", "")
+            res = self.document_data_to_file(output_type, document_id)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 try:
@@ -456,9 +457,11 @@ class DocumentToFile(views.APIView):
         ser = TaskSerializer(task)
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
+        print("---->", output_type)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
         pre, ext = os.path.splitext(task_data["output_file_path"])
+        print("output type---->", output_type)
         ext = ".xliff" if output_type == "XLIFF" else \
             (".tmx" if output_type == "TMX" else ext)
 

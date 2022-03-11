@@ -11,6 +11,8 @@ from contextlib import closing
 from django.db import connection
 from django.utils import timezone
 
+import re
+
 client = translate.Client()
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -120,8 +122,10 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence', "random_tag_ids"]
-        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
+        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
+        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
