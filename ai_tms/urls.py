@@ -27,7 +27,15 @@ from ai_auth.admin import staff_admin_site
 from django.views.generic import TemplateView
 from allauth.socialaccount.providers.github import views
 
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
+
 urlpatterns = [
+
+    # SENTRY CHECK
+    path('sentry-debug/', trigger_error),
+
     path('admin/', admin.site.urls),
     path("staff/", staff_admin_site.urls),
     path('app/',include('ai_staff.urls')),
