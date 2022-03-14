@@ -145,3 +145,4 @@ gunicorn
 channels-redis==3.3.1
 python-gitlab==3.1.1
 xlwt
+sentry-sdk
