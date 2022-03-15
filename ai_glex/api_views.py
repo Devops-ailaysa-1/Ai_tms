@@ -13,12 +13,18 @@ from rest_framework.views import APIView
 
 from ai_workspace.excel_utils import WriteToExcel_lite, WriteToExcel
 from ai_workspace.serializers import Job
-from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
+from ai_workspace.models import TaskAssign, Task
+
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace.models import Task
+from ai_workspace.api_views import UpdateTaskCreditStatus
+
+from .serializers import TermsSerializer
+
+from nltk import word_tokenize
 
 # Create your views here.
 ############ GLOSSARY GET & CREATE VIEW #######################
@@ -229,6 +235,14 @@ def tbx_write(request,task_id):
 class GetTranslation(APIView):
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def word_count(self, string):
+        punctuations = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+        tokens = word_tokenize(string)
+        tokens_new = [word for word in tokens if word not in punctuations]
+        return len(tokens_new)
+
+
     def post(self, request, task_id):
 
         # input data
@@ -237,6 +251,19 @@ class GetTranslation(APIView):
         tl_code = Job.objects.get(job_tasks_set = task_id).target_language_code
         mt_engine_id = TaskAssign.objects.get(task_info = task_id).mt_engine
 
-        #get translation
-        translation = get_translation(mt_engine_id, source, sl_code, tl_code)
-        return Response({"res": translation}, status=200)
+        # Finding the debit user
+        project = Job.objects.get(job_tasks_set = task_id).project
+        user = project.team.owner if project.team else project.ai_user
+
+        credit_balance = user.credit_balance.get("total")
+        word_count = GetTranslation.word_count(source)
+
+        if credit_balance > word_count:
+
+            #get translation
+            translation = get_translation(mt_engine_id, source, sl_code, tl_code)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, word_count)
+            return Response({"res": translation}, status=200)
+
+        else:
+            return Response({"res": "Insufficient credits"}, status=424)
