@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from ai_auth.models import AiUser
-from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,GlossaryTasks,
+from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,\
+                        GlossaryTasks,GlossarySelected,
                     )
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
@@ -26,6 +27,11 @@ class TermsSerializer(serializers.ModelSerializer):
         model = TermsModel
         fields ="__all__"
 
+class GlossarySelectedSerializer(serializers.ModelSerializer):
+    glossary_name = serializers.ReadOnlyField(source="glossary.project.project_name")
+    class Meta:
+        model = GlossarySelected
+        fields = ('id','project','glossary','glossary_name',)
 
 # class GlossaryTaskSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -51,7 +57,8 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
-        workflow = validated_data.get('workflow')
+        workflow = validated_data.get('workflow_id')
+        print("WF-->",workflow)
         original_validated_data = validated_data.copy()
         glossary_data = original_validated_data.pop('glossary')
         project = super().create(validated_data = original_validated_data)
@@ -75,3 +82,12 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
             tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
                     project = instance)
         return super().update(instance, validated_data)
+
+
+
+class GlossaryListSerializer(serializers.ModelSerializer):
+    glossary_name = serializers.CharField(source = 'project_name')
+    glossary_id = serializers.CharField(source = 'glossary_project.id')
+    class Meta:
+        model = Glossary
+        fields = ("glossary_id", "glossary_name", )

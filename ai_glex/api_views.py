@@ -3,15 +3,18 @@ import json
 import mimetypes
 import os
 import xml.etree.ElementTree as ET
-
+from ai_workspace_okapi.utils import get_translation
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.conf import settings
+from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected
+from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer,\
+                        GlossaryListSerializer,GlossarySelectedSerializer
+import json,mimetypes,os
 from rest_framework.views import APIView
-
-from ai_workspace.excel_utils import WriteToExcel_lite, WriteToExcel
 from ai_workspace.serializers import Job
 from ai_workspace.models import TaskAssign, Task
 
@@ -25,6 +28,9 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 from .serializers import TermsSerializer
 
 from nltk import word_tokenize
+from ai_workspace.models import Task,Project,TaskAssign
+from ai_workspace_okapi.models import Document
+# from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
 ############ GLOSSARY GET & CREATE VIEW #######################
@@ -107,6 +113,7 @@ class GlossaryFileView(viewsets.ViewSet):
         data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
         serializer = GlossaryFileSerializer(data=data,many=True)
         if serializer.is_valid():
+            print(serializer.is_valid())
             serializer.save()
             return Response(serializer.data, status=201)
         else:
@@ -232,6 +239,67 @@ def tbx_write(request,task_id):
         print("Exception1-->", e)
         return Response(data={"Message":"Something wrong in TBX conversion"})
 
+
+
+@api_view(['GET',])
+def glossaries_list(request,project_id):
+    project = Project.objects.get(id=project_id)
+    target_languages = project.get_target_languages
+    queryset = Project.objects.filter(glossary_project__isnull=False)\
+                .filter(project_jobs_set__target_language__language__in = target_languages).distinct()
+    serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+class GlossarySelectedCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        project = request.GET.get('project')
+        if not project:
+            return Response({"msg":"project_id required"})
+        glossary_selected = GlossarySelected.objects.filter(project_id=project).all()
+        serializer = GlossarySelectedSerializer(glossary_selected, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        glossaries = request.POST.getlist('glossary')
+        project = request.POST.get('project')
+        data = [{"project":project, "glossary": glossary} for glossary in glossaries]
+        serializer = GlossarySelectedSerializer(data=data,many=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(data={"Message":"successfully added"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        pass
+
+    def delete(self,request,pk):
+        obj = GlossarySelected.objects.get(id = pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['POST',])
+def glossary_search(request):
+    user_input = request.POST.get("user_input")
+    doc_id = request.POST.get("doc_id")
+    doc = Document.objects.get(id=doc_id)
+    glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
+    target_language = doc.job.target_language
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
+                .filter(job__target_language__language=target_language)\
+                .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
+                      params=[user_input]).distinct().values('sl_term','tl_term')
+    if queryset:
+        res=[]
+        for data in queryset:
+           out = [{'source':data.get('sl_term'),'target':data.get('tl_term')}]
+           res.extend(out)
+    else:
+        res=None
+    return JsonResponse({'res':res},safe=False)
+
 class GetTranslation(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -242,17 +310,17 @@ class GetTranslation(APIView):
         tokens_new = [word for word in tokens if word not in punctuations]
         return len(tokens_new)
 
-
     def post(self, request, task_id):
 
         # input data
-        source = request.GET.get("source", "")
-        sl_code = Job.objects.get(job_tasks_set = task_id).source_language_code
-        tl_code = Job.objects.get(job_tasks_set = task_id).target_language_code
-        mt_engine_id = TaskAssign.objects.get(task_info = task_id).mt_engine
+        task_obj = Task.objects.get(id=task_id)
+        source = request.POST.get("source", "")
+        sl_code = task_obj.job.source_language_code
+        tl_code = task_obj.job.target_language_code
+        mt_engine_id = task_obj.task_info.get(step__name="PostEditing").mt_engine_id
 
         # Finding the debit user
-        project = Job.objects.get(job_tasks_set = task_id).project
+        project = Job.objects.get(job_tasks_set=task_id).project
         user = project.team.owner if project.team else project.ai_user
 
         credit_balance = user.credit_balance.get("total")
@@ -260,10 +328,27 @@ class GetTranslation(APIView):
 
         if credit_balance > word_count:
 
-            #get translation
+            # get translation
             translation = get_translation(mt_engine_id, source, sl_code, tl_code)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, word_count)
             return Response({"res": translation}, status=200)
 
         else:
             return Response({"res": "Insufficient credits"}, status=424)
+
+
+@api_view(['POST',])
+def adding_term_to_glossary_from_workspace(request):
+    sl_term = request.POST.get('source')
+    tl_term = request.POST.get('target',"")
+    doc_id = request.POST.get("doc_id")
+    glossary_id = request.POST.get('glossary')
+    doc = Document.objects.get(id=doc_id)
+    glossary = Glossary.objects.get(id = glossary_id)
+    job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
+    serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

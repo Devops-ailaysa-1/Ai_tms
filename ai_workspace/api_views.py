@@ -1132,6 +1132,7 @@ class ProjectAnalysisProperty(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
+                print("Status@@@@@@@@@@@@@@@@@@@@@@@@",doc.status_code)
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()

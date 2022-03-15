@@ -171,7 +171,6 @@ def ms_translation(source_string, source_lang_code, target_lang_code):
     # print(json.dumps(response, sort_keys=True, ensure_ascii=False, indent=4, separators=(',', ': ')))
 
 def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_code):
-
     # FOR GOOGLE TRANSLATE
     if mt_engine_id == 1:
 
