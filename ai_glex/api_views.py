@@ -3,7 +3,6 @@ import json
 import mimetypes
 import os
 import xml.etree.ElementTree as ET
-from ai_workspace_okapi.utils import get_translation
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
