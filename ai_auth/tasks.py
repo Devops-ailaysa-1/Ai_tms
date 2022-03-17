@@ -104,7 +104,8 @@ def delete_hired_editors():
 
 @task
 def send_notification_email_for_unread_messages():
-    queryset = Notification.objects.filter(Q(unread = True) & Q(emailed = False) &Q(verb= "Message")).order_by('recipient_id').distinct('recipient_id')
+    query = Notification.objects.filter(Q(unread = True) & Q(emailed = False) & Q(verb= "Message"))
+    queryset = query.order_by('recipient_id').distinct('recipient_id')
     email_list=[]
     for i in queryset:
        q1 = Notification.objects.filter(Q(unread=True)&Q(verb="Message")&Q(emailed=False)&Q(recipient_id = i.recipient_id))
@@ -115,8 +116,9 @@ def send_notification_email_for_unread_messages():
            recent_message = j.description
            details.append({"From":actor_obj.fullname,"Message":recent_message})
        email = AiUser.objects.get(id = i.recipient_id).email
-       i.emailed = True
-       i.save()
        email_list.append({"email":email,"details":details})
     auth_forms.unread_notification_mail(email_list)
+    for k in query:
+        k.emailed = True
+        k.save()
     logger.info("unread_notification_mail")
