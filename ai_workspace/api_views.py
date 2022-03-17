@@ -923,9 +923,9 @@ class UpdateTaskCreditStatus(APIView):
             return False
 
     @staticmethod
-    def update_usercredit(request,doc_id, actual_used_credits):
-        doc = Document.objects.get(id = doc_id)
-        user = doc.doc_credit_debit_user
+    def update_usercredit(request, user, actual_used_credits):
+        # doc = Document.objects.get(id = doc_id)
+        # user = doc.doc_credit_debit_user
         print("Credit User",type(user))
         present = datetime.now()
         try:
@@ -960,38 +960,18 @@ class UpdateTaskCreditStatus(APIView):
             return from_addon
 
     @staticmethod
-    def update_credits(request, doc_id, actual_used_credits):
-        # task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
-        credit_status = UpdateTaskCreditStatus.update_usercredit(request, doc_id, actual_used_credits)
+    def update_credits(request, user, actual_used_credits):
+        credit_status = UpdateTaskCreditStatus.update_usercredit(request, user, actual_used_credits)
         # print("CREDIT STATUS----->", credit_status)
+
         if credit_status:
             msg = "Successfully debited MT credits"
             status = 200
         else:
             msg = "Insufficient credits to apply MT"
             status = 424
-        # serializer = TaskCreditStatusSerializer(task_cred_status,
-        #              data={"actual_used_credits" : actual_used_credits }, partial=True)
-        # if serializer.is_valid(raise_exception=True):
-        #     serializer.save()
-        #     return {"msg" : msg}, status
-        return {"msg" : msg}, status
 
-################Incomplete project list for Marketplace###########3
-# class IncompleteProjectListView(viewsets.ViewSet) :
-#     serializer_class = ProjectSetupSerializer
-#
-#     def get_queryset(self):
-#         objects_id = [x.id for x in Project.objects.all() if x.progress != "completed" ]
-#         return Project.objects.filter(Q(ai_user=self.request.user) & Q(id__in=objects_id))
-#
-#     def list(self,request):
-#         queryset = self.get_queryset()
-#         print(queryset)
-#         # pagin_tc = self.paginate_queryset(queryset, request , view=self)
-#         serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
-#         # response = self.get_paginated_response(serializer.data)
-#         return Response(serializer.data)
+        return {"msg" : msg}, status
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

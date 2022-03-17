@@ -275,6 +275,8 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_data(request, segment_id, mt_params):
+
+        # get already stored MT done for first time
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200, "available"
@@ -283,6 +285,7 @@ class MT_RawAndTM_View(views.APIView):
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
 
+        # finding the user to debit credit
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
@@ -295,8 +298,10 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 return MT_RawAndTM_View.can_translate(request, user)
 
+        # credit balance of debit user
         initial_credit = user.credit_balance.get("total")
 
+        # getting word count
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)
 
         if initial_credit > consumable_credits :
@@ -305,7 +310,7 @@ class MT_RawAndTM_View(views.APIView):
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
                 mt_raw_serlzr.save()
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, consumable_credits)
                 # print("DEBIT STATUS -----> ", debit_status["msg"])
                 return mt_raw_serlzr.data, 201, "available"
         else:

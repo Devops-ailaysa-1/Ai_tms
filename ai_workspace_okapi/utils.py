@@ -1,5 +1,5 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-import os, mimetypes, requests, uuid, json, xlwt
+import os, mimetypes, requests, uuid, json, xlwt, boto3
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
@@ -170,6 +170,17 @@ def ms_translation(source_string, source_lang_code, target_lang_code):
 
     # print(json.dumps(response, sort_keys=True, ensure_ascii=False, indent=4, separators=(',', ': ')))
 
+def aws_translate(source_string, source_lang_code, target_lang_code):
+    translate = boto3.client(service_name = 'translate',
+                             region_name = os.getenv('aws_iam_region_name'),
+                             aws_access_key_id = os.getenv("aws_iam_access_key_id"),
+                             aws_secret_access_key = os.getenv("aws_iam_secret_access_key")
+                                )
+    return translate.translate_text( Text = source_string,
+                                     SourceLanguageCode = source_lang_code,
+                                     TargetLanguageCode = target_lang_code)["TranslatedText"]
+
+
 def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_code):
     # FOR GOOGLE TRANSLATE
     if mt_engine_id == 1:
@@ -180,6 +191,10 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         return ms_translation(source_string, source_lang_code, target_lang_code)
+
+    # AMAZON TRANSLATE
+    elif mt_engine_id == 3:
+        return aws_translate(source_string, source_lang_code, target_lang_code)
 
 class SpacesService:
 

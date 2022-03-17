@@ -3,7 +3,6 @@ import json
 import mimetypes
 import os
 import xml.etree.ElementTree as ET
-from ai_workspace_okapi.utils import get_translation
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
@@ -16,11 +15,18 @@ from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializ
 import json,mimetypes,os
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
-from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
+from ai_workspace.models import TaskAssign, Task
+
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from ai_workspace.models import Task
+from ai_workspace.api_views import UpdateTaskCreditStatus
+
+from .serializers import TermsSerializer
+
+from nltk import word_tokenize
 from ai_workspace.models import Task,Project,TaskAssign
 from ai_workspace_okapi.models import Document
 # from ai_workspace.serializers import ProjectListSerializer
@@ -296,6 +302,13 @@ def glossary_search(request):
 class GetTranslation(APIView):
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def word_count(self, string):
+        punctuations = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+        tokens = word_tokenize(string)
+        tokens_new = [word for word in tokens if word not in punctuations]
+        return len(tokens_new)
+
     def post(self, request, task_id):
 
         # input data
@@ -305,9 +318,22 @@ class GetTranslation(APIView):
         tl_code = task_obj.job.target_language_code
         mt_engine_id = task_obj.task_info.get(step__name="PostEditing").mt_engine_id
 
-        #get translation
-        translation = get_translation(mt_engine_id, source, sl_code, tl_code)
-        return Response({"res": translation}, status=200)
+        # Finding the debit user
+        project = Job.objects.get(job_tasks_set=task_id).project
+        user = project.team.owner if project.team else project.ai_user
+
+        credit_balance = user.credit_balance.get("total")
+        word_count = GetTranslation.word_count(source)
+
+        if credit_balance > word_count:
+
+            # get translation
+            translation = get_translation(mt_engine_id, source, sl_code, tl_code)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, word_count)
+            return Response({"res": translation}, status=200)
+
+        else:
+            return Response({"res": "Insufficient credits"}, status=424)
 
 
 @api_view(['POST',])
@@ -324,3 +350,4 @@ def adding_term_to_glossary_from_workspace(request):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
