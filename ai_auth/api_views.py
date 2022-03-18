@@ -1097,7 +1097,7 @@ def TransactionSessionInfo(request):
 
     elif response.mode == "payment":
         try:
-            charge = Charge.objects.get(payment_intent=response.payment_intent)
+            charge = Charge.objects.get(payment_intent=response.payment_intent,captured=True)
         except Charge.DoesNotExist:
              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=charge.metadata.get("price"),type="Addon")
