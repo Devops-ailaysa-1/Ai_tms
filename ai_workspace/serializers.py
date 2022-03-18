@@ -405,6 +405,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
 	workflow_id = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),required=False,allow_null=True, write_only=True)
+	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True, write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
@@ -417,7 +418,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","subjects","contents","project_type_id",)
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","subjects","contents","project_type_id",'mt_engine_id',)
 	# class Meta:
 	# 	model = Project
 	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
@@ -431,24 +432,21 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return super().run_validation(data)
 
 	def to_internal_value(self, data):
-		# print("DTATA------>",data)
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['workflow_id'] = data.get('workflow',[1])[0]
+		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['pre_translate'] = data.get('pre_translate',['false'])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
-		# print("files-->",data['files'])
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-		# data['team'] = data.get('team',[None])[0]
 		data['team_exist'] = data.get('team',[None])[0]
 		if data.get('subjects'):
 			data["subjects"] = [{"subject":sub} for sub in data.get('subjects',[])]
 		if data.get("contents"):
 			data["contents"]=[{"content_type":cont} for cont in data.get('contents',[])]
-		# # data['project_manager_id'] = data.get('project_manager')
 		print('dtatatat---->',data)
 		return super().to_internal_value(data=data)
 
@@ -473,7 +471,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return res
 
 	def check_role(self, instance):
-		print("Ins------->",instance)
 		if self.context.get("request")!=None:
 			user = self.context.get("request").user
 		else:user = self.context.get("ai_user", None)
@@ -530,6 +527,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if validated_data.get('project_name'):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)
+			instance.save()
+
+		if validated_data.get('mt_engine_id'):
+			instance.mt_engine_id = validated_data.get("mt_engine_id",\
+									instance.mt_engine_id)
 			instance.save()
 
 		if 'team_exist' in validated_data:

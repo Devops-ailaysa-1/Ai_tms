@@ -123,9 +123,8 @@ def send_notification_email_for_unread_messages():
         logger.info("unread_notification_mail")
 
     except:
-        pass
-        # email_list = [{'email': 'thenmozhivijay20@gmail.com','details': [{'From': 'Ilangoven',"message":"hi"},{'From': 'Ilangoven Ailaysa',"message":"hi"}]},
-        #               {'email': 'warunvijay@gmail.com','details': [{'From': 'Test User',"message":"hi"}]},
-        #               {'email': 'thenmozhi.dev@langscape.com','details': [{'From': 'Ilangoven Ailaysa',"message":"hi"}]}]
-        # auth_forms.unread_notification_mail(email_list)
-        # logger.info("unread_notification_mail")
+        email_list = [{'email': 'thenmozhivijay20@gmail.com','details': [{'From': 'Ilangoven',"message":"hi"},{'From': 'Ilangoven Ailaysa',"message":"hi"}]},
+                      {'email': 'warunvijay@gmail.com','details': [{'From': 'Test User',"message":"hi"}]},
+                      {'email': 'thenmozhi.dev@langscape.com','details': [{'From': 'Ilangoven Ailaysa',"message":"hi"}]}]
+        auth_forms.unread_notification_mail(email_list)
+        logger.info("unread_notification_mail")
