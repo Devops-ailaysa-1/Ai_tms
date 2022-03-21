@@ -106,3 +106,5 @@ staticfiles
 api_automation
 env
 wordsapi_sample.json
+*.dot
+*.png

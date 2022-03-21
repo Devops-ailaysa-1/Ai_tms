@@ -1,61 +1,51 @@
-from rest_framework.exceptions import ValidationError
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
 from ai_workspace_okapi.models import Document
 from django.conf import settings
-from django.core.files import File as DJFile
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from ai_vendor.models import VendorLanguagePair
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_glex.serializers import GlossarySetupSerializer
-from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEditors
+from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
-    ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
-    ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
-    TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
-    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer,InstructionfilesSerializer,StepsSerializer,WorkflowsSerializer,WorkflowsStepsSerializer)
+from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+                          ProjectSerializer, JobSerializer, FileSerializer, FileSerializer, \
+                          ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
+                          TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer, \
+                          PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
+                          VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer, \
+                          TaskCreditStatusSerializer, TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
+                          GetAssignToSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
-    TaskAssignInfo,TaskAssign,Workflows,Steps,WorkflowSteps)
+from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
+                     TaskAssignInfo, TaskAssign, Workflows, Steps, WorkflowSteps)
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Task, TbxFile, Instructionfiles
 from django.http import JsonResponse
-import requests, json, os, time
 from .models import Task,Tbxfiles
 from lxml import etree as ET
 from ai_marketplace.models import AvailableVendors,ChatMessage
-from django.http import JsonResponse,HttpResponse
 import requests, json, os,mimetypes
-from ai_workspace import serializers
 from ai_workspace_okapi.models import Document
-from ai_staff.models import LanguagesLocale, Languages
 from rest_framework.decorators import api_view
 from django.http import JsonResponse, Http404, HttpResponse
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from django.core.files import File as DJFile
 from django.http import JsonResponse
-from tablib import Dataset
-import shutil
 from datetime import datetime
 from django.db.models import Q, Sum
 from rest_framework.decorators import permission_classes
 from notifications.signals import notify
-from notifications.models import Notification
 from ai_marketplace.serializers import ThreadSerializer
 from controller.serializer_mapper import serializer_map
 # from ai_workspace_okapi.api_views import DocumentViewByTask
@@ -542,7 +532,7 @@ class TbxUploadView(APIView):
 
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
-    # team = django_filters.CharFilter(field_name='team__name',lookup_expr='icontains')
+    filter = django_filters.CharFilter(field_name='glossary_project',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     class Meta:
         model = Project
@@ -555,6 +545,11 @@ class ProjectFilter(django_filters.FilterSet):
         else:
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
+
+    def filter_not_empty(self,queryset, name, value):
+        if value == "glossary":
+            lookup = '__'.join([name, 'isnull'])
+            return queryset.filter(**{lookup: False})
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -929,9 +924,9 @@ class UpdateTaskCreditStatus(APIView):
             return False
 
     @staticmethod
-    def update_usercredit(request,doc_id, actual_used_credits):
-        doc = Document.objects.get(id = doc_id)
-        user = doc.doc_credit_debit_user
+    def update_usercredit(request, user, actual_used_credits):
+        # doc = Document.objects.get(id = doc_id)
+        # user = doc.doc_credit_debit_user
         print("Credit User",type(user))
         present = datetime.now()
         try:
@@ -966,38 +961,18 @@ class UpdateTaskCreditStatus(APIView):
             return from_addon
 
     @staticmethod
-    def update_credits(request, doc_id, actual_used_credits):
-        # task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
-        credit_status = UpdateTaskCreditStatus.update_usercredit(request, doc_id, actual_used_credits)
+    def update_credits(request, user, actual_used_credits):
+        credit_status = UpdateTaskCreditStatus.update_usercredit(request, user, actual_used_credits)
         # print("CREDIT STATUS----->", credit_status)
+
         if credit_status:
             msg = "Successfully debited MT credits"
             status = 200
         else:
             msg = "Insufficient credits to apply MT"
             status = 424
-        # serializer = TaskCreditStatusSerializer(task_cred_status,
-        #              data={"actual_used_credits" : actual_used_credits }, partial=True)
-        # if serializer.is_valid(raise_exception=True):
-        #     serializer.save()
-        #     return {"msg" : msg}, status
-        return {"msg" : msg}, status
 
-################Incomplete project list for Marketplace###########3
-# class IncompleteProjectListView(viewsets.ViewSet) :
-#     serializer_class = ProjectSetupSerializer
-#
-#     def get_queryset(self):
-#         objects_id = [x.id for x in Project.objects.all() if x.progress != "completed" ]
-#         return Project.objects.filter(Q(ai_user=self.request.user) & Q(id__in=objects_id))
-#
-#     def list(self,request):
-#         queryset = self.get_queryset()
-#         print(queryset)
-#         # pagin_tc = self.paginate_queryset(queryset, request , view=self)
-#         serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
-#         # response = self.get_paginated_response(serializer.data)
-#         return Response(serializer.data)
+        return {"msg" : msg}, status
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1159,6 +1134,7 @@ class ProjectAnalysisProperty(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
+                print("Status@@@@@@@@@@@@@@@@@@@@@@@@",doc.status_code)
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
@@ -1229,6 +1205,40 @@ def msg_send(sender,receiver,task):
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
+class TaskAssignUpdateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def update(self, request,pk=None):
+        task = request.POST.get('task')
+        step = request.POST.get('step')
+        file = request.FILES.getlist('instruction_file')
+        req_copy = copy.copy( request._request)
+        req_copy.method = "DELETE"
+
+        file_delete_ids = self.request.query_params.get(\
+            "file_delete_ids", [])
+
+        if file_delete_ids:
+            file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
+                        pk='0', many="true", ids=file_delete_ids)
+        if not task:
+            return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step))
+        if file:
+            serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
+        else:
+            serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict()},context={'request':request},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # except:
+            # return Response({'msg':'Task Assign details not found'},status=status.HTTP_400_BAD_REQUEST)
+        return Response(task, status=status.HTTP_200_OK)
+
+
+
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1263,7 +1273,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request,pk=None):
-        task = request.POST.getlist('task')
+        task = request.POST.get('task')
         step = request.POST.get('step')
         file = request.FILES.getlist('instruction_file')
         req_copy = copy.copy( request._request)
@@ -1279,20 +1289,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
 
-        for i in task:
-            try:
-                task_assign = TaskAssign.objects.get(Q(task_id = i) & Q(step_id = step))
-                task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
-                if file:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
-                else:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            except TaskAssignInfo.DoesNotExist:
-                print('not exist')
+        task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step))
+        task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
+        if file:
+            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
+        else:
+            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):

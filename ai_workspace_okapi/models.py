@@ -27,6 +27,9 @@ class TextUnit(models.Model):
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)
 
+    def __str__(self):
+        return self.engine_name
+
 class TranslationStatus(models.Model):
     status_name = models.CharField(max_length=25)
     status_id = models.IntegerField()

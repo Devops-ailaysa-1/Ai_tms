@@ -111,3 +111,11 @@ class Tbx_Download(models.Model):
 
     def __str__(self):
         return self.termbase_Name
+
+
+class GlossarySelected(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project')
+    glossary = models.ForeignKey(Glossary,on_delete=models.CASCADE,related_name='glossary')
+
+    class Meta:
+        unique_together = ("project", "glossary")

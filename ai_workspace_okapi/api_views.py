@@ -1,46 +1,44 @@
-from datetime import datetime
-from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
+import json
+import jwt
+import logging
+import os
+import re
+import urllib.parse
+import xlsxwriter
+from json import JSONDecodeError
+
+import requests
+from django.contrib.auth import settings
+from django.db.models import Q
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
+from rest_framework import permissions
+from rest_framework import views
+from rest_framework import viewsets
+from rest_framework.decorators import api_view
+from rest_framework.exceptions import APIException
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from spellchecker import SpellChecker
+from wiktionaryparser import WiktionaryParser
+
+from ai_auth.models import AiUser, UserCredits
+from ai_auth.utils import get_plan_name
+from ai_staff.models import SpellcheckerLanguages
+from ai_workspace.api_views import UpdateTaskCreditStatus
+from ai_workspace.models import File
+from ai_workspace.models import Task, TaskAssign
+from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, , MergeSegment, FontSize, Comment
+from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
+from .serializers import PentmUpdateSerializer
+from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer)
-from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer, TaskAssignSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus,\
-    FontSize, Comment, MergeSegment
-from rest_framework import viewsets, authentication
-from rest_framework import views
-from django.shortcuts import get_object_or_404
-from rest_framework import permissions
-from ai_auth.models import AiUser, UserAttribute, UserCredits
-from ai_staff.models import AiUserType,SpellcheckerLanguages
-from ai_workspace.models import Task, TaskCreditStatus, TaskAssign
-from rest_framework.response import  Response
-import requests
-import json, os, re, time, jwt, xlsxwriter
-import pickle
-import logging
-from rest_framework.exceptions import APIException
-from spellchecker import SpellChecker
-from rest_framework.decorators import api_view
-from rest_framework.pagination import PageNumberPagination
-from django.http import  HttpResponse, JsonResponse
-from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import JSONParser
-from django.http import  FileResponse
-from rest_framework.views import APIView
-from django.db.models import Q
-import urllib.parse
-from .serializers import PentmUpdateSerializer
-from wiktionaryparser import WiktionaryParser
-from ai_workspace.api_views import UpdateTaskCreditStatus
-from django.urls import reverse
-from json import JSONDecodeError
-from ai_workspace.models import File
 from .utils import SpacesService
-from django.contrib.auth import settings
-from ai_auth.utils import get_plan_name
 from .utils import download_file, bl_title_format, bl_cell_format
-
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -259,6 +257,8 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_data(request, segment_id, mt_params):
+
+        # get already stored MT done for first time
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200, "available"
@@ -267,6 +267,7 @@ class MT_RawAndTM_View(views.APIView):
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
 
+        # finding the user to debit credit
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
@@ -279,8 +280,10 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 return MT_RawAndTM_View.can_translate(request, user)
 
+        # credit balance of debit user
         initial_credit = user.credit_balance.get("total")
 
+        # getting word count
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)
 
         if initial_credit > consumable_credits :
@@ -289,7 +292,7 @@ class MT_RawAndTM_View(views.APIView):
                             context={"request": request})
             if mt_raw_serlzr.is_valid(raise_exception=True):
                 mt_raw_serlzr.save()
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id, consumable_credits)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, consumable_credits)
                 # print("DEBIT STATUS -----> ", debit_status["msg"])
                 return mt_raw_serlzr.data, 201, "available"
         else:

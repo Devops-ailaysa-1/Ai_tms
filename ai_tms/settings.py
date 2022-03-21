@@ -539,3 +539,8 @@ sentry_sdk.init(
 )
 
 
+# FOR ERD DIAGRAM
+GRAPH_MODELS = {
+    'all_applications': True,
+    'group_models': True,
+}
