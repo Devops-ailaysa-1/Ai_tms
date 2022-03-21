@@ -1097,7 +1097,7 @@ def TransactionSessionInfo(request):
 
     elif response.mode == "payment":
         try:
-            charge = Charge.objects.get(payment_intent=response.payment_intent)
+            charge = Charge.objects.get(payment_intent=response.payment_intent,captured=True)
         except Charge.DoesNotExist:
              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=charge.metadata.get("price"),type="Addon")
@@ -1457,7 +1457,7 @@ def msg_send(user,vendor):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "You are invited as an editor by "+user.fullname+".\n"+ "An invitation has been sent to your registered email." + "\n" + "Click Accept to accept the invitation." + "\n" + "Please note that the invitation is valid only for one week"
+    message = "You are invited as an editor by "+user.fullname+".\n"+ "An invitation has been sent to your registered email." + "\n" + "Click <b>Accept</b> to accept the invitation." + "\n" + "<i>Please note that the invitation is valid only for one week</i>"
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 

@@ -4,12 +4,16 @@ from django.dispatch import receiver
 from guardian.shortcuts import assign_perm
 
 from ai_auth.models import AiUser
+from .utils import pretty_size
+from ai_workspace_okapi.okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST as csfel
 
 from github import Github
 from django.shortcuts import get_object_or_404
 
 from datetime import datetime
-import pytz
+import pytz, os
+
+
 
 class IntegerationAppBase(models.Model):
     oauth_token = models.CharField(max_length=255,)
@@ -45,17 +49,10 @@ class IntegerationAppBase(models.Model):
 
     def permission_signal(app_name="github"):
         def githubtoken_post_save(sender, **kwargs):
-            """
-            Create a Profile instance for all newly created User instances. We only
-            run on user creation to avoid having to check for existence on each call
-            to User.save.
-            """
-            print("signals received----")
             obj, created = kwargs["instance"], kwargs["created"]
             if created:
                 assign_perm(f"change_{app_name}app", obj.ai_user, obj)
         return githubtoken_post_save
-
 
 class FetchInfoBase(models.Model):
     last_fetched_on = models.DateTimeField(auto_now=True,)
@@ -98,6 +95,7 @@ class BranchBase(models.Model):
     created_on = models.DateTimeField(auto_now_add=True,)
     accessed_on =  models.DateTimeField(blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True, )
+    is_archived = models.BooleanField(default=False)
 
     class Meta:
         abstract = True
@@ -125,6 +123,7 @@ class ContentFileBase(models.Model):
     is_localize_registered = models.BooleanField(default=False)
     file = models.CharField(max_length=255)
     file_path = models.TextField() #github file stored path
+    size_of_file = models.BigIntegerField(null=True) # in bytes
     created_on = models.DateTimeField(auto_now_add=True,)
     accessed_on =  models.DateTimeField(blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True, )
@@ -137,6 +136,20 @@ class ContentFileBase(models.Model):
 
     class Meta:
         abstract = True
+
+    @property
+    def is_translatable(self):
+        return os.path.splitext(self.file)[-1]  in csfel
+
+    @property
+    def is_file_size_exceeded(self):
+        return 100*1000*1000 < self.size_of_file
+
+    @property
+    def get_size_of_file_with_units(self):
+        return pretty_size(self.size_of_file)
+
+    size_of_file_with_units = get_size_of_file_with_units
 
     def update_file(self, file):
         raise ValueError("You should implement in child class!!!")
@@ -155,5 +168,7 @@ class ContentFileBase(models.Model):
                 assign_perm(app_name,
                             obj.branch.repo.get_token.ai_user, obj)
         return contentfile_post_save
+
+
 
 

@@ -4,7 +4,8 @@ from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,\
-		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps
+		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
+		ProjectFilesCreateType
 import json
 import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -399,6 +400,9 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 #  {'source_file_path': '/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u98163/u98163p2/source/test1.txt', 'source_language': 'af', 'target_language': 'hy', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
 ######################################## nandha ##########################################
 
+
+
+
 class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
@@ -408,6 +412,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True, write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
+	file_create_type = serializers.CharField(read_only=True,
+			source="project_file_create_type.file_create_type")
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False)
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True)
@@ -418,7 +424,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","subjects","contents","project_type_id",'mt_engine_id',)
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","subjects","contents","project_type_id", "file_create_type",'mt_engine_id',)
 	# class Meta:
 	# 	model = Project
 	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
@@ -426,9 +432,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def run_validation(self,data):
 		if data.get('target_languages')!=None:
-			comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
+			comparisons = [source == target for (source, target) in itertools.
+				product(data['source_language'],data['target_languages'])]
 			if True in comparisons:
-				raise serializers.ValidationError({"msg":"source and target languages should not be same"})
+				raise serializers.ValidationError({"msg":"source and target "
+					"languages should not be same"})
 		return super().run_validation(data)
 
 	def to_internal_value(self, data):
@@ -451,7 +459,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return super().to_internal_value(data=data)
 
 	def get_project_analysis(self,instance):
-		user = self.context.get("request").user if self.context.get("request")!=None else self.context.get("ai_user", None)
+		user = self.context.get("request").user if self.context.get("request")!=None else self\
+			.context.get("ai_user", None)
 		if instance.ai_user == user:
 			tasks = instance.get_tasks
 		elif instance.team:
@@ -506,6 +515,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
 			f_klass=File,j_klass=Job, ai_user=ai_user,\
 			team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
+		ProjectFilesCreateType.objects.create(project=project)
 
 		if proj_subject:
 			[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]

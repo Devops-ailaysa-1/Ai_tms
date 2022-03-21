@@ -94,7 +94,8 @@ def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
                 .index(close_tag))):
                 text_content = text_content.replace(open_tag,'')
                 text_content = text_content.replace(close_tag, '')
-                text_content = open_tag+close_tag+text_content
+                # text_content = open_tag + close_tag + text_content
+                text_content = text_content + open_tag + close_tag
 
         else:
             run = ids_dict_for_single_tag.get(id)
@@ -104,7 +105,8 @@ def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
                 tag = "</" + str(id) + ">"
 
             if tag not in text_content:
-                text_content = tag+text_content
+                # text_content = tag+text_content
+                text_content = text_content + tag
 
 
     missed_ref_ids = []
@@ -229,7 +231,6 @@ class OkapiUtils:
         pass
 
 def download_file(file_path):
-
     filename = os.path.basename(file_path)
     fl = open(file_path, 'rb')
     mime_type, _ = mimetypes.guess_type(file_path)

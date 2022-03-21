@@ -103,8 +103,9 @@ def delete_hired_editors():
 
 @task
 def send_notification_email_for_unread_messages():
+    query = Notification.objects.filter(Q(unread = True) & Q(emailed = False) & Q(verb= "Message"))
     try:
-        queryset = Notification.objects.filter(Q(unread = True) & Q(emailed = False) &Q(verb= "Message")).order_by('recipient_id').distinct('recipient_id')
+        queryset = query.order_by('recipient_id').distinct('recipient_id')
         email_list=[]
         for i in queryset:
            q1 = Notification.objects.filter(Q(unread=True)&Q(verb="Message")&Q(emailed=False)&Q(recipient_id = i.recipient_id))
@@ -112,19 +113,14 @@ def send_notification_email_for_unread_messages():
            details=[]
            for j in q2:
                actor_obj = AiUser.objects.get(id = j.actor_object_id)
-               # count = q1.filter(actor_object_id = j.actor_object_id).count()
                recent_message = j.description
                details.append({"From":actor_obj.fullname,"Message":recent_message})
            email = AiUser.objects.get(id = i.recipient_id).email
-           i.emailed = True
-           i.save()
            email_list.append({"email":email,"details":details})
         auth_forms.unread_notification_mail(email_list)
+        for k in query:
+            k.emailed = True
+            k.save()
         logger.info("unread_notification_mail")
-
     except:
-        email_list = [{'email': 'thenmozhivijay20@gmail.com','details': [{'From': 'Ilangoven',"message":"hi"},{'From': 'Ilangoven Ailaysa',"message":"hi"}]},
-                      {'email': 'warunvijay@gmail.com','details': [{'From': 'Test User',"message":"hi"}]},
-                      {'email': 'thenmozhi.dev@langscape.com','details': [{'From': 'Ilangoven Ailaysa',"message":"hi"}]}]
-        auth_forms.unread_notification_mail(email_list)
-        logger.info("unread_notification_mail")
+        pass

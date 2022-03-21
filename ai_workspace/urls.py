@@ -62,6 +62,7 @@ urlpatterns += [
 	path('tasks_list/',api_views.tasks_list),
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
 	path("instruction_file_download/<int:task_assign_info_id>", api_views.instruction_file_download, name="instruction-file-download"),
+	path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"}))
 ]
 # views urls adding for local testing
 urlpatterns += [
@@ -70,6 +71,7 @@ urlpatterns += [
 	path("dj/logout", views.LoginOutView.as_view(), name="dj-logout"),
 	path("tasks_dj/<int:project_id>/", views.TaskCreateViewDj.as_view(), name="task-create-dj"),
 	path("tasks/dj", views.TaskListView.as_view(), name="task-list-dj"),
+
 	# path("document/<int:project_id>/dj", views.DocumentView.as_view(), name="document-view"), # Segments will be listed here
 
 	# path("source_tmx", )
