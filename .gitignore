@@ -96,3 +96,4 @@ ignore_data/
 /integerations/github_/migrations/
 /integerations/gitlab_/migrations/
 APP.MD
+staticfiles/
