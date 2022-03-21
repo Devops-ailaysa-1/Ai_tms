@@ -30,7 +30,7 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 from ai_workspace.models import File
 from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, , MergeSegment, FontSize, Comment
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, MergeSegment, FontSize, Comment
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from .serializers import PentmUpdateSerializer
 from .serializers import (SegmentSerializer, DocumentSerializerV2,
