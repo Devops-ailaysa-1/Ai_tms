@@ -57,6 +57,7 @@ from rest_framework.decorators import permission_classes
 from notifications.signals import notify
 from notifications.models import Notification
 from ai_marketplace.serializers import ThreadSerializer
+from controller.serializer_mapper import serializer_map
 # from ai_workspace_okapi.api_views import DocumentViewByTask
 
 spring_host = os.environ.get("SPRING_HOST")
@@ -607,7 +608,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
-            file_obj2,f2,name = text_file_processing(text_data)
+            file_obj2, f2, name = text_file_processing(text_data)
             serializer = ProjectQuickSetupSerializer(data={**request.data,"files":[file_obj2]},context={"request": request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
@@ -1004,8 +1005,9 @@ def dashboard_credit_status(request):
     # if (request.user.is_internal_member) and (InternalMember.objects.get(internal_member=request.user.id).role.id == 1):
     #     return Response({"credits_left" : request.user.internal_team_manager.credit_balance,
     #                         "total_available" : request.user.internal_team_manager.buyed_credits}, status=200)
-    return Response({"credits_left" : request.user.credit_balance,
-                            "total_available" : request.user.buyed_credits}, status=200)
+    # return Response({"credits_left" : request.user.credit_balance,
+    #                         "total_available" : request.user.buyed_credits}, status=200)
+    return Response({"credits_left": request.user.credit_balance,}, status=200)
 
 #############Tasks Assign to vendor#################
 class TaskView(APIView):
@@ -1435,6 +1437,24 @@ class AssignToListView(viewsets.ModelViewSet):
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
 
+class IntegerationProject(viewsets.ViewSet):
+
+    def list(self, request, *args, **kwargs):
+        project_id = self.kwargs.get("pk", None)
+        #  ownership
+        project = get_object_or_404(Project.objects.all(),
+            id=project_id)
+        #  ownership
+        download_project = project.project_download.\
+            get_download
+
+        serlzr_class = serializer_map.get(
+            download_project.serializer_class_str)
+
+        serlzr = serlzr_class(download_project.branch.branch_contentfiles_set
+            .all(), many=True)
+
+        return Response(serlzr.data)
 
 
 class InstructionFilesView(viewsets.ModelViewSet):

@@ -294,6 +294,11 @@ class Project(models.Model):
         else:
             return False
 
+    @property
+    def get_project_file_create_type(self):
+        return self.project_file_create_type.file_create_type
+
+
     def project_analysis(self,tasks):
         if self.is_proj_analysed == True:
             task_words = []
@@ -324,6 +329,16 @@ class Project(models.Model):
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
+
+class ProjectFilesCreateType(models.Model):
+    class FileType(models.TextChoices):
+        upload_file = 'upload', "Files from usual upload"
+        integeration = "integeration", "Files from integerations"
+
+    file_create_type = models.TextField(choices=FileType.choices,
+        default=FileType.upload_file)
+    project = models.OneToOneField(Project, on_delete=models.CASCADE,
+        related_name="project_file_create_type")
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -466,7 +481,7 @@ class File(models.Model):
     #     self.save()
 
     class Meta:
-        managed = False
+        managed = True #False
     #
     # @property
     # def is_upload_from_integeration(self):

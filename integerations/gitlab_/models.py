@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models.signals import pre_save, post_save
 from django.shortcuts import get_object_or_404
 from django.apps import apps
-from controller.bases import DownloadBase
+from controller.bases import DownloadBase, FileBase
 
 from ai_auth.models import AiUser
 from gitlab import Gitlab
@@ -13,6 +13,7 @@ from .enums import APP_NAME
 from ..base.models import IntegerationAppBase, FetchInfoBase,\
     RepositoryBase, BranchBase, ContentFileBase
 from .utils import GitlabUtils
+from .managers import ContentFileManager
 
 
 
@@ -150,6 +151,8 @@ class ContentFile(ContentFileBase):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE,
                 related_name="branch_contentfiles_set")
 
+    objects = ContentFileManager()
+
     def update_file(self, file):
         self.uploaded_file = file
         fc = apps.get_model("controller.FileController")\
@@ -159,29 +162,37 @@ class ContentFile(ContentFileBase):
         self.save()
 
     @property
-    def get_content_of_file(self):
+    def get_contentfile_obj(self):
         return self.branch.repo.get_repo_obj.files.get(
             file_path=self.file_path, ref=self.branch.branch_name)
+
+    @property
+    def get_content_of_file(self):
+        return self.get_contentfile_obj.decode()
 
     def create_all_contentfiles(branch):
         repo_obj = branch.repo.get_repo_obj
         branch_name = branch.branch_name
 
-        for file_content in GitlabUtils.get_file_contents(
+        for file_content, size in GitlabUtils.get_file_contents(
             repo=repo_obj, ref_branch=branch_name):
 
             ContentFile.objects.get_or_create(
                 branch=branch, file=file_content.get("name"),
-                file_path=file_content.get("path"),)
+                file_path=file_content.get("path"),
+                size_of_file=size)
 
 post_save.connect(ContentFileBase.permission_signal(),
                   sender=ContentFile)
 
 
 class DownloadProject(DownloadBase):
+    branch = models.OneToOneField(Branch, on_delete=models.CASCADE, null=True)
+
+    serializer_class_str = "gitlab__contentfile_serializer"
 
     def save(self, *args, **kwargs):
-        print("project---->", self.project)
+        # print("project---->", self.project)
         return super().save(*args, **kwargs)
 
     def push_to_gitlab(self):
@@ -192,11 +203,15 @@ class DownloadProject(DownloadBase):
 
     def update_project(self, project):
         self.project = project
-        print("here----")
         dc = apps.get_model("controller.DownloadController")\
-            (project = project, related_model_string="github_.DownloadProject")
+            (project = project, related_model_string="gitlab_.DownloadProject")
         dc.save()
         self.controller = dc
         self.save()
+
+
+class FileConnector(FileBase):
+    contentfile = models.OneToOneField(ContentFile, on_delete=models.SET_NULL,
+        null=True)
 
 

@@ -63,12 +63,13 @@ class GithubUtils:
             f"refs/heads/{branch_name}", sha=from_commit_hash)
         return ref_branch
 
+
     @staticmethod
     def updatefile_in_branch(repo, file_path, branch_name,
         commit_message="more +++++ tests", content="more ----- tests"):
 
         content =  repo.get_contents(file_path, ref=branch_name)
-        now_str = datetime.today().strftime("%Y_%m_%d_%H_%M_") \
+        now_str = datetime.today().strftime("%Y_%m_%d_%H-%M_") \
                   + str(int(time.time()))
         new_unique_branch ="ailaysa_"+ now_str +"_localisation"
         return repo.update_file(content.path,

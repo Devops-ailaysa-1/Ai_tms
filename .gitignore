@@ -97,6 +97,10 @@ fprm
 /documentation/
 ai_auth/block_list.py
 /*/*/migrations/
+ignore_data/
+/repeat-snippets.py
+/integerations/github_/migrations/
+/integerations/gitlab_/migrations/
 APP.MD
 staticfiles
 api_automation

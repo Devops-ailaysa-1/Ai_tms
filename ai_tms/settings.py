@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 load_dotenv(".env2")
 from pathlib import Path
 import sentry_sdk
@@ -132,6 +134,7 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
+    "ai_tm_management",
     # 'dbbackup',
     # 'django_q',
 ]
@@ -517,11 +520,10 @@ LOGGING = {
         #     'formatter' : 'dev_formatter',
         # }
     },
-
-
 }
 
 
+# ERROR MONITORING USING SENTRY
 sentry_sdk.init(
     dsn = os.getenv("dsn"),
     integrations=[DjangoIntegration()],
@@ -535,3 +537,5 @@ sentry_sdk.init(
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii = os.getenv("send_default_pii")
 )
+
+
