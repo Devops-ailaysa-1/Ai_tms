@@ -130,6 +130,7 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
+    # 'reversion',
     # 'dbbackup',
     # 'channels',
     # 'django_q',

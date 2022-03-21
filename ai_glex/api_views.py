@@ -319,7 +319,7 @@ class GetTranslation(APIView):
         mt_engine_id = task_obj.task_info.get(step__name="PostEditing").mt_engine_id
 
         # Finding the debit user
-        project = Job.objects.get(job_tasks_set=task_id).project
+        project = task_obj.job.project
         user = project.team.owner if project.team else project.ai_user
 
         credit_balance = user.credit_balance.get("total")
@@ -350,4 +350,3 @@ def adding_term_to_glossary_from_workspace(request):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-

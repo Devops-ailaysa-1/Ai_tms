@@ -245,6 +245,10 @@ class Project(models.Model):
         return [job for job in self.project_jobs_set.all()]
 
     @property
+    def get_workflowsteps(self):
+        return [i.steps for i in self.workflow.workflow.all()]
+
+    @property
     def tmx_files_path(self):
         return [tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.all()]
 
