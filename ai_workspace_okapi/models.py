@@ -2,7 +2,7 @@ from django.db import models
 # from ai_workspace.models import File, Job
 # Create your models here.
 from django.db.models.signals import post_save, pre_save
-from .signals import set_segment_tags_in_source_and_target
+from .signals import set_segment_tags_in_source_and_target, create_segment_controller
 import json
 from ai_auth.models import AiUser
 from ai_staff.models import LanguageMetaDetails, Languages
@@ -10,7 +10,7 @@ from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
 from django.utils.functional import cached_property
 from django.db.models import Q, UniqueConstraint, CheckConstraint, F
 from .managers import MergeSegmentManager
-
+from django.apps import apps
 
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
@@ -31,6 +31,22 @@ class TranslationStatus(models.Model):
     status_name = models.CharField(max_length=25)
     status_id = models.IntegerField()
 
+# class SegmentController(models.Model):
+#     base_segment_id = models.BigIntegerField(unique=True)
+#     related_model_string = models.TextField(default="ai_workspace_okapi.segment")
+#     is_archived = models.BooleanField(default=False)
+#     is_merged = models.BooleanField(default=False)
+#
+#     def get_segment(self):
+#         return apps.get_model(self.related_model_string).objects\
+#             .filter(id=self.base_segment_id).first()
+#
+#     def __add__(self, other):
+#         print("---->", (self.base_segment_id + other.base_segment_id))
+#
+#     class Meta:
+#         pass
+
 class BaseSegment(models.Model):
     source = models.TextField(blank=True)
     target = models.TextField(null=True, blank=True)
@@ -49,6 +65,8 @@ class BaseSegment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models
         .SET_NULL, null=True)
+    mt_raw_translation = models.OneToOneField("ai_workspace_okapi.MT_RawTranslation",
+                related_name="mt_raw_%(class)s", on_delete=models.CASCADE, null=True)
 
     class Meta:
         ordering = ['id',]
@@ -95,9 +113,7 @@ class Segment(BaseSegment):
 
     @property
     def get_merge_target_if_have(self):
-        if self.is_merged and self.is_merge_start:
-            self = MergeSegment.objects.get(id=self.id)
-        return self.coded_target
+        return self.get_active_object().coded_target
 
     @property
     def get_merge_segment_count(self):
@@ -106,9 +122,13 @@ class Segment(BaseSegment):
             count = MergeSegment.objects.get(id=self.id).segments.all().count() - 1
         return count
 
-
+    def get_active_object(self):
+        if self.is_merged and self.is_merge_start:
+            self = MergeSegment.objects.get(id=self.id)
+        return self
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
+# post_save.connect(create_segment_controller, sender=Segment)
 
 # class TempTargetSave(models.Model):
 #     segment = models.OneToOneField(Segment, null=True, on_delete=models.CASCADE,
@@ -121,13 +141,27 @@ post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 
 class MT_RawTranslation(models.Model):
 
-    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
+    SegmentStringChoices = (
+        ("ai_workspace_okapi.segment", "Segment"),
+        ("ai_workspace_okapi.mergesegment", "MergeSegment")
+    )
+
+    # segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
     mt_engine = models.ForeignKey(MT_Engine, null=True, blank=True, on_delete=models.SET_NULL)
     mt_raw = models.TextField()
+    # segment_controller = models.OneToOneField(SegmentController, null=True, blank=True,
+    #             on_delete=models.SET_NULL)
+    reverse_string_for_segment = models.TextField(choices=SegmentStringChoices,
+                default="ai_workspace_okapi.segment")
 
     @property
     def target_language(self):
-        return self.segment.text_unit.document.job.target_language_code
+        return self.get_segment.text_unit.document.job.target_language_code
+
+    @property
+    def get_segment(self):
+        return apps.get_model(self.reverse_string_for_segment).objects\
+            .filter(mt_raw_translation=self).first()
 
 class Comment(models.Model):
     comment = models.TextField()
@@ -330,6 +364,8 @@ class MergeSegment(BaseSegment):
 
 class SplitSegment(models.Model):
     pass
+
+
 
 
 

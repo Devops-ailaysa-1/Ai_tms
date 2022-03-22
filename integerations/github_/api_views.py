@@ -20,7 +20,7 @@ from .serializers import GithubOAuthTokenSerializer, RepositorySerializer,\
     BranchSerializer, ContentFileSerializer, LocalizeIdsSerializer,\
     FileSerializer, JobSerializer, GithubHookSerializerD1, GithubHookSerializerD2, \
     HookDeckResponseSerializer, HookDeckSerializer, ProjectCreateReqReslvSerlzr, \
-    ProjectSerializerV2, HookDeckCallSerializer
+    ProjectSerializerV2, HookDeckCallSerializer, TokenValidateSerializer
 from controller.models import DownloadController
 from .models import GithubApp, Repository, FetchInfo, Branch, ContentFile, HookDeck,\
     DownloadProject
@@ -36,33 +36,24 @@ from io import BytesIO
 import pickle
 from pymongo import MongoClient
 cli = MongoClient ( 'localhost', 27017)
-import hmac, hashlib
-import os
-import uuid
-import cryptocode
+
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
 @api_view(["POST"])
 def repo_update_view(request, token):
-    # decoded = cryptocode.decrypt(slug, CRYPT_PASSWORD)
-    #
-    # if not decoded:
-    #     raise ValueError("Hook URL invalid!!!")
-    #
-    # user = AiUser.objects.filter(email=decoded).first()
-    #
-    # if (not user) or (user != request.user):
-    #     raise ValueError("URL user doest not match with request user!!!")
 
-    print("headers--->", request.headers)
-    print("slug---->", token)
+    token_serlzr = TokenValidateSerializer(data={"token": token},
+            context={"request": request})
 
-    dump_data = pickle.dumps(request.data)
-    db = cli["samples"]
-    coll = db["github_hook_data"]
-    id_ = coll.insert_one({"data": dump_data})
-    print("id---->", id_.inserted_id)
+    if token_serlzr.is_valid(raise_exception=True):
+        hook = token_serlzr.instance
+
+    # dump_data = pickle.dumps(request.data)
+    # db = cli["samples"]
+    # coll = db["github_hook_data"]
+    # id_ = coll.insert_one({"data": dump_data})
+    # print("id---->", id_.inserted_id)
     gd = GithubHookSerializerD1(data=request.data)
     gd.is_valid(raise_exception=True)
     gd2 = GithubHookSerializerD2(data=gd.data.get("payload"))
@@ -79,8 +70,6 @@ def repo_update_view(request, token):
     data["added_files"] = { file for _ in data.get("commits") for
             file in _.get("added") }
 
-    print("data---->", data)
-
     #
     # repo_fullname, branch_name = data["repository"]["full_name"], data["ref"]
     #
@@ -90,21 +79,6 @@ def repo_update_view(request, token):
 
     return Response(request.data)
 
-def validate_signature(payload, secret):
-    # Get the signature from the payload
-    signature_header = payload['headers']['X-Hub-Signature']
-    sha_name, github_signature = signature_header.split('=')
-    if sha_name != 'sha1':
-        print('ERROR: X-Hub-Signature in payload headers was not sha1=****')
-        return False
-
-    # Create our own signature
-    body = payload['body']
-    local_signature = hmac.new(secret.encode('utf-8'), msg=body.encode('utf-8'),
-        digestmod=hashlib.sha1)
-
-    # See if they match
-    return hmac.compare_digest(local_signature.hexdigest(), github_signature)
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -322,8 +296,6 @@ class ContentFileViewset(viewsets.ModelViewSet):
         download_project = DownloadProject(commit_hash=latest_commit_sha)
         download_project.save()
 
-
-
         serlzr1 = LocalizeIdsSerializer(data=request.data)
 
         if serlzr1.is_valid(raise_exception=True):
@@ -331,8 +303,6 @@ class ContentFileViewset(viewsets.ModelViewSet):
 
         data = [{"is_localize_registered": True, "id": _}
                 for _ in data.get('localizable_ids')]
-
-        print("data--->", data)
 
         ser = ContentFileSerializer(qs, data=data, many=True, partial=True)
 
@@ -397,9 +367,4 @@ class ContentFileViewset(viewsets.ModelViewSet):
         hookdeck.save()
 
         return  Response({"project":project_data, "hook": HookDeckSerializer(hookdeck).data})
-
-
-
-
-
 

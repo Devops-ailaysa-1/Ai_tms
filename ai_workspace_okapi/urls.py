@@ -19,6 +19,8 @@ urlpatterns+=[
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
     path("segment/update/<int:pk>", api_views.SegmentsUpdateView.as_view({"put": "partial_update"}), \
          name="segment-update"),
+    path("segment/restore/<int:pk>", api_views.MergeSegmentDeleteView.as_view({"delete": "destroy"}), \
+         name="segment-update"),
     path("mt_raw_and_tm/<int:segment_id>", api_views.MT_RawAndTM_View.as_view(), name="mt-raw"),
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(),\
          name="document-convert-to-file"),
