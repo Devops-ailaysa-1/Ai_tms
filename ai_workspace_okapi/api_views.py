@@ -235,7 +235,6 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def can_translate(request, debit_user):
-        return None
         hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
 
         # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
@@ -271,7 +270,7 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 return MT_RawAndTM_View.can_translate(request, user)
 
-        initial_credit =100000# user.credit_balance.get("total_left")
+        initial_credit = user.credit_balance.get("total_left")
 
         segment_source = segment.source
         seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code,
