@@ -352,6 +352,9 @@ class MergeSegment(BaseSegment):
     def validate_record(self):
         return all([segment.text_unit.id==self.text_unit.id for segment
             in self.segments.all()])
+    @property
+    def is_merged(self):
+        return True
 
     # class Meta:
     #     constraints = [
