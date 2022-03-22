@@ -80,6 +80,12 @@ class ProjectContentTypeManager(models.Manager):
         contents = [self.create(**item, project=project) for item in data]
         return contents
 
+class ProjectStepsManager(models.Manager):
+    def bulk_create_of_project(self, \
+            data, project, klass):
+        contents = [self.create(**item, project=project) for item in data]
+        return contents
+
 class ProjectSubjectFieldManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
@@ -122,7 +128,7 @@ class TaskManager(models.Manager):
 
 class TaskAssignManager(models.Manager):
 
-    def assign_task(self,steps,project):
+    def assign_task(self,project):
         print("PRO---->",project.id)
         if hasattr(project, "ai_user"):
             assign_to = project.ai_user
@@ -130,6 +136,7 @@ class TaskAssignManager(models.Manager):
         mt_engine = project.mt_engine_id
         mt_enable = project.mt_enable
         pre_translate = project.pre_translate
+        steps = project.get_steps
         print("Inside Manager---------->",tasks)
         print("Inside---->",steps)
         task_assign = [self.get_or_create(task=task,step=step,mt_engine_id=mt_engine,\

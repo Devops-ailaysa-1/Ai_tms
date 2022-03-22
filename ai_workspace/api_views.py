@@ -565,7 +565,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         project_type = json.loads(self.request.POST.get('project_type'))
-        if project_type == 2:
+        if project_type == 3:
             return GlossarySetupSerializer
         return ProjectQuickSetupSerializer
 
@@ -1544,3 +1544,14 @@ class CustomWorkflowCreateView(viewsets.ViewSet):
         obj = get_object_or_404(queryset, pk=pk)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+def previously_created_steps(request):
+    used_steps = []
+    pr = Project.objects.filter(Q(created_by = request.user)\
+         & Q(proj_steps__isnull=False) & ~Q(project_type=1)).distinct()
+    for obj in pr:
+        if obj.get_steps_name not in [step for step in used_steps]:
+            used_steps.append(obj.get_steps_name)
+    return Response({'used_steps':used_steps})

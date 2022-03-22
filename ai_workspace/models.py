@@ -33,7 +33,7 @@ from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
     check_job_file_version_has_same_project,)
 from .manager import ProjectManager, FileManager, JobManager,\
-    TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager
+    TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager,ProjectStepsManager
 from django.db.models.fields import Field
 from integerations.github_.models import ContentFile
 from integerations.base.utils import DjRestUtils
@@ -101,7 +101,7 @@ class Workflows(models.Model):
 ##########################Need to add project type################################
 class Project(models.Model):
     project_type = models.ForeignKey(ProjectType, null=False, blank=False,
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE, related_name="proj_type")
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
@@ -245,8 +245,12 @@ class Project(models.Model):
         return [job for job in self.project_jobs_set.all()]
 
     @property
-    def get_workflowsteps(self):
-        return [i.steps for i in self.workflow.workflow.all()]
+    def get_steps(self):
+        return [i.steps for i in self.proj_steps.all()]
+
+    @property
+    def get_steps_name(self):
+        return [i.steps.name for i in self.proj_steps.all()]
 
     @property
     def tmx_files_path(self):
@@ -346,6 +350,17 @@ class ProjectFilesCreateType(models.Model):
         default=FileType.upload_file)
     project = models.OneToOneField(Project, on_delete=models.CASCADE,
         related_name="project_file_create_type")
+
+
+class ProjectSteps(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE,
+                        related_name="proj_steps")
+    steps = models.ForeignKey(Steps, on_delete=models.CASCADE,
+                        related_name="proj_steps_name")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    objects = ProjectStepsManager()
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,

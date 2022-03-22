@@ -57,8 +57,6 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 
 
     def create(self, validated_data):
-        workflow = validated_data.get('workflow_id')
-        print("WF-->",workflow)
         original_validated_data = validated_data.copy()
         glossary_data = original_validated_data.pop('glossary')
         project = super().create(validated_data = original_validated_data)
@@ -66,9 +64,7 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
         glossary = Glossary.objects.create(**glossary_data,project=project)
         tasks = Task.objects.create_glossary_tasks_of_jobs(
                 jobs=jobs,klass=Task)
-        steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]
-        if steps:
-            task_assign = TaskAssign.objects.assign_task(steps=steps,project=project)
+        task_assign = TaskAssign.objects.assign_task(project=project)
         return project
 
     def update(self, instance, validated_data):
