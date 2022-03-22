@@ -526,19 +526,19 @@ LOGGING = {
 
 
 # ERROR MONITORING USING SENTRY
-sentry_sdk.init(
-    dsn = os.getenv("dsn"),
-    integrations=[DjangoIntegration()],
-
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # We recommend adjusting this value in production.
-    traces_sample_rate = os.getenv("traces_sample_rate"),
-
-    # If you wish to associate users to errors (assuming you are using
-    # django.contrib.auth) you may enable sending PII data.
-    send_default_pii = os.getenv("send_default_pii")
-)
+# sentry_sdk.init(
+#     dsn = os.getenv("dsn"),
+#     integrations=[DjangoIntegration()],
+#
+#     # Set traces_sample_rate to 1.0 to capture 100%
+#     # of transactions for performance monitoring.
+#     # We recommend adjusting this value in production.
+#     traces_sample_rate = os.getenv("traces_sample_rate"),
+#
+#     # If you wish to associate users to errors (assuming you are using
+#     # django.contrib.auth) you may enable sending PII data.
+#     send_default_pii = os.getenv("send_default_pii")
+# )
 
 
 # FOR ERD DIAGRAM
