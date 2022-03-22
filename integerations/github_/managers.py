@@ -53,6 +53,18 @@ class HookDeckManager(models.Manager):
         raise ValueError("Hookdeck Api Hook and destination name create Max iteration "
                          "reached to find unique base name. Try Again once!!!")
 
+    def get_hook_unique_token(self):
+        MAX_ITER = 1000
+        for i in range(MAX_ITER):
+            unique_token = uuid.uuid4().__str__()
+            if not self.filter(hook_ref_token=unique_token):
+                return unique_token
+
+        raise ValueError("Hook url token create Max iteration "
+                         "reached to find unique base name. Try Again once!!!")
+
+    def get_password(self):
+        return  uuid.uuid4().__str__().split("-")[-1]
 
 class ContentFileManager(models.Manager):
     def size_of_file_null_reset(self):

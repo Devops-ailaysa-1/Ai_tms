@@ -39,7 +39,10 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           TM_FetchSerializer, MergeSegmentSerializer)
 from .utils import SpacesService
 from .utils import download_file, bl_title_format, bl_cell_format
+from google.cloud import translate_v2 as translate
+from rest_framework import serializers
 
+client = translate.Client()
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
 
@@ -185,6 +188,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         page_len = self.paginate_queryset(range(1, len_segments+1), request)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
+        # print("data---->", segments_ser.data)
         data = [ SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
             if (i.get("is_merged")==True and i.get("is_merge_start")) else i for i in segments_ser.data]
         [i.update({"segment_count":j}) for i, j in zip(data, page_len)]
@@ -216,6 +220,13 @@ class SegmentsUpdateView(viewsets.ModelViewSet):
             return MergeSegment.objects.get(id=segment_id)
         return segment
 
+class MergeSegmentDeleteView(viewsets.ModelViewSet):
+    def get_object(self, pk=None):
+        pk = self.kwargs["pk"]
+        obj = get_object_or_404(Segment.objects.all(), id=pk)
+        if obj.is_merged == True and obj.is_merge_start:
+            return get_object_or_404(MergeSegment.objects.all(), id=pk)
+        raise serializers.ValidationError("Restore process not applicable for this segment")
 
 class MT_RawAndTM_View(views.APIView):
 
@@ -237,43 +248,19 @@ class MT_RawAndTM_View(views.APIView):
             return None
 
     @staticmethod
-    def get_consumable_credits(doc, segment_id):
-        segment_source = Segment.objects.get(id=segment_id).source
-        seg_data = { "segment_source" : segment_source,
-                     "source_language" : doc.source_language_code,
-                     "target_language" : doc.target_language_code,
-                     "processor_name" : "plain-text-processor",
-                     "extension":".txt"
-                     }
-        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-            data={"segmentWordCountdata":json.dumps(seg_data)})
-
-        if res.status_code == 200:
-            print("Word count --->", res.json())
-            return res.json()
-        else:
-            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
-            raise  ValueError("Sorry! Something went wrong with word count calculation.")
-
-    @staticmethod
-    def get_data(request, segment_id, mt_params):
-
-        # get already stored MT done for first time
-        mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
+    def get_data(request, segment):
+        mt_raw = segment.mt_raw_translation
+        # mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200, "available"
 
-        # If MT disabled for the task
-        if mt_params.get("mt_enable", True) != True:
-            return {}, 200, "MT disabled"
-
-        # finding the user to debit credit
-        text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
+        text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
 
         # Checking if the request user is account owner or not
-        if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
+        if (doc.job.project.team) and (request.user != AiUser.objects.get
+                (project__project_jobs_set__file_job_set=doc)):
             can_translate = MT_RawAndTM_View.can_translate(request, user)
             if can_translate == None:
                 pass
@@ -283,24 +270,46 @@ class MT_RawAndTM_View(views.APIView):
         # credit balance of debit user
         initial_credit = user.credit_balance.get("total")
 
-        # getting word count
-        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)
+        segment_source = segment.source
+        seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code,
+                    "target_language":doc.target_language_code,\
+                     "processor_name":"plain-text-processor", "extension":".txt"}
+
+        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
+            data={"segmentWordCountdata": json.dumps(seg_data)})
+        if res.status_code == 200:
+            print("Word count --->", res.json())
+            consumable_credits = res.json()
+        else:
+            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
         if initial_credit > consumable_credits :
-            mt_engine_id = mt_params.get("mt_engine", 1)            # Google MT selected if MT selection fails
-            mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id, "mt_engine": mt_engine_id},\
+            mt_raw = client.translate(segment.source,
+                target_language=segment.target_language_code, format_="text") \
+                .get("translatedText")
+            reverse_string_for_segment = "ai_workspace_okapi.segment" if\
+                isinstance(segment, Segment) else ("ai_workspace_okapi.mergesegment"
+                if isinstance(segment, MergeSegment) else None)
+
+            mt_raw_serlzr = MT_RawSerializer(data = {"mt_raw": mt_raw,
+                "reverse_string_for_segment": reverse_string_for_segment},
                             context={"request": request})
+
             if mt_raw_serlzr.is_valid(raise_exception=True):
                 mt_raw_serlzr.save()
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, consumable_credits)
+                segment.mt_raw_translation = mt_raw_serlzr.instance
+                segment.save()
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id,
+                    consumable_credits)
                 # print("DEBIT STATUS -----> ", debit_status["msg"])
                 return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
 
     @staticmethod
-    def get_tm_data(request, segment_id):
-        segment = Segment.objects.filter(id=segment_id).first()
+    def get_tm_data(request, segment):
+        # segment = Segment.objects.filter(id=segment_id).first()
         if segment:
             tm_ser = TM_FetchSerializer(segment)
             res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
@@ -325,11 +334,15 @@ class MT_RawAndTM_View(views.APIView):
             return "Team subscription inactive"
 
     def get(self, request, segment_id):
-        mt_params = self.get_segment_MT_params(segment_id)
-        data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+        segment = get_object_or_404(Segment.objects.all(), id=segment_id)\
+            .get_active_object()
+        data, status_code, can_team = self.get_data(request, segment)
+        # print("data---->", data)
+        # print("MT Data -----> ", data)
         mt_alert = True if status_code == 424 else False
-        alert_msg = self.get_alert_msg(status_code, can_team)
-        tm_data = self.get_tm_data(request, segment_id)
+        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
+            can_team == "unavailable") else "Team subscription inactive"
+        tm_data = self.get_tm_data(request, segment)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
             "alert_msg":alert_msg}, status=status_code)
 
@@ -488,7 +501,6 @@ class DocumentToFile(views.APIView):
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
         pre, ext = os.path.splitext(task_data["output_file_path"])
-        print("output type---->", output_type)
         ext = ".xliff" if output_type == "XLIFF" else \
             (".tmx" if output_type == "TMX" else ext)
 

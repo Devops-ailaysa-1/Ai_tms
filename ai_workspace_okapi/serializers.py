@@ -329,42 +329,22 @@ class DocumentSerializerV3(DocumentSerializerV2):
         return ret
 
 class MT_RawSerializer(serializers.ModelSerializer):
-    mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
+    mt_engine_name = serializers.CharField(source="mt_engine.engine_name",
+        read_only=True)
+    segment = serializers.CharField(read_only=True, source="get_segment")
 
     class Meta:
         model = MT_RawTranslation
         fields = (
-            "segment", 'mt_engine', 'mt_raw', "mt_engine_name", "target_language", "task_mt_engine"
+            "segment", 'mt_engine', 'mt_raw', "reverse_string_for_segment",
+            "mt_engine_name", "target_language"
         )
 
         extra_kwargs = {
-            "mt_raw": {"required": False},
-            "mt_engine" : {"required": False},
+            "reverse_string_for_segment": {"write_only": True},
+            "mt_engine": {"default": MT_Engine.objects.get(id=1)}
         }
 
-    def to_internal_value(self, data):
-
-        # data["mt_engine"] = data.get("mt_engine", 1)
-        data["task_mt_engine"] = data.get("mt_engine", 1)
-        return super().to_internal_value(data=data)
-
-    def create(self, validated_data):
-
-        # MT FEED DATA
-        source_string = validated_data["segment"].source
-        source_lang_code = validated_data["segment"].source_language_code
-        target_lang_code = validated_data["segment"].target_language_code
-
-        validated_data["mt_raw"] = get_translation(
-                        validated_data["task_mt_engine"].id,
-                        # validated_data["mt_engine"].id,
-                        source_string,
-                        source_lang_code,
-                        target_lang_code,
-                    )
-
-        instance = MT_RawTranslation.objects.create(**validated_data)
-        return instance
 
 class TM_FetchSerializer(serializers.ModelSerializer):
     pentm_dir_path = serializers.CharField(source=\
@@ -448,5 +428,3 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
             raise serializers.ValidationError("all segments should be have same text unit id...")
         return super().validate(data)
-
-

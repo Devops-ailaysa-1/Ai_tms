@@ -102,9 +102,13 @@ ignore_data/
 /integerations/github_/migrations/
 /integerations/gitlab_/migrations/
 APP.MD
+<<<<<<< HEAD
 staticfiles
 api_automation
 env
 wordsapi_sample.json
 *.dot
 *.png
+=======
+staticfiles/
+>>>>>>> origin/v3_ailaysa
