@@ -23,7 +23,7 @@ urlpatterns=[
         {"get": "list", "post":"create"})),
     path("github/repository/branch/contentfile/<int:pk>/refresh", api_views.ContentFileViewset.as_view(
         {"get": "list_refresh"})),
-    path("hooks/repo_update/<str:slug>", api_views.repo_update_view)
+    path("github/hooks/<str:token>", api_views.repo_update_view, name="hooks-listen")
 ]
 
 

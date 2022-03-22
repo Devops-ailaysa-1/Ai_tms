@@ -5,12 +5,18 @@ from .models import GithubApp, FetchInfo,\
     DownloadProject
 from ai_workspace.models import  Project, File, Job, ProjectFilesCreateType
 from ai_staff.models import AssetUsageTypes, Languages
+from django.shortcuts import get_object_or_404, reverse
 
 from github import Github
 from collections import OrderedDict
 from ai_auth.models import AiUser
-from .enums import DJ_APP_NAME
+from .enums import DJ_APP_NAME, HOOK_LISTEN_ADDRESS
 from controller.models import DownloadController, FileController
+
+import hmac, hashlib
+import os
+import uuid
+import cryptocode
 
 
 class GithubOAuthTokenSerializer(serializers.ModelSerializer):
@@ -69,7 +75,6 @@ class BranchSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         data = validated_data
         return super().create(data)
-
 
 class ContentFileListSerializer(serializers.ListSerializer):
     def update(self, instance, validated_data):
@@ -218,9 +223,26 @@ class ProjectCreateReqReslvSerlzr(serializers.Serializer):
 class GithubHookSerializerD1(serializers.Serializer):
     payload = serializers.JSONField()
 
-class GithubHookSerializerD3(serializers.Serializer):
+class GithubHookSerializerD3(serializers.ModelSerializer):
     name = serializers.CharField()
     full_name = serializers.CharField()
+
+    def validate(self, attrs):
+        if not Repository.objects.filter(repository_name=attrs["name"],
+            repository_fullname=attrs["full_name"]):
+            raise serializers.ValidationError("repository not exist!!!")
+        return super().validate(attrs=attrs)
+
+    class Meta:
+        model = Repository
+        fields = ("name", "full_name", "id", "repository_fullname")
+        read_only_fields = ("id", "repository_fullname")
+
+    def to_representation(self, instance):
+        self.instance = Repository.objects.filter(
+            repository_name=self.validated_data["name"], repository_fullname=
+        self.validated_data["full_name"]).first()
+        return super().to_representation(instance=instance)
 
 class GithubHookSerializerD4(serializers.Serializer):
     modified = serializers.ListField()
@@ -249,32 +271,34 @@ class GithubHookSerializerD2(serializers.Serializer):
         ret["commit_hash"] = ret["head_commit"]["id"]
         return ret
 
+
 class HookDeckSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ['id', 'source_name', 'project', 'hook_name',
-            'destination_name', 'hook_cli_path', "hookdeck_url"]
+        fields = [ 'project', 'hook_url',
+            'password', "hook_ref_token"]
         model = HookDeck
-        read_only_fields =  ['id', 'hook_name',
-            'destination_name', 'hook_cli_path', "hookdeck_url",
-            # 'source_name'
-            ]
+        extra_kwargs = {
+            "hook_url": {"required": False},
+            "password": {"required": False},
+            "hook_ref_token": {"required": False}
+        }
 
     def create(self, validated_data):
         data = validated_data
         return super().create(data)
 
-    def to_representation(self, instance):
-        ret = super().to_representation(instance=instance)
-        if self.context.get("for_hook_api_call", False):
-            ret["name"] = instance.hook_name
-            ret["source"] = {}
-            ret["source"]["name"] = instance.source_name
-            ret["destination"] = {}
-            ret["destination"]["name"] = instance.destination_name
-            ret["destination"]["cli_path"] = instance.hook_cli_path
-
-        return ret
+    # def to_representation(self, instance):
+    #     ret = super().to_representation(instance=instance)
+    #     if self.context.get("for_hook_api_call", False):
+    #         ret["name"] = instance.hook_name
+    #         ret["source"] = {}
+    #         ret["source"]["name"] = instance.source_name
+    #         ret["destination"] = {}
+    #         ret["destination"]["name"] = instance.destination_name
+    #         ret["destination"]["cli_path"] = instance.hook_cli_path
+    #
+    #     return ret
 
 class HookDeckCallSerializerSub2(serializers.Serializer):
     name = serializers.CharField()
@@ -294,3 +318,41 @@ class HookDeckResponseSerializer(serializers.Serializer):
     def to_internal_value(self, data):
         url_data = data["source"]
         return super().to_internal_value(data=url_data)
+
+class TokenValidateSerializer(serializers.Serializer):
+    token = serializers.CharField()
+
+    def validate_token(self, value):
+        if not HookDeck.objects.filter(hook_ref_token=value):
+            raise serializers.ValidationError("token is invalid")
+
+        return value
+
+    def validate(self, attrs):
+        req = self.context["request"]
+        instance = HookDeck.objects.filter(hook_ref_token=attrs["token"]).first()
+        secret = instance.password
+        is_valid = self.validate_signature(req, secret)
+        if not is_valid:
+            raise serializers.ValidationError("secret key not matching")
+        self.instance = instance
+        return super().validate(attrs=attrs)
+
+    class Meta:
+        # model = HookDeck
+        fields = ("token", )
+
+    def validate_signature(self, payload, secret):
+
+        signature_header = payload.headers['X-Hub-Signature']
+        sha_name, github_signature = signature_header.split('=')
+        if sha_name != 'sha1':
+            print('ERROR: X-Hub-Signature in payload headers was not sha1=****')
+            return False
+
+        body = payload.body
+        local_signature = hmac.new(secret.encode('utf-8'), msg=body,
+                                   digestmod=hashlib.sha1)
+
+        return hmac.compare_digest(local_signature.hexdigest(), github_signature)
+
