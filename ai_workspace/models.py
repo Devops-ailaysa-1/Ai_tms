@@ -297,7 +297,8 @@ class Project(models.Model):
         if self.get_tasks:
             for task in self.get_tasks:
                 try:
-                    if task.task_assign_info:
+                    if task.task_info.filter(task_assign_info__isnull=False):
+                    # if task.task_assign_info:
                         return True
                 except:
                     pass
