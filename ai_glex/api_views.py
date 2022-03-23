@@ -293,8 +293,8 @@ def glossary_search(request):
     #                   params=[user_input]).distinct().values('sl_term','tl_term')
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
                 .filter(job__target_language__language=target_language)\
-                .extra(where={"%s like CONCAT('%%', sl_term ,'%%')"},
-                       params=[user_input]).distinct().values('sl_term','tl_term')
+                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+                      params=[user_input]).distinct().values('sl_term','tl_term')
     if queryset:
         res=[]
         for data in queryset:
