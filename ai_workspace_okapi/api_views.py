@@ -430,8 +430,9 @@ class DocumentToFile(views.APIView):
         for text_unit in text_units:
             segments = Segment.objects.filter(text_unit_id=text_unit.id)
             for segment in segments:
-                worksheet.write(row, 0, segment.source.strip(), cell_format)
-                worksheet.write(row, 1, self.remove_tags(segment.target), cell_format)
+                segment_new = segment.get_active_object()
+                worksheet.write(row, 0, segment_new.source.strip(), cell_format)
+                worksheet.write(row, 1, self.remove_tags(segment_new.target), cell_format)
                 row += 1
         workbook.close()
 
