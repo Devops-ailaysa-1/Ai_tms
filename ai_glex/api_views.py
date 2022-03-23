@@ -287,16 +287,14 @@ def glossary_search(request):
     doc = Document.objects.get(id=doc_id)
     glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
     target_language = doc.job.target_language
-    try:
-        queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
-                    .filter(job__target_language__language=target_language)\
-                    .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
-                          params=[user_input]).distinct().values('sl_term','tl_term')
-    except:
-        queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
-                    .filter(job__target_language__language=target_language)\
-                    .extra(where={"%s like CONCAT('%%', sl_term ,'%%')"},
-                           params=[user_input]).distinct().values('sl_term','tl_term')
+    # queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
+    #             .filter(job__target_language__language=target_language)\
+    #             .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
+    #                   params=[user_input]).distinct().values('sl_term','tl_term')
+    queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
+                .filter(job__target_language__language=target_language)\
+                .extra(where={"%s like CONCAT('%%', sl_term ,'%%')"},
+                       params=[user_input]).distinct().values('sl_term','tl_term')
     if queryset:
         res=[]
         for data in queryset:
