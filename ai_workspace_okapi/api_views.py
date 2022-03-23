@@ -430,6 +430,8 @@ class DocumentToFile(views.APIView):
         for text_unit in text_units:
             segments = Segment.objects.filter(text_unit_id=text_unit.id)
             for segment in segments:
+                if segment.is_merged and (not segment.is_merge_start):
+                    continue
                 segment_new = segment.get_active_object()
                 worksheet.write(row, 0, segment_new.source.strip(), cell_format)
                 worksheet.write(row, 1, self.remove_tags(segment_new.target), cell_format)
@@ -702,7 +704,6 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
         return  Response(SegmentSerializer(segment).data, status=200)
 
 class ProgressView(views.APIView):
-    confirm_list = [102, 104, 106]
 
     @staticmethod
     def get_object(document_id):
@@ -712,19 +713,25 @@ class ProgressView(views.APIView):
         return document
 
     @staticmethod
-    def get_progress(document, confirm_list):
-        # total_segment_count = document.total_segment_count - document.segments_with_blank.count()
-        total_segment_count = Segment.objects.filter(
-            text_unit__document=document
-        ).count()
-        segments_confirmed_count = document.segments.filter(
-            status__status_id__in=confirm_list
-        ).count()
-        return total_segment_count, segments_confirmed_count
+    def get_progress(document):
+
+        confirm_list = [102, 104, 106]
+        total_seg_count = 0
+        confirm_count = 0
+
+        segs = Segment.objects.filter(text_unit__document=document)
+        for seg in segs:
+            if not (seg.is_merged and (not seg.is_merge_start)):
+                total_seg_count += 1
+            seg_new = seg.get_active_object()
+            if seg_new.status_id in confirm_list:
+                confirm_count += 1
+
+        return total_seg_count, confirm_count
 
     def get(self, request, document_id):
         document = self.get_object(document_id)
-        total_segment_count, segments_confirmed_count = self.get_progress(document, self.confirm_list)
+        total_segment_count, segments_confirmed_count = self.get_progress(document)
         return JsonResponse(
             dict(total_segment_count=total_segment_count,
                  segments_confirmed_count=segments_confirmed_count), safe=False
