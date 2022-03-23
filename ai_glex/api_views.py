@@ -172,7 +172,7 @@ class TermUploadView(viewsets.ModelViewSet):
 @api_view(['GET',])
 def glossary_template_lite(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
-    response['Content-Disposition'] = 'attachment; filename=Glossary_Lite.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=Glossary_template_lite.xlsx'
     xlsx_data = WriteToExcel_lite()
     response.write(xlsx_data)
     return response
@@ -245,7 +245,8 @@ def glossaries_list(request,project_id):
     project = Project.objects.get(id=project_id)
     target_languages = project.get_target_languages
     queryset = Project.objects.filter(glossary_project__isnull=False)\
-                .filter(project_jobs_set__target_language__language__in = target_languages).distinct()
+                .filter(project_jobs_set__target_language__language__in = target_languages)\
+                .exclude(id=project.id).distinct()
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
 
@@ -286,10 +287,16 @@ def glossary_search(request):
     doc = Document.objects.get(id=doc_id)
     glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
     target_language = doc.job.target_language
-    queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
-                .filter(job__target_language__language=target_language)\
-                .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
-                      params=[user_input]).distinct().values('sl_term','tl_term')
+    try:
+        queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
+                    .filter(job__target_language__language=target_language)\
+                    .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
+                          params=[user_input]).distinct().values('sl_term','tl_term')
+    except:
+        queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
+                    .filter(job__target_language__language=target_language)\
+                    .extra(where={"%s like CONCAT('%%', sl_term ,'%%')"},
+                           params=[user_input]).distinct().values('sl_term','tl_term')
     if queryset:
         res=[]
         for data in queryset:
