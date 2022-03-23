@@ -154,15 +154,36 @@ class Project(models.Model):
             return "Yet to start"
         else:
             if docs.count() == tasks:
-                for doc in docs:
-                    total_segments+=doc.total_segment_count
+                # for doc in docs:
+                #     total_segments+=doc.total_segment_count
+
+                # segs = Segment.objects.filter(text_unit__document=document)
+                # for seg in segs:
+                #     if not (seg.is_merged and (not seg.is_merge_start)):
+                #         total_seg_count += 1
+                #     seg_new = seg.get_active_object()
+                #     if seg_new.status_id in confirm_list:
+                #         confirm_count += 1
+
+                total_seg_count = 0
+                confirm_count  = 0
+                confirm_list = [102, 104, 106]
+
+                segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+                for seg in segs:
+                    if not (seg.is_merged and (not seg.is_merge_start)):
+                        total_seg_count += 1
+                    seg_new = seg.get_active_object()
+                    if seg_new.status_id in confirm_list:
+                        confirm_count += 1
+
             else:
                 return "In Progress"
 
-        status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-            Q(status_id__in=[102,104,106])).all().count()
+        # status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
+        #     Q(status_id__in=[102,104,106])).all().count()
 
-        if total_segments == status_count:
+        if total_seg_count == confirm_count:
             return "Completed"
         else:
             return "In Progress"
