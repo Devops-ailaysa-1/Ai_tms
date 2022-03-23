@@ -246,11 +246,11 @@ class Project(models.Model):
 
     @property
     def get_steps(self):
-        return [i.steps for i in self.proj_steps.all()]
+        return [obj.steps for obj in self.proj_steps.all()]
 
     @property
     def get_steps_name(self):
-        return [i.steps.name for i in self.proj_steps.all()]
+        return [obj.steps.name for obj in self.proj_steps.all()]
 
     @property
     def tmx_files_path(self):

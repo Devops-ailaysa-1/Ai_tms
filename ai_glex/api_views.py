@@ -16,7 +16,7 @@ import json,mimetypes,os
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
 from ai_workspace.models import TaskAssign, Task
-
+from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django_filters.rest_framework import DjangoFilterBackend
