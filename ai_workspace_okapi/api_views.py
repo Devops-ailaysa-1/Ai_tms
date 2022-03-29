@@ -567,7 +567,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         document = get_object_or_404(qs, id=document_id)
         segments_all = segments = document.segments
         status_list = data.get("status_list", [])
-        print("status_list--->", status_list)
+        # print("status_list--->", status_list)
         if status_list:
             if 0 in status_list:
                 segments = segments.filter(Q(status=None) | \
@@ -603,7 +603,13 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
-        res = self.get_paginated_response(segments_ser.data)
+
+        # res = self.get_paginated_response(segments_ser.data)
+
+        data = [SegmentSerializer(MergeSegment.objects.get(segments=Segment.objects.get(id=i.get("segment_id")))).data
+                    if i.get("is_merged") == True else i for i in segments_ser.data]
+
+        res = self.get_paginated_response(data)
         res.status_code = status
         return res
 
@@ -623,7 +629,13 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
     def paginate_response(self, segments, request, status):
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
-        res = self.get_paginated_response(segments_ser.data)
+
+        # res = self.get_paginated_response(segments_ser.data)
+
+        data = [SegmentSerializer(MergeSegment.objects.get(segments=Segment.objects.get(id=i.get("segment_id")))).data
+                if i.get("is_merged") == True else i for i in segments_ser.data]
+
+        res = self.get_paginated_response(data)
         res.status_code = status
         return res
 
@@ -671,6 +683,7 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         return segments, 200
 
     def update(self, request, document_id):
+        print("PUT data ----> ", request.POST.dict())
         data = self.prepare_data(request.POST.dict())
         segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
         segments, status = self.update_segments(request, data, segments, self=self)
