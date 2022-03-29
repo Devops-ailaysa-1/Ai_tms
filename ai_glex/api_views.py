@@ -105,6 +105,12 @@ from ai_workspace_okapi.models import Document
 class GlossaryFileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    def list(self,request):
+        job = request.GET.get('job')
+        queryset = GlossaryFiles.objects.filter(job_id = job)
+        serializer = GlossaryFileSerializer(queryset,many=True)
+        return  Response(serializer.data)
+
     def create(self, request):
         files = request.FILES.getlist("glossary_file")
         job = json.loads(request.POST.get('job'))
