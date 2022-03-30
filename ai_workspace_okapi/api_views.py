@@ -230,7 +230,7 @@ class SegmentsUpdateView(viewsets.ModelViewSet):
         segment_id = self.kwargs["pk"]
         qs = Segment.objects.all()
         segment = get_object_or_404(qs, id = segment_id)
-        return segment.get_active_object
+        return segment.get_active_object()
 
 
 class MergeSegmentDeleteView(viewsets.ModelViewSet):
@@ -627,7 +627,10 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
                 merged_segment = MergeSegment.objects.get(segments=Segment.objects.get(id=i.get("segment_id")))
 
                 if status_list:
-                    if 0 in status_list or merged_segment.status_id in status_list:
+                    if 0 in status_list and merged_segment.status_id == None:
+                        data.append(SegmentSerializer(merged_segment).data)
+                        continue
+                    if merged_segment.status_id in status_list:
                         data.append(SegmentSerializer(merged_segment).data)
                         continue
 
@@ -661,7 +664,10 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
                 normal_segment = Segment.objects.get(id=i.get("segment_id"))
 
                 if status_list:
-                    if 0 in status_list or normal_segment.status_id in status_list:
+                    if 0 in status_list and normal_segment.status_id == None:
+                        data.append(SegmentSerializer(normal_segment).data)
+                        continue
+                    if normal_segment.status_id in status_list:
                         data.append(SegmentSerializer(normal_segment).data)
                         continue
 
