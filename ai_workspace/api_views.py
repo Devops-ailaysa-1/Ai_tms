@@ -1,4 +1,5 @@
 import django_filters
+import shutil
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
@@ -11,6 +12,7 @@ from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_glex.serializers import GlossarySetupSerializer
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
+from ai_workspace_okapi.utils import download_file
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, FileSerializer, \
@@ -564,7 +566,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     def get_serializer_class(self):
-        project_type = json.loads(self.request.POST.get('project_type'))
+        project_type = json.loads(self.request.POST.get('project_type','1'))
         if project_type == 3:
             return GlossarySetupSerializer
         return ProjectQuickSetupSerializer
@@ -1555,3 +1557,13 @@ def previously_created_steps(request):
         if obj.get_steps_name not in [step for step in used_steps]:
             used_steps.append(obj.get_steps_name)
     return Response({'used_steps':used_steps})
+
+
+
+@api_view(["GET"])
+def project_download(request,project_id):
+    pr = Project.objects.get(id=project_id)
+    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+    tt = download_file(pr.project_name+'.zip')
+    os.remove(pr.project_name+'.zip')
+    return tt

@@ -63,7 +63,8 @@ urlpatterns += [
 	path('used_steps/',api_views.previously_created_steps),
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
 	path("instruction_file_download/<int:task_assign_info_id>", api_views.instruction_file_download, name="instruction-file-download"),
-	path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"}))
+	path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"})),
+	path("project/download/<int:project_id>",api_views.project_download),
 ]
 # views urls adding for local testing
 urlpatterns += [

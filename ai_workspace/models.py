@@ -37,6 +37,7 @@ from .manager import ProjectManager, FileManager, JobManager,\
 from django.db.models.fields import Field
 from integerations.github_.models import ContentFile
 from integerations.base.utils import DjRestUtils
+from ai_workspace.utils import create_ai_project_id_if_not_exists
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -135,13 +136,15 @@ class Project(models.Model):
 
     penseive_tm_klass = PenseiveTM
 
+
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
 
         if not self.ai_project_id:
             # self.ai_user shoould be set before save
-            self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
-            objects.filter(ai_user=self.ai_user).count()+1)
+            # self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
+            # objects.filter(ai_user=self.ai_user).count()+1)
+            self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
         if not self.project_name:
             #self.project_name = self.ai_project_id
