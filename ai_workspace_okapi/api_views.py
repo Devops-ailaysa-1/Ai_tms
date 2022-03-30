@@ -611,7 +611,6 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         match_case = payload.get("match_case", False)
         exact_word = payload.get("exact_word", False)
         status_list = payload.get("status_list", [])
-        print("Status list----> ", status_list)
         lookup_field = self.lookup_field
 
         for i in segments_ser.data:
@@ -623,7 +622,6 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
                 if status_list:
                     if 0 in status_list or merged_segment.status_id in status_list:
                         data.append(SegmentSerializer(merged_segment).data)
-                        print("*********  Merged segment appended  *******")
                         continue
 
                 if search_word not in [None, ""]:
@@ -974,8 +972,15 @@ class ProgressView(views.APIView):
 
         segs = Segment.objects.filter(text_unit__document=document)
         for seg in segs:
-            if not (seg.is_merged and (not seg.is_merge_start)):
+
+            # if not (seg.is_merged and (not seg.is_merge_start)):
+            #     total_seg_count += 1
+
+            if seg.is_merged == True and seg.is_merge_start == False:
+                continue
+            else:
                 total_seg_count += 1
+
             seg_new = seg.get_active_object()
             if seg_new.status_id in confirm_list:
                 confirm_count += 1
