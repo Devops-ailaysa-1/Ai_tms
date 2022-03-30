@@ -673,8 +673,15 @@ class Task(models.Model):
         segs = Segment.objects.filter(text_unit__document=doc)
         for seg in segs:
             # continue if seg.is_merged and (not seg.is_merge_start) else total_seg_count += 1
-            if not (seg.is_merged and (not seg.is_merge_start)):
+
+            # if not (seg.is_merged and (not seg.is_merge_start)):
+            #     total_seg_count += 1
+
+            if seg.is_merged == True and seg.is_merge_start == False:
+                continue
+            else:
                 total_seg_count += 1
+
             seg_new = seg.get_active_object()
             if seg_new.status_id in confirm_list:
                 confirm_count += 1
