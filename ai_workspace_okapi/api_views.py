@@ -218,13 +218,20 @@ class SegmentsUpdateView(viewsets.ModelViewSet):
 
     serializer_class = SegmentSerializerV2
 
+    # def get_object(self):
+    #     segment_id = self.kwargs["pk"]
+    #     qs = Segment.objects.all()
+    #     segment = get_object_or_404(qs, id = segment_id)
+    #     if segment.is_merged == True:
+    #         return MergeSegment.objects.get(id=segment_id)
+    #     return segment
+
     def get_object(self):
         segment_id = self.kwargs["pk"]
         qs = Segment.objects.all()
         segment = get_object_or_404(qs, id = segment_id)
-        if segment.is_merged == True:
-            return MergeSegment.objects.get(id=segment_id)
-        return segment
+        return segment.get_active_object
+
 
 class MergeSegmentDeleteView(viewsets.ModelViewSet):
     def get_object(self, pk=None):
