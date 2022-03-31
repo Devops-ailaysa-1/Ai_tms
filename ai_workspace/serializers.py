@@ -439,6 +439,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	# 	 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )# "project_analysis",)#,'ai_user')
 
 	def run_validation(self,data):
+		if data.get('steps'):
+			if '1' not in data['steps']:
+				raise serializers.ValidationError({"msg":"step 1 is mandotary"})
 		if data.get('target_languages')!=None:
 			comparisons = [source == target for (source, target) in itertools.
 				product(data['source_language'],data['target_languages'])]
