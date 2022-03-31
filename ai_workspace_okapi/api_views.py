@@ -491,6 +491,8 @@ class DocumentToFile(views.APIView):
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
 
+        # print("Data to write output file ---> ", data)
+
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
