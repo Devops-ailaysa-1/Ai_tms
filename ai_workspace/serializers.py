@@ -441,7 +441,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def run_validation(self,data):
 		if data.get('steps'):
 			if '1' not in data['steps']:
-				raise serializers.ValidationError({"msg":"step 1 is mandotary"})
+				raise serializers.ValidationError({"msg":"step 1 is mandatory"})
 		if data.get('target_languages')!=None:
 			comparisons = [source == target for (source, target) in itertools.
 				product(data['source_language'],data['target_languages'])]

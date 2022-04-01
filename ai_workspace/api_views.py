@@ -1,5 +1,6 @@
 import django_filters
 import shutil
+import zipfile
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
@@ -1560,10 +1561,38 @@ def previously_created_steps(request):
 
 
 
-@api_view(["GET"])
-def project_download(request,project_id):
-    pr = Project.objects.get(id=project_id)
-    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-    tt = download_file(pr.project_name+'.zip')
-    os.remove(pr.project_name+'.zip')
+# @api_view(["GET"])
+# def project_download(request,project_id):
+#     pr = Project.objects.get(id=project_id)
+#     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+#     tt = download_file(pr.project_name+'.zip')
+#     os.remove(pr.project_name+'.zip')
+#     return tt
+
+
+
+def zipit(folders, zip_filename):
+    zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
+
+    for folder in folders:
+        for dirpath, dirnames, filenames in os.walk(folder):
+            for filename in filenames:
+                zip_file.write(
+                    os.path.join(dirpath, filename),
+                    os.path.relpath(os.path.join(dirpath, filename), os.path.join(folders[0], '../..')))
+
+    zip_file.close()
+
+@api_view(['GET',])
+def project_list_download(request):
+    projects = request.GET.getlist('project')
+    dest = []
+    for obj in projects:
+        pr = Project.objects.get(id=obj)
+        path = pr.project_dir_path + '/source'
+        dest.append(path)
+    zip_file_name = "Project-"+projects[0]+"-"+projects[-1]+'.zip' if len(projects) > 1 else "Project-"+projects[0]+'.zip'
+    zipit(dest,zip_file_name)
+    tt = download_file(zip_file_name)
+    os.remove(zip_file_name)
     return tt
