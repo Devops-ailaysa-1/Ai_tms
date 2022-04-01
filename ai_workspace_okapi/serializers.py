@@ -423,7 +423,7 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
         fields = ("segments", "text_unit")
 
     def validate(self, data):
-        segments = data["segments"]
+        segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
         text_unit = data["text_unit"]
         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
             raise serializers.ValidationError("all segments should be have same text unit id...")
