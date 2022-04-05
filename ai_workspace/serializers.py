@@ -757,14 +757,15 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
-		task_assign = obj.task_info.all()
-		task_assign_info=[]
-		for i in task_assign:
-			try:
-				task_assign_info.append(i.task_assign_info)
-			except:
-				pass
-		return TaskAssignInfoSerializer(task_assign_info,many=True).data
+		task_assign = obj.task_info.filter(task_assign_info__isnull=False)
+		if task_assign:
+			task_assign_info=[]
+			for i in task_assign:
+				try:task_assign_info.append(i.task_assign_info)
+				except:pass
+			return TaskAssignInfoSerializer(task_assign_info,many=True).data
+		else: return None
+
 
 
 	def get_task_word_count(self,instance):
