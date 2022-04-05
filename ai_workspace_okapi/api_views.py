@@ -127,7 +127,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     
             if doc.status_code == 200 :
                 doc_data = doc.json()
-                # print("Doc data ---> ", doc_data)
+                # print("Doc data from spring---> ", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 },))
