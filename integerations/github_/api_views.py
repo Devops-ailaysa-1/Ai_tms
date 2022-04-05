@@ -17,10 +17,11 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 
 from .serializers import GithubOAuthTokenSerializer, RepositorySerializer,\
-    BranchSerializer, ContentFileSerializer, LocalizeIdsSerializer,ProjectSerializer,\
-    FileSerializer, JobSerializer, JobDataPrepareSerializer, FileDataPrepareSerializer,\
-    GithubHookSerializerD1, GithubHookSerializerD2, HookDeckCallSerializer, \
-    HookDeckResponseSerializer, HookDeckSerializer
+    BranchSerializer, ContentFileSerializer, LocalizeIdsSerializer,\
+    FileSerializer, JobSerializer, GithubHookSerializerD1, GithubHookSerializerD2, \
+    HookDeckResponseSerializer, HookDeckSerializer, ProjectCreateReqReslvSerlzr, \
+    ProjectSerializerV2, HookDeckCallSerializer, TokenValidateSerializer
+from controller.models import DownloadController
 from .models import GithubApp, Repository, FetchInfo, Branch, ContentFile, HookDeck,\
     DownloadProject
 from ..base.utils import DjRestUtils
@@ -30,63 +31,54 @@ from ai_workspace.models import Project, Task
 from ai_auth.models import AiUser
 from .enums import APP_NAME, DJ_APP_NAME
 
-import pytz, pickle,sys
+import pytz, pickle, sys
 from io import BytesIO
 import pickle
 from pymongo import MongoClient
 cli = MongoClient ( 'localhost', 27017)
-import hmac, hashlib
-import os
-import uuid
-import cryptocode
+
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
 @api_view(["POST"])
-def repo_update_view(request, slug):
-    # decoded = cryptocode.decrypt(slug, CRYPT_PASSWORD)
-    #
-    # if not decoded:
-    #     raise ValueError("Hook URL invalid!!!")
-    #
-    # user = AiUser.objects.filter(email=decoded).first()
-    #
-    # if (not user) or (user != request.user):
-    #     raise ValueError("URL user doest not match with request user!!!")
+def repo_update_view(request, token):
+
+    token_serlzr = TokenValidateSerializer(data={"token": token},
+            context={"request": request})
+
+    if token_serlzr.is_valid(raise_exception=True):
+        hook = token_serlzr.instance
 
     # dump_data = pickle.dumps(request.data)
     # db = cli["samples"]
     # coll = db["github_hook_data"]
-    # coll.insert_one({"data": dump_data})
+    # id_ = coll.insert_one({"data": dump_data})
+    # print("id---->", id_.inserted_id)
     gd = GithubHookSerializerD1(data=request.data)
     gd.is_valid(raise_exception=True)
     gd2 = GithubHookSerializerD2(data=gd.data.get("payload"))
     gd2.is_valid(raise_exception=True)
     data = gd2.data
-    data["updated_files"] = { file for _ in data.get("commits") for file in _.get("modified") }
 
-    repo_fullname, branch_name = data["repository"]["full_name"], data["ref"]
+    if data.get("created"):
+        repo = None
 
-    for file_path in data["updated_files"] :
-        update_files.delay(repo_fullname=repo_fullname,
-            branch_name=branch_name, file_path=file_path)
+    data["updated_files"] = { file for _ in data.get("commits") for
+            file in _.get("modified") }
+    data["deleted_files"] = { file for _ in data.get("commits") for
+            file in _.get("removed") }
+    data["added_files"] = { file for _ in data.get("commits") for
+            file in _.get("added") }
 
-    return Response(data)
+    #
+    # repo_fullname, branch_name = data["repository"]["full_name"], data["ref"]
+    #
+    # for file_path in data["updated_files"] :
+    #     update_files.delay(repo_fullname=repo_fullname,
+    #         branch_name=branch_name, file_path=file_path)
 
-def validate_signature(payload, secret):
-    # Get the signature from the payload
-    signature_header = payload['headers']['X-Hub-Signature']
-    sha_name, github_signature = signature_header.split('=')
-    if sha_name != 'sha1':
-        print('ERROR: X-Hub-Signature in payload headers was not sha1=****')
-        return False
+    return Response(request.data)
 
-    # Create our own signature
-    body = payload['body']
-    local_signature = hmac.new(secret.encode('utf-8'), msg=body.encode('utf-8'), digestmod=hashlib.sha1)
-
-    # See if they match
-    return hmac.compare_digest(local_signature.hexdigest(), github_signature)
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -118,6 +110,7 @@ class GithubOAuthTokenViewset(viewsets.ModelViewSet):
     def get_queryset(self):
         return  get_objects_for_user(self.request.user,
             f'{DJ_APP_NAME}.change_{APP_NAME}app')
+
 
 class RepositoryViewset(viewsets.ModelViewSet):
     serializer_class = RepositorySerializer
@@ -241,6 +234,59 @@ class ContentFileViewset(viewsets.ModelViewSet):
     @transaction.atomic
     def create(self, request, *args, **kwargs):
 
+        serlzr1 = LocalizeIdsSerializer(data=request.data)
+
+        if serlzr1.is_valid(raise_exception=True):
+            data = serlzr1.data
+
+        data = [{"is_localize_registered": True, "id": _}
+                for _ in data.get('localizable_ids')]
+
+        ser = ContentFileSerializer(self.get_queryset(),
+                data=data, many=True, partial=True)
+
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            data = ser.data
+            instances = ser.instance
+
+        im_uploads = []
+
+        for  content_file in instances:
+            im = DjRestUtils.convert_content_to_inmemoryfile(
+                filecontent=content_file.get_content_of_file.decoded_content,
+                file_name=content_file.file)
+            im_uploads.append({"file":im, "contentfile_id": content_file.id})
+
+        serlzr = ProjectCreateReqReslvSerlzr(data=request.data)
+
+        if serlzr.is_valid(raise_exception=True):
+            data = Response(serlzr.data).data
+
+        data = {**data, "files": im_uploads, "branch_id": self.kwargs["pk"]}
+
+        projv2_serlzr = ProjectSerializerV2(data=data, context={"branch_id": self.kwargs.get("pk")})
+        jobs_serlzr = JobSerializer(data=data["jobs"], many=True)
+        files_serlzr = FileSerializer(data=data["files"], many=True)
+
+        if projv2_serlzr.is_valid(raise_exception=True) and jobs_serlzr.is_valid(
+                raise_exception=True) and files_serlzr.is_valid(raise_exception=True):
+            projv2_serlzr.save(ai_user=request.user);
+            project = projv2_serlzr.instance
+            jobs_serlzr.save(project = project);
+            files_serlzr.save(project = project);
+
+        tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(project=project)
+
+        hookdeck = HookDeckSerializer(data={"project": project.id})
+
+        if hookdeck.is_valid(raise_exception=True):
+            hookdeck.save()
+
+        return  Response({"project":projv2_serlzr.data, "hook": hookdeck.data})
+
+    def partial_update(self, request, *args, **kwargs):
+
         qs = self.get_queryset()
 
         branch = get_object_or_404(Branch.objects.all(), id=kwargs.get("pk"))
@@ -321,45 +367,4 @@ class ContentFileViewset(viewsets.ModelViewSet):
         hookdeck.save()
 
         return  Response({"project":project_data, "hook": HookDeckSerializer(hookdeck).data})
-
-class TestProjectView(viewsets.ModelViewSet):
-    serializer_class = ProjectSerializer
-    queryset = Project.objects.all()
-
-    def create(self, request, *args, **kwargs):
-        serlzr = ProjectSerializer(data=request.data,)
-
-        if serlzr.is_valid(raise_exception=True):
-            serlzr.save(ai_user=request.user)
-            return Response(serlzr.data, status=200)
-
-class TestFIleView(viewsets.ModelViewSet):
-    serializer_class = ProjectSerializer
-    queryset = Project.objects.all()
-
-    def create(self, request, *args, **kwargs):
-        serlzr = FileSerializer(data=request.data, many=True)
-
-        if serlzr.is_valid(raise_exception=True):
-            serlzr.save(project=Project.objects.last())
-            return Response(serlzr.data, status=200)
-
-
-        #
-        # coll_ids = []
-        #
-        # for id in register_localize_ids:
-        #     if id in dict_qs:
-        #         obj = dict_qs[id]
-        #         obj.is_loalize_registered = True
-        #         obj.save()
-        #         coll_ids.append(id)
-        #
-        # # May be celery tasks will required for file uploading
-        # print("tl---->", request.data.pop("target_languages"))
-
-
-
-
-
 

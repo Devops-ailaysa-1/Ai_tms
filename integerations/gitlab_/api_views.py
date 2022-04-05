@@ -206,7 +206,7 @@ class ContentFileViewset(viewsets.ModelViewSet):
             content_file = ContentFile.objects.get(id=_.get("id"))
             # print("contents---->", content_file.get_content_of_file.decoded_content)
             im = DjRestUtils.convert_content_to_inmemoryfile(
-                filecontent=content_file.get_content_of_file.decode(), #vary from github
+                filecontent=content_file.get_content_of_file, #vary from github
                 file_name=_.get("file"))
             im_uploads.append(im)
 

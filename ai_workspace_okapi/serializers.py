@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize, Comment
-import json, copy, re
+from .models import Document, Segment, TextUnit, MT_RawTranslation, \
+    MT_Engine, TranslationStatus, FontSize, Comment, MergeSegment
+import json, copy
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
 from ai_workspace.models import  Project,Job
@@ -9,6 +10,8 @@ from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from contextlib import closing
 from django.db import connection
 from django.utils import timezone
+
+import re
 
 client = translate.Client()
 
@@ -51,6 +54,9 @@ class SegmentSerializer(serializers.ModelSerializer):
             "temp_target",
             "status",
             "has_comment",
+            "is_merged",
+            "text_unit",
+            "is_merge_start",
             "random_tag_ids",
         )
 
@@ -62,6 +68,9 @@ class SegmentSerializer(serializers.ModelSerializer):
             # "random_tag_ids" : {"read_only": True},
             "tagged_source": {"read_only": True},
             "target_tags": {"read_only": True},
+            "is_merged": {"required": False, "default": False},
+            "text_unit": {"read_only": True},
+            "is_merge_start": {"read_only": True},
             # "id",
         }
 
@@ -88,8 +97,8 @@ class SegmentSerializer(serializers.ModelSerializer):
 class SegmentSerializerV2(SegmentSerializer):
     temp_target = serializers.CharField(trim_whitespace=False)
     target = serializers.CharField(trim_whitespace=False, required=False)
-    status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
-
+    status = serializers.PrimaryKeyRelatedField(required=False,
+                queryset=TranslationStatus.objects.all())
     class Meta(SegmentSerializer.Meta):
         fields = ("target", "id", "temp_target", "status", "random_tag_ids", "tagged_source", "target_tags")
 
@@ -105,12 +114,18 @@ class SegmentSerializerV2(SegmentSerializer):
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
-    target = serializers.CharField(read_only=True, source="coded_target", trim_whitespace=False)
+    target = serializers.CharField(read_only=True, source="get_merge_target_if_have",
+        trim_whitespace=False)
+    merge_segment_count = serializers.IntegerField(read_only=True,
+        source="get_merge_segment_count", )
+
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence', "random_tag_ids"]
-        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
+        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
+        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
@@ -136,13 +151,12 @@ class TextUnitSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data=data)
 
 class TextUnitSerializerV2(serializers.ModelSerializer):
-    segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
+    segment_ser = SegmentSerializerV3(many=True ,read_only=True,
+            source="text_unit_segment_set_exclude_merge_dummies")
 
     class Meta:
         model = TextUnit
-        fields = (
-            "segment_ser","okapi_ref_translation_unit_id"
-        )
+        fields = ("segment_ser", "okapi_ref_translation_unit_id")
 
     def to_representation(self, instance):
         ret = super(TextUnitSerializerV2, self).to_representation(instance=instance)
@@ -150,6 +164,11 @@ class TextUnitSerializerV2(serializers.ModelSerializer):
             ret.pop("segment_ser")
         )
         return ret
+
+class TextUnitSerializerTest(serializers.ModelSerializer):
+    class Meta:
+        model = TextUnit
+        fields = "__all__"
 
 class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
     text_unit_ser = TextUnitSerializer(many=True,  write_only=True)
@@ -310,15 +329,19 @@ class DocumentSerializerV3(DocumentSerializerV2):
         return ret
 
 class MT_RawSerializer(serializers.ModelSerializer):
-    mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
+    mt_engine_name = serializers.CharField(source="mt_engine.engine_name",
+        read_only=True)
+    segment = serializers.CharField(read_only=True, source="get_segment")
 
     class Meta:
         model = MT_RawTranslation
         fields = (
-            "segment", 'mt_engine', 'mt_raw', "mt_engine_name", "target_language", "task_mt_engine"
+            "segment", 'mt_engine', 'mt_raw', "mt_engine_name", "target_language", "task_mt_engine", "reverse_string_for_segment"
         )
 
         extra_kwargs = {
+            "reverse_string_for_segment": {"write_only": True},
+            "mt_engine": {"default": MT_Engine.objects.get(id=1)}
             "mt_raw": {"required": False},
             "mt_engine" : {"required": False},
         }
@@ -416,3 +439,16 @@ class PentmUpdateSerializer(serializers.ModelSerializer):
 
     def get_pentm_update_params(self, object):
         return json.dumps(PentmUpdateParamSerializer(object).data)
+
+
+class MergeSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MergeSegment
+        fields = ("segments", "text_unit")
+
+    def validate(self, data):
+        segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
+        text_unit = data["text_unit"]
+        if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
+            raise serializers.ValidationError("all segments should be have same text unit id...")
+        return super().validate(data)

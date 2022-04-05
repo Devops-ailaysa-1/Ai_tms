@@ -17,7 +17,9 @@ urlpatterns+=[
          name="document-by-document-id"),
     path("file_extensions/", api_views.get_supported_file_extensions, name="get-file-extensions"),
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
-    path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put":"update"}),\
+    path("segment/update/<int:pk>", api_views.SegmentsUpdateView.as_view({"put": "partial_update"}), \
+         name="segment-update"),
+    path("segment/restore/<int:pk>", api_views.MergeSegmentDeleteView.as_view({"delete": "destroy"}), \
          name="segment-update"),
     path("mt_raw_and_tm/<int:segment_id>", api_views.MT_RawAndTM_View.as_view(), name="mt-raw"),
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(),\
@@ -35,8 +37,8 @@ urlpatterns+=[
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
 #     path("project_status/<int:project_id>", api_views.ProjectStatusView.as_view(), name="project-status"),
-    path("segment/get/page/filter/<int:document_id>/<int:segment_id>", api_views.GetPageIndexWithFilterApplied.as_view(),\
-         name="get-page-id-of-segment-on-apply-filter"),
+    path("segment/get/page/filter/<int:document_id>/<int:segment_id>", api_views
+         .GetPageIndexWithFilterApplied.as_view(), name="get-page-id-of-segment-on-apply-filter"),
     # path("comments", api_views)
 #     path("project_progress/<int:project_id>", api_views.ProjectStatusView.as_view(),\
 #          name="project-status"),
@@ -44,6 +46,7 @@ urlpatterns+=[
     path('get_wikipedia/<int:doc_id>/', api_views.WikipediaWorkspace, name='get-wikipedia'),
     path('get_wiktionary/<int:doc_id>/', api_views.WiktionaryWorkSpace, name='get-wiktionary'),
     path('spellcheck/', api_views.spellcheck, name='spellcheck'),
+    path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment')
 ]
 
 urlpatterns+=[
@@ -51,5 +54,8 @@ urlpatterns+=[
     path("segment_list/dj/<int:document_id>", views.SegmentListView.as_view(), name="segments-list"),
     path("segment/update/dj/<int:segment_id>", views.SegmentUpdateView.as_view(), name="segment-update-dj"),
     path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file")
-
 ]
+
+
+
+

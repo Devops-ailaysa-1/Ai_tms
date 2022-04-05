@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 load_dotenv(".env2")
 from pathlib import Path
 import sentry_sdk
@@ -35,6 +37,8 @@ SECRET_KEY = os.getenv("django_secret_key", "fwevbsuio")
 DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
+
+ALLOWED_HOSTS += ["11e41bb54bb45b.lhrtunnel.link"]
 
 # SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE')
 # CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE')
@@ -65,7 +69,6 @@ CORS_ALLOW_METHODS = [
      'POST',
      'PUT',
 ]
-
 
 CORS_ALLOW_HEADERS = [
      'accept',
@@ -132,6 +135,7 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
+    "ai_tm_management",
     # 'dbbackup',
     # 'django_q',
 ]
@@ -518,6 +522,7 @@ LOGGING = {
         # }
     },
 }
+
 
 # FOR ERD DIAGRAM
 GRAPH_MODELS = {
