@@ -35,6 +35,7 @@ class Segment(models.Model):
     tagged_source = models.TextField(null=True, blank=True)
     coded_brace_pattern = models.TextField(null=True, blank=True)
     coded_ids_sequence = models.TextField(null=True, blank=True)
+    random_tag_ids = models.TextField(null=True, blank=True)
     target_tags = models.TextField(null=True, blank=True)
     okapi_ref_segment_id = models.CharField(max_length=50)
     status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=\
@@ -222,7 +223,7 @@ class Document(models.Model):
 
     @property
     def doc_credit_check_open_alert(self):
-        total_credit_left = self.created_by.credit_balance
+        total_credit_left = self.created_by.credit_balance.get("total_left")
         open_alert = False if (self.total_word_count < total_credit_left) else True
         return open_alert
 

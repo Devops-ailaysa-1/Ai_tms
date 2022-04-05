@@ -92,13 +92,14 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
     @property
     def credit_balance(self):
-        total_credit_left = 0
+        # total_credit_left = 0
+        addons = subscription = 0
         present = datetime.now()
 
         try:
             addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
-                total_credit_left += addon.credits_left
+                addons += addon.credits_left
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
 
@@ -106,7 +107,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
                                                 & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                total_credit_left += sub_credits.credits_left
+                subscription += sub_credits.credits_left
 
             # carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
             #     Q(ended_at__isnull=False)).last()
@@ -116,9 +117,11 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
         except:
             print("No active subscription")
-            return total_credit_left
+            # return total_credit_left
+            return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
 
-        return total_credit_left
+        # return total_credit_left
+        return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
 
     @property
     def buyed_credits(self):

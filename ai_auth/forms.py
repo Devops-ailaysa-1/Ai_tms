@@ -257,3 +257,17 @@ def external_member_invite_mail(context,email):
         html_message=msg_html,
     )
     print("mailsent>>")
+
+
+def unread_notification_mail(email_list):
+    for i in email_list:
+        context = {'data':i.get('details')}
+        email = i.get('email')
+        msg_html = render_to_string("notification_email.html",context)
+        send_mail(
+            'Notification from ailaysa',None,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=msg_html,
+        )
+    print("notification mailsent>>")

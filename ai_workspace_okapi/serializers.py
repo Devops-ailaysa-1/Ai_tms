@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize, Comment
-import json, copy
+import json, copy, re
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
 from ai_workspace.models import  Project,Job
@@ -35,6 +35,7 @@ class SegmentSerializer(serializers.ModelSerializer):
     temp_target = serializers.CharField(read_only=True, source="get_temp_target")
     status = serializers.IntegerField(read_only=True, source="status.status_id")
     source = serializers.CharField(trim_whitespace=False, allow_blank=True)
+    random_tag_ids = serializers.CharField(allow_blank=True, required=False)
 
     class Meta:
         model = Segment
@@ -49,7 +50,8 @@ class SegmentSerializer(serializers.ModelSerializer):
             "segment_id",
             "temp_target",
             "status",
-            "has_comment"
+            "has_comment",
+            "random_tag_ids",
         )
 
         extra_kwargs = {
@@ -57,6 +59,7 @@ class SegmentSerializer(serializers.ModelSerializer):
             "coded_source": {"write_only": True},
             "coded_brace_pattern": {"write_only": True},
             "coded_ids_sequence": {"write_only": True},
+            # "random_tag_ids" : {"read_only": True},
             "tagged_source": {"read_only": True},
             "target_tags": {"read_only": True},
             # "id",
@@ -65,20 +68,30 @@ class SegmentSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         # print(self)
         data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
+        data["random_tag_ids"] = json.dumps(data["random_tag_ids"])
         return super().to_internal_value(data=data)
+
+    def remove_random_tags(self, string, random_tag_list):
+        if not random_tag_list:
+            return string
+        for id in random_tag_list:
+            string = re.sub(fr'</?{id}>', "", string)
+        return string
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # print("-------------------------> called")
+        random_tag_id_list = json.loads(representation["random_tag_ids"])
+        representation["tagged_source"] = self.remove_random_tags(representation["tagged_source"], random_tag_id_list)
+        representation["target_tags"] = self.remove_random_tags(representation["target_tags"], random_tag_id_list)
         return representation
 
 class SegmentSerializerV2(SegmentSerializer):
     temp_target = serializers.CharField(trim_whitespace=False)
     target = serializers.CharField(trim_whitespace=False, required=False)
     status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
+
     class Meta(SegmentSerializer.Meta):
-        fields = ("target", "id", "temp_target", "status")
-        #
+        fields = ("target", "id", "temp_target", "status", "random_tag_ids", "tagged_source", "target_tags")
 
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
@@ -96,10 +109,11 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
+        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence', "random_tag_ids"]
         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
+        ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
         return ret
 
@@ -241,14 +255,14 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
-                target = "" if seg["target"] == None else seg["target"]
+                target = "" if seg["target"] is None else seg["target"]
                 seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
-                        timezone.now(), text_unit_id])
+                        timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
 
         segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
-                       coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id) VALUES {}'.format(
-                           ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+                       coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
+                           ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
 
         with closing(connection.cursor()) as cursor:
             cursor.execute(segment_sql, seg_params)
