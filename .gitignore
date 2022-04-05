@@ -102,6 +102,7 @@ ignore_data/
 /*/*/migrations/
 ai_auth/block_list.py
 APP.MD
+<<<<<<< HEAD
 staticfiles
 api_automation
 env

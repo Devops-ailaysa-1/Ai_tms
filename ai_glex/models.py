@@ -7,6 +7,7 @@ import os
 from .manager import GlossaryTasksManager
 from ai_staff.models import AssetUsageTypes
 from django.contrib.auth import settings
+from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save, pre_save, post_delete
 from ai_glex.signals import update_words_from_template,delete_words_from_term_model
 # Create your models here.
@@ -50,7 +51,7 @@ class GlossaryFiles(models.Model):
     usage_type = models.ForeignKey(AssetUsageTypes,null=False, blank=False,\
                 on_delete=models.CASCADE, related_name="glossary_project_usage_type")
     file = FileField(upload_to=get_file_upload_path, null=False,\
-                blank=False, max_length=1000, default=settings.MEDIA_ROOT+"/"+"defualt.zip")
+                blank=False, max_length=1000,validators=[FileExtensionValidator(allowed_extensions=["xlsx"])] )
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
                 CASCADE, related_name="project_files")
     filename = models.CharField(max_length=200,null=True)

@@ -16,7 +16,7 @@ import json,mimetypes,os
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
 from ai_workspace.models import TaskAssign, Task
-
+from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
 from django_filters.rest_framework import DjangoFilterBackend
@@ -105,6 +105,12 @@ from ai_workspace_okapi.models import Document
 class GlossaryFileView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    def list(self,request):
+        job = request.GET.get('job')
+        queryset = GlossaryFiles.objects.filter(job_id = job)
+        serializer = GlossaryFileSerializer(queryset,many=True)
+        return  Response(serializer.data)
+
     def create(self, request):
         files = request.FILES.getlist("glossary_file")
         job = json.loads(request.POST.get('job'))
@@ -172,7 +178,7 @@ class TermUploadView(viewsets.ModelViewSet):
 @api_view(['GET',])
 def glossary_template_lite(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
-    response['Content-Disposition'] = 'attachment; filename=Glossary_Lite.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=Glossary_template_lite.xlsx'
     xlsx_data = WriteToExcel_lite()
     response.write(xlsx_data)
     return response
@@ -245,7 +251,8 @@ def glossaries_list(request,project_id):
     project = Project.objects.get(id=project_id)
     target_languages = project.get_target_languages
     queryset = Project.objects.filter(glossary_project__isnull=False)\
-                .filter(project_jobs_set__target_language__language__in = target_languages).distinct()
+                .filter(project_jobs_set__target_language__language__in = target_languages)\
+                .exclude(id=project.id).distinct()
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
 
@@ -286,9 +293,13 @@ def glossary_search(request):
     doc = Document.objects.get(id=doc_id)
     glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
     target_language = doc.job.target_language
+    # queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
+    #             .filter(job__target_language__language=target_language)\
+    #             .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
+    #                   params=[user_input]).distinct().values('sl_term','tl_term')
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
                 .filter(job__target_language__language=target_language)\
-                .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
+                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
                       params=[user_input]).distinct().values('sl_term','tl_term')
     if queryset:
         res=[]
@@ -319,7 +330,7 @@ class GetTranslation(APIView):
         mt_engine_id = task_obj.task_info.get(step__name="PostEditing").mt_engine_id
 
         # Finding the debit user
-        project = Job.objects.get(job_tasks_set=task_id).project
+        project = task_obj.job.project
         user = project.team.owner if project.team else project.ai_user
 
         credit_balance = user.credit_balance.get("total")
@@ -350,4 +361,3 @@ def adding_term_to_glossary_from_workspace(request):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-

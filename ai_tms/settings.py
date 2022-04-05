@@ -136,6 +136,7 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     "ai_tm_management",
+    # 'reversion',
     # 'dbbackup',
     # 'django_q',
 ]
@@ -522,7 +523,6 @@ LOGGING = {
         # }
     },
 }
-
 
 # FOR ERD DIAGRAM
 GRAPH_MODELS = {

@@ -33,10 +33,11 @@ from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
     check_job_file_version_has_same_project,)
 from .manager import ProjectManager, FileManager, JobManager,\
-    TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager
+    TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager,ProjectStepsManager
 from django.db.models.fields import Field
 from integerations.github_.models import ContentFile
 from integerations.base.utils import DjRestUtils
+from ai_workspace.utils import create_ai_project_id_if_not_exists
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -101,7 +102,7 @@ class Workflows(models.Model):
 ##########################Need to add project type################################
 class Project(models.Model):
     project_type = models.ForeignKey(ProjectType, null=False, blank=False,
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE, related_name="proj_type")
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
@@ -135,19 +136,20 @@ class Project(models.Model):
 
     penseive_tm_klass = PenseiveTM
 
+
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
 
         if not self.ai_project_id:
             # self.ai_user shoould be set before save
-            self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
-            objects.filter(ai_user=self.ai_user).count()+1)
+            # self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
+            # objects.filter(ai_user=self.ai_user).count()+1)
+            self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
         if not self.project_name:
             #self.project_name = self.ai_project_id
-            self.project_name = 'Project-'+str(Project.objects.filter\
-                (ai_user=self.ai_user).count()+1).zfill(3)
-
+            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
+        # print("Project_name---->",self.project_name)
         if self.id:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \
                             ai_user=self.ai_user).exclude(id=self.id).count()
@@ -274,6 +276,14 @@ class Project(models.Model):
         return [job for job in self.project_jobs_set.all()]
 
     @property
+    def get_steps(self):
+        return [obj.steps for obj in self.proj_steps.all()]
+
+    @property
+    def get_steps_name(self):
+        return [obj.steps.name for obj in self.proj_steps.all()]
+
+    @property
     def tmx_files_path(self):
         return [tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.all()]
 
@@ -318,7 +328,8 @@ class Project(models.Model):
         if self.get_tasks:
             for task in self.get_tasks:
                 try:
-                    if task.task_assign_info:
+                    if task.task_info.filter(task_assign_info__isnull=False):
+                    # if task.task_assign_info:
                         return True
                 except:
                     pass
@@ -329,35 +340,6 @@ class Project(models.Model):
     @property
     def get_project_file_create_type(self):
         return self.project_file_create_type.file_create_type
-
-    # @property
-    # def project_analysis(self):
-    #     if self.is_proj_analysed == True:
-    #         proj_word_count = proj_char_count = proj_seg_count = 0
-    #         task_words = []
-
-    #         if self.is_all_doc_opened:
-    #             for task in self.get_tasks:
-    #                 doc = Document.objects.get(id=task.document_id)
-    #                 proj_word_count += doc.total_word_count
-    #                 proj_char_count += doc.total_char_count
-    #                 proj_seg_count += doc.total_segment_count
-
-    #                 task_words.append({task.id:doc.total_word_count})
-    #             return {"proj_word_count": proj_word_count, "proj_char_count":proj_char_count, "proj_seg_count":proj_seg_count,\
-    #                               "task_words" : task_words }
-    #         else:
-    #             out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-    #             task_words = []
-    #             for task in self.get_tasks:
-    #                 task_words.append({task.id : task.task_details.first().task_word_count})
-    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-    #                 "proj_seg_count":out.get('task_seg_count__sum'),
-    #                             "task_words":task_words}
-    #     else:
-    #         return {"proj_word_count": 0, "proj_char_count": 0, "proj_seg_count": 0,
-    #                               "task_words" : [] }
-
 
     def project_analysis(self,tasks):
         if self.is_proj_analysed == True:
@@ -399,6 +381,17 @@ class ProjectFilesCreateType(models.Model):
         default=FileType.upload_file)
     project = models.OneToOneField(Project, on_delete=models.CASCADE,
         related_name="project_file_create_type")
+
+
+class ProjectSteps(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE,
+                        related_name="proj_steps")
+    steps = models.ForeignKey(Steps, on_delete=models.CASCADE,
+                        related_name="proj_steps_name")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    objects = ProjectStepsManager()
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -465,13 +458,13 @@ class Job(models.Model):
 
     @cached_property
     def source__language(self):
-        print("called first time!!!")
+        #print("called first time!!!")
         # return self.source_language.locale.first().language
         return self.source_language_code
 
     @property
     def target__language(self):
-        print("called every time!!!")
+        #print("called every time!!!")
         # return self.target_language.locale.first().language
         return  self.target_language_code
 

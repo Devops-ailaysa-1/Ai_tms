@@ -1,4 +1,6 @@
 import django_filters
+import shutil
+import zipfile
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
@@ -11,6 +13,7 @@ from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_glex.serializers import GlossarySetupSerializer
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
+from ai_workspace_okapi.utils import download_file
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, FileSerializer, \
@@ -414,17 +417,18 @@ class Files_Jobs_List(APIView):
         jobs = project.project_jobs_set.all()
         contents = project.proj_content_type.all()
         subjects = project.proj_subject.all()
+        project_type = project.project_type.id
         files = project.project_files_set.filter(usage_type__use_type="source").all()
-        return jobs, files,contents,subjects,project_name, get_team, assigned
+        return jobs, files,contents,subjects,project_name, get_team, assigned,project_type
 
     def get(self, request, project_id):
-        jobs, files,contents,subjects,project_name, get_team, assigned= self.get_queryset(project_id)#
+        jobs, files,contents,subjects,project_name, get_team, assigned,project_type= self.get_queryset(project_id)#
         team_edit = False if assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
         contents = ProjectContentTypeSerializer(contents,many=True)
         subjects = ProjectSubjectSerializer(subjects,many=True)
-        return Response({"files":files.data, "jobs": jobs.data, "subjects":subjects.data, "contents":contents.data, "project_name": project_name, "team":get_team, "team_edit":team_edit}, status=200)
+        return Response({"files":files.data, "jobs": jobs.data, "subjects":subjects.data, "contents":contents.data, "project_name": project_name, "team":get_team, "team_edit":team_edit,"project_type_id":project_type}, status=200)
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):
@@ -564,8 +568,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     def get_serializer_class(self):
-        project_type = json.loads(self.request.POST.get('project_type'))
-        if project_type == 2:
+        project_type = json.loads(self.request.POST.get('project_type','1'))
+        if project_type == 3:
             return GlossarySetupSerializer
         return ProjectQuickSetupSerializer
 
@@ -1510,8 +1514,6 @@ class InstructionFilesView(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-
-
 class StepsView(viewsets.ViewSet):
     permission_classes = [AllowAny,]
     def list(self,request):
@@ -1554,3 +1556,52 @@ class CustomWorkflowCreateView(viewsets.ViewSet):
         obj = get_object_or_404(queryset, pk=pk)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+def previously_created_steps(request):
+    used_steps = []
+    pr = Project.objects.filter(Q(created_by = request.user)\
+         & Q(proj_steps__isnull=False) & ~Q(project_type=1)).distinct()
+    for obj in pr:
+        if obj.get_steps_name not in [step for step in used_steps]:
+            used_steps.append(obj.get_steps_name)
+    return Response({'used_steps':used_steps})
+
+
+
+# @api_view(["GET"])
+# def project_download(request,project_id):
+#     pr = Project.objects.get(id=project_id)
+#     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+#     tt = download_file(pr.project_name+'.zip')
+#     os.remove(pr.project_name+'.zip')
+#     return tt
+
+
+
+def zipit(folders, zip_filename):
+    zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
+
+    for folder in folders:
+        for dirpath, dirnames, filenames in os.walk(folder):
+            for filename in filenames:
+                zip_file.write(
+                    os.path.join(dirpath, filename),
+                    os.path.relpath(os.path.join(dirpath, filename), os.path.join(folders[0], '../..')))
+
+    zip_file.close()
+
+@api_view(['GET',])
+def project_list_download(request):
+    projects = request.GET.getlist('project')
+    dest = []
+    for obj in projects:
+        pr = Project.objects.get(id=obj)
+        path = pr.project_dir_path + '/source'
+        dest.append(path)
+    zip_file_name = "Project-"+projects[0]+"-"+projects[-1]+'.zip' if len(projects) > 1 else "Project-"+projects[0]+'.zip'
+    zipit(dest,zip_file_name)
+    tt = download_file(zip_file_name)
+    os.remove(zip_file_name)
+    return tt

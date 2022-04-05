@@ -30,7 +30,7 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 from ai_workspace.models import File
 from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, MergeSegment, FontSize, Comment
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from .serializers import PentmUpdateSerializer
 from .serializers import (SegmentSerializer, DocumentSerializerV2,
@@ -313,6 +313,30 @@ class MT_RawAndTM_View(views.APIView):
         if initial_credit > consumable_credits :
             mt_engine_id = mt_params.get("mt_engine", 1)            # Google MT selected if MT selection fails
             mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id, "mt_engine": mt_engine_id},\
+        segment_source = segment.source
+        seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code,
+                    "target_language":doc.target_language_code,\
+                     "processor_name":"plain-text-processor", "extension":".txt"}
+
+        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
+            data={"segmentWordCountdata": json.dumps(seg_data)})
+        if res.status_code == 200:
+            print("Word count --->", res.json())
+            consumable_credits = res.json()
+        else:
+            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")
+
+        if initial_credit > consumable_credits :
+            mt_raw = client.translate(segment.source,
+                target_language=segment.target_language_code, format_="text") \
+                .get("translatedText")
+            reverse_string_for_segment = "ai_workspace_okapi.segment" if\
+                isinstance(segment, Segment) else ("ai_workspace_okapi.mergesegment"
+                if isinstance(segment, MergeSegment) else None)
+
+            mt_raw_serlzr = MT_RawSerializer(data = {"mt_raw": mt_raw,
+                "reverse_string_for_segment": reverse_string_for_segment},
                             context={"request": request})
 
             if mt_raw_serlzr.is_valid(raise_exception=True):
@@ -1345,8 +1369,3 @@ class MergeSegmentView(viewsets.ModelViewSet):
             print("Object ---> ", obj)
             obj.update_segments(serlzr.validated_data.get("segments"))
             return Response(MergeSegmentSerializer(obj).data)
-
-
-
-
-

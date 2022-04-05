@@ -4,7 +4,7 @@ from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeE
                     SpellcheckerLanguages,SubscriptionPricing,Currencies,SubscriptionPricingPrices,SubscriptionFeatures,
                     CreditsAddons,CreditAddonPrice,IndianStates,StripeTaxId,JobPositions, LanguagesLocale, LanguageScripts,
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
-                    ServiceTypeunits)
+                    ServiceTypeunits,ProjectType)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -84,3 +84,4 @@ admin.site.register(ContentTypes)
 admin.site.register(ServiceTypes)
 admin.site.register(VendorLegalCategories)
 admin.site.register(ServiceTypeunits)
+admin.site.register(ProjectType)

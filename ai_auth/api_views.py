@@ -1393,6 +1393,19 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
         return user,password
 
+    def create_thread(self,user,team):
+        print("data--->",user,team)
+        team_obj = Team.objects.get(id=team)
+        from ai_marketplace.serializers import ThreadSerializer
+        # data = [{'first_person':user.id,'second_person':i.internal_member_id} for i in team_obj.internal_member_team_info.all()]
+        for i in team_obj.internal_member_team_info.all():
+            thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':i.internal_member_id})
+            if thread_ser.is_valid():
+                thread_ser.save()
+            else:
+                print("Errors--->",thread_ser.errors)
+
+
     @integrity_error
     def create(self,request):
         data = request.POST.dict()
@@ -1409,6 +1422,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             auth_forms.internal_user_credential_mail(context)
+            self.create_thread(request.user,data.get('team'))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
