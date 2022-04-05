@@ -1097,7 +1097,7 @@ def TransactionSessionInfo(request):
 
     elif response.mode == "payment":
         try:
-            charge = Charge.objects.get(payment_intent=response.payment_intent)
+            charge = Charge.objects.get(payment_intent=response.payment_intent,captured=True)
         except Charge.DoesNotExist:
              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=charge.metadata.get("price"),type="Addon")
@@ -1434,7 +1434,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         internal_member.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-def msg_send(user,vendor,link):
+def msg_send(user,vendor):
     from ai_marketplace.serializers import ThreadSerializer
     thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':vendor.id})
     if thread_ser.is_valid():
@@ -1443,7 +1443,7 @@ def msg_send(user,vendor,link):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "You are invited as an editor by "+user.fullname+".\n"+ "Click link to accept invite \n"+ link
+    message = "You are invited as an editor by " + user.fullname + ".\n" + "An invitation has been sent to your registered email." + "\n" + "Click <b>Accept</b> to accept the invitation." + "\n" + "<i>Please note that the invitation is valid only for one week</i>"
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
@@ -1499,7 +1499,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 context = {'name':vendor.fullname,'team':user.fullname,'role':role_name,'link':link}
                 auth_forms.external_member_invite_mail(context,email)
-                msg_send(user,vendor,link)
+                msg_send(user,vendor)
                 return JsonResponse({"msg":"email and msg sent successfully"},safe = False)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

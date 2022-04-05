@@ -107,7 +107,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") \
                                                 & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-                # total_credit_left += sub_credits.credits_left
                 subscription += sub_credits.credits_left
 
             # carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
@@ -118,9 +117,11 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
         except:
             print("No active subscription")
-            return {"addon": addons, "subscription": subscription, 'total': addons + subscription}
+            # return total_credit_left
+            return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
 
-        return {"addon": addons, "subscription": subscription, 'total': addons + subscription}
+        # return total_credit_left
+        return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
 
     @property
     def buyed_credits(self):
@@ -484,3 +485,7 @@ class HiredEditors(models.Model):
 
 class ReferredUsers(models.Model):
     email = models.EmailField()
+
+class CampaignUsers(models.Model):
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
+    campaign_name = models.CharField(max_length=255, blank=True, null=True)

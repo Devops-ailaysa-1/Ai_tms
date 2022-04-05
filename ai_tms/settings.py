@@ -15,6 +15,8 @@ from datetime import timedelta
 from dotenv import load_dotenv
 load_dotenv(".env2")
 from pathlib import Path
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -131,7 +133,6 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     # 'dbbackup',
-    # 'channels',
     # 'django_q',
 ]
 
@@ -453,7 +454,6 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-             # "hosts": [("redis", 6379)],
              "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
 
         },
@@ -492,8 +492,7 @@ LOGGING = {
             'handlers' : ['file_prod',],
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'propogate' : True,
-        }
-
+        },
     },
 
     'handlers' : {
@@ -505,7 +504,7 @@ LOGGING = {
             'formatter' : 'dev_formatter',
         },
 
-        'file_prod' : {
+       'file_prod' : {
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'class' : 'logging.FileHandler',
             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
@@ -525,3 +524,18 @@ GRAPH_MODELS = {
     'all_applications': True,
     'group_models': True,
 }
+
+
+sentry_sdk.init(
+    dsn = os.getenv("dsn"),
+    integrations=[DjangoIntegration()],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate = os.getenv("traces_sample_rate"),
+
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii = os.getenv("send_default_pii")
+)

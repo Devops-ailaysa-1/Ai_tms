@@ -79,6 +79,10 @@ docker-compose.staging.yml
 nginx.zip
 nginx/
 mediafiles
+.env.prod.proxy-companion
+docker-compose.prod.yml
+exp.zip
+staticfiles/
 config
 fprm
 /automate/
@@ -92,6 +96,7 @@ fprm
 /u599082/
 /documentation/
 /*/*/migrations/
+ai_auth/block_list.py
 APP.MD
 staticfiles
 api_automation

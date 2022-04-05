@@ -125,7 +125,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
             if doc.status_code == 200 :
                 doc_data = doc.json()
-                # print("Doc data ---> ", doc_data)
+                # print("Doc data from spring---> ", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 },))
@@ -299,7 +299,7 @@ class MT_RawAndTM_View(views.APIView):
                 return MT_RawAndTM_View.can_translate(request, user)
 
         # credit balance of debit user
-        initial_credit = user.credit_balance.get("total")
+        initial_credit = user.credit_balance.get("total_left")
 
         # getting word count
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)
@@ -409,7 +409,7 @@ class DocumentToFile(views.APIView):
 
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
-        return re.sub(r'</?\d>', "", string)
+        return re.sub(r'</?\d+>', "", string)
         # return string
 
     def get_bilingual_filename(self, document_id):
@@ -434,7 +434,7 @@ class DocumentToFile(views.APIView):
 
         title_format = workbook.add_format(bl_title_format)
         cell_format = workbook.add_format(bl_cell_format)
-        worksheet.set_column('A:B', 30, cell_format)
+        worksheet.set_column('A:B', 100, cell_format)
 
         worksheet.write('A1', 'Source language' + '(' + source_lang + ')', title_format)
         worksheet.write('B1', 'Target language' + '(' + target_lang + ')', title_format)
@@ -446,7 +446,7 @@ class DocumentToFile(views.APIView):
         for text_unit in text_units:
             segments = Segment.objects.filter(text_unit_id=text_unit.id)
             for segment in segments:
-                worksheet.write(row, 0, segment.source, cell_format)
+                worksheet.write(row, 0, segment.source.strip(), cell_format)
                 worksheet.write(row, 1, self.remove_tags(segment.target), cell_format)
                 row += 1
         workbook.close()

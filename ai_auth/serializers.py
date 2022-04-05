@@ -9,7 +9,7 @@ from django.contrib.auth.password_validation import validate_password
 from ai_auth.models import (AiUser, BillingAddress,UserAttribute,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
-                            VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember)
+                            VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,CampaignUsers)
 from rest_framework import status
 from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
@@ -30,12 +30,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     # email=serializers.EmailField()
     # fullname= serializers.CharField(required=True)
     # password = serializers.CharField(style={'input_type':'password'}, write_only=True,required= True)
+    campaign = serializers.CharField(required=False)
 
     class Meta:
         model = AiUser
-        fields = ['email','fullname','password','country']
+        fields = ['email','fullname','password','country','campaign']
         extra_kwargs = {
-            'password': {'write_only':True}
+            'password': {'write_only':True},
+            'campaign': {'write_only':True}
         }
 
     def run_validation(self,data):
@@ -57,6 +59,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
 
         password = self.validated_data['password']
+        print("valid",self.validated_data)
        # password2 = self.validated_data['password2']
 
         # if password != password2:
@@ -64,6 +67,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         UserAttribute.objects.create(user=user)
+        campaign = self.validated_data.get('campaign',None)
+        if campaign :
+            CampaignUsers.objects.create(user=user,campaign_name=campaign)
         return user
 
 
