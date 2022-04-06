@@ -114,7 +114,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             DocumentViewByTask.correct_fields(data)
             params_data = {**data, "output_type": None}
 
-            print("Data to spring ===> ", params_data)
+            # print("Data to spring ===> ", params_data)
 
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None,
@@ -257,8 +257,9 @@ class MT_RawAndTM_View(views.APIView):
             return None
 
     @staticmethod
-    def get_consumable_credits(doc, segment_id):
-        segment_source = Segment.objects.get(id=segment_id).source
+    def get_consumable_credits(doc, segment):
+        # segment_source = Segment.objects.get(id=segment_id).source
+        segment_source = segment.source
         seg_data = { "segment_source" : segment_source,
                      "source_language" : doc.source_language_code,
                      "target_language" : doc.target_language_code,
@@ -276,13 +277,10 @@ class MT_RawAndTM_View(views.APIView):
             raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
     @staticmethod
-    def get_data(request, segment_id, mt_params):
+    def get_data(request, segment, mt_params):
 
         # get already stored MT done for first time
-        mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
-    def get_data(request, segment):
         mt_raw = segment.mt_raw_translation
-        # mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200, "available"
 
@@ -290,8 +288,8 @@ class MT_RawAndTM_View(views.APIView):
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
 
-        # finding the user to debit credit
-        text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
+        # finding the user to debit Credit
+        text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
 
@@ -308,42 +306,26 @@ class MT_RawAndTM_View(views.APIView):
         initial_credit = user.credit_balance.get("total_left")
 
         # getting word count
-        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id)
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment)
 
-        if initial_credit > consumable_credits :
-            mt_engine_id = mt_params.get("mt_engine", 1)            # Google MT selected if MT selection fails
-            mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id, "mt_engine": mt_engine_id},\
-        segment_source = segment.source
-        seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code,
-                    "target_language":doc.target_language_code,\
-                     "processor_name":"plain-text-processor", "extension":".txt"}
+        if initial_credit > consumable_credits:
 
-        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-            data={"segmentWordCountdata": json.dumps(seg_data)})
-        if res.status_code == 200:
-            print("Word count --->", res.json())
-            consumable_credits = res.json()
-        else:
-            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
-            raise  ValueError("Sorry! Something went wrong with word count calculation.")
+            # Applying Machine Translation
+            mt_engine_id = mt_params.get("mt_engine", 1)  # Google MT selected if MT selection fails
 
-        if initial_credit > consumable_credits :
-            mt_raw = client.translate(segment.source,
-                target_language=segment.target_language_code, format_="text") \
-                .get("translatedText")
-            reverse_string_for_segment = "ai_workspace_okapi.segment" if\
-                isinstance(segment, Segment) else ("ai_workspace_okapi.mergesegment"
-                if isinstance(segment, MergeSegment) else None)
+            reverse_string_for_segment = "ai_workspace_okapi.segment" if \
+                            isinstance(segment, Segment) else ("ai_workspace_okapi.mergesegment"
+                        if isinstance(segment, MergeSegment) else None)
 
-            mt_raw_serlzr = MT_RawSerializer(data = {"mt_raw": mt_raw,
-                "reverse_string_for_segment": reverse_string_for_segment},
-                            context={"request": request})
+            mt_raw_serlzr = MT_RawSerializer(data = { "mt_engine": mt_engine_id,
+                                                      "reverse_string_for_segment": reverse_string_for_segment,
+                                                     }, context={"request": request})
 
             if mt_raw_serlzr.is_valid(raise_exception=True):
-                mt_raw_serlzr.save()
+                mt_raw_serlzr.save(segment=segment)
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, consumable_credits)
-                # print("DEBIT STATUS -----> ", debit_status["msg"])
                 return mt_raw_serlzr.data, 201, "available"
+
         else:
             return {}, 424, "unavailable"
 
@@ -374,11 +356,19 @@ class MT_RawAndTM_View(views.APIView):
             return "Team subscription inactive"
 
     def get(self, request, segment_id):
+
+        segment = get_object_or_404(Segment.objects.all(), id=segment_id)\
+            .get_active_object()
+
         mt_params = self.get_segment_MT_params(segment_id)
-        data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+
+        # data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+
+        data, status_code, can_team = self.get_data(request, segment, mt_params)
+
         mt_alert = True if status_code == 424 else False
         alert_msg = self.get_alert_msg(status_code, can_team)
-        tm_data = self.get_tm_data(request, segment_id)
+        tm_data = self.get_tm_data(request, segment)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
             "alert_msg":alert_msg}, status=status_code)
 
