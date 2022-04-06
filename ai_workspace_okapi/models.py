@@ -144,13 +144,13 @@ class MT_RawTranslation(models.Model):
         ("ai_workspace_okapi.mergesegment", "MergeSegment")
     )
 
-    # segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
+    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
     mt_engine = models.ForeignKey(MT_Engine, null=True, blank=True, on_delete=models.SET_NULL)
     mt_raw = models.TextField()
     # segment_controller = models.OneToOneField(SegmentController, null=True, blank=True,
     #             on_delete=models.SET_NULL)
-    reverse_string_for_segment = models.TextField(choices=SegmentStringChoices,
-                default="ai_workspace_okapi.segment")
+    # reverse_string_for_segment = models.TextField(choices=SegmentStringChoices,
+    #             default="ai_workspace_okapi.segment")
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL)
 
     @property
