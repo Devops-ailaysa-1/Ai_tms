@@ -17,6 +17,7 @@ from django.utils.crypto import get_random_string
 
 from .utils import GithubUtils
 from controller.bases import DownloadBase, FileBase
+from controller.models import FileController
 from datetime import datetime
 import pytz
 import cryptocode
@@ -28,6 +29,7 @@ from django.apps import apps
 from django import forms
 from ..base.models import IntegerationAppBase, RepositoryBase, FetchInfoBase,\
     BranchBase, ContentFileBase
+
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -206,7 +208,6 @@ class ContentFile(ContentFileBase):
 
     objects = ContentFileManager()
 
-
     def update_file(self, file):
         self.uploaded_file = file
         fc = apps.get_model("controller.FileController")\
@@ -320,7 +321,7 @@ class HookDeck(models.Model):
 
 class DownloadProject(DownloadBase):
 
-    branch = models.OneToOneField(Branch, on_delete=models.CASCADE, null=True)
+    branch = models.OneToOneField(Branch, on_delete=models.CASCADE, null=True,)
 
     serializer_class_str = "github__contentfile_serializer"
 
@@ -329,11 +330,38 @@ class DownloadProject(DownloadBase):
         # print("project---->", self.project)
         return super().save(*args, **kwargs)
 
-    def push_to_github(self):
-        pass
+    def push_to_github(self, project, files_info):
+        GU = GithubUtils
+        repo = self.branch.repo.get_repo_obj
+        branch_name = GU.get_new_branch_name()
+        new_branch = GU.create_new_branch(repo=repo,
+                    branch_name=branch_name, from_commit_hash=self.commit_hash)
+        # print("files_info", files_info)
+        data_file_based = data_fb = {}
 
-    def download(self):
-        self.push_to_github()
+        for e in files_info:
+            fid = e.pop("file_id")
+            data_fb[fid] = data_fb.get(fid, []) + [e]
+
+        for k, vs in data_fb.items():
+            fc = FileController.objects.filter(file_id=k).first()
+            if fc:
+                # content file
+                file_path = fc.get_file.contentfile.file_path
+                for v in vs:
+                    job = apps.get_model("ai_workspace.job").objects.get(id=v.get("job_id"))
+                    with open( v.get("file_path",'rb')) as f:
+                        b_data = f.read()
+                    upload_file_path = \
+                        f"({job.source__language}-{job.target__language})".join(\
+                            os.path.splitext(file_path))
+                    GU.create_new_file(repo=repo, file_path=upload_file_path,
+                        branch_name=branch_name,
+                        commit_message="pushed from ailaysa integeration...",
+                        content=b_data)
+
+    def download(self, project, files_info):
+        self.push_to_github(project, files_info)
 
     def update_project(self, project):
         self.project.add(project)

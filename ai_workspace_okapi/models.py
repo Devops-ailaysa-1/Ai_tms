@@ -343,6 +343,10 @@ class MergeSegment(BaseSegment):
 
     objects = MergeSegmentManager()
 
+    @property
+    def is_merged(self):
+        return True
+
     def update_segment_is_merged_true(self,segs):
         segs[0].is_merge_start = True
         for seg  in segs:

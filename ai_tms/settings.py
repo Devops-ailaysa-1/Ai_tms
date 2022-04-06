@@ -36,7 +36,10 @@ DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
 
-ALLOWED_HOSTS += ["11e41bb54bb45b.lhrtunnel.link"]
+# ALLOWED_HOSTS += ["11e41bb54bb45b.lhrtunnel.link", "d96ada36139e0b.lhrtunnel.link",
+#                   "c3c0df83ac1b86.lhrtunnel.link", 'acb69157d8c89a.lhrtunnel.link',
+#                   "414004b4a51963.lhrtunnel.link", "2b80a8d1a40052.lhrtunnel.link",
+#                   "d5db75cdd4b431.lhrtunnel.link", "68a4a1352f7fdb.lhrtunnel.link"]
 
 # SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE')
 # CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE')
@@ -132,6 +135,9 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     "ai_tm_management",
+    # 'drf_yasg',
+
+    # 'rest_framework_swagger',
     # 'dbbackup',
     # 'channels',
     # 'django_q',
@@ -302,7 +308,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+
 }
 
 
@@ -432,8 +439,6 @@ CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
 CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
 
 
-
-
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
 CEO_EMAIL = os.getenv("CEO_EMAIL")
@@ -537,5 +542,4 @@ sentry_sdk.init(
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii = os.getenv("send_default_pii")
 )
-
 
