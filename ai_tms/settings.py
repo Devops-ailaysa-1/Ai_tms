@@ -117,6 +117,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.github',
+    "allauth.socialaccount.providers.twitter",
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',

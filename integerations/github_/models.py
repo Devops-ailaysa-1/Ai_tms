@@ -350,10 +350,3 @@ class DownloadProject(DownloadBase):
 class FileConnector(FileBase):
     contentfile = models.OneToOneField(ContentFile, on_delete=models.SET_NULL,
         null=True)
-
-
-
-
-
-
-

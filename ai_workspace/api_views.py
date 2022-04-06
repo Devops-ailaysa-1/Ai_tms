@@ -417,18 +417,24 @@ class Files_Jobs_List(APIView):
         jobs = project.project_jobs_set.all()
         contents = project.proj_content_type.all()
         subjects = project.proj_subject.all()
+        project_deadline = project.project_deadline
+        mt_enable = project.mt_enable
         project_type = project.project_type.id
         files = project.project_files_set.filter(usage_type__use_type="source").all()
-        return jobs, files,contents,subjects,project_name, get_team, assigned,project_type
+        return jobs, files,contents,subjects,project_name, \
+                get_team, assigned, project_type, project_deadline, mt_enable
 
     def get(self, request, project_id):
-        jobs, files,contents,subjects,project_name, get_team, assigned,project_type= self.get_queryset(project_id)#
+        jobs, files,contents,subjects,project_name, get_team, assigned, project_type, project_deadline, mt_enable= self.get_queryset(project_id)#
         team_edit = False if assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
         contents = ProjectContentTypeSerializer(contents,many=True)
         subjects = ProjectSubjectSerializer(subjects,many=True)
-        return Response({"files":files.data, "jobs": jobs.data, "subjects":subjects.data, "contents":contents.data, "project_name": project_name, "team":get_team, "team_edit":team_edit,"project_type_id":project_type}, status=200)
+        return Response({"files":files.data, "jobs": jobs.data, "subjects":subjects.data,\
+                        "contents":contents.data, "project_name": project_name, "team":get_team,\
+                         "team_edit":team_edit,"project_type_id":project_type,\
+                         "project_deadline":project_deadline, "mt_enable": mt_enable}, status=200)
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):

@@ -567,10 +567,8 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     @staticmethod
     def prepare_data(data):
         for i in data:
-            try:
-                data[i] = json.loads(data[i])
-            except:
-                pass
+            try:data[i] = json.loads(data[i])
+            except:pass
         return data
 
     @staticmethod
