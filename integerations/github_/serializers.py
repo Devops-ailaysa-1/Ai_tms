@@ -228,6 +228,7 @@ class GithubHookSerializerD3(serializers.ModelSerializer):
     full_name = serializers.CharField()
 
     def validate(self, attrs):
+        print("validate call+++++")
         if not Repository.objects.filter(repository_name=attrs["name"],
             repository_fullname=attrs["full_name"]):
             raise serializers.ValidationError("repository not exist!!!")
@@ -240,8 +241,8 @@ class GithubHookSerializerD3(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         self.instance = Repository.objects.filter(
-            repository_name=self.validated_data["name"], repository_fullname=
-        self.validated_data["full_name"]).first()
+            repository_name=self.data["name"], repository_fullname=
+        self.data["full_name"]).first()
         return super().to_representation(instance=instance)
 
 class GithubHookSerializerD4(serializers.Serializer):

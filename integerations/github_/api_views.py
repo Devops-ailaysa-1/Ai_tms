@@ -34,9 +34,6 @@ from .enums import APP_NAME, DJ_APP_NAME
 import pytz, pickle, sys
 from io import BytesIO
 import pickle
-from pymongo import MongoClient
-cli = MongoClient ( 'localhost', 27017)
-
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -49,11 +46,6 @@ def repo_update_view(request, token):
     if token_serlzr.is_valid(raise_exception=True):
         hook = token_serlzr.instance
 
-    # dump_data = pickle.dumps(request.data)
-    # db = cli["samples"]
-    # coll = db["github_hook_data"]
-    # id_ = coll.insert_one({"data": dump_data})
-    # print("id---->", id_.inserted_id)
     gd = GithubHookSerializerD1(data=request.data)
     gd.is_valid(raise_exception=True)
     gd2 = GithubHookSerializerD2(data=gd.data.get("payload"))
@@ -66,19 +58,20 @@ def repo_update_view(request, token):
     data["updated_files"] = { file for _ in data.get("commits") for
             file in _.get("modified") }
     data["deleted_files"] = { file for _ in data.get("commits") for
-            file in _.get("removed") }
+            file in _.get("removed") } # should add celery task for this
     data["added_files"] = { file for _ in data.get("commits") for
-            file in _.get("added") }
-
+            file in _.get("added") } # should add celery task for this
     #
-    # repo_fullname, branch_name = data["repository"]["full_name"], data["ref"]
-    #
-    # for file_path in data["updated_files"] :
-    #     update_files.delay(repo_fullname=repo_fullname,
-    #         branch_name=branch_name, file_path=file_path)
+    repo_fullname, branch_name, hash = data["repository"]["full_name"], data["ref"],\
+                                        data["commit_hash"]
+    # print(f"{repo_fullname=} and {branch_name=}")
 
-    return Response(request.data)
+    for file_path in data["updated_files"] :
+        update_files.delay(repo_fullname=repo_fullname,
+            branch_name=branch_name, file_path=file_path,
+            new_commit_hash=hash)
 
+    return Response(data)
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -367,4 +360,3 @@ class ContentFileViewset(viewsets.ModelViewSet):
         hookdeck.save()
 
         return  Response({"project":project_data, "hook": HookDeckSerializer(hookdeck).data})
-
