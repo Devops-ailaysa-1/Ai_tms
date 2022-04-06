@@ -130,15 +130,6 @@ class Segment(BaseSegment):
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 # post_save.connect(create_segment_controller, sender=Segment)
 
-# class TempTargetSave(models.Model):
-#     segment = models.OneToOneField(Segment, null=True, on_delete=models.CASCADE,
-#                                    related_name="segment_temp_target")
-#     target = models.TextField(null=True, blank=True)
-#
-#     @property
-#     def get_target(self):
-#         return '' if self.target == None else self.target
-
 class MT_RawTranslation(models.Model):
 
     SegmentStringChoices = (
@@ -311,12 +302,15 @@ class MergeSegment(BaseSegment):
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
-        self.target = "".join([seg.target for seg in segs])
+        # self.target = "".join([seg.target for seg in segs])
+        self.target = ""
         self.coded_source = "".join([seg.coded_source for seg in segs])
-        self.temp_target = "".join([seg.temp_target for seg in segs])
+        # self.temp_target = "".join([seg.temp_target for seg in segs])
+        self.temp_target = ""
         self.target_tags = "".join([seg.target_tags for seg in segs])
         self.tagged_source = "".join([seg.tagged_source for seg in segs])
         self.coded_brace_pattern = "".join([seg.coded_brace_pattern for seg in segs])
+        self.status_id = None
         ids_seq = []
         for seg in segs:
             ids_seq+=json.loads(seg.coded_ids_sequence)
@@ -336,6 +330,9 @@ class MergeSegment(BaseSegment):
         for seg in self.segments.all():
             seg.is_merged = False
             seg.is_merge_start = False
+            seg.status_id = None
+            seg.temp_target = ""
+            seg.target = ""
             seg.save()
 
         return  super(MergeSegment, self).delete(using=using,
@@ -357,6 +354,9 @@ class MergeSegment(BaseSegment):
     def validate_record(self):
         return all([segment.text_unit.id==self.text_unit.id for segment
             in self.segments.all()])
+    @property
+    def is_merged(self):
+        return True
 
     # class Meta:
     #     constraints = [

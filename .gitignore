@@ -97,3 +97,4 @@ ignore_data/
 /integerations/gitlab_/migrations/
 APP.MD
 kite-installer
+staticfiles/
