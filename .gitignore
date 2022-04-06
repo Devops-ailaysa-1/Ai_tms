@@ -95,12 +95,12 @@ fprm
 /my-test-.docx
 /u599082/
 /documentation/
-ai_auth/block_list.py
-/*/*/migrations/
 ignore_data/
 /repeat-snippets.py
 /integerations/github_/migrations/
 /integerations/gitlab_/migrations/
+/*/*/migrations/
+ai_auth/block_list.py
 APP.MD
 <<<<<<< HEAD
 staticfiles
@@ -109,6 +109,3 @@ env
 wordsapi_sample.json
 *.dot
 *.png
-=======
-staticfiles/
->>>>>>> origin/v3_ailaysa

@@ -428,6 +428,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
+	file_create_type = serializers.CharField(read_only=True,
+			source="project_file_create_type.file_create_type")
 
 	class Meta:
 		model = Project

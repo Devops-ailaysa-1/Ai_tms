@@ -341,7 +341,6 @@ class Project(models.Model):
     def get_project_file_create_type(self):
         return self.project_file_create_type.file_create_type
 
-
     def project_analysis(self,tasks):
         if self.is_proj_analysed == True:
             task_words = []

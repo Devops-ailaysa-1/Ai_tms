@@ -1473,6 +1473,16 @@ class IntegerationProject(viewsets.ViewSet):
         return Response(serlzr.data)
 
 
+
+
+
+
+
+
+
+
+
+
 class InstructionFilesView(viewsets.ModelViewSet):
 
     serializer_class = InstructionfilesSerializer
@@ -1508,8 +1518,6 @@ class InstructionFilesView(viewsets.ModelViewSet):
                 obj.delete()
             return Response(status=204)
         return super().destroy(request, *args, **kwargs)
-
-
 
 
 class StepsView(viewsets.ViewSet):

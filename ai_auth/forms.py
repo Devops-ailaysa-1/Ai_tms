@@ -258,6 +258,7 @@ def external_member_invite_mail(context,email):
     )
     print("mailsent>>")
 
+
 def unread_notification_mail(email_list):
     for i in email_list:
         context = {'data':i.get('details')}
