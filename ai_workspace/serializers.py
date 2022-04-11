@@ -469,7 +469,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if data.get("contents"):
 			data["contents"]=[{"content_type":cont} for cont in data.get('contents',[])]
 		data["steps"] = [{"steps":step} for step in data.get('steps',[])] if data.get('steps') else [{"steps":1}]
-		print('dtatatat---->',data)
+		# print('dtatatat---->',data)
 		return super().to_internal_value(data=data)
 
 	def get_project_analysis(self,instance):
@@ -520,7 +520,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		project_manager = created_by
 		# workflow = validated_data.get('workflow_id')
 		validated_data.pop('team_exist')
-		print("validated_data---->",validated_data)
+		# print("validated_data---->",validated_data)
 		project_type = validated_data.get("project_type_id")
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_steps = validated_data.pop("proj_steps",[])
@@ -540,7 +540,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			[project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 
 		# steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]#need to include custom workflows
-		print("STEP---->",proj_steps)
+		# print("STEP---->",proj_steps)
 
 		if project_type == 1 or project_type == 2:
 			tasks = Task.objects.create_tasks_of_files_and_jobs(

@@ -438,7 +438,7 @@ class DocumentToFile(views.APIView):
 
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
-        return re.sub(r'</?\d+>', "", string)
+        return re.sub(rf'</?\d+>', "", string)
         # return string
 
     def get_bilingual_filename(self, document_id):
@@ -536,7 +536,7 @@ class DocumentToFile(views.APIView):
         ser = TaskSerializer(task)
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
-        print("---->", output_type)
+        # print("---->", output_type)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
         pre, ext = os.path.splitext(task_data["output_file_path"])
@@ -547,6 +547,7 @@ class DocumentToFile(views.APIView):
                 "-" + task_data["target_language"] + ")" + ext
 
         params_data = {**task_data, "output_type": output_type}
+        # print("Params data ----> ", params_data)
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None,
                      "use_spaces" : settings.USE_SPACES
