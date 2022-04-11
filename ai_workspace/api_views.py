@@ -23,11 +23,11 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer, \
                           TaskCreditStatusSerializer, TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
                           GetAssignToSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
-                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer)
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
-                     TaskAssignInfo, TaskAssign, Workflows, Steps, WorkflowSteps)
+                     TaskAssignInfo, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory)
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -417,22 +417,25 @@ class Files_Jobs_List(APIView):
         jobs = project.project_jobs_set.all()
         contents = project.proj_content_type.all()
         subjects = project.proj_subject.all()
+        steps = project.proj_steps.all()
         project_deadline = project.project_deadline
         mt_enable = project.mt_enable
         project_type = project.project_type.id
         files = project.project_files_set.filter(usage_type__use_type="source").all()
-        return jobs, files,contents,subjects,project_name, \
+        return jobs, files, contents, subjects, project_name, steps, \
                 get_team, assigned, project_type, project_deadline, mt_enable
 
     def get(self, request, project_id):
-        jobs, files,contents,subjects,project_name, get_team, assigned, project_type, project_deadline, mt_enable= self.get_queryset(project_id)#
+        jobs, files, contents, subjects, project_name, steps, get_team, \
+        assigned, project_type, project_deadline, mt_enable = self.get_queryset(project_id)#
         team_edit = False if assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
         contents = ProjectContentTypeSerializer(contents,many=True)
         subjects = ProjectSubjectSerializer(subjects,many=True)
+        steps = ProjectStepsSerializer(steps,many=True)
         return Response({"files":files.data, "jobs": jobs.data, "subjects":subjects.data,\
-                        "contents":contents.data, "project_name": project_name, "team":get_team,\
+                        "contents":contents.data, "steps":steps.data, "project_name": project_name, "team":get_team,\
                          "team_edit":team_edit,"project_type_id":project_type,\
                          "project_deadline":project_deadline, "mt_enable": mt_enable}, status=200)
 
@@ -642,6 +645,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             "content_delete_ids", [])
         subject_delete_ids = self.request.query_params.get(\
             "subject_delete_ids", [])
+        step_delete_ids = self.request.query_params.get(\
+            "step_delete_ids", [])
+
+        if step_delete_ids:
+            for task_obj in instance.get_tasks:
+                task_obj.task_info.filter(task_assign_info__isnull=True).filter(step_id__in=step_delete_ids).delete()
+            instance.proj_steps.filter(steps__in=step_delete_ids).delete()
 
         if file_delete_ids:
             file_res = FileView.as_view({"delete": "destroy"})(request=req_copy,\
@@ -1265,6 +1275,9 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         ser = TaskAssignInfoSerializer(task_assign_info,many=True)
         return Response(ser.data)
 
+    def history(self,instance):
+        segment_count=0 if instance.task_assign.task.document == None else instance.task_assign.task.get_progress.get('confirmed_segments')
+        task_history = TaskAssignHistory.objects.create(task_assign =instance.task_assign,previous_assign_id=instance.task_assign.assign_to_id,task_segment_confirmed=segment_count)
 
     @integrity_error
     def create(self,request):
@@ -1312,14 +1325,20 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):
-        task = request.GET.get('task')
-        assigns = TaskAssignInfo.objects.filter(task_assign__task_id=task)
+        task = request.GET.getlist('task')
+        steps = request.GET.getlist('step')
+        task_assign_info_ids = request.GET.getlist('task_assign_info')
+        if task and steps:
+            assigns = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in=task) & Q(task_assign__step_id__in=steps))
+        if task_assign_info_ids:
+            assigns = TaskAssignInfo.objects.filter(id__in = task_assign_info_ids )
         for obj in assigns:
+            self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user
             obj.task_assign.save()
             obj.delete()
-        return Response({"msg":"Deleted Successfully"},status=200)
+        return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
 
 @api_view(['GET',])

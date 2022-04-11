@@ -441,9 +441,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	# 	 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )# "project_analysis",)#,'ai_user')
 
 	def run_validation(self,data):
-		if data.get('steps'):
-			if '1' not in data['steps']:
-				raise serializers.ValidationError({"msg":"step 1 is mandatory"})
+		if self.context['request']._request.method == 'POST':
+			if data.get('steps'):
+				if '1' not in data['steps']:
+					raise serializers.ValidationError({"msg":"step 1 is mandatory"})
 		if data.get('target_languages')!=None:
 			comparisons = [source == target for (source, target) in itertools.
 				product(data['source_language'],data['target_languages'])]
@@ -548,7 +549,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			task_assign = TaskAssign.objects.assign_task(project=project)
 		return  project
 
-	def update(self, instance, validated_data):#No update for steps and project_type
+	def update(self, instance, validated_data):#No update for project_type
+		print("DATA---->",validated_data)
 		if validated_data.get('project_name'):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)
@@ -577,13 +579,16 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		contents_data = validated_data.pop("proj_content_type",[])
 		subjects_data = validated_data.pop("proj_subject",[])
+		steps_data = validated_data.pop("proj_steps",[])
 
-		project,contents,subjects = Project.objects.create_content_and_subject_for_project(instance,\
-							contents_data, subjects_data,\
-							c_klass=ProjectContentType, s_klass = ProjectSubjectField)
+		project,contents,subjects,steps = Project.objects.create_content_and_subject_and_steps_for_project(instance,\
+							contents_data, subjects_data, steps_data,\
+							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
+
 		if project_type == 1 or project_type == 2:
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
+		task_assign = TaskAssign.objects.assign_task(project=project)
 		return  project
 
 	def to_representation(self, value):

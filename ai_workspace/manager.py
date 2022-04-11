@@ -51,8 +51,8 @@ class ProjectManager(models.Manager):
         )
         return project, files, jobs
 
-    def create_content_and_subject_for_project(self,project,contents_data,\
-         subjects_data,c_klass, s_klass):
+    def create_content_and_subject_and_steps_for_project(self,project,contents_data,\
+         subjects_data, steps_data, c_klass, s_klass, step_klass):
 
          contents = c_klass.objects.bulk_create_of_project(
             contents_data, project, c_klass
@@ -60,7 +60,10 @@ class ProjectManager(models.Manager):
          subjects = s_klass.objects.bulk_create_of_project(
             subjects_data, project, s_klass
             )
-         return project, contents, subjects
+         steps = step_klass.objects.bulk_create_of_project(
+            steps_data, project, step_klass
+            )
+         return project, contents, subjects, steps
 
 class FileManager(models.Manager):
     def bulk_create_of_project(self, \
@@ -83,8 +86,8 @@ class ProjectContentTypeManager(models.Manager):
 class ProjectStepsManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
-        contents = [self.create(**item, project=project) for item in data]
-        return contents
+        steps = [self.get_or_create(**item, project=project) for item in data]
+        return steps
 
 class ProjectSubjectFieldManager(models.Manager):
     def bulk_create_of_project(self, \
@@ -139,6 +142,9 @@ class TaskAssignManager(models.Manager):
         steps = project.get_steps
         print("Inside Manager---------->",tasks)
         print("Inside---->",steps)
+        # print("TT--->", [self.get_or_create(task=task,step=step,mt_engine_id=mt_engine,\
+        #                 mt_enable=mt_enable,pre_translate=pre_translate,defaults = {"assign_to": assign_to,"status":1})\
+        #                 for task in tasks for step in steps])
         task_assign = [self.get_or_create(task=task,step=step,mt_engine_id=mt_engine,\
                         mt_enable=mt_enable,pre_translate=pre_translate,defaults = {"assign_to": assign_to,"status":1})\
                         for task in tasks for step in steps]
