@@ -561,6 +561,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 									instance.mt_engine_id)
 			instance.save()
 
+		if 'mt_enable' in validated_data:
+			instance.mt_enable = validated_data.get("mt_enable",\
+									instance.mt_enable)
+			instance.save()
+
 		if validated_data.get('project_deadline'):
 			instance.project_deadline = validated_data.get("project_deadline",\
 									instance.project_deadline)
