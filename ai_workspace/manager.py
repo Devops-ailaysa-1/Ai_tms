@@ -80,7 +80,7 @@ class JobManager(models.Manager):
 class ProjectContentTypeManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
-        contents = [self.create(**item, project=project) for item in data]
+        contents = [self.get_or_create(**item, project=project) for item in data]
         return contents
 
 class ProjectStepsManager(models.Manager):
@@ -92,7 +92,7 @@ class ProjectStepsManager(models.Manager):
 class ProjectSubjectFieldManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
-        subjects = [self.create(**item, project=project) for item in data]
+        subjects = [self.get_or_create(**item, project=project) for item in data]
         return subjects
 
 class TaskManager(models.Manager):
