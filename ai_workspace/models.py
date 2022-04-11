@@ -284,6 +284,14 @@ class Project(models.Model):
         return [obj.steps.name for obj in self.proj_steps.all()]
 
     @property
+    def PR_step_edit(self):
+        for task in self.get_tasks:
+            if task.task_info.filter(task_assign_info__isnull=False).filter(step_id=2):
+                return False
+        return True
+
+
+    @property
     def tmx_files_path(self):
         return [tmx_file.tmx_file.path for tmx_file in self.project_tmx_files.all()]
 
