@@ -10,7 +10,7 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from django.http import Http404,JsonResponse
 from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
-                    SupportFiles, Timezones,Billingunits,ServiceTypeunits,
+                    SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
@@ -19,7 +19,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
-                         SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer)
+                         SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,AiSupportedMtpeEnginesSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -505,6 +505,14 @@ class ServiceTypeunitsView(APIView):
     def get(self, request, format=None):
         queryset = ServiceTypeunits.objects.all()
         serializer = ServiceTypeUnitsSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+class AilaysaSupportedMtpeEnginesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        queryset = AilaysaSupportedMtpeEngines.objects.all()
+        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
         return Response(serializer.data)
 
 class SupportTypeView(APIView):
