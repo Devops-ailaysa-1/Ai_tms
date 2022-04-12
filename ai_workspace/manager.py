@@ -142,10 +142,14 @@ class TaskAssignManager(models.Manager):
         steps = project.get_steps
         print("Inside Manager---------->",tasks)
         print("Inside---->",steps)
+        task_assign = [self.get_or_create(task=task,step=step,\
+                         defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
+                         "mt_enable":mt_enable,"pre_translate":pre_translate})\
+                        for task in tasks for step in steps]
         # print("TT--->", [self.get_or_create(task=task,step=step,mt_engine_id=mt_engine,\
         #                 mt_enable=mt_enable,pre_translate=pre_translate,defaults = {"assign_to": assign_to,"status":1})\
         #                 for task in tasks for step in steps])
-        task_assign = [self.get_or_create(task=task,step=step,mt_engine_id=mt_engine,\
-                        mt_enable=mt_enable,pre_translate=pre_translate,defaults = {"assign_to": assign_to,"status":1})\
-                        for task in tasks for step in steps]
+        # task_assign = [self.get_or_create(task=task,step=step,mt_engine_id=mt_engine,\
+        #                 mt_enable=mt_enable,pre_translate=pre_translate,defaults = {"assign_to": assign_to,"status":1})\
+        #                 for task in tasks for step in steps]
         return task_assign
