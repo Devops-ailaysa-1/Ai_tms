@@ -112,10 +112,17 @@ class GlossaryFileView(viewsets.ViewSet):
         return  Response(serializer.data)
 
     def create(self, request):
+        proj_id = request.POST.get('project')
+        job_id = request.POST.get('job',None)
         files = request.FILES.getlist("glossary_file")
-        job = json.loads(request.POST.get('job'))
-        obj = Job.objects.get(id=job)
-        data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
+        if job_id:
+            job = json.loads(request.POST.get('job'))
+            obj = Job.objects.get(id=job)
+            data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
+        else:
+            proj = Project.objects.get(id=proj_id)
+            jobs = proj.get_jobs
+            data = [{"project": proj.id, "file": file, "job":job.id, "usage_type":8, "source_only":True} for file in files for job in jobs]
         serializer = GlossaryFileSerializer(data=data,many=True)
         if serializer.is_valid():
             print(serializer.is_valid())
