@@ -410,35 +410,26 @@ class Files_Jobs_List(APIView):
 
     def get_queryset(self, project_id):
         project = get_object_or_404(Project.objects.all(), id=project_id)
-                        # ai_user=self.request.user)
-        project_name = project.project_name
-        get_team =project.get_team
-        assigned = project.assigned
-        revision_step_edit = project.PR_step_edit
+                         # ai_user=self.request.user)
         jobs = project.project_jobs_set.all()
         contents = project.proj_content_type.all()
         subjects = project.proj_subject.all()
         steps = project.proj_steps.all()
-        project_deadline = project.project_deadline
-        mt_enable = project.mt_enable
-        project_type = project.project_type.id
         files = project.project_files_set.filter(usage_type__use_type="source").all()
-        return jobs, files, contents, subjects, project_name, steps, \
-                get_team, assigned, project_type, project_deadline, mt_enable, revision_step_edit
+        return jobs, files, contents, subjects, steps, project
 
     def get(self, request, project_id):
-        jobs, files, contents, subjects, project_name, steps, get_team, \
-        assigned, project_type, project_deadline, mt_enable, revision_step_edit = self.get_queryset(project_id)#
-        team_edit = False if assigned == True else True
+        jobs, files, contents, subjects, steps, project = self.get_queryset(project_id)
+        team_edit = False if project.assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
         contents = ProjectContentTypeSerializer(contents,many=True)
         subjects = ProjectSubjectSerializer(subjects,many=True)
         steps = ProjectStepsSerializer(steps,many=True)
         return Response({"files":files.data, "jobs": jobs.data, "subjects":subjects.data,\
-                        "contents":contents.data, "steps":steps.data, "project_name": project_name, "team":get_team,\
-                         "team_edit":team_edit,"project_type_id":project_type,\
-                         "project_deadline":project_deadline, "mt_enable": mt_enable, "revision_step_edit":revision_step_edit}, status=200)
+                        "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,\
+                         "team_edit":team_edit,"project_type_id":project.project_type.id,\
+                         "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit}, status=200)
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):
@@ -1282,6 +1273,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
+        step = request.POST.get('step')
         files=request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
@@ -1313,7 +1305,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
 
-        task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step))
+        task_assign = TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first()
         task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
         if file:
             serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)

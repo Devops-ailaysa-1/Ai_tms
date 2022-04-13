@@ -57,6 +57,7 @@ class GlossaryFiles(models.Model):
     filename = models.CharField(max_length=200,null=True)
     fid = models.TextField(null=True, blank=True)
     job = models.ForeignKey(Job,on_delete=models.CASCADE,related_name="job")
+    source_only = models.BooleanField(default=False)
     deleted_at = models.BooleanField(default=False)
     upload_date = models.DateTimeField(auto_now_add=True)
 

@@ -6,23 +6,32 @@ def update_words_from_template(sender, instance, *args, **kwargs):
     glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
     dataset = Dataset()
     imported_data = dataset.load(instance.file.read(), format='xlsx')
-    for data in imported_data:
-        if data[2]:
-            try:
-                value = glex_model.TermsModel(
-                        # data[0],          #Blank column
-                        data[1],            #Autoincremented in the model
-                        data[2].strip(),    #SL term column
-                        data[3].strip() if data[3] else data[3],    #TL term column
-                        data[4], data[5], data[6], data[7], data[8], data[9],
-                        data[10], data[11], data[12], data[13], data[14], data[15]
-                )
-            except:
-                value = glex_model.TermsModel(
-                        # data[0],          #Blank column
-                        data[1],            #Autoincremented in the model
-                        data[2].strip(),    #SL term column
-                        data[3].strip() if data[3] else data[3], )
+    if instance.source_only == False:
+        for data in imported_data:
+            if data[2]:
+                try:
+                    value = glex_model.TermsModel(
+                            # data[0],          #Blank column
+                            data[1],            #Autoincremented in the model
+                            data[2].strip(),    #SL term column
+                            data[3].strip() if data[3] else data[3],    #TL term column
+                            data[4], data[5], data[6], data[7], data[8], data[9],
+                            data[10], data[11], data[12], data[13], data[14], data[15]
+                    )
+                except:
+                    value = glex_model.TermsModel(
+                            # data[0],          #Blank column
+                            data[1],            #Autoincremented in the model
+                            data[2].strip(),    #SL term column
+                            data[3].strip() if data[3] else data[3], )
+    else:
+        for data in imported_data:
+            if data[2]:
+                    value = glex_model.TermsModel(
+                            # data[0],          #Blank column
+                            data[1],            #Autoincremented in the model
+                            data[2].strip()
+                            )
             value.glossary_id = glossary_obj.id
             value.file_id = instance.id
             value.job_id = instance.job_id
