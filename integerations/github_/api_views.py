@@ -227,7 +227,11 @@ class ContentFileViewset(viewsets.ModelViewSet):
     @transaction.atomic
     def create(self, request, *args, **kwargs):
 
+        print("Request data ---> ", request.data)
+
         serlzr1 = LocalizeIdsSerializer(data=request.data)
+
+        print("serlzr1 data ---> ", serlzr1.data)
 
         if serlzr1.is_valid(raise_exception=True):
             data = serlzr1.data
@@ -235,17 +239,21 @@ class ContentFileViewset(viewsets.ModelViewSet):
         data = [{"is_localize_registered": True, "id": _}
                 for _ in data.get('localizable_ids')]
 
+        print("is localise registered data --> ", data)
+
         ser = ContentFileSerializer(self.get_queryset(),
                 data=data, many=True, partial=True)
 
         if ser.is_valid(raise_exception=True):
             ser.save()
             data = ser.data
+
+            print("Content serializer data --> ", data)
             instances = ser.instance
 
         im_uploads = []
 
-        for  content_file in instances:
+        for content_file in instances:
             im = DjRestUtils.convert_content_to_inmemoryfile(
                 filecontent=content_file.get_content_of_file.decoded_content,
                 file_name=content_file.file)

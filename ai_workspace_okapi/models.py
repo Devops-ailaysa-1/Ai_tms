@@ -294,12 +294,12 @@ class Document(models.Model):
         open_alert = False if (self.total_word_count < total_credit_left) else True
         return open_alert
 
-    # @property
-    # def is_first_doc_view(self):
-    #     user = self.job.project.ai_user.id
-    #     ai_user_first_doc_id = Document.objects.filter(
-    #         job__project__ai_user_id=user).first().id
-    #     return True if self.id == ai_user_first_doc_id else False
+    @property
+    def is_first_doc_view(self):
+        user = self.job.project.ai_user.id
+        ai_user_first_doc_id = Document.objects.filter(
+            job__project__ai_user_id=user).first().id
+        return True if self.id == ai_user_first_doc_id else False
 
 class FontSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,

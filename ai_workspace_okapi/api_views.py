@@ -287,13 +287,17 @@ class MT_RawAndTM_View(views.APIView):
     @staticmethod
     def get_data(request, segment, mt_params):
 
+        print("MT params ---> ", mt_params)
+
         # get already stored MT done for first time
         mt_raw = segment.mt_raw_translation
         if mt_raw:
+            print("MT Raw available ---> ", mt_raw)
             return MT_RawSerializer(mt_raw).data, 200, "available"
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
+            print("MT not enabled")
             return {}, 200, "MT disabled"
 
         # finding the user to debit Credit
@@ -377,6 +381,7 @@ class MT_RawAndTM_View(views.APIView):
         mt_alert = True if status_code == 424 else False
         alert_msg = self.get_alert_msg(status_code, can_team)
         tm_data = self.get_tm_data(request, segment)
+        print("MT Data ---> ", data)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
             "alert_msg":alert_msg}, status=status_code)
 
