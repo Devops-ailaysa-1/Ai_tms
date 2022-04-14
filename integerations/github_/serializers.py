@@ -3,8 +3,8 @@ import json
 from .models import GithubApp, FetchInfo,\
     Repository, Branch, ContentFile, HookDeck, FileConnector, \
     DownloadProject
-from ai_workspace.models import  Project, File, Job, ProjectFilesCreateType
-from ai_staff.models import AssetUsageTypes, Languages
+from ai_workspace.models import  Project, File, Job, ProjectFilesCreateType, ProjectSteps
+from ai_staff.models import AssetUsageTypes, Languages, ProjectType
 from django.shortcuts import get_object_or_404, reverse
 
 from github import Github
@@ -183,26 +183,44 @@ class FileConnectorSerializer(serializers.ModelSerializer):
         model = FileConnector
         fields = "__all__"
 
+class ProjectStepsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectSteps
+        fields = ("project", "steps")
+        extra_kwargs = {
+            "project": {"required": False}
+        }
+
 class ProjectSerializerV2(serializers.ModelSerializer):
     # jobs = JobSerializer(many=True)
     # files = FileSerializer(many=True)
     branch_id = serializers.IntegerField(write_only=True)
     file_create_type = serializers.CharField(read_only=True,
             source="project_file_create_type.file_create_type")
+    proj_steps = ProjectStepsSerializer(many=True)
 
     class Meta:
         model = Project
-        fields = ( "project_name", "branch_id", "file_create_type")
+        fields = ( "project_name", "branch_id", "file_create_type",
+                   "mt_engine", "project_type", "proj_steps")
+
+        extra_kwargs = {
+            "project_type": {"default": ProjectType.objects.get(id=2)} # "Advanced project type..."
+        }
         # "download_controller",
 
     def create(self, validated_data):
         branch_id = validated_data.pop("branch_id")
+        proj_steps = validated_data.pop("proj_steps")
+        print("data----->", validated_data)
         project = super().create(validated_data)
         rel_obj = DownloadController()
         rel_obj.update_project(project=project, related_model_string=
             f"{DJ_APP_NAME}.DownloadProject", branch_id=branch_id)
         ProjectFilesCreateType.objects.create(project=project,
             file_create_type=ProjectFilesCreateType.FileType.integeration)
+        for proj_step in proj_steps:
+            ProjectSteps.objects.create(**proj_step, project=project)
         return project
 
 class ProjectCreateReqReslvSerlzr(serializers.Serializer):
@@ -210,6 +228,8 @@ class ProjectCreateReqReslvSerlzr(serializers.Serializer):
     source_language = serializers.IntegerField()
     target_languages = serializers.ListField()
     localizable_ids = serializers.ListField()
+    steps = serializers.ListField()
+    mt_engine = serializers.IntegerField()
 
     def to_representation(self, instance):
         ret = super().to_representation(instance=instance)
@@ -218,6 +238,9 @@ class ProjectCreateReqReslvSerlzr(serializers.Serializer):
         sl = ret.pop("source_language")
         ret["jobs"] = [{"source_language": sl , "target_language": tl}
             for tl in ret.pop("target_languages")]
+        ret["proj_steps"] = [{"steps": step} for step in ret.pop("steps")]
+        if not ret["proj_steps"]:
+            ret["proj_steps"] = [{"steps": 1}] # Post editing default add
         return ret
 
 class GithubHookSerializerD1(serializers.Serializer):
