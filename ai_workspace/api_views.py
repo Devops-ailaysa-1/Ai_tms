@@ -1,59 +1,54 @@
-from rest_framework.exceptions import ValidationError
 import django_filters
+import shutil
+import zipfile
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
 from ai_workspace_okapi.models import Document
 from django.conf import settings
-from django.core.files import File as DJFile
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from ai_vendor.models import VendorLanguagePair
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEditors
+from ai_glex.serializers import GlossarySetupSerializer
+from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
+from ai_workspace_okapi.utils import download_file
 from rest_framework.response import Response
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
-    ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
-    ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
-    TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
-    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer)
+from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+                          ProjectSerializer, JobSerializer, FileSerializer, FileSerializer, \
+                          ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
+                          TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer, \
+                          PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
+                          VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer, \
+                          TaskCreditStatusSerializer, TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
+                          GetAssignToSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails, TaskAssignInfo
+from .models import (Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
+                     TaskAssignInfo, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory)
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Task, TbxFile
+from .models import Task, TbxFile, Instructionfiles
 from django.http import JsonResponse
-import requests, json, os, time
 from .models import Task,Tbxfiles
 from lxml import etree as ET
 from ai_marketplace.models import AvailableVendors,ChatMessage
-from django.http import JsonResponse,HttpResponse
 import requests, json, os,mimetypes
-from ai_workspace import serializers
 from ai_workspace_okapi.models import Document
-from ai_staff.models import LanguagesLocale, Languages
 from rest_framework.decorators import api_view
 from django.http import JsonResponse, Http404, HttpResponse
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from django.core.files import File as DJFile
 from django.http import JsonResponse
-from tablib import Dataset
-import shutil
 from datetime import datetime
 from django.db.models import Q, Sum
 from rest_framework.decorators import permission_classes
 from notifications.signals import notify
-from notifications.models import Notification
 from ai_marketplace.serializers import ThreadSerializer
 from controller.serializer_mapper import serializer_map
 # from ai_workspace_okapi.api_views import DocumentViewByTask
@@ -130,6 +125,29 @@ class JobView(viewsets.ModelViewSet):
 class ProjectSubjectView(viewsets.ModelViewSet):
     serializer_class = ProjectSubjectField
 
+    def get_object(self, many=False):
+        objs = []
+        obj = None
+        if not many:
+            try:
+                obj = get_object_or_404(ProjectSubjectField.objects.all(),\
+                    id=self.kwargs.get("pk"))
+            except:
+                raise Http404
+            return  obj
+
+        objs_ids_list =  self.kwargs.get("ids").split(",")
+
+        for obj_id in objs_ids_list:
+            print("obj id--->", obj_id)
+            try:
+                objs.append(get_object_or_404(ProjectSubjectField.objects.all(),\
+                    id=obj_id))
+            except:
+                raise Http404
+        return objs
+
+
     def get_queryset(self):
         project_id = self.request.query_params.get('project_id')
         return ProjectSubjectField.objects.filter(project__id=project_id)
@@ -148,8 +166,39 @@ class ProjectSubjectView(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
 
+    def destroy(self, request, *args, **kwargs):
+        print("ak---->", args, kwargs)
+        if kwargs.get("many")=="true":
+            objs = self.get_object(many=True)
+            for obj in objs:
+                obj.delete()
+            return Response(status=204)
+        return super().destroy(request, *args, **kwargs)
+
 class ProjectContentTypeView(viewsets.ModelViewSet):
     serializer_class = ProjectContentTypeSerializer
+
+    def get_object(self, many=False):
+        objs = []
+        obj = None
+        if not many:
+            try:
+                obj = get_object_or_404(ProjectContentType.objects.all(),\
+                    id=self.kwargs.get("pk"))
+            except:
+                raise Http404
+            return  obj
+
+        objs_ids_list =  self.kwargs.get("ids").split(",")
+
+        for obj_id in objs_ids_list:
+            print("obj id--->", obj_id)
+            try:
+                objs.append(get_object_or_404(ProjectContentType.objects.all(),\
+                    id=obj_id))
+            except:
+                raise Http404
+        return objs
 
     def get_queryset(self):
         project_id = self.request.query_params.get('project_id')
@@ -168,6 +217,13 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
 
+    def destroy(self, request, *args, **kwargs):
+        if kwargs.get("many")=="true":
+            objs = self.get_object(many=True)
+            for obj in objs:
+                obj.delete()
+            return Response(status=204)
+        return super().destroy(request, *args, **kwargs)
 
 class FileView(viewsets.ModelViewSet):
     serializer_class = FileSerializer
@@ -354,20 +410,26 @@ class Files_Jobs_List(APIView):
 
     def get_queryset(self, project_id):
         project = get_object_or_404(Project.objects.all(), id=project_id)
-                        # ai_user=self.request.user)
-        project_name = project.project_name
-        get_team =project.get_team
-        assigned = project.assigned
+                         # ai_user=self.request.user)
         jobs = project.project_jobs_set.all()
+        contents = project.proj_content_type.all()
+        subjects = project.proj_subject.all()
+        steps = project.proj_steps.all()
         files = project.project_files_set.filter(usage_type__use_type="source").all()
-        return jobs, files, project_name, get_team, assigned
+        return jobs, files, contents, subjects, steps, project
 
     def get(self, request, project_id):
-        jobs, files, project_name, get_team, assigned= self.get_queryset(project_id)#
-        team_edit = False if assigned == True else True
+        jobs, files, contents, subjects, steps, project = self.get_queryset(project_id)
+        team_edit = False if project.assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
-        return Response({"files":files.data, "jobs": jobs.data, "project_name": project_name, "team":get_team, "team_edit":team_edit}, status=200)
+        contents = ProjectContentTypeSerializer(contents,many=True)
+        subjects = ProjectSubjectSerializer(subjects,many=True)
+        steps = ProjectStepsSerializer(steps,many=True)
+        return Response({"files":files.data, "jobs": jobs.data, "subjects":subjects.data,\
+                        "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,\
+                         "team_edit":team_edit,"project_type_id":project.project_type.id,\
+                         "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit}, status=200)
 
 class TmxFilesOfProject(APIView):
     def get_queryset(self, project_id):
@@ -475,7 +537,7 @@ class TbxUploadView(APIView):
 
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
-    # team = django_filters.CharFilter(field_name='team__name',lookup_expr='icontains')
+    filter = django_filters.CharFilter(field_name='glossary_project',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     class Meta:
         model = Project
@@ -489,6 +551,11 @@ class ProjectFilter(django_filters.FilterSet):
             lookup = '__'.join([name, 'icontains'])
             return queryset.filter(**{lookup: value})
 
+    def filter_not_empty(self,queryset, name, value):
+        if value == "glossary":
+            lookup = '__'.join([name, 'isnull'])
+            return queryset.filter(**{lookup: False})
+
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
@@ -501,6 +568,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     ordering = ('-id')
     paginator.page_size = 20
 
+    def get_serializer_class(self):
+        project_type = json.loads(self.request.POST.get('project_type','1'))
+        if project_type == 3:
+            return GlossarySetupSerializer
+        return ProjectQuickSetupSerializer
+
     def get_object(self):
         pk = self.kwargs.get("pk", 0)
         try:
@@ -512,7 +585,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         print(self.request.user)
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         return queryset
@@ -529,7 +602,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
     def create(self, request):
+        print("DT----->",request.data)
         text_data=request.POST.get('text_data')
+        ser = self.get_serializer_class()
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
@@ -542,8 +617,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
-            serlzr = ProjectQuickSetupSerializer(data=\
-            {**request.data, "files": request.FILES.getlist("files")},context={"request": request})
+            serlzr = ser(data={**request.data, "files": request.FILES.getlist("files")},context={"request": request})
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 return Response(serlzr.data, status=201)
@@ -551,6 +625,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def update(self, request, pk, format=None):
         instance = self.get_object()
+        ser = self.get_serializer_class()
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -558,6 +633,18 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             "file_delete_ids", [])
         job_delete_ids = self.request.query_params.get(\
             "job_delete_ids", [])
+        content_delete_ids = self.request.query_params.get(\
+            "content_delete_ids", [])
+        subject_delete_ids = self.request.query_params.get(\
+            "subject_delete_ids", [])
+        step_delete_ids = self.request.query_params.get(\
+            "step_delete_ids", [])
+
+        if step_delete_ids:
+            for task_obj in instance.get_tasks:
+                task_obj.task_info.filter(task_assign_info__isnull=True).filter(step_id__in=step_delete_ids).delete()
+            instance.proj_steps.filter(steps__in=step_delete_ids).delete()
+
         if file_delete_ids:
             file_res = FileView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
@@ -566,7 +653,15 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             job_res = JobView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=job_delete_ids)
 
-        serlzr = ProjectQuickSetupSerializer(instance, data=\
+        if content_delete_ids:
+            content_res = ProjectContentTypeView.as_view({"delete": "destroy"})(request=req_copy,\
+                        pk='0', many="true", ids=content_delete_ids)
+
+        if subject_delete_ids:
+            subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
+                        pk='0', many="true", ids=subject_delete_ids)
+
+        serlzr = ser(instance, data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request}, partial=True)
 
@@ -598,10 +693,10 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             #     return project.get_tasks
             else:
                 return [task for job in project.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
+                        in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = self.request.user)]
         else:
             return [task for job in project.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all().filter(assign_to_id = self.request.user)]
+                    in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = self.request.user)]
 
 
     def get_object(self):
@@ -841,9 +936,9 @@ class UpdateTaskCreditStatus(APIView):
             return False
 
     @staticmethod
-    def update_usercredit(request,doc_id, actual_used_credits):
-        doc = Document.objects.get(id = doc_id)
-        user = doc.doc_credit_debit_user
+    def update_usercredit(request, user, actual_used_credits):
+        # doc = Document.objects.get(id = doc_id)
+        # user = doc.doc_credit_debit_user
         print("Credit User",type(user))
         present = datetime.now()
         try:
@@ -878,38 +973,18 @@ class UpdateTaskCreditStatus(APIView):
             return from_addon
 
     @staticmethod
-    def update_credits(request, doc_id, actual_used_credits):
-        # task_cred_status = UpdateTaskCreditStatus.get_object(doc_id)
-        credit_status = UpdateTaskCreditStatus.update_usercredit(request, doc_id, actual_used_credits)
+    def update_credits(request, user, actual_used_credits):
+        credit_status = UpdateTaskCreditStatus.update_usercredit(request, user, actual_used_credits)
         # print("CREDIT STATUS----->", credit_status)
+
         if credit_status:
             msg = "Successfully debited MT credits"
             status = 200
         else:
             msg = "Insufficient credits to apply MT"
             status = 424
-        # serializer = TaskCreditStatusSerializer(task_cred_status,
-        #              data={"actual_used_credits" : actual_used_credits }, partial=True)
-        # if serializer.is_valid(raise_exception=True):
-        #     serializer.save()
-        #     return {"msg" : msg}, status
-        return {"msg" : msg}, status
 
-################Incomplete project list for Marketplace###########3
-# class IncompleteProjectListView(viewsets.ViewSet) :
-#     serializer_class = ProjectSetupSerializer
-#
-#     def get_queryset(self):
-#         objects_id = [x.id for x in Project.objects.all() if x.progress != "completed" ]
-#         return Project.objects.filter(Q(ai_user=self.request.user) & Q(id__in=objects_id))
-#
-#     def list(self,request):
-#         queryset = self.get_queryset()
-#         print(queryset)
-#         # pagin_tc = self.paginate_queryset(queryset, request , view=self)
-#         serializer = ProjectSetupSerializer(queryset, many=True, context={'request': request})
-#         # response = self.get_paginated_response(serializer.data)
-#         return Response(serializer.data)
+        return {"msg" : msg}, status
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1071,7 +1146,7 @@ class ProjectAnalysisProperty(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-
+                print("Status@@@@@@@@@@@@@@@@@@@@@@@@",doc.status_code)
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
@@ -1142,30 +1217,70 @@ def msg_send(sender,receiver,task):
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
+class TaskAssignUpdateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def update(self, request,pk=None):
+        task = request.POST.get('task')
+        step = request.POST.get('step')
+        file = request.FILES.getlist('instruction_file')
+        req_copy = copy.copy( request._request)
+        req_copy.method = "DELETE"
+
+        file_delete_ids = self.request.query_params.get(\
+            "file_delete_ids", [])
+
+        if file_delete_ids:
+            file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
+                        pk='0', many="true", ids=file_delete_ids)
+        if not task:
+            return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step))
+        if file:
+            serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
+        else:
+            serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict()},context={'request':request},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # except:
+            # return Response({'msg':'Task Assign details not found'},status=status.HTTP_400_BAD_REQUEST)
+        return Response(task, status=status.HTTP_200_OK)
+
+
+
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
         tasks = request.GET.getlist('tasks')
-        # print(tasks)
+        step = request.GET.get('step')
         try:
-            task_assign_info = TaskAssignInfo.objects.filter(task_id__in = tasks)
+            task_assign_info = TaskAssignInfo.objects.filter(task_assign__task_id__in = tasks)
+            # task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__step_id =step))
         except TaskAssignInfo.DoesNotExist:
             return HttpResponse(status=404)
+        # print('trtrt',task_assign_info)
         ser = TaskAssignInfoSerializer(task_assign_info,many=True)
         return Response(ser.data)
 
+    def history(self,instance):
+        segment_count=0 if instance.task_assign.task.document == None else instance.task_assign.task.get_progress.get('confirmed_segments')
+        task_history = TaskAssignHistory.objects.create(task_assign =instance.task_assign,previous_assign_id=instance.task_assign.assign_to_id,task_segment_confirmed=segment_count)
 
     @integrity_error
     def create(self,request):
-        file=request.FILES.get('instruction_file')
+        step = request.POST.get('step')
+        files=request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         Receiver = AiUser.objects.get(id = receiver)
         task = request.POST.getlist('task')
         tasks= [json.loads(i) for i in task]
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'files':files,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             msg_send(sender,Receiver,tasks[0])
@@ -1174,32 +1289,49 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request,pk=None):
-        task = request.POST.getlist('task')
-        file = request.FILES.get('instruction_file')
+        task = request.POST.get('task')
+        step = request.POST.get('step')
+        file = request.FILES.getlist('instruction_file')
+        req_copy = copy.copy( request._request)
+        req_copy.method = "DELETE"
+
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
-        for i in task:
-            try:
-                task_assign_info = TaskAssignInfo.objects.get(task_id = i)
-                if file:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
-                else:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            except TaskAssignInfo.DoesNotExist:
-                print('not exist')
+
+        file_delete_ids = self.request.query_params.get(\
+            "file_delete_ids", [])
+
+        if file_delete_ids:
+            file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
+                        pk='0', many="true", ids=file_delete_ids)
+
+        task_assign = TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first()
+        task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
+        if file:
+            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
+        else:
+            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):
-        task = request.GET.get('task')
-        instance = TaskAssignInfo.objects.get(task_id=task)
-        # if request.POST.get('instruction_file',None) != None :
-        instance.instruction_file=None
-        instance.save()
-        return Response({"msg":"Deleted Successfully"},status=200)
+        task = request.GET.getlist('task')
+        steps = request.GET.getlist('step')
+        task_assign_info_ids = request.GET.getlist('task_assign_info')
+        if task and steps:
+            assigns = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in=task) & Q(task_assign__step_id__in=steps))
+        if task_assign_info_ids:
+            assigns = TaskAssignInfo.objects.filter(id__in = task_assign_info_ids )
+        for obj in assigns:
+            self.history(obj)
+            user = obj.task_assign.task.job.project.ai_user
+            obj.task_assign.assign_to = user
+            obj.task_assign.save()
+            obj.delete()
+        return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
 
 @api_view(['GET',])
@@ -1271,9 +1403,12 @@ class ProjectListView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
+        #             |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+        #             |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
         return queryset
 
     def list(self,request):
@@ -1296,6 +1431,7 @@ def tasks_list(request):
     try:
         job = Job.objects.get(id = job_id)
         tasks = job.job_tasks_set.all()
+        print("Task--->",tasks)
         ser = VendorDashBoardSerializer(tasks,many=True)
         return Response(ser.data)
     except:
@@ -1356,3 +1492,134 @@ class IntegerationProject(viewsets.ViewSet):
 
 
 
+
+
+
+class InstructionFilesView(viewsets.ModelViewSet):
+
+    serializer_class = InstructionfilesSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_object(self, many=False):
+        objs = []
+        obj = None
+        if not many:
+            try:
+                obj = get_object_or_404(Instructionfiles.objects.all(),\
+                    id=self.kwargs.get("pk"))
+            except:
+                raise Http404
+            return  obj
+
+        objs_ids_list =  self.kwargs.get("ids").split(",")
+
+        for obj_id in objs_ids_list:
+            print("obj id--->", obj_id)
+            try:
+                objs.append(get_object_or_404(Instructionfiles.objects.all(),\
+                    id=obj_id))
+            except:
+                raise Http404
+        return objs
+
+    def destroy(self, request, *args, **kwargs):
+        if kwargs.get("many")=="true":
+            objs = self.get_object(many=True)
+            for obj in objs:
+                obj.delete()
+            return Response(status=204)
+        return super().destroy(request, *args, **kwargs)
+
+
+class StepsView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = Steps.objects.all()
+        serializer = StepsSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class CustomWorkflowCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = Workflows.objects.all()
+        serializer = WorkflowsSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        steps = request.POST.getlist('steps')
+        serializer = WorkflowsStepsSerializer(data={**request.POST.dict(),"user":self.request.user.id,"steps":steps})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"msg":"workflow created"})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = Workflows.objects.all()
+        steps = request.POST.getlist('steps')
+        step_delete_ids = request.POST.getlist('step_delete_ids')
+        workflow = get_object_or_404(queryset, pk=pk)
+        if step_delete_ids:
+            [WorkflowSteps.objects.filter(workflow=workflow,steps=i).delete() for i in step_delete_ids]
+        serializer= WorkflowsStepsSerializer(workflow,data={**request.POST.dict(),"steps":steps},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = Workflows.objects.all()
+        obj = get_object_or_404(queryset, pk=pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+def previously_created_steps(request):
+    used_steps = []
+    pr = Project.objects.filter(Q(created_by = request.user)\
+         & Q(proj_steps__isnull=False) & ~Q(project_type=1)).distinct()
+    for obj in pr:
+        if obj.get_steps_name not in [step for step in used_steps]:
+            used_steps.append(obj.get_steps_name)
+    return Response({'used_steps':used_steps})
+
+
+
+# @api_view(["GET"])
+# def project_download(request,project_id):
+#     pr = Project.objects.get(id=project_id)
+#     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+#     tt = download_file(pr.project_name+'.zip')
+#     os.remove(pr.project_name+'.zip')
+#     return tt
+
+
+
+def zipit(folders, zip_filename):
+    zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
+
+    for folder in folders:
+        for dirpath, dirnames, filenames in os.walk(folder):
+            for filename in filenames:
+                zip_file.write(
+                    os.path.join(dirpath, filename),
+                    os.path.relpath(os.path.join(dirpath, filename), os.path.join(folders[0], '../..')))
+
+    zip_file.close()
+
+@api_view(['GET',])
+def project_list_download(request):
+    projects = request.GET.getlist('project')
+    dest = []
+    for obj in projects:
+        pr = Project.objects.get(id=obj)
+        path = pr.project_dir_path + '/source'
+        dest.append(path)
+    zip_file_name = "Project-"+projects[0]+"-"+projects[-1]+'.zip' if len(projects) > 1 else "Project-"+projects[0]+'.zip'
+    zipit(dest,zip_file_name)
+    tt = download_file(zip_file_name)
+    os.remove(zip_file_name)
+    return tt

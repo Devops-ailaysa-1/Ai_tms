@@ -79,6 +79,10 @@ docker-compose.staging.yml
 nginx.zip
 nginx/
 mediafiles
+.env.prod.proxy-companion
+docker-compose.prod.yml
+exp.zip
+staticfiles/
 config
 fprm
 /automate/
@@ -95,7 +99,16 @@ ignore_data/
 /repeat-snippets.py
 /integerations/github_/migrations/
 /integerations/gitlab_/migrations/
+/*/*/migrations/
+ai_auth/block_list.py
 APP.MD
+<<<<<<< HEAD
+staticfiles
+api_automation
+env
+wordsapi_sample.json
+*.dot
+*.png
 kite-installer
 staticfiles/
 panda1.gif

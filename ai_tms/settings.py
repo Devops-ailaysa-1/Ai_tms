@@ -17,6 +17,8 @@ import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 load_dotenv(".env2")
 from pathlib import Path
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -118,6 +120,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.github',
+    "allauth.socialaccount.providers.twitter",
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
@@ -128,6 +131,8 @@ INSTALLED_APPS = [
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
+    'ai_glex',
+    'ai_nlp',
     'djstripe',
     'django_filters',
     'notifications',
@@ -135,11 +140,8 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     "ai_tm_management",
-    # 'drf_yasg',
-
-    # 'rest_framework_swagger',
+    # 'reversion',
     # 'dbbackup',
-    # 'channels',
     # 'django_q',
 ]
 
@@ -460,7 +462,6 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-             # "hosts": [("redis", 6379)],
              "hosts": [os.getenv("REDIS_CHANNEL_HOST")],
 
         },
@@ -499,8 +500,7 @@ LOGGING = {
             'handlers' : ['file_prod',],
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'propogate' : True,
-        }
-
+        },
     },
 
     'handlers' : {
@@ -512,7 +512,7 @@ LOGGING = {
             'formatter' : 'dev_formatter',
         },
 
-        'file_prod' : {
+       'file_prod' : {
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'class' : 'logging.FileHandler',
             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
@@ -527,8 +527,13 @@ LOGGING = {
     },
 }
 
+# FOR ERD DIAGRAM
+GRAPH_MODELS = {
+    'all_applications': True,
+    'group_models': True,
+}
 
-# ERROR MONITORING USING SENTRY
+
 sentry_sdk.init(
     dsn = os.getenv("dsn"),
     integrations=[DjangoIntegration()],
@@ -542,4 +547,3 @@ sentry_sdk.init(
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii = os.getenv("send_default_pii")
 )
-

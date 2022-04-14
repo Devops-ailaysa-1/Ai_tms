@@ -238,6 +238,9 @@ class AssetUsageTypes(ParanoidModel):
     #deleted_at = models.DateTimeField(blank=True, null=True)
     is_active=models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.use_type
+
     class Meta:
         db_table = 'asset_usage_types'
 
@@ -406,3 +409,12 @@ class OldVendorPasswords(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class ProjectType(models.Model):
+    type = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.type

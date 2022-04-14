@@ -22,6 +22,8 @@ router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
 				basename="project-reference-files")
+router.register(r'steps',api_views.StepsView,basename='steps')
+router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
 urlpatterns = router.urls
 
@@ -52,14 +54,17 @@ urlpatterns += [
 	path("task_credit_status_update/<int:doc_id>", api_views.UpdateTaskCreditStatus.as_view(), name="task-credit-update"),
 	path("dashboard_credit_status", api_views.dashboard_credit_status, name="dashboard-credit-status"),
 	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
-	path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
+	# path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
+	path('task_assign_update/',api_views.TaskAssignUpdateView.as_view({'put':'update'})),
 	path('get_assign_to_list/',api_views.get_assign_to_list),
 	path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
 	path('assign_to/',api_views.AssignToListView.as_view({'get': 'list'}),name='assign-list'),
 	path('tasks_list/',api_views.tasks_list),
+	path('used_steps/',api_views.previously_created_steps),
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
 	path("instruction_file_download/<int:task_assign_info_id>", api_views.instruction_file_download, name="instruction-file-download"),
-	path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"}))
+	path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"})),
+	path("download/",api_views.project_list_download),
 ]
 # views urls adding for local testing
 urlpatterns += [

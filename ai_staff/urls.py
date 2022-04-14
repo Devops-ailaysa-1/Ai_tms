@@ -16,6 +16,7 @@ router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax
 router.register(r'general-support-topics',api_views.SupportTopicsView,basename='general-support-topics')
 router.register(r'job-positions',api_views.JobPositionsView,basename='job-positions')
 router.register(r'roles',api_views.TeamRoleView,basename='team-role')
+
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -44,6 +45,7 @@ urlpatterns += [
      path('billunits/<int:pk>', api_views.BillingunitsView.as_view(), name='billunits_pk'),
      path('servicetypeunits/', api_views.ServiceTypeunitsView.as_view(), name='billunits'),
      path('support_types/',api_views.SupportTypeView.as_view(),name = 'support-types'),
+     path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view(),name = 'mt-engines'),
      path('get_plan_details/',api_views.get_plan_details),
      path('get_price_details/',api_views.get_pricing_details),
      path('get-addons-details/',api_views.get_addons_details),

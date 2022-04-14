@@ -140,7 +140,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
 
             #carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
             #    Q(ended_at__isnull=False)).last()
-            carry_credits =UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription")).order_by('-id')
+            carry_credits =UserCredits.objects.filter(Q(user=self) & \
+                Q(credit_pack_type__icontains="Subscription")).order_by('-id')
             avai_cp= 0
             for credits in carry_credits:
                 if credits.ended_at == None:
@@ -150,7 +151,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
                     avai_cp = credits.buyed_credits
                 else:
                     print("else")
-                    if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
+                    if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') \
+                                    <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
                         startdate = credits.created_at
                         enddate = credits.expiry
                         print("inside else")
@@ -161,9 +163,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
             #     subscription += carry_on_credits.credits_left
         except:
             print("No active subscription")
-            return {"addon":addons, "subscription":avai_cp}
+            return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
-        return {"addon":addons, "subscription":avai_cp}
+        return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
     # @property
     # def buyed_credits(self):
@@ -190,7 +192,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         print("username field not available.so it is returning fullname")
         return self.fullname
 
-post_save.connect(update_internal_member_status, sender=AiUser)    
+post_save.connect(update_internal_member_status, sender=AiUser)
 
 
 class BaseAddress(models.Model):
@@ -483,3 +485,7 @@ class HiredEditors(models.Model):
 
 class ReferredUsers(models.Model):
     email = models.EmailField()
+
+class CampaignUsers(models.Model):
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
+    campaign_name = models.CharField(max_length=255, blank=True, null=True)

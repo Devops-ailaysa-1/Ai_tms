@@ -5,7 +5,7 @@ from django.db.models.signals import post_save, pre_save
 from .signals import set_segment_tags_in_source_and_target, create_segment_controller
 import json
 from ai_auth.models import AiUser
-from ai_staff.models import LanguageMetaDetails, Languages
+from ai_staff.models import LanguageMetaDetails, Languages, AilaysaSupportedMtpeEngines
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
 from django.utils.functional import cached_property
 from django.db.models import Q, UniqueConstraint, CheckConstraint, F
@@ -26,6 +26,9 @@ class TextUnit(models.Model):
 
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)
+
+    def __str__(self):
+        return self.engine_name
 
 class TranslationStatus(models.Model):
     status_name = models.CharField(max_length=25)
@@ -92,6 +95,10 @@ class BaseSegment(models.Model):
         return self.text_unit.document.job.target_language_code
 
     @property
+    def source_language_code(self):
+        return self.text_unit.document.job.source_language_code
+
+    @property
     def tm_fetch_configs(self):
         return self.text_unit.document.tm_fetch_configs
 
@@ -144,6 +151,7 @@ class MT_RawTranslation(models.Model):
     #             on_delete=models.SET_NULL)
     reverse_string_for_segment = models.TextField(choices=SegmentStringChoices,
                 default="ai_workspace_okapi.segment")
+    task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL)
 
     @property
     def target_language(self):
@@ -368,9 +376,3 @@ class MergeSegment(BaseSegment):
 
 class SplitSegment(models.Model):
     pass
-
-
-
-
-
-

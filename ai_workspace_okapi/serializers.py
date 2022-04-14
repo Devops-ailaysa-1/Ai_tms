@@ -6,10 +6,11 @@ from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
 from ai_workspace.models import  Project,Job
 from django.db.models import Q
-from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids
+from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from contextlib import closing
 from django.db import connection
 from django.utils import timezone
+from django.apps import apps
 
 import re
 
@@ -336,15 +337,42 @@ class MT_RawSerializer(serializers.ModelSerializer):
     class Meta:
         model = MT_RawTranslation
         fields = (
-            "segment", 'mt_engine', 'mt_raw', "reverse_string_for_segment",
-            "mt_engine_name", "target_language"
-        )
+            'mt_engine', 'mt_raw', "mt_engine_name", "task_mt_engine", "reverse_string_for_segment", "segment",
+        ) #, "target_language"
 
         extra_kwargs = {
             "reverse_string_for_segment": {"write_only": True},
-            "mt_engine": {"default": MT_Engine.objects.get(id=1)}
+            "mt_engine": {"default": MT_Engine.objects.get(id=1)},
+            "mt_raw": {"required": False},
+            # "mt_engine" : {"required": False},
         }
 
+    def to_internal_value(self, data):
+
+        # data["mt_engine"] = data.get("mt_engine", 1)
+        data["task_mt_engine"] = data.get("mt_engine", 1)
+        return super().to_internal_value(data=data)
+
+    def create(self, validated_data):
+        # MT FEED DATA
+        source_string = validated_data["segment"].source
+        source_lang_code = validated_data["segment"].source_language_code
+        target_lang_code = validated_data["segment"].target_language_code
+
+        validated_data["mt_raw"] = get_translation(
+            validated_data["task_mt_engine"].id,
+            source_string,
+            source_lang_code,
+            target_lang_code,
+        )
+
+        data = validated_data.pop("segment")
+        instance = MT_RawTranslation.objects.create(**validated_data)
+        seg_instance = apps.get_model(instance.reverse_string_for_segment).objects.get(id=data.id)
+        seg_instance.mt_raw_translation = instance
+        seg_instance.save()
+
+        return instance
 
 class TM_FetchSerializer(serializers.ModelSerializer):
     pentm_dir_path = serializers.CharField(source=\

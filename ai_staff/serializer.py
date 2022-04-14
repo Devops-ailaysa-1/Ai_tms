@@ -177,6 +177,7 @@ class ServiceTypeUnitsSerializer(serializers.ModelSerializer):
         fields = ( 'id', 'unit','is_active','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
 
+
 class SupportTypeSerializer(serializers.ModelSerializer):
 
         class Meta:
@@ -193,7 +194,7 @@ class AiUserTypeSerializer(serializers.ModelSerializer):
         read_only_fields = ('id','created_at','updated_at')
 
 class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
-    project = serializers.IntegerField(required=False, source="project_id")
+    # project = serializers.IntegerField(required=False, source="project_id")Edited
     class Meta:
         model = AilaysaSupportedMtpeEngines
         fields = ("id","name",'created_at','updated_at')

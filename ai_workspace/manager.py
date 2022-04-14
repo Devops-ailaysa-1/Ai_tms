@@ -51,6 +51,20 @@ class ProjectManager(models.Manager):
         )
         return project, files, jobs
 
+    def create_content_and_subject_and_steps_for_project(self,project,contents_data,\
+         subjects_data, steps_data, c_klass, s_klass, step_klass):
+
+         contents = c_klass.objects.bulk_create_of_project(
+            contents_data, project, c_klass
+            )
+         subjects = s_klass.objects.bulk_create_of_project(
+            subjects_data, project, s_klass
+            )
+         steps = step_klass.objects.bulk_create_of_project(
+            steps_data, project, step_klass
+            )
+         return project, contents, subjects, steps
+
 class FileManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
@@ -63,9 +77,27 @@ class JobManager(models.Manager):
         jobs = [self.create(**item, project=project) for item in data]
         return jobs
 
+class ProjectContentTypeManager(models.Manager):
+    def bulk_create_of_project(self, \
+            data, project, klass):
+        contents = [self.get_or_create(**item, project=project) for item in data]
+        return contents
+
+class ProjectStepsManager(models.Manager):
+    def bulk_create_of_project(self, \
+            data, project, klass):
+        steps = [self.get_or_create(**item, project=project) for item in data]
+        return steps
+
+class ProjectSubjectFieldManager(models.Manager):
+    def bulk_create_of_project(self, \
+            data, project, klass):
+        subjects = [self.get_or_create(**item, project=project) for item in data]
+        return subjects
+
 class TaskManager(models.Manager):
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
-        assign_to=None,  project = None):
+          project = None):
 
         if hasattr(project, "ai_user"):
             assign_to = project.ai_user
@@ -73,8 +105,11 @@ class TaskManager(models.Manager):
         if not assign_to:
             raise ValueError("You should send parameter either project "
                              "object or assign_to user")
-        tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
+        # tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
+        tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
+        print(tasks)
         return tasks
+
 
     def create_tasks_of_files_and_jobs_by_project(self, project):
         files = project.project_files_set.all()
@@ -83,3 +118,37 @@ class TaskManager(models.Manager):
         return self.create_tasks_of_files_and_jobs(
             files=files, jobs=jobs, klass=None, project=project
         )
+
+    def create_glossary_tasks_of_jobs(self, jobs, klass,\
+          project = None):
+        glossary_tasks = [self.get_or_create(job=job) for job in jobs]
+        return glossary_tasks
+
+    def create_glossary_tasks_of_jobs_by_project(self, project):
+        jobs = project.project_jobs_set.all()
+        return self.create_glossary_tasks_of_jobs(
+            jobs=jobs, klass=None)
+
+class TaskAssignManager(models.Manager):
+
+    def task_assign_update(self, pk, mt_engine , mt_enable):
+        self.filter(pk__in=pk).update(mt_engine_id = mt_engine, mt_enable = mt_enable)
+
+    def assign_task(self,project):
+        print("PRO---->",project.id)
+        if hasattr(project, "ai_user"):
+            assign_to = project.created_by
+        tasks = project.get_tasks
+        mt_engine = project.mt_engine_id
+        mt_enable = project.mt_enable
+        pre_translate = project.pre_translate
+        steps = project.get_steps
+        print("Inside Manager---------->",tasks)
+        print("Inside---->",steps)
+        task_assign = [self.get_or_create(task=task,step=step,\
+                         defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
+                         "mt_enable":mt_enable,"pre_translate":pre_translate})\
+                        for task in tasks for step in steps]
+        data = [i[0].id for i in task_assign if i[1]==False]
+        self.task_assign_update(data,mt_engine,mt_enable)
+        return task_assign

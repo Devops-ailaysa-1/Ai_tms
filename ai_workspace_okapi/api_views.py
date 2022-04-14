@@ -1,55 +1,52 @@
-from datetime import datetime
-from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
+import json
+import jwt
+import logging
+import os
+import re
+import urllib.parse
+import xlsxwriter
+from json import JSONDecodeError
+
+import requests
+from django.contrib.auth import settings
+from django.db.models import Q
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
+from rest_framework import permissions
+from rest_framework import views
+from rest_framework import viewsets
+from rest_framework.decorators import api_view
+from rest_framework.exceptions import APIException
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from spellchecker import SpellChecker
+from wiktionaryparser import WiktionaryParser
+
+from ai_auth.models import AiUser, UserCredits
+from ai_auth.utils import get_plan_name
+from ai_staff.models import SpellcheckerLanguages
+from ai_workspace.api_views import UpdateTaskCreditStatus
+from ai_workspace.models import File
+from ai_workspace.models import Task, TaskAssign
+from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, MergeSegment, FontSize, Comment
+from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
+from .serializers import PentmUpdateSerializer
+from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer)
-from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus,\
-    FontSize, Comment, MergeSegment
-from rest_framework import viewsets, authentication
-from rest_framework import views
-from django.shortcuts import get_object_or_404
-from rest_framework import permissions
-from ai_auth.models import AiUser, UserAttribute, UserCredits
-from ai_staff.models import AiUserType,SpellcheckerLanguages
-from django.http import HttpResponse
-from ai_workspace.models import Task, TaskCreditStatus
-from rest_framework.response import  Response
-from rest_framework.views import APIView
-from django.db.models import F, Q
-import requests, boto3
-import json, os, re, time, jwt, xlsxwriter
-import pickle
-import logging
-from rest_framework.exceptions import APIException
-from spellchecker import SpellChecker
-from rest_framework.decorators import api_view
-from rest_framework.pagination import PageNumberPagination
-from django.http import  HttpResponse, JsonResponse
-from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import JSONParser
-from django.http import  FileResponse
-from rest_framework.views import APIView
-from django.db.models import Q
-import urllib.parse
-from .serializers import PentmUpdateSerializer
-from wiktionaryparser import WiktionaryParser
-from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.urls import reverse
 from json import JSONDecodeError
 from ai_workspace.models import File, Project
 from .utils import SpacesService
-from django.contrib.auth import settings
-from ai_auth.utils import get_plan_name
 from .utils import download_file, bl_title_format, bl_cell_format
 from google.cloud import translate_v2 as translate
 from rest_framework import serializers
 import os, io, zipfile, requests
 from django.http import HttpResponse
 from controller.models import DownloadController
-
-client = translate.Client()
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -121,8 +118,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             ser = TaskSerializer(task)
             data = ser.data
             DocumentViewByTask.correct_fields(data)
-            # print("data--->", data)
             params_data = {**data, "output_type": None}
+
+            # print("Data to spring ===> ", params_data)
+
             res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None,
                          "use_spaces" : settings.USE_SPACES
@@ -131,10 +130,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
-    
+
             if doc.status_code == 200 :
                 doc_data = doc.json()
-                # print("Doc data ---> ", doc_data)
+                # print("Doc data from spring---> ", doc_data)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                     "file": task.file.id, "job": task.job.id,},))
                 if serializer.is_valid(raise_exception=True):
@@ -143,7 +142,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     task.save()
             else:
                 # logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
+                logger.info(f">>>>>>>> Something went wrong with file reading in --> {task.id}<<<<<<<<<")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
         return document
@@ -268,12 +267,38 @@ class MT_RawAndTM_View(views.APIView):
             return None
 
     @staticmethod
-    def get_data(request, segment):
+    def get_consumable_credits(doc, segment):
+        # segment_source = Segment.objects.get(id=segment_id).source
+        segment_source = segment.source
+        seg_data = { "segment_source" : segment_source,
+                     "source_language" : doc.source_language_code,
+                     "target_language" : doc.target_language_code,
+                     "processor_name" : "plain-text-processor",
+                     "extension":".txt"
+                     }
+        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
+            data={"segmentWordCountdata":json.dumps(seg_data)})
+
+        if res.status_code == 200:
+            print("Word count --->", res.json())
+            return res.json()
+        else:
+            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")
+
+    @staticmethod
+    def get_data(request, segment, mt_params):
+
+        # get already stored MT done for first time
         mt_raw = segment.mt_raw_translation
-        # mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200, "available"
 
+        # If MT disabled for the task
+        if mt_params.get("mt_enable", True) != True:
+            return {}, 200, "MT disabled"
+
+        # finding the user to debit Credit
         text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
         user = doc.doc_credit_debit_user
@@ -287,42 +312,30 @@ class MT_RawAndTM_View(views.APIView):
             else:
                 return MT_RawAndTM_View.can_translate(request, user)
 
+        # credit balance of debit user
         initial_credit = user.credit_balance.get("total_left")
 
-        segment_source = segment.source
-        seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code,
-                    "target_language":doc.target_language_code,\
-                     "processor_name":"plain-text-processor", "extension":".txt"}
+        # getting word count
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment)
 
-        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-            data={"segmentWordCountdata": json.dumps(seg_data)})
-        if res.status_code == 200:
-            print("Word count --->", res.json())
-            consumable_credits = res.json()
-        else:
-            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
-            raise  ValueError("Sorry! Something went wrong with word count calculation.")
+        if initial_credit > consumable_credits:
 
-        if initial_credit > consumable_credits :
-            mt_raw = client.translate(segment.source,
-                target_language=segment.target_language_code, format_="text") \
-                .get("translatedText")
-            reverse_string_for_segment = "ai_workspace_okapi.segment" if\
-                isinstance(segment, Segment) else ("ai_workspace_okapi.mergesegment"
-                if isinstance(segment, MergeSegment) else None)
+            # Applying Machine Translation
+            mt_engine_id = mt_params.get("mt_engine", 1)  # Google MT selected if MT selection fails
 
-            mt_raw_serlzr = MT_RawSerializer(data = {"mt_raw": mt_raw,
-                "reverse_string_for_segment": reverse_string_for_segment},
-                            context={"request": request})
+            reverse_string_for_segment = "ai_workspace_okapi.segment" if \
+                            isinstance(segment, Segment) else ("ai_workspace_okapi.mergesegment"
+                        if isinstance(segment, MergeSegment) else None)
+
+            mt_raw_serlzr = MT_RawSerializer(data = { "mt_engine": mt_engine_id,
+                                                      "reverse_string_for_segment": reverse_string_for_segment,
+                                                     }, context={"request": request})
 
             if mt_raw_serlzr.is_valid(raise_exception=True):
-                mt_raw_serlzr.save()
-                segment.mt_raw_translation = mt_raw_serlzr.instance
-                segment.save()
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, doc.id,
-                    consumable_credits)
-                # print("DEBIT STATUS -----> ", debit_status["msg"])
+                mt_raw_serlzr.save(segment=segment)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, consumable_credits)
                 return mt_raw_serlzr.data, 201, "available"
+
         else:
             return {}, 424, "unavailable"
 
@@ -339,15 +352,32 @@ class MT_RawAndTM_View(views.APIView):
                 return []
         return []
 
+    def get_segment_MT_params(self, segment_id):
+        task_assign_obj = TaskAssign.objects.filter(
+            Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
+            Q(step_id=1)
+        ).first()
+        return TaskAssignSerializer(task_assign_obj).data
+
+    def get_alert_msg(self, status_code, can_team):
+        if (status_code == 424 and can_team == "unavailable"):
+            return "MT doesn't work as the credits are insufficient. Please buy more or upgrade"
+        else:
+            return "Team subscription inactive"
+
     def get(self, request, segment_id):
+
         segment = get_object_or_404(Segment.objects.all(), id=segment_id)\
             .get_active_object()
-        data, status_code, can_team = self.get_data(request, segment)
-        # print("data---->", data)
-        # print("MT Data -----> ", data)
+
+        mt_params = self.get_segment_MT_params(segment_id)
+
+        # data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+
+        data, status_code, can_team = self.get_data(request, segment, mt_params)
+
         mt_alert = True if status_code == 424 else False
-        alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
-            can_team == "unavailable") else "Team subscription inactive"
+        alert_msg = self.get_alert_msg(status_code, can_team)
         tm_data = self.get_tm_data(request, segment)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
             "alert_msg":alert_msg}, status=status_code)
@@ -377,7 +407,7 @@ class ConcordanceSearchView(views.APIView):
         return Response(concordance, status=200)
 
 class DocumentToFile(views.APIView):
-    
+
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()
@@ -532,7 +562,7 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),})
 
         if settings.USE_SPACES:
-    
+
             with open(task_data["output_file_path"], "rb") as f:
                 SpacesService.put_object(output_file_path=File
                     .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
@@ -563,10 +593,8 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     @staticmethod
     def prepare_data(data):
         for i in data:
-            try:
-                data[i] = json.loads(data[i])
-            except:
-                pass
+            try:data[i] = json.loads(data[i])
+            except:pass
         return data
 
     @staticmethod

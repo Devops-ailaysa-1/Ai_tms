@@ -1097,7 +1097,7 @@ def TransactionSessionInfo(request):
 
     elif response.mode == "payment":
         try:
-            charge = Charge.objects.get(payment_intent=response.payment_intent)
+            charge = Charge.objects.get(payment_intent=response.payment_intent,captured=True)
         except Charge.DoesNotExist:
              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=charge.metadata.get("price"),type="Addon")
@@ -1393,6 +1393,19 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
         return user,password
 
+    def create_thread(self,user,team):
+        print("data--->",user,team)
+        team_obj = Team.objects.get(id=team)
+        from ai_marketplace.serializers import ThreadSerializer
+        # data = [{'first_person':user.id,'second_person':i.internal_member_id} for i in team_obj.internal_member_team_info.all()]
+        for i in team_obj.internal_member_team_info.all():
+            thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':i.internal_member_id})
+            if thread_ser.is_valid():
+                thread_ser.save()
+            else:
+                print("Errors--->",thread_ser.errors)
+
+
     @integrity_error
     def create(self,request):
         data = request.POST.dict()
@@ -1409,6 +1422,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             auth_forms.internal_user_credential_mail(context)
+            self.create_thread(request.user,data.get('team'))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1443,7 +1457,7 @@ def msg_send(user,vendor):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     print("Thread--->",thread_id)
-    message = "You are invited as an editor by "+user.fullname+".\n"+ "An invitation has been sent to your registered email." + "\n" + "Click <b>Accept</b> to accept the invitation." + "\n" + "<i>Please note that the invitation is valid only for one week</i>"
+    message = "You are invited as an editor by " + user.fullname + ".\n" + "An invitation has been sent to your registered email." + "\n" + "Click <b>Accept</b> to accept the invitation." + "\n" + "<i>Please note that the invitation is valid only for one week</i>"
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
