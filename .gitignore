@@ -109,3 +109,5 @@ wordsapi_sample.json
 *.dot
 *.png
 kite-installer
+staticfiles/
+panda1.gif

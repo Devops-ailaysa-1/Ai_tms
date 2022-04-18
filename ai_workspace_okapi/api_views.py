@@ -38,6 +38,8 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer)
+from django.urls import reverse
+from json import JSONDecodeError
 from .utils import SpacesService
 from .utils import download_file, bl_title_format, bl_cell_format
 from google.cloud import translate_v2 as translate
