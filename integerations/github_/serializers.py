@@ -34,12 +34,15 @@ class GithubOAuthTokenSerializer(serializers.ModelSerializer):
         try:
             g.get_user().login
         except:
-            raise serializers.ValidationError({"detail":"Token is invalid!!!3333"})
+            raise serializers.ValidationError({"detail":"Token is invalid!!!"})
 
         return value
 
     def create(self, validated_data):
         data = validated_data
+
+        # print("Validated data --> ", data)
+
         g = Github(data["oauth_token"])
         username = g.get_user().login
         data["username"] = username
@@ -49,7 +52,7 @@ class GithubOAuthTokenSerializer(serializers.ModelSerializer):
             username=username
         ).first():
             raise serializers.ValidationError\
-                ({"detail": "Already github account registered!!!"})
+                ({"detail": "This token is already registered"})
         return super().create(data)
 
 class RepositorySerializer(serializers.ModelSerializer):

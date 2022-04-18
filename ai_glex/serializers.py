@@ -45,8 +45,6 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     class Meta(ProjectQuickSetupSerializer.Meta):
         fields = ProjectQuickSetupSerializer.Meta.fields + ('glossary',)
 
-
-
     def to_internal_value(self, data):
         glossary = {}
         for key in GlossarySerializer.Meta.fields:

@@ -441,6 +441,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	# 	 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )# "project_analysis",)#,'ai_user')
 
 	def run_validation(self,data):
+
+		# print("Running validation ===> ", data)
+
 		if self.context['request']._request.method == 'POST':
 			if data.get('steps'):
 				if '1' not in data['steps']:
@@ -454,6 +457,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return super().run_validation(data)
 
 	def to_internal_value(self, data):
+
+		# print("Internal value ===> ", data)
+
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
@@ -511,6 +517,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
+
+		# print("Validated data ===> ", validated_data)
+
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
 		else:
@@ -550,7 +559,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
-		print("DATA---->",validated_data)
+		# print("DATA---->",validated_data)
 		if validated_data.get('project_name'):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)
