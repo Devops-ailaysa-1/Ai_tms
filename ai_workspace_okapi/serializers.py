@@ -463,3 +463,77 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
             raise serializers.ValidationError("all segments should be have same text unit id...")
         return super().validate(data)
+
+class ListSegmentIntgerationUpdateSerializer(serializers.ListSerializer):
+    def create(self, validated_data, text_unit):
+        ids = []
+        for s_data in validated_data:
+            segment = self.child.create(s_data, text_unit=text_unit, ids = ids)
+            ids.append(segment.id)
+
+class SegmentIntgerationUpdateSerializer(serializers.ModelSerializer):
+    source = serializers.CharField(trim_whitespace=False, allow_blank=True)
+    random_tag_ids = serializers.CharField(allow_blank=True, required=False)
+
+    class Meta:
+        model = Segment
+        list_serializer_class = ListSegmentIntgerationUpdateSerializer
+
+        fields = (
+            "source",
+            "target",
+            "coded_source",
+            "coded_brace_pattern",
+            "coded_ids_sequence",
+            "text_unit",
+            "is_merge_start",
+            "random_tag_ids",
+        )
+
+        extra_kwargs = {
+            "is_merged": {"required": False, "default": False},
+            "text_unit": {"required": False},
+        }
+
+    def to_internal_value(self, data):
+        print("child internal")
+        data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
+        data["random_tag_ids"] = json.dumps(data["random_tag_ids"])
+        return super().to_internal_value(data=data)
+
+    def create(self, validated_data, text_unit, ids):
+        segment = text_unit.text_unit_segment_set.filter(
+           Q (source=validated_data.get("source")) & (~Q(id__in=ids))
+            ).first()
+        if segment:
+            return segment
+        segment = Segment.objects.create(**validated_data, text_unit=text_unit)
+        return  segment
+
+class ListTextUnitIntgerationUpdateSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        result = []
+        for s_data in validated_data:
+            result.append(self.child.create(s_data))
+        return  result
+
+class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
+    text_unit_segment_set = SegmentIntgerationUpdateSerializer(many=True)
+    class Meta:
+        list_serializer_class = ListTextUnitIntgerationUpdateSerializer
+        model = TextUnit
+        fields  = ("text_unit_segment_set", "document",
+                   "okapi_ref_translation_unit_id")
+
+    def create(self, validated_data):
+        segments = validated_data.pop("text_unit_segment_set")
+        text_unit, created = TextUnit.objects.get_or_create(
+            okapi_ref_translation_unit_id = validated_data.get("okapi_ref_translation_unit_id"),
+            document = validated_data.get("document")
+        )
+
+        ser = SegmentIntgerationUpdateSerializer(many=True)
+        ser.create(segments, text_unit=text_unit)
+        return text_unit
+
+

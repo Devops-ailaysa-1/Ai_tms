@@ -34,6 +34,12 @@ class TranslationStatus(models.Model):
     status_name = models.CharField(max_length=25)
     status_id = models.IntegerField()
 
+    class Meta:
+        verbose_name_plural = "Translation statuses"
+
+    def __str__(self):
+        return self.status_name
+
 # class SegmentController(models.Model):
 #     base_segment_id = models.BigIntegerField(unique=True)
 #     related_model_string = models.TextField(default="ai_workspace_okapi.segment")
@@ -347,6 +353,10 @@ class MergeSegment(BaseSegment):
             keep_parents=keep_parents)
 
     objects = MergeSegmentManager()
+
+    @property
+    def is_merged(self):
+        return True
 
     def update_segment_is_merged_true(self,segs):
         segs[0].is_merge_start = True

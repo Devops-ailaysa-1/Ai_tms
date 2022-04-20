@@ -12,7 +12,7 @@ class DownloadController(models.Model):
     @property
     def get_download(self):
         return apps.get_model(self.related_model_string).objects\
-            .filter(**{"controller__in": self}).first()
+            .filter(controller= self).first()
 
     def update_project(self, project, related_model_string, branch_id):
         self.project = project
@@ -41,7 +41,7 @@ class FileController(models.Model):
     @property
     def get_file(self):
         return apps.get_model(self.related_model_string).objects\
-            .filter(**{"controller__in": self}).first()
+            .filter(controller= self).first()
 
 
 

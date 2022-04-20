@@ -441,6 +441,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	# 	 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )# "project_analysis",)#,'ai_user')
 
 	def run_validation(self,data):
+
+		# print("Running validation ===> ", data)
+
 		if self.context['request']._request.method == 'POST':
 			if data.get('steps'):
 				if '1' not in data['steps']:
@@ -454,6 +457,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return super().run_validation(data)
 
 	def to_internal_value(self, data):
+
+		# print("Internal value ===> ", data)
+
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
@@ -470,7 +476,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if data.get("contents"):
 			data["contents"]=[{"content_type":cont} for cont in data.get('contents',[])]
 		data["steps"] = [{"steps":step} for step in data.get('steps',[])] if data.get('steps') else [{"steps":1}]
-		print('dtatatat---->',data)
+		# print('dtatatat---->',data)
 		return super().to_internal_value(data=data)
 
 	def get_project_analysis(self,instance):
@@ -511,6 +517,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
+
+		# print("Validated data ===> ", validated_data)
+
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
 		else:
@@ -521,7 +530,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		project_manager = created_by
 		# workflow = validated_data.get('workflow_id')
 		validated_data.pop('team_exist')
-		print("validated_data---->",validated_data)
+		# print("validated_data---->",validated_data)
 		project_type = validated_data.get("project_type_id")
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_steps = validated_data.pop("proj_steps",[])
@@ -541,7 +550,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			[project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 
 		# steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]#need to include custom workflows
-		print("STEP---->",proj_steps)
+		# print("STEP---->",proj_steps)
 
 		if project_type == 1 or project_type == 2:
 			tasks = Task.objects.create_tasks_of_files_and_jobs(
@@ -550,7 +559,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
-		print("DATA---->",validated_data)
+		# print("DATA---->",validated_data)
 		if validated_data.get('project_name'):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)

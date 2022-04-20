@@ -88,6 +88,10 @@ class ContentTypes(ParanoidModel):
 
     class Meta:
         db_table = 'content_types'
+        verbose_name_plural = "Content_types"
+
+    def __str__(self):
+        return self.name
 
 class Languages(ParanoidModel):
     #lang_code = models.CharField(max_length=191)

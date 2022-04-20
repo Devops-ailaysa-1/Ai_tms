@@ -27,16 +27,13 @@ from .models import GithubApp, Repository, FetchInfo, Branch, ContentFile, HookD
 from ..base.utils import DjRestUtils
 from .tasks import update_files
 from guardian.shortcuts import get_objects_for_user
-from ai_workspace.models import Project, Task
+from ai_workspace.models import Project, Task, TaskAssign
 from ai_auth.models import AiUser
 from .enums import APP_NAME, DJ_APP_NAME
 
 import pytz, pickle, sys
 from io import BytesIO
 import pickle
-from pymongo import MongoClient
-cli = MongoClient ( 'localhost', 27017)
-
 
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
@@ -49,11 +46,6 @@ def repo_update_view(request, token):
     if token_serlzr.is_valid(raise_exception=True):
         hook = token_serlzr.instance
 
-    # dump_data = pickle.dumps(request.data)
-    # db = cli["samples"]
-    # coll = db["github_hook_data"]
-    # id_ = coll.insert_one({"data": dump_data})
-    # print("id---->", id_.inserted_id)
     gd = GithubHookSerializerD1(data=request.data)
     gd.is_valid(raise_exception=True)
     gd2 = GithubHookSerializerD2(data=gd.data.get("payload"))
@@ -66,19 +58,20 @@ def repo_update_view(request, token):
     data["updated_files"] = { file for _ in data.get("commits") for
             file in _.get("modified") }
     data["deleted_files"] = { file for _ in data.get("commits") for
-            file in _.get("removed") }
+            file in _.get("removed") } # should add celery task for this
     data["added_files"] = { file for _ in data.get("commits") for
-            file in _.get("added") }
-
+            file in _.get("added") } # should add celery task for this
     #
-    # repo_fullname, branch_name = data["repository"]["full_name"], data["ref"]
-    #
-    # for file_path in data["updated_files"] :
-    #     update_files.delay(repo_fullname=repo_fullname,
-    #         branch_name=branch_name, file_path=file_path)
+    repo_fullname, branch_name, hash = data["repository"]["full_name"], data["ref"],\
+                                        data["commit_hash"]
+    # print(f"{repo_fullname=} and {branch_name=}")
 
-    return Response(request.data)
+    for file_path in data["updated_files"] :
+        update_files.delay(repo_fullname=repo_fullname,
+            branch_name=branch_name, file_path=file_path,
+            new_commit_hash=hash)
 
+    return Response(data)
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -97,14 +90,20 @@ class GithubOAuthTokenViewset(viewsets.ModelViewSet):
     permission_classes = [IsOwnerOrReadOnly, IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
+
+        # print("Request data --> ", request.data.dict())
+
         data = request.data.dict()
 
         serlzr_obj = GithubOAuthTokenSerializer(data={**data,
             "ai_user": request.user.id})
 
-        print("initial data---->", serlzr_obj.initial_data)
+        # print("initial data---->", serlzr_obj.initial_data)
         if serlzr_obj.is_valid(raise_exception=True):
             serlzr_obj.save()
+
+            # print("Validated data ---> ", serlzr_obj.data)
+
             return Response(serlzr_obj.data, status=201)
 
     def get_queryset(self):
@@ -234,13 +233,18 @@ class ContentFileViewset(viewsets.ModelViewSet):
     @transaction.atomic
     def create(self, request, *args, **kwargs):
 
+        # print("Request data ---> ", request.data)
+
         serlzr1 = LocalizeIdsSerializer(data=request.data)
 
         if serlzr1.is_valid(raise_exception=True):
+            print("serlzr1 data ---> ", serlzr1.data)
             data = serlzr1.data
 
         data = [{"is_localize_registered": True, "id": _}
                 for _ in data.get('localizable_ids')]
+
+        # print("is localise registered data --> ", data)
 
         ser = ContentFileSerializer(self.get_queryset(),
                 data=data, many=True, partial=True)
@@ -248,11 +252,13 @@ class ContentFileViewset(viewsets.ModelViewSet):
         if ser.is_valid(raise_exception=True):
             ser.save()
             data = ser.data
+
+            # print("Content serializer data --> ", data)
             instances = ser.instance
 
         im_uploads = []
 
-        for  content_file in instances:
+        for content_file in instances:
             im = DjRestUtils.convert_content_to_inmemoryfile(
                 filecontent=content_file.get_content_of_file.decoded_content,
                 file_name=content_file.file)
@@ -262,6 +268,7 @@ class ContentFileViewset(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             data = Response(serlzr.data).data
+            # print("CreateReslv data ---> ", data)
 
         data = {**data, "files": im_uploads, "branch_id": self.kwargs["pk"]}
 
@@ -367,4 +374,3 @@ class ContentFileViewset(viewsets.ModelViewSet):
         hookdeck.save()
 
         return  Response({"project":project_data, "hook": HookDeckSerializer(hookdeck).data})
-

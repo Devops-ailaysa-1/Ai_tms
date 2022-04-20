@@ -6,6 +6,7 @@ import re
 import urllib.parse
 import xlsxwriter
 from json import JSONDecodeError
+from django.urls import reverse
 
 import requests
 from django.contrib.auth import settings
@@ -27,7 +28,7 @@ from ai_auth.models import AiUser, UserCredits
 from ai_auth.utils import get_plan_name
 from ai_staff.models import SpellcheckerLanguages
 from ai_workspace.api_views import UpdateTaskCreditStatus
-from ai_workspace.models import File
+from ai_workspace.models import File,Project
 from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, MergeSegment, FontSize, Comment
@@ -37,10 +38,15 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer)
+from django.urls import reverse
+from json import JSONDecodeError
 from .utils import SpacesService
 from .utils import download_file, bl_title_format, bl_cell_format
 from google.cloud import translate_v2 as translate
 from rest_framework import serializers
+import os, io, zipfile, requests
+from django.http import HttpResponse
+from controller.models import DownloadController
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -230,12 +236,16 @@ class SegmentsUpdateView(viewsets.ModelViewSet):
 
 
 class MergeSegmentDeleteView(viewsets.ModelViewSet):
-    def get_object(self, pk=None):
-        pk = self.kwargs["pk"]
-        obj = get_object_or_404(Segment.objects.all(), id=pk)
-        if obj.is_merged == True and obj.is_merge_start:
-            return get_object_or_404(MergeSegment.objects.all(), id=pk)
-        raise serializers.ValidationError("Restore process not applicable for this segment")
+    def get_queryset(self):
+        return  MergeSegment.objects.all()
+
+
+    # def get_object(self, pk=None):
+    #     pk = self.kwargs["pk"]
+    #     obj = get_object_or_404(Segment.objects.all(), id=pk)
+    #     if obj.is_merged == True and obj.is_merge_start:
+    #         return get_object_or_404(, id=pk)
+    #     raise serializers.ValidationError("Restore process not applicable for this segment")
 
 class MT_RawAndTM_View(views.APIView):
 
@@ -279,13 +289,17 @@ class MT_RawAndTM_View(views.APIView):
     @staticmethod
     def get_data(request, segment, mt_params):
 
+        print("MT params ---> ", mt_params)
+
         # get already stored MT done for first time
         mt_raw = segment.mt_raw_translation
         if mt_raw:
+            print("MT Raw available ---> ", mt_raw)
             return MT_RawSerializer(mt_raw).data, 200, "available"
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
+            print("MT not enabled")
             return {}, 200, "MT disabled"
 
         # finding the user to debit Credit
@@ -369,6 +383,7 @@ class MT_RawAndTM_View(views.APIView):
         mt_alert = True if status_code == 424 else False
         alert_msg = self.get_alert_msg(status_code, can_team)
         tm_data = self.get_tm_data(request, segment)
+        print("MT Data ---> ", data)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
             "alert_msg":alert_msg}, status=status_code)
 
@@ -430,7 +445,7 @@ class DocumentToFile(views.APIView):
 
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
-        return re.sub(r'</?\d+>', "", string)
+        return re.sub(rf'</?\d+>', "", string)
         # return string
 
     def get_bilingual_filename(self, document_id):
@@ -528,7 +543,7 @@ class DocumentToFile(views.APIView):
         ser = TaskSerializer(task)
         task_data = ser.data
         DocumentViewByTask.correct_fields(task_data)
-        print("---->", output_type)
+        # print("---->", output_type)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
         pre, ext = os.path.splitext(task_data["output_file_path"])
@@ -539,6 +554,7 @@ class DocumentToFile(views.APIView):
                 "-" + task_data["target_language"] + ")" + ext
 
         params_data = {**task_data, "output_type": output_type}
+        # print("Params data ----> ", params_data)
         res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                      "fprm_file_path": None,
                      "use_spaces" : settings.USE_SPACES
@@ -556,7 +572,7 @@ class DocumentToFile(views.APIView):
             with open(task_data["output_file_path"], "rb") as f:
                 SpacesService.put_object(output_file_path=File
                     .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
-
+        print("res--->", res.text)
         return res
 
 OUTPUT_TYPES = dict(
@@ -1357,3 +1373,53 @@ class MergeSegmentView(viewsets.ModelViewSet):
             print("Object ---> ", obj)
             obj.update_segments(serlzr.validated_data.get("segments"))
             return Response(MergeSegmentSerializer(obj).data)
+
+class ProjectDownload(viewsets.ModelViewSet):
+    def get_queryset(self):
+        # limiting queryset for current user
+        qs = Project.objects.filter(ai_user=self.request.user).all()
+        return  qs
+
+    def get_files_info(self):
+        self.project = project = self.get_object()
+        documents = Document.objects.filter(file__project=project).all()
+
+        files_info = []
+        for document in documents:
+            res = DocumentToFile.document_data_to_file("", document_id=document.id)
+            if res.status_code == 200:
+                files_info.append({"file_path":res.text, "file_id": document.file.id,
+                                   "job_id": document.job.id})
+        return files_info
+
+    def zip(self, request, *args, **kwargs): #get
+
+        file_paths = [info.get("file_path") for info in self.get_files_info()]
+        response = HttpResponse(content_type='application/zip')
+        # zf = zipfile.ZipFile(response, 'w')
+        with zipfile.ZipFile(response, 'w') as zf:
+            for file_path in file_paths:
+                with open(file_path, "rb") as f:
+                    zf.writestr(file_path.split("/")[-1], f.read())
+
+        response['Content-Disposition'] = f'attachment; filename={self.project.project_name}.zip'
+
+        return response
+
+    def push_to_repo(self, request, *args, **kwargs):#post
+        files_info = self.get_files_info()
+        dc = DownloadController.objects.filter(project=self.project).first()
+        if dc :
+            try:
+                dc.get_download .download(project=self.project, files_info=files_info)
+                return Response({"message": "Successfully pushed to repository!!!"}, status=200)
+            except Exception as e:
+                print("errror--->", e)
+                return Response({"message": "Something went to wrong!!!"},status=500)
+        return Response({"message": "There is no documnent to push!!!"}, status=204)
+
+
+
+
+
+

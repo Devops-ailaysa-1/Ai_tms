@@ -101,7 +101,7 @@ class Workflows(models.Model):
 
 ##########################Need to add project type################################
 class Project(models.Model):
-    project_type = models.ForeignKey(ProjectType, null=False, blank=False,
+    project_type = models.ForeignKey(ProjectType, null=False, blank=False, default=1,
         on_delete=models.CASCADE, related_name="proj_type")
     project_name = models.CharField(max_length=50, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
@@ -135,7 +135,6 @@ class Project(models.Model):
     __repr__ = __str__
 
     penseive_tm_klass = PenseiveTM
-
 
     def save(self, *args, **kwargs):
         ''' try except block created for logging the exception '''
@@ -732,6 +731,12 @@ class TaskAssign(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
 
     objects = TaskAssignManager()
+
+    # task_assign_obj = TaskAssign.objects.filter(
+    #     Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
+    #     Q(step_id=1)
+    # ).first()
+    # return TaskAssignSerializer(task_assign_obj).data
 
 class TaskAssignInfo(models.Model):
     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,

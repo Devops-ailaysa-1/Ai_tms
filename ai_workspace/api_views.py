@@ -572,6 +572,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         project_type = json.loads(self.request.POST.get('project_type','1'))
         if project_type == 3:
             return GlossarySetupSerializer
+        # if project_type == 4:
+        #     return GitProjSetupSerializer
         return ProjectQuickSetupSerializer
 
     def get_object(self):
@@ -602,7 +604,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
     def create(self, request):
-        print("DT----->",request.data)
+        # print("Project Creation request data----->", request.data)
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
         if text_data:
@@ -617,7 +619,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
-            serlzr = ser(data={**request.data, "files": request.FILES.getlist("files")},context={"request": request})
+            serlzr = ser(data={**request.data, "files": request.FILES.getlist("files")}, context={"request": request})
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 return Response(serlzr.data, status=201)
