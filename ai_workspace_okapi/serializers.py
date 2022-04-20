@@ -5,12 +5,14 @@ import json, copy
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
 from ai_workspace.models import  Project,Job
+from ai_auth.models import AiUser
 from django.db.models import Q
 from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from contextlib import closing
 from django.db import connection
 from django.utils import timezone
 from django.apps import apps
+from ai_workspace_okapi.models import SegmentHistory
 
 import re
 
@@ -100,18 +102,23 @@ class SegmentSerializerV2(SegmentSerializer):
     target = serializers.CharField(trim_whitespace=False, required=False)
     status = serializers.PrimaryKeyRelatedField(required=False,
                 queryset=TranslationStatus.objects.all())
+    user  = serializers.PrimaryKeyRelatedField(required=False,queryset=AiUser.objects.all())
     class Meta(SegmentSerializer.Meta):
-        fields = ("target", "id", "temp_target", "status", "random_tag_ids", "tagged_source", "target_tags")
+        fields = ("target", "id", "temp_target", "status", "random_tag_ids", "tagged_source", "target_tags","user",)
 
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
     def update(self, instance, validated_data):
+        user = validated_data.pop('user','')
+        content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
+            SegmentHistory.objects.create(segment_id=instance.id, user = user, target= content, status= validated_data.get('status') )
             return res
+        SegmentHistory.objects.create(segment_id=instance.id, user = user, target= content, status= validated_data.get('status') )
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
