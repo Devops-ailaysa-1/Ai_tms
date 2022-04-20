@@ -12,6 +12,7 @@ from contextlib import closing
 from django.db import connection
 from django.utils import timezone
 from django.apps import apps
+from django.http import HttpResponse, JsonResponse
 from ai_workspace_okapi.models import SegmentHistory
 
 import re
@@ -106,11 +107,16 @@ class SegmentSerializerV2(SegmentSerializer):
     class Meta(SegmentSerializer.Meta):
         fields = ("target", "id", "temp_target", "status", "random_tag_ids", "tagged_source", "target_tags","user",)
 
+    def run_validation(self, data):
+        if 'user' not in data:
+            raise serializers.ValidationError({"msg":"user_id required"})
+        return super().run_validation(data)
+
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
     def update(self, instance, validated_data):
-        user = validated_data.pop('user','')
+        user = validated_data.pop('user')
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
             res = super().update(instance, validated_data)
@@ -536,4 +542,7 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
         ser.create(segments, text_unit=text_unit)
         return text_unit
 
-
+class SegmentHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SegmentHistory
+        fields = '__all__'

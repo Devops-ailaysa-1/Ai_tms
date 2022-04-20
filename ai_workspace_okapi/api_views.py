@@ -33,7 +33,7 @@ from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, MergeSegment, FontSize, Comment
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
-from .serializers import PentmUpdateSerializer
+from .serializers import PentmUpdateSerializer,SegmentHistorySerializer
 from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
@@ -1418,8 +1418,14 @@ class ProjectDownload(viewsets.ModelViewSet):
                 return Response({"message": "Something went to wrong!!!"},status=500)
         return Response({"message": "There is no documnent to push!!!"}, status=204)
 
-
-
-
-
-
+############################segment history#############################################
+@api_view(['GET',])
+def get_segment_history(request):
+    seg_id = request.GET.get('segment')
+    try:
+        obj = Segment.objects.get(id=seg_id)
+        history = obj.segment_history.all().order_by('-id')
+        ser = SegmentHistorySerializer(history,many=True)
+        return Response(ser.data)
+    except Segment.DoesNotExist:
+        return Response({'msg':'Not found'}, status=404)

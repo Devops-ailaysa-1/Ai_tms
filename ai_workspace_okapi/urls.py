@@ -49,6 +49,7 @@ urlpatterns+=[
     path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment'),
     path("project/download/<int:pk>", api_views.ProjectDownload.as_view({"get": "zip",
             "post":"push_to_repo"}), name="project-download"),
+    path("segment_history/",api_views.get_segment_history,name='segment-history'),
 ]
 
 urlpatterns+=[
@@ -57,7 +58,3 @@ urlpatterns+=[
     path("segment/update/dj/<int:segment_id>", views.SegmentUpdateView.as_view(), name="segment-update-dj"),
     path("download/to/file/dj", views.DownloadDocumentToFileView.as_view(), name="download-document-to-file")
 ]
-
-
-
-
