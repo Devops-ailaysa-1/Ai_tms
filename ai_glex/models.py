@@ -25,7 +25,7 @@ class Glossary(models.Model):
     details_of_PGS          = models.TextField(null=True, blank=True)
     source_Copyright_owner  = models.CharField(max_length=50, null=True, blank=True)
     notes                   = models.TextField(verbose_name = "Glossary General Notes", null=True, blank=True)
-    usage_permission        = models.CharField(max_length=30, verbose_name = "Usage Permission", choices=options, default='Public', null=True, blank=True)
+    usage_permission        = models.CharField(max_length=30, verbose_name = "Usage Permission", choices=options, default='Private', null=True, blank=True)
     public_license          = models.CharField(max_length=30, verbose_name = "Public License", null=True, blank=True)
     created_date            = models.DateTimeField(auto_now_add=True)
     modified_date           = models.DateTimeField(auto_now=True)

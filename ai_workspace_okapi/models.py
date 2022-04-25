@@ -12,6 +12,7 @@ from django.db.models import Q, UniqueConstraint, CheckConstraint, F
 from .managers import MergeSegmentManager
 from django.apps import apps
 
+
 class TaskStatus(models.Model):
     task = models.ForeignKey("ai_workspace.Task", on_delete=models.SET_NULL, null=True)
 
@@ -300,6 +301,17 @@ class Document(models.Model):
         ai_user_first_doc_id = Document.objects.filter(
             job__project__ai_user_id=user).first().id
         return True if self.id == ai_user_first_doc_id else False
+
+    @property
+    def assign_detail(self):
+        from ai_workspace.models import TaskAssign
+        task = self.task_document.first().id
+        if TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False):
+            rr = TaskAssign.objects.filter(task_id = task)
+            return [{'step':i.step.name,'user_id':i.assign_to.id} for i in rr]
+        else:
+            return []
+
 
 class FontSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,

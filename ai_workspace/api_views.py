@@ -10,7 +10,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_glex.serializers import GlossarySetupSerializer
+from ai_glex.serializers import GlossarySetupSerializer,GlossaryFileSerializer
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
 from ai_workspace_okapi.utils import download_file
@@ -416,17 +416,19 @@ class Files_Jobs_List(APIView):
         subjects = project.proj_subject.all()
         steps = project.proj_steps.all()
         files = project.project_files_set.filter(usage_type__use_type="source").all()
-        return jobs, files, contents, subjects, steps, project
+        glossary_files = project.project_files.all()
+        return jobs, files, contents, subjects, steps, project, glossary_files
 
     def get(self, request, project_id):
-        jobs, files, contents, subjects, steps, project = self.get_queryset(project_id)
+        jobs, files, contents, subjects, steps, project, glossary_files = self.get_queryset(project_id)
         team_edit = False if project.assigned == True else True
         jobs = JobSerializer(jobs, many=True)
         files = FileSerializer(files, many=True)
+        glossary_files = GlossaryFileSerializer(glossary_files,many=True)
         contents = ProjectContentTypeSerializer(contents,many=True)
         subjects = ProjectSubjectSerializer(subjects,many=True)
         steps = ProjectStepsSerializer(steps,many=True)
-        return Response({"files":files.data, "jobs": jobs.data, "subjects":subjects.data,\
+        return Response({"files":files.data,"glossary_files":glossary_files.data, "jobs": jobs.data, "subjects":subjects.data,\
                         "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,\
                          "team_edit":team_edit,"project_type_id":project.project_type.id,\
                          "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit}, status=200)

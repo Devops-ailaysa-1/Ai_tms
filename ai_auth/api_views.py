@@ -59,6 +59,10 @@ from ai_auth.utils import get_plan_name
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
 
 
+
+def striphtml(data):
+    p = re.compile(r'<.*?>')
+    return p.sub('', data)
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -1751,3 +1755,9 @@ def vendor_renewal_change(request):
         user.is_vendor = data
         user.save()
     return JsonResponse({"msg": "changed successfully"})
+
+
+import re
+def striphtml(data):
+    p = re.compile(r'<.*?>')
+    return p.sub('', data)

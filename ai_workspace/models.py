@@ -627,7 +627,7 @@ class Task(models.Model):
             related_name="file_tasks_set")
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
             related_name="job_tasks_set")
-    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
+    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True, related_name='task_document')
 
     class Meta:
         constraints = [

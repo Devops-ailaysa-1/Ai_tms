@@ -14,6 +14,7 @@ from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
+from ai_auth.api_views import striphtml
 # @shared_task
 # def test_task():
 #     print("this is task")
@@ -114,7 +115,7 @@ def send_notification_email_for_unread_messages():
            for j in q2:
                actor_obj = AiUser.objects.get(id = j.actor_object_id)
                recent_message = j.description
-               details.append({"From":actor_obj.fullname,"Message":recent_message})
+               details.append({"From":actor_obj.fullname,"Message":striphtml(recent_message)})
            email = AiUser.objects.get(id = i.recipient_id).email
            email_list.append({"email":email,"details":details})
         auth_forms.unread_notification_mail(email_list)

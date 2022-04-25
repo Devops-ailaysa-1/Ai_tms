@@ -1,4 +1,5 @@
 from rest_framework import filters,generics
+from rest_framework.pagination import PageNumberPagination
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter as SF, OrderingFilter as OF
@@ -24,11 +25,11 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
                     Thread,BidPropasalDetails,AvailableJobs,ChatMessage,ProjectPostSubjectField)
-from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,
+from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,ProjectPostTemplateSerializer,
                         AvailableJobSerializer,BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
                         GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
-                        )
+                        SimpleProjectSerializer)
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines)
@@ -52,7 +53,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django_filters import Filter, FilterSet,RangeFilter
 import django_filters
 from django_filters.filters import OrderingFilter
-from ai_workspace.serializers import TaskSerializer
+from ai_workspace.serializers import TaskSerializer,\
+            JobSerializer, ProjectSubjectSerializer,ProjectContentTypeSerializer
 # Create your views here.
 
 
@@ -115,64 +117,83 @@ def assign_available_vendor_to_customer(request):
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
-def post_job_primary_details(request):
+def post_project_primary_details(request):
     project_id=request.POST.get('project_id')
-    jobslist=Job.objects.filter(project_id=project_id).values('source_language_id','target_language_id')
-    result={}
-    tar_lang=[]
-    for i in jobslist:
-        lang=i.get('target_language_id')
-        tar_lang.append(lang)
-    jobs=[{"src_lang":i.get('source_language_id'),"tar_lang":tar_lang}]
-    result["jobs"]=jobs
-    subjectfield = ProjectSubjectField.objects.filter(project_id=project_id).all()
-    subjects=[]
-    for i in subjectfield:
-        subjects.append({'subject':i.subject_id})
-    result["subjects"]=subjects
-    content_type = ProjectContentType.objects.filter(project_id=project_id).all()
-    contents=[]
-    for j in content_type:
-        contents.append({'content_type':j.content_type_id})
-    result["contents"]=contents
-    result["project_name"]=Project.objects.get(id=project_id).project_name
-    # proj_detail = Project.objects.select_related('proj_subject','proj_content_type').filter(id=1)\
-    #               .values('proj_content_type__content_type_id', 'proj_subject__subject_id','project_name')
-    # proj_detail={"project_name":proj_detail[0].get('project_name'),"subject":proj_detail[0].get('proj_subject__subject_id'),"content_type":proj_detail[0].get('proj_content_type__content_type_id')}
-    # result["projectpost_detail"]=proj_detail
+    project = get_object_or_404(Project.objects.all(), id=project_id)
+                     # ai_user=self.request.user)
+    jobs = project.project_jobs_set.all()
+    contents = project.proj_content_type.all()
+    subjects = project.proj_subject.all()
+    jobs = JobSerializer(jobs, many=True)
+    contents = ProjectContentTypeSerializer(contents,many=True)
+    subjects = ProjectSubjectSerializer(subjects,many=True)
+    result = {'project_name':project.project_name,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
     return JsonResponse({"res":result},safe=False)
+    # jobslist=Job.objects.filter(project_id=project_id).values('source_language_id','target_language_id')
+    # result={}
+    # tar_lang=[]
+    # for i in jobslist:
+    #     lang=i.get('target_language_id')
+    #     tar_lang.append(lang)
+    # jobs=[{"src_lang":i.get('source_language_id'),"tar_lang":tar_lang}]
+    # result["jobs"]=jobs
+    # subjectfield = ProjectSubjectField.objects.filter(project_id=project_id).all()
+    # subjects=[]
+    # for i in subjectfield:
+    #     subjects.append({'subject':i.subject_id})
+    # result["subjects"]=subjects
+    # content_type = ProjectContentType.objects.filter(project_id=project_id).all()
+    # contents=[]
+    # for j in content_type:
+    #     contents.append({'content_type':j.content_type_id})
+    # result["contents"]=contents
+    # result["project_name"]=Project.objects.get(id=project_id).project_name
+    # # proj_detail = Project.objects.select_related('proj_subject','proj_content_type').filter(id=1)\
+    # #               .values('proj_content_type__content_type_id', 'proj_subject__subject_id','project_name')
+    # # proj_detail={"project_name":proj_detail[0].get('project_name'),"subject":proj_detail[0].get('proj_subject__subject_id'),"content_type":proj_detail[0].get('proj_content_type__content_type_id')}
+    # # result["projectpost_detail"]=proj_detail
+    # return JsonResponse({"res":result},safe=False)
 
 
-class ProjectPostInfoCreateView(APIView):
+class ProjectPostInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    def get(self, request,projectpost_id):
+    def get(self, request):
         try:
             print(request.user.id)
-            queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id)).all()
-            print(queryset)
+            projectpost_id = request.GET.get('project_post_id')
+            if projectpost_id:
+                queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id)).all()
+                print(queryset)
+            else:
+                queryset = ProjectboardDetails.objects.filter(customer_id = request.user.id).all()
             serializer = ProjectPostSerializer(queryset,many=True)
             return Response(serializer.data)
         except:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def post(self, request,project_id):
-        print(project_id)
+    def create(self, request):
+        template = request.POST.get('is_template',None)
+        if template: ####template create only added.........update and delete need to be included#############
+            serializer1 = ProjectPostTemplateSerializer(data={**request.POST.dict(),'customer_id':request.user.id})
+            if serializer1.is_valid():
+                serializer1.save()
         customer = request.user.id
-        print({**request.POST.dict(),'project_id':project_id})
-        serializer = ProjectPostSerializer(data={**request.POST.dict(),'project_id':project_id,'customer_id':customer})#,context={'request':request})
-        print(serializer.is_valid())
-        print(serializer.errors)
+        serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer})#,context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
 
-    def put(self,request,projectpost_id):
-        projectpost_info = ProjectboardDetails.objects.get(id=projectpost_id)
+    def update(self,request,pk):
+        projectpost_info = ProjectboardDetails.objects.get(id=pk)
         serializer = ProjectPostSerializer(projectpost_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
 
+    def delete(self,request,pk):
+        projectpost_info = ProjectboardDetails.objects.get(id=pk)
+        projectpost_info.delete()
+        return Response(status=204)
 
 
 @api_view(['GET',])
@@ -186,13 +207,22 @@ def user_projectpost_list(request):
         for i in queryset:
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
             project = i.proj_name
-            project_id=i.id
+            projectpost_id=i.id
             bids = BidPropasalDetails.objects.filter(projectpost_id = i.id).count()
-            out=[{'jobs':jobs,'project':project,'bids':bids,'project_id':project_id}]
+            out=[{'jobs':jobs,'project':project,'bids':bids,'projectpost_id':projectpost_id}]
             new.extend(out)
         return JsonResponse({'out':new},safe=False)
     except:
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def shortlisted_vendor_list_send_email_new(request):
+#     projectpost_id=request.POST.get('projectpost_id')
+#     projectpost = ProjectboardDetails.objects.get(id=projectpost_id)
+#     ser = ShortListedVendorSerializer(projectpost)
+
+
 
 
 
@@ -404,27 +434,36 @@ class ChatMessageListView(viewsets.ModelViewSet):
         return Response({'msg':'deleted'})
 
 
+class IncompleteProjectListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SimpleProjectSerializer
+    pagination.PageNumberPagination.page_size = 20
 
-@api_view(['GET',])
-@permission_classes([IsAuthenticated])
-def get_incomplete_projects_list(request):
-    try:
-        new=[]
-        project_list=[x for x in Project.objects.filter(ai_user=request.user.id) if x.progress != "completed" ]
-        out=[]
-        for j in project_list:
-            out=[{"project_id":j.id,"project":j.project_name}]
-            jobs = j.get_jobs
-            for i in jobs:
-                rt=[]
-                jobs=i.source_language.language+"->"+i.target_language.language
-                res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id)).distinct()
-                rt.append({"job_id":i.id,"job":jobs,"vendors":res.count()})
-                out.extend(rt)
-            new.append(out)
-    except:
-        out="No incomplete projects"
-    return JsonResponse({'project_list':new},safe=False)
+    def get_queryset(self):
+        queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).order_by('-id') if x.progress != "completed" ]
+        return queryset
+
+
+# @api_view(['GET',])
+# @permission_classes([IsAuthenticated])
+# def get_incomplete_projects_list(request):
+    # try:
+    #     new=[]
+    #     project_list=[x for x in Project.objects.filter(ai_user=request.user.id) if x.progress != "completed" ]
+    #     out=[]
+    #     for j in project_list:
+    #         out=[{"project_id":j.id,"project":j.project_name}]
+    #         jobs = j.get_jobs
+    #         for i in jobs:
+    #             rt=[]
+    #             jobs=i.source_language.language+"->"+i.target_language.language
+    #             res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id)).distinct()
+    #             rt.append({"job_id":i.id,"job":jobs,"vendors":res.count()})
+    #             out.extend(rt)
+    #         new.append(out)
+    # except:
+    #     out="No incomplete projects"
+    # return JsonResponse({'project_list':new},safe=False)
 
 
 @api_view(['GET',])
@@ -573,7 +612,7 @@ class GetVendorListViewNew(generics.ListAPIView):
             for i in queryset.values('vendor_lang_pair__id'):
                 ids.append(i.get('vendor_lang_pair__id'))
             queryset= queryset_all = queryset.filter(Q(vendor_lang_pair__service__mtpe_count_unit_id=count_unit)&Q(vendor_info__currency = currency)&Q(vendor_lang_pair__service__mtpe_rate__range=(min_price,max_price))&Q(vendor_lang_pair__service__lang_pair_id__in=ids)).distinct()
-        if  contenttype:
+        if contenttype:
             contentlist = contenttype.split(',')
             queryset = queryset.filter(Q(vendor_contentype__contenttype_id__in=contentlist)&Q(vendor_contentype__deleted_at=None)).annotate(number_of_match=Count('vendor_contentype__contenttype_id',0)).order_by('-number_of_match').distinct()
         if subject:
