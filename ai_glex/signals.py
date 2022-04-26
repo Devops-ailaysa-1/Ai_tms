@@ -24,6 +24,10 @@ def update_words_from_template(sender, instance, *args, **kwargs):
                             data[1],            #Autoincremented in the model
                             data[2].strip(),    #SL term column
                             data[3].strip() if data[3] else data[3], )
+                value.glossary_id = glossary_obj.id
+                value.file_id = instance.id
+                value.job_id = instance.job_id
+                value.save()
     else:
         for data in imported_data:
             if data[2]:
