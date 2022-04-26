@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_auth.models import AiUser
 from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,\
-                        GlossaryTasks,GlossarySelected,
+                        GlossaryTasks,GlossarySelected,MyGlossary,\
                     )
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
@@ -21,6 +21,10 @@ class GlossaryFileSerializer(serializers.ModelSerializer):
         model = GlossaryFiles
         fields = "__all__"
 
+class MyGlossarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyGlossary
+        fields = "__all__"
 
 class TermsSerializer(serializers.ModelSerializer):
     class Meta:

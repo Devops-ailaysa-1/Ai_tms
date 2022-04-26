@@ -9,9 +9,10 @@ from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.conf import settings
-from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected
+from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected, MyGlossary
 from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer,\
-                        GlossaryListSerializer,GlossarySelectedSerializer
+                        GlossaryListSerializer,GlossarySelectedSerializer,\
+                        MyGlossarySerializer
 import json,mimetypes,os
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
@@ -23,7 +24,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace.models import Task
 from ai_workspace.api_views import UpdateTaskCreditStatus
-
+from django.db.models import Q
 from .serializers import TermsSerializer
 
 from nltk import word_tokenize
@@ -176,8 +177,8 @@ class TermUploadView(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self,request,pk):
-        term = TermsModel.objects.get(id=pk)
+    def destroy(self, request, *args, **kwargs):
+        term = TermsModel.objects.get(id=self.kwargs.get("pk"))
         term.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -301,17 +302,18 @@ def glossary_search(request):
     doc = Document.objects.get(id=doc_id)
     glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
     target_language = doc.job.target_language
-    # queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
-    #             .filter(job__target_language__language=target_language)\
-    #             .extra(where={"%s like ('%%' || `sl_term`  || '%%')"},
-    #                   params=[user_input]).distinct().values('sl_term','tl_term')
+    source_language = doc.job.source_language
+    queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=request.user)& Q(sl_language__language=source_language))\
+                .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
+                      params=[user_input]).distinct().values('sl_term','tl_term')
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
                 .filter(job__target_language__language=target_language)\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
                       params=[user_input]).distinct().values('sl_term','tl_term')
-    if queryset:
+    queryset_final = queryset1.union(queryset)
+    if queryset_final:
         res=[]
-        for data in queryset:
+        for data in queryset_final:
            out = [{'source':data.get('sl_term'),'target':data.get('tl_term')}]
            res.extend(out)
     else:
@@ -360,12 +362,21 @@ def adding_term_to_glossary_from_workspace(request):
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
     doc_id = request.POST.get("doc_id")
-    glossary_id = request.POST.get('glossary')
     doc = Document.objects.get(id=doc_id)
-    glossary = Glossary.objects.get(id = glossary_id)
-    job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
-    serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    glossary_id = request.POST.get('glossary',None)
+    if glossary_id:
+        glossary = Glossary.objects.get(id = glossary_id)
+        job = glossary.project.project_jobs_set.filter(target_language = doc.job.target_language).first()
+        serializer = TermsSerializer(data={"sl_term":sl_term,"tl_term":tl_term,"job":job.id,"glossary":glossary.id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        data = {"sl_term":sl_term,"tl_term":tl_term,"sl_language":doc.job.source_language.id,\
+                "tl_language":doc.job.target_language.id,"project":doc.project,"user":request.user.id}
+        serializer = MyGlossarySerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

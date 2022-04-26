@@ -121,3 +121,18 @@ class GlossarySelected(models.Model):
 
     class Meta:
         unique_together = ("project", "glossary")
+
+
+class MyGlossary(models.Model):######Default Glossary For Each User###################
+    user            = models.ForeignKey(AiUser, on_delete=models.CASCADE, related_name='default_glossary')
+    sl_term         = models.CharField(max_length=200, null=True, blank=False)
+    tl_term         = models.CharField(max_length=200, null=True, blank=True)
+    sl_language     = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,\
+                      related_name="my_glossary_source_language")
+    tl_language     = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,\
+                      related_name="my_glossary_target_language")
+    # job             = models.ForeignKey(Job, null=True, on_delete=models.SET_NULL,related_name='my_glossary_job')
+    project         = models.ForeignKey(Project, null=True, on_delete=models.SET_NULL,related_name = 'my_glossary_project')
+    created_at      = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at      = models.DateTimeField(auto_now=True,blank=True, null=True)
+    deleted_at      = models.DateTimeField(blank=True, null=True)
