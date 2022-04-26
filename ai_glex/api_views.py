@@ -132,8 +132,8 @@ class GlossaryFileView(viewsets.ViewSet):
             return Response (serializer.errors,status=400)
 
     def delete(self,request,pk=None):
-        file_delete_ids = request.POST.getlist('file_delete_ids')
-        job = request.POST.get('job')
+        file_delete_ids = request.GET.getlist('file_delete_ids')
+        job = request.GET.get('job')
         [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in file_delete_ids]
         return Response({"Msg":"Files Deleted"})
 
