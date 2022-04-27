@@ -160,7 +160,7 @@ def user_trial_end(user,sub):
     email =user.email
    # msg_plain = render_to_string("account/email/password_change.txt", context)
     msg_html = render_to_string("account/email/trial_ending.html", context)
-    try:      
+    try:
         from .block_list import ven_blocklist
         block_list=ven_blocklist
     except Exception as e:
@@ -245,6 +245,22 @@ def internal_user_credential_mail(context):
         html_message=msg_html,
     )
     print("mailsent>>")
+
+
+def vendor_notify_post_jobs(detail):
+    #pass
+    for i in detail:
+        context = detail.get(i)
+        email = context.get('user_email')
+        msg_html = render_to_string("job_alert_email.html",context)
+        send_mail(
+            'Available jobs alert from ailaysa',None,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=msg_html,
+        )
+        print("available job alert mail sent>>")
+
 
 
 def external_member_invite_mail(context,email):

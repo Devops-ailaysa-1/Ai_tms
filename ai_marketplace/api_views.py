@@ -12,6 +12,7 @@ from notifications.models import Notification
 from django.db.models import Q, Max
 from django.shortcuts import get_object_or_404, render
 from django.test.client import RequestFactory
+from ai_auth import forms as auth_forms
 from rest_framework import pagination, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -215,65 +216,75 @@ def user_projectpost_list(request):
     except:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# @api_view(['POST',])
-# @permission_classes([IsAuthenticated])
-# def shortlisted_vendor_list_send_email_new(request):
-#     projectpost_id=request.POST.get('projectpost_id')
-#     projectpost = ProjectboardDetails.objects.get(id=projectpost_id)
-#     ser = ShortListedVendorSerializer(projectpost)
-
-
-
-
-
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
-def shortlisted_vendor_list_send_email(request):
+def shortlisted_vendor_list_send_email_new(request):
     projectpost_id=request.POST.get('projectpost_id')
-    new=[]
-    userslist=[]
-    jobs=ProjectPostJobDetails.objects.filter(projectpost_id=projectpost_id).all()
-    project_deadline=ProjectboardDetails.objects.get(id=projectpost_id).proj_deadline
-    bid_deadline=ProjectboardDetails.objects.get(id=projectpost_id).bid_deadline
-    for i in jobs:
-        res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id)).all()
-        if res:
-            for j in res:
-                out=[]
-                print(i.id)
-                print(j.user_id)
-                serializer=AvailableJobSerializer(data={'projectpostjob':i.id,'vendor':j.user_id,'projectpost':projectpost_id})
-                if serializer.is_valid():
-                    serializer.save()
-                print(serializer.errors)
-                src_lang=Languages.objects.get(id=i.src_lang_id).language
-                tar_lang=Languages.objects.get(id=i.tar_lang_id).language
-                user_id=VendorLanguagePair.objects.get(id=j.id).user_id
-                out=[{"lang":[{"src_lang":src_lang,"tar_lang":tar_lang}],"user_id":user_id}]
-                if user_id not in userslist:
-                    new.extend(out)
-                    userslist.append(user_id)
-                else:
-                    for k in new:
-                        if k.get("user_id")==user_id:
-                            k.get("lang").extend(out[0].get("lang"))
-    print(new)
-    if new:
-        for data in new:
-            user_id=data.get('user_id')
-            user=AiUser.objects.get(id=user_id).fullname
-            email=AiUser.objects.get(id=user_id).email
-            print(email)
-            template = 'email.html'
-            context = {'user': user, 'lang':data.get('lang'),'proj_deadline':project_deadline,'bid_deadline':bid_deadline}
-            content = render_to_string(template, context)
-            subject='Regarding Available jobs'
-            msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,])
-            msg.content_subtype = 'html'
-            msg.send()
-        return JsonResponse({"message":"Email Successfully Sent"},safe=False)
-    else:
-        return JsonResponse({"message":"No Match Found"},safe=False)
+    projectpost = ProjectboardDetails.objects.get(id=projectpost_id)
+    jobs = projectpost.projectpost_get_jobs
+    lang_pair = VendorLanguagePair.objects.none()
+    for obj in jobs:
+        query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None))
+        lang_pair = lang_pair|query
+    res={}
+    for object in lang_pair:
+        print(object.user.fullname)
+        if object.user_id in res:
+            res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':object.target_lang.language})
+        else:
+            res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':object.target_lang.language}],'project_deadline':projectpost.proj_deadline,'bid_deadline':projectpost.bid_deadline}
+    auth_forms.vendor_notify_post_jobs(res)
+    return Response({"msg":"mailsent"})
+
+
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def shortlisted_vendor_list_send_email(request):
+#     projectpost_id=request.POST.get('projectpost_id')
+#     new=[]
+#     userslist=[]
+#     jobs=ProjectPostJobDetails.objects.filter(projectpost_id=projectpost_id).all()
+#     project_deadline=ProjectboardDetails.objects.get(id=projectpost_id).proj_deadline
+#     bid_deadline=ProjectboardDetails.objects.get(id=projectpost_id).bid_deadline
+#     for i in jobs:
+#         res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id)).all()
+#         if res:
+#             for j in res:
+#                 out=[]
+#                 print(i.id)
+#                 print(j.user_id)
+#                 serializer=AvailableJobSerializer(data={'projectpostjob':i.id,'vendor':j.user_id,'projectpost':projectpost_id})
+#                 if serializer.is_valid():
+#                     serializer.save()
+#                 print(serializer.errors)
+#                 src_lang=Languages.objects.get(id=i.src_lang_id).language
+#                 tar_lang=Languages.objects.get(id=i.tar_lang_id).language
+#                 user_id=VendorLanguagePair.objects.get(id=j.id).user_id
+#                 out=[{"lang":[{"src_lang":src_lang,"tar_lang":tar_lang}],"user_id":user_id}]
+#                 if user_id not in userslist:
+#                     new.extend(out)
+#                     userslist.append(user_id)
+#                 else:
+#                     for k in new:
+#                         if k.get("user_id")==user_id:
+#                             k.get("lang").extend(out[0].get("lang"))
+#     print(new)
+#     if new:
+#         for data in new:
+#             user_id=data.get('user_id')
+#             user=AiUser.objects.get(id=user_id).fullname
+#             email=AiUser.objects.get(id=user_id).email
+#             print(email)
+#             template = 'email.html'
+#             context = {'user': user, 'lang':data.get('lang'),'proj_deadline':project_deadline,'bid_deadline':bid_deadline}
+#             content = render_to_string(template, context)
+#             subject='Regarding Available jobs'
+#             msg = EmailMessage(subject, content, settings.DEFAULT_FROM_EMAIL, to=[email,])
+#             msg.content_subtype = 'html'
+#             msg.send()
+#         return JsonResponse({"message":"Email Successfully Sent"},safe=False)
+#     else:
+#         return JsonResponse({"message":"No Match Found"},safe=False)
 
 
 
