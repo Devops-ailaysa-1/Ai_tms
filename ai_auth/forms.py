@@ -237,9 +237,10 @@ def vendor_renewal_mail(link,email):
 def internal_user_credential_mail(context):
     context = context
     email = context.get('email')
+    team = context.get('team')
     msg_html = render_to_string("Internal_member_credential_email.html",context)
     send_mail(
-        "Regarding Login Credentials",None,
+        f"You have been added to {team}'s team in Ailaysa",None,
         settings.DEFAULT_FROM_EMAIL,
         [email],
         html_message=msg_html,

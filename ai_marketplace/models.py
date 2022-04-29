@@ -38,17 +38,24 @@ class ProjectboardDetails(models.Model):#stephen subburaj
     rate_range_max = models.DecimalField(
                          max_digits = 5,
                          decimal_places = 2,blank=True, null=True)
-    currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='ven_currency', on_delete=models.CASCADE)
+    currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='rate_currency', on_delete=models.CASCADE)
     unit = models.ForeignKey(Billingunits,blank=True, null=True, related_name='bill_unit', on_delete=models.CASCADE)
     milestone = models.CharField(max_length=191,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     @property
-    def projectpost_get_jobs(self):
+    def get_jobs(self):
         return [job for job in self.projectpost_jobs.all()]
 
-        
+    @property
+    def get_steps(self):
+        return [obj.steps for obj in self.projectpost_steps.all()]
+
+    @property
+    def get_steps_name(self):
+        return [{'step':obj.steps.name,'id':obj.steps.id} for obj in self.projectpost_steps.all()]
+
 class ProjectPostJobDetails(models.Model):
      src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
      tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE)
@@ -135,10 +142,10 @@ class BidChat(models.Model):
     class Meta:
         ordering = ('timestamp',)
 
-class AvailableJobs(models.Model):
-    projectpostjob=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="projpostjob_details")
-    vendor=models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost')
+# class AvailableJobs(models.Model):
+#     projectpostjob=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="projpostjob_details")
+#     vendor=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost')
 
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}/{3}'.format(instance.vendor.uid,"BidDetails","Samplefiles",filename)
@@ -148,23 +155,34 @@ class BidStatus(models.Model):
 
 
 class BidPropasalDetails(models.Model):
-    projectpostjob =  models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="bidjob_details")
+    # projectpostjob =  models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="bidjob_details")
     projectpost = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,related_name="bidproject_details")
-    vendor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name="bid_sent_vendor")
+    # vendor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name="bid_sent_vendor")
     proposed_completion_date = models.DateTimeField(blank=True,null=True)
     description = models.TextField(blank=True,null=True)
     sample_file_upload = models.FileField(upload_to=user_directory_path, blank=True, null=True)
     status = models.ForeignKey(BidStatus,on_delete=models.CASCADE,related_name="bid_status",blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    class Meta:
-        unique_together = ['projectpostjob', 'vendor']
+    # class Meta:
+    #     unique_together = ['projectpostjob', 'vendor']
 
 class BidProposalServicesRates(models.Model):
-    bid =  models.ForeignKey(BidPropasalDetails, on_delete=models.CASCADE,related_name="service_and_rates")
+    bid_proposal =  models.ForeignKey(BidPropasalDetails, on_delete=models.CASCADE,related_name="service_and_rates")
+    bidpostjob =  models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="bid_details")
+    bid_vendor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name="bidsent_vendor")
     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
     mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+    bid_step = models.ForeignKey(Steps, on_delete=models.CASCADE,related_name="bidpost_steps")
     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,on_delete=models.CASCADE,related_name='bid_job_mtpe_unit_type',blank=True,null=True)
+    currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='bidding_currency_detail', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+
+    class Meta:
+        unique_together = ['bidpostjob', 'bid_vendor','bid_step']
+
+# class BidPropasalStepDetails(models.Model):
+#     bid_proposal_service_rate = models.ForeignKey(BidProposalServicesRates, on_delete=models.CASCADE,related_name="bid_step_detail")
+#     steps = models.ForeignKey(Steps, on_delete=models.CASCADE,related_name="bidpost_steps")
 
 
 User = get_user_model()
