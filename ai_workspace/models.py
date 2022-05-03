@@ -169,6 +169,9 @@ class Project(models.Model):
     def files_count(self):
         return self.project_files_set.all().count()
 
+    @property
+    def get_project_type(self):
+        return self.project_type.id
 
     @property
     def progress(self):
