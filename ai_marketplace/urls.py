@@ -15,6 +15,7 @@ urlpatterns+= [
     path('get_vendor_detail/',api_views.get_vendor_detail,name="get-vendor-detail"),
     # path('hire_vendor/',api_views.assign_available_vendor_to_customer,name="assign-vendor"),
     path('post_project_primary_details/',api_views.post_project_primary_details,name="post-job-primary-details"),
+    path('bid_proposal_status/',api_views.bid_proposal_status),
     # path('post_project/',api_views.ProjectPostInfoCreateView.as_view(),name='project-post'),
     # path('post_job_get_update/<int:projectpost_id>/',api_views.ProjectPostInfoCreateView.as_view(),name='job-post'),
     path('send_email/',api_views.shortlisted_vendor_list_send_email_new,name='send-email'),

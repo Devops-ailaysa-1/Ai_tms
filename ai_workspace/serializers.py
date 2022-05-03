@@ -5,11 +5,11 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
-		ProjectFilesCreateType,ProjectSteps
+		ProjectFilesCreateType,ProjectSteps#,TaskAssignRateInfo
 import json
 import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
-from ai_marketplace.models import AvailableVendors
+from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
 from ai_auth.models import AiUser,Team,HiredEditors
@@ -640,10 +640,8 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	task_assign_info = TaskAssignSerializer(required=False)
 	class Meta:
 		model = TaskAssignInfo
-		fields = ('instruction','assignment_id','deadline','total_word_count',\
-				'mtpe_rate','mtpe_count_unit','currency','assigned_by','task_assign_info',)
-
-
+		fields = ('instruction','assignment_id','deadline','mtpe_rate','mtpe_count_unit','total_word_count','currency',\
+				  'assigned_by','task_assign_info',)
 
 ####################Need to change################################
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
@@ -661,13 +659,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     mt_enable = serializers.BooleanField(required=False,allow_null=True,write_only=True)
     pre_translate = serializers.BooleanField(required=False,allow_null=True,write_only=True)
 
+
     class Meta:
         model = TaskAssignInfo
         fields = ('id','instruction','files','step','instruction_files',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline',\
-                   'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
-                    'total_word_count','assign_to_details','assigned_by_details',\
-                    'mt_enable','pre_translate','task_assign_detail')
+                   'mtpe_rate','mtpe_count_unit','total_word_count','currency',\
+                   'assign_to','tasks','assign_to_details','assigned_by_details',\
+                    'mt_enable','pre_translate','task_assign_detail',)
         extra_kwargs = {
             'assigned_by':{'write_only':True},
             # 'assign_to':{'write_only':True}
@@ -728,14 +727,16 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         pre_translate = data.pop('pre_translate',None)
         task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step)) for task in task_list]
         task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
+        for i in task_assign_info:
+            try:total_word_count = i.task_assign.task.document.total_word_count
+            except:
+                try:total_word_count = i.task_assign.task.task_details.first().task_word_count
+                except:total_word_count=None
+            TaskAssignInfo.objects.filter(id=i.id).update(total_word_count = total_word_count)
         [Instructionfiles.objects.create(**instruction_file,task_assign_info = assign) for instruction_file in files for assign in task_assign_info]
         task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(assign_to_id = assign_to) for task in task_list]
-        if mt_engine_id:
-           [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_engine_id=mt_engine_id) for task in task_list]
-        if mt_enable:
-           [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_enable = mt_enable) for task in task_list]
-        if pre_translate:
-           [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(pre_translate = pre_translate) for task in task_list]
+        if mt_engine_id or mt_enable or pre_translate:
+           [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_engine_id=mt_engine_id,mt_enable=mt_enable,pre_translate=pre_translate) for task in task_list]
         return task_assign_info
 
     # def to_representation(self, instance):
@@ -759,6 +760,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	# task_assign_info = TaskAssignInfoSerializer(required=False)
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
+	bid_job_detail_info = serializers.SerializerMethodField()
 	can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
@@ -767,7 +769,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "project_name",\
-			"document_url", "progress","task_assign_info","task_word_count",'can_open',)
+			"document_url", "progress","task_assign_info","task_word_count",'can_open','bid_job_detail_info')
 
 	def get_can_open(self,obj):
 		try:
@@ -781,6 +783,12 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		except:
 			return None
 
+	def get_bid_job_detail_info(self,obj):
+		if obj.job.project.proj_detail.all():
+			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id))
+			return ProjectPostJobDetailSerializer(qs,many=True).data
+		else:
+			return None
 
 	def get_task_assign_info(self, obj):
 		task_assign = obj.task_info.filter(task_assign_info__isnull=False)

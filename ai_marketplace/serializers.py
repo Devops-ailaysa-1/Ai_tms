@@ -90,23 +90,45 @@ class BidChatSerializer(serializers.ModelSerializer):
 
 
 class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
+    project_id = serializers.ReadOnlyField(source = 'bidpostjob.projectpost.project.id')
+    job_id = serializers.SerializerMethodField()
+    bid_vendor_uid = serializers.ReadOnlyField(source =  'bid_vendor.uid')
+    bid_vendor_name = serializers.ReadOnlyField(source = 'bid_vendor.fullname')
+    bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
     class Meta:
         model = BidProposalServicesRates
-        fields = ('bid_step','bidpostjob','bid_vendor','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency',)
+        fields = ('id','project_id','job_id','bid_step','bidpostjob','bidpostjob_name','bid_vendor_name','bid_vendor_uid','bid_vendor','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status',)
 
-# class BidPropasalStepDetailsSerializer(serializers.ModelSerializer):
+    def get_job_id(self,obj):
+        pr = obj.bidpostjob.projectpost.project
+        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
+        return job[0].id if job else None
+
+# class BidProposalGetSerializer(serializers.ModelSerializer):
+#     bid_extra_details = serializers.SerializerMethodField()
 #     class Meta:
-#         model = BidPropasalStepDetails
-#         fields = ('steps',)
-
+#         model = BidProposalServicesRates
+#         fields = ('bid_step','bidpostjob','bid_vendor','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','bid_extra_details',)
+#     def get_bid_extra_details(self,obj):
+#         out =[{'description':obj.bid_proposal.description,'sample_file':obj.bid_proposal.filename,'proposed_completion_date':obj.bid_proposal.proposed_completion_date}]
+#         return out
+#
+# class BidProposalDetailGetSerializer(serializers.ModelSerializer):
+#     service_and_rates = BidProposalGetSerializer(many=True,required=False)
+#     projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
+#
+#     class Meta:
+#         model = BidPropasalDetails
+#         fields = ('id','projectpost_id','service_and_rates','proposed_completion_date','description','sample_file','status',)
 
 class BidPropasalDetailSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
     projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
+    vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
 
     class Meta:
         model = BidPropasalDetails
-        fields = ('id','projectpost_id','service_and_rates','proposed_completion_date','description','sample_file_upload','status',)
+        fields = ('id','projectpost_id','vendor_id','service_and_rates','proposed_completion_date','description','sample_file','filename',)
 
     def run_validation(self, data):
         if data.get("service_and_rates") and isinstance( data.get("service_and_rates"), str):
@@ -126,14 +148,20 @@ class ThreadSerializer(serializers.ModelSerializer):
         bid = data.get('bid')
         if first_person == second_person:
             raise serializers.ValidationError({"msg":"Thread between same person cannot be created"})
-        lookup1 = Q(first_person=first_person) & Q(second_person=second_person) & Q(bid=bid)
-        lookup2 = Q(first_person=second_person) & Q(second_person=first_person) & Q(bid=bid)
-        lookup = Q(lookup1 | lookup2)
-        qs = Thread.objects.filter(lookup)
-        print(qs)
-        if qs.exists():
-            raise serializers.ValidationError({"msg":f'Thread between {first_person} and {second_person} already exists.','thread_id':qs[0].id})# for this {bid}.'})
+        else:
+            lookup1 = Q(first_person=first_person) & Q(second_person=second_person)
+            lookup2 = Q(first_person=second_person) & Q(second_person=first_person)
+            lookup = Q(lookup1 | lookup2)
+            qs = Thread.objects.filter(lookup)
+            if qs.exists():
+                raise serializers.ValidationError({"msg":f'Thread between {first_person} and {second_person} already exists.','thread_id':qs[0].id})# for this {bid}.'})
         return super().run_validation(data)
+
+    # def create(self, validated_data):
+    #     first_person = validated_data.get('first_person')
+    #     second_person = validated_data.get('second_person')
+    #     tt = Thread.objects.get_or_create(first_person = first_person,second_person=second_person)
+    #     return tt
 
 
 # class VendorSerializer(serializers.ModelSerializer):
@@ -218,7 +246,7 @@ class ProjectPostJobSerializer(serializers.ModelSerializer):
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
     bid_count = serializers.SerializerMethodField()
     bid_details = BidPropasalServicesRatesSerializer(many=True,read_only=True)
-    # bidjob_details = BidPropasalDetailSerializer(many=True,read_only=True)
+    # bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
     class Meta:
         model=ProjectPostJobDetails
         fields=('id','src_lang','tar_lang','bid_count','bid_details',)

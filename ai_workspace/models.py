@@ -169,55 +169,68 @@ class Project(models.Model):
     def files_count(self):
         return self.project_files_set.all().count()
 
+
     @property
     def progress(self):
-        docs = Document.objects.filter(job__project_id=self.id).all()
-        tasks = len(self.get_tasks)
-        total_segments = 0
-        if not docs:
-            return "Yet to start"
+        if self.project_type_id == 3:
+            terms = self.glossary_project.term.all()
+            if len(terms) == 0:
+                return "Yet to start"
+            elif len(terms) == len(terms.filter(Q(tl_term='') | Q(tl_term__isnull = True))):
+                return "Yet to start"
+            else:
+                if len(terms) == len(terms.filter(Q(tl_term__isnull = False))):
+                    return "Completed"
+                else:
+                    return "In Progress"
         else:
-            if docs.count() == tasks:
-                # for doc in docs:
-                #     total_segments+=doc.total_segment_count
+            docs = Document.objects.filter(job__project_id=self.id).all()
+            tasks = len(self.get_tasks)
+            total_segments = 0
+            if not docs:
+                return "Yet to start"
+            else:
+                if docs.count() == tasks:
+                    # for doc in docs:
+                    #     total_segments+=doc.total_segment_count
 
-                # segs = Segment.objects.filter(text_unit__document=document)
-                # for seg in segs:
-                #     if not (seg.is_merged and (not seg.is_merge_start)):
-                #         total_seg_count += 1
-                #     seg_new = seg.get_active_object()
-                #     if seg_new.status_id in confirm_list:
-                #         confirm_count += 1
+                    # segs = Segment.objects.filter(text_unit__document=document)
+                    # for seg in segs:
+                    #     if not (seg.is_merged and (not seg.is_merge_start)):
+                    #         total_seg_count += 1
+                    #     seg_new = seg.get_active_object()
+                    #     if seg_new.status_id in confirm_list:
+                    #         confirm_count += 1
 
-                total_seg_count = 0
-                confirm_count  = 0
-                confirm_list = [102, 104, 106]
+                    total_seg_count = 0
+                    confirm_count  = 0
+                    confirm_list = [102, 104, 106]
 
-                segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
-                for seg in segs:
+                    segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+                    for seg in segs:
 
-                    # if not (seg.is_merged and (not seg.is_merge_start)):
-                    #     total_seg_count += 1
+                        # if not (seg.is_merged and (not seg.is_merge_start)):
+                        #     total_seg_count += 1
 
-                    if seg.is_merged == True and seg.is_merge_start == False:
-                        continue
-                    else:
-                        total_seg_count += 1
+                        if seg.is_merged == True and seg.is_merge_start == False:
+                            continue
+                        else:
+                            total_seg_count += 1
 
-                    seg_new = seg.get_active_object()
-                    if seg_new.status_id in confirm_list:
-                        confirm_count += 1
+                        seg_new = seg.get_active_object()
+                        if seg_new.status_id in confirm_list:
+                            confirm_count += 1
 
+                else:
+                    return "In Progress"
+
+            # status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
+            #     Q(status_id__in=[102,104,106])).all().count()
+
+            if total_seg_count == confirm_count:
+                return "Completed"
             else:
                 return "In Progress"
-
-        # status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-        #     Q(status_id__in=[102,104,106])).all().count()
-
-        if total_seg_count == confirm_count:
-            return "Completed"
-        else:
-            return "In Progress"
 
     @property
     def files_and_jobs_set(self):
@@ -756,6 +769,14 @@ class TaskAssignInfo(models.Model):
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
         super().save()
 
+
+# class TaskAssignRateInfo(models.Model):
+#     task_assign_info = models.OneToOneField(TaskAssignInfo,on_delete=models.CASCADE, null=False, blank=False,
+#             related_name="task_assign_rate_info")
+#     total_word_count = models.IntegerField(null=True, blank=True)
+#     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+#     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
+#     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
     # @property
     # def filename(self):
     #     try:

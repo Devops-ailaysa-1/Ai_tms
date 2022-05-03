@@ -1,15 +1,18 @@
 from rest_framework import filters,generics
 from rest_framework.pagination import PageNumberPagination
 import django_filters
+from ai_marketplace import forms as m_forms
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter as SF, OrderingFilter as OF
 from django.shortcuts import render
+from os.path import join
 from ai_auth.models import AiUser
 from ai_staff.models import Languages,ContentTypes
 from django.conf import settings
 from notifications.signals import notify
 from notifications.models import Notification
 from django.db.models import Q, Max
+from django.conf import settings
 from django.shortcuts import get_object_or_404, render
 from django.test.client import RequestFactory
 from ai_auth import forms as auth_forms
@@ -20,12 +23,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view,permission_classes
 from datetime import datetime
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_text
+from ai_auth.api_views import msg_send,invite_accept_token
 from django.db.models import OuterRef, Subquery
 from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
 from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
-                    Thread,BidPropasalDetails,ChatMessage,ProjectPostSubjectField)
+                    Thread,BidPropasalDetails,ChatMessage,ProjectPostSubjectField,BidProposalServicesRates)
 from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,ProjectPostTemplateSerializer,
                         BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
@@ -42,7 +48,7 @@ from ai_vendor.serializers import (ServiceExpertiseSerializer,
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits)
-from ai_auth.models import  AiUser, Professionalidentity
+from ai_auth.models import  AiUser, Professionalidentity, HiredEditors
 from ai_auth.serializers import AiUserDetailsSerializer
 import json,requests
 from django.db.models import Count
@@ -88,32 +94,32 @@ def get_vendor_detail(request):
 
 
 
-@api_view(['POST',])
-@permission_classes([IsAuthenticated])
-def assign_available_vendor_to_customer(request):
-    uid=request.POST.get('vendor_id')
-    bid_id = request.POST.get('bid_id',None)
-    print(bid_id)
-    if uid:
-        vendor_id=AiUser.objects.get(uid=uid).id
-    elif bid_id:
-        vendor_id=BidPropasalDetails.objects.get(id=bid_id).vendor_id
-    customer_id=request.user.id
-    serializer=AvailableVendorSerializer(data={"vendor":vendor_id,"customer":customer_id})
-    if serializer.is_valid():
-        serializer.save()
-        if bid_id:
-            try:
-                Bid_info = BidPropasalDetails.objects.get(id=bid_id)
-                serializer2 = BidPropasalDetailSerializer(Bid_info,data={'status':4},partial=True)
-                if serializer2.is_valid():
-                    serializer2.save()
-                else:
-                    print(serializer2.errors)
-            except:
-                print("No bid detail exists")
-        return Response(data={"Message":"Vendor Assigned to User Successfully"})
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def assign_available_vendor_to_customer(request):
+#     uid=request.POST.get('vendor_id')
+#     bid_id = request.POST.get('bid_id',None)
+#     print(bid_id)
+#     if uid:
+#         vendor_id=AiUser.objects.get(uid=uid).id
+#     elif bid_id:
+#         vendor_id=BidPropasalDetails.objects.get(id=bid_id).vendor_id
+#     customer_id=request.user.id
+#     serializer=AvailableVendorSerializer(data={"vendor":vendor_id,"customer":customer_id})
+#     if serializer.is_valid():
+#         serializer.save()
+#         if bid_id:
+#             try:
+#                 Bid_info = BidPropasalDetails.objects.get(id=bid_id)
+#                 serializer2 = BidPropasalDetailSerializer(Bid_info,data={'status':4},partial=True)
+#                 if serializer2.is_valid():
+#                     serializer2.save()
+#                 else:
+#                     print(serializer2.errors)
+#             except:
+#                 print("No bid detail exists")
+#         return Response(data={"Message":"Vendor Assigned to User Successfully"})
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -329,20 +335,20 @@ def addingthread(request):
 class BidPostInfoCreateView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        try:
-            print(request.user.id)
-            id = request.GET.get('id')
-            queryset = BidPropasalDetails.objects.filter(Q(projectpostjob_id=id)&Q(vendor_id=request.user.id)).all()
-            serializer = BidPropasalDetailSerializer(queryset,many=True)
-            return Response(serializer.data)
-        except:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        # try:
+        print(request.user.id)
+        id = request.GET.get('id')
+        queryset = BidPropasalDetails.objects.filter(Q(service_and_rates__bid_vendor=request.user.id)).all()
+        serializer = BidPropasalDetailSerializer(queryset,many=True)
+        return Response(serializer.data)
+        # except:
+        #     return Response(status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
         post_id = request.POST.get('post_id')
         post = ProjectboardDetails.objects.get(id=post_id)
         sample_file=request.FILES.get('sample_file')
-        serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file_upload':sample_file,'status':1})#,context={'request':request})
+        serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':request.user.id})#,context={'request':request})
         print(serializer.is_valid())
         if serializer.is_valid():
             serializer.save()
@@ -365,12 +371,12 @@ class BidPostInfoCreateView(APIView):
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
-def post_bid_primary_details(request):
+def post_bid_primary_details(request):############need to include currency conversion###############
     projectpost = request.POST.get('projectpost')
     post = ProjectboardDetails.objects.get(id = projectpost)
     ser = PrimaryBidDetailSerializer(post,context={'request':request})
     return Response(ser.data)
-    
+
 
 
 @api_view(['GET',])
@@ -380,6 +386,43 @@ def get_available_job_details(request):
     query = ProjectboardDetails.objects.filter(bid_deadline__gte = present)
     ser = AvailablePostJobSerializer(query,many=True,context={'request':request})
     return Response(ser.data)
+
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def bid_proposal_status(request):
+    bid_service_rate_id= request.POST.get('id')
+    obj = BidProposalServicesRates.objects.get(id = bid_service_rate_id)
+    status = json.loads(request.POST.get('status'))
+    if status == 2 or status == 4:
+        BidProposalServicesRates.objects.filter(id = bid_service_rate_id).update(status = status)
+    elif status == 3:
+        if request.user.team: user = request.user.team.owner
+        else: user = request.user
+        if user != obj.bid_vendor:
+            tt,created = HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=obj.bid_vendor_id,role_id=2,defaults = {"status":1,"added_by_id":request.user.id})
+            if created == False:
+                if tt.status == 1:
+                    tt.status = 2
+                    tt.save()
+                return Response({"msg":"Already in HiredEditors List....Redirect to Assign Page"})
+            elif created == True:
+                print(obj)
+                uid = urlsafe_base64_encode(force_bytes(tt.id))
+                token = invite_accept_token.make_token(tt)
+                link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
+                context = {'name':obj.bid_vendor.fullname,'team':user.fullname,'link':link,'job':obj.bidpostjob.source_target_pair_names,
+                            'count_unit':obj.mtpe_count_unit.unit,'hourly_rate': str(obj.mtpe_hourly_rate) + '(' + obj.currency.currency_code + ')',\
+                            'unit_rate':str(obj.mtpe_rate) + '(' + obj.currency.currency_code + ')'}
+                print("Mail------>",obj.bid_vendor.email)
+                m_forms.external_member_invite_mail_after_bidding(context,obj.bid_vendor.email)
+                msg_send(user,obj.bid_vendor)
+            BidProposalServicesRates.objects.filter(id = bid_service_rate_id).update(status = status)
+            return JsonResponse({"msg":"Invite send...added to your HiredEditors list"})
+        else:
+            return JsonResponse({"msg":"error"})
+    return JsonResponse({"msg":"status updated"})
 
 
 # @api_view(['GET',])

@@ -1278,9 +1278,11 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         segment_count=0 if instance.task_assign.task.document == None else instance.task_assign.task.get_progress.get('confirmed_segments')
         task_history = TaskAssignHistory.objects.create(task_assign =instance.task_assign,previous_assign_id=instance.task_assign.assign_to_id,task_segment_confirmed=segment_count)
 
+
     @integrity_error
     def create(self,request):
         step = request.POST.get('step')
+        task_assign_detail = request.POST.get('task_assign_detail')
         files=request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
@@ -1295,34 +1297,34 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self, request,pk=None):
-        task = request.POST.get('task')
-        step = request.POST.get('step')
-        file = request.FILES.getlist('instruction_file')
-        req_copy = copy.copy( request._request)
-        req_copy.method = "DELETE"
-
-        if not task:
-            return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
-
-        file_delete_ids = self.request.query_params.get(\
-            "file_delete_ids", [])
-
-        if file_delete_ids:
-            file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
-                        pk='0', many="true", ids=file_delete_ids)
-
-        task_assign = TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first()
-        task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
-        if file:
-            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
-        else:
-            serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-        if serializer.is_valid():
-            serializer.save()
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(task, status=status.HTTP_200_OK)
+    # def update(self, request,pk=None):
+    #     task = request.POST.get('task')
+    #     step = request.POST.get('step')
+    #     file = request.FILES.getlist('instruction_file')
+    #     req_copy = copy.copy( request._request)
+    #     req_copy.method = "DELETE"
+    #
+    #     if not task:
+    #         return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+    #
+    #     file_delete_ids = self.request.query_params.get(\
+    #         "file_delete_ids", [])
+    #
+    #     if file_delete_ids:
+    #         file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
+    #                     pk='0', many="true", ids=file_delete_ids)
+    #
+    #     task_assign = TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first()
+    #     task_assign_info = TaskAssignInfo.objects.get(task_assign_id = task_assign.id)
+    #     if file:
+    #         serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
+    #     else:
+    #         serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #     else:
+    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #     return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):
         task = request.GET.getlist('task')
@@ -1595,13 +1597,14 @@ def previously_created_steps(request):
 
 
 
-# @api_view(["GET"])
-# def project_download(request,project_id):
-#     pr = Project.objects.get(id=project_id)
-#     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-#     tt = download_file(pr.project_name+'.zip')
-#     os.remove(pr.project_name+'.zip')
-#     return tt
+@api_view(["GET"])
+def project_download(request,project_id):
+    # projects = request.GET.getlist('project')
+    pr = Project.objects.get(id=project_id)
+    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+    tt = download_file(pr.project_name+'.zip')
+    os.remove(pr.project_name+'.zip')
+    return tt
 
 
 
