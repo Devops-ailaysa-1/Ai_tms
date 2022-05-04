@@ -79,7 +79,7 @@ class PenseiveTM(models.Model):
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
 class Project(models.Model):
-    project_name = models.CharField(max_length=50, null=True, blank=True,)
+    project_name = models.CharField(max_length=200, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
         allow_files=False)

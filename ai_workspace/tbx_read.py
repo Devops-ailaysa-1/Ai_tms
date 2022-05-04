@@ -39,7 +39,7 @@ def termIdentify(root,t1,ls,datanew,codesrc,code):
                     lang = term_lang.get('{http://www.w3.org/XML/1998/namespace}lang')
                     if lang.split('-')[0]==codesrc:
                             for item in term_lang.iter('term'):
-                                if word.strip()==item.text.strip():
+                                if word.strip().casefold()==item.text.strip().casefold():
                                     match=1
                                     source=item.text
                                     # for j in term.iter(ls):
