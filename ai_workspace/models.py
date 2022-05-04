@@ -784,3 +784,13 @@ class TempFiles(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.files.file.name)
+
+
+class Steps(models.Model):
+    name = models.CharField(max_length=191)
+    short_name = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.name
