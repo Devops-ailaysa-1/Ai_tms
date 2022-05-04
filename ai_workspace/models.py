@@ -182,7 +182,7 @@ class Project(models.Model):
             elif len(terms) == len(terms.filter(Q(tl_term='') | Q(tl_term__isnull = True))):
                 return "Yet to start"
             else:
-                if len(terms) == len(terms.filter(Q(tl_term__isnull = False))):
+                if len(terms) == len(terms.filter(tl_term__isnull = False).exclude(tl_term='')):
                     return "Completed"
                 else:
                     return "In Progress"
