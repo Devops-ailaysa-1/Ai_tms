@@ -1,5 +1,6 @@
 from rest_framework.exceptions import ValidationError
 import django_filters
+import shutil
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
@@ -9,6 +10,7 @@ from django.core.files import File as DJFile
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from ai_vendor.models import VendorLanguagePair
+from ai_workspace_okapi.utils import download_file
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEditors
@@ -968,12 +970,13 @@ def create_project_from_temp_project_new(request):
     temp_proj =  TempProject.objects.get(temp_proj_id =temp_proj_id)
     files_list = TempFiles.objects.filter(temp_proj_id =temp_proj.id)
     jobs_list = Templangpair.objects.filter(temp_proj_id=temp_proj.id)
+    mt_engine = [temp_proj.mt_engine_id]
     source_language = [str(jobs_list[0].source_language_id)]
     target_languages = [str(i.target_language_id) for i in jobs_list]
     files = [DJFile(i.files,name=i.filename) for i in files_list]
     filename,extension = os.path.splitext((files_list[0].filename))
     serializer = ProjectQuickSetupSerializer(data={'project_name':[filename +'-tmp'+ str(temp_proj.id)],\
-    'source_language':source_language,'target_languages':target_languages,'files':files},\
+    'source_language':source_language,'target_languages':target_languages,'files':files,'mt_engine':mt_engine},\
     context={'ai_user':ai_user})
     if serializer.is_valid():
         serializer.save()
@@ -1327,3 +1330,12 @@ class AssignToListView(viewsets.ModelViewSet):
         user = Project.objects.get(id = project).ai_user
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
+
+
+@api_view(["GET"])
+def project_download(request,project_id):
+    pr = Project.objects.get(id=project_id)
+    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+    res = download_file(pr.project_name+'.zip')
+    os.remove(pr.project_name+'.zip')
+    return res

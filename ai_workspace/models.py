@@ -45,6 +45,8 @@ def set_pentm_dir(instance):
 
 class TempProject(models.Model):
     temp_proj_id =  models.CharField(max_length=50 , null=False, blank=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True, blank=True, \
+        on_delete=models.CASCADE, related_name="temp_proj_mt_engine")
 
     def save(self, *args, **kwargs):
         if not self.temp_proj_id:

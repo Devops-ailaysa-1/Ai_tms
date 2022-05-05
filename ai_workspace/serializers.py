@@ -225,12 +225,13 @@ class TempFileSerializer(serializers.ModelSerializer):
 
 
 class TempProjectSetupSerializer(serializers.ModelSerializer):
+	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False)
 	langpair = TemplangpairSerializer(many=True, source="temp_proj_langpair")
 	tempfiles = TempFileSerializer(many=True, source="temp_proj_file",required=False)
 
 	class Meta:
 		model = TempProject
-		fields = ( "temp_proj_id","langpair", "tempfiles")
+		fields = ( "temp_proj_id","langpair", "tempfiles",'mt_engine_id',)
 		read_only_fields = ("temp_proj_id", )
 
 
@@ -238,10 +239,7 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		print("intial-->",self.initial_data )
 		source_language = json.loads(self.initial_data["source_language"])
 		target_languages = json.loads(self.initial_data["target_languages"])
-		# if len(self.initial_data['tempfiles'])>20:
-		# 	raise serializers.ValidationError({"msg":"Number of files per project exceeded."})
-		# if len(target_languages)>20:
-		# 	raise serializers.ValidationError({"msg":"Number of jobs per project exceeded."})
+		self.initial_data['mt_engine_id'] = json.loads(self.initial_data["mt_engine"])
 		if source_language and target_languages:
 			self.initial_data['langpair'] = [{"source_language": source_language, "target_language": \
 				target_language} for target_language in target_languages]
@@ -399,6 +397,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
+	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True)
 	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
@@ -407,7 +406,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist",)
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","mt_engine_id")
 	# class Meta:
 	# 	model = Project
 	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
@@ -429,6 +428,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 		# data['team'] = data.get('team',[None])[0]
 		data['team_exist'] = data.get('team',[None])[0]
+		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		# # data['project_manager_id'] = data.get('project_manager')
 		return super().to_internal_value(data=data)
 
@@ -496,6 +496,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		if validated_data.get('project_manager_id'):
 			instance.project_manager_id = validated_data.get('project_manager_id')
+			instance.save()
+
+		if validated_data.get('mt_engine_id'):
+			instance.mt_engine_id = validated_data.get('mt_engine_id')
 			instance.save()
 
 		files_data = validated_data.pop("project_files_set")
