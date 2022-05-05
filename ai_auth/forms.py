@@ -261,7 +261,7 @@ def vendor_notify_post_jobs(detail):
         )
         print("available job alert mail sent>>")
 
-        
+
 def external_member_invite_mail(context,email):
     context = context
     msg_html = render_to_string("External_member_invite_email.html",context)

@@ -523,8 +523,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     # assigned_by = serializers.CharField(required=False,read_only=True)
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_file','filename',\
-                   'job','project','assigned_by','assignment_id','deadline',\
+        fields = ('id','instruction','instruction_file','filename','task_ven_accepted',\
+                   'job','project','assigned_by','assignment_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
                     'total_word_count','assign_to_details','assigned_by_details',)
         extra_kwargs = {
@@ -534,10 +534,11 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     def get_assign_to_details(self,instance):
 	    if instance.task.assign_to:
+	        external_editor = True if instance.task.assign_to.is_internal_member==False else False
 	        email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
 	        try:avatar = instance.task.assign_to.professional_identity_info.avatar_url
 	        except:avatar = None
-	        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email,"avatar":avatar}
+	        return {"id":instance.task.assign_to_id,"name":instance.task.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor}
 
     def get_assigned_by_details(self,instance):
         if instance.assigned_by:
@@ -563,7 +564,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         # print('validated data==>',data)
         task_list = data.pop('tasks')
         assign_to = data.pop('assign_to')
-        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task ) for task in task_list]
+        total_word_count = data.pop('total_word_count',None)
+        task_obj_list = Task.objects.filter(id__in=task_list)
+        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task.id,total_word_count = task.task_word_count) for task in task_obj_list]
         task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
         return task_assign_info
 
@@ -594,23 +597,23 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
 	task_assign_info = TaskAssignInfoSerializer(required=False)
-	task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
+	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
 
 	class Meta:
 		model = Task
 		fields = \
-			("id","filename", "source_language", "target_language", "project_name",\
-			"document_url", "progress","task_assign_info","task_word_count",)
+			("id","filename", "source_language", "target_language", "task_word_count","project_name",\
+			"document_url", "progress","task_assign_info",)
 
-	def get_task_word_count(self,instance):
-		if instance.document_id:
-			document = Document.objects.get(id = instance.document_id)
-			return document.total_word_count
-		else:
-			t = TaskDetails.objects.get(task_id = instance.id)
-			return t.task_word_count
+	# def get_task_word_count(self,instance):
+	# 	if instance.document_id:
+	# 		document = Document.objects.get(id = instance.document_id)
+	# 		return document.total_word_count
+	# 	else:
+	# 		t = TaskDetails.objects.get(task_id = instance.id)
+	# 		return t.task_word_count
 
 
 class ProjectSerializerV2(serializers.ModelSerializer):

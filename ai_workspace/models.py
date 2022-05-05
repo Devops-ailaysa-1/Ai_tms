@@ -617,6 +617,24 @@ class Task(models.Model):
         return  get_processor_name(self.file.file.name).get("processor_name", None)
 
     @property
+    def task_word_count(self):
+        if self.document_id:
+            document = Document.objects.get(id = self.document_id)
+            return document.total_word_count
+        else:
+            t = TaskDetails.objects.get(task_id = self.id)
+            return t.task_word_count
+
+    @property
+    def task_char_count(self):
+        if self.document_id:
+            document = Document.objects.get(id = self.document_id)
+            return document.total_char_count
+        else:
+            t = TaskDetails.objects.get(task_id = self.id)
+            return t.task_char_count
+
+    @property
     def corrected_segment_count(self):
         doc = self.document
         return Segment.objects.filter(
@@ -658,6 +676,8 @@ class TaskAssignInfo(models.Model):
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
             related_name="user_assign_info")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    task_ven_accepted = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
