@@ -104,12 +104,13 @@ def task_assign_detail_mail(Receiver,assignment_id):
             out = [{"file":i.task.file.filename,"characters":i.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
         file_detail.extend(out)
     context = {'name':Receiver.fullname,'project':ins.task.job.project,'job':ins.task.job.source_target_pair_names, 'rate':str(ins.mtpe_rate)+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
-    'files':file_detail}
+    'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y')}
     msg_html = render_to_string("assign_detail_mail.html", context)
     send_mail(
         "Regarding Assigned Task Detail Info",None,
         settings.DEFAULT_FROM_EMAIL,
-        [Receiver.email],#['thenmozhivijay20@gmail.com',],
+        [Receiver.email],
+        #['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
     print("assign detail mailsent>>")

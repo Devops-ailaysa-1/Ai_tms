@@ -39,7 +39,7 @@ from django.http import JsonResponse
 import requests, json, os, time
 from .models import Task,Tbxfiles
 from lxml import etree as ET
-from ai_marketplace.models import AvailableVendors,ChatMessage
+from ai_marketplace.models import ChatMessage
 from django.http import JsonResponse,HttpResponse
 import requests, json, os,mimetypes
 from ai_workspace import serializers

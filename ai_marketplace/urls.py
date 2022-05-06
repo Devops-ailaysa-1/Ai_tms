@@ -30,4 +30,5 @@ urlpatterns+= [
     path('general/unread/notifications/',api_views.general_notifications),
     path('messages/',views.messages_page),
     path('get_recent_messages/',api_views.get_last_messages),
+    path('get_previous_accepted_rate/',api_views.get_previous_accepted_rate),
     ]

@@ -22,9 +22,11 @@
         <tbody class="email-body"><tr><td style="text-align:left;">
             <div style="padding:21px 32px; background-color:#fff;">
                 <h1 style="font-size:18px; line-height:20px; font-weight:bold;">Hi {{name}},</h1>
-                  <p>You have been assigned to new tasks in {{project}}.Below are the details</p>
+                  <p>You have been assigned to new tasks in <b>{{project}}</b>.</p>
+                  <p>Task details can be found below,</p>
                   <p>Job : {{job}}</p>
                   <p>Rate : {{rate}}</p>
+                  <p>Deadline : {{deadline}}
                 {% for i in files %}
                 {% if i.unit == 'Word' %}
                 <p>File : {{i.file}},&emsp;Words : {{i.words}}</p>
@@ -33,7 +35,7 @@
                 {% endif %}
                 {% endfor %}
             </div>
-            <p>Visit Ailaysa to know details</p>
+            <p>Log into Ailaysa to approve rates and start the task</p>
         </td></tr></tbody>
 
         <tfoot class="email-footer" style="text-align:center; font-weight:normal;"><tr><td style="padding-top:32px;">

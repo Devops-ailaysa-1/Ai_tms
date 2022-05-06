@@ -29,10 +29,10 @@ from ai_auth.api_views import msg_send,invite_accept_token
 from django.db.models import OuterRef, Subquery
 from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task
-from .models import(AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,BidChat,
+from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task,TaskAssignInfo
+from .models import(ProjectboardDetails,ProjectPostJobDetails,BidChat,
                     Thread,BidPropasalDetails,ChatMessage,ProjectPostSubjectField,BidProposalServicesRates)
-from .serializers import(AvailableVendorSerializer, ProjectPostSerializer,ProjectPostTemplateSerializer,
+from .serializers import(ProjectPostSerializer,ProjectPostTemplateSerializer,
                         BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
                         GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
@@ -228,7 +228,7 @@ def user_projectpost_list(request):
 def shortlisted_vendor_list_send_email_new(request):
     projectpost_id=request.POST.get('projectpost_id')
     projectpost = ProjectboardDetails.objects.get(id=projectpost_id)
-    jobs = projectpost.get_jobs
+    jobs = projectpost.get_postedjobs
     lang_pair = VendorLanguagePair.objects.none()
     for obj in jobs:
         query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None))
@@ -413,8 +413,10 @@ def bid_proposal_status(request):
                 token = invite_accept_token.make_token(tt)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 context = {'name':obj.bid_vendor.fullname,'team':user.fullname,'link':link,'job':obj.bidpostjob.source_target_pair_names,
-                            'count_unit':obj.mtpe_count_unit.unit,'hourly_rate': str(obj.mtpe_hourly_rate) + '(' + obj.currency.currency_code + ')',\
-                            'unit_rate':str(obj.mtpe_rate) + '(' + obj.currency.currency_code + ')'}
+                           'hourly_rate': str(obj.mtpe_hourly_rate) + '(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit,\
+                            'unit_rate':str(obj.mtpe_rate) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
+                            'job_id':obj.bidpostjob.postjob_id,'project':obj.bid_proposal.projectpost.proj_name,\
+                            'date':obj.bid_proposal.created_at.date().strftime('%d-%m-%Y')}
                 print("Mail------>",obj.bid_vendor.email)
                 m_forms.external_member_invite_mail_after_bidding(context,obj.bid_vendor.email)
                 msg_send(user,obj.bid_vendor)
@@ -698,3 +700,23 @@ def get_last_messages(request):
         obj =  ChatMessage.objects.filter(thread_id = i.id).last()
         data.append({'thread_id':i.id,'last_message':obj.message,'unread_count':count,'last_timestamp':obj.timestamp})
     return JsonResponse({"data":data},safe=False)
+
+
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def get_previous_accepted_rate(request):
+    user = request.user
+    vendor_id = request.POST.get('vendor_id')
+    job_id = request.POST.get('job_id')
+    job_obj = Job.objects.get(id=job_id)
+    # print(job_obj.source_language,job_obj.target_language)
+    vendor = AiUser.objects.get(id=vendor_id)
+    query = TaskAssignInfo.objects.filter(Q(task_ven_accepted = True) & Q(assigned_by = user) & Q(task__assign_to = vendor))
+    query_final = query.filter(Q(task__job__source_language = job_obj.source_language) & Q(task__job__target_language = job_obj.target_language))
+    rates =[]
+    for i in query_final:
+        out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id}]
+        rates.append(out)
+    return JsonResponse({"Previously Agreed Rates":rates})

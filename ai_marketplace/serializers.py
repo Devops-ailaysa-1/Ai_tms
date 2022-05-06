@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ai_marketplace.models import (AvailableVendors,ProjectboardDetails,ProjectPostJobDetails,
+from ai_marketplace.models import (ProjectboardDetails,ProjectPostJobDetails,
                     BidChat,BidPropasalDetails,BidProposalServicesRates,
                     Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage,
                     ProjectPostTemplateJobDetails,ProjectPostTemplateContentType,
@@ -18,26 +18,6 @@ from dj_rest_auth.serializers import UserDetailsSerializer
 from ai_auth.serializers import ProfessionalidentitySerializer
 from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
-
-
-class AvailableVendorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model= AvailableVendors
-        fields="__all__"
-
-    def run_validation(self, data):
-        vendor = data.get('vendor')
-        customer = data.get('customer')
-        if vendor == customer:
-            raise serializers.ValidationError({"msg":"Both vendor and customer are same"})
-        lookup = Q(customer_id=customer) & Q(vendor_id=vendor)
-        qs = AvailableVendors.objects.filter(lookup)
-        print(qs)
-        if qs.exists():
-            raise serializers.ValidationError({"msg":"This vendor is already assigned to customer" })
-        return super().run_validation(data)
-
-
 
 
 class SimpleProjectSerializer(serializers.ModelSerializer):
@@ -297,7 +277,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
     def get_bid_applied(self,obj):
         applied =[]
         vendor = self.context.get("request").user
-        jobs = obj.get_jobs
+        jobs = obj.get_postedjobs
         for i in jobs:
             if i.bid_details.filter(bid_vendor_id = vendor.id):
                 applied.append(i)
@@ -305,7 +285,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
 
     def get_post_jobs(self,obj):
         vendor = self.context.get("request").user
-        jobs = obj.get_jobs
+        jobs = obj.get_postedjobs
         matched_jobs=[]
         for i in jobs:
             res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
@@ -319,7 +299,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
     def get_service_info(self,obj):
         vendor = self.context.get("request").user
         currency = vendor.vendor_info.currency.currency_code
-        jobs = obj.get_jobs
+        jobs = obj.get_postedjobs
         service_details=[]
         for i in jobs:
             res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
@@ -351,7 +331,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
 
     def get_apply(self, obj):
         vendor = self.context.get("request").user
-        jobs = obj.get_jobs
+        jobs = obj.get_postedjobs
         for i in jobs:
             res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:

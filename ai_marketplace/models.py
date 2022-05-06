@@ -9,12 +9,11 @@ from ai_auth.models import AiUser,user_directory_path
 from ai_workspace.models import Job,Project,Steps
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
-import os
+import os,random
+from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import get_user_model
+from ai_auth.signals import create_postjob_id
 # Create your models here.
-class AvailableVendors(ParanoidModel):
-    customer= models.ForeignKey(AiUser,related_name='customer',on_delete=models.CASCADE)
-    vendor =  models.ForeignKey(AiUser,related_name='vendor',on_delete=models.CASCADE)
 
 
 class ProjectboardDetails(models.Model):#stephen subburaj
@@ -41,11 +40,11 @@ class ProjectboardDetails(models.Model):#stephen subburaj
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     @property
-    def get_jobs(self):
+    def get_postedjobs(self):
         return [job for job in self.projectpost_jobs.all()]
 
     @property
-    def get_steps(self):
+    def get_postedsteps(self):
         return [obj.steps for obj in self.projectpost_steps.all()]
 
     @property
@@ -54,16 +53,22 @@ class ProjectboardDetails(models.Model):#stephen subburaj
 
 
 class ProjectPostJobDetails(models.Model):
-     src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
-     tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE)
-     projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
+    postjob_id = models.CharField(max_length=191,blank=True,null=True)
+    src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
+    tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE)
+    projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
 
-     @property
-     def source_target_pair_names(self):
+    @property
+    def get_job_obj(self):
+        return self.projectpost.project.project_jobs_set.filter(Q(source_language = self.src_lang) & Q(target_language = self.tar_lang)).first()
+
+    @property
+    def source_target_pair_names(self):
         return "%s->%s"%(
             self.src_lang.language,
             self.tar_lang.language
         )
+post_save.connect(create_postjob_id, sender=ProjectPostJobDetails)
 
 class ProjectPostContentType(models.Model):
     project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
