@@ -1,9 +1,11 @@
 from rest_framework.exceptions import ValidationError
 import django_filters
 import shutil
+from ai_workspace import forms as ws_forms
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from urllib.parse import urlparse
+from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document
 from django.conf import settings
 from django.core.files import File as DJFile
@@ -1168,10 +1170,12 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         Receiver = AiUser.objects.get(id = receiver)
         task = request.POST.getlist('task')
         tasks= [json.loads(i) for i in task]
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
+        assignment_id = create_assignment_id()
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             msg_send(sender,Receiver,tasks[0])
+            ws_forms.task_assign_detail_mail(Receiver,assignment_id)
             # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
             return Response({"msg":"Task Assigned"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
