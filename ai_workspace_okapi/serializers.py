@@ -3,9 +3,9 @@ from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, T
 import json, copy, re
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
-from ai_workspace.models import  Project,Job
+from ai_workspace.models import  Project, Job
 from django.db.models import Q
-from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids
+from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from contextlib import closing
 from django.db import connection
 from django.utils import timezone
@@ -323,15 +323,35 @@ class MT_RawSerializer(serializers.ModelSerializer):
         }
 
     def to_internal_value(self, data):
+
         # print("data--->", data)
-        data["mt_engine"] = data.get("mt_engine", 1)
+        segment_id = data.get("segment")
+        # print("Segment ID ---> ", segment_id)
+        mt_engine_id = Project.objects.filter(
+            project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first().mt_engine.id
+
+        # data["mt_engine"] = data.get("mt_engine", 1)
+        data["mt_engine"] = mt_engine_id
         return super().to_internal_value(data=data)
 
     def create(self, validated_data):
+
+        # print("Validated data ---> ", validated_data)
+
         segment = validated_data["segment"]
-        validated_data["mt_raw"]= client.translate(segment.source,
-            target_language=segment.target_language_code, format_="text")\
-            .get("translatedText")
+        mt_engine= validated_data["mt_engine"]
+
+        text_unit_id = segment.text_unit_id
+        doc = TextUnit.objects.get(id=text_unit_id).document
+
+        sl_code = doc.source_language_code
+        tl_code = doc.target_language_code
+
+        # validated_data["mt_raw"]= client.translate(segment.source,
+        #     target_language=segment.target_language_code, format_="text")\
+        #     .get("translatedText")
+
+        validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
 
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance

@@ -60,6 +60,7 @@ urlpatterns += [
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
 	path("download/<int:project_id>/",api_views.project_download),
 	path("instruction_file_download/<int:task_assign_info_id>", api_views.instruction_file_download, name="instruction-file-download"),
+	path("mt_samples/",api_views.ShowMTChoices.as_view(), name='mt-samples'),
 ]
 # views urls adding for local testing
 urlpatterns += [

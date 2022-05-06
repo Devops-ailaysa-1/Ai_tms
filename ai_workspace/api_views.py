@@ -10,7 +10,7 @@ from django.core.files import File as DJFile
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from ai_vendor.models import VendorLanguagePair
-from ai_workspace_okapi.utils import download_file
+from ai_workspace_okapi.utils import download_file, get_translation
 from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEditors
@@ -58,6 +58,7 @@ from notifications.signals import notify
 from notifications.models import Notification
 from ai_marketplace.serializers import ThreadSerializer
 # from ai_workspace_okapi.api_views import DocumentViewByTask
+from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -1339,3 +1340,26 @@ def project_download(request,project_id):
     res = download_file(pr.project_name+'.zip')
     os.remove(pr.project_name+'.zip')
     return res
+
+class ShowMTChoices(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @staticmethod
+    def get_lang_code(lang_id):
+        return LanguagesLocale.objects.filter(language_id = lang_id).first().locale_code
+
+    def post(self, request):
+        data = request.POST.dict()
+        text = data.get("text", "")
+        target_languages = json.loads(data["target_language"])
+        sl_code = json.loads(data["source_language"])
+
+        res = {}
+
+        for tl in target_languages:
+            mt_responses = {}
+            for mt_engine in AilaysaSupportedMtpeEngines.objects.all():
+                mt_responses[mt_engine.name] = get_translation(mt_engine.id, text, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
+                res[tl] = mt_responses
+
+        return Response(res, status=status.HTTP_200_OK)

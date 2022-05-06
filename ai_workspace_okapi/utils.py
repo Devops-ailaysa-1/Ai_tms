@@ -1,8 +1,12 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-import os, mimetypes, requests, uuid, json, xlwt
+import os, mimetypes, requests, uuid, json, xlwt, boto3
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
+
+from google.cloud import translate_v2 as translate
+
+client = translate.Client()
 
 
 class DebugVariables(object): # For Class Functions only to use
@@ -173,3 +177,71 @@ bl_cell_format = {
     'text_wrap': True,
     'align': 'left',
 }
+
+def ms_translation(source_string, source_lang_code, target_lang_code):
+
+    # Add your subscription key and endpoint
+    subscription_key = os.getenv("MST_KEY")
+    endpoint = os.getenv("MST_API")
+
+    # Add your location, also known as region. The default is global.
+    # This is required if using a Cognitive Services resource.
+    location = os.getenv("MST_LOCATION")
+
+    path = '/translate'
+    constructed_url = endpoint + path
+
+    params = {
+        'api-version': '3.0',
+        'from': source_lang_code,
+        'to': [target_lang_code]
+    }
+
+    headers = {
+        'Ocp-Apim-Subscription-Key': subscription_key,
+        'Ocp-Apim-Subscription-Region': location,
+        'Content-type': 'application/json',
+        'X-ClientTraceId': str(uuid.uuid4())
+    }
+
+    # You can pass more than one object in body.
+    body = [{
+        'text': source_string
+    }]
+
+    request = requests.post(constructed_url, params=params, headers=headers, json=body)
+    return request.json()[0]["translations"][0]["text"]
+
+    # print(json.dumps(response, sort_keys=True, ensure_ascii=False, indent=4, separators=(',', ': ')))
+
+def aws_translate(source_string, source_lang_code, target_lang_code):
+    translate = boto3.client(service_name = 'translate',
+                             region_name = os.getenv('aws_iam_region_name'),
+                             aws_access_key_id = os.getenv("aws_iam_access_key_id"),
+                             aws_secret_access_key = os.getenv("aws_iam_secret_access_key")
+                                )
+    return translate.translate_text( Text = source_string,
+                                     SourceLanguageCode = source_lang_code,
+                                     TargetLanguageCode = target_lang_code)["TranslatedText"]
+
+def lingvanex(source_string, source_lang_code, target_lang_code):
+    pass
+
+def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_code):
+    # FOR GOOGLE TRANSLATE
+    if mt_engine_id == 1:
+
+        return client.translate(source_string,
+                                target_language=target_lang_code,
+                                format_="text").get("translatedText")
+    # FOR MICROSOFT TRANSLATE
+    elif mt_engine_id == 2:
+        return ms_translation(source_string, source_lang_code, target_lang_code)
+
+    # AMAZON TRANSLATE
+    elif mt_engine_id == 3:
+        return aws_translate(source_string, source_lang_code, target_lang_code)
+
+    # # LINGVANEX TRANSLATE
+    # elif mt_engine_id == 4:
+    #     return lingvanex(source_string, source_lang_code, target_lang_code)
