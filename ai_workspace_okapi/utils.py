@@ -1,4 +1,5 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
+from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap
 import os, mimetypes, requests, uuid, json, xlwt, boto3
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
@@ -155,7 +156,6 @@ class SpacesService:
         client.delete_object(Bucket=bucket_name, Key=file_path)
         print("FIle is deleted successfully!!!")
 
-
 class OkapiUtils:
     def get_translated_file_(self):
         pass
@@ -225,7 +225,27 @@ def aws_translate(source_string, source_lang_code, target_lang_code):
                                      TargetLanguageCode = target_lang_code)["TranslatedText"]
 
 def lingvanex(source_string, source_lang_code, target_lang_code):
-    pass
+    url = os.getenv("lingvanex_translate_url")
+    sl_code = (f'{source_lang_code}',)
+    tl_code = (f'{target_lang_code}',)
+
+    data = {
+
+        "from": llmap.get(sl_code, ""),
+        "to": llmap.get(tl_code, ""),
+        "data": source_string,
+        "platform": "api",
+        "enableTransliteration": 'false'
+    }
+
+    headers = {
+        'accept': 'application/json',
+        'Authorization': os.getenv("lingvanex_mt_api_key"),
+        'Content-Type': 'application/json',
+    }
+
+    r = requests.post(url, headers=headers, json=data)
+    return r.json()["result"]
 
 def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_code):
     # FOR GOOGLE TRANSLATE
@@ -242,6 +262,6 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
     elif mt_engine_id == 3:
         return aws_translate(source_string, source_lang_code, target_lang_code)
 
-    # # LINGVANEX TRANSLATE
-    # elif mt_engine_id == 4:
-    #     return lingvanex(source_string, source_lang_code, target_lang_code)
+    # LINGVANEX TRANSLATE
+    elif mt_engine_id == 4:
+        return lingvanex(source_string, source_lang_code, target_lang_code)
