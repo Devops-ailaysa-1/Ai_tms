@@ -17,6 +17,7 @@ from ai_workspace_okapi.models import Document
 from ai_auth.serializers import InternalMemberSerializer,HiredEditorSerializer
 from ai_vendor.models import VendorLanguagePair
 from django.db.models import OuterRef, Subquery
+from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -597,6 +598,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
 	task_assign_info = TaskAssignInfoSerializer(required=False)
+	bid_job_detail_info = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
@@ -605,7 +607,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "task_word_count","project_name",\
-			"document_url", "progress","task_assign_info",)
+			"document_url", "progress","task_assign_info","bid_job_detail_info",)
+
+	def get_bid_job_detail_info(self,obj):
+		if obj.job.project.proj_detail.all():
+			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id))
+			return ProjectPostJobDetailSerializer(qs,many=True).data
+		else:
+			return None
 
 	# def get_task_word_count(self,instance):
 	# 	if instance.document_id:

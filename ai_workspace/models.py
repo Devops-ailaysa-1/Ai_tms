@@ -91,7 +91,7 @@ class Project(models.Model):
     ai_project_id = models.TextField()
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,
         null=True, blank=True, \
-        on_delete=models.CASCADE, related_name="proj_mt_engine")
+        on_delete=models.CASCADE, related_name="proj_mt_engine",default=1)
     threshold = models.IntegerField(default=85)
     max_hits = models.IntegerField(default=5)
     team = models.ForeignKey(Team,null=True,blank=True,on_delete=models.CASCADE,related_name='proj_team')
