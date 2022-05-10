@@ -372,20 +372,26 @@ class BidPostInfoCreateView(APIView):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def post_bid_primary_details(request):############need to include currency conversion###############
-    projectpost = request.POST.get('projectpost')
-    post = ProjectboardDetails.objects.get(id = projectpost)
-    ser = PrimaryBidDetailSerializer(post,context={'request':request})
-    return Response(ser.data)
+    if request.user.is_vendor == True:
+        projectpost = request.POST.get('projectpost')
+        post = ProjectboardDetails.objects.get(id = projectpost)
+        ser = PrimaryBidDetailSerializer(post,context={'request':request})
+        return Response(ser.data)
+    else:
+        return JsonResponse({'msg':'not a vendor'})
 
 
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_available_job_details(request):
-    present = datetime.now()
-    query = ProjectboardDetails.objects.filter(bid_deadline__gte = present)
-    ser = AvailablePostJobSerializer(query,many=True,context={'request':request})
-    return Response(ser.data)
+    if request.user.is_vendor == True:
+        present = datetime.now()
+        query = ProjectboardDetails.objects.filter(bid_deadline__gte = present)
+        ser = AvailablePostJobSerializer(query,many=True,context={'request':request})
+        return Response(ser.data)
+    else:
+        return JsonResponse({'msg':'not a vendor'})
 
 
 

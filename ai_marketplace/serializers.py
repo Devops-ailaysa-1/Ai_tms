@@ -10,7 +10,7 @@ from ai_staff.models import Languages
 from django.db.models import Q
 from ai_workspace.models import Project,Job
 from drf_writable_nested import WritableNestedModelSerializer
-import json
+import json,requests
 from ai_workspace.models import Steps
 from itertools import groupby
 from rest_framework.response import Response
@@ -306,6 +306,12 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
                     .select_related('service').values('service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
 
             if res:
+                # vpc = currency
+                # upc = obj.currency.currency_code
+                # payload = {'q': vpc+'_'+upc}
+                # res1 = requests.get('https://free.currconv.com/api/v7/convert?compact=ultra&apiKey=78341dcc54736bbff6e1',params=payload)
+                # rate = res1.json().get(payload.get('q'))
+                # out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,"user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":currency,"mtpe_rate":float(res[0].get('service__mtpe_rate'))*rate,"mtpe_hourly_rate":float(res[0].get('service__mtpe_hourly_rate'))*rate,"mtpe_count_unit":float(res[0].get('service__mtpe_count_unit'))*rate}]
                 out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,"user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":currency,"mtpe_rate":res[0].get('service__mtpe_rate'),"mtpe_hourly_rate":res[0].get('service__mtpe_hourly_rate'),"mtpe_count_unit":res[0].get('service__mtpe_count_unit')}]
             else:
                 out=[]
