@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter as SF, OrderingFilter as OF
 from django.shortcuts import render
 from os.path import join
+# from django_filters.groups import CombinedGroup
 from ai_auth.models import AiUser
 from ai_staff.models import Languages,ContentTypes
 from django.conf import settings
@@ -382,16 +383,16 @@ def post_bid_primary_details(request):############need to include currency conve
 
 
 
-@api_view(['GET',])
-@permission_classes([IsAuthenticated])
-def get_available_job_details(request):
-    if request.user.is_vendor == True:
-        present = datetime.now()
-        query = ProjectboardDetails.objects.filter(bid_deadline__gte = present)
-        ser = AvailablePostJobSerializer(query,many=True,context={'request':request})
-        return Response(ser.data)
-    else:
-        return JsonResponse({'msg':'not a vendor'})
+# @api_view(['GET',])
+# @permission_classes([IsAuthenticated])
+# def get_available_job_details(request):
+#     if request.user.is_vendor == True:
+#         present = datetime.now()
+#         query = ProjectboardDetails.objects.filter(bid_deadline__gte = present)
+#         ser = AvailablePostJobSerializer(query,many=True,context={'request':request})
+#         return Response(ser.data)
+#     else:
+#         return JsonResponse({'msg':'not a vendor'})
 
 
 
@@ -513,6 +514,43 @@ class IncompleteProjectListView(generics.ListAPIView):
     def get_queryset(self):
         queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).order_by('-id') if x.progress != "completed" ]
         return queryset
+
+
+
+
+class JobFilter(django_filters.FilterSet):
+    fullname = django_filters.CharFilter(field_name='customer__fullname',lookup_expr='icontains')
+    source = django_filters.CharFilter(field_name='projectpost_jobs__src_lang__language',lookup_expr='icontains')
+    target = django_filters.CharFilter(field_name='projectpost_jobs__tar_lang__language',lookup_expr='icontains')
+    subject = django_filters.CharFilter(field_name='projectpost_subject__subject',lookup_expr='icontains')
+
+    class Meta:
+        model = ProjectboardDetails
+        fields = ('fullname', 'source','target','subject',)
+        together = ['source','target']
+        # groups = [
+        #     RequiredGroup(['source', 'target']),
+        #  ]
+
+class AvailableJobsListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AvailablePostJobSerializer
+    filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
+    ordering_fields = ['bid_deadline','proj_deadline','id']
+    ordering = ('-id')
+    filterset_class = JobFilter
+    pagination.PageNumberPagination.page_size = 10
+
+    def validate(self):
+        if self.request.user.is_vendor == False:
+            raise ValidationError({"error":"user is not a vendor"})
+
+    def get_queryset(self):
+        self.validate()
+        present = datetime.now()
+        queryset= ProjectboardDetails.objects.filter(bid_deadline__gte = present).distinct()
+        return queryset
+
 
 
 # @api_view(['GET',])
