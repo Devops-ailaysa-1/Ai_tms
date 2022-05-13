@@ -256,6 +256,7 @@ def vendor_notify_post_jobs(detail):
         send_mail(
             'Available jobs alert from ailaysa',None,
             settings.DEFAULT_FROM_EMAIL,
+            #['thenmozhivijay20@gmail.com'],
             [email],
             html_message=msg_html,
         )

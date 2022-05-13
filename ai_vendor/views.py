@@ -155,8 +155,8 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
 
     def delete(self,request,pk):
         queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
-        vendor = get_object_or_404(queryset, pk=pk)
-        vendor.delete()
+        lang_pair = get_object_or_404(queryset, pk=pk)
+        lang_pair.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

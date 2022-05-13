@@ -29,6 +29,7 @@ class VendorServiceTypeSerializer(serializers.ModelSerializer):
 class VendorServiceInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model=VendorServiceInfo
+        # fields = ('id','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit',)
         exclude=('lang_pair','created_at','updated_at','deleted_at')
 
 class VendorCATsoftwareSerializer(serializers.ModelSerializer):
@@ -69,11 +70,12 @@ class MtpeSampleSerializer(serializers.ModelSerializer):
         fields=('sample_file',)
 
 class VendorLanguagePairCloneSerializer(serializers.ModelSerializer):
+    Currency = serializers.ReadOnlyField(source='currency.currency_code')
     service=VendorServiceInfoSerializer(many=True,required=False)
     servicetype=VendorServiceTypeSerializer(many=True,required=False)
     class Meta:
         model = VendorLanguagePair
-        fields=('service','servicetype',)
+        fields=('Currency','service','servicetype',)
 
 class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):#WritableNestedModelSerializer,
      service=VendorServiceInfoSerializer(many=True,required=False)
@@ -88,12 +90,13 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
 
      class Meta:
          model = VendorLanguagePair
-         fields=('id','user_id','source_lang','target_lang','source_lang_name','target_lang_name','service','servicetype','translationfile','mtpesamples','existing_lang_pair_id','apply_for_reverse',)
+         fields=('id','user_id','source_lang','target_lang','currency','source_lang_name','target_lang_name','service','servicetype','translationfile','mtpesamples','existing_lang_pair_id','apply_for_reverse',)
          extra_kwargs = {
             'translationfile':{'read_only':True},
             'MtpeSamples':{'read_only':True},
             "source_lang": {"required": False},
-            "target_lang": {"required": False}
+            "target_lang": {"required": False},
+            "currency":{"required":False}
          }
 
 
@@ -101,10 +104,10 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          # if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
          #    or ((("existing_lang_pair_id") in data) and (((("source_lang") in data) and(("target_lang") in data))\
          #    or("apply_for_reverse") in data))):
-         if self.context['request']._request.method == 'POST':
-             if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
-                or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
-                 raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
+         # if self.context['request']._request.method == 'POST':
+         #     if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
+         #        or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
+         #         raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
          if "source_lang" in data:
              if data.get('source_lang')==data.get('target_lang'):
                  raise serializers.ValidationError({"message":"source and target language should not be same"})
@@ -127,6 +130,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          lang_reverse = None
          if data.get("source_lang"):
              lang = VendorLanguagePair.objects.create(**data)
+             print("lang====>",lang)
          else:
              lang = VendorLanguagePair.objects.get(id=existing_lang_pair_id)
 

@@ -755,9 +755,10 @@ class ProjectListSerializer(serializers.ModelSerializer):
 class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
 	source_lang = serializers.ReadOnlyField(source = 'source_lang.language')
 	target_lang = serializers.ReadOnlyField(source = 'target_lang.language')
+	# currency = serializers.ReadOnlyField(source = 'currency.currency_code')
 	class Meta:
 		model = VendorLanguagePair
-		fields = ('source_lang','target_lang',)
+		fields = ('source_lang','target_lang',)#'currency',)
 
 class HiredEditorDetailSerializer(serializers.Serializer):
 	name = serializers.ReadOnlyField(source='hired_editor.fullname')
@@ -774,7 +775,7 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
 		lang_pair = VendorLanguagePair.objects.none()
 		for i in jobs:
-			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None))
+			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
 			lang_pair = lang_pair.union(tr)
 		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 
@@ -793,7 +794,7 @@ class InternalEditorDetailSerializer(serializers.Serializer):
 		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
 		lang_pair = VendorLanguagePair.objects.none()
 		for i in jobs:
-			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.internal_member_id) &Q(deleted_at=None))
+			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.internal_member_id) &Q(deleted_at=None)).distinct('user')
 			lang_pair = lang_pair.union(tr)
 		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 

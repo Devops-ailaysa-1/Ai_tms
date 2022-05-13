@@ -33,7 +33,7 @@ class SimpleProjectSerializer(serializers.ModelSerializer):
         jobs = instance.get_jobs
         out=[]
         for i in jobs:
-             res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id)).distinct()
+             res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id)).distinct('user')
              data = {'job':i.id,'count':res.count()}
              out.append(data)
         return out
@@ -298,13 +298,15 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
 
     def get_service_info(self,obj):
         vendor = self.context.get("request").user
-        currency = vendor.vendor_info.currency.currency_code
         jobs = obj.get_postedjobs
         service_details=[]
         for i in jobs:
-            res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
-                    .select_related('service').values('service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
-
+            query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+                    .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+            query1 = query.filter(currency=obj.currency)
+            if query1: res= query1
+            else: res= query
+            #########################if user preffered currency exists,then use that or pick first instance matching that job pair and convert to user_preffered_currency###############
             if res:
                 # vpc = currency
                 # upc = obj.currency.currency_code
@@ -312,7 +314,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
                 # res1 = requests.get('https://free.currconv.com/api/v7/convert?compact=ultra&apiKey=78341dcc54736bbff6e1',params=payload)
                 # rate = res1.json().get(payload.get('q'))
                 # out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,"user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":currency,"mtpe_rate":float(res[0].get('service__mtpe_rate'))*rate,"mtpe_hourly_rate":float(res[0].get('service__mtpe_hourly_rate'))*rate,"mtpe_count_unit":float(res[0].get('service__mtpe_count_unit'))*rate}]
-                out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,"user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":currency,"mtpe_rate":res[0].get('service__mtpe_rate'),"mtpe_hourly_rate":res[0].get('service__mtpe_hourly_rate'),"mtpe_count_unit":res[0].get('service__mtpe_count_unit')}]
+                out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,"user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":res[0].get('currency'),"mtpe_rate":res[0].get('service__mtpe_rate'),"mtpe_hourly_rate":res[0].get('service__mtpe_hourly_rate'),"mtpe_count_unit":res[0].get('service__mtpe_count_unit')}]
             else:
                 out=[]
             service_details.extend(out)
@@ -391,9 +393,10 @@ class VendorInfoListSerializer(serializers.ModelSerializer):
 
 class VendorServiceSerializer(serializers.ModelSerializer):
     service = VendorServiceInfoSerializer(many=True,read_only=True)
+    Currency = serializers.ReadOnlyField(source='currency.currency_code')
     class Meta:
         model = VendorLanguagePair
-        fields = ('service',)
+        fields = ('Currency','service',)
 
 
 class GetVendorListSerializer(serializers.ModelSerializer):
@@ -417,8 +420,6 @@ class GetVendorListSerializer(serializers.ModelSerializer):
             return hired.get_status_display()
         else:
             return None
-
-
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']

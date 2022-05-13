@@ -17,6 +17,7 @@ from ai_auth.authentication import IsCustomer
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEditors
 from rest_framework import viewsets, status
+from integerations.base.utils import DjRestUtils
 from rest_framework.response import Response
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
     ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
@@ -537,12 +538,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
-            file_obj2,f2,name = text_file_processing(text_data)
-            serializer = ProjectQuickSetupSerializer(data={**request.data,"files":[file_obj2]},context={"request": request})
+            name =  text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
+            im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+            serializer = ProjectQuickSetupSerializer(data={**request.data,"files":[im_file]},context={"request": request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
-                f2.close()
-                os.remove(os.path.abspath(name))
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
