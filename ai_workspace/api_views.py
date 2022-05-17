@@ -1349,7 +1349,7 @@ def project_download(request,project_id):
     return res
 
 class ShowMTChoices(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     @staticmethod
     def get_lang_code(lang_id):
@@ -1366,7 +1366,10 @@ class ShowMTChoices(APIView):
         for tl in target_languages:
             mt_responses = {}
             for mt_engine in AilaysaSupportedMtpeEngines.objects.all():
-                mt_responses[mt_engine.name] = get_translation(mt_engine.id, text, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
+                try:
+                    mt_responses[mt_engine.name] = get_translation(mt_engine.id, text, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
+                except:
+                    mt_responses[mt_engine.name] = None
                 res[tl] = mt_responses
 
         return Response(res, status=status.HTTP_200_OK)
