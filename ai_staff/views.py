@@ -11,10 +11,10 @@ from django.shortcuts import render
 from tablib import Dataset
 
 from .forms import UploadFileForm
-from .models import (AiUserType, Billingunits, ContentTypes, Countries, 
+from .models import (AiUserType, Billingunits, ContentTypes, Countries,
                      Currencies, Languages, LanguagesLocale, MtpeEngines,
                      ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates,StripeTaxId,
-                     LanguageMetaDetails, OldVendorPasswords)
+                     LanguageMetaDetails, OldVendorPasswords, CurrencyBasedOnCountry)
 from ai_auth.models import AiUser
 
 
@@ -31,9 +31,9 @@ def Bulk_insert(request):
             imported_data = dataset.load(filedata.read(), format='xlsx')
             # print(imported_data)
             for data in imported_data:
-                value = OldVendorPasswords(
-                            email = data[0],
-                            password =data[1],
+                value = CurrencyBasedOnCountry(
+                            country_id = data[0],
+                            currency_id =data[1],
                             # script_id = data[2],
                             # ime = data[3],
                             # uid =data[4],
@@ -43,7 +43,7 @@ def Bulk_insert(request):
                             # is_active = data[8],
                             # date_joined = data[9],
                             # from_mysql = data[10],
-            
+
                         )
                 # print(value)
                 value.save()

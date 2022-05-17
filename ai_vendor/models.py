@@ -116,7 +116,7 @@ class VendorLanguagePair(ParanoidModel):
         ]
     def save(self, *args, **kwargs):
         if not self.currency_id:
-            try:self.currency_id = self.user.vendor_info.currency_id
+            try:self.currency_id = self.user.currency_based_on_country_id
             except:self.currency_id = 144
         super().save()
 # post_save.connect(user_update, sender=VendorLanguagePair)
@@ -131,15 +131,6 @@ class VendorServiceInfo(ParanoidModel):
      #created_at = models.CharField(max_length=100, null=True, blank=True)
      #updated_at = models.CharField(max_length=100, null=True, blank=True)
 
-     # class Meta:
-     #     constraints = [
-     #        UniqueConstraint(fields=['lang_pair', 'currency'], condition=Q(deleted_at=None), name='unique_rate_if_not_deleted')
-     #     ]
-
-     # def save(self, *args, **kwargs):
-     #    if not self.currency_id:
-     #        self.currency_id = self.lang_pair.user.vendor_info.currency_id
-     #    super().save()
 
 class VendorServiceTypes(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='servicetype', on_delete=models.CASCADE)
@@ -153,10 +144,6 @@ class VendorServiceTypes(ParanoidModel):
     #created_at = models.CharField(max_length=100, null=True, blank=True)
     #updated_at = models.CharField(max_length=100, null=True, blank=True)
 
-    # class Meta:
-    #    constraints = [
-    #         UniqueConstraint(fields=['lang_pair', 'currency'], condition=Q(deleted_at=None), name='unique_service_if_not_deleted')
-    #     ]
 
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}/{3}'.format(lang_pair.instance.user.uid, "vendor","TranslationSamples",filename)

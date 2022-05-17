@@ -1276,6 +1276,7 @@ def find_vendor(team,jobs):
 
 
 class ProjectListView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
 
     def get_queryset(self):

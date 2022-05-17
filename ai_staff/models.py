@@ -406,3 +406,9 @@ class OldVendorPasswords(models.Model):
 
     def __str__(self):
         return self.email
+
+class CurrencyBasedOnCountry(models.Model):
+    country = models.ForeignKey(Countries,related_name='user_country',
+        on_delete=models.CASCADE,blank=True, null=True)
+    currency = models.ForeignKey(Currencies,related_name='user_currency',
+        on_delete=models.CASCADE,blank=True, null=True)

@@ -4,9 +4,9 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role
+from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries,Timezones,SupportType,JobPositions,SupportTopics,Role,Currencies
 from django.db.models.signals import post_save, pre_save
-from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email
+from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
 from ai_auth.utils import get_unique_uid
@@ -17,7 +17,7 @@ from ai_auth.utils import get_plan_name
 from django.db.models import Q
 from datetime import datetime,date,timedelta
 
-class AiUser(AbstractBaseUser, PermissionsMixin):
+class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
     email = models.EmailField(_('email address'), unique=True)
     fullname=models.CharField(max_length=191)
@@ -31,6 +31,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
     deactivate = models.BooleanField(default=False)
     is_vendor = models.BooleanField(default=False)
     is_internal_member = models.BooleanField(default=False)
+    currency_based_on_country = models.ForeignKey(Currencies,related_name='aiuser_country_based_currency',
+        on_delete=models.CASCADE,blank=True, null=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -53,6 +55,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
+
 
     @property
     def internal_member_team_detail(self):
@@ -190,7 +193,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):
         print("username field not available.so it is returning fullname")
         return self.fullname
 
-post_save.connect(update_internal_member_status, sender=AiUser)    
+post_save.connect(update_internal_member_status, sender=AiUser)
+post_save.connect(get_currency_based_on_country, sender=AiUser)
 
 
 class BaseAddress(models.Model):

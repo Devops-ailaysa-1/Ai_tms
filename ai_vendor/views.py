@@ -87,46 +87,22 @@ class VendorsInfoCreateView(APIView):
 
 class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
     permission_classes =[IsAuthenticated]
-    # page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
-    # def get_custom_page_size(self, request, view):
-    #     try:
-    #         self.page_size = self.request.query_params.get('limit',10)
-    #         print("limit--->",self.request.query_params.get('limit'))
-    #     except (ValueError, TypeError):
-    #         pass
-    #     return super().get_page_size(request)
-    # def paginate_queryset(self, queryset, request, view=None):
-    #     self.page_size = self.get_custom_page_size(request, view)
-    #     return super().paginate_queryset(queryset, request, view)
-    # def list(self,request):
-    #     queryset = self.get_queryset()
-    #     pagin_tc = self.paginate_queryset( queryset, request , view=self )
-    #     serializer = VendorLanguagePairSerializer(pagin_tc, many=True, context={'request': request})
-    #     response =self.get_paginated_response(serializer.data)
-    #     return  Response(response.data)
-    # def get_queryset(self):
-    #     search_word =  self.request.query_params.get('search_word',None)
-    #     print(search_word)
-    #     queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
-    #     if search_word:
-    #         if search_word.isalpha()==True:
-    #             lang_id=Languages.objects.get(language__contains=search_word).id
-    #             print(lang_id)
-    #             queryset = queryset.filter(
-    #                         Q(source_lang=lang_id) | Q(target_lang=lang_id)
-    #                     )
-    #         else:
-    #             queryset = queryset.filter(
-    #                         Q(id=search_word))
-    #             print(queryset)
-    #     return queryset
+
+
+    def get_queryset(self):
+        queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+        return queryset
+
     def list(self,request):
         queryset = self.get_queryset()
         serializer = VendorLanguagePairSerializer(queryset,many=True)
         return Response(serializer.data)
-    def get_queryset(self):
-        queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
-        return queryset
+
+   # def retrieve(self, request, pk=None):
+   #      queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
+   #      user = get_object_or_404(queryset, pk=pk)
+   #      serializer = VendorLanguagePairSerializer(user)
+   #      return Response(serializer.data)
 
     @integrity_error
     def create(self,request):

@@ -149,7 +149,30 @@ class GetVendorDetailSerializer(serializers.Serializer):
         if job_id:
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
-        return VendorLanguagePairCloneSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)), many=True, read_only=True).data
+        queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
+        query = queryset.filter(currency = obj.currency_based_on_country)
+        if query.exists():
+            if query[0].service.exists() or query[0].servicetype.exists():
+                return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
+            else:return {'service':[],'servicetype':[]}
+        else:
+            query = queryset.filter(currency_id=144)
+            if query.exists():
+                if query[0].service.exists() or query[0].servicetype.exists():
+                    return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
+                else:return {'service':[],'servicetype':[]}
+            else:
+                objs = [data for data in queryset if data.service.exists() or data.servicetype.exists()]
+                if objs:
+                    return VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data
+                else:return {'service':[],'servicetype':[]}
+        # query = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
+        # if query.count() > 1:
+        #     query1 = query.filter(currency_id=obj.currency_based_on_country_id)
+        #     if query1.exists():
+        #         queryset = query1
+        #     else: queryset = [query.first(),]
+        # return VendorLanguagePairCloneSerializer(queryset, many=True, read_only=True).data
 
     def get_status(self,obj):
         request_user = self.context['request'].user
@@ -429,7 +452,31 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         if job_id:
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
-        return VendorServiceSerializer(obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None)), many=True, read_only=True).data
+        queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
+        query = queryset.filter(currency=obj.currency_based_on_country)
+        if query.exists():
+            if query[0].service.exists():
+                return VendorServiceSerializer(query, many=True, read_only=True).data
+            else:return {'service':[]}
+        else:
+            query1 = queryset.filter(currency_id = 144)
+            if query1.exists():
+                if query1[0].service.exists():
+                    return VendorServiceSerializer(query1, many=True, read_only=True).data
+                else:return {'service':[]}
+            else:
+                objs = [data for data in queryset if data.service.exists()]
+                if objs:
+                    return VendorServiceSerializer(objs[0], many=False, read_only=True).data
+                else:return {'service':[]}
+
+
+        # if query.count() > 1:
+        #     query1 = query.filter(currency_id=obj.currency_based_on_country_id)
+        #     if query1.exists():
+        #         queryset = query1
+        # else: queryset = [query.first(),]
+        #return VendorServiceSerializer(queryset, many=True, read_only=True).data
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source='user.fullname')

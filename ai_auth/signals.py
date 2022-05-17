@@ -211,6 +211,18 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
             print("status updated")
 
 
+def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
+	if created:
+		queryset = staff_model.CurrencyBasedOnCountry.objects.filter(country_id = instance.country_id)
+		if queryset:
+			instance.currency_based_on_country_id = queryset.first().currency_id
+			instance.save()
+		else:
+			instance.currency_based_on_country_id = 144
+			instance.save()
+
+
+
 
 # def updated_user_taxid(sender, instance, *args, **kwargs):
 def create_postjob_id(sender, instance, *args, **kwargs):
