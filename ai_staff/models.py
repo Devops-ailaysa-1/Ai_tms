@@ -412,3 +412,24 @@ class CurrencyBasedOnCountry(models.Model):
         on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='user_currency',
         on_delete=models.CASCADE,blank=True, null=True)
+
+
+class ProjectType(models.Model):
+    type = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.type
+
+
+# class LanguageSupport(models.Model):
+#     language = models.ForeignKey(Languages,related_name='supported_lang', on_delete=models.CASCADE)
+#     google = models.BooleanField(default=True)
+#     microsoft = models.BooleanField(default=False)
+#     amazon = models.BooleanField(default=False)
+#     lingvanex = models.BooleanField(default=False)
+#     speech_to_text = models.BooleanField(default=False)
+#     text_to_speech = models.BooleanField(default=False)
+#     has_female = models.BooleanField(default=False)
+#     has_male = models.BooleanField(default=False)

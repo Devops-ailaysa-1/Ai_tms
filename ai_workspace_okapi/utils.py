@@ -4,7 +4,7 @@ import os, mimetypes, requests, uuid, json, xlwt, boto3
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
-
+from google.cloud import texttospeech
 from google.cloud import translate_v2 as translate
 
 client = translate.Client()
@@ -265,3 +265,27 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
     # LINGVANEX TRANSLATE
     elif mt_engine_id == 4:
         return lingvanex(source_string, source_lang_code, target_lang_code)
+
+
+def text_to_speech(ssml_file,target_language,filename,voice_gender):
+    # print("@#@#@#@#@#",voice_gender)
+    gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
+    filename = filename + "_out"+ ".mp3"
+    path, name = os.path.split(ssml_file)
+    client = texttospeech.TextToSpeechClient()
+    with open(ssml_file, "r") as f:
+        ssml = f.read()
+        input_text = texttospeech.SynthesisInput(ssml=ssml)
+    voice = texttospeech.VoiceSelectionParams(
+        language_code=target_language, ssml_gender=gender
+    )
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+    response = client.synthesize_speech(
+        input=input_text, voice=voice, audio_config=audio_config
+    )
+    with open(os.path.join(path,filename), "wb") as out:
+        out.write(response.audio_content)
+        print('Audio content written to file',filename)
+    return os.path.join(path,filename)

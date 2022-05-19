@@ -14,7 +14,7 @@ from django.contrib.auth import settings
 import os, re,time
 from ai_auth.models import AiUser,Team,HiredEditors
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
-    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
+    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,ProjectType
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document, Segment
 from ai_staff.models import ParanoidModel
@@ -81,6 +81,8 @@ class PenseiveTM(models.Model):
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
 class Project(models.Model):
+    project_type = models.ForeignKey(ProjectType, null=False, blank=False,
+        on_delete=models.CASCADE,default=1)
     project_name = models.CharField(max_length=200, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,

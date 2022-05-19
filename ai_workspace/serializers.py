@@ -1,5 +1,5 @@
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
-from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
+from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
@@ -402,12 +402,14 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
+	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False)
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","mt_engine_id")
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed",
+					"team_exist","mt_engine_id","project_type_id",)
 	# class Meta:
 	# 	model = Project
 	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
@@ -423,6 +425,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def to_internal_value(self, data):
 		print("DTATA------>",data)
 		data["project_name"] = data.get("project_name", [None])[0]
+		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
 		# print("files-->",data['files'])
@@ -475,6 +478,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		team = created_by.team if created_by.team else None
 		project_manager = created_by
 		validated_data.pop('team_exist')
+		# project_type = validated_data.get("project_type_id")
 		print("validated_data---->",validated_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \

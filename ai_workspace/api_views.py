@@ -482,9 +482,10 @@ class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
     # team = django_filters.CharFilter(field_name='team__name',lookup_expr='icontains')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
+    type = django_filters.NumberFilter(field_name='project_type_id')
     class Meta:
         model = Project
-        fields = ('project', 'team')
+        fields = ('project', 'team','type')
 
     def filter_team(self, queryset, name, value):
         if value=="None":

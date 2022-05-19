@@ -414,6 +414,7 @@ class VendorOnboarding(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 post_save.connect(vendor_status_send_email, sender=VendorOnboarding)
+#post_save.connect(vendorsinfo_update, sender=VendorOnboarding)
 
 def support_file_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.email,"support_file",filename)
