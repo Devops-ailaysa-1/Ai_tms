@@ -124,6 +124,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors)
 
     def update(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
