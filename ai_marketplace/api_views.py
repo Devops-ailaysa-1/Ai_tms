@@ -87,7 +87,8 @@ def post_project_primary_details(request):
     jobs = JobSerializer(jobs, many=True)
     contents = ProjectContentTypeSerializer(contents,many=True)
     subjects = ProjectSubjectSerializer(subjects,many=True)
-    result = {'project_name':project.project_name,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
+    total_word_count = project.project_analysis(project.get_tasks).get('proj_word_count')
+    result = {'project_name':project.project_name,'total_word_count':total_word_count,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
     return JsonResponse({"res":result},safe=False)
 
 
