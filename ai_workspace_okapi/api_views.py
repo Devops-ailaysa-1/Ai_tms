@@ -381,7 +381,7 @@ class DocumentToFile(views.APIView):
 
 
     #For Downloading Audio File################only for voice project###########
-    def download_audio_file(self,res,document_id,voice_gender):
+    def download_audio_file(self,res,document_id,voice_gender,language_locale):
         if res.status_code in [200, 201]:
             file_path = res.text
             doc = DocumentToFile.get_object(document_id)
@@ -389,7 +389,7 @@ class DocumentToFile(views.APIView):
             ser = TaskSerializer(task)
             task_data = ser.data
             filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
-            target_language = task_data["target_language"]
+            target_language = language_locale if language_locale else task_data["target_language"]
             res1 = text_to_speech(file_path,target_language,filename,voice_gender)
             return download_file(res1)
         else:
@@ -449,6 +449,7 @@ class DocumentToFile(views.APIView):
         token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
+        language_locale = request.GET.get("locale", None)
         payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
         user_id_payload = payload.get("user_id", 0)
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
@@ -465,7 +466,7 @@ class DocumentToFile(views.APIView):
             # For Downloading Audio File
             if output_type == "AUDIO":
                 res = self.document_data_to_file(request, document_id)
-                return self.download_audio_file(res,document_id,voice_gender)
+                return self.download_audio_file(res,document_id,voice_gender,language_locale)
 
             res = self.document_data_to_file(request, document_id)
             if res.status_code in [200, 201]:

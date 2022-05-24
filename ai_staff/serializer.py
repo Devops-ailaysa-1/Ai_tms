@@ -5,7 +5,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
-                    CreditAddonPrice,SupportTopics,JobPositions,Role)
+                    CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -302,3 +302,21 @@ class TeamRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = "__all__"
+
+
+class MTLanguageSupportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MTLanguageSupport
+        fields = "__all__"
+
+
+class GetLanguagesSerializer(serializers.Serializer):
+    language = serializers.ReadOnlyField(source = 'language.language')
+    language_id = serializers.ReadOnlyField(source = 'language.id')
+    # languages_list = serializers.SerializerMethodField()
+    # target_languages = serializers.SerializerMethodField()
+
+    # def get_languages_list(self,obj):
+    #     project_type_detail = self.context['project_type_detail_id']
+    #     if project_type_detail == 2:
+    #

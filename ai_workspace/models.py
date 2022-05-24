@@ -14,7 +14,8 @@ from django.contrib.auth import settings
 import os, re,time
 from ai_auth.models import AiUser,Team,HiredEditors
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
-    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,ProjectType
+    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,ProjectType,\
+    ProjectTypeDetail
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document, Segment
 from ai_staff.models import ParanoidModel
@@ -81,8 +82,8 @@ class PenseiveTM(models.Model):
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
 class Project(models.Model):
-    project_type = models.ForeignKey(ProjectType, null=False, blank=False,
-        on_delete=models.CASCADE,default=1)
+    project_type = models.ForeignKey(ProjectType, null=False, blank=False,on_delete=models.CASCADE,default=1)
+    # project_type_detail = models.ForeignKey(ProjectTypeDetail,null=True,blank=True,on_delete=models.CASCADE)
     project_name = models.CharField(max_length=200, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
@@ -355,6 +356,23 @@ class Project(models.Model):
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
+
+
+def get_audio_file_upload_path(instance, filename):
+    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
+            "Audio",filename)
+    return file_path
+
+
+class VoiceProjectDetail(models.Model):
+    project = models.OneToOneField(Project, on_delete = models.CASCADE,related_name="voice_proj_detail")
+    project_type_sub_category = models.ForeignKey(ProjectTypeDetail,null=True,blank=True,on_delete=models.CASCADE)
+    audio_file =  models.FileField (upload_to=get_audio_file_upload_path,blank=True, null=True)
+
+    @property
+    def filename(self):
+        if self.audio_file:
+            return  os.path.basename(self.audio_file.file.name)
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,

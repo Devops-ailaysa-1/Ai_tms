@@ -422,14 +422,29 @@ class ProjectType(models.Model):
     def __str__(self):
         return self.type
 
+class ProjectTypeDetail(models.Model):
+    projecttype = models.ForeignKey(ProjectType,related_name='project_type_detail',on_delete=models.CASCADE,blank=True, null=True)
+    sub_category_name = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-# class LanguageSupport(models.Model):
-#     language = models.ForeignKey(Languages,related_name='supported_lang', on_delete=models.CASCADE)
-#     google = models.BooleanField(default=True)
-#     microsoft = models.BooleanField(default=False)
-#     amazon = models.BooleanField(default=False)
-#     lingvanex = models.BooleanField(default=False)
-#     speech_to_text = models.BooleanField(default=False)
-#     text_to_speech = models.BooleanField(default=False)
-#     has_female = models.BooleanField(default=False)
-#     has_male = models.BooleanField(default=False)
+    def __str__(self):
+        return self.sub_category_name
+
+
+class MTLanguageSupport(models.Model):
+    language = models.ForeignKey(Languages,related_name='supported_lang', on_delete=models.CASCADE)
+    mtpe_engines = models.ForeignKey(AilaysaSupportedMtpeEngines,related_name='supported_mt',on_delete=models.CASCADE)
+    speech_to_text = models.BooleanField(default=False)
+    text_to_speech = models.BooleanField(default=False)
+    translate = models.BooleanField(default=True)
+    # has_female = models.BooleanField(default=False)
+    # has_male = models.BooleanField(default=False)
+
+
+class MTLanguageLocaleVoiceSupport(models.Model):
+    language = models.ForeignKey(Languages,related_name='supported_language', on_delete=models.CASCADE)
+    language_locale = models.ForeignKey(LanguagesLocale,related_name='supported_locale', on_delete=models.CASCADE)
+    mtpe_engines = models.ForeignKey(AilaysaSupportedMtpeEngines,related_name='support_mt',on_delete=models.CASCADE)
+    has_female = models.BooleanField(default=False)
+    has_male = models.BooleanField(default=False)

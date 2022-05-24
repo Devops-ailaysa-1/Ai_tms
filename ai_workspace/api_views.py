@@ -536,6 +536,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def create(self, request):
         text_data=request.POST.get('text_data')
+        audio_file = request.FILES.get('audio_file',None)
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
@@ -548,7 +549,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             return Response(serializer.errors, status=409)
         else:
             serlzr = ProjectQuickSetupSerializer(data=\
-            {**request.data, "files": request.FILES.getlist("files")},context={"request": request})
+            {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request})
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 return Response(serlzr.data, status=201)
@@ -1374,3 +1375,36 @@ class ShowMTChoices(APIView):
                 res[tl] = mt_responses
 
         return Response(res, status=status.HTTP_200_OK)
+
+
+
+################################need to revise############# working
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def transcribe_file(request):
+    project_id = request.POST.get('project')
+    obj = Project.objects.get(id = project_id)
+    speech_file = obj.voice_proj_detail.audio_file
+    """Transcribe the given audio file."""
+    from google.cloud import speech
+    import io
+
+    client = speech.SpeechClient()
+
+    with io.open(speech_file, "rb") as audio_file:
+        content = audio_file.read()
+
+    audio = speech.RecognitionAudio(content=content)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=16000,
+        language_code="en-US",
+    )
+
+    response = client.recognize(config=config, audio=audio)
+
+    # Each result is for a consecutive portion of the audio. Iterate through
+    # them to get the transcripts for the entire audio file.
+    for result in response.results:
+        # The first alternative is the most likely one for this portion.
+        print(u"Transcript: {}".format(result.alternatives[0].transcript))
