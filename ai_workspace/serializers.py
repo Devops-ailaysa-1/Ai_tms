@@ -1,9 +1,9 @@
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
-from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields
+from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType,ProjectTypeDetail
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,TaskAssignHistory,TaskDetails
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,TaskAssignHistory,TaskDetails,VoiceProjectDetail
 import json
 import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -133,6 +133,20 @@ class ProjectSubjectSerializer(serializers.ModelSerializer):
 		model = ProjectSubjectField
 		fields = ("id","project", "subject")
 		read_only_fields = ("id","project",)
+
+
+class VoiceProjectDetailSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = VoiceProjectDetail
+		# fields = "__all__"
+		fields = ("id","project", "project_type_sub_category","audio_file",)
+		read_only_fields = ("id","project",)
+		extra_kwargs = {
+			"audio_file":{
+				"required": False
+			}
+		}
+
 
 
 class ProjectContentTypeSerializer(serializers.ModelSerializer):
@@ -396,18 +410,22 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
+	voice_proj_detail = VoiceProjectDetailSerializer(required=False,allow_null=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
 	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True)
 	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
+	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False)
+	# project_type_detail_id = serializers.PrimaryKeyRelatedField(queryset=ProjectTypeDetail.objects.all().values_list('pk',flat=True),required=False)
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","team_exist","mt_engine_id")
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed",
+					"team_exist","mt_engine_id","project_type_id","voice_proj_detail",)#"project_type_detail_id",)
 	# class Meta:
 	# 	model = Project
 	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
@@ -423,6 +441,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def to_internal_value(self, data):
 		print("DTATA------>",data)
 		data["project_name"] = data.get("project_name", [None])[0]
+		data["project_type_id"] = data.get("project_type",[1])[0]
+		if data.get('sub_category'):
+			if data.get('audio_file'):
+				data["voice_proj_detail"] = {"project_type_sub_category":data.get("sub_category",[None])[0],"audio_file":data.get('audio_file')}
+			else:
+				data["voice_proj_detail"] = {"project_type_sub_category":data.get("sub_category",[None])[0],"audio_file":None}
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
 		# print("files-->",data['files'])
@@ -466,6 +490,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
+		print("$$$$$$$$$$$$$$$$",validated_data)
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
 		else:
@@ -474,12 +499,17 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:ai_user = created_by
 		team = created_by.team if created_by.team else None
 		project_manager = created_by
+		voice_proj_detail = validated_data.pop("voice_proj_detail",[])
 		validated_data.pop('team_exist')
+		# project_type = validated_data.get("project_type_id")
 		print("validated_data---->",validated_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
 			f_klass=File,j_klass=Job, ai_user=ai_user,\
 			team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
+
+		if voice_proj_detail:
+			VoiceProjectDetail.objects.create(**voice_proj_detail,project=project )
 
 		tasks = Task.objects.create_tasks_of_files_and_jobs(
 			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)

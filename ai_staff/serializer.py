@@ -5,7 +5,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
-                    CreditAddonPrice,SupportTopics,JobPositions,Role)
+                    CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -192,12 +192,12 @@ class AiUserTypeSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ('id','created_at','updated_at')
 
-class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
-    project = serializers.IntegerField(required=False, source="project_id")
-    class Meta:
-        model = AilaysaSupportedMtpeEngines
-        fields = ("id","name",'created_at','updated_at')
-        read_only_fields = ('id','created_at','updated_at')
+# class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
+#     project = serializers.IntegerField(required=False, source="project_id")
+#     class Meta:
+#         model = AilaysaSupportedMtpeEngines
+#         fields = ("id","name",'created_at','updated_at')
+#         read_only_fields = ('id','created_at','updated_at')
 
 class SubscriptionPricingSerializer(serializers.ModelSerializer):
     class Meta:
@@ -302,3 +302,22 @@ class TeamRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = "__all__"
+
+
+class MTLanguageSupportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MTLanguageSupport
+        fields = "__all__"
+
+
+class GetLanguagesSerializer(serializers.Serializer):
+    language = serializers.ReadOnlyField(source = 'language.language')
+    language_id = serializers.ReadOnlyField(source = 'language.id')
+
+
+class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
+    # project = serializers.IntegerField(required=False, source="project_id")Edited
+    class Meta:
+        model = AilaysaSupportedMtpeEngines
+        fields = ("id","name",'created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')

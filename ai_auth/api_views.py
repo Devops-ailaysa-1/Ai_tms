@@ -1737,3 +1737,19 @@ def vendor_renewal_change(request):
         user.is_vendor = data
         user.save()
     return JsonResponse({"msg": "changed successfully"})
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def vendor_onboard_complete(request):#######while using social signups################
+    from ai_vendor.models import VendorsInfo,VendorLanguagePair
+    source_lang = request.POST.get('source_language')
+    target_lang = request.POST.get('target_language')
+    cv_file = request.FILES.get('cv_file')
+    if source_lang and target_lang:
+        VendorLanguagePair.objects.create(user=request.user,source_lang_id = source_lang,target_lang_id =target_lang)
+    if cv_file:
+        VendorsInfo.objects.create(user=request.user,cv_file = cv_file )
+        VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+    return JsonResponse({"msg": "Onboarding completed successfully"})

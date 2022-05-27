@@ -87,7 +87,10 @@ def post_project_primary_details(request):
     jobs = JobSerializer(jobs, many=True)
     contents = ProjectContentTypeSerializer(contents,many=True)
     subjects = ProjectSubjectSerializer(subjects,many=True)
-    result = {'project_name':project.project_name,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
+    tasks = project.get_tasks
+    task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,'word_count':i.task_word_count} for i in tasks]
+    print("^^^^^^^^^^^^",task_count_detail)
+    result = {'project_name':project.project_name,'task_count_detail':task_count_detail,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
     return JsonResponse({"res":result},safe=False)
 
 
@@ -124,6 +127,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors)
 
     def update(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
@@ -344,7 +348,10 @@ class IncompleteProjectListView(generics.ListAPIView):
     pagination.PageNumberPagination.page_size = 20
 
     def get_queryset(self):
-        queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).order_by('-id') if x.progress != "completed" ]
+        query = ProjectboardDetails.objects.filter(customer = self.request.user.id)
+        if query:
+            projects = [i.project_id for i in query]
+        queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
         return queryset
 
 
@@ -575,3 +582,19 @@ def get_previous_accepted_rate(request):
         out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id}]
         rates.append(out)
     return JsonResponse({"Previously Agreed Rates":rates})
+
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def customer_mp_dashboard_count(request):
+    user = request.user
+    present = datetime.now()
+    query = ProjectboardDetails.objects.filter(customer = user)
+    posted_project_count = query.count()
+    inprogress_project_count = query.filter(bid_deadline__gte = present).count()
+    bid_deadline_expired_project_count = query.filter(bid_deadline__lte = present).count()
+    return JsonResponse({"posted_project_count":posted_project_count,\
+    "inprogress_project_count":inprogress_project_count,\
+    "bid_deadline_expired_project_count":bid_deadline_expired_project_count})

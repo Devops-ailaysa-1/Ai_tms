@@ -48,6 +48,8 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
     elif instance.get_status_display() == "Request Sent":
        auth_forms.vendor_request_admin_mail(instance)
 
+
+
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''
 #     res=update_billing_address(address=instance)

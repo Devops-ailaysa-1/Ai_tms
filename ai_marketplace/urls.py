@@ -32,4 +32,5 @@ urlpatterns+= [
     path('messages/',views.messages_page),
     path('get_recent_messages/',api_views.get_last_messages),
     path('get_previous_accepted_rate/',api_views.get_previous_accepted_rate),
+    path('customer_dashboard/',api_views.customer_mp_dashboard_count),
     ]
