@@ -650,9 +650,11 @@ class Task(models.Model):
         if self.document_id:
             document = Document.objects.get(id = self.document_id)
             return document.total_char_count
-        else:
+        elif self.task_details.first():
             t = TaskDetails.objects.get(task_id = self.id)
             return t.task_char_count
+        else:
+            return None
 
     @property
     def corrected_segment_count(self):

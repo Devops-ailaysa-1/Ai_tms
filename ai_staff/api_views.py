@@ -12,7 +12,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
-                    IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport)
+                    IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -20,7 +20,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
-                         GetLanguagesSerializer)
+                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -653,7 +653,13 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
         pack.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+class AilaysaSupportedMtpeEnginesView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, format=None):
+        queryset = AilaysaSupportedMtpeEngines.objects.all()
+        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 class IndianStatesView(viewsets.ViewSet):
     def list(self,request):

@@ -49,6 +49,7 @@ urlpatterns += [
      path('get_plan_details/',api_views.get_plan_details),
      path('get_price_details/',api_views.get_pricing_details),
      path('get-addons-details/',api_views.get_addons_details),
+     path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view(),name = 'mt-engines'),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      path('insert',views.Bulk_insert)
 

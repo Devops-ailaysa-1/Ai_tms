@@ -192,12 +192,12 @@ class AiUserTypeSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ('id','created_at','updated_at')
 
-class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
-    project = serializers.IntegerField(required=False, source="project_id")
-    class Meta:
-        model = AilaysaSupportedMtpeEngines
-        fields = ("id","name",'created_at','updated_at')
-        read_only_fields = ('id','created_at','updated_at')
+# class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
+#     project = serializers.IntegerField(required=False, source="project_id")
+#     class Meta:
+#         model = AilaysaSupportedMtpeEngines
+#         fields = ("id","name",'created_at','updated_at')
+#         read_only_fields = ('id','created_at','updated_at')
 
 class SubscriptionPricingSerializer(serializers.ModelSerializer):
     class Meta:
@@ -313,10 +313,11 @@ class MTLanguageSupportSerializer(serializers.ModelSerializer):
 class GetLanguagesSerializer(serializers.Serializer):
     language = serializers.ReadOnlyField(source = 'language.language')
     language_id = serializers.ReadOnlyField(source = 'language.id')
-    # languages_list = serializers.SerializerMethodField()
-    # target_languages = serializers.SerializerMethodField()
 
-    # def get_languages_list(self,obj):
-    #     project_type_detail = self.context['project_type_detail_id']
-    #     if project_type_detail == 2:
-    #
+
+class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
+    # project = serializers.IntegerField(required=False, source="project_id")Edited
+    class Meta:
+        model = AilaysaSupportedMtpeEngines
+        fields = ("id","name",'created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
