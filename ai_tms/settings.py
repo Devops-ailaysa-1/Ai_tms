@@ -130,6 +130,7 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
+    "ai_pay"
     # 'dbbackup',
     # 'django_q',
 ]
@@ -520,16 +521,16 @@ STATICFILES_DIRS = [
 # }
 
 
-sentry_sdk.init(
-    dsn = os.getenv("dsn"),
-    integrations=[DjangoIntegration()],
+# sentry_sdk.init(
+#     dsn = os.getenv("dsn"),
+#     integrations=[DjangoIntegration()],
 
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # We recommend adjusting this value in production.
-    traces_sample_rate = os.getenv("traces_sample_rate"),
+#     # Set traces_sample_rate to 1.0 to capture 100%
+#     # of transactions for performance monitoring.
+#     # We recommend adjusting this value in production.
+#     traces_sample_rate = os.getenv("traces_sample_rate"),
 
-    # If you wish to associate users to errors (assuming you are using
-    # django.contrib.auth) you may enable sending PII data.
-    send_default_pii = os.getenv("send_default_pii")
-)
+#     # If you wish to associate users to errors (assuming you are using
+#     # django.contrib.auth) you may enable sending PII data.
+#     send_default_pii = os.getenv("send_default_pii")
+# )

@@ -527,7 +527,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         fields = ('id','instruction','instruction_file','filename','task_ven_accepted',\
                    'job','project','assigned_by','assignment_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
-                    'total_word_count','assign_to_details','assigned_by_details',)
+                    'total_word_count','assign_to_details','assigned_by_details','payment_type')
         extra_kwargs = {
             'assigned_by':{'write_only':True},
             # 'assign_to':{'write_only':True}
@@ -562,7 +562,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
 
     def create(self, data):
-        # print('validated data==>',data)
+        print('validated data kk==>',data)
         task_list = data.pop('tasks')
         assign_to = data.pop('assign_to')
         total_word_count = data.pop('total_word_count',None)
