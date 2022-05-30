@@ -41,9 +41,15 @@ app.conf.beat_schedule = {
     'task': 'ai_auth.tasks.send_notification_email_for_unread_messages',
     'schedule': crontab(minute='*/15'),
     'args': (),
-},
+    },
 
+   'send-mail-30-minutes': {
+    'task': 'ai_auth.tasks.email_send_subscription_extension',
+    'schedule': crontab(minute='*/30'),
+    'args': (),
+    },
 }
+
 app.conf.timezone = 'UTC'
 
 # @app.task
