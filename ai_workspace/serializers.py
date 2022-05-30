@@ -604,9 +604,11 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		if instance.document_id:
 			document = Document.objects.get(id = instance.document_id)
 			return document.total_word_count
-		else:
+		elif instance.task_details.first():
 			t = TaskDetails.objects.get(task_id = instance.id)
 			return t.task_word_count
+		else:
+			return None
 
 
 class ProjectSerializerV2(serializers.ModelSerializer):
