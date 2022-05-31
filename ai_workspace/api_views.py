@@ -26,7 +26,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
     TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer)
+    GetAssignToSerializer,TaskTranscriptDetailSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
@@ -536,7 +536,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def create(self, request):
         text_data=request.POST.get('text_data')
-        audio_file = request.FILES.get('audio_file',None)
+        audio_file = request.FILES.getlist('audio_file',None)
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
@@ -1023,7 +1023,7 @@ class ProjectAnalysisProperty(APIView):
         proj_word_count = proj_char_count = proj_seg_count = 0
         task_words = []
 
-        for task in project.get_tasks:
+        for task in project.get_mtpe_tasks:
             doc = Document.objects.get(id=task.document_id)
             proj_word_count += doc.total_word_count
             proj_char_count += doc.total_char_count
@@ -1038,7 +1038,7 @@ class ProjectAnalysisProperty(APIView):
     def get_data_from_analysis(project):
         out = TaskDetails.objects.filter(project_id=project.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
         task_words = []
-        for task in project.get_tasks:
+        for task in project.get_mtpe_tasks:
             task_words.append({task.id : task.task_details.first().task_word_count})
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
@@ -1055,7 +1055,7 @@ class ProjectAnalysisProperty(APIView):
     @staticmethod
     def analyse_project(project_id):
         project = Project.objects.get(id=project_id)
-        project_tasks = Project.objects.get(id=project_id).get_tasks
+        project_tasks = Project.objects.get(id=project_id).get_mtpe_tasks
         tasks = []
         for _task in project_tasks:
             if _task.task_details.first() == None:
@@ -1104,13 +1104,14 @@ class ProjectAnalysisProperty(APIView):
             else:
                 print("*************  File taken only once  **************")
                 tasks = [i for i in Task.objects.filter(file_id=task.file_id)]
+                print("####",tasks)
                 task_details = TaskDetails.objects.filter(task__in = tasks).first()
                 task_details.pk = None
                 task_details.task_id = task.id
                 task_details.save()
                 # task_words.append({task.id : task_details.task_word_count})
 
-        [task_words.append({task.id : task.task_details.first().task_word_count})for task in project.get_tasks]
+        [task_words.append({task.id : task.task_details.first().task_word_count})for task in project.get_mtpe_tasks]
         out = TaskDetails.objects.filter(project_id=project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
@@ -1377,16 +1378,22 @@ class ShowMTChoices(APIView):
         return Response(res, status=status.HTTP_200_OK)
 
 
-
+# def write_transcripts(transcript_filename,transcript):
+#     f= open(output_filepath + transcript_filename,"w+")
+#     f.write(transcript)
+#     f.close()
 ################################need to revise############# working
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def transcribe_file(request):
-    project_id = request.POST.get('project')
-    obj = Project.objects.get(id = project_id)
-    speech_file = obj.voice_proj_detail.audio_file
-    """Transcribe the given audio file."""
+    task_id = request.POST.get('task')
+    target_language = request.POST.getlist('target_languages')
+    obj = Task.objects.get(id = task_id)
+    source = [obj.job.source_language.id]
+    source_code = obj.job.source_language_code
+    speech_file = obj.file.file.path
     from google.cloud import speech
+    from google.cloud import speech_v1p1beta1 as speech
     import io
 
     client = speech.SpeechClient()
@@ -1395,16 +1402,49 @@ def transcribe_file(request):
         content = audio_file.read()
 
     audio = speech.RecognitionAudio(content=content)
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=16000,
-        language_code="en-US",
-    )
 
-    response = client.recognize(config=config, audio=audio)
+    config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code,)
 
-    # Each result is for a consecutive portion of the audio. Iterate through
-    # them to get the transcripts for the entire audio file.
-    for result in response.results:
-        # The first alternative is the most likely one for this portion.
-        print(u"Transcript: {}".format(result.alternatives[0].transcript))
+    # if os.path.splitext(file)[1] == '.mp3':
+    #     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source,)
+    # elif os.path.splitext(file)[1] == '.wav':
+    #     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+    #         sample_rate_hertz=44100, #for .wav files
+    #         audio_channel_count=2,# for .wav files
+    #         language_code=source,
+    #     )
+    try:
+        response = client.recognize(config=config, audio=audio)
+        transcript=''
+        for result in response.results:
+            print(u"Transcript: {}".format(result.alternatives[0].transcript))
+            transcript += result.alternatives[0].transcript
+        # transcript = 'This is for sample check..'
+        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id})
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors)
+    except:
+        return Response({'msg':'Audio File Size Too long Error'})
+    # transcript = 'This is for sample check..'
+    # return Response({'transcripted_msg':transcript})
+    # name =  transcript.split()[0]+ ".txt" if len(transcript.split()[0])<=15 else transcript[:5]+ ".txt"
+    # im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = transcript.encode(),file_name=name)
+    # team = True if obj.job.project.team else False
+    # pr = obj.job.project
+    # serializer = ProjectQuickSetupSerializer(pr,data={"files":[im_file],"team":[team],\
+    #             "source_language":source,'target_languages':target_language},context={"request": request}, partial=True)
+    # if serializer.is_valid():
+    #     serializer.save()
+    #     return Response(serializer.data)
+    # return Response(serializer.errors)
+
+
+
+
+
+    # f1 = open(name, 'w')
+    # f1.write(transcript)
+    # f1.close()
+    # return Response({'file':f1.path,'name':name})
