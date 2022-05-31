@@ -430,15 +430,21 @@ class Job(models.Model):
 
     @property
     def source_target_pair(self): # code repr
-        return "%s-%s"%(self.source_language.locale.first().locale_code,\
-            self.target_language.locale.first().locale_code)
+        if self.target_language != None:
+            return "%s-%s"%(self.source_language.locale.first().locale_code,\
+                self.target_language.locale.first().locale_code)
+        else:
+            return "%s-%s"%(self.source_language.locale.first().locale_code,None)
 
     @property
     def source_target_pair_names(self):
-        return "%s->%s"%(
-            self.source_language.language,
-            self.target_language.language
-        )
+        if self.target_language != None:
+            return "%s->%s"%(
+                self.source_language.language,
+                self.target_language.language)
+        else:
+            return "%s->%s"%(
+                self.source_language.language,None)
 
     @property
     def source_language_code(self):

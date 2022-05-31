@@ -24,6 +24,7 @@ class ProjectboardDetails(models.Model):#stephen subburaj
     proj_desc = models.CharField(max_length=5000,blank=True, null=True)
     bid_deadline = models.DateTimeField(blank=True, null=True)
     proj_deadline = models.DateTimeField(blank=True, null=True)
+    post_word_count =models.IntegerField(null=True, blank=True)
     ven_native_lang = models.ForeignKey(Languages,blank=True, null=True, related_name='vendor_native_lang', on_delete=models.CASCADE)
     ven_res_country = models.ForeignKey(Countries,blank=True, null=True, related_name='res_country', on_delete=models.CASCADE)
     ven_special_req = models.CharField(max_length=1000,blank=True, null=True)

@@ -1,6 +1,7 @@
 from rest_framework import filters,generics
 from rest_framework.pagination import PageNumberPagination
 import django_filters
+from  django.utils import timezone
 from ai_marketplace import forms as m_forms
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter as SF, OrderingFilter as OF
@@ -88,7 +89,7 @@ def post_project_primary_details(request):
     contents = ProjectContentTypeSerializer(contents,many=True)
     subjects = ProjectSubjectSerializer(subjects,many=True)
     tasks = project.get_tasks
-    task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,'word_count':i.task_word_count} for i in tasks]
+    task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,'word_count':i.task_word_count if i.task_details.exists() else None} for i in tasks]
     print("^^^^^^^^^^^^",task_count_detail)
     result = {'project_name':project.project_name,'task_count_detail':task_count_detail,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
     return JsonResponse({"res":result},safe=False)
@@ -146,16 +147,21 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 @permission_classes([IsAuthenticated])
 def user_projectpost_list(request):
     customer_id = request.user.id
+    present = timezone.now()
     new=[]
     try:
         queryset = ProjectboardDetails.objects.filter(customer_id=customer_id).all()
         print(queryset)
         for i in queryset:
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
-            project = i.proj_name
+            projectpost_title = i.proj_name
             projectpost_id=i.id
+            posted_word_count = i.post_word_count
             bids = BidPropasalDetails.objects.filter(projectpost_id = i.id).count()
-            out=[{'jobs':jobs,'project':project,'bids':bids,'projectpost_id':projectpost_id}]
+            post_status = "InBidding" if i.bid_deadline >= present else "Expired"
+            out=[{'jobs':jobs,'projectpost_title':projectpost_title,\
+                'bids':bids,'projectpost_id':projectpost_id,\
+                'posted_word_count':posted_word_count,"status":post_status}]
             new.extend(out)
         return JsonResponse({'out':new},safe=False)
     except:

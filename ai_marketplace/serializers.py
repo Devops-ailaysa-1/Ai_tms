@@ -254,7 +254,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     # steps_id = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),write_only=True)
     class Meta:
         model=ProjectboardDetails
-        fields=('id','project_id','customer_id','proj_name','proj_desc',
+        fields=('id','project_id','customer_id','proj_name','proj_desc','post_word_count',
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
                  'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',)
