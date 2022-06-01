@@ -648,7 +648,12 @@ class Task(models.Model):
 
     @property
     def get_document_url(self):
-        return reverse("ws_okapi:document", kwargs={"task_id": self.id})
+        try:
+            if self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+                return None
+            else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
+        except:
+            return reverse("ws_okapi:document", kwargs={"task_id": self.id})
 
     @property
     def extension(self):
@@ -665,9 +670,11 @@ class Task(models.Model):
         if self.document_id:
             document = Document.objects.get(id = self.document_id)
             return document.total_word_count
-        else:
+        elif self.task_details.exists():
             t = TaskDetails.objects.get(task_id = self.id)
             return t.task_word_count
+        else:
+            return None
 
     @property
     def task_char_count(self):

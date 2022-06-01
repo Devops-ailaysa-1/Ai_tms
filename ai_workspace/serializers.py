@@ -415,33 +415,26 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	jobs = JobSerializer(many=True, source="project_jobs_set", write_only=True)
 	files = FileSerializer(many=True, source="project_files_set", write_only=True)
 	voice_proj_detail = VoiceProjectDetailSerializer(required=False,allow_null=True)
-	#voice_proj_file = VoiceProjectFileSerializer(many=True,required=False,allow_null=True)
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
 	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True)
-	# # team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
-	# # project_manager_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False)
-	# project_type_detail_id = serializers.PrimaryKeyRelatedField(queryset=ProjectTypeDetail.objects.all().values_list('pk',flat=True),required=False)
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed",
-					"team_exist","mt_engine_id","project_type_id","voice_proj_detail",)#"voice_proj_file",)#"project_type_detail_id",)
-	# class Meta:
-	# 	model = Project
-	# 	fields = ("id", "project_name", "jobs", "files","team_id",'get_team',"assign_enable",'project_manager_id',"files_jobs_choice_url",
-	# 	 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed", )# "project_analysis",)#,'ai_user')
+					"team_exist","mt_engine_id","project_type_id","voice_proj_detail",)
 
-	# def run_validation(self,data):
-	# 	if data.get('target_languages')!=None:
-	# 		comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
-	# 		if True in comparisons:
-	# 			raise serializers.ValidationError({"msg":"source and target languages should not be same"})
-	# 	return super().run_validation(data)
+
+	def run_validation(self,data):
+		if data.get('target_languages')!=None:
+			comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
+			if True in comparisons:
+				raise serializers.ValidationError({"msg":"source and target languages should not be same"})
+		return super().run_validation(data)
 
 	def to_internal_value(self, data):
 		print("DTATA------>",data)
@@ -505,9 +498,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		team = created_by.team if created_by.team else None
 		project_manager = created_by
 		voice_proj_detail = validated_data.pop("voice_proj_detail",[])
-		#voice_proj_file = validated_data.pop("voice_proj_file",[])
 		validated_data.pop('team_exist')
-		# project_type = validated_data.get("project_type_id")
 		print("validated_data---->",validated_data)
 		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
 			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
@@ -636,6 +627,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	progress = serializers.DictField(source="get_progress", read_only=True)
 	task_assign_info = TaskAssignInfoSerializer(required=False)
 	bid_job_detail_info = serializers.SerializerMethodField()
+	open_in =  serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
@@ -644,18 +636,21 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "task_word_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info",)
+			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in")
 
 	def get_bid_job_detail_info(self,obj):
-		if obj.job:
-			if obj.job.project.proj_detail.all():
-				qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id))
-				return ProjectPostJobDetailSerializer(qs,many=True).data
-			else:
-				return None
+		if obj.job.project.proj_detail.all():
+			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id))
+			return ProjectPostJobDetailSerializer(qs,many=True).data
 		else:
 			return None
 
+	def get_open_in(self,obj):
+		try:
+			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:return "Ailaysa Writer"
+			else:return "Transeditor"
+		except:
+			return "Transeditor"
 	# def get_task_word_count(self,instance):
 	# 	if instance.document_id:
 	# 		document = Document.objects.get(id = instance.document_id)
@@ -820,7 +815,10 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
 		lang_pair = VendorLanguagePair.objects.none()
 		for i in jobs:
-			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			if i.target_language_id == None:
+				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) | Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			else:
+				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
 			lang_pair = lang_pair.union(tr)
 		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 
