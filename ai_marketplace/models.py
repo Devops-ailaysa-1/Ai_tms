@@ -37,8 +37,10 @@ class ProjectboardDetails(models.Model):#stephen subburaj
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='rate_currency', on_delete=models.CASCADE)
     unit = models.ForeignKey(Billingunits,blank=True, null=True, related_name='bill_unit', on_delete=models.CASCADE)
     milestone = models.CharField(max_length=191,blank=True, null=True)
+    closed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    deleted_at = models.DateTimeField(blank=True, null=True)
 
     @property
     def get_postedjobs(self):

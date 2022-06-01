@@ -106,9 +106,9 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         try:
             projectpost_id = request.GET.get('project_post_id')
             if projectpost_id:
-                queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id)).all()
+                queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
             else:
-                queryset = ProjectboardDetails.objects.filter(customer_id = request.user.id).all()
+                queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = ProjectPostSerializer(pagin_tc,many=True)
             response = self.get_paginated_response(serializer.data)
@@ -139,7 +139,8 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 
     def delete(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
-        projectpost_info.delete()
+        projectpost_info.deleted_at = timezone.now()
+        projectpost_info.save()
         return Response(status=204)
 
 
@@ -393,7 +394,7 @@ class AvailableJobsListView(generics.ListAPIView):
     def get_queryset(self):
         self.validate()
         present = datetime.now()
-        queryset= ProjectboardDetails.objects.filter(bid_deadline__gte = present).distinct()
+        queryset= ProjectboardDetails.objects.filter(Q(bid_deadline__gte = present) & Q(deleted_at__isnull = True) &Q(closed_at__isnull = True)).distinct()
         return queryset
 
 
@@ -604,3 +605,23 @@ def customer_mp_dashboard_count(request):
     return JsonResponse({"posted_project_count":posted_project_count,\
     "inprogress_project_count":inprogress_project_count,\
     "bid_deadline_expired_project_count":bid_deadline_expired_project_count})
+
+
+
+
+class GetVendorListBasedonProjects(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = GetVendorListSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        sltl_list = Project.objects.filter(ai_user = user).distinct().\
+                values('project_jobs_set__source_language','project_jobs_set__target_language').\
+                annotate(sltl=Count('project_jobs_set__source_language__language')).order_by('-sltl')[:5]
+        lang_pair = VendorLanguagePair.objects.none()
+        for i in sltl_list:
+            query = VendorLanguagePair.objects.filter(Q(source_lang=i.get('project_jobs_set__source_language'))\
+                    &Q(target_lang=i.get('project_jobs_set__target_language'))&Q(deleted_at=None)).values_list('user_id',flat=True)
+            lang_pair = lang_pair.union(query)
+        users_list = AiUser.objects.filter(id__in = lang_pair).distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
+        return users_list

@@ -257,7 +257,8 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
         fields=('id','project_id','customer_id','proj_name','proj_desc','post_word_count',
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
-                 'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',)
+                 'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',
+                 'closed_at','deleted_at',)
 
     def get_bid_count(self, obj):
         bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
@@ -284,7 +285,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
             if source_language and target_languages:
                 data["projectpost_jobs"] = [{"src_lang": source_language, "tar_lang": target_language}
                                             for target_language in target_languages]
-        print("data---->",data["projectpost_jobs"])
+        # print("data---->",data["projectpost_jobs"])
         return super().run_validation(data)
 
 
