@@ -58,7 +58,7 @@ class ProjectboardDetails(models.Model):#stephen subburaj
 class ProjectPostJobDetails(models.Model):
     postjob_id = models.CharField(max_length=191,blank=True,null=True)
     src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
-    tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE)
+    tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE,blank=True,null=True)
     projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
 
     @property
@@ -119,7 +119,7 @@ class ProjectboardTemplateDetails(models.Model):
 
 class ProjectPostTemplateJobDetails(models.Model):
      src_lang = models.ForeignKey(Languages,related_name='projectposttemp_source_lang', on_delete=models.CASCADE)
-     tar_lang = models.ForeignKey(Languages,related_name='projectposttemp_target_lang', on_delete=models.CASCADE)
+     tar_lang = models.ForeignKey(Languages,related_name='projectposttemp_target_lang', on_delete=models.CASCADE,blank=True,null=True)
      projectpost_template=models.ForeignKey(ProjectboardTemplateDetails,on_delete=models.CASCADE,related_name='projectposttemp_jobs')
 
 

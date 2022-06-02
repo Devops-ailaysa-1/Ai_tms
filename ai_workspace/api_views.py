@@ -1439,12 +1439,3 @@ def transcribe_file(request):
     #     serializer.save()
     #     return Response(serializer.data)
     # return Response(serializer.errors)
-
-
-
-
-
-    # f1 = open(name, 'w')
-    # f1.write(transcript)
-    # f1.close()
-    # return Response({'file':f1.path,'name':name})

@@ -5,7 +5,8 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubjectFields, SupportFiles, Timezones,Billingunits,
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
-                    CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport)
+                    CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
+                    ProjectTypeDetail,ProjectType)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -321,3 +322,14 @@ class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
         model = AilaysaSupportedMtpeEngines
         fields = ("id","name",'created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
+
+
+class ProjectTypeDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectTypeDetail
+        fields = "__all__"
+
+class ProjectTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectType
+        fields = "__all__"
