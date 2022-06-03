@@ -190,12 +190,13 @@ class BidProposalServicesRates(models.Model):
     mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
     bid_step = models.ForeignKey(Steps, on_delete=models.CASCADE,related_name="bidpost_steps")
     status = models.ForeignKey(BidStatus,on_delete=models.CASCADE,related_name="bid_status",blank=True, null=True,default = 1)
+    edited_count =  models.IntegerField(blank=True,null=True)
     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,on_delete=models.CASCADE,related_name='bid_job_mtpe_unit_type',blank=True,null=True)
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='bidding_currency_detail', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
-    class Meta:
-        unique_together = ['bidpostjob', 'bid_vendor','bid_step']
+    # class Meta:
+    #     unique_together = ['bidpostjob', 'bid_vendor','bid_step']
 
 User = get_user_model()
 

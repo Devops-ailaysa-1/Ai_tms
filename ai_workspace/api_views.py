@@ -1,6 +1,6 @@
 from rest_framework.exceptions import ValidationError
 import django_filters
-import shutil
+import shutil,docx2txt
 from ai_workspace import forms as ws_forms
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -19,6 +19,7 @@ from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEdito
 from rest_framework import viewsets, status
 from integerations.base.utils import DjRestUtils
 from rest_framework.response import Response
+from ai_workspace_okapi.utils import download_file,text_to_speech
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
     ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
@@ -1439,3 +1440,50 @@ def transcribe_file(request):
     #     serializer.save()
     #     return Response(serializer.data)
     # return Response(serializer.errors)
+
+#text_to_speech(ssml_file,target_language,filename,voice_gender)
+@api_view(["GET"])
+def download_text_to_speech_source(request):#########working############
+    project = request.GET.get('project',None)
+    task = request.GET.get('task',None)
+    if task:
+        obj = Task.objects.get(id = i)
+        file,ext = os.path.splitext(obj.file.file.path)
+        if ext == '.docx':
+            name = file + '.txt'
+            text = docx2txt.process(obj.file.file.path)
+            with open(name, "w") as out:
+                out.write(text)
+        audio_file = file + '_source'+'.mp3'
+        res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
+        return download_file(res)
+    # if project:
+    #     pr = Project.objects.get(id=project)
+    #     tasks = pr.get_tasks
+    #     for obj in tasks:
+    #         file,ext = os.path.splitext(obj.file.file.path)
+    #         if ext == '.docx':
+    #             name = file + '.txt'
+    #             text = docx2txt.process(obj.file.file.path)
+    #             with open(name, "w") as out:
+    #                 out.write(text)
+    #         audio_file = file + '_source'+'.mp3'
+    #         try:
+    #             res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
+    #         except:
+    #             pass
+    #     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+    #     res = download_file(pr.project_name+'.zip')
+    #     os.remove(pr.project_name+'.zip')
+    #     return res
+    # if task:
+    #     obj = Task.objects.get(id = i)
+    #     file,ext = os.path.splitext(obj.file.file.path)
+    #     if ext == '.docx':
+    #         name = file + '.txt'
+    #         text = docx2txt.process(obj.file.file.path)
+    #         with open(name, "w") as out:
+    #             out.write(text)
+    #     audio_file = file + '_source'+'.mp3'
+    #     res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
+    #     return download_file(res)

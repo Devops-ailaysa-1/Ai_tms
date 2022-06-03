@@ -62,6 +62,7 @@ urlpatterns += [
 	path("instruction_file_download/<int:task_assign_info_id>", api_views.instruction_file_download, name="instruction-file-download"),
 	path("mt_samples/",api_views.ShowMTChoices.as_view(), name='mt-samples'),
 	path('transcribe_file/',api_views.transcribe_file),
+	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
 ]
 # views urls adding for local testing
 urlpatterns += [

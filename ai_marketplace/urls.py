@@ -16,7 +16,7 @@ urlpatterns+= [
     path('get_vendor_detail/',api_views.get_vendor_detail,name="get-vendor-detail"),
     path('post_project_primary_details/',api_views.post_project_primary_details,name="post-job-primary-details"),
     path('bid_proposal_status/',api_views.bid_proposal_status),
-    path('bid_post_update/<int:pk>',api_views.BidPostUpdateView.as_view({'put':'update'})),
+    path('bid_post_update/<int:pk>/',api_views.BidPostUpdateView.as_view({'put':'update'})),
     #path('bid_proposal/',api_views.BidPostInfoCreateView.as_view(),name='bid-proposal-get'),
     path('send_email/',api_views.shortlisted_vendor_list_send_email_new,name='send-email'),
     path('chat/<int:thread_id>/',api_views.ChatMessageListView.as_view({'get': 'list','post':'create'}),name='chat'),

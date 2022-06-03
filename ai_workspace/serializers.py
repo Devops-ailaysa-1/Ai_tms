@@ -13,7 +13,9 @@ from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
 from ai_auth.models import AiUser,Team,HiredEditors
 from ai_auth.validators import project_file_size
+from collections import OrderedDict
 from django.db.models import Q
+from django.db import transaction
 from ai_workspace_okapi.models import Document
 from ai_auth.serializers import InternalMemberSerializer,HiredEditorSerializer
 from ai_vendor.models import VendorLanguagePair
@@ -430,6 +432,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 
 	def run_validation(self,data):
+		if self.context['request']._request.method == 'POST':
+			pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
+			if pt!=4 and data.get('target_languages')==None:
+					raise serializers.ValidationError({"msg":"target languages needed for translation project"})
 		if data.get('target_languages')!=None:
 			comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
 			if True in comparisons:
@@ -448,9 +454,12 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:
 			data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 		print('data[files]-------------->',data['files'])
-		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
-			target_language} for target_language in data.get("target_languages", [None])]
-		print('data[jobs]-------------->',data['jobs'])
+		if self.context['request']._request.method == 'POST':
+			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
+				target_language} for target_language in data.get("target_languages", [None])]
+		else:
+			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
+				target_language} for target_language in data.get("target_languages", [])]
 		data['team_exist'] = data.get('team',[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		return super().to_internal_value(data=data)
@@ -488,7 +497,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
-		print("$$$$$$$$$$$$$$$$",validated_data)
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
 		else:
@@ -507,8 +515,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		if voice_proj_detail:
 			voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
-			if voice_project.project_type_sub_category.id == 1:
-				tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
+			if voice_project.project_type_sub_category.id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
+				rr = voice_project.project.project_jobs_set.filter(~Q(target_language = None))
+				if voice_project.project_type_sub_category.id == 2 and rr:
+					tasks = Task.objects.create_tasks_of_files_and_jobs(
+						files=files, jobs=jobs, project=project, klass=Task)
+				else:
+					tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
 		tasks = Task.objects.create_tasks_of_files_and_jobs(
 			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
 		return  project
@@ -533,10 +546,15 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		files_data = validated_data.pop("project_files_set")
 		jobs_data = validated_data.pop("project_jobs_set")
-		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
-								files_data, jobs_data, f_klass=File, j_klass=Job)
-		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
-			project=project)  # For self assign quick setup run)
+		with transaction.atomic():
+			project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
+									files_data, jobs_data, f_klass=File, j_klass=Job)
+			try:
+				if instance.voice_proj_detail.project_type_sub_category_id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
+						tasks = Task.objects.create_tasks_of_audio_files_by_project(project=project)
+			except:
+				tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
+					project=project)
 		return  project
 
 class TaskAssignInfoSerializer(serializers.ModelSerializer):

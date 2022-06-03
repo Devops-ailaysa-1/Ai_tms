@@ -211,40 +211,46 @@ def addingthread(request):
 class BidPostInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        # try:
-        print(request.user.id)
-        id = request.GET.get('id')
-        queryset = BidPropasalDetails.objects.filter(Q(service_and_rates__bid_vendor=request.user.id)).distinct().all()
-        serializer = BidPropasalDetailSerializer(queryset,many=True)
-        return Response(serializer.data)
-        # except:
-        #     return Response(status=status.HTTP_204_NO_CONTENT)
+        if self.request.user.is_vendor == True:
+            try:
+                print(request.user.id)
+                id = request.GET.get('id')
+                queryset = BidPropasalDetails.objects.filter(Q(service_and_rates__bid_vendor=request.user.id)).distinct().all()
+                serializer = BidPropasalDetailSerializer(queryset,many=True)
+                return Response(serializer.data)
+            except:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({'msg':'user is not a vendor'})
 
     def create(self, request):
-        post_id = request.POST.get('post_id')
-        post = ProjectboardDetails.objects.get(id=post_id)
+        if self.request.user.is_vendor == True:
+            post_id = request.POST.get('post_id')
+            post = ProjectboardDetails.objects.get(id=post_id)
+            sample_file=request.FILES.get('sample_file')
+            serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':request.user.id})#,context={'request':request})
+            print(serializer.is_valid())
+            if serializer.is_valid():
+                with transaction.atomic():
+                    serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors)
+        else:
+            return Response({'msg':'user is not a vendor'})
+
+
+    def update(self,request,pk):
+        Bid_info = BidPropasalDetails.objects.get(id=pk)#bid_proposal_id
+        # Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
         sample_file=request.FILES.get('sample_file')
-        serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':request.user.id})#,context={'request':request})
-        print(serializer.is_valid())
+        if sample_file:
+            serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
+        else:
+            serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
-            with transaction.atomic():
-                serializer.save()
+            serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
-
-
-    # def update(self,request,pk):
-    #     Bid_info = BidPropasalDetails.objects.get(id=pk)#bid_proposal_id
-    #     # Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
-    #     sample_file=request.FILES.get('sample_file')
-    #     if sample_file:
-    #         serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
-    #     else:
-    #         serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict()},partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data)
-    #     return Response(serializer.errors)
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
@@ -358,8 +364,7 @@ class IncompleteProjectListView(generics.ListAPIView):
 
     def get_queryset(self):
         query = ProjectboardDetails.objects.filter(customer = self.request.user.id)
-        if query:
-            projects = [i.project_id for i in query]
+        projects = [i.project_id for i in query] if query else []
         queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
         return queryset
 
@@ -668,14 +673,16 @@ class BidPostUpdateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def update(self,request,pk):
-        Bid_info = BidPropasalDetails.objects.get(id=pk)#bid_proposal_id
-        # Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
-        sample_file=request.FILES.get('sample_file')
-        if sample_file:
-            serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
+        if self.request.user.is_vendor == True:
+            Bid_info = BidPropasalDetails.objects.get(id=pk)#bid_proposal_id
+            sample_file=request.FILES.get('sample_file')
+            if sample_file:
+                serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
+            else:
+                serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict()},partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors)
         else:
-            serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict()},partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+            return Response({'msg':'user is not a vendor'})

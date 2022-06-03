@@ -77,7 +77,7 @@ class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
     bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
     class Meta:
         model = BidProposalServicesRates
-        fields = ('id','project_id','job_id','bid_step','bidpostjob','bidpostjob_name','bid_vendor_name','bid_vendor_uid','bid_vendor','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status',)
+        fields = ('id','project_id','job_id','bid_step','edited_count','bidpostjob','bidpostjob_name','bid_vendor_name','bid_vendor_uid','bid_vendor','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status',)
 
     def get_job_id(self,obj):
         pr = obj.bidpostjob.projectpost.project
@@ -115,11 +115,27 @@ class BidPropasalUpdateSerializer(serializers.ModelSerializer):
             data["service_and_rates"]=json.loads(data["service_and_rates"])
         return data
 
+    # def create(self,data):
+    #     bidpost_obj = BidPropasalDetails.objects.filter(projectpost_id = data.get('post_id'))
+    #     service = data.pop("service_and_rates",[])
+    #     if not bidpost_obj:
+    #         bd = BidPropasalDetails.objects.create(**data)
+    #         if service:
+    #             [BidProposalServicesRates.objects.create(**i,status=1) for i in service]
+    #     if bidpost_obj:
+    #         if service:
+    #             bidservice_obj =BidProposalServicesRates.objects.filter(bidpostjob_id=service.get('bidpostjob'))
+
+
+
     def update(self, instance, data):
         service = data.pop("service_and_rates",[])[0]
+        queryset = BidProposalServicesRates.objects.filter(bidpostjob_id=service.get('bidpostjob'))
+        edited_count = 1 if queryset.first().edited_count==None else queryset.first().edited_count+1
         if service:
-            BidProposalServicesRates.objects.filter(bidpostjob_id=service.get('bidpostjob')).update(mtpe_rate=service.get('mtpe_rate'),\
-                                            mtpe_hourly_rate =service.get('mtpe_hourly_rate'),mtpe_count_unit = service.get('mtpe_count_unit'),status_id=5)
+            queryset.update(mtpe_rate=service.get('mtpe_rate'),\
+                                            mtpe_hourly_rate =service.get('mtpe_hourly_rate'),mtpe_count_unit = service.get('mtpe_count_unit'),\
+                                            status_id=5,edited_count=edited_count)
         return super().update(instance, data)
 
 

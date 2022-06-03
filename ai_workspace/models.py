@@ -378,6 +378,9 @@ class VoiceProjectDetail(models.Model):
     project = models.OneToOneField(Project, on_delete = models.CASCADE,related_name="voice_proj_detail")
     source_language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,related_name="voice_proj_source_language")
     project_type_sub_category = models.ForeignKey(ProjectTypeDetail,null=True,blank=True,on_delete=models.CASCADE)
+    # source_language_locale = models.ForeignKey(LanguagesLocale, null=True, blank=True, on_delete=models.CASCADE,related_name="voice_proj_source_language_locale")
+    # has_male = models.BooleanField(blank=True,null=True)
+    # has_female = models.BooleanField(blank=True,null=True)
 
 
 class VoiceProjectFile(models.Model):
@@ -763,6 +766,7 @@ class TaskDetails(models.Model):
 class TaskTranscriptDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
     transcripted_text = models.TextField()
+
 
 class TmxFile(models.Model):
 
