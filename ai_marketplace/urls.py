@@ -27,7 +27,8 @@ urlpatterns+= [
     # path('availablejobs/',api_views.get_available_job_details),
     path('availablejobs/',api_views.AvailableJobsListView.as_view(),name='get-available-jobs'),
     path('get_vendor_list/',api_views.GetVendorListViewNew.as_view(),name='get-vendor-list'),
-    path('get_incomplete_projects_list/',api_views.IncompleteProjectListView.as_view(),name='get-incomplete-project'),
+    # path('get_incomplete_projects_list/',api_views.IncompleteProjectListView.as_view(),name='get-incomplete-project'),
+    path('get_incomplete_projects_list/',api_views.get_incomplete_projects_list),
     path('get_available_threads/',api_views.get_available_threads),
     url('^notifications/', include(notifications.urls, namespace='notifications')),
     path('chat/unread/notifications/',api_views.chat_unread_notifications,name='chat-notifications'),
@@ -37,4 +38,6 @@ urlpatterns+= [
     path('get_previous_accepted_rate/',api_views.get_previous_accepted_rate),
     path('customer_dashboard/',api_views.customer_mp_dashboard_count),
     path('vendor_list_based_on_projects/',api_views.GetVendorListBasedonProjects.as_view({'get': 'list'}),name='vendor-list'),
+    path('templates/',api_views.project_post_template_options),
+    path('get_template/',api_views.project_post_template_get),
     ]

@@ -21,39 +21,39 @@ from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,Ve
 
 
 class SimpleProjectSerializer(serializers.ModelSerializer):
-    project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
-    vendor_count = serializers.SerializerMethodField(method_name='get_vendor_count')
+    # project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
+    # vendor_count = serializers.SerializerMethodField(method_name='get_vendor_count')
 
     class Meta:
         model = Project
-        fields = ("id", "project_name","files_jobs_choice_url", "project_analysis",'vendor_count',)
+        fields = ("id", "project_name",)#"files_jobs_choice_url", "project_analysis",'vendor_count',)
 
 
-    def get_vendor_count(self,instance):
-        jobs = instance.get_jobs
-        out=[]
-        for i in jobs:
-             res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id)).distinct('user')
-             data = {'job':i.id,'count':res.count()}
-             out.append(data)
-        return out
-
-    def get_project_analysis(self,instance):
-        user = self.context.get("request").user if self.context.get("request")!=None else self\
-               .context.get("ai_user", None)
-        if instance.ai_user == user:
-            tasks = instance.get_tasks
-        elif instance.team:
-            if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
-                tasks = instance.get_tasks
-            else:
-                tasks = [task for job in instance.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
-        else:
-            tasks = [task for job in instance.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
-        res = instance.project_analysis(tasks)
-        return res
+    # def get_vendor_count(self,instance):
+    #     jobs = instance.get_jobs
+    #     out=[]
+    #     for i in jobs:
+    #          res=VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id)).distinct('user')
+    #          data = {'job':i.id,'count':res.count()}
+    #          out.append(data)
+    #     return out
+    #
+    # def get_project_analysis(self,instance):
+    #     user = self.context.get("request").user if self.context.get("request")!=None else self\
+    #            .context.get("ai_user", None)
+    #     if instance.ai_user == user:
+    #         tasks = instance.get_tasks
+    #     elif instance.team:
+    #         if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+    #             tasks = instance.get_tasks
+    #         else:
+    #             tasks = [task for job in instance.project_jobs_set.all() for task \
+    #                     in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
+    #     else:
+    #         tasks = [task for job in instance.project_jobs_set.all() for task \
+    #                 in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
+    #     res = instance.project_analysis(tasks)
+    #     return res
 
 
 class BidChatSerializer(serializers.ModelSerializer):
@@ -262,14 +262,12 @@ class ProjectPostTemplateStepsSerializer(serializers.ModelSerializer):
         fields = ('steps',)
 
 class ProjectPostTemplateJobDetailSerializer(serializers.ModelSerializer):
-    bid_count = serializers.SerializerMethodField()
-    bidjob_details = BidPropasalDetailSerializer(many=True,read_only=True)
+
     class Meta:
         model=ProjectPostTemplateJobDetails
-        fields=('id','src_lang','tar_lang','bid_count','bidjob_details',)
+        fields=('id','src_lang','tar_lang',)
 
-    def get_bid_count(self, obj):
-        return obj.bidjob_details.count()
+
 
 class ProjectPostTemplateContentTypeSerializer(serializers.ModelSerializer):
     class Meta:

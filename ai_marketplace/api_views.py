@@ -33,7 +33,7 @@ from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task,TaskAssignInfo
 from .models import(ProjectboardDetails,ProjectPostJobDetails,BidChat,
-                    Thread,BidPropasalDetails,ChatMessage,ProjectPostSubjectField,BidProposalServicesRates)
+                    Thread,BidPropasalDetails,ChatMessage,ProjectPostSubjectField,BidProposalServicesRates,ProjectboardTemplateDetails)
 from .serializers import(ProjectPostSerializer,ProjectPostTemplateSerializer,
                         BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
@@ -189,8 +189,26 @@ def shortlisted_vendor_list_send_email_new(request):
     auth_forms.vendor_notify_post_jobs(res)
     return Response({"msg":"mailsent"})
 
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def project_post_template_options(request):
+    query = ProjectboardTemplateDetails.objects.filter(customer=request.user)
+    out = []
+    for i in query:
+        res = {'id':i.id,'template_name':i.template_name,}
+        out.append(res)
+    return Response(out)
 
-
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def project_post_template_get(request):
+    template = request.GET.get('template')
+    query = ProjectboardTemplateDetails.objects.filter(Q(id=template) &Q(customer = request.user))
+    if query:
+        ser = ProjectPostTemplateSerializer(query,many=True)
+        return Response(ser.data)
+    else:
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
@@ -357,18 +375,25 @@ class ChatMessageListView(viewsets.ModelViewSet):
         return Response({'msg':'deleted'})
 
 
-class IncompleteProjectListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = SimpleProjectSerializer
-    pagination.PageNumberPagination.page_size = 20
+# class IncompleteProjectListView(generics.ListAPIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = SimpleProjectSerializer
+#     pagination.PageNumberPagination.page_size = 20
+#
+#     def get_queryset(self):
+#         query = ProjectboardDetails.objects.filter(customer = self.request.user.id)
+#         projects = [i.project_id for i in query] if query else []
+#         queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
+#         return queryset
 
-    def get_queryset(self):
-        query = ProjectboardDetails.objects.filter(customer = self.request.user.id)
-        projects = [i.project_id for i in query] if query else []
-        queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
-        return queryset
-
-
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_incomplete_projects_list(request):
+    query = ProjectboardDetails.objects.filter(customer = request.user.id)
+    projects = [i.project_id for i in query] if query else []
+    queryset=[x for x in Project.objects.filter(ai_user=request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
+    ser = SimpleProjectSerializer(queryset,many=True)
+    return Response(ser.data)
 
 
 class JobFilter(django_filters.FilterSet):
