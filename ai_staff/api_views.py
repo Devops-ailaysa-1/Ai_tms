@@ -12,7 +12,8 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
-                    IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines)
+                    IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
+                    ProjectType,ProjectTypeDetail)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -20,7 +21,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
-                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer)
+                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -770,23 +771,34 @@ class MTLanguageSupportView(viewsets.ViewSet):
         serializer = MTLanguageSupportSerializer(queryset,many=True)
         return Response(serializer.data)
 
+class ProjectTypeView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = ProjectType.objects.all()
+        serializer = ProjectTypeSerializer(queryset,many=True)
+        return Response(serializer.data)
 
-
+class ProjectTypeDetailView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = ProjectTypeDetail.objects.all()
+        serializer = ProjectTypeDetailSerializer(queryset,many=True)
+        return Response(serializer.data)
 
 class VoiceSupportLanguages(viewsets.ViewSet):
     permission_classes = [AllowAny,]
     def list(self,request):
         sub_category = request.GET.get('sub_category')
         project_type_detail = json.loads(sub_category)
-        if project_type_detail == 1:
+        if project_type_detail == 1:           #speech-to-text
             queryset = MTLanguageSupport.objects.filter(speech_to_text = True)
             serializer = GetLanguagesSerializer(queryset,many=True)
             return Response({'source_lang_list':serializer.data})
-        if project_type_detail == 2:
+        if project_type_detail == 2:           #text-to-speech
             queryset = MTLanguageSupport.objects.filter(text_to_speech = True)
             serializer = GetLanguagesSerializer(queryset,many=True)
             return Response({'target_lang_list':serializer.data})
-        if project_type_detail == 3:
+        if project_type_detail == 3:           #speech-to-speech
             queryset = MTLanguageSupport.objects.filter(speech_to_text = True)
             serializer1 = GetLanguagesSerializer(queryset,many=True)
             queryset2 = MTLanguageSupport.objects.filter(text_to_speech = True)

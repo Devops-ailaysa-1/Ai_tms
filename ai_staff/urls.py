@@ -50,6 +50,8 @@ urlpatterns += [
      path('get_price_details/',api_views.get_pricing_details),
      path('get-addons-details/',api_views.get_addons_details),
      path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view(),name = 'mt-engines'),
+     path('project_types/',api_views.ProjectTypeView.as_view({'get': 'list'}),name = 'project-type'),
+     path('sub_category/',api_views.ProjectTypeDetailView.as_view({'get': 'list'}),name = 'project-type-detail'),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      path('insert',views.Bulk_insert)
 

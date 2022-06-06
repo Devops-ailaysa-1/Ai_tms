@@ -4,7 +4,7 @@ import os, mimetypes, requests, uuid, json, xlwt, boto3
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
-from google.cloud import texttospeech
+
 from google.cloud import translate_v2 as translate
 
 client = translate.Client()
@@ -268,9 +268,10 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
 
 
 def text_to_speech(ssml_file,target_language,filename,voice_gender):
+    from google.cloud import texttospeech
     # print("@#@#@#@#@#",voice_gender)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
-    filename = filename + "_out"+ ".mp3"
+    #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
     client = texttospeech.TextToSpeechClient()
     with open(ssml_file, "r") as f:
