@@ -14,6 +14,7 @@ from notifications.signals import notify
 from notifications.models import Notification
 from django.db.models import Q, Max
 from django.db import transaction
+from ai_workspace.api_views import integrity_error
 from django.conf import settings
 from django.shortcuts import get_object_or_404, render
 from django.test.client import RequestFactory
@@ -33,13 +34,13 @@ from rest_framework.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField,Task,TaskAssignInfo
 from .models import(ProjectboardDetails,ProjectPostJobDetails,BidChat,
-                    Thread,BidPropasalDetails,ChatMessage,ProjectPostSubjectField,BidProposalServicesRates,ProjectboardTemplateDetails)
+                    Thread,BidPropasalDetails,ChatMessage,ProjectPostSubjectField,ProjectboardTemplateDetails)
 from .serializers import(ProjectPostSerializer,ProjectPostTemplateSerializer,
                         BidChatSerializer,BidPropasalDetailSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
                         GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
                         SimpleProjectSerializer,AvailablePostJobSerializer,ProjectPostStepsSerializer,
-                        PrimaryBidDetailSerializer,BidPropasalUpdateSerializer,GetVendorListBasedonProjectSerializer)
+                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer)
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines)
@@ -65,6 +66,8 @@ import django_filters
 from django_filters.filters import OrderingFilter
 from ai_workspace.serializers import TaskSerializer,\
             JobSerializer, ProjectSubjectSerializer,ProjectContentTypeSerializer
+import os,mimetypes
+from django.http import JsonResponse,HttpResponse
 # Create your views here.
 
 
@@ -133,6 +136,19 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 
     def update(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
+        content_delete_ids = self.request.query_params.get(\
+            "content_delete_ids", [])
+        subject_delete_ids = self.request.query_params.get(\
+            "subject_delete_ids", [])
+
+        if content_delete_ids:
+            contentlist = content_delete_ids.split(',')
+            projectpost_info.projectpost_content_type.filter(id__in=contentlist).delete()
+
+        if subject_delete_ids:
+            subjectlist = subject_delete_ids.split(',')
+            projectpost_info.projectpost_subject.filter(id__in=subjectlist).delete()
+
         serializer = ProjectPostSerializer(projectpost_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -233,7 +249,7 @@ class BidPostInfoCreateView(viewsets.ViewSet):
             try:
                 print(request.user.id)
                 id = request.GET.get('id')
-                queryset = BidPropasalDetails.objects.filter(Q(service_and_rates__bid_vendor=request.user.id)).distinct().all()
+                queryset = BidPropasalDetails.objects.filter(Q(vendor=request.user.id)).distinct().all()
                 serializer = BidPropasalDetailSerializer(queryset,many=True)
                 return Response(serializer.data)
             except:
@@ -241,6 +257,7 @@ class BidPostInfoCreateView(viewsets.ViewSet):
         else:
             return Response({'msg':'user is not a vendor'})
 
+    @integrity_error
     def create(self, request):
         if self.request.user.is_vendor == True:
             post_id = request.POST.get('post_id')
@@ -251,7 +268,7 @@ class BidPostInfoCreateView(viewsets.ViewSet):
             if serializer.is_valid():
                 with transaction.atomic():
                     serializer.save()
-                return Response(serializer.data)
+                return Response({"msg":"Bid Posted"})
             return Response(serializer.errors)
         else:
             return Response({'msg':'user is not a vendor'})
@@ -262,8 +279,9 @@ class BidPostInfoCreateView(viewsets.ViewSet):
         # Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
         sample_file=request.FILES.get('sample_file')
         if sample_file:
-            serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
+            serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file':sample_file},partial=True)
         else:
+            print("###")
             serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -286,16 +304,16 @@ def post_bid_primary_details(request):############need to include currency conve
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def bid_proposal_status(request):
-    bid_service_rate_id= request.POST.get('id')
-    obj = BidProposalServicesRates.objects.get(id = bid_service_rate_id)
+    bid_detail_id= request.POST.get('id')
+    obj = BidPropasalDetails.objects.get(id = bid_detail_id)
     status = json.loads(request.POST.get('status'))
     if status == 2 or status == 4:
-        BidProposalServicesRates.objects.filter(id = bid_service_rate_id).update(status = status)
+        BidPropasalDetails.objects.filter(id = bid_detail_id).update(status = status)
     elif status == 3:
         if request.user.team: user = request.user.team.owner
         else: user = request.user
-        if user != obj.bid_vendor:
-            tt,created = HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=obj.bid_vendor_id,role_id=2,defaults = {"status":1,"added_by_id":request.user.id})
+        if user != obj.vendor:
+            tt,created = HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=obj.vendor_id,role_id=2,defaults = {"status":1,"added_by_id":request.user.id})
             if created == False:
                 if tt.status == 1:
                     tt.status = 2
@@ -306,15 +324,15 @@ def bid_proposal_status(request):
                 uid = urlsafe_base64_encode(force_bytes(tt.id))
                 token = invite_accept_token.make_token(tt)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
-                context = {'name':obj.bid_vendor.fullname,'team':user.fullname,'link':link,'job':obj.bidpostjob.source_target_pair_names,
+                context = {'name':obj.vendor.fullname,'team':user.fullname,'link':link,'job':obj.bidpostjob.source_target_pair_names,
                            'hourly_rate': str(obj.mtpe_hourly_rate) + '(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit,\
                             'unit_rate':str(obj.mtpe_rate) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
-                            'job_id':obj.bidpostjob.postjob_id,'project':obj.bid_proposal.projectpost.proj_name,\
-                            'date':obj.bid_proposal.created_at.date().strftime('%d-%m-%Y')}
-                print("Mail------>",obj.bid_vendor.email)
-                m_forms.external_member_invite_mail_after_bidding(context,obj.bid_vendor.email)
-                msg_send(user,obj.bid_vendor)
-            BidProposalServicesRates.objects.filter(id = bid_service_rate_id).update(status = status)
+                            'job_id':obj.bidpostjob.postjob_id,'project':obj.projectpost.proj_name,\
+                            'date':obj.created_at.date().strftime('%d-%m-%Y')}
+                print("Mail------>",obj.vendor.email)
+                m_forms.external_member_invite_mail_after_bidding(context,obj.vendor.email)
+                msg_send(user,obj.vendor)
+            BidPropasalDetails.objects.filter(id = bid_detail_id).update(status = status)
             return JsonResponse({"msg":"Invite send...added to your HiredEditors list"})
         else:
             return JsonResponse({"msg":"error"})
@@ -694,20 +712,36 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 
 
 
-class BidPostUpdateView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+# class BidPostUpdateView(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated]
+#
+#     def update(self,request,pk):
+#         if self.request.user.is_vendor == True:
+#             Bid_info = BidPropasalDetails.objects.get(id=pk)#bid_proposal_id
+#             sample_file=request.FILES.get('sample_file')
+#             if sample_file:
+#                 serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
+#             else:
+#                 serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict()},partial=True)
+#             if serializer.is_valid():
+#                 serializer.save()
+#                 return Response(serializer.data)
+#             return Response(serializer.errors)
+#         else:
+#             return Response({'msg':'user is not a vendor'})
 
-    def update(self,request,pk):
-        if self.request.user.is_vendor == True:
-            Bid_info = BidPropasalDetails.objects.get(id=pk)#bid_proposal_id
-            sample_file=request.FILES.get('sample_file')
-            if sample_file:
-                serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict(),'sample_file_upload':sample_file},partial=True)
-            else:
-                serializer = BidPropasalUpdateSerializer(Bid_info,data={**request.POST.dict()},partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors)
-        else:
-            return Response({'msg':'user is not a vendor'})
+
+@api_view(['GET',])
+def sample_file_download(request,bidpostjob_id):
+    sample_file = BidPropasalDetails.objects.get(id=bidpostjob_id).sample_file
+    if sample_file:
+        fl_path = sample_file.path
+        filename = os.path.basename(fl_path)
+        # print(os.path.dirname(fl_path))
+        fl = open(fl_path, 'rb')
+        mime_type, _ = mimetypes.guess_type(fl_path)
+        response = HttpResponse(fl, content_type=mime_type)
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        return response
+    else:
+        return JsonResponse({"msg":"no file associated with it"})
