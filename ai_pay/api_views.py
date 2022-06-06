@@ -1,4 +1,6 @@
+from locale import currency
 from ai_auth.models import AiUser
+from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from django.conf import settings
@@ -10,6 +12,10 @@ from djstripe.models import Account,Customer
 from weasyprint import HTML
 from django.template.loader import render_to_string
 
+from django.db.models import Count
+import logging
+
+from django.db import transaction
 
 
 def get_stripe_key():
@@ -166,12 +172,16 @@ class CreateInvoiceVendor(viewsets.ViewSet):
             return Response({'msg':'Invoice Generation failed'},status=404)
 
 
-def po_generate(cust,ven):
+def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
-    html_string = render_to_string('pdf_template_po.html', {'cust': cust,'ven':ven})
+
+    tasks = po.assignment.assignment_po.all()
+    html_string = render_to_string('pdf_template_po.html', {'cust': po.client,'ven':po.seller,'status':po.po_status,'tasks':tasks})
 
     html = HTML(string=html_string)
+
     html.write_pdf(target='mypdf.pdf');
+    #po_generate()
 
     # fs = FileSystemStorage('/tmp')
     # with fs.open('mypdf.pdf') as pdf:
@@ -180,3 +190,58 @@ def po_generate(cust,ven):
     #     return response
 
 
+
+def download_pdf():
+    pass
+
+
+def generate_invoice_offline(po_li):
+    #same currency po
+    pos = PurchaseOrder.objects.filter(poid__in=po_li)
+    res  = pos.values('currency').annotate(dcount=Count('currency')).order_by().count()
+    res2 = pos.values('seller_id').annotate(dcount=Count('seller_id')).order_by().count()
+    res3 = pos.values('client_id').annotate(dcount=Count('client_id')).order_by().count()
+    if res&res2&res3 >1:
+        logging.error("Invoice creation Failed More Than on currency or users")
+        return None
+    else:
+        try:
+            with transaction.atomic():
+                invo = AilaysaGeneratedInvoice.objects.create(client=pos.last().client,seller=pos.last().seller,invo_status='draft')
+                for po in pos:
+                    AiInvoicePO.objects.create(invoice=invo,po=po)
+        except:
+            logging.error("Invoice Generration Failed")
+     
+
+def generate_client_po(task_assign_info):
+    #pos.values('currency').annotate(dcount=Count('currency')).order_by()
+    try:
+       with transaction.atomic():
+        for instance in task_assign_info:
+            assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id)[0]
+            insert={'task_id':instance.task.id,'assignment':assign,'project_name':instance.task.job.project.project_name,
+                    'word_count':instance.total_word_count,'char_count':instance.task.task_details.last().task_char_count,'price':instance.mtpe_rate,
+                    'unit_type':instance.mtpe_count_unit,'source_language':instance.task.job.source_language,'target_language':instance.task.job.target_language}
+            po_task=POTaskDetails.objects.create(**insert)
+        insert2={'client':instance.assigned_by,'seller':instance.task.assign_to,
+                'assignment':assign,'currency':instance.currency,
+                'po_status':'issued'}
+        po=PurchaseOrder.objects.create(**insert2)
+    except:
+       print("PO Not generated")
+       logging.error("PO Generations Failed For assignment:{0}".format(instance.assignment_id))
+
+
+def generate_invoice_pdf(invo):
+    pos=invo.ai_invo_po.all()
+    pos_ls=[po_i.po for po_i in pos]
+    # for po in pos:
+    #     tasks = po.assignment.assignment_po.all()
+    #     qs=tasks.union(tasks)
+    tasks =  POTaskDetails.objects.filter(assignment__po_assign__in=pos_ls)
+    print("tasks invo",tasks)
+    context= {'cust': invo.client,'ven':invo.seller,'pos_ids':pos_ls,'status':invo.invo_status,'tasks':tasks}
+    html_string = render_to_string('pdf_template_invoice.html',context)
+    html = HTML(string=html_string)
+    html.write_pdf(target='myinvo.pdf');

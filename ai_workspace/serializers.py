@@ -1,3 +1,4 @@
+from ai_pay.api_views import generate_client_po
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType,ProjectTypeDetail
 from rest_framework import serializers
@@ -18,6 +19,7 @@ from ai_auth.serializers import InternalMemberSerializer,HiredEditorSerializer
 from ai_vendor.models import VendorLanguagePair
 from django.db.models import OuterRef, Subquery
 from ai_marketplace.serializers import ProjectPostJobDetailSerializer
+from django.db import transaction
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -597,8 +599,10 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         assign_to = data.pop('assign_to')
         total_word_count = data.pop('total_word_count',None)
         task_obj_list = Task.objects.filter(id__in=task_list)
-        task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task.id,total_word_count = task.task_word_count) for task in task_obj_list]
-        task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
+        with transaction.atomic():
+          task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task.id,total_word_count = task.task_word_count) for task in task_obj_list]
+          task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
+          generate_client_po(task_assign_info)
         return task_assign_info
 
     def update(self,instance,data):

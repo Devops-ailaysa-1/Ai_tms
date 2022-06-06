@@ -39,7 +39,6 @@ from django.db.models.fields import Field
 from integerations.github_.models import ContentFile
 from integerations.base.utils import DjRestUtils
 
-from ai_pay.signals import generate_client_po
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -717,7 +716,7 @@ class TaskAssignInfo(models.Model):
             return  os.path.basename(self.instruction_file.file.name)
         except:
             return None
-post_save.connect(generate_client_po, sender=TaskAssignInfo)
+# post_save.connect(generate_client_po, sender=TaskAssignInfo)
 
 class TaskAssignHistory(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,

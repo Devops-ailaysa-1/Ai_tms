@@ -13,21 +13,35 @@ class POTaskDetails(models.Model):
     assignment = models.ForeignKey(POAssignment,related_name='assignment_po',on_delete=models.PROTECT)
     #step = models.ForeignKey(Steps,on_delete=models.PROTECT, null=False, blank=False,
     #        related_name="po_step")
-    project_name = models.CharField(max_length=223, blank=True, null=True)
-    word_count=models.IntegerField(null=True,blank=True)
-    char_count=models.IntegerField(null=True,blank=True)
-    price =models.DecimalField(max_digits=12, decimal_places=2)
-    unit_type = models.ForeignKey(ServiceTypeunits,related_name="po_unit",on_delete=models.PROTECT)
-
-def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for _ in range(size))
-
-class POLangpair(models.Model):
-    task_po=models.ForeignKey(POTaskDetails,related_name='task_po_langpair',on_delete=models.CASCADE)
     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
         related_name="po_source_lang")
     target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
         related_name="po_target_lang")
+    project_name = models.CharField(max_length=223, blank=True, null=True)
+    word_count=models.IntegerField(null=True,blank=True)
+    char_count=models.IntegerField(null=True,blank=True)
+    unit_price =models.DecimalField(max_digits=12, decimal_places=2)
+    unit_type = models.ForeignKey(ServiceTypeunits,related_name="po_unit",on_delete=models.PROTECT)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        if not self.total_amount:
+            if self.unit_type.unit=='Char':
+                self.total_amount = self.unit_price * self.char_count
+            elif self.unit_type.unit=='Word':
+                self.total_amount = self.unit_price * self.word_count
+            #self.assignment_id = self.task.job.project.ai_project_id+"t"+str(TaskAssignInfo.objects.filter(task=self.task).count()+1)
+        super().save()
+
+def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
+# class POLangpair(models.Model):
+#     task_po=models.ForeignKey(POTaskDetails,related_name='task_po_langpair',on_delete=models.CASCADE)
+#     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
+#         related_name="po_source_lang")
+#     target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
+#         related_name="po_target_lang")
 
 
 
@@ -50,10 +64,11 @@ class PurchaseOrder(models.Model):
     poid=models.CharField(max_length=50,default=generate_po_id,unique=True)
     client=models.ForeignKey(AiUser,related_name='user_client',on_delete=models.PROTECT)
     seller=models.ForeignKey(AiUser,related_name='user_seller',on_delete=models.PROTECT)
-    assignment = models.ForeignKey(POAssignment,related_name='user_seller',on_delete=models.PROTECT)  
+    assignment = models.ForeignKey(POAssignment,related_name='po_assign',on_delete=models.PROTECT)  
     currency = models.ForeignKey(Currencies,related_name='po_currency', on_delete=models.PROTECT,blank=True, null=True)
     po_status =models.CharField(max_length=50,choices=status,default='draft')
     po_file = models.FileField(upload_to=po_dir_path, blank=True, null=True)
+    projectid=models.CharField(max_length=191)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
@@ -72,6 +87,8 @@ class AilaysaGeneratedInvoice(models.Model):
         return "{0}".format(id_generator())
     invo_id=models.CharField(max_length=50,default=generate_invo_id,unique=True)
     invo_status=models.CharField(max_length=50,choices=STATUS)
+    client=models.ForeignKey(AiUser,related_name='user_client_invo',on_delete=models.PROTECT)
+    seller=models.ForeignKey(AiUser,related_name='user_seller_invo',on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 

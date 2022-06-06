@@ -39,9 +39,9 @@
 					</div>
 				<div class="col-12 col-md-6" style="text-align: right;">
 					<h2> Purchase Order </h2>
-					<h6> 001 </h6>
+					<h6> {{po.poid}} </h6>
 
-					<span align="right" class="inv-date"> 04/06.21 </span>
+					<span align="right" class="inv-date"> {{po.created_at}} </span>
 					</div>
 				<div class="clearfix"> </div>
 				</div>
@@ -54,17 +54,23 @@
 			            	<tr>
 			            		<td width="50%" valign="top" class="col">
 
-									<p>{{ven.fullname}}</p>
-									<p>{{ven.email}}</p>
-									<p>Tel:1234567</p>
-									<p>GST: 12345</p>
+									<p>{{cust.fullname}}</p>
+									<p>{{cust.email}}</p>
+									{%if cust.profile_info.phonenumber%}
+									<p>Tel:cust.profile_info.phonenumber</p>
+									{% endif %}
 								</td>
 			            		<td width="50%" valign="top" class="col">
 						<p><b>BILLING TO: </b><br><br>
-							{{cust.fullname}}</p>
-							<p>{{cust.email}}</p>
-							<p>Tel: 12345</p>
-			            	</tr>
+							<p>{{ven.fullname}}</p>
+							<p>{{ven.email}}</p>
+							{%if ven.profile_info.phonenumber%}
+							<p>Tel:ven.profile_info.phonenumber</p>
+							{% endif %}
+							{%if ven.gst%}
+							<p>GST: 12345</p>
+							{%endif%}
+						</td>
 			            </tbody>
 			        </table>
 			    </div>
@@ -73,9 +79,9 @@
 				<table width="100%" style="width: 100%;" >
 				<tr>
 					<td width="50%" align="left" valign="top" style="border-bottom: 0px !important;" class="col"><div class="prj-wrap inv-pro-name"><label>Project ID:</label><span> 001 </span></div>
-				<div class="prj-wrap"><label> Project Name: </label><span> Test Project </span></div>
+				<div class="prj-wrap"><label> Project Name: </label><span> {{project_name}} </span></div>
 				</td>
-					<td width="50%" align="left" valign="top" style="border-bottom: 0px !important;" class="col"><div class="prj-wrap inv-pro-name"><label>Currency: INR </label> </div>  </td>
+					<td width="50%" align="left" valign="top" style="border-bottom: 0px !important;" class="col"><div class="prj-wrap inv-pro-name"><label>Currency:{{currency}} </label> </div>  </td>
 					</tr>
 
 
@@ -98,23 +104,23 @@
 		                    <th>Total Units</th>
 		                    <th>Total</th>
 		                </tr>
-
+						{% for task in tasks%}
 			            	<tr>
-			            		<td><p class="text-center">001</p></td>
+			            		<td><p class="text-center">{{task.task_id}}</p></td>
 			            		<td><p class="text-center">123456</p></td>
-			            		<td><p class="text-center">English</p></td>
-			            		<td><p class="text-center">Tamil</p></td>
-			            		<td><p class="text-center">
-			            			Words
-			            		</p></td>
-			            		<td><p class="text-center"> 1.01</p></td>
-			            		<td><p class="text-center">58</p></td>
-
-
-
-			            		<td><p class="text-center">60Rs</p></td>
+			            		<td><p class="text-center">{{task.source_language.language}}</p></td>
+			            		<td><p class="text-center">{{task.target_language.language}}</p></td>
+			            		<td><p class="text-center">{{task.unit_type.unit}}</p></td>
+			            		<td><p class="text-center">{{task.unit_price}}</p></td>
+								{% if task.unit_type.unit == 'Char' %}
+			            		<td><p class="text-center">{{task.char_count}}</p></td>
+								{% if task.unit_type.unit == 'Word' %}
+			            		<td><p class="text-center">{{task.char_count}}</p></td>
+								{% endif %}
+			            		<td><p class="text-center">{{task.total_amount}}</p></td>
 
 			            	</tr>
+						{% endfor %}
 
 
 
@@ -132,24 +138,25 @@
                                         <td style="text-align: right;" class="text-right"><span class="text-center">Total Before GST</span></td>
                                         <td style="text-align: right;">55</td>
                                       </tr>
-
-
+									  {% if  GST%}
                                       <tr>
                                         <td class="text-right" >&nbsp;</td>
-                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">IGST @ 9%</span></td>
+                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">CGST @ 9%</span></td>
                                         <td style="text-align: center;">9%</td>
                                       </tr>
                                       <tr>
                                         <td class="text-right" >&nbsp;</td>
                                         <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">SGST @ 9%</span></td>
-                                        <td style="text-align: center;">20%</td>
+                                        <td style="text-align: center;">9%</td>
                                       </tr>
-
+									{% endif %}
+									{%if CGST %}
                                       <tr>
                                         <td class="text-right" >&nbsp;</td>
-                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">GST @ 18%</span></td>
+                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">CGST @ 18%</span></td>
                                         <td style="text-align: center;">18</td>
                                       </tr>
+									{% endif %}
 
 
                                       <tr>
