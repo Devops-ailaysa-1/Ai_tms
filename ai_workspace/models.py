@@ -321,9 +321,16 @@ class Project(models.Model):
                 return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                     "proj_seg_count":out.get('task_seg_count__sum'),
                                 "task_words":task_words}
+        # else:
+        #     from .api_views import ProjectAnalysisProperty
+        #     return ProjectAnalysisProperty.get(self.id)
         else:
             from .api_views import ProjectAnalysisProperty
-            return ProjectAnalysisProperty.get(self.id)
+            try:
+                return ProjectAnalysisProperty.get(self.id)
+            except:
+                return {"proj_word_count": 0, "proj_char_count": 0, \
+                    "proj_seg_count": 0, "task_words":[]}
     # @property
     # def project_analysis(self):
     #     if self.is_proj_analysed == True:
