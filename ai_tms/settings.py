@@ -132,6 +132,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     # 'dbbackup',
     # 'django_q',
+    'ai_writer',
 ]
 
 MANAGEMENT = False
@@ -533,3 +534,11 @@ sentry_sdk.init(
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii = os.getenv("send_default_pii")
 )
+
+
+
+
+OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
+MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
+NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
+END_POINT = os.getenv('END_POINT')

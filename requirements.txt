@@ -149,3 +149,17 @@ xlwt==1.3.0
 graphviz
 pydot
 spacy==3.2.3
+hunspell==0.5.5
+sentencepiece
+protobuf
+quill-delta
+cssutils
+htmldocx
+pytz==2021.1
+sqlparse==0.4.1
+iso-639==0.4.5
+requests==2.25.1
+rapidfuzz
+transformers
+openai
+nlpcloud
