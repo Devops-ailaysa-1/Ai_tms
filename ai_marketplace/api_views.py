@@ -140,6 +140,8 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             "content_delete_ids", [])
         subject_delete_ids = self.request.query_params.get(\
             "subject_delete_ids", [])
+        job_delete_ids = self.request.query_params.get(\
+            "job_delete_ids", [])
 
         if content_delete_ids:
             contentlist = content_delete_ids.split(',')
@@ -148,6 +150,10 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if subject_delete_ids:
             subjectlist = subject_delete_ids.split(',')
             projectpost_info.projectpost_subject.filter(id__in=subjectlist).delete()
+
+        if job_delete_ids:
+            jobslist = job_delete_ids.split(',')
+            projectpost_info.projectpost_jobs.filter(id__in=jobslist).delete()
 
         serializer = ProjectPostSerializer(projectpost_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
