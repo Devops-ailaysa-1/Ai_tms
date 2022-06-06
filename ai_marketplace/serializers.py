@@ -121,9 +121,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
 
 
     def create(self,data):
-        # print("#############",data)
         service = data.pop("service_and_rates",[])
-        # rest = data
         res = [BidPropasalDetails.objects.get_or_create(bidpostjob=i.get('bidpostjob'),vendor_id=data.get('vendor_id'),\
                 defaults={**data,'bidpostjob':i.get('bidpostjob'),'mtpe_rate':i.get('mtpe_rate'),'mtpe_hourly_rate':i.get('mtpe_hourly_rate'),\
                             'mtpe_count_unit':i.get('mtpe_count_unit'),'currency':i.get('currency')}) for i in service]

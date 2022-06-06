@@ -739,7 +739,7 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 
 @api_view(['GET',])
 def sample_file_download(request,bidpostjob_id):
-    sample_file = BidPropasalDetails.objects.get(id=bidpostjob_id).sample_file
+    sample_file = BidPropasalDetails.objects.get(bidpostjob_id=bidpostjob_id).sample_file
     if sample_file:
         fl_path = sample_file.path
         filename = os.path.basename(fl_path)
