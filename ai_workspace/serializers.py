@@ -654,7 +654,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id","filename", "source_language", "target_language", "task_word_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in")
+			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable",)
 
 	def get_bid_job_detail_info(self,obj):
 		if obj.job.project.proj_detail.all():
@@ -666,6 +666,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	def get_open_in(self,obj):
 		try:
 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:return "Ailaysa Writer"
+			elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+				if obj.job.target_language==None:
+					return "Download"
+				else:return "Transeditor"
 			else:return "Transeditor"
 		except:
 			return "Transeditor"

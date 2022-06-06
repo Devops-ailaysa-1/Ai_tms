@@ -391,7 +391,7 @@ class ChatMessageListView(viewsets.ModelViewSet):
 def get_incomplete_projects_list(request):
     query = ProjectboardDetails.objects.filter(customer = request.user.id)
     projects = [i.project_id for i in query] if query else []
-    queryset=[x for x in Project.objects.filter(ai_user=request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
+    queryset=[x for x in Project.objects.filter(ai_user=request.user.id).filter(voice_proj_detail__isnull=True).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
     ser = SimpleProjectSerializer(queryset,many=True)
     return Response(ser.data)
 

@@ -181,6 +181,18 @@ class Project(models.Model):
         return reverse("", kwargs={"project_id":self.id})
 
     @property
+    def get_assignable_tasks(self):
+        tasks=[]
+        for job in self.project_jobs_set.all():
+            for task in job.job_tasks_set.all():
+               if (task.job.target_language == None):
+                   if (task.file.get_file_extension == '.mp3'):
+                       tasks.append(task)
+                   else:pass
+               else:tasks.append(task)
+        return tasks
+
+    @property
     def get_mtpe_tasks(self):
         return [task for job in self.project_jobs_set.filter(~Q(target_language = None)) for task \
             in job.job_tasks_set.all()]
@@ -604,6 +616,11 @@ class File(models.Model):
         return self.filename
 
     @property
+    def get_file_extension(self):
+        file,ext = os.path.splitext(self.file.path)
+        return ext
+
+    @property
     def get_source_tmx_path(self):
         prefix, ext = os.path.splitext(self.filename)
         return os.path.join(self.project.project_penseivetm.source_tmx_dir_path, prefix+".tmx")
@@ -690,6 +707,14 @@ class Task(models.Model):
         else:
             return None
 
+    @property
+    def assignable(self):
+        if self.job.target_language == None:
+            if self.file.get_file_extension == '.mp3':
+                return True
+            else:return False
+        else:return True
+        
     @property
     def corrected_segment_count(self):
         doc = self.document
