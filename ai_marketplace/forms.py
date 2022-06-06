@@ -13,6 +13,7 @@ def external_member_invite_mail_after_bidding(context,email):
     send_mail(
         'Ailaysa MarketPlace Invite',None,
         settings.DEFAULT_FROM_EMAIL,
+        #['thenmozhivijay20@gmail.com'],
         [email],
         html_message=msg_html,
     )

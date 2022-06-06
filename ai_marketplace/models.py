@@ -9,12 +9,11 @@ from ai_auth.models import AiUser,user_directory_path
 from ai_workspace.models import Job,Project,Steps
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
-import os
+import os,random
+from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import get_user_model
+from ai_auth.signals import create_postjob_id
 # Create your models here.
-class AvailableVendors(ParanoidModel):
-    customer= models.ForeignKey(AiUser,related_name='customer',on_delete=models.CASCADE)
-    vendor =  models.ForeignKey(AiUser,related_name='vendor',on_delete=models.CASCADE)
 
 
 class ProjectboardDetails(models.Model):#stephen subburaj
@@ -22,9 +21,10 @@ class ProjectboardDetails(models.Model):#stephen subburaj
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
     proj_name = models.CharField(max_length=191,blank=True, null=True)
-    proj_desc = models.CharField(max_length=1000,blank=True, null=True)
+    proj_desc = models.CharField(max_length=5000,blank=True, null=True)
     bid_deadline = models.DateTimeField(blank=True, null=True)
     proj_deadline = models.DateTimeField(blank=True, null=True)
+    post_word_count =models.IntegerField(null=True, blank=True)
     ven_native_lang = models.ForeignKey(Languages,blank=True, null=True, related_name='vendor_native_lang', on_delete=models.CASCADE)
     ven_res_country = models.ForeignKey(Countries,blank=True, null=True, related_name='res_country', on_delete=models.CASCADE)
     ven_special_req = models.CharField(max_length=1000,blank=True, null=True)
@@ -37,15 +37,17 @@ class ProjectboardDetails(models.Model):#stephen subburaj
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='rate_currency', on_delete=models.CASCADE)
     unit = models.ForeignKey(Billingunits,blank=True, null=True, related_name='bill_unit', on_delete=models.CASCADE)
     milestone = models.CharField(max_length=191,blank=True, null=True)
+    closed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    deleted_at = models.DateTimeField(blank=True, null=True)
 
     @property
-    def get_jobs(self):
+    def get_postedjobs(self):
         return [job for job in self.projectpost_jobs.all()]
 
     @property
-    def get_steps(self):
+    def get_postedsteps(self):
         return [obj.steps for obj in self.projectpost_steps.all()]
 
     @property
@@ -54,16 +56,22 @@ class ProjectboardDetails(models.Model):#stephen subburaj
 
 
 class ProjectPostJobDetails(models.Model):
-     src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
-     tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE)
-     projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
+    postjob_id = models.CharField(max_length=191,blank=True,null=True)
+    src_lang = models.ForeignKey(Languages,related_name='projectpost_source_lang', on_delete=models.CASCADE)
+    tar_lang = models.ForeignKey(Languages,related_name='projectpost_target_lang', on_delete=models.CASCADE,blank=True,null=True)
+    projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost_jobs')
 
-     @property
-     def source_target_pair_names(self):
+    @property
+    def get_job_obj(self):
+        return self.projectpost.project.project_jobs_set.filter(Q(source_language = self.src_lang) & Q(target_language = self.tar_lang)).first()
+
+    @property
+    def source_target_pair_names(self):
         return "%s->%s"%(
             self.src_lang.language,
             self.tar_lang.language
         )
+post_save.connect(create_postjob_id, sender=ProjectPostJobDetails)
 
 class ProjectPostContentType(models.Model):
     project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
@@ -90,7 +98,7 @@ class ProjectboardTemplateDetails(models.Model):
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
     proj_name = models.CharField(max_length=191,blank=True, null=True)
-    proj_desc = models.CharField(max_length=1000,blank=True, null=True)
+    proj_desc = models.CharField(max_length=5000,blank=True, null=True)
     bid_deadline = models.DateTimeField(blank=True, null=True)
     proj_deadline = models.DateTimeField(blank=True, null=True)
     ven_native_lang = models.ForeignKey(Languages,blank=True, null=True, related_name='ven_native_lang', on_delete=models.CASCADE)
@@ -111,7 +119,7 @@ class ProjectboardTemplateDetails(models.Model):
 
 class ProjectPostTemplateJobDetails(models.Model):
      src_lang = models.ForeignKey(Languages,related_name='projectposttemp_source_lang', on_delete=models.CASCADE)
-     tar_lang = models.ForeignKey(Languages,related_name='projectposttemp_target_lang', on_delete=models.CASCADE)
+     tar_lang = models.ForeignKey(Languages,related_name='projectposttemp_target_lang', on_delete=models.CASCADE,blank=True,null=True)
      projectpost_template=models.ForeignKey(ProjectboardTemplateDetails,on_delete=models.CASCADE,related_name='projectposttemp_jobs')
 
 
@@ -182,12 +190,13 @@ class BidProposalServicesRates(models.Model):
     mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
     bid_step = models.ForeignKey(Steps, on_delete=models.CASCADE,related_name="bidpost_steps")
     status = models.ForeignKey(BidStatus,on_delete=models.CASCADE,related_name="bid_status",blank=True, null=True,default = 1)
+    edited_count =  models.IntegerField(blank=True,null=True)
     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,on_delete=models.CASCADE,related_name='bid_job_mtpe_unit_type',blank=True,null=True)
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='bidding_currency_detail', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
-    class Meta:
-        unique_together = ['bidpostjob', 'bid_vendor','bid_step']
+    # class Meta:
+    #     unique_together = ['bidpostjob', 'bid_vendor','bid_step']
 
 User = get_user_model()
 

@@ -16,6 +16,8 @@ router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax
 router.register(r'general-support-topics',api_views.SupportTopicsView,basename='general-support-topics')
 router.register(r'job-positions',api_views.JobPositionsView,basename='job-positions')
 router.register(r'roles',api_views.TeamRoleView,basename='team-role')
+router.register(r'mt-language-support',api_views.MTLanguageSupportView,basename='mt-language-support')
+router.register(r'voice-support-language',api_views.VoiceSupportLanguages,basename='voice-support-language')
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -47,6 +49,9 @@ urlpatterns += [
      path('get_plan_details/',api_views.get_plan_details),
      path('get_price_details/',api_views.get_pricing_details),
      path('get-addons-details/',api_views.get_addons_details),
+     path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view(),name = 'mt-engines'),
+     path('project_types/',api_views.ProjectTypeView.as_view({'get': 'list'}),name = 'project-type'),
+     path('sub_category/',api_views.ProjectTypeDetailView.as_view({'get': 'list'}),name = 'project-type-detail'),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      path('insert',views.Bulk_insert)
 

@@ -1,4 +1,4 @@
-import ai_staff
+import ai_staff,json
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status,viewsets
@@ -12,14 +12,16 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
-                    IndianStates,SupportTopics,JobPositions,Role)
+                    IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
+                    ProjectType,ProjectTypeDetail)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
                          TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
-                         SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer)
+                         SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
+                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer)
 
 
 class ServiceTypesView(APIView):
@@ -652,7 +654,13 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
         pack.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+class AilaysaSupportedMtpeEnginesView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, format=None):
+        queryset = AilaysaSupportedMtpeEngines.objects.all()
+        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+        return Response(serializer.data)
 
 class IndianStatesView(viewsets.ViewSet):
     def list(self,request):
@@ -753,3 +761,47 @@ class TeamRoleView(viewsets.ViewSet):
         role = get_object_or_404(queryset, pk=pk)
         role.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class MTLanguageSupportView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = MTLanguageSupport.objects.all()
+        serializer = MTLanguageSupportSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+class ProjectTypeView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = ProjectType.objects.all()
+        serializer = ProjectTypeSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+class ProjectTypeDetailView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = ProjectTypeDetail.objects.all()
+        serializer = ProjectTypeDetailSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+class VoiceSupportLanguages(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        sub_category = request.GET.get('sub_category')
+        project_type_detail = json.loads(sub_category)
+        if project_type_detail == 1:           #speech-to-text
+            queryset = MTLanguageSupport.objects.filter(speech_to_text = True)
+            serializer = GetLanguagesSerializer(queryset,many=True)
+            return Response({'source_lang_list':serializer.data})
+        if project_type_detail == 2:           #text-to-speech
+            queryset = MTLanguageSupport.objects.filter(text_to_speech = True)
+            serializer = GetLanguagesSerializer(queryset,many=True)
+            return Response({'target_lang_list':serializer.data})
+        if project_type_detail == 3:           #speech-to-speech
+            queryset = MTLanguageSupport.objects.filter(speech_to_text = True)
+            serializer1 = GetLanguagesSerializer(queryset,many=True)
+            queryset2 = MTLanguageSupport.objects.filter(text_to_speech = True)
+            serializer2 = GetLanguagesSerializer(queryset2,many=True)
+            return Response({'source_lang_list':serializer1.data,'target_lang_list':serializer2.data})
+        return Response({"msg":"something went wrong"})

@@ -256,12 +256,13 @@ def vendor_notify_post_jobs(detail):
         send_mail(
             'Available jobs alert from ailaysa',None,
             settings.DEFAULT_FROM_EMAIL,
+            #['thenmozhivijay20@gmail.com'],
             [email],
             html_message=msg_html,
         )
         print("available job alert mail sent>>")
 
-        
+
 def external_member_invite_mail(context,email):
     context = context
     msg_html = render_to_string("External_member_invite_email.html",context)

@@ -11,7 +11,7 @@ from ai_auth.models import (AiUser, BillingAddress,UserAttribute,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
                             VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,CampaignUsers)
 from rest_framework import status
-from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer
+from ai_staff.serializer import AiUserTypeSerializer,TeamRoleSerializer,Languages
 from dj_rest_auth.serializers import PasswordResetSerializer,PasswordChangeSerializer,LoginSerializer
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -31,10 +31,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     # fullname= serializers.CharField(required=True)
     # password = serializers.CharField(style={'input_type':'password'}, write_only=True,required= True)
     campaign = serializers.CharField(required=False)
+    source_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
+    target_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
+    cv_file = serializers.FileField(required=False,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
 
     class Meta:
         model = AiUser
-        fields = ['email','fullname','password','country','campaign']
+        fields = ['email','fullname','password','country','campaign','source_language','target_language','cv_file',]
         extra_kwargs = {
             'password': {'write_only':True},
             'campaign': {'write_only':True}
@@ -51,6 +54,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
     def save(self, request):
+        from ai_vendor.models import VendorLanguagePair,VendorsInfo
         user = AiUser(
             email=self.validated_data['email'],
             fullname=self.validated_data['fullname'],
@@ -68,7 +72,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.save()
         UserAttribute.objects.create(user=user)
         campaign = self.validated_data.get('campaign',None)
-        if campaign :
+        source_language = self.validated_data.get('source_language',None)
+        target_language = self.validated_data.get('target_language',None)
+        cv_file = self.validated_data.get('cv_file',None)
+
+        if source_language and target_language:
+            VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language)
+        if cv_file:
+            VendorsInfo.objects.create(user=user,cv_file = cv_file )
+            VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
+        if campaign:
             CampaignUsers.objects.create(user=user,campaign_name=campaign)
         return user
 
