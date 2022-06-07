@@ -658,7 +658,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_bid_job_detail_info(self,obj):
 		if obj.job.project.proj_detail.all():
-			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id))
+			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language.id ))
 			return ProjectPostJobDetailSerializer(qs,many=True).data
 		else:
 			return None
