@@ -12,11 +12,11 @@ from django.db.models import Q
 import os,random
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import get_user_model
-from ai_auth.signals import create_postjob_id
+from ai_auth.signals import create_postjob_id,shortlisted_vendor_list_send_email_new
 # Create your models here.
 
 
-class ProjectboardDetails(models.Model):#stephen subburaj
+class ProjectboardDetails(models.Model):
     project=models.ForeignKey(Project, on_delete=models.CASCADE,related_name="proj_detail")
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
@@ -53,6 +53,8 @@ class ProjectboardDetails(models.Model):#stephen subburaj
     @property
     def get_steps_name(self):
         return [{'step':obj.steps.name,'id':obj.steps.id} for obj in self.projectpost_steps.all()]
+
+post_save.connect(shortlisted_vendor_list_send_email_new, sender=ProjectboardDetails,)
 
 
 class ProjectPostJobDetails(models.Model):

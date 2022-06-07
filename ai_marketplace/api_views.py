@@ -131,6 +131,8 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer})#,context={'request':request})
         if serializer.is_valid():
             serializer.save()
+            post_id = serializer.data.get('id')
+            # shortlisted_vendor_list_send_email_new(post_id)
             return Response(serializer.data)
         return Response(serializer.errors)
 
@@ -191,25 +193,29 @@ def user_projectpost_list(request):
     except:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-@api_view(['POST',])
-@permission_classes([IsAuthenticated])
-def shortlisted_vendor_list_send_email_new(request):
-    projectpost_id=request.POST.get('projectpost_id')
-    projectpost = ProjectboardDetails.objects.get(id=projectpost_id)
-    jobs = projectpost.get_postedjobs
-    lang_pair = VendorLanguagePair.objects.none()
-    for obj in jobs:
-        query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
-        lang_pair = lang_pair.union(query)
-    res={}
-    for object in lang_pair:
-        print(object.user.fullname)
-        if object.user_id in res:
-            res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':object.target_lang.language})
-        else:
-            res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':object.target_lang.language}],'project_deadline':projectpost.proj_deadline,'bid_deadline':projectpost.bid_deadline}
-    auth_forms.vendor_notify_post_jobs(res)
-    return Response({"msg":"mailsent"})
+# # @api_view(['POST',])
+# # @permission_classes([IsAuthenticated])
+# def shortlisted_vendor_list_send_email_new(projectpost_id):
+#     # projectpost_id=request.POST.get('projectpost_id')
+#     projectpost = ProjectboardDetails.objects.get(id=projectpost_id)
+#     jobs = projectpost.get_postedjobs
+#     lang_pair = VendorLanguagePair.objects.none()
+#     for obj in jobs:
+#         if obj.src_lang_id == obj.tar_lang_id:
+#             query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) | Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+#         else:
+#             query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+#         lang_pair = lang_pair.union(query)
+#     res={}
+#     for object in lang_pair:
+#         tt = object.source_lang.language if object.source_lang_id == object.target_lang_id else object.source_lang.language
+#         print(object.user.fullname)
+#         if object.user_id in res:
+#             res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':tt})
+#         else:
+#             res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':projectpost.proj_deadline,'bid_deadline':projectpost.bid_deadline}
+#     auth_forms.vendor_notify_post_jobs(res)
+#     return {"msg":"mailsent"}
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
@@ -264,7 +270,7 @@ class BidPostInfoCreateView(viewsets.ViewSet):
             return Response({'msg':'user is not a vendor'})
 
     @integrity_error
-    def create(self, request):
+    def create(self, request):###########Need to check#############
         if self.request.user.is_vendor == True:
             post_id = request.POST.get('post_id')
             post = ProjectboardDetails.objects.get(id=post_id)
@@ -274,7 +280,9 @@ class BidPostInfoCreateView(viewsets.ViewSet):
             if serializer.is_valid():
                 with transaction.atomic():
                     serializer.save()
-                return Response({"msg":"Bid Posted"})
+                queryset = BidPropasalDetails.objects.filter(projectpost_id= post_id).all()
+                serializer = BidPropasalDetailSerializer(queryset,many=True)
+                return Response({"msg":"Bid Posted","data":serializer.data})
             return Response(serializer.errors)
         else:
             return Response({'msg':'user is not a vendor'})
@@ -287,12 +295,18 @@ class BidPostInfoCreateView(viewsets.ViewSet):
         if sample_file:
             serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file':sample_file},partial=True)
         else:
-            print("###")
             serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        Bid_info = BidPropasalDetails.objects.get(Q(id=pk) & Q(vendor=request.user))
+        Bid_info.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
@@ -415,7 +429,7 @@ class ChatMessageListView(viewsets.ModelViewSet):
 def get_incomplete_projects_list(request):
     query = ProjectboardDetails.objects.filter(customer = request.user.id)
     projects = [i.project_id for i in query] if query else []
-    queryset=[x for x in Project.objects.filter(ai_user=request.user.id).filter(voice_proj_detail__isnull=True).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
+    queryset=[x for x in Project.objects.filter(ai_user=request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]#.filter(voice_proj_detail__isnull=True)
     ser = SimpleProjectSerializer(queryset,many=True)
     return Response(ser.data)
 
