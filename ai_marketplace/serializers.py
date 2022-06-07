@@ -392,7 +392,11 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
         jobs = obj.get_postedjobs
         matched_jobs=[]
         for i in jobs:
-            res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            if i.src_lang_id == i.tar_lang_id:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            else:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            # res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:
                 matched_jobs.append(i)
         print(matched_jobs)
@@ -405,8 +409,12 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
         jobs = obj.get_postedjobs
         service_details=[]
         for i in jobs:
-            query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
-                    .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+            if i.src_lang_id == i.tar_lang_id:
+                query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+                        .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+            else:
+                query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+                        .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
             query1 = query.filter(currency=obj.currency)
             if query1: res= query1
             else: res= query
@@ -445,7 +453,10 @@ class AvailablePostJobSerializer(serializers.Serializer):
         vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         for i in jobs:
-            res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            if i.src_lang_id == i.tar_lang_id:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            else:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:
                 return True
         return False
