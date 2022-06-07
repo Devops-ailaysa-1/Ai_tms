@@ -86,15 +86,23 @@ def post_project_primary_details(request):
     project_id=request.POST.get('project_id')
     project = get_object_or_404(Project.objects.all(), id=project_id)
                      # ai_user=self.request.user)
-    jobs = project.project_jobs_set.all()
+    try:
+        if project.voice_proj_detail.project_type_sub_category_id == 2:
+            jobs =  project.project_jobs_set.filter(~Q(target_language=None))
+            tasks = project.get_assignable_tasks
+        else:
+            jobs = project.project_jobs_set.all()
+            tasks = project.get_tasks
+    except:
+        jobs = project.project_jobs_set.all()
+        tasks = project.get_tasks
     contents = project.proj_content_type.all()
     subjects = project.proj_subject.all()
     jobs = JobSerializer(jobs, many=True)
     contents = ProjectContentTypeSerializer(contents,many=True)
     subjects = ProjectSubjectSerializer(subjects,many=True)
-    tasks = project.get_tasks
+    # tasks = project.get_tasks
     task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,'word_count':i.task_word_count if i.task_details.exists() else None} for i in tasks]
-    print("^^^^^^^^^^^^",task_count_detail)
     result = {'project_name':project.project_name,'task_count_detail':task_count_detail,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
     return JsonResponse({"res":result},safe=False)
 
@@ -455,7 +463,7 @@ class AvailableJobsListView(generics.ListAPIView):
     ordering_fields = ['bid_deadline','proj_deadline','id']
     ordering = ('-id')
     filterset_class = JobFilter
-    pagination.PageNumberPagination.page_size = 10
+    pagination.PageNumberPagination.page_size = None
 
     def validate(self):
         if self.request.user.is_vendor == False:

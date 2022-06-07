@@ -336,7 +336,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
                  'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',
-                 'closed_at','deleted_at',)#'bidproject_details',
+                 'closed_at','deleted_at','created_at',)#'bidproject_details',
 
     def get_bid_count(self, obj):
         bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
@@ -438,6 +438,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
     post_id = serializers.ReadOnlyField(source = 'id')
     post_name = serializers.ReadOnlyField(source='proj_name')
     post_desc = serializers.ReadOnlyField(source='proj_desc')
+    posted_by = serializers.ReadOnlyField(source='customer.fullname')
     apply = serializers.SerializerMethodField()
     post_bid_deadline =serializers.ReadOnlyField(source='bid_deadline')
     post_deadline = serializers.ReadOnlyField(source='proj_deadline')
@@ -447,7 +448,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
 
 
     class Meta:
-        fields = ('post_id', 'post_name', 'post_desc','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
+        fields = ('post_id', 'post_name','posted_by','post_desc','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
 
     def get_apply(self, obj):
         vendor = self.context.get("request").user
