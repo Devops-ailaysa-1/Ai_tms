@@ -390,7 +390,8 @@ class DocumentToFile(views.APIView):
             task_data = ser.data
             filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
             target_language = language_locale if language_locale else task_data["target_language"]
-            filename = filename + "_out"+ ".mp3"
+            dir,name_ = os.path.split(os.path.abspath(self.get_source_file_path(document_id)))
+            filename = name_ + "_out"+ ".mp3"
             res1 = text_to_speech(file_path,target_language,filename,voice_gender)
             return download_file(res1)
         else:
