@@ -70,23 +70,14 @@ class BidChatSerializer(serializers.ModelSerializer):
 
 
 class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
-    # project_id = serializers.ReadOnlyField(source = 'bidpostjob.projectpost.project.id')
-    # job_id = serializers.SerializerMethodField()
-    # bid_vendor_uid = serializers.ReadOnlyField(source =  'bid_vendor.uid')
-    # bid_vendor_name = serializers.ReadOnlyField(source = 'bid_vendor.fullname')
-    # bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
+
     class Meta:
         model = BidPropasalDetails
         fields = ('bidpostjob','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency',)
-#         fields = ('id','project_id','job_id','bid_step','edited_count','bidpostjob','bidpostjob_name','bid_vendor_name','bid_vendor_uid','bid_vendor','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status',)
-#
-    # def get_job_id(self,obj):
-    #     pr = obj.bidpostjob.projectpost.project
-    #     job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
-    #     return job[0].id if job else None
-#
-#
-#
+
+
+
+
 class BidPropasalDetailSerializer(serializers.ModelSerializer):
     service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
     projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
@@ -97,22 +88,43 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
     projectpost_title = serializers.ReadOnlyField(source = 'projectpost.proj_name')
     bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
     professional_identity= serializers.ReadOnlyField(source='vendor.professional_identity_info.avatar_url')
+    # projectpost_status = serializers.SerializerMethodField()
+    current_status = serializers.SerializerMethodField()#ReadOnlyField(source='status.status')
 
     class Meta:
         model = BidPropasalDetails
         fields = ('id','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
-                    'mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status','edited_count','service_and_rates','bid_step',\
+                    'mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status','current_status','edited_count','service_and_rates','bid_step',\
                     'job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity','created_at',)
         extra_kwargs = {
         	"bidpostjob":{
         		"required": False
         	}
+            # "status":{
+            # "write_only":True
+            # }
         }
 
     def get_job_id(self,obj):
         pr = obj.bidpostjob.projectpost.project
         job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
         return job[0].id if job else None
+
+    def get_current_status(self,obj):
+        if obj.projectpost.closed_at != None:
+            return "Projectpost Closed"
+        elif obj.projectpost.deleted_at !=None:
+            return "Projectpost Deleted"
+        else:
+            return obj.status.status
+
+    # def get_projectpost_status(self,obj):
+    #     if obj.projectpost.closed_at != None:
+    #         return "closed"
+    #     elif obj.projectpost.deleted_at !=None:
+    #         return "deleted"
+    #     else:
+    #         return "Active"
 
 
     def run_validation(self, data):

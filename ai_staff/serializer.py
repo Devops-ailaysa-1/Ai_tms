@@ -337,7 +337,7 @@ class ProjectTypeSerializer(serializers.ModelSerializer):
 
 
 class LanguagesSerializerNew(serializers.ModelSerializer):
-    locale_code = serializers.SerializerMethodField()#ReadOnlyField(source = 'language.locale.first().locale_code')
+    locale_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Languages

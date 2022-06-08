@@ -1347,10 +1347,13 @@ class AssignToListView(viewsets.ModelViewSet):
 @api_view(["GET"])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
-    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-    res = download_file(pr.project_name+'.zip')
-    os.remove(pr.project_name+'.zip')
-    return res
+    if os.path.exists(os.path.join(pr.project_dir_path,'source')):
+        shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+        res = download_file(pr.project_name+'.zip')
+        os.remove(pr.project_name+'.zip')
+        return res
+    else:
+        return Response({'msg':'something went wrong'})
 
 class ShowMTChoices(APIView):
     # permission_classes = [IsAuthenticated]
