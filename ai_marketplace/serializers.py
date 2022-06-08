@@ -94,14 +94,15 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
     job_id = serializers.SerializerMethodField()
     bid_vendor_uid = serializers.ReadOnlyField(source =  'vendor.uid')
     bid_vendor_name = serializers.ReadOnlyField(source = 'vendor.fullname')
+    projectpost_title = serializers.ReadOnlyField(source = 'projectpost.proj_name')
     bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
     professional_identity= serializers.ReadOnlyField(source='vendor.professional_identity_info.avatar_url')
 
     class Meta:
         model = BidPropasalDetails
-        fields = ('id','projectpost_id','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
+        fields = ('id','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
                     'mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status','edited_count','service_and_rates','bid_step',\
-                    'job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity',)
+                    'job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity','created_at',)
         extra_kwargs = {
         	"bidpostjob":{
         		"required": False

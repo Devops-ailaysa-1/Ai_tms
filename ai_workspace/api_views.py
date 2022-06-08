@@ -1443,47 +1443,36 @@ def transcribe_file(request):
 
 #text_to_speech(ssml_file,target_language,filename,voice_gender)
 @api_view(["GET"])
-def download_text_to_speech_source(request):#########working############
+def transcribe_and_download_text_to_speech_source(request):#########working############Transcribe and Download
     project = request.GET.get('project',None)
     task = request.GET.get('task',None)
-    if task:
-        obj = Task.objects.get(id = i)
+    pr = Project.objects.get(id=project)
+    tasks = pr.get_tasks
+    for obj in tasks:
         file,ext = os.path.splitext(obj.file.file.path)
+        dir,name_ = os.path.split(os.path.abspath(file))
         if ext == '.docx':
             name = file + '.txt'
             text = docx2txt.process(obj.file.file.path)
             with open(name, "w") as out:
                 out.write(text)
-        audio_file = file + '_source'+'.mp3'
+        else:
+            name = obj.file.file.path
+        audio_file = name_ + '_source'+'.mp3'
         res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
-        return download_file(res)
-    # if project:
-    #     pr = Project.objects.get(id=project)
-    #     tasks = pr.get_tasks
-    #     for obj in tasks:
-    #         file,ext = os.path.splitext(obj.file.file.path)
-    #         if ext == '.docx':
-    #             name = file + '.txt'
-    #             text = docx2txt.process(obj.file.file.path)
-    #             with open(name, "w") as out:
-    #                 out.write(text)
-    #         audio_file = file + '_source'+'.mp3'
-    #         try:
-    #             res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
-    #         except:
-    #             pass
-    #     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-    #     res = download_file(pr.project_name+'.zip')
-    #     os.remove(pr.project_name+'.zip')
-    #     return res
-    # if task:
-    #     obj = Task.objects.get(id = i)
-    #     file,ext = os.path.splitext(obj.file.file.path)
-    #     if ext == '.docx':
-    #         name = file + '.txt'
-    #         text = docx2txt.process(obj.file.file.path)
-    #         with open(name, "w") as out:
-    #             out.write(text)
-    #     audio_file = file + '_source'+'.mp3'
-    #     res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
-    #     return download_file(res)
+    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source/Audio')
+    res = download_file(pr.project_name+'.zip')
+    os.remove(pr.project_name+'.zip')
+    return res
+
+
+
+@api_view(["GET"])
+def download_text_to_speech_source(request):
+    task = request.GET.get('task')
+    obj = Task.objects.get(id = task)
+    file,ext = os.path.splitext(os.path.basename(obj.file.file.path))
+    name =file +'_source.mp3'
+    dir = os.path.dirname(obj.file.file.path)
+    loc = os.path.join(dir,"Audio",name)
+    return download_file(loc)

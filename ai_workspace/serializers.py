@@ -4,7 +4,7 @@ from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,\
-		TaskAssignInfo,TaskAssignHistory,TaskDetails,VoiceProjectDetail,VoiceProjectFile,TaskTranscriptDetails
+		TaskAssignInfo,TaskAssignHistory,TaskDetails,VoiceProjectDetail,TaskTranscriptDetails
 import json
 import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -148,11 +148,11 @@ class VoiceProjectDetailSerializer(serializers.ModelSerializer):
 		# 		"required": False
 		# 	}
 		# }
-class VoiceProjectFileSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = VoiceProjectFile
-		fields = ('id','voice_project','audio_file')
-		read_only_fields = ("id","voice_project",)
+# class VoiceProjectFileSerializer(serializers.ModelSerializer):
+# 	class Meta:
+# 		model = VoiceProjectFile
+# 		fields = ('id','voice_project','audio_file')
+# 		read_only_fields = ("id","voice_project",)
 
 
 class ProjectContentTypeSerializer(serializers.ModelSerializer):
