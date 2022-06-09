@@ -792,15 +792,15 @@ class TaskDetails(models.Model):
         return "file=> "+ str(self.task.file) + ", job=> "+ str(self.task.job)
 
 def audio_file_path(instance, filename):
-    file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,instance.usage_type.type_path,\
+    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
             "Audio", filename)
     return file_path
 
 class TaskTranscriptDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
-    transcripted_text = models.TextField()
-    # source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
-    # translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
+    transcripted_text = models.TextField(null=True,blank=True)
+    source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
+    translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
 
 
 class TmxFile(models.Model):

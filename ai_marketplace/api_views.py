@@ -332,6 +332,7 @@ def post_bid_primary_details(request):############need to include currency conve
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def bid_proposal_status(request):
+    print("#@#@#@#@#")
     bid_detail_id= request.POST.get('id')
     obj = BidPropasalDetails.objects.get(id = bid_detail_id)
     status = json.loads(request.POST.get('status'))
@@ -346,6 +347,7 @@ def bid_proposal_status(request):
                 if tt.status == 1:
                     tt.status = 2
                     tt.save()
+                BidPropasalDetails.objects.filter(id = bid_detail_id).update(status = status)
                 return Response({"msg":"Already in HiredEditors List....Redirect to Assign Page"})
             elif created == True:
                 print(obj)
@@ -363,7 +365,7 @@ def bid_proposal_status(request):
             BidPropasalDetails.objects.filter(id = bid_detail_id).update(status = status)
             return JsonResponse({"msg":"Invite send...added to your HiredEditors list"})
         else:
-            return JsonResponse({"msg":"error"})
+            return JsonResponse({"msg":"Not a customer"})
     return JsonResponse({"msg":"status updated"})
 
 

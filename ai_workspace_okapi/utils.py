@@ -4,7 +4,7 @@ import os, mimetypes, requests, uuid, json, xlwt, boto3
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
-
+from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 
 client = translate.Client()
@@ -286,10 +286,18 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
     response = client.synthesize_speech(
         input=input_text, voice=voice, audio_config=audio_config
     )
-    dir = os.path.join(path,"Audio")
-    if not os.path.exists(dir):
-        os.mkdir(dir)
-    with open(os.path.join(dir,filename), "wb") as out:
+    with open(filename,"wb") as out:
         out.write(response.audio_content)
         print('Audio content written to file',filename)
-    return os.path.join(dir,filename)
+    out.close()
+    f2 = open(filename, 'rb')
+    file_obj = DJFile(f2)
+    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)
+    return file_obj,f2
+    # dir = os.path.join(path,"Audio")
+    # if not os.path.exists(dir):
+    #     os.mkdir(dir)
+    # with open(os.path.join(dir,filename), "wb") as out:
+    #     out.write(response.audio_content)
+    #     print('Audio content written to file',filename)
+    # return os.path.join(dir,filename)

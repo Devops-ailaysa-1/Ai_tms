@@ -86,6 +86,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
     bid_vendor_uid = serializers.ReadOnlyField(source =  'vendor.uid')
     bid_vendor_name = serializers.ReadOnlyField(source = 'vendor.fullname')
     projectpost_title = serializers.ReadOnlyField(source = 'projectpost.proj_name')
+    original_project_id = serializers.ReadOnlyField(source = 'projectpost.project.id')
     bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
     professional_identity= serializers.ReadOnlyField(source='vendor.professional_identity_info.avatar_url')
     # projectpost_status = serializers.SerializerMethodField()
@@ -95,7 +96,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         model = BidPropasalDetails
         fields = ('id','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
                     'mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status','current_status','edited_count','service_and_rates','bid_step',\
-                    'job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity','created_at',)
+                    'original_project_id','job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity','created_at',)
         extra_kwargs = {
         	"bidpostjob":{
         		"required": False
@@ -106,8 +107,9 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         }
 
     def get_job_id(self,obj):
+        tar_lang = None if obj.bidpostjob.src_lang_id == obj.bidpostjob.tar_lang_id else obj.bidpostjob.tar_lang_id
         pr = obj.bidpostjob.projectpost.project
-        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
+        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
         return job[0].id if job else None
 
     def get_current_status(self,obj):

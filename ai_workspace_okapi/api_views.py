@@ -3,7 +3,7 @@ from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSeriali
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer)
-from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer
+from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer,TaskTranscriptDetailSerializer
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets, authentication
 from rest_framework import views
@@ -392,8 +392,18 @@ class DocumentToFile(views.APIView):
             target_language = language_locale if language_locale else task_data["target_language"]
             dir,name_ = os.path.split(os.path.abspath(self.get_source_file_path(document_id)))
             filename = name_ + "_out"+ ".mp3"
-            res1 = text_to_speech(file_path,target_language,filename,voice_gender)
-            return download_file(res1)
+            res1,f2 = text_to_speech(file_path,target_language,filename,voice_gender)
+            if task.task_transcript_details.first()==None:
+                ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
+            else:
+                t = task.task_transcript_details.first()
+                ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
+            if ser.is_valid():
+                ser.save()
+            print(ser.errors)
+            f2.close()
+            os.remove(filename)
+            return download_file(task.task_transcript_details.last().translated_audio_file.path)
         else:
             return Response({"msg":"something went wrong"})
 
