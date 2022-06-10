@@ -151,3 +151,4 @@ pydot
 spacy==3.2.3
 google-cloud-texttospeech
 google-cloud-speech
+docx2txt==0.8
