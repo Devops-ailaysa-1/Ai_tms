@@ -31,7 +31,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails, TaskAssignInfo
+    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails, TaskAssignInfo,TaskTranscriptDetails
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -1347,10 +1347,13 @@ class AssignToListView(viewsets.ModelViewSet):
 @api_view(["GET"])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
-    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-    res = download_file(pr.project_name+'.zip')
-    os.remove(pr.project_name+'.zip')
-    return res
+    if os.path.exists(os.path.join(pr.project_dir_path,'source')):
+        shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+        res = download_file(pr.project_name+'.zip')
+        os.remove(pr.project_name+'.zip')
+        return res
+    else:
+        return Response({'msg':'something went wrong'})
 
 class ShowMTChoices(APIView):
     # permission_classes = [IsAuthenticated]
@@ -1443,47 +1446,59 @@ def transcribe_file(request):
 
 #text_to_speech(ssml_file,target_language,filename,voice_gender)
 @api_view(["GET"])
-def download_text_to_speech_source(request):#########working############
+def transcribe_and_download_text_to_speech_source(request):#########working############Transcribe and Download
+    tasks =[]
     project = request.GET.get('project',None)
-    task = request.GET.get('task',None)
-    if task:
-        obj = Task.objects.get(id = i)
+    # task = request.GET.get('task',None)
+    pr = Project.objects.get(id=project)
+    for _task in pr.get_tasks:
+        if _task.task_transcript_details.first() == None:
+            tasks.append(_task)
+    for obj in tasks:
         file,ext = os.path.splitext(obj.file.file.path)
+        dir,name_ = os.path.split(os.path.abspath(file))
         if ext == '.docx':
             name = file + '.txt'
-            text = docx2txt.process(obj.file.file.path)
+            data = docx2txt.process(obj.file.file.path)
             with open(name, "w") as out:
-                out.write(text)
-        audio_file = file + '_source'+'.mp3'
-        res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
-        return download_file(res)
-    # if project:
-    #     pr = Project.objects.get(id=project)
-    #     tasks = pr.get_tasks
-    #     for obj in tasks:
-    #         file,ext = os.path.splitext(obj.file.file.path)
-    #         if ext == '.docx':
-    #             name = file + '.txt'
-    #             text = docx2txt.process(obj.file.file.path)
-    #             with open(name, "w") as out:
-    #                 out.write(text)
-    #         audio_file = file + '_source'+'.mp3'
-    #         try:
-    #             res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
-    #         except:
-    #             pass
-    #     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-    #     res = download_file(pr.project_name+'.zip')
-    #     os.remove(pr.project_name+'.zip')
-    #     return res
-    # if task:
-    #     obj = Task.objects.get(id = i)
-    #     file,ext = os.path.splitext(obj.file.file.path)
-    #     if ext == '.docx':
-    #         name = file + '.txt'
-    #         text = docx2txt.process(obj.file.file.path)
-    #         with open(name, "w") as out:
-    #             out.write(text)
-    #     audio_file = file + '_source'+'.mp3'
-    #     res = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
-    #     return download_file(res)
+                out.write(data)
+        else:
+            name = obj.file.file.path
+            text_file = open(name, "r")
+            data = text_file.read()
+            text_file.close()
+        seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
+                     "processor_name":"plain-text-processor", "extension":".txt"}
+        res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
+        wc = res1.json() if res1.status_code == 200 else None
+        TaskDetails.objects.create(task = obj,task_word_count = wc,project = obj.job.project)
+        audio_file = name_ + '_source'+'.mp3'
+        res2,f2 = text_to_speech(name,obj.job.source_language_code,audio_file,'FEMALE')
+        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id})
+        if ser.is_valid():
+            ser.save()
+        f2.close()
+        os.remove(audio_file)
+        print(ser.errors)
+    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source/Audio')
+    res = download_file(pr.project_name+'.zip')
+    os.remove(pr.project_name+'.zip')
+    return res
+
+
+
+@api_view(["GET"])
+def download_text_to_speech_source(request):
+    task = request.GET.get('task')
+    obj = Task.objects.get(id = task)
+    try:
+        file = obj.task_transcript_details.first().source_audio_file
+        return download_file(file.path)
+    except:
+        return Response({'msg':'something went wrong'})
+    # obj = Task.objects.get(id = task)
+    # file,ext = os.path.splitext(os.path.basename(obj.file.file.path))
+    # name =file +'_source.mp3'
+    # dir = os.path.dirname(obj.file.file.path)
+    # loc = os.path.join(dir,"Audio",name)
+    # return download_file(loc)

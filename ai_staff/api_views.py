@@ -21,7 +21,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
-                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer)
+                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew)
 
 
 class ServiceTypesView(APIView):
@@ -805,3 +805,12 @@ class VoiceSupportLanguages(viewsets.ViewSet):
             serializer2 = GetLanguagesSerializer(queryset2,many=True)
             return Response({'source_lang_list':serializer1.data,'target_lang_list':serializer2.data})
         return Response({"msg":"something went wrong"})
+
+
+
+
+@api_view(['GET',])
+def get_languages(request):
+    queryset = Languages.objects.all().order_by('language')
+    serializer = LanguagesSerializerNew(queryset, many=True)
+    return Response(serializer.data)

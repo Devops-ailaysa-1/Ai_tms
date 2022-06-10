@@ -49,7 +49,28 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
        auth_forms.vendor_request_admin_mail(instance)
 
 
-
+def shortlisted_vendor_list_send_email_new(sender, instance, created, *args, **kwargs):
+    from ai_vendor.models import VendorLanguagePair
+    from ai_auth import forms as auth_forms
+    if created:
+        jobs = instance.get_postedjobs
+        lang_pair = VendorLanguagePair.objects.none()
+        for obj in jobs:
+            if obj.src_lang_id == obj.tar_lang_id:
+                query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) | Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+            else:
+                query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+            lang_pair = lang_pair.union(query)
+        res={}
+        for object in lang_pair:
+            tt = object.source_lang.language if object.source_lang_id == object.target_lang_id else object.source_lang.language
+            print(object.user.fullname)
+            if object.user_id in res:
+                res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':tt})
+            else:
+                res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':projectpost.proj_deadline,'bid_deadline':projectpost.bid_deadline}
+        auth_forms.vendor_notify_post_jobs(res)
+        print("mailsent")
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''
 #     res=update_billing_address(address=instance)

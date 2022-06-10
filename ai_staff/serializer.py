@@ -333,3 +333,15 @@ class ProjectTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectType
         fields = "__all__"
+
+
+
+class LanguagesSerializerNew(serializers.ModelSerializer):
+    locale_code = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Languages
+        fields = ('id', 'language','locale_code')
+
+    def get_locale_code(self,obj):
+        return obj.locale.first().locale_code

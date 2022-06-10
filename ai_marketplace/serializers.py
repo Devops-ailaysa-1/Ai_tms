@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from ai_marketplace.models import (ProjectboardDetails,ProjectPostJobDetails,
-                    BidChat,BidPropasalDetails,BidProposalServicesRates,
+                    BidChat,BidPropasalDetails,
                     Thread,ProjectPostContentType,ProjectPostSubjectField,ChatMessage,
                     ProjectPostTemplateJobDetails,ProjectPostTemplateContentType,
                     ProjectPostTemplateSubjectField,ProjectboardTemplateDetails,
@@ -70,30 +70,64 @@ class BidChatSerializer(serializers.ModelSerializer):
 
 
 class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
-    project_id = serializers.ReadOnlyField(source = 'bidpostjob.projectpost.project.id')
-    job_id = serializers.SerializerMethodField()
-    bid_vendor_uid = serializers.ReadOnlyField(source =  'bid_vendor.uid')
-    bid_vendor_name = serializers.ReadOnlyField(source = 'bid_vendor.fullname')
-    bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
-    class Meta:
-        model = BidProposalServicesRates
-        fields = ('id','project_id','job_id','bid_step','edited_count','bidpostjob','bidpostjob_name','bid_vendor_name','bid_vendor_uid','bid_vendor','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status',)
-
-    def get_job_id(self,obj):
-        pr = obj.bidpostjob.projectpost.project
-        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
-        return job[0].id if job else None
-
-
-
-class BidPropasalDetailSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
-    service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
-    projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
-    vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
 
     class Meta:
         model = BidPropasalDetails
-        fields = ('id','projectpost_id','vendor_id','service_and_rates','proposed_completion_date','description','sample_file','filename',)
+        fields = ('bidpostjob','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency',)
+
+
+
+
+class BidPropasalDetailSerializer(serializers.ModelSerializer):
+    service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
+    projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
+    vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
+    job_id = serializers.SerializerMethodField()
+    bid_vendor_uid = serializers.ReadOnlyField(source =  'vendor.uid')
+    bid_vendor_name = serializers.ReadOnlyField(source = 'vendor.fullname')
+    projectpost_title = serializers.ReadOnlyField(source = 'projectpost.proj_name')
+    original_project_id = serializers.ReadOnlyField(source = 'projectpost.project.id')
+    bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
+    professional_identity= serializers.ReadOnlyField(source='vendor.professional_identity_info.avatar_url')
+    # projectpost_status = serializers.SerializerMethodField()
+    current_status = serializers.SerializerMethodField()#ReadOnlyField(source='status.status')
+
+    class Meta:
+        model = BidPropasalDetails
+        fields = ('id','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
+                    'mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status','current_status','edited_count','service_and_rates','bid_step',\
+                    'original_project_id','job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity','created_at',)
+        extra_kwargs = {
+        	"bidpostjob":{
+        		"required": False
+        	}
+            # "status":{
+            # "write_only":True
+            # }
+        }
+
+    def get_job_id(self,obj):
+        tar_lang = None if obj.bidpostjob.src_lang_id == obj.bidpostjob.tar_lang_id else obj.bidpostjob.tar_lang_id
+        pr = obj.bidpostjob.projectpost.project
+        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
+        return job[0].id if job else None
+
+    def get_current_status(self,obj):
+        if obj.projectpost.closed_at != None:
+            return "Projectpost Closed"
+        elif obj.projectpost.deleted_at !=None:
+            return "Projectpost Deleted"
+        else:
+            return obj.status.status
+
+    # def get_projectpost_status(self,obj):
+    #     if obj.projectpost.closed_at != None:
+    #         return "closed"
+    #     elif obj.projectpost.deleted_at !=None:
+    #         return "deleted"
+    #     else:
+    #         return "Active"
+
 
     def run_validation(self, data):
         if data.get("service_and_rates") and isinstance( data.get("service_and_rates"), str):
@@ -101,19 +135,40 @@ class BidPropasalDetailSerializer(WritableNestedModelSerializer,serializers.Mode
         return super().run_validation(data)
 
 
-class BidPropasalUpdateSerializer(serializers.ModelSerializer):
-    service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
-    projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
-    vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
+    def create(self,data):
+        service = data.pop("service_and_rates",[])
+        res = [BidPropasalDetails.objects.get_or_create(bidpostjob=i.get('bidpostjob'),vendor_id=data.get('vendor_id'),\
+                defaults={**data,'bidpostjob':i.get('bidpostjob'),'mtpe_rate':i.get('mtpe_rate'),'mtpe_hourly_rate':i.get('mtpe_hourly_rate'),\
+                            'mtpe_count_unit':i.get('mtpe_count_unit'),'currency':i.get('currency')}) for i in service]
+        return res
 
-    class Meta:
-        model = BidPropasalDetails
-        fields = ('id','projectpost_id','vendor_id','service_and_rates','proposed_completion_date','description','sample_file','filename',)
+    def update(self, instance, data):
+        service = data.pop("service_and_rates",[])[0]
+        queryset = BidPropasalDetails.objects.filter(bidpostjob_id=service.get('bidpostjob'))
+        edited_count = 1 if queryset.first().edited_count==None else queryset.first().edited_count+1
+        dt = super().update(instance, data)
+        if service:
+            queryset.update(mtpe_rate=service.get('mtpe_rate'),\
+                                            mtpe_hourly_rate =service.get('mtpe_hourly_rate'),mtpe_count_unit = service.get('mtpe_count_unit'),\
+                                            status_id=5,edited_count=edited_count)
+        return queryset[0]
 
-    def run_validation(self, data):
-        if data.get("service_and_rates") and isinstance( data.get("service_and_rates"), str):
-            data["service_and_rates"]=json.loads(data["service_and_rates"])
-        return data
+
+
+#
+# class BidPropasalUpdateSerializer(serializers.ModelSerializer):
+#     service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
+#     projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
+#     vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
+#
+#     class Meta:
+#         model = BidPropasalDetails
+#         fields = ('id','projectpost_id','vendor_id','service_and_rates','proposed_completion_date','description','sample_file','filename',)
+#
+#     def run_validation(self, data):
+#         if data.get("service_and_rates") and isinstance( data.get("service_and_rates"), str):
+#             data["service_and_rates"]=json.loads(data["service_and_rates"])
+#         return data
 
     # def create(self,data):
     #     bidpost_obj = BidPropasalDetails.objects.filter(projectpost_id = data.get('post_id'))
@@ -128,15 +183,15 @@ class BidPropasalUpdateSerializer(serializers.ModelSerializer):
 
 
 
-    def update(self, instance, data):
-        service = data.pop("service_and_rates",[])[0]
-        queryset = BidProposalServicesRates.objects.filter(bidpostjob_id=service.get('bidpostjob'))
-        edited_count = 1 if queryset.first().edited_count==None else queryset.first().edited_count+1
-        if service:
-            queryset.update(mtpe_rate=service.get('mtpe_rate'),\
-                                            mtpe_hourly_rate =service.get('mtpe_hourly_rate'),mtpe_count_unit = service.get('mtpe_count_unit'),\
-                                            status_id=5,edited_count=edited_count)
-        return super().update(instance, data)
+    # def update(self, instance, data):
+    #     service = data.pop("service_and_rates",[])[0]
+    #     queryset = BidProposalServicesRates.objects.filter(bidpostjob_id=service.get('bidpostjob'))
+    #     edited_count = 1 if queryset.first().edited_count==None else queryset.first().edited_count+1
+    #     if service:
+    #         queryset.update(mtpe_rate=service.get('mtpe_rate'),\
+    #                                         mtpe_hourly_rate =service.get('mtpe_hourly_rate'),mtpe_count_unit = service.get('mtpe_count_unit'),\
+    #                                         status_id=5,edited_count=edited_count)
+    #     return super().update(instance, data)
 
 
 
@@ -231,7 +286,7 @@ class ProjectPostJobSerializer(serializers.ModelSerializer):
 
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
     bid_count = serializers.SerializerMethodField()
-    bid_details = BidPropasalServicesRatesSerializer(many=True,read_only=True)
+    bid_details = BidPropasalDetailSerializer(many=True,read_only=True)
     # bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
     class Meta:
         model=ProjectPostJobDetails
@@ -243,7 +298,7 @@ class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
 class ProjectPostContentTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectPostContentType
-        fields = ('content_type',)
+        fields = ('id','content_type',)
 
 class ProjectPostStepsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -253,7 +308,7 @@ class ProjectPostStepsSerializer(serializers.ModelSerializer):
 class ProjectPostSubjectFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectPostSubjectField
-        fields = ('subject',)
+        fields = ('id','subject',)
 
 
 class ProjectPostTemplateStepsSerializer(serializers.ModelSerializer):
@@ -296,7 +351,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
                  'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',
-                 'closed_at','deleted_at',)
+                 'closed_at','deleted_at','created_at',)#'bidproject_details',
 
     def get_bid_count(self, obj):
         bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
@@ -343,7 +398,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
         vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         for i in jobs:
-            if i.bid_details.filter(bid_vendor_id = vendor.id):
+            if i.bid_details.filter(vendor_id = vendor.id):
                 applied.append(i)
         return ProjectPostJobDetailSerializer(applied,many=True).data
 
@@ -352,7 +407,11 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
         jobs = obj.get_postedjobs
         matched_jobs=[]
         for i in jobs:
-            res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            if i.src_lang_id == i.tar_lang_id:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            else:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            # res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:
                 matched_jobs.append(i)
         print(matched_jobs)
@@ -365,8 +424,12 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
         jobs = obj.get_postedjobs
         service_details=[]
         for i in jobs:
-            query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
-                    .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+            if i.src_lang_id == i.tar_lang_id:
+                query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+                        .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+            else:
+                query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+                        .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
             query1 = query.filter(currency=obj.currency)
             if query1: res= query1
             else: res= query
@@ -390,6 +453,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
     post_id = serializers.ReadOnlyField(source = 'id')
     post_name = serializers.ReadOnlyField(source='proj_name')
     post_desc = serializers.ReadOnlyField(source='proj_desc')
+    posted_by = serializers.ReadOnlyField(source='customer.fullname')
     apply = serializers.SerializerMethodField()
     post_bid_deadline =serializers.ReadOnlyField(source='bid_deadline')
     post_deadline = serializers.ReadOnlyField(source='proj_deadline')
@@ -399,13 +463,16 @@ class AvailablePostJobSerializer(serializers.Serializer):
 
 
     class Meta:
-        fields = ('post_id', 'post_name', 'post_desc','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
+        fields = ('post_id', 'post_name','posted_by','post_desc','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
 
     def get_apply(self, obj):
         vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         for i in jobs:
-            res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            if i.src_lang_id == i.tar_lang_id:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            else:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:
                 return True
         return False

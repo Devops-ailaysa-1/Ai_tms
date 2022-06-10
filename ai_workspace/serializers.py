@@ -5,7 +5,7 @@ from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,\
-		TaskAssignInfo,TaskAssignHistory,TaskDetails,VoiceProjectDetail,VoiceProjectFile,TaskTranscriptDetails
+		TaskAssignInfo,TaskAssignHistory,TaskDetails,VoiceProjectDetail,TaskTranscriptDetails
 import json
 import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -150,11 +150,11 @@ class VoiceProjectDetailSerializer(serializers.ModelSerializer):
 		# 		"required": False
 		# 	}
 		# }
-class VoiceProjectFileSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = VoiceProjectFile
-		fields = ('id','voice_project','audio_file')
-		read_only_fields = ("id","voice_project",)
+# class VoiceProjectFileSerializer(serializers.ModelSerializer):
+# 	class Meta:
+# 		model = VoiceProjectFile
+# 		fields = ('id','voice_project','audio_file')
+# 		read_only_fields = ("id","voice_project",)
 
 
 class ProjectContentTypeSerializer(serializers.ModelSerializer):
@@ -662,7 +662,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_bid_job_detail_info(self,obj):
 		if obj.job.project.proj_detail.all():
-			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id))
+			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language.id ))
 			return ProjectPostJobDetailSerializer(qs,many=True).data
 		else:
 			return None

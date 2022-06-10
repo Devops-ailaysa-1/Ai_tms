@@ -24,7 +24,7 @@ from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from django.db.models import Q, Sum
 from django.utils.functional import cached_property
-
+from ai_workspace.utils import create_ai_project_id_if_not_exists
 from django.db.models.fields.files import FieldFile, FileField
 
 from .manager import AilzaManager
@@ -119,9 +119,12 @@ class Project(models.Model):
         ''' try except block created for logging the exception '''
 
         if not self.ai_project_id:
-            # self.ai_user shoould be set before save
-            self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
-            objects.filter(ai_user=self.ai_user).count()+1)
+            self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
+
+        # if not self.ai_project_id:
+        #     # self.ai_user shoould be set before save
+        #     self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
+        #     objects.filter(ai_user=self.ai_user).count()+1)
 
         if not self.project_name:
             #self.project_name = self.ai_project_id
@@ -396,14 +399,14 @@ class VoiceProjectDetail(models.Model):
     # has_female = models.BooleanField(blank=True,null=True)
 
 
-class VoiceProjectFile(models.Model):
-    voice_project = models.ForeignKey(VoiceProjectDetail, null=True, blank=True, on_delete=models.CASCADE,related_name='voice_proj')
-    audio_file =  models.FileField (upload_to=get_audio_file_upload_path,blank=True, null=True)
-
-    @property
-    def filename(self):
-        if self.audio_file:
-            return  os.path.basename(self.audio_file.file.name)
+# class VoiceProjectFile(models.Model):
+#     voice_project = models.ForeignKey(VoiceProjectDetail, null=True, blank=True, on_delete=models.CASCADE,related_name='voice_proj')
+#     audio_file =  models.FileField (upload_to=get_audio_file_upload_path,blank=True, null=True)
+#
+#     @property
+#     def filename(self):
+#         if self.audio_file:
+#             return  os.path.basename(self.audio_file.file.name)
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -715,7 +718,7 @@ class Task(models.Model):
                 return True
             else:return False
         else:return True
-        
+
     @property
     def corrected_segment_count(self):
         doc = self.document
@@ -793,9 +796,16 @@ class TaskDetails(models.Model):
     def __str__(self):
         return "file=> "+ str(self.task.file) + ", job=> "+ str(self.task.job)
 
+def audio_file_path(instance, filename):
+    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
+            "Audio", filename)
+    return file_path
+
 class TaskTranscriptDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
-    transcripted_text = models.TextField()
+    transcripted_text = models.TextField(null=True,blank=True)
+    source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
+    translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
 
 
 class TmxFile(models.Model):
