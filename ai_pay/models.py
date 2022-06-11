@@ -8,6 +8,11 @@ class POAssignment(models.Model):
     #task_assign =  models.CharField(max_length=191, blank=True, null=True)
     assignment_id =  models.CharField(max_length=191, blank=True, null=True)
 
+    def __unicode__(self):
+        return self.assignment_id
+    def __str__(self):
+        return self.assignment_id
+
 class POTaskDetails(models.Model):
     task_id = models.CharField(max_length=191)
     assignment = models.ForeignKey(POAssignment,related_name='assignment_po',on_delete=models.PROTECT)
@@ -46,7 +51,8 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
 
 
 def po_dir_path(instance, filename):
-    return '{0}/{1}/{2}/{3}'.format(instance.user.uid, "Reports","PO",filename)
+    #return '{0}/{1}/{2}/{3}'.format(instance.user.uid, "Reports","PO",filename)
+    return '{0}/{1}/{2}'.format("ai_reports","PO",filename)
 
 class PurchaseOrder(models.Model):
     status =(
@@ -69,10 +75,14 @@ class PurchaseOrder(models.Model):
     po_status =models.CharField(max_length=50,choices=status,default='draft')
     po_file = models.FileField(upload_to=po_dir_path, blank=True, null=True)
     projectid=models.CharField(max_length=191)
+    po_total_amount = models.DecimalField(max_digits=12,decimal_places=2)
+    #po_pdf = models.FileField(upload_to ='ai_invoices/',null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-
+    @property
+    def get_pdf(self):
+        return self.po_file.url
 
 
 class AilaysaGeneratedInvoice(models.Model):

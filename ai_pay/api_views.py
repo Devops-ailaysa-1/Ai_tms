@@ -1,3 +1,4 @@
+import decimal
 from locale import currency
 from ai_auth.models import AiUser
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment
@@ -14,8 +15,16 @@ from django.template.loader import render_to_string
 
 from django.db.models import Count
 import logging
-
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
+from rest_framework.decorators import api_view,permission_classes
+from rest_framework import generics
+from ai_pay.models import POTaskDetails,POAssignment,PurchaseOrder
+from ai_pay.serializers import POTaskSerializer,POAssignmentSerializer, PurchaseOrderListSerializer,PurchaseOrderSerializer
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter,OrderingFilter
+from django.db.models import Q
 
 
 def get_stripe_key():
@@ -174,13 +183,14 @@ class CreateInvoiceVendor(viewsets.ViewSet):
 
 def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
-
     tasks = po.assignment.assignment_po.all()
     html_string = render_to_string('pdf_template_po.html', {'cust': po.client,'ven':po.seller,'status':po.po_status,'tasks':tasks})
 
     html = HTML(string=html_string)
-
-    html.write_pdf(target='mypdf.pdf');
+    po_res = html.write_pdf()
+    print('po_res',po_res)
+    po.po_file = SimpleUploadedFile( po.poid +'.pdf', po_res, content_type='application/pdf')
+    po.save()
     #po_generate()
 
     # fs = FileSystemStorage('/tmp')
@@ -210,27 +220,41 @@ def generate_invoice_offline(po_li):
                 invo = AilaysaGeneratedInvoice.objects.create(client=pos.last().client,seller=pos.last().seller,invo_status='draft')
                 for po in pos:
                     AiInvoicePO.objects.create(invoice=invo,po=po)
+                return invo
         except:
             logging.error("Invoice Generration Failed")
+            return None
      
 
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
-    try:
-       with transaction.atomic():
+
+    with transaction.atomic():
+        po_total_amt=0.0
         for instance in task_assign_info:
             assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id)[0]
+            if instance.mtpe_count_unit.unit=='Word':
+                tot_amount =instance.total_word_count * instance.mtpe_rate
+            elif instance.mtpe_count_unit.unit =='Char':
+                tot_amount = instance.task.task_details.last().task_char_count * instance.mtpe_rate
+            else:
+                # rasie error on invalid price should be rised
+                logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
+                tot_amount=0
             insert={'task_id':instance.task.id,'assignment':assign,'project_name':instance.task.job.project.project_name,
-                    'word_count':instance.total_word_count,'char_count':instance.task.task_details.last().task_char_count,'price':instance.mtpe_rate,
-                    'unit_type':instance.mtpe_count_unit,'source_language':instance.task.job.source_language,'target_language':instance.task.job.target_language}
+                    'word_count':instance.total_word_count,'char_count':instance.task.task_details.last().task_char_count,'unit_price':instance.mtpe_rate,
+                    'unit_type':instance.mtpe_count_unit,'source_language':instance.task.job.source_language,'target_language':instance.task.job.target_language,'total_amount':tot_amount}
+            print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
+            print("po_task",po_task)
+            po_total_amt+=float(tot_amount)
         insert2={'client':instance.assigned_by,'seller':instance.task.assign_to,
                 'assignment':assign,'currency':instance.currency,
-                'po_status':'issued'}
+                'po_status':'issued','po_total_amount':po_total_amt}
+        print("insert2",insert2)
         po=PurchaseOrder.objects.create(**insert2)
-    except:
-       print("PO Not generated")
-       logging.error("PO Generations Failed For assignment:{0}".format(instance.assignment_id))
+        print("po2",po)
+
 
 
 def generate_invoice_pdf(invo):
@@ -245,3 +269,59 @@ def generate_invoice_pdf(invo):
     html_string = render_to_string('pdf_template_invoice.html',context)
     html = HTML(string=html_string)
     html.write_pdf(target='myinvo.pdf');
+
+
+
+
+
+
+class POViewSet(viewsets.ViewSet):
+    def list(self, request):
+        queryset = POAssignment.objects.all()
+        serializer = POAssignmentSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class POListView(generics.ListAPIView):
+    #permission_classes=[IsAuthenticated]
+    serializer_class = PurchaseOrderListSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    #search_fields = ['']
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = PurchaseOrder.objects.filter(Q(client=user)|Q(seller=user))
+        return queryset
+
+    def list(self, request):
+        # Note the use of `get_queryset()` instead of `self.queryset`
+        queryset = self.get_queryset()
+        serializer = PurchaseOrderListSerializer(queryset,context=request)
+        return Response(serializer.data)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def po_request_payment(request):
+    poids = request.POST.getlist('poids')
+    print('request_dict',request.POST.getlist('poids'))
+    print('poid',poids)
+    invo = generate_invoice_offline(poids)
+    if invo:
+        return JsonResponse({"msg":"Successfully created Invoice"},safe=False,status=200)
+    else:
+        return JsonResponse({"msg":"Invoice creation failed"},status=400)
+    #generate_invoice_offline()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def po_pdf_get(request):
+    poid = request.POST.get('poid')
+    print('request_dict',request.POST.getlist('poids'))
+    print('poid',poid)
+    po =PurchaseOrder.objects.get(poid=poid)
+    if not po.po_file:
+        po = po_generate_pdf(po)
+    return JsonResponse({'url':po.get_pdf},safe=False,status=200)

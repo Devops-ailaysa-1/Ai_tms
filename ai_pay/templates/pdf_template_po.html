@@ -114,6 +114,7 @@
 			            		<td><p class="text-center">{{task.unit_price}}</p></td>
 								{% if task.unit_type.unit == 'Char' %}
 			            		<td><p class="text-center">{{task.char_count}}</p></td>
+								{%endif%}
 								{% if task.unit_type.unit == 'Word' %}
 			            		<td><p class="text-center">{{task.char_count}}</p></td>
 								{% endif %}
