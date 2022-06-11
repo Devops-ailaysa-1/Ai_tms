@@ -39,6 +39,7 @@ from django.db.models.fields import Field
 from integerations.github_.models import ContentFile
 from integerations.base.utils import DjRestUtils
 
+
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
     create_dirs_if_not_exists(path)
@@ -748,6 +749,8 @@ def ref_file_upload_path(instance, filename):
     return file_path
 
 class TaskAssignInfo(models.Model):
+    PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
+                    ("stripe","stripe")]
     task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
@@ -762,6 +765,7 @@ class TaskAssignInfo(models.Model):
             related_name="user_assign_info")
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     task_ven_accepted = models.BooleanField(default=False)
+    payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
@@ -774,6 +778,7 @@ class TaskAssignInfo(models.Model):
             return  os.path.basename(self.instruction_file.file.name)
         except:
             return None
+# post_save.connect(generate_client_po, sender=TaskAssignInfo)
 
 class TaskAssignHistory(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,

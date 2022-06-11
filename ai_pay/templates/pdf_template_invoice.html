@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+
+<head>
+	<title>Invoice</title>
+
+	<link  rel="stylesheet" href="{% static 'css/bootstrap.css' %}" >
+	<link  rel="stylesheet" href="{% static 'css/custom.css' %}" >
+	<link  rel="stylesheet" href="{% static 'css/responsive.css' %}" >
+	<link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet"></link>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+	<style type="text/css">
+
+		body {
+			background: #e6e6e6 !important;
+		}
+		@media print {
+			#print-invoice{
+				display: none;
+			}
+			@page {
+			    size: portrait;
+			    margin: 5mm 5mm 5mm 5mm; /* change the margins as you want them to be. */
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="project-owner-reg">
+ 	<section class="invoice new">
+ 		<section class="">
+	 		<section class="invoice-add">
+
+
+				<div class="col-12">
+				 <div class="col-12 col-md-6">
+					<img src="http://ailaysa.bleaptestserver.com/public/img/logo-ailaysa-big.png" width="180">
+					</div>
+				<div class="col-12 col-md-6" style="text-align: right;">
+					<h2> Invoice </h2>
+					<h6> 001 </h6>
+
+					<span align="right" class="inv-date"> 04/06.21 </span>
+					</div>
+				<div class="clearfix"> </div>
+				</div>
+
+
+ 			 	<div class="table-responsive">
+		            <table width="100%">
+
+			            <tbody>
+			            	<tr>
+			            		<td width="50%" valign="top" class="col">
+
+									<p>{{ven.fullname}}</p>
+									<p>{{ven.email}}</p>
+									{%if ven.profile_info.phonenumber%}
+									<p>Tel:ven.profile_info.phonenumber</p>
+									{% endif %}
+									{%if ven.gst%}
+									<p>GST: 12345</p>
+									{%endif%}
+								</td>
+			            		<td width="50%" valign="top" class="col">
+						<p><b>BILLING TO: </b><br><br>
+							<p>{{cust.fullname}}</p>
+							<p>{{cust.email}}</p>
+							{%if cust.profile_info.phonenumber%}
+							<p>Tel:cust.profile_info.phonenumber</p>
+							{% endif %}
+			            	</tr>
+			            </tbody>
+			        </table>
+			    </div>
+	 		</section>
+	 		<section class="project-blk table-responsive">
+				<table width="100%" style="width: 100%;" >
+				<tr>
+		
+                        <div class="prj-wrap"><label> PO-ID: </label><span> {% for ids in pos_ids %}
+							{{ids.poid}},
+							{% endfor %}
+						</span></div>
+				</td>
+					<td width="50%" align="left" valign="top" style="border-bottom: 0px !important;" class="col"><div class="prj-wrap inv-pro-name"><label>Currency: INR </label> </div>  </td>
+					</tr>
+
+
+				</table>
+	 		</section>
+ 		<section class="table">
+            <div class="table-responsive"><!--table-->
+
+
+
+	<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <thead>
+     <tr>
+		                    <th>Task ID</th>
+		                    <th>SAC</th>
+							<th>Project ID</th>
+		                    <th>SL</th>
+		                    <th>TL</th>
+		                    <th>Unit Type</th>
+		                    <th>Unit Rate</th>
+		                    <th>Total Units</th>
+		                    <th>Total</th>
+		                </tr>
+					</thead>
+					<tbody>
+						{% for task in tasks %}
+						<li></li>
+
+			            	<tr>
+			            		<td><p class="text-center">{{ task.id }}</p></td>
+			            		<td><p class="text-center">{{sac.id}}</p></td>
+								<td><p class="text-center">{{task.project.id}}</p></td>
+			            		<td><p class="text-center">{{task.source_language.language}}</p></td>
+			            		<td><p class="text-center">{{task.target_language.language}}</p></td>
+			            		<td><p class="text-center">
+			            			{{task.unit_type.unit}}
+			            		</p></td>
+			            		<td><p class="text-center">{{task.unit_rate}}</p></td>
+								{% if task.unit_type.unit == 'Char' %}
+			            		<td><p class="text-center">{{task.char_count}}</p></td>
+								{%endif%}
+								{% if task.unit_type.unit == 'Word' %}
+			            		<td><p class="text-center">{{task.char_count}}</p></td>
+								{% endif %}
+			            		<td><p class="text-center">{{task.amount}}</p></td>
+			            	</tr>
+							{% endfor %}
+
+
+
+                                <tr>
+                                  <td style="border-bottom: 0px !important;" colspan="9"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                    <tbody>
+
+                                      <tr>
+                                        <td width="63%" class="text-right" >&nbsp;</td>
+                                        <td width="19%" class="text-center" style="text-align: right; color: #000;">Sub Total</td>
+                                        <td style="text-align: center;" width="10%">58Rs</td>
+                                      </tr>
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-right"><span class="text-center">Total Before GST</span></td>
+                                        <td style="text-align: right;">55</td>
+                                      </tr>
+
+									{% if  GST%}
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">CGST @ 9%</span></td>
+                                        <td style="text-align: center;">9%</td>
+                                      </tr>
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">SGST @ 9%</span></td>
+                                        <td style="text-align: center;">9%</td>
+                                      </tr>
+									{% endif %}
+									{%if CGST %}
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">CGST @ 18%</span></td>
+                                        <td style="text-align: center;">18</td>
+                                      </tr>
+									{% endif %}
+
+
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td class="text-right" style="padding-right: 0px;"><span class="inv-blue">Total INR</span></td>
+                                        <td style="background: #16a1e2; border-top-right-radius: 8px; border-bottom-right-radius: 8px;"><p class="text-center"><span class="inv-blue">60</span> </p></td>
+                                      </tr>
+                                      <tr>
+                                        <td class="text-right">&nbsp;</td>
+                                        <td colspan="2" style="font-weight:500; color:#000;">Sixty only</td>
+                                      </tr>
+                                      </tbody>
+                                  </table></td>
+                                </tr>
+            </tbody>
+</table>
+
+
+		  </div><!--./table-->
+		</section>
+
+</body>
+</html>

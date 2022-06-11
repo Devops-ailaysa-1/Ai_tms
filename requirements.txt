@@ -183,5 +183,12 @@ wiktionaryparser==0.0.97
 wrapt==1.14.1
 XlsxWriter==3.0.1
 xlwt==1.3.0
+graphviz
+pydot
+spacy==3.2.3
+google-cloud-texttospeech
+google-cloud-speech
+gevent
 zope.interface==5.4.0
 docx2txt==0.8
+weasyprint==55.0

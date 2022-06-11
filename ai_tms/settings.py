@@ -130,6 +130,7 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
+    "ai_pay"
     # 'dbbackup',
     # 'django_q',
 ]
