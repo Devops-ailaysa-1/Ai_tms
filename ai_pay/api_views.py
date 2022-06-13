@@ -1,7 +1,8 @@
 import decimal
 from locale import currency
-from ai_auth.models import AiUser
+from ai_auth.models import AiUser, BillingAddress
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment
+from ai_staff.models import IndianStates
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from django.conf import settings
@@ -20,7 +21,8 @@ from django.db import transaction
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework import generics
 from ai_pay.models import POTaskDetails,POAssignment,PurchaseOrder
-from ai_pay.serializers import POTaskSerializer,POAssignmentSerializer, PurchaseOrderListSerializer,PurchaseOrderSerializer
+from ai_pay.serializers import (InvoiceListSerializer, POTaskSerializer,POAssignmentSerializer, 
+                PurchaseOrderListSerializer,PurchaseOrderSerializer,AilaysaGeneratedInvoiceSerializer)
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter,OrderingFilter
@@ -204,8 +206,26 @@ def po_generate_pdf(po):
 def download_pdf():
     pass
 
+def get_gst(client,seller):
+    if client.country.sortname == seller.country.sortname == 'IN':
+        return  2
+        # addr_client=BillingAddress.objects.get(user=client)
+        # addr_seller=BillingAddress.objects.get(user=seller)
+        # print(addr.state)
+        # state_client = IndianStates.objects.filter(state_name__icontains=addr_client.state)
+        # state_seller = IndianStates.objects.filter(state_name__icontains=addr_seller.state)
+        # if state_client.exists() and state_client.first().state_code == 'TN':
+        #     tax_rate=[TaxRate.objects.filter(display_name = 'CGST').last().id,TaxRate.objects.filter(display_name = 'SGST').last().id]
+        # elif state.exists():
+        #     tax_rate=[TaxRate.objects.filter(display_name = 'IGST').last().id,]
+        #tax_rate=[TaxRate.objects.get(display_name = 'GST',description='IN GST').id,]
+        
+    else:
+        return 0
 
-def generate_invoice_offline(po_li):
+
+
+def generate_invoice_offline(po_li,gst=None):
     #same currency po
     pos = PurchaseOrder.objects.filter(poid__in=po_li)
     res  = pos.values('currency').annotate(dcount=Count('currency')).order_by().count()
@@ -215,15 +235,26 @@ def generate_invoice_offline(po_li):
         logging.error("Invoice creation Failed More Than on currency or users")
         return None
     else:
-        try:
-            with transaction.atomic():
-                invo = AilaysaGeneratedInvoice.objects.create(client=pos.last().client,seller=pos.last().seller,invo_status='draft')
-                for po in pos:
-                    AiInvoicePO.objects.create(invoice=invo,po=po)
-                return invo
-        except:
-            logging.error("Invoice Generration Failed")
-            return None
+        # try:
+        with transaction.atomic():
+            # if gst: 
+            #     gst_tax =get_gst(pos.last().client,pos.last().seller)
+            #     pass
+            total_amount=0
+            tax_amount =0
+            currency = pos.last().currency
+            for po in pos:
+                total_amount+=float(po.po_total_amount)
+            grand_total = tax_amount + total_amount
+            invo = AilaysaGeneratedInvoice.objects.create(client=pos.last().client,
+                        seller=pos.last().seller,invo_status='open',tax_amount=tax_amount,total_amount=total_amount,gst="NOGST",grand_total=grand_total,currency=currency)
+            print("invo")
+            for po in pos:
+                AiInvoicePO.objects.create(invoice=invo,po=po)
+            return invo
+        # except:
+        #     logging.error("Invoice Generration Failed")
+        #     return None
      
 
 def generate_client_po(task_assign_info):
@@ -268,11 +299,9 @@ def generate_invoice_pdf(invo):
     context= {'cust': invo.client,'ven':invo.seller,'pos_ids':pos_ls,'status':invo.invo_status,'tasks':tasks}
     html_string = render_to_string('pdf_template_invoice.html',context)
     html = HTML(string=html_string)
-    html.write_pdf(target='myinvo.pdf');
-
-
-
-
+    invo_res = html.write_pdf()
+    invo.invo_file = SimpleUploadedFile(invo.invoid +'.pdf', invo_res, content_type='application/pdf')
+    invo.save()
 
 
 class POViewSet(viewsets.ViewSet):
@@ -305,9 +334,15 @@ class POListView(generics.ListAPIView):
 @permission_classes([IsAuthenticated])
 def po_request_payment(request):
     poids = request.POST.getlist('poids')
+    gst=request.POST.get('gst')
+    stripe_con = request.POST.get('use_stripe_con')
+
     print('request_dict',request.POST.getlist('poids'))
     print('poid',poids)
-    invo = generate_invoice_offline(poids)
+    if stripe_con:
+        pass
+    else:
+        invo = generate_invoice_offline(poids,gst)
     if invo:
         return JsonResponse({"msg":"Successfully created Invoice"},safe=False,status=200)
     else:
@@ -318,10 +353,43 @@ def po_request_payment(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def po_pdf_get(request):
-    poid = request.POST.get('poid')
-    print('request_dict',request.POST.getlist('poids'))
-    print('poid',poid)
+    poid = request.GET.get('poid')
     po =PurchaseOrder.objects.get(poid=poid)
     if not po.po_file:
-        po = po_generate_pdf(po)
+        po_pdf = po_generate_pdf(po)
     return JsonResponse({'url':po.get_pdf},safe=False,status=200)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def invoice_pdf_get(request):
+    invoid = request.GET.get('invoice_id')
+    invo =AilaysaGeneratedInvoice.objects.get(invoid=invoid)
+    if not invo.invo_file:
+        invo_pdf = generate_invoice_pdf(invo)
+    return JsonResponse({'url':invo.get_pdf},safe=False,status=200)
+
+
+
+class InvoiceListView(generics.ListAPIView):
+    #permission_classes=[IsAuthenticated]
+    serializer_class = InvoiceListSerializer
+    #filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    #search_fields = ['']
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = AilaysaGeneratedInvoice.objects.filter(Q(client=user)|Q(seller=user))
+        return queryset
+
+    def list(self, request):
+        # Note the use of `get_queryset()` instead of `self.queryset`
+        queryset = self.get_queryset()
+        serializer = InvoiceListSerializer(queryset,context=request)
+        return Response(serializer.data)
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def gen_invoice_offline(request):
+#     poids = request.POST.getlist('poids')

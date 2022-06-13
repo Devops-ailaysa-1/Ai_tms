@@ -85,6 +85,10 @@ class PurchaseOrder(models.Model):
         return self.po_file.url
 
 
+def invoice_dir_path(instance, filename):
+    #return '{0}/{1}/{2}/{3}'.format(instance.user.uid, "Reports","PO",filename)
+    return '{0}/{1}/{2}'.format("ai_reports","Invoice",filename)
+
 class AilaysaGeneratedInvoice(models.Model):
     '''Invoice generate by Ailaysa'''
     STATUS =(
@@ -93,14 +97,25 @@ class AilaysaGeneratedInvoice(models.Model):
     ("open","open"),
     ("void","void")
     )
+    GST_CAT =(("NOGST","NOGST"),("SGST,CGST","SGST,CGST"),("IGST","IGST"))
     def generate_invo_id():
         return "{0}".format(id_generator())
-    invo_id=models.CharField(max_length=50,default=generate_invo_id,unique=True)
+    invoid=models.CharField(max_length=50,default=generate_invo_id,unique=True)
     invo_status=models.CharField(max_length=50,choices=STATUS)
     client=models.ForeignKey(AiUser,related_name='user_client_invo',on_delete=models.PROTECT)
     seller=models.ForeignKey(AiUser,related_name='user_seller_invo',on_delete=models.PROTECT)
+    invo_file = models.FileField(upload_to=invoice_dir_path, blank=True, null=True)
+    gst = models.CharField(max_length=50,choices=GST_CAT)
+    tax_amount = models.DecimalField(max_digits=12,decimal_places=2)
+    total_amount = models.DecimalField(max_digits=12,decimal_places=2)
+    grand_total = models.DecimalField(max_digits=12,decimal_places=2)
+    currency = models.ForeignKey(Currencies,related_name='ai_invo_currency', on_delete=models.PROTECT,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    @property
+    def get_pdf(self):
+        return self.invo_file.url
 
 class AiInvoicePO(models.Model):
     invoice=models.ForeignKey(AilaysaGeneratedInvoice,related_name='ai_invo_po',on_delete=models.CASCADE)

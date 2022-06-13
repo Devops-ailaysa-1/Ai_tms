@@ -16,7 +16,9 @@ urlpatterns = [
      path('con-invoice/', api_views.CreateInvoiceVendor.as_view({"post":"create"}), name='con-invoice'),
     path('po-list/',api_views.POListView.as_view(),name= 'po_list'),
     path('po-req-pay/',api_views.po_request_payment,name='po_req_pay'),
-    path('po-pdf/',api_views.po_pdf_get,name='get_po_pdf')
+    path('po-pdf/',api_views.po_pdf_get,name='get_po_pdf'),
+    path('invo-pdf/',api_views.invoice_pdf_get,name='get_invo_pdf'),
+    path('invo-list/',api_views.InvoiceListView.as_view(),name='invo_list')
 ]
 
 
