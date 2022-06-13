@@ -814,3 +814,11 @@ def get_languages(request):
     queryset = Languages.objects.all().order_by('language')
     serializer = LanguagesSerializerNew(queryset, many=True)
     return Response(serializer.data)
+
+
+
+@api_view(['GET',])
+def vendor_language_pair_currency(request):
+    queryset = Currencies.objects.filter(id__in = [48,45,63,144])
+    serializer = CurrenciesSerializer(queryset, many=True)
+    return Response(serializer.data)
