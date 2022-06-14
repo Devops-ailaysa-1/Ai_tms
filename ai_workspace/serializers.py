@@ -885,10 +885,13 @@ class GetAssignToSerializer(serializers.Serializer):
 			return []
 
 	def get_external_editors(self,obj):
+		default = AiUser.objects.get(id=8)
+		try:profile = default.hired_editor.professional_identity_info.avatar_url
+		except:profile = None
 		request = self.context['request']
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
 		ser = HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data
-		tt = []
+		tt = [{'name':default.fullname,'id':default.id,'status':'Invite Accepted','avatar':profile}]
 		for i in ser:
 			if i.get("vendor_lang_pair")!=[]:
 				tt.append(i)
