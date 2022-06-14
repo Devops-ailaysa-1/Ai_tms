@@ -44,6 +44,8 @@ urlpatterns+=[
     path('get_wikipedia/<int:doc_id>/', api_views.WikipediaWorkspace, name='get-wikipedia'),
     path('get_wiktionary/<int:doc_id>/', api_views.WiktionaryWorkSpace, name='get-wiktionary'),
     path('spellcheck/', api_views.spellcheck, name='spellcheck'),
+    path('synonyms/',api_views.synonmys_lookup, name ='synonyms'),
+    path('paraphrase/',api_views.paraphrasing, name = 'paraphrase'),
 ]
 
 urlpatterns+=[

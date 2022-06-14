@@ -135,7 +135,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
              lang = VendorLanguagePair.objects.get(id=existing_lang_pair_id)
 
          if apply_for_reverse:
-             reverse_data={"source_lang_id":lang.target_lang_id,"target_lang_id":lang.source_lang_id,"user_id":user_id}
+             reverse_data={"source_lang_id":lang.target_lang_id,"target_lang_id":lang.source_lang_id,"currency":lang.currency,"user_id":user_id}
              print("reverse_data--->",reverse_data)
              lang_reverse = VendorLanguagePair.objects.create(**reverse_data)
 

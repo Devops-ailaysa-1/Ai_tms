@@ -2,7 +2,7 @@ from datetime import datetime
 from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
-                          TM_FetchSerializer)
+                          TM_FetchSerializer,VerbSerializer)
 from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer,TaskTranscriptDetailSerializer
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets, authentication
@@ -1060,3 +1060,33 @@ def spellcheck(request):
             return JsonResponse({"result":res},safe=False)
     except:
         return JsonResponse({"message":"Spellcheck not available"},safe=False)
+
+####################################################### Hemanth #########################################################
+
+@api_view(['POST',])
+def paraphrasing(request):
+    sentence = request.POST.get('sentence')
+    try:
+        text = {}
+        text['sentence'] = sentence
+        end_pts = settings.END_POINT +"paraphrase/"
+        data = requests.post(end_pts , text)
+        return JsonResponse(data.json())
+    except:
+        return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
+
+
+
+@api_view(['POST',])
+def synonmys_lookup(request):
+    if request.method == "POST":
+        try:
+            data = {}
+            txt = request.POST["text"]
+            end_pts = settings.END_POINT +"synonyms/"
+            data['text'] = txt
+            result = requests.post(end_pts , data )
+            serialize = VerbSerializer(result.json())
+            return JsonResponse(serialize.data)
+        except:
+            return JsonResponse({"message":"error in synonmys"},safe=False)

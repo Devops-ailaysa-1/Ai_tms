@@ -90,13 +90,20 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
 
 
     def get_queryset(self):
+        print(self.request.user)
         queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         return queryset
 
     def list(self,request):
         queryset = self.get_queryset()
-        serializer = VendorLanguagePairSerializer(queryset,many=True)
-        return Response(serializer.data)
+        res ={}
+        for i in queryset:
+            q2 = VendorLanguagePair.objects.filter(Q(source_lang = i.source_lang)&Q(target_lang=i.target_lang)&Q(user_id=i.user_id))
+            tt = str(i.source_lang.language) + '-->' + str(i.target_lang.language)
+            ser = VendorLanguagePairSerializer(q2,many=True)
+            res[tt]=ser.data
+        # serializer = VendorLanguagePairSerializer(queryset,many=True)
+        return Response(res)
 
    # def retrieve(self, request, pk=None):
    #      queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
