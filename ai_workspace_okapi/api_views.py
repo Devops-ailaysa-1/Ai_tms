@@ -32,6 +32,7 @@ from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
+import hunspell,nltk
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 from ai_workspace.api_views import UpdateTaskCreditStatus
@@ -1034,7 +1035,7 @@ def WiktionaryWorkSpace(request,doc_id):
     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
 
 
-######  USING PY SPELLCHECKER  ######
+######  USING PY SPELLCHECKER  AND HunSpell######
 @api_view(['GET', 'POST',])
 def spellcheck(request):
     tar = request.POST.get('target')
@@ -1042,28 +1043,44 @@ def spellcheck(request):
     doc = Document.objects.get(id=doc_id)
     out,res = [],[]
     try:
-        spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
-        if spellchecker=="pyspellchecker":
-            code = doc.target_language_code
-            spell = SpellChecker(code)
-            words=spell.split_words(tar)#list
-            misspelled=spell.unknown(words)#set
-            for word in misspelled:
-                suggestion=list(spell.candidates(word))
-                for k in words:
-                    if k==word.capitalize():
-                        out=[{"word":k,"Suggested Words":suggestion}]
-                        break
-                    else:
-                        out=[{"word":word,"Suggested Words":suggestion}]
-                res.extend(out)
+        if doc.target_language_code == 'en':
+            lang = doc.target_language_code
+            dic = r'/ai_home/dictionaries/{lang}.dic'.format(lang = lang)
+            aff = r'/ai_home/dictionaries/{lang}.aff'.format(lang = lang)
+            hobj = hunspell.HunSpell(dic,aff )
+            punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+            nltk_tokens = nltk.word_tokenize(tar)
+            tokens_new = [word for word in nltk_tokens if word not in punctuation]
+            for word in tokens_new:
+                suggestions=[]
+                if hobj.spell(word)==False:
+                     suggestions.extend(hobj.suggest(word))
+                     out=[{"word":word,"Suggested Words":suggestions}]
+                     res.extend(out)
             return JsonResponse({"result":res},safe=False)
+        else:
+            spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
+            if spellchecker=="pyspellchecker":
+                code = doc.target_language_code
+                spell = SpellChecker(code)
+                words=spell.split_words(tar)#list
+                misspelled=spell.unknown(words)#set
+                for word in misspelled:
+                    suggestion=list(spell.candidates(word))
+                    for k in words:
+                        if k==word.capitalize():
+                            out=[{"word":k,"Suggested Words":suggestion}]
+                            break
+                        else:
+                            out=[{"word":word,"Suggested Words":suggestion}]
+                    res.extend(out)
+                return JsonResponse({"result":res},safe=False)
     except:
         return JsonResponse({"message":"Spellcheck not available"},safe=False)
 
 ####################################################### Hemanth #########################################################
 
-@api_view(['POST',])
+@api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
     sentence = request.POST.get('sentence')
     try:
@@ -1077,7 +1094,7 @@ def paraphrasing(request):
 
 
 
-@api_view(['POST',])
+@api_view(['POST',])############### only available for english ###################
 def synonmys_lookup(request):
     if request.method == "POST":
         try:
@@ -1090,3 +1107,14 @@ def synonmys_lookup(request):
             return JsonResponse(serialize.data)
         except:
             return JsonResponse({"message":"error in synonmys"},safe=False)
+
+
+
+@api_view(['POST',])############### only available for english ###################
+def grammar_check_model(request):
+    text = request.POST.get('target')
+    data = {}
+    data['text'] = text
+    end_pts = settings.END_POINT +"grammar-checker/"
+    result = requests.post(end_pts , data )
+    return JsonResponse(result.json())

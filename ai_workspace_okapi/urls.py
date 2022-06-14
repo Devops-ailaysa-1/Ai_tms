@@ -45,6 +45,7 @@ urlpatterns+=[
     path('get_wiktionary/<int:doc_id>/', api_views.WiktionaryWorkSpace, name='get-wiktionary'),
     path('spellcheck/', api_views.spellcheck, name='spellcheck'),
     path('synonyms/',api_views.synonmys_lookup, name ='synonyms'),
+    path('grammercheck/',api_views.grammar_check_model, name ='grammercheck'),
     path('paraphrase/',api_views.paraphrasing, name = 'paraphrase'),
 ]
 
