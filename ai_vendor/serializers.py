@@ -85,12 +85,13 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
      existing_lang_pair_id=serializers.PrimaryKeyRelatedField(queryset=VendorLanguagePair.objects.all().values_list('pk', flat=True),required=False,write_only=True)
      apply_for_reverse=serializers.IntegerField(write_only=True,required=False)
      user_id=serializers.IntegerField()
+     currency_code =  serializers.ReadOnlyField(source ='currency.currency_code')
      source_lang_name = serializers.ReadOnlyField(source ='source_lang.language')
      target_lang_name = serializers.ReadOnlyField(source ='target_lang.language')
 
      class Meta:
          model = VendorLanguagePair
-         fields=('id','user_id','source_lang','target_lang','currency','source_lang_name','target_lang_name','service','servicetype','translationfile','mtpesamples','existing_lang_pair_id','apply_for_reverse',)
+         fields=('id','user_id','source_lang','target_lang','currency','currency_code','source_lang_name','target_lang_name','service','servicetype','translationfile','mtpesamples','existing_lang_pair_id','apply_for_reverse',)
          extra_kwargs = {
             'translationfile':{'read_only':True},
             'MtpeSamples':{'read_only':True},

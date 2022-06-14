@@ -14,7 +14,7 @@ def print_key_value(keys, values):
 
 def create_assignment_id():
 	from ai_workspace.models import TaskAssignInfo
-	rand_id = "AssId-"+str(random.randint(1,10000))
+	rand_id = "AS-"+str(random.randint(1,10000))
 	pr = TaskAssignInfo.objects.filter(assignment_id = rand_id)
 	if not pr:
 		return  rand_id
