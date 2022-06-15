@@ -90,13 +90,20 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
 
 
     def get_queryset(self):
+        print(self.request.user)
         queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         return queryset
 
     def list(self,request):
         queryset = self.get_queryset()
-        serializer = VendorLanguagePairSerializer(queryset,many=True)
-        return Response(serializer.data)
+        res ={}
+        for i in queryset:
+            q2 = VendorLanguagePair.objects.filter(Q(source_lang = i.source_lang)&Q(target_lang=i.target_lang)&Q(user_id=i.user_id))
+            tt = str(i.source_lang.language) + '-->' + str(i.target_lang.language)
+            ser = VendorLanguagePairSerializer(q2,many=True)
+            res[tt]=ser.data
+        # serializer = VendorLanguagePairSerializer(queryset,many=True)
+        return Response(res)
 
    # def retrieve(self, request, pk=None):
    #      queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
@@ -214,6 +221,7 @@ class VendorsBankInfoCreateView(APIView):
 @api_view(['GET','POST',])
 def feature_availability(request):
     doc_id= request.POST.get("doc_id")
+    doc = Document.objects.get(id=doc_id)
     target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
     source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
 
@@ -229,11 +237,12 @@ def feature_availability(request):
     # CHECK FOR IME
     show_ime = True if LanguageMetaDetails.objects.get(language_id=target_lang_id).ime == True else False
 
-
+    #Check for paraphrase and grammercheck
+    show_paraphrase_and_grammercheck = True if doc.target_language_code == 'en' else False
     # CHECK FOR NER AVAILABILITY
     # show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False
 
-    return JsonResponse({"out":data, "show_ime":show_ime}, safe = False)
+    return JsonResponse({"out":data, "show_ime":show_ime, "show_paraphrase_and_grammercheck":show_paraphrase_and_grammercheck}, safe = False)
 
 @api_view(['GET',])
 def vendor_legal_categories_list(request):
