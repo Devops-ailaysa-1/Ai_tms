@@ -1,3 +1,5 @@
+import random
+import string
 from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_auth.utils import get_unique_pid
@@ -28,7 +30,7 @@ from ai_workspace.utils import create_ai_project_id_if_not_exists
 from django.db.models.fields.files import FieldFile, FileField
 
 from .manager import AilzaManager
-from .utils import create_dirs_if_not_exists
+from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
@@ -651,7 +653,15 @@ class Version(models.Model):
     def __str__(self):
         return self.version_name
 
+
+def id_generator_ws(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
 class Task(models.Model):
+    def generate_task_id():
+        return "TK-{0}".format(id_generator_ws())
+
+    ai_taskid=models.CharField(max_length=50,unique=True,null=True)
     file = models.ForeignKey(File, on_delete=models.CASCADE, null=False, blank=False,
             related_name="file_tasks_set")
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
@@ -669,6 +679,11 @@ class Task(models.Model):
         ]
 
     objects = TaskManager()
+
+    def save(self, *args, **kwargs):
+        if not self.ai_taskid:
+            self.ai_taskid = create_task_id()
+        super().save()
 
     @property
     def get_document_url(self):
