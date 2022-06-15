@@ -473,8 +473,8 @@ class AvailableJobsListView(generics.ListAPIView):
 
     def get_queryset(self):
         self.validate()
-        present = datetime.now()
-        queryset= ProjectboardDetails.objects.filter(Q(bid_deadline__gte = present) & Q(deleted_at__isnull = True) &Q(closed_at__isnull = True)).distinct()
+        present = timezone.now()
+        queryset= ProjectboardDetails.objects.filter(~Q(customer=self.request.user)).filter(Q(bid_deadline__gte = present) & Q(deleted_at__isnull = True) &Q(closed_at__isnull = True)).distinct()
         return queryset
 
 
