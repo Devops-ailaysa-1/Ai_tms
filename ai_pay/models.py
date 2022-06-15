@@ -23,6 +23,7 @@ class POTaskDetails(models.Model):
     target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
         related_name="po_target_lang")
     project_name = models.CharField(max_length=223, blank=True, null=True)
+    projectid= models.CharField(max_length=223, blank=True, null=True)
     word_count=models.IntegerField(null=True,blank=True)
     char_count=models.IntegerField(null=True,blank=True)
     unit_price =models.DecimalField(max_digits=12, decimal_places=2)
@@ -74,7 +75,6 @@ class PurchaseOrder(models.Model):
     currency = models.ForeignKey(Currencies,related_name='po_currency', on_delete=models.PROTECT,blank=True, null=True)
     po_status =models.CharField(max_length=50,choices=status,default='draft')
     po_file = models.FileField(upload_to=po_dir_path, blank=True, null=True)
-    projectid=models.CharField(max_length=191)
     po_total_amount = models.DecimalField(max_digits=12,decimal_places=2)
     #po_pdf = models.FileField(upload_to ='ai_invoices/',null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
