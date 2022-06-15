@@ -76,7 +76,16 @@ def shortlisted_vendor_list_send_email_new(sender, instance, created, *args, **k
 #     res=update_billing_address(address=instance)
 #     print("-----------updated customer address-------")
 
-
+# def vendorsinfo_update(sender, instance, created, *args, **kwargs):
+# 	from ai_vendor.models import VendorsInfo
+# 	if created:
+# 		try:
+# 			user = AiUser.objects.get(email = instance.email)
+# 			query = VendorsInfo.objects.filter(user=user)
+# 			tt = query.update(cv_file=instance.cv_file)
+# 			print("@@@@",tt)
+# 		except:
+# 			pass
 
 
 # def update_billing_address(address):

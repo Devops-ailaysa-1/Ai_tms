@@ -1204,10 +1204,14 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
+        from ai_vendor.models import VendorsInfo
         cv_file = request.FILES.get('cv_file')
+        email = request.POST.get('email')
         serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
+            user = AiUser.objects.get(email = email)
+            query = VendorsInfo.objects.create(user=user,cv_file=cv_file)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
