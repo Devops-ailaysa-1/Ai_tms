@@ -18,6 +18,7 @@ from dj_rest_auth.serializers import UserDetailsSerializer
 from ai_auth.serializers import ProfessionalidentitySerializer
 from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
+from  django.utils import timezone
 
 
 class SimpleProjectSerializer(serializers.ModelSerializer):
@@ -337,6 +338,7 @@ class ProjectPostTemplateSubjectFieldSerializer(serializers.ModelSerializer):
 
 class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     bid_count = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
     # bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
     projectpost_jobs=ProjectPostJobDetailSerializer(many=True,required=False)
     projectpost_content_type=ProjectPostContentTypeSerializer(many=True,required=False)
@@ -347,7 +349,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     # steps_id = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),write_only=True)
     class Meta:
         model=ProjectboardDetails
-        fields=('id','project_id','customer_id','proj_name','proj_desc','post_word_count',
+        fields=('id','project_id','customer_id','proj_name','proj_desc','post_word_count','status',
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
                  'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',
@@ -358,6 +360,14 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
         print(obj.bidproject_details.count())
         return obj.bidproject_details.count()
 
+    def get_status(self,obj):
+        present = timezone.now()
+        if obj.closed_at:
+            return "Closed"
+        elif obj.bid_deadline < present:
+            return "Expired"
+        else:
+            return "Active"
 
     def run_validation(self, data):
         # if data.get('steps'):

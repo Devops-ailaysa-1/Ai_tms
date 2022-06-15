@@ -53,6 +53,7 @@ urlpatterns += [
      path('project_types/',api_views.ProjectTypeView.as_view({'get': 'list'}),name = 'project-type'),
      path('sub_category/',api_views.ProjectTypeDetailView.as_view({'get': 'list'}),name = 'project-type-detail'),
      path('get_languages/',api_views.get_languages),
+     path('vendor_language_pair_currency/',api_views.vendor_language_pair_currency),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      path('insert',views.Bulk_insert)
 
