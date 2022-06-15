@@ -1211,7 +1211,10 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             user = AiUser.objects.get(email = email)
-            query = VendorsInfo.objects.get_or_create(user=user,defaults = {"cv_file":cv_file})
+            obj,created = VendorsInfo.objects.get_or_create(user=user,defaults = {"cv_file":cv_file})
+            if created == False:
+                obj.cv_file = cv_file
+                obj.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
