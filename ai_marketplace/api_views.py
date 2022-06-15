@@ -270,7 +270,7 @@ class BidPostInfoCreateView(viewsets.ViewSet):
                 print(request.user.id)
                 id = request.GET.get('id')
                 queryset = BidPropasalDetails.objects.filter(Q(vendor=request.user.id)).distinct().order_by('-id').all()
-                serializer = BidPropasalDetailSerializer(queryset,many=True)
+                serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
                 return Response(serializer.data)
             except:
                 return Response(status=status.HTTP_204_NO_CONTENT)
@@ -283,13 +283,13 @@ class BidPostInfoCreateView(viewsets.ViewSet):
             post_id = request.POST.get('post_id')
             post = ProjectboardDetails.objects.get(id=post_id)
             sample_file=request.FILES.get('sample_file')
-            serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':request.user.id})#,context={'request':request})
+            serializer = BidPropasalDetailSerializer(data={**request.POST.dict(),'projectpost_id':post_id,'sample_file':sample_file,'vendor_id':request.user.id},context={'request':request})
             print(serializer.is_valid())
             if serializer.is_valid():
                 with transaction.atomic():
                     serializer.save()
                 queryset = BidPropasalDetails.objects.filter(projectpost_id= post_id).all()
-                serializer = BidPropasalDetailSerializer(queryset,many=True)
+                serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
                 return Response({"msg":"Bid Posted","data":serializer.data})
             return Response(serializer.errors)
         else:
@@ -301,9 +301,9 @@ class BidPostInfoCreateView(viewsets.ViewSet):
         # Bid_info = get_object_or_404(queryset, id=bid_proposal_id)
         sample_file=request.FILES.get('sample_file')
         if sample_file:
-            serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file':sample_file},partial=True)
+            serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict(),'sample_file':sample_file},context={'request':request},partial=True)
         else:
-            serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict()},partial=True)
+            serializer = BidPropasalDetailSerializer(Bid_info,data={**request.POST.dict()},context={'request':request},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

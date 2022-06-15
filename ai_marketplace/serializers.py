@@ -149,15 +149,16 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         return res
 
     def update(self, instance, data):
-        service = data.pop("service_and_rates",[])[0]
-        queryset = BidPropasalDetails.objects.filter(bidpostjob_id=service.get('bidpostjob'))
-        edited_count = 1 if queryset.first().edited_count==None else queryset.first().edited_count+1
+        service = data.pop("service_and_rates",[])
         dt = super().update(instance, data)
         if service:
-            queryset.update(mtpe_rate=service.get('mtpe_rate'),\
-                                            mtpe_hourly_rate =service.get('mtpe_hourly_rate'),mtpe_count_unit = service.get('mtpe_count_unit'),\
+            queryset = BidPropasalDetails.objects.filter(bidpostjob_id=service[0].get('bidpostjob'))
+            edited_count = 1 if queryset.first().edited_count==None else queryset.first().edited_count+1
+            queryset.update(mtpe_rate=service[0].get('mtpe_rate'),\
+                                            mtpe_hourly_rate =service[0].get('mtpe_hourly_rate'),mtpe_count_unit = service[0].get('mtpe_count_unit'),\
                                             status_id=5,edited_count=edited_count)
-        return queryset[0]
+            return queryset[0]
+        return instance
 
 
 
