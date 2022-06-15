@@ -131,6 +131,11 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
 
 
     def run_validation(self, data):
+        if self.context['request']._request.method == 'POST':
+            pp = ProjectboardDetails.objects.get(id = data.get('projectpost_id'))
+            vendor = AiUser.objects.get(id=data.get('vendor_id'))
+            if vendor == pp.customer:
+                raise serializers.ValidationError({"msg":"you can't bid your post"})
         if data.get("service_and_rates") and isinstance( data.get("service_and_rates"), str):
             data["service_and_rates"]=json.loads(data["service_and_rates"])
         return super().run_validation(data)

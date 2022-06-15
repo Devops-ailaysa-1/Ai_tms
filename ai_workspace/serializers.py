@@ -660,7 +660,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Task
 		fields = \
-			("id","filename", "source_language", "target_language", "task_word_count","project_name",\
+			("id","filename", "ai_taskid","source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable",)
 
 	def get_bid_job_detail_info(self,obj):

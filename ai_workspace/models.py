@@ -662,6 +662,7 @@ class Task(models.Model):
         return "TK-{0}".format(id_generator_ws())
 
     ai_taskid=models.CharField(max_length=50,unique=True,null=True)
+    
     file = models.ForeignKey(File, on_delete=models.CASCADE, null=False, blank=False,
             related_name="file_tasks_set")
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
