@@ -78,8 +78,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         if source_language and target_language:
             VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language)
+            if not cv_file:
+                VendorsInfo.objects.create(user=user,onboarded_as_vendor=True)
         if cv_file:
-            VendorsInfo.objects.create(user=user,cv_file = cv_file )
+            VendorsInfo.objects.create(user=user,cv_file = cv_file,onboarded_as_vendor=True )
             VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
         if campaign:
             CampaignUsers.objects.create(user=user,campaign_name=campaign)

@@ -1652,28 +1652,32 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-def vendor_onboard_check(email):
+def vendor_onboard_check(email,user):
+    from ai_vendor.models import VendorsInfo
     try:
         obj = VendorOnboarding.objects.get(email = email)
-        print(obj)
         return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
-    except VendorOnboarding.DoesNotExist:
-        return Response(status=204)
+    except:
+        try:
+            obj1 = VendorsInfo.objects.get(user = user)
+            if obj1.onboarded_as_vendor == True:
+                return JsonResponse({'msg':'onboarded_as_vendor and profile incomplete'})
+        except:
+            return Response(status=204)
 
 
 @api_view(['POST',])
 def vendor_form_filling_status(request):
     email = request.POST.get('email')
-    print("Email---->",email)
     try:
         user = AiUser.objects.get(email=email)
         if user.is_vendor == True:
             return JsonResponse({"msg":"Already a vendor"})
         else:
-            res = vendor_onboard_check(email)
+            res = vendor_onboard_check(email,user)
             return res
     except:
-        res = vendor_onboard_check(email)
+        res = vendor_onboard_check(email,None)
         return res
 
 class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
