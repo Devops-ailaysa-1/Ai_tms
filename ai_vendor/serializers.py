@@ -104,20 +104,20 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
      def run_validation(self, data):
          print("Data--->",data)
          data["user_id"] = self.context.get("request").user.id
-         if self.context['request']._request.method == 'POST':
-             if "source_lang" in data and "target_lang" in data:
-                 tt = VendorLanguagePair.objects.filter(source_lang_id=data.get('source_lang'),target_lang_id=data.get('target_lang'),user_id=data['user_id'])
-                 if len(tt) == 1:
-                     if tt.first().service.exists():pass
-                     elif tt.first().servicetype.exists():pass
-                     else:tt.delete()
-         # if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
-         #    or ((("existing_lang_pair_id") in data) and (((("source_lang") in data) and(("target_lang") in data))\
-         #    or("apply_for_reverse") in data))):
          # if self.context['request']._request.method == 'POST':
-         #     if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
-         #        or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
-         #         raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
+         #     if "source_lang" in data and "target_lang" in data:
+         #         tt = VendorLanguagePair.objects.filter(source_lang_id=data.get('source_lang'),target_lang_id=data.get('target_lang'),user_id=data['user_id'])
+         #         if len(tt) == 1:
+         #             if tt.first().service.exists():pass
+         #             elif tt.first().servicetype.exists():pass
+         #             else:tt.delete()
+         # # if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
+         # #    or ((("existing_lang_pair_id") in data) and (((("source_lang") in data) and(("target_lang") in data))\
+         # #    or("apply_for_reverse") in data))):
+         # # if self.context['request']._request.method == 'POST':
+         # #     if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
+         # #        or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
+         # #         raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
          if "source_lang" in data:
              if data.get('source_lang')==data.get('target_lang'):
                  raise serializers.ValidationError({"message":"source and target language should not be same"})
