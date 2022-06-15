@@ -1211,16 +1211,18 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             user = AiUser.objects.get(email = email)
-            query = VendorsInfo.objects.create(user=user,cv_file=cv_file)
+            query = VendorsInfo.objects.get_or_create(user=user,defaults = {"cv_file":cv_file})
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # def update(self, request, pk):
     #     cv_file=request.FILES.get('cv_file')
-    #     try:
-    #         queryset = VendorOnboarding.objects.get(id=pk)
-    #     except VendorOnboarding.DoesNotExist:
-    #         return Response(status=204)
+    #     queryset = VendorOnboarding.objects.get(id=pk)
+    #     serializer = VendorOnboardingSerializer(queryset,data={'cv_file':cv_file},partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     #     rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
     #     serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
     #     if serializer.is_valid():
