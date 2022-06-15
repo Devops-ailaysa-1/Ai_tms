@@ -186,7 +186,11 @@ class CreateInvoiceVendor(viewsets.ViewSet):
 def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
     tasks = po.assignment.assignment_po.all()
-    html_string = render_to_string('pdf_template_po.html', {'cust': po.client,'ven':po.seller,'status':po.po_status,'tasks':tasks})
+    project_id=tasks.last().projectid
+    project_name=tasks.last().project_name
+    context={'client': po.client,'seller':po.seller,'poid':po.poid,
+     'created_at':po.created_at,'project_name':project_name ,'project_id':project_id,'currency':po.currency.currency_code,'po_total_amount':po.po_total_amount,'tasks':tasks}
+    html_string = render_to_string('po_pdf.html', context)
 
     html = HTML(string=html_string)
     po_res = html.write_pdf()
@@ -272,7 +276,7 @@ def generate_client_po(task_assign_info):
                 # rasie error on invalid price should be rised
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
-            insert={'task_id':instance.task.id,'assignment':assign,'project_name':instance.task.job.project.project_name,
+            insert={'task_id':instance.task.id,'assignment':assign,'project_name':instance.task.job.project.project_name,'projectid':instance.task.job.project.ai_project_id,
                     'word_count':instance.total_word_count,'char_count':instance.task.task_details.last().task_char_count,'unit_price':instance.mtpe_rate,
                     'unit_type':instance.mtpe_count_unit,'source_language':instance.task.job.source_language,'target_language':instance.task.job.target_language,'total_amount':tot_amount}
             print("insert1",insert)
@@ -296,8 +300,8 @@ def generate_invoice_pdf(invo):
     #     qs=tasks.union(tasks)
     tasks =  POTaskDetails.objects.filter(assignment__po_assign__in=pos_ls)
     print("tasks invo",tasks)
-    context= {'cust': invo.client,'ven':invo.seller,'pos_ids':pos_ls,'status':invo.invo_status,'tasks':tasks}
-    html_string = render_to_string('pdf_template_invoice.html',context)
+    context= {'client': invo.client,'seller':invo.seller,'pos_ids':pos_ls,'invo':invo,'tasks':tasks}
+    html_string = render_to_string('invoice_pdf.html',context)
     html = HTML(string=html_string)
     invo_res = html.write_pdf()
     invo.invo_file = SimpleUploadedFile(invo.invoid +'.pdf', invo_res, content_type='application/pdf')
