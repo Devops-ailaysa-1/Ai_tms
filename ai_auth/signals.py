@@ -36,9 +36,9 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
     print("status----->",instance.get_status_display())
     if instance.get_status_display() == "Accepted":
        user = auth_model.AiUser.objects.get(email = instance.email)
-       user.is_vendor = True
-       user.save()
-       sub = subscribe_vendor(user)
+       # user.is_vendor = True
+       # user.save()
+       # sub = subscribe_vendor(user)
        email = instance.email
        auth_forms.vendor_status_mail(email,instance.get_status_display())
     elif (instance.get_status_display() == "Waitlisted"):

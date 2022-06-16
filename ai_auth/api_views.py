@@ -523,6 +523,11 @@ def subscribe_trial(price,customer=None):
 
 def subscribe_vendor(user):
     plan = get_plan_name(user)
+    try:
+        cust = Customer.objects.get(subscriber=user)
+    except Customer.DoesNotExist:
+        customer = Customer.get_or_create(subscriber=user)
+        cust=customer[0]
     cust = Customer.objects.get(subscriber=user)
     price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
     if plan!= None and (plan != "Pro - V" and plan.startswith('Pro')):
@@ -1665,7 +1670,8 @@ def vendor_onboard_check(email,user):
     from ai_vendor.models import VendorsInfo
     try:
         obj = VendorOnboarding.objects.get(email = email)
-        return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
+        current = "verified" if obj.get_status_display() == "Accepted" else "unverified"
+        return JsonResponse({'id':obj.id,'email':email,'status':current})
     except:
         try:
             obj1 = VendorsInfo.objects.get(user = user)
@@ -1681,8 +1687,8 @@ def vendor_form_filling_status(request):
     try:
         user = AiUser.objects.get(email=email)
         if user.is_vendor == True:
-            return JsonResponse({"msg":"Already a vendor"})
-        else:
+        #     return JsonResponse({"msg":"Already a vendor"})
+        # else:
             res = vendor_onboard_check(email,user)
             return res
     except:
