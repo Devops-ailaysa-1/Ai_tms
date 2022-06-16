@@ -82,7 +82,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language)
             user.is_vendor = True
             user.save()
-            # sub = subscribe_vendor(user)
+            sub = subscribe_vendor(user)
             if not cv_file:
                 VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
         if cv_file:
