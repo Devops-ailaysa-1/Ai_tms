@@ -14,6 +14,8 @@ from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
+
+extend_mail_sent= 0
 # @shared_task
 # def test_task():
 #     print("this is task")
@@ -124,3 +126,18 @@ def send_notification_email_for_unread_messages():
         logger.info("unread_notification_mail")
     except:
         pass
+
+
+
+@task
+def email_send_subscription_extension():
+    from .user_email_list import extend_list_1
+    try:
+        global extend_mail_sent
+        mail_id=extend_list_1[extend_mail_sent]
+        user = AiUser.objects.get(email=mail_id)
+        auth_forms.user_trial_extend_mail(user)
+        logger.info("email-sent succesfully")
+        extend_mail_sent+=1
+    except IndexError:
+        logger.info("all-email-sent succesfully")
