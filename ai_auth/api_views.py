@@ -1673,14 +1673,14 @@ def get_team_name(request):
 
 
 def vendor_onboard_check(email,user):
-    from ai_vendor.models import VendorsInfo
+    from ai_vendor.models import VendorsInfo,VendorOnboardingInfo
     try:
         obj = VendorOnboarding.objects.get(email = email)
         current = "verified" if obj.get_status_display() == "Accepted" else "unverified"
         return JsonResponse({'id':obj.id,'email':email,'status':current})
     except:
         try:
-            obj1 = VendorsInfo.objects.get(user = user)
+            obj1 = VendorOnboardingInfo.objects.get(user = user)
             if obj1.onboarded_as_vendor == True:
                 return JsonResponse({'msg':'onboarded_as_vendor and profile incomplete'})
         except:
