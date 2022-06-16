@@ -46,6 +46,7 @@ def conn_account_create(user):
         type="standard",
         country=user.country.sortname,
         email=user.email,
+        metadata={'uid':user.uid}
         #business_type = 'individual',
         #settings={"payouts": {"schedule": {"delay_days": 31}}},
         )
@@ -55,8 +56,7 @@ def conn_account_create(user):
         account=acc_create.id,
         refresh_url=settings.USERPORTAL_URL,
         return_url=settings.USERPORTAL_URL,
-        type="account_onboarding",
-         metadata={'uid':user.uid,}
+        type="account_onboarding"
         )
         return acc_link
 
@@ -196,7 +196,7 @@ def po_generate_pdf(po):
 
     html = HTML(string=html_string)
     po_res = html.write_pdf()
-    print('po_res',po_res)
+    # print('po_res',po_res)
     po.po_file = SimpleUploadedFile( po.poid +'.pdf', po_res, content_type='application/pdf')
     po.save()
     #po_generate()
@@ -231,7 +231,7 @@ def get_gst(client,seller):
 
 
 
-def generate_invoice_offline(po_li,gst=None):
+def generate_invoice_offline(po_li,gst=None,user=None):
     #same currency po
     pos = PurchaseOrder.objects.filter(poid__in=po_li)
     res  = pos.values('currency').annotate(dcount=Count('currency')).order_by().count()
@@ -254,7 +254,7 @@ def generate_invoice_offline(po_li,gst=None):
                 grand_total = tax_amount + total_amount
                 invo = AilaysaGeneratedInvoice.objects.create(client=pos.last().client,
                             seller=pos.last().seller,invo_status='open',tax_amount=tax_amount,total_amount=total_amount,gst="NOGST",grand_total=grand_total,currency=currency)
-                print("invo")
+                # print("invo")
                 for po in pos:
                     AiInvoicePO.objects.create(invoice=invo,po=po)
                 return invo
@@ -281,16 +281,16 @@ def generate_client_po(task_assign_info):
             insert={'task_id':instance.task.id,'assignment':assign,'project_name':instance.task.job.project.project_name,'projectid':instance.task.job.project.ai_project_id,
                     'word_count':instance.total_word_count,'char_count':instance.task.task_char_count,'unit_price':instance.mtpe_rate,
                     'unit_type':instance.mtpe_count_unit,'source_language':instance.task.job.source_language,'target_language':instance.task.job.target_language,'total_amount':tot_amount}
-            print("insert1",insert)
+            # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
-            print("po_task",po_task)
+            # print("po_task",po_task)
             po_total_amt+=float(tot_amount)
         insert2={'client':instance.assigned_by,'seller':instance.task.assign_to,
                 'assignment':assign,'currency':instance.currency,
                 'po_status':'issued','po_total_amount':po_total_amt}
-        print("insert2",insert2)
+        # print("insert2",insert2)
         po=PurchaseOrder.objects.create(**insert2)
-        print("po2",po)
+        # print("po2",po)
 
 
 
@@ -301,7 +301,7 @@ def generate_invoice_pdf(invo):
     #     tasks = po.assignment.assignment_po.all()
     #     qs=tasks.union(tasks)
     tasks =  POTaskDetails.objects.filter(assignment__po_assign__in=pos_ls)
-    print("tasks invo",tasks)
+    # print("tasks invo",tasks)
     context= {'client': invo.client,'seller':invo.seller,'pos_ids':pos_ls,'invo':invo,'tasks':tasks}
     html_string = render_to_string('invoice_pdf.html',context)
     html = HTML(string=html_string)
@@ -357,15 +357,16 @@ def po_request_payment(request):
     user = request.user
     poids = request.POST.getlist('poids')
     gst=request.POST.get('gst')
-    stripe_con = request.POST.get('use_stripe_con')
+    stripe_con = request.POST.get('stripe_con',None)
+    # print("stripe_con >>",stripe_con)
 
-    print('request_dict',request.POST.getlist('poids'))
-    print('poid',poids)
+    # print('request_dict',request.POST.getlist('poids'))
+    # print('poid',poids)
 
     invo_po=AiInvoicePO.objects.filter(po__poid__in=poids)
-    if invo_po.invo_po.filter(invoice__invo_status='open').count() > 0:
+    if invo_po.filter(invoice__invo_status='open').count() > 0:
         return JsonResponse({"msg":"invoice with po already open"},safe=False,status=409)
-    if stripe_con:
+    if stripe_con == 'True':
         # invo = generat_invoice_by_stripe(poids,gst,user=request.user)
         from djstripe.models import Account
         acc=Account.objects.filter(email=user.email)
