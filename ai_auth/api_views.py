@@ -527,9 +527,15 @@ def subscribe_vendor(user):
     except Customer.DoesNotExist:
         customer = Customer.get_or_create(subscriber=user)
         cust=customer[0]
+    if cust.currency==None:
+        if user.country.id == 101 :
+            currency = 'inr'
+        else:
+            currency ='usd'
+    else:
+        currency =cust.currency
+    price = Price.objects.get(product__name="Pro - V",currency=currency)
     plan = get_plan_name(user)
-    cust = Customer.objects.get(subscriber=user)
-    price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
     if plan!= None and (plan != "Pro - V" and plan.startswith('Pro')):
         sub=subscribe(price=price,customer=cust)
         return sub
