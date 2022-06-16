@@ -55,7 +55,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
     def save(self, request):
-        from ai_vendor.models import VendorLanguagePair,VendorsInfo
+        from ai_vendor.models import VendorLanguagePair,VendorOnboardingInfo,VendorsInfo
         from ai_auth.api_views import subscribe_vendor
         user = AiUser(
             email=self.validated_data['email'],
@@ -82,12 +82,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language)
             user.is_vendor = True
             user.save()
-            sub = subscribe_vendor(user)
+            # sub = subscribe_vendor(user)
             if not cv_file:
-                VendorsInfo.objects.create(user=user,onboarded_as_vendor=True)
+                VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
         if cv_file:
-            tt = VendorsInfo.objects.create(user=user,cv_file = cv_file,onboarded_as_vendor=True )
-            print("@@@",tt)
+            tt = VendorsInfo.objects.create(user=user,cv_file = cv_file)
+            VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
             VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
         if campaign:
             CampaignUsers.objects.create(user=user,campaign_name=campaign)

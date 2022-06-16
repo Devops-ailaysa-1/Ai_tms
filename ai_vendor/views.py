@@ -25,7 +25,7 @@ from .serializers import (ServiceExpertiseSerializer,
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits, LanguageMetaDetails)
-from ai_auth.models import AiUser, Professionalidentity
+from ai_auth.models import AiUser, Professionalidentity,VendorOnboarding
 import json,requests
 from django.http import JsonResponse
 # from django.core.mail import EmailMessage
@@ -61,8 +61,8 @@ class VendorsInfoCreateView(APIView):
         serializer = VendorsInfoSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save(user_id = user_id)
+            obj = VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
             return Response(serializer.data)
-        # print("errors", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self,request):
@@ -71,6 +71,11 @@ class VendorsInfoCreateView(APIView):
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
         if cv_file:
             serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
+            try:
+                ins = VendorOnboarding.objects.get(email=request.user.email)
+                ins.cv_file = cv_file
+                ins.save()
+            except:pass
         else:
             serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():

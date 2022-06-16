@@ -29,12 +29,16 @@ class VendorsInfo(models.Model):
     proz_link = models.CharField(max_length=191, blank=True, null=True)
     cv_file = models.FileField(upload_to=vendor_directory_path, blank=True, null=True)
     native_lang = models.ForeignKey(Languages,blank=True, null=True, related_name='native_lang', on_delete=models.CASCADE)
-    onboarded_as_vendor = models.BooleanField(default=False,blank=True, null=True)
     year_of_experience = models.DecimalField(max_digits=5,decimal_places=1 , blank=True, null=True)
     rating = models.IntegerField(blank=True, null=True)
     location = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class VendorOnboardingInfo(models.Model):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='vendor_onboard_info')
+    onboarded_as_vendor = models.BooleanField(default=False,blank=True, null=True)
 
 
 class VendorBankDetails(models.Model):

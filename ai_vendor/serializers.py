@@ -11,7 +11,7 @@ class VendorsInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorsInfo
         fields = ('id','vendor_unique_id','type','currency','vm_status','status','token','skype',
-                'proz_link','cv_file','native_lang','year_of_experience','rating','location','onboarded_as_vendor',)
+                'proz_link','cv_file','native_lang','year_of_experience','rating','location',)
         extra_kwargs = {'id':{"read_only":True},}
 
     def save(self, user_id):

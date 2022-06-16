@@ -527,7 +527,7 @@ def subscribe_vendor(user):
     except Customer.DoesNotExist:
         customer = Customer.get_or_create(subscriber=user)
         cust=customer[0]
-    if cust.currency==None:
+    if cust.currency=='':
         if user.country.id == 101 :
             currency = 'inr'
         else:
@@ -1221,11 +1221,11 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
-            user = AiUser.objects.get(email = email)
-            obj,created = VendorsInfo.objects.get_or_create(user=user,defaults = {"cv_file":cv_file})
-            if created == False:
-                obj.cv_file = cv_file
-                obj.save()
+            # user = AiUser.objects.get(email = email)
+            # obj,created = VendorsInfo.objects.get_or_create(user=user,defaults = {"cv_file":cv_file})
+            # if created == False:
+            #     obj.cv_file = cv_file
+            #     obj.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
