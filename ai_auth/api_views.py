@@ -522,12 +522,12 @@ def subscribe_trial(price,customer=None):
     return subscription
 
 def subscribe_vendor(user):
-    plan = get_plan_name(user)
     try:
         cust = Customer.objects.get(subscriber=user)
     except Customer.DoesNotExist:
         customer = Customer.get_or_create(subscriber=user)
         cust=customer[0]
+    plan = get_plan_name(user)
     cust = Customer.objects.get(subscriber=user)
     price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
     if plan!= None and (plan != "Pro - V" and plan.startswith('Pro')):
