@@ -122,7 +122,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             else:
                 queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
-            serializer = ProjectPostSerializer(pagin_tc,many=True)
+            serializer = ProjectPostSerializer(pagin_tc,many=True,context={'request':request})
             response = self.get_paginated_response(serializer.data)
             return response
             #return Response(serializer.data)

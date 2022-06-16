@@ -114,12 +114,17 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         return job[0].id if job else None
 
     def get_current_status(self,obj):
+        user = self.context.get('request').user
         if obj.projectpost.closed_at != None:
             return "Projectpost Closed"
         elif obj.projectpost.deleted_at !=None:
             return "Projectpost Deleted"
         else:
-            return obj.status.status
+            if obj.status_id == 3:
+                ht = HiredEditors.objects.get(user_id=user.id,hired_editor_id=obj.vendor_id)
+                return str(ht.get_status_display())
+            else:
+                return obj.status.status
 
     # def get_projectpost_status(self,obj):
     #     if obj.projectpost.closed_at != None:
