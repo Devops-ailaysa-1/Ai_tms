@@ -27,6 +27,7 @@ from ai_pay.serializers import (InvoiceListSerializer, POTaskSerializer,POAssign
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter,OrderingFilter
 from django.db.models import Q
+from django.conf import settings
 
 
 def get_stripe_key():
@@ -48,13 +49,14 @@ def conn_account_create(user):
         #business_type = 'individual',
         #settings={"payouts": {"schedule": {"delay_days": 31}}},
         )
-    print(acc_create)
+    # print(acc_create)
     if acc_create:
         acc_link = stripe.AccountLink.create(
         account=acc_create.id,
-        refresh_url="https://staticstaging.ailaysa.com/benefits",
-        return_url="https://staticstaging.ailaysa.com/pricing",
+        refresh_url=settings.USERPORTAL_URL,
+        return_url=settings.USERPORTAL_URL,
         type="account_onboarding",
+         metadata={'uid':user.uid,}
         )
         return acc_link
 
@@ -148,13 +150,13 @@ def customer_create_conn_account(user,vendor):
 def create_invoice_conn_direct(cust,vendor,amount,currency,finalize=True):
     stripe.api_key=get_stripe_key()
     percent=3
-    app_fee_amount=percent/100*amount
+    #app_fee_amount=percent/100*amount
     invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
                 customer=cust.id,amount =amount,currency=currency)
 
     invo = stripe.Invoice.create(
         customer=cust.id,
-        application_fee_amount=app_fee_amount,
+        #application_fee_amount=app_fee_amount,
         stripe_account=vendor.id,)
     if finalize:
         stripe.Invoice.finalize_invoice(invo.id,stripe_account=vendor.id)
@@ -239,26 +241,26 @@ def generate_invoice_offline(po_li,gst=None):
         logging.error("Invoice creation Failed More Than on currency or users")
         return None
     else:
-        # try:
-        with transaction.atomic():
-            # if gst: 
-            #     gst_tax =get_gst(pos.last().client,pos.last().seller)
-            #     pass
-            total_amount=0
-            tax_amount =0
-            currency = pos.last().currency
-            for po in pos:
-                total_amount+=float(po.po_total_amount)
-            grand_total = tax_amount + total_amount
-            invo = AilaysaGeneratedInvoice.objects.create(client=pos.last().client,
-                        seller=pos.last().seller,invo_status='open',tax_amount=tax_amount,total_amount=total_amount,gst="NOGST",grand_total=grand_total,currency=currency)
-            print("invo")
-            for po in pos:
-                AiInvoicePO.objects.create(invoice=invo,po=po)
-            return invo
-        # except:
-        #     logging.error("Invoice Generration Failed")
-        #     return None
+        try:
+            with transaction.atomic():
+                # if gst: 
+                #     gst_tax =get_gst(pos.last().client,pos.last().seller)
+                #     pass
+                total_amount=0
+                tax_amount =0
+                currency = pos.last().currency
+                for po in pos:
+                    total_amount+=float(po.po_total_amount)
+                grand_total = tax_amount + total_amount
+                invo = AilaysaGeneratedInvoice.objects.create(client=pos.last().client,
+                            seller=pos.last().seller,invo_status='open',tax_amount=tax_amount,total_amount=total_amount,gst="NOGST",grand_total=grand_total,currency=currency)
+                print("invo")
+                for po in pos:
+                    AiInvoicePO.objects.create(invoice=invo,po=po)
+                return invo
+        except:
+            logging.error("Invoice Generration Failed")
+            return None
      
 
 def generate_client_po(task_assign_info):
@@ -277,7 +279,7 @@ def generate_client_po(task_assign_info):
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
             insert={'task_id':instance.task.id,'assignment':assign,'project_name':instance.task.job.project.project_name,'projectid':instance.task.job.project.ai_project_id,
-                    'word_count':instance.total_word_count,'char_count':instance.task.task_details.last().task_char_count,'unit_price':instance.mtpe_rate,
+                    'word_count':instance.total_word_count,'char_count':instance.task.task_char_count,'unit_price':instance.mtpe_rate,
                     'unit_type':instance.mtpe_count_unit,'source_language':instance.task.job.source_language,'target_language':instance.task.job.target_language,'total_amount':tot_amount}
             print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
@@ -332,21 +334,52 @@ class POListView(generics.ListAPIView):
         serializer = PurchaseOrderListSerializer(queryset,context=request)
         return Response(serializer.data)
 
+def generat_invoice_by_stripe(po_li,user,gst=None):
+    pos = PurchaseOrder.objects.filter(poid__in=po_li)
+    res  = pos.values('currency').annotate(dcount=Count('currency')).order_by().count()
+    res2 = pos.values('seller_id').annotate(dcount=Count('seller_id')).order_by().count()
+    res3 = pos.values('client_id').annotate(dcount=Count('client_id')).order_by().count()
+    if user.id != pos.last().seller.id:
+        pass
+    elif res&res2&res3 >1:
+        logging.error("Invoice creation Failed More Than on currency or users")
+        return None
+    else:
+        cust  = pos.last().seller
+        ven = pos.last().client
+        # create_invoice_conn_direct(cust,ven,amount,currency)
+
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def po_request_payment(request):
+    user = request.user
     poids = request.POST.getlist('poids')
     gst=request.POST.get('gst')
     stripe_con = request.POST.get('use_stripe_con')
 
     print('request_dict',request.POST.getlist('poids'))
     print('poid',poids)
+
+    invo_po=AiInvoicePO.objects.filter(po__poid__in=poids)
+    if invo_po.invo_po.filter(invoice__invo_status='open').count() > 0:
+        return JsonResponse({"msg":"invoice with po already open"},safe=False,status=409)
     if stripe_con:
-        pass
+        # invo = generat_invoice_by_stripe(poids,gst,user=request.user)
+        from djstripe.models import Account
+        acc=Account.objects.filter(email=user.email)
+        if acc.count()==0:
+            acc_link=conn_account_create(user)
+            if acc_link:
+                return Response({'msg':'Connect Account Link Generated','url':acc_link.url,'expiry':acc_link.expires_at},status=302)
+            else:
+                return Response({"msg":"Invoice creation failed"},status=400)
+        ## need to check uid 
+           
+        return JsonResponse({"msg":"redirecting to stripe dashboard","url":"https://dashboard.stripe.com/invoices/create"},status=302)
     else:
-        invo = generate_invoice_offline(poids,gst)
+        invo = generate_invoice_offline(poids,gst,user=user)
     if invo:
         return JsonResponse({"msg":"Successfully created Invoice"},safe=False,status=200)
     else:
