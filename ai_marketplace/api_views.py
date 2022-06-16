@@ -136,7 +136,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             if serializer1.is_valid():
                 serializer1.save()
         customer = request.user.id
-        serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer})#,context={'request':request})
+        serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             post_id = serializer.data.get('id')
@@ -165,7 +165,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
             jobslist = job_delete_ids.split(',')
             projectpost_info.projectpost_jobs.filter(id__in=jobslist).delete()
 
-        serializer = ProjectPostSerializer(projectpost_info,data={**request.POST.dict()},partial=True)
+        serializer = ProjectPostSerializer(projectpost_info,data={**request.POST.dict()},context={'request':request},partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -486,7 +486,7 @@ def vendor_applied_jobs_list(request):
     try:
         print(request.user.id)
         queryset = BidPropasalDetails.objects.filter(vendor_id=request.user.id).all()
-        serializer = BidPropasalDetailSerializer(queryset,many=True)
+        serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
         return Response(serializer.data)
     except:
         return Response(status=status.HTTP_204_NO_CONTENT)

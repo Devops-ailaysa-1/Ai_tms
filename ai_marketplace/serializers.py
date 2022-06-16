@@ -114,17 +114,17 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
         return job[0].id if job else None
 
     def get_current_status(self,obj):
-        user = self.context.get('request').user
+        user_ = self.context.get("request").user
         if obj.projectpost.closed_at != None:
             return "Projectpost Closed"
         elif obj.projectpost.deleted_at !=None:
             return "Projectpost Deleted"
         else:
-            if obj.status_id == 3:
-                ht = HiredEditors.objects.get(user_id=user.id,hired_editor_id=obj.vendor_id)
-                return str(ht.get_status_display())
-            else:
-                return obj.status.status
+            # if obj.status_id == 3:
+            #     ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor_id=user_).first()
+            #     return str(ht.get_status_display())
+            # else:
+            return obj.status.status
 
     # def get_projectpost_status(self,obj):
     #     if obj.projectpost.closed_at != None:
@@ -487,8 +487,10 @@ class AvailablePostJobSerializer(serializers.Serializer):
         fields = ('post_id', 'post_name','posted_by','post_desc','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
 
     def get_apply(self, obj):
+        print( self.context.get("request").user)
         vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
+        # matched_jobs,applied_jobs=[],[]
         for i in jobs:
             if i.src_lang_id == i.tar_lang_id:
                 res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
@@ -496,6 +498,25 @@ class AvailablePostJobSerializer(serializers.Serializer):
                 res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:
                 return True
+                # matched_jobs.append(i)
+        #     if i.bid_details.filter(vendor_id = vendor.id):
+        #         applied_jobs.append(j)
+        # applied_jobs =[]
+        # for j in jobs:
+        #     if j.bid_details.filter(vendor_id = vendor.id):
+        #         applied_jobs.append(j)
+        # if len(matched_jobs) == len(applied_jobs):
+            # return False
+        else:
+            return False
+
+        # for i in jobs:
+        #     if i.src_lang_id == i.tar_lang_id:
+        #         res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+        #     else:
+        #         res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+        #     if res:
+        #         return True
         return False
 
 class ProjectPostTemplateSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
