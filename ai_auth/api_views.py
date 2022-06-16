@@ -522,10 +522,21 @@ def subscribe_trial(price,customer=None):
     return subscription
 
 def subscribe_vendor(user):
+    try:
+        cust = Customer.objects.get(subscriber=user)
+    except Customer.DoesNotExist:
+        customer = Customer.get_or_create(subscriber=user)
+        cust=customer[0]
+    if cust.currency=='':
+        if user.country.id == 101 :
+            currency = 'inr'
+        else:
+            currency ='usd'
+    else:
+        currency =cust.currency
+    price = Price.objects.get(product__name="Pro - V",currency=currency)
     plan = get_plan_name(user)
-    cust = Customer.objects.get(subscriber=user)
-    price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
-    if plan!= None and (plan != "Pro - V" and plan.startswith('Pro')):
+    if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
         sub=subscribe(price=price,customer=cust)
         return sub
 
@@ -1204,19 +1215,28 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self,request):
+        from ai_vendor.models import VendorsInfo
         cv_file = request.FILES.get('cv_file')
+        email = request.POST.get('email')
         serializer = VendorOnboardingSerializer(data={**request.POST.dict(),'cv_file':cv_file,'status':1})
         if serializer.is_valid():
             serializer.save()
+            # user = AiUser.objects.get(email = email)
+            # obj,created = VendorsInfo.objects.get_or_create(user=user,defaults = {"cv_file":cv_file})
+            # if created == False:
+            #     obj.cv_file = cv_file
+            #     obj.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # def update(self, request, pk):
     #     cv_file=request.FILES.get('cv_file')
-    #     try:
-    #         queryset = VendorOnboarding.objects.get(id=pk)
-    #     except VendorOnboarding.DoesNotExist:
-    #         return Response(status=204)
+    #     queryset = VendorOnboarding.objects.get(id=pk)
+    #     serializer = VendorOnboardingSerializer(queryset,data={'cv_file':cv_file},partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     #     rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
     #     serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
     #     if serializer.is_valid():
@@ -1652,28 +1672,33 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-def vendor_onboard_check(email):
+def vendor_onboard_check(email,user):
+    from ai_vendor.models import VendorsInfo,VendorOnboardingInfo
     try:
         obj = VendorOnboarding.objects.get(email = email)
-        print(obj)
-        return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
-    except VendorOnboarding.DoesNotExist:
-        return Response(status=204)
+        current = "verified" if obj.get_status_display() == "Accepted" else "unverified"
+        return JsonResponse({'id':obj.id,'email':email,'status':current})
+    except:
+        try:
+            obj1 = VendorOnboardingInfo.objects.get(user = user)
+            if obj1.onboarded_as_vendor == True:
+                return JsonResponse({'msg':'onboarded_as_vendor and profile incomplete'})
+        except:
+            return Response(status=204)
 
 
 @api_view(['POST',])
 def vendor_form_filling_status(request):
     email = request.POST.get('email')
-    print("Email---->",email)
     try:
         user = AiUser.objects.get(email=email)
         if user.is_vendor == True:
-            return JsonResponse({"msg":"Already a vendor"})
-        else:
-            res = vendor_onboard_check(email)
+        #     return JsonResponse({"msg":"Already a vendor"})
+        # else:
+            res = vendor_onboard_check(email,user)
             return res
     except:
-        res = vendor_onboard_check(email)
+        res = vendor_onboard_check(email,None)
         return res
 
 class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
@@ -1737,3 +1762,19 @@ def vendor_renewal_change(request):
         user.is_vendor = data
         user.save()
     return JsonResponse({"msg": "changed successfully"})
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def vendor_onboard_complete(request):#######while using social signups################
+    from ai_vendor.models import VendorsInfo,VendorLanguagePair
+    source_lang = request.POST.get('source_language')
+    target_lang = request.POST.get('target_language')
+    cv_file = request.FILES.get('cv_file')
+    if source_lang and target_lang:
+        VendorLanguagePair.objects.create(user=request.user,source_lang_id = source_lang,target_lang_id =target_lang)
+    if cv_file:
+        VendorsInfo.objects.create(user=request.user,cv_file = cv_file )
+        VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+    return JsonResponse({"msg": "Onboarding completed successfully"})

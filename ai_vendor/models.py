@@ -10,7 +10,7 @@ from ai_workspace.models import Job,Project
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
 from django.db.models.signals import post_save, pre_save
-from ai_vendor.signals import user_update
+# from ai_vendor.signals import user_update
 
 
 def vendor_directory_path(instance, filename):
@@ -20,8 +20,8 @@ def vendor_directory_path(instance, filename):
 class VendorsInfo(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='vendor_info')
     vendor_unique_id = models.CharField(max_length=191, blank=True, null=True)
-    type = models.ForeignKey(VendorLegalCategories,related_name='vendor_legal_type', on_delete=models.CASCADE)
-    currency = models.ForeignKey(Currencies,related_name='vendor_currency', on_delete=models.CASCADE)
+    type = models.ForeignKey(VendorLegalCategories,related_name='vendor_legal_type', on_delete=models.CASCADE,blank=True, null=True)
+    currency = models.ForeignKey(Currencies,related_name='vendor_currency', on_delete=models.CASCADE,blank=True, null=True)
     vm_status = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=100, blank=True, null=True)
     token = models.CharField(max_length=191, blank=True, null=True)
@@ -34,6 +34,11 @@ class VendorsInfo(models.Model):
     location = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+
+class VendorOnboardingInfo(models.Model):
+    user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='vendor_onboard_info')
+    onboarded_as_vendor = models.BooleanField(default=False,blank=True, null=True)
 
 
 class VendorBankDetails(models.Model):
@@ -103,16 +108,22 @@ class VendorLanguagePair(ParanoidModel):
     user = models.ForeignKey(AiUser,related_name='vendor_lang_pair', on_delete=models.CASCADE)
     source_lang=models.ForeignKey(Languages,related_name='vendor_source_lang', on_delete=models.CASCADE)
     target_lang=models.ForeignKey(Languages,related_name='vendor_target_lang', on_delete=models.CASCADE)
+    currency = models.ForeignKey(Currencies,related_name='lang_pair_currency', on_delete=models.CASCADE,\
+                blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
    # created_at = models.CharField(max_length=100, null=True, blank=True)
    # updated_at = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
-
        constraints = [
-            UniqueConstraint(fields=['user', 'source_lang', 'target_lang'], condition=Q(deleted_at=None), name='unique_if_not_deleted')
+            UniqueConstraint(fields=['user', 'source_lang', 'target_lang','currency'], condition=Q(deleted_at=None), name='unique_if_not_deleted')
         ]
+    def save(self, *args, **kwargs):
+        if not self.currency_id:
+            try:self.currency_id = self.user.currency_based_on_country_id
+            except:self.currency_id = 144
+        super().save()
 # post_save.connect(user_update, sender=VendorLanguagePair)
 
 class VendorServiceInfo(ParanoidModel):
@@ -124,6 +135,7 @@ class VendorServiceInfo(ParanoidModel):
      updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
      #created_at = models.CharField(max_length=100, null=True, blank=True)
      #updated_at = models.CharField(max_length=100, null=True, blank=True)
+
 
 class VendorServiceTypes(ParanoidModel):
     lang_pair=models.ForeignKey(VendorLanguagePair,related_name='servicetype', on_delete=models.CASCADE)

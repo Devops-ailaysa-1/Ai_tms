@@ -36,9 +36,9 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
     print("status----->",instance.get_status_display())
     if instance.get_status_display() == "Accepted":
        user = auth_model.AiUser.objects.get(email = instance.email)
-       user.is_vendor = True
-       user.save()
-       sub = subscribe_vendor(user)
+       # user.is_vendor = True
+       # user.save()
+       # sub = subscribe_vendor(user)
        email = instance.email
        auth_forms.vendor_status_mail(email,instance.get_status_display())
     elif (instance.get_status_display() == "Waitlisted"):
@@ -48,12 +48,44 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
     elif instance.get_status_display() == "Request Sent":
        auth_forms.vendor_request_admin_mail(instance)
 
+
+def shortlisted_vendor_list_send_email_new(sender, instance, created, *args, **kwargs):
+    from ai_vendor.models import VendorLanguagePair
+    from ai_auth import forms as auth_forms
+    if created:
+        jobs = instance.get_postedjobs
+        lang_pair = VendorLanguagePair.objects.none()
+        for obj in jobs:
+            if obj.src_lang_id == obj.tar_lang_id:
+                query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) | Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+            else:
+                query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+            lang_pair = lang_pair.union(query)
+        res={}
+        for object in lang_pair:
+            tt = object.source_lang.language if object.source_lang_id == object.target_lang_id else object.source_lang.language
+            print(object.user.fullname)
+            if object.user_id in res:
+                res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':tt})
+            else:
+                res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':projectpost.proj_deadline,'bid_deadline':projectpost.bid_deadline}
+        auth_forms.vendor_notify_post_jobs(res)
+        print("mailsent")
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''
 #     res=update_billing_address(address=instance)
 #     print("-----------updated customer address-------")
 
-
+# def vendorsinfo_update(sender, instance, created, *args, **kwargs):
+# 	from ai_vendor.models import VendorsInfo
+# 	if created:
+# 		try:
+# 			user = AiUser.objects.get(email = instance.email)
+# 			query = VendorsInfo.objects.filter(user=user)
+# 			tt = query.update(cv_file=instance.cv_file)
+# 			print("@@@@",tt)
+# 		except:
+# 			pass
 
 
 # def update_billing_address(address):
@@ -211,5 +243,25 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
             print("status updated")
 
 
+def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
+	if created:
+		if instance.is_internal_member == True:
+			instance.currency_based_on_country_id = 144
+			instance.save()
+		else:
+			queryset = staff_model.CurrencyBasedOnCountry.objects.filter(country_id = instance.country_id)
+			if queryset:
+				instance.currency_based_on_country_id = queryset.first().currency_id
+				instance.save()
+			else:
+				instance.currency_based_on_country_id = 144
+				instance.save()
+
+
+
 
 # def updated_user_taxid(sender, instance, *args, **kwargs):
+def create_postjob_id(sender, instance, *args, **kwargs):
+    if instance.postjob_id == None:
+        instance.postjob_id = str(random.randint(1,10000))+"j"+str(instance.id)
+        instance.save()

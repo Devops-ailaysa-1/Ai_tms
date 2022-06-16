@@ -2,8 +2,8 @@ from datetime import datetime
 from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
-                          TM_FetchSerializer)
-from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer
+                          TM_FetchSerializer,VerbSerializer)
+from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer,TaskTranscriptDetailSerializer
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
 from rest_framework import viewsets, authentication
 from rest_framework import views
@@ -32,13 +32,14 @@ from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
+import hunspell,nltk
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.urls import reverse
 from json import JSONDecodeError
 from ai_workspace.models import File
-from .utils import SpacesService
+from .utils import SpacesService,text_to_speech
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
 from .utils import download_file, bl_title_format, bl_cell_format
@@ -124,7 +125,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
-    
+
             if doc.status_code == 200 :
                 doc_data = doc.json()
                 # print("Doc data from spring---> ", doc_data)
@@ -348,7 +349,7 @@ class ConcordanceSearchView(views.APIView):
         return Response(concordance, status=200)
 
 class DocumentToFile(views.APIView):
-    
+
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()
@@ -378,6 +379,36 @@ class DocumentToFile(views.APIView):
     def download_source_file(self, document_id):
         source_file_path = self.get_source_file_path(document_id)
         return download_file(source_file_path)
+
+
+    #For Downloading Audio File################only for voice project###########
+    def download_audio_file(self,res,document_id,voice_gender,language_locale):
+        if res.status_code in [200, 201]:
+            file_path = res.text
+            doc = DocumentToFile.get_object(document_id)
+            task = doc.task_set.first()
+            ser = TaskSerializer(task)
+            task_data = ser.data
+            filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
+            target_language = language_locale if language_locale else task_data["target_language"]
+            dir,name_ = os.path.split(os.path.abspath(self.get_source_file_path(document_id)))
+            filename = name_ + "_out"+ ".mp3"
+            res1,f2 = text_to_speech(file_path,target_language,filename,voice_gender)
+            if task.task_transcript_details.first()==None:
+                ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
+            else:
+                t = task.task_transcript_details.first()
+                ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
+            if ser.is_valid():
+                ser.save()
+            print(ser.errors)
+            f2.close()
+            os.remove(filename)
+            return download_file(task.task_transcript_details.last().translated_audio_file.path)
+        else:
+            return Response({"msg":"something went wrong"})
+
+
 
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
@@ -430,6 +461,8 @@ class DocumentToFile(views.APIView):
     def get(self, request, document_id):
         token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
+        voice_gender = request.GET.get("voice_gender", "FEMALE")
+        language_locale = request.GET.get("locale", None)
         payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
         user_id_payload = payload.get("user_id", 0)
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
@@ -442,6 +475,11 @@ class DocumentToFile(views.APIView):
             # FOR DOWNLOADING BILINGUAL FILE
             if output_type == "BILINGUAL":
                 return self.download_bilingual_file(document_id)
+
+            # For Downloading Audio File
+            if output_type == "AUDIO":
+                res = self.document_data_to_file(request, document_id)
+                return self.download_audio_file(res,document_id,voice_gender,language_locale)
 
             res = self.document_data_to_file(request, document_id)
             if res.status_code in [200, 201]:
@@ -497,11 +535,10 @@ class DocumentToFile(views.APIView):
                 "doc_req_params": json.dumps(params_data),})
 
         if settings.USE_SPACES:
-    
+
             with open(task_data["output_file_path"], "rb") as f:
                 SpacesService.put_object(output_file_path=File
                                         .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
-
         return res
 
 OUTPUT_TYPES = dict(
@@ -510,6 +547,7 @@ OUTPUT_TYPES = dict(
     TMX = "TMX",
     SOURCE = "SOURCE",
     BILINGUAL = "BILINGUAL",
+    # AUDIO = "AUDIO",
 )
 
 def output_types(request):
@@ -997,7 +1035,7 @@ def WiktionaryWorkSpace(request,doc_id):
     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
 
 
-######  USING PY SPELLCHECKER  ######
+######  USING PY SPELLCHECKER  AND HunSpell######
 @api_view(['GET', 'POST',])
 def spellcheck(request):
     tar = request.POST.get('target')
@@ -1005,21 +1043,78 @@ def spellcheck(request):
     doc = Document.objects.get(id=doc_id)
     out,res = [],[]
     try:
-        spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
-        if spellchecker=="pyspellchecker":
-            code = doc.target_language_code
-            spell = SpellChecker(code)
-            words=spell.split_words(tar)#list
-            misspelled=spell.unknown(words)#set
-            for word in misspelled:
-                suggestion=list(spell.candidates(word))
-                for k in words:
-                    if k==word.capitalize():
-                        out=[{"word":k,"Suggested Words":suggestion}]
-                        break
-                    else:
-                        out=[{"word":word,"Suggested Words":suggestion}]
-                res.extend(out)
+        if doc.target_language_code == 'en':
+            lang = doc.target_language_code
+            dic = r'/ai_home/dictionaries/{lang}.dic'.format(lang = lang)
+            aff = r'/ai_home/dictionaries/{lang}.aff'.format(lang = lang)
+            hobj = hunspell.HunSpell(dic,aff )
+            punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+            nltk_tokens = nltk.word_tokenize(tar)
+            tokens_new = [word for word in nltk_tokens if word not in punctuation]
+            for word in tokens_new:
+                suggestions=[]
+                if hobj.spell(word)==False:
+                     suggestions.extend(hobj.suggest(word))
+                     out=[{"word":word,"Suggested Words":suggestions}]
+                     res.extend(out)
             return JsonResponse({"result":res},safe=False)
+        else:
+            spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
+            if spellchecker=="pyspellchecker":
+                code = doc.target_language_code
+                spell = SpellChecker(code)
+                words=spell.split_words(tar)#list
+                misspelled=spell.unknown(words)#set
+                for word in misspelled:
+                    suggestion=list(spell.candidates(word))
+                    for k in words:
+                        if k==word.capitalize():
+                            out=[{"word":k,"Suggested Words":suggestion}]
+                            break
+                        else:
+                            out=[{"word":word,"Suggested Words":suggestion}]
+                    res.extend(out)
+                return JsonResponse({"result":res},safe=False)
     except:
         return JsonResponse({"message":"Spellcheck not available"},safe=False)
+
+####################################################### Hemanth #########################################################
+
+@api_view(['POST',])############### only available for english ###################
+def paraphrasing(request):
+    sentence = request.POST.get('sentence')
+    try:
+        text = {}
+        text['sentence'] = sentence
+        end_pts = settings.END_POINT +"paraphrase/"
+        data = requests.post(end_pts , text)
+        return JsonResponse(data.json())
+    except:
+        return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
+
+
+
+@api_view(['POST',])############### only available for english ###################
+def synonmys_lookup(request):
+    if request.method == "POST":
+        try:
+            data = {}
+            txt = request.POST["text"]
+            end_pts = settings.END_POINT +"synonyms/"
+            data['text'] = txt
+            result = requests.post(end_pts , data )
+            serialize = VerbSerializer(result.json())
+            return JsonResponse(serialize.data)
+        except:
+            return JsonResponse({"message":"error in synonmys"},safe=False)
+
+
+
+@api_view(['POST',])############### only available for english ###################
+def grammar_check_model(request):
+    text = request.POST.get('target')
+    data = {}
+    data['text'] = text
+    end_pts = settings.END_POINT +"grammar-checker/"
+    result = requests.post(end_pts , data )
+    return JsonResponse(result.json())
