@@ -617,14 +617,14 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         tasks = self.get_object()
         pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
-        serlzr = VendorDashBoardSerializer(pagin_queryset, many=True)
+        serlzr = VendorDashBoardSerializer(pagin_queryset, many=True,context={'request':request})
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
         print("%%%%")
         tasks = self.get_tasks_by_projectid(pk=pk)
         print(tasks)
-        serlzr = VendorDashBoardSerializer(tasks, many=True)
+        serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
         return Response(serlzr.data, status=200)
 
 class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
@@ -642,7 +642,7 @@ class VendorProjectBasedDashBoardView(viewsets.ModelViewSet):
         tasks = self.get_object(project_id)
         # pagin_queryset = self.paginator.paginate_queryset(tasks, request,
         # view=self)
-        serlzr = VendorDashBoardSerializer(tasks, many=True)
+        serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
         return Response(serlzr.data, status=200)
 
 class TM_FetchConfigsView(viewsets.ViewSet):
@@ -1307,7 +1307,7 @@ def tasks_list(request):
     try:
         job = Job.objects.get(id = job_id)
         tasks = job.job_tasks_set.all()
-        ser = VendorDashBoardSerializer(tasks,many=True)
+        ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request})
         return Response(ser.data)
     except:
         return JsonResponse({"msg":"No job exists"})
