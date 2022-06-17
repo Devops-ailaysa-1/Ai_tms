@@ -6,7 +6,7 @@ from ai_marketplace.models import (ProjectboardDetails,ProjectPostJobDetails,
                     ProjectPostTemplateSubjectField,ProjectboardTemplateDetails,
                     ProjectPostContentType,ProjectPostSteps,ProjectPostTemplateSteps)
 from ai_auth.models import AiUser,AiUserProfile,HiredEditors
-from ai_staff.models import Languages
+from ai_staff.models import Languages,Currencies
 from django.db.models import Q
 from ai_workspace.models import Project,Job
 from drf_writable_nested import WritableNestedModelSerializer
@@ -119,12 +119,14 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
             return "Projectpost Closed"
         elif obj.projectpost.deleted_at !=None:
             return "Projectpost Deleted"
-        else:
-            # if obj.status_id == 3:
-            #     ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor_id=user_).first()
-            #     return str(ht.get_status_display())
-            # else:
-            return obj.status.status
+        else:  ##############################Need to revise this##############################
+            if obj.status_id == 3:
+                ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor=user_).first()
+                if not ht:
+                    ht = HiredEditors.objects.filter(user=user_,hired_editor=obj.vendor).first()
+                return str(ht.get_status_display())
+            else:
+                return obj.status.status
 
     # def get_projectpost_status(self,obj):
     #     if obj.projectpost.closed_at != None:
@@ -355,7 +357,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     projectpost_content_type=ProjectPostContentTypeSerializer(many=True,required=False)
     projectpost_subject=ProjectPostSubjectFieldSerializer(many=True,required=False)
     projectpost_steps=ProjectPostStepsSerializer(many=True,required=False)
-    project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True),write_only=True)
+    project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True))#,write_only=True)
     customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
     # steps_id = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),write_only=True)
     class Meta:
@@ -421,7 +423,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
         for i in jobs:
             if i.bid_details.filter(vendor_id = vendor.id):
                 applied.append(i)
-        return ProjectPostJobDetailSerializer(applied,many=True).data
+        return ProjectPostJobDetailSerializer(applied,many=True,context={'request':self.context.get("request")}).data
 
     def get_post_jobs(self,obj):
         vendor = self.context.get("request").user
@@ -436,7 +438,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
             if res:
                 matched_jobs.append(i)
         print(matched_jobs)
-        return ProjectPostJobSerializer(matched_jobs,many=True).data
+        return ProjectPostJobSerializer(matched_jobs,many=True,context={'request':self.context.get("request")}).data
 
 
 
@@ -456,13 +458,17 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
             else: res= query
             #########################if user preffered currency exists,then use that or pick first instance matching that job pair and convert to user_preffered_currency###############
             if res:
+                vendor_currency_code = Currencies.objects.get(id = res[0].get('currency')).currency_code
                 # vpc = currency
                 # upc = obj.currency.currency_code
                 # payload = {'q': vpc+'_'+upc}
                 # res1 = requests.get('https://free.currconv.com/api/v7/convert?compact=ultra&apiKey=78341dcc54736bbff6e1',params=payload)
                 # rate = res1.json().get(payload.get('q'))
                 # out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,"user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":currency,"mtpe_rate":float(res[0].get('service__mtpe_rate'))*rate,"mtpe_hourly_rate":float(res[0].get('service__mtpe_hourly_rate'))*rate,"mtpe_count_unit":float(res[0].get('service__mtpe_count_unit'))*rate}]
-                out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,"user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":res[0].get('currency'),"mtpe_rate":res[0].get('service__mtpe_rate'),"mtpe_hourly_rate":res[0].get('service__mtpe_hourly_rate'),"mtpe_count_unit":res[0].get('service__mtpe_count_unit')}]
+                out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,\
+                    "user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":res[0].get('currency'),\
+                    "vendor_given_currency_code":vendor_currency_code,"mtpe_rate":res[0].get('service__mtpe_rate'),"mtpe_hourly_rate":res[0].get('service__mtpe_hourly_rate'),\
+                    "mtpe_count_unit":res[0].get('service__mtpe_count_unit')}]
             else:
                 out=[]
             service_details.extend(out)
@@ -490,25 +496,20 @@ class AvailablePostJobSerializer(serializers.Serializer):
         print( self.context.get("request").user)
         vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
-        # matched_jobs,applied_jobs=[],[]
+        matched_jobs,applied_jobs=[],[]
         for i in jobs:
             if i.src_lang_id == i.tar_lang_id:
                 res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             else:
                 res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:
-                return True
-                # matched_jobs.append(i)
-        #     if i.bid_details.filter(vendor_id = vendor.id):
-        #         applied_jobs.append(j)
-        # applied_jobs =[]
-        # for j in jobs:
-        #     if j.bid_details.filter(vendor_id = vendor.id):
-        #         applied_jobs.append(j)
-        # if len(matched_jobs) == len(applied_jobs):
-            # return False
-        else:
+                matched_jobs.append(i)
+            if i.bid_details.filter(vendor_id = vendor.id):
+                applied_jobs.append(i)
+        if len(matched_jobs) == len(applied_jobs):
             return False
+        else:
+            return True
 
         # for i in jobs:
         #     if i.src_lang_id == i.tar_lang_id:
