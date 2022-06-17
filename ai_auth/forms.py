@@ -287,3 +287,17 @@ def unread_notification_mail(email_list):
             html_message=msg_html,
         )
     print("notification mailsent>>")
+
+
+
+def user_trial_extend_mail(user):
+    context = {'user':user.fullname}
+    email = user.email
+    msg_html = render_to_string("user_trial_extend.html",context)
+    send_mail(
+        'Trial-Extension',None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("trial_exten_mail_sent-->>>")
