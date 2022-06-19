@@ -406,6 +406,15 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
         # print("data---->",data["projectpost_jobs"])
         return super().run_validation(data)
 
+    def update(self, instance, validated_data):
+        jobs = validated_data.pop("projectpost_jobs",[])
+        dt = super().update(instance, validated_data)
+        if jobs:
+            [instance.projectpost_jobs.create(**i) for i in jobs]
+        return dt
+
+
+
 
 class PrimaryBidDetailSerializer(serializers.Serializer):
     bid_applied = serializers.SerializerMethodField()
@@ -506,8 +515,10 @@ class AvailablePostJobSerializer(serializers.Serializer):
                 matched_jobs.append(i)
             if i.bid_details.filter(vendor_id = vendor.id):
                 applied_jobs.append(i)
-        if len(matched_jobs) == len(applied_jobs):
+        if len(matched_jobs)== 0:
             return False
+        elif len(matched_jobs) == len(applied_jobs):
+            return "Applied"
         else:
             return True
 
