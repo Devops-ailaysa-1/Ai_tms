@@ -327,8 +327,8 @@ class MT_RawSerializer(serializers.ModelSerializer):
         # print("data--->", data)
         segment_id = data.get("segment")
         # print("Segment ID ---> ", segment_id)
-        mt_engine_id = Project.objects.filter(
-            project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first().mt_engine.id
+        obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
+        mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
 
         # data["mt_engine"] = data.get("mt_engine", 1)
         data["mt_engine"] = mt_engine_id

@@ -889,7 +889,7 @@ class GetAssignToSerializer(serializers.Serializer):
 			default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
 			try:profile = default.hired_editor.professional_identity_info.avatar_url
 			except:profile = None
-			tt = [{'name':default.fullname,'id':default.id,'status':'Invite Accepted','avatar':profile}]
+			tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'status':'Invite Accepted','avatar':profile}]
 		except:
 			tt=[]
 		request = self.context['request']

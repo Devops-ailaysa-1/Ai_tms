@@ -8,10 +8,17 @@ from djstripe.models import Price,Customer
 # from ai_auth.api_views import subscribe,subscribe_vendor
 #
 #
-# def user_update(sender, instance, *args, **kwargs):
-#     user = auth_models.AiUser.objects.get(id = instance.user_id)
-#
-#     if user.is_vendor == False:
-#         user.is_vendor = True
-#         user.save()
-#         sub = subscribe_vendor(user)
+def user_update(sender, instance, *args, **kwargs):
+    user = auth_models.AiUser.objects.get(id = instance.user_id)
+    if instance.lang_pair.user.id in users_list:
+        if user.is_vendor == False:
+            user.is_vendor = True
+            user.save()
+
+
+def user_update_1(sender, instance, *args, **kwargs):
+    user = auth_models.AiUser.objects.get(id = instance.user_id)
+    if instance.lang_pair.user.id in users_list:
+        if user.is_vendor == False:
+            user.is_vendor = True
+            user.save()
