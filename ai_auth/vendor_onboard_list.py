@@ -24,3 +24,10 @@ VENDORS_TO_ONBOARD = [
 # production
 
 ]
+
+users_list = [
+'acilangoven+8@gmail.com',
+'acilangoven+10@gmail.com',
+'acilangoven+11@gmail.com',
+'acilangoven+23@gmail.com',
+]

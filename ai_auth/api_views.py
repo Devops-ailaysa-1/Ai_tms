@@ -22,6 +22,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
+from ai_auth.vendor_onboard_list import users_list
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
@@ -1693,8 +1694,9 @@ def vendor_form_filling_status(request):
     try:
         user = AiUser.objects.get(email=email)
         if user.is_vendor == True:
-        #     return JsonResponse({"msg":"Already a vendor"})
-        # else:
+            res = vendor_onboard_check(email,user)
+            return res
+        elif user.email in users_list:
             res = vendor_onboard_check(email,user)
             return res
     except:
