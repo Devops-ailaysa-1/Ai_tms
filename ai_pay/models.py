@@ -26,9 +26,9 @@ class POTaskDetails(models.Model):
     projectid= models.CharField(max_length=223, blank=True, null=True)
     word_count=models.IntegerField(null=True,blank=True)
     char_count=models.IntegerField(null=True,blank=True)
-    unit_price =models.DecimalField(max_digits=12, decimal_places=2)
+    unit_price =models.DecimalField(max_digits=12, decimal_places=4)
     unit_type = models.ForeignKey(ServiceTypeunits,related_name="po_unit",on_delete=models.PROTECT)
-    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=4)
 
     def save(self, *args, **kwargs):
         if not self.total_amount:
@@ -64,18 +64,18 @@ class PurchaseOrder(models.Model):
     ("void","void")
     )
 
-    
+
     def generate_po_id():
         return "PO-{0}".format(id_generator())
 
     poid=models.CharField(max_length=50,default=generate_po_id,unique=True)
     client=models.ForeignKey(AiUser,related_name='user_client',on_delete=models.PROTECT)
     seller=models.ForeignKey(AiUser,related_name='user_seller',on_delete=models.PROTECT)
-    assignment = models.ForeignKey(POAssignment,related_name='po_assign',on_delete=models.PROTECT)  
+    assignment = models.ForeignKey(POAssignment,related_name='po_assign',on_delete=models.PROTECT)
     currency = models.ForeignKey(Currencies,related_name='po_currency', on_delete=models.PROTECT,blank=True, null=True)
     po_status =models.CharField(max_length=50,choices=status,default='draft')
     po_file = models.FileField(upload_to=po_dir_path, blank=True, null=True)
-    po_total_amount = models.DecimalField(max_digits=12,decimal_places=2)
+    po_total_amount = models.DecimalField(max_digits=12,decimal_places=4)
     #po_pdf = models.FileField(upload_to ='ai_invoices/',null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -106,9 +106,9 @@ class AilaysaGeneratedInvoice(models.Model):
     seller=models.ForeignKey(AiUser,related_name='user_seller_invo',on_delete=models.PROTECT)
     invo_file = models.FileField(upload_to=invoice_dir_path, blank=True, null=True)
     gst = models.CharField(max_length=50,choices=GST_CAT)
-    tax_amount = models.DecimalField(max_digits=12,decimal_places=2)
-    total_amount = models.DecimalField(max_digits=12,decimal_places=2)
-    grand_total = models.DecimalField(max_digits=12,decimal_places=2)
+    tax_amount = models.DecimalField(max_digits=12,decimal_places=4)
+    total_amount = models.DecimalField(max_digits=12,decimal_places=4)
+    grand_total = models.DecimalField(max_digits=12,decimal_places=4)
     currency = models.ForeignKey(Currencies,related_name='ai_invo_currency', on_delete=models.PROTECT,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -120,6 +120,3 @@ class AilaysaGeneratedInvoice(models.Model):
 class AiInvoicePO(models.Model):
     invoice=models.ForeignKey(AilaysaGeneratedInvoice,related_name='ai_invo_po',on_delete=models.CASCADE)
     po=models.ForeignKey(PurchaseOrder,related_name='ai_po',on_delete=models.CASCADE)
-
-
-
