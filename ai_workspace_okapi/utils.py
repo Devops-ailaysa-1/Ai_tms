@@ -181,8 +181,10 @@ bl_cell_format = {
 def get_aws_lang_code(lang_code):
     if lang_code == "zh-Hans":
         return lang_code[:2]
-    if lang_code == "zh-Hant":
+    elif lang_code == "zh-Hant":
         return "zh-TW"
+    else:
+        return lang_code
 
 def ms_translation(source_string, source_lang_code, target_lang_code):
 
