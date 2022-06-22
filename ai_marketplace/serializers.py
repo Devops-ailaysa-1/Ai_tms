@@ -5,7 +5,7 @@ from ai_marketplace.models import (ProjectboardDetails,ProjectPostJobDetails,
                     ProjectPostTemplateJobDetails,ProjectPostTemplateContentType,
                     ProjectPostTemplateSubjectField,ProjectboardTemplateDetails,
                     ProjectPostContentType,ProjectPostSteps,ProjectPostTemplateSteps)
-from ai_auth.models import AiUser,AiUserProfile,HiredEditors
+from ai_auth.models import AiUser,AiUserProfile,HiredEditors,VendorOnboarding
 from ai_staff.models import Languages,Currencies
 from django.db.models import Q
 from ai_workspace.models import Project,Job
@@ -249,6 +249,15 @@ class GetVendorDetailSerializer(serializers.Serializer):
     vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True)
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
     status = serializers.SerializerMethodField()
+    verified = serializers.SerializerMethodField()
+
+    def get_verified(self,obj):
+        try:
+            user = VendorOnboarding.objects.get(email = obj.email)
+            if user.get_status_display() == "Accepted":return True
+            else:return False
+        except:
+            return  False
 
     def get_vendor_lang_pair(self, obj):
         request = self.context['request']
@@ -591,9 +600,18 @@ class GetVendorListSerializer(serializers.ModelSerializer):
     country = serializers.ReadOnlyField(source = 'country.sortname')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     status = serializers.SerializerMethodField()
+    verified = serializers.SerializerMethodField()
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status',)
+        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified',)
+
+    def get_verified(self,obj):
+        try:
+            user = VendorOnboarding.objects.get(email = obj.email)
+            if user.get_status_display() == "Accepted":return True
+            else:return False
+        except:
+            return  False
 
 
     def get_status(self,obj):
@@ -709,9 +727,19 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
     country = serializers.ReadOnlyField(source = 'country.sortname')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     status = serializers.SerializerMethodField()
+    verified = serializers.SerializerMethodField()
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status',)
+        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified',)
+
+
+    def get_verified(self,obj):
+        try:
+            user = VendorOnboarding.objects.get(email = obj.email)
+            if user.get_status_display() == "Accepted":return True
+            else:return False
+        except:
+            return  False
 
 
     def get_status(self,obj):
