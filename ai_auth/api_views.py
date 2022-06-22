@@ -1699,6 +1699,8 @@ def vendor_form_filling_status(request):
         elif user.email in users_list:
             res = vendor_onboard_check(email,user)
             return res
+        else:
+            pass
     except:
         res = vendor_onboard_check(email,None)
         return res
@@ -1778,5 +1780,5 @@ def vendor_onboard_complete(request):#######while using social signups##########
         VendorLanguagePair.objects.create(user=request.user,source_lang_id = source_lang,target_lang_id =target_lang)
     if cv_file:
         VendorsInfo.objects.create(user=request.user,cv_file = cv_file )
-        VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+        VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
     return JsonResponse({"msg": "Onboarding completed successfully"})
