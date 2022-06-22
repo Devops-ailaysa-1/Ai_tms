@@ -346,6 +346,7 @@ class TempProjectSetupView(viewsets.ViewSet):
                 f2.close()
                 os.remove(os.path.abspath(name))
                 return Response(serializer.data, status=201)
+            os.remove(os.path.abspath(name))
             return Response(serializer.errors, status=409)
         else:
             serializer = TempProjectSetupSerializer(data={**request.POST.dict(),

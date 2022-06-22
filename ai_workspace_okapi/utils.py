@@ -178,6 +178,14 @@ bl_cell_format = {
     'align': 'left',
 }
 
+def get_aws_lang_code(lang_code):
+    if lang_code == "zh-Hans":
+        return lang_code[:2]
+    elif lang_code == "zh-Hant":
+        return "zh-TW"
+    else:
+        return lang_code
+
 def ms_translation(source_string, source_lang_code, target_lang_code):
 
     # Add your subscription key and endpoint
@@ -220,6 +228,8 @@ def aws_translate(source_string, source_lang_code, target_lang_code):
                              aws_access_key_id = os.getenv("aws_iam_access_key_id"),
                              aws_secret_access_key = os.getenv("aws_iam_secret_access_key")
                                 )
+    source_lang_code = get_aws_lang_code(source_lang_code)
+    target_lang_code = get_aws_lang_code(target_lang_code)
     return translate.translate_text( Text = source_string,
                                      SourceLanguageCode = source_lang_code,
                                      TargetLanguageCode = target_lang_code)["TranslatedText"]
