@@ -5,7 +5,7 @@ from .models import (AiUser, UserAttribute,
 from ai_vendor.models import VendorOnboardingInfo,VendorLanguagePair
 from django.contrib.auth.models import Permission
 from django.contrib.admin import AdminSite
-#from django.contrib.auth.admin import UserAdmin 
+#from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Count
 # from ai_staff.forms import AiUserCreationForm, AiUserChangeForm
@@ -110,18 +110,18 @@ class VAAdmin(admin.ModelAdmin):
 @admin.register(VendorOnboardingInfo)
 @admin.register(VendorOnboardingInfo, site=staff_admin_site)
 class VOIAdmin(admin.ModelAdmin):
-    list_display = ("user","fullname","country","cv_approved","cv_status","service_rates_status")
-    def cv_status(self, obj):
+    list_display = ("user","fullname","country","vendor_status","cv_uploaded","service_rates_status")
+    def cv_uploaded(self, obj):
         ven = VendorOnboarding.objects.filter(email=obj.user.email)
         if ven.exists():
             return True
         else:
-            return False 
+            return False
     def fullname(self,obj):
         return obj.user.fullname
     def country(self,obj):
         return obj.user.country.name
-    cv_status.boolean = True
+    cv_uploaded.boolean = True
 
     def service_rates_status(self,obj):
         res = VendorLanguagePair.objects.filter(user=obj.user).values('user').annotate(service=Count('service')).annotate(service_type=Count('servicetype'))
@@ -132,7 +132,7 @@ class VOIAdmin(admin.ModelAdmin):
 
     service_rates_status.boolean= True
 
-    def cv_approved(self,obj):
+    def vendor_status(self,obj):
         try:
             ven = VendorOnboarding.objects.get(email=obj.user.email)
             if ven.get_status_display() == "Accepted":
@@ -142,7 +142,7 @@ class VOIAdmin(admin.ModelAdmin):
         except:
             return False
 
-    cv_approved.boolean= True
+    vendor_status.boolean= True
 
 # Custom Admin Page  #
 
