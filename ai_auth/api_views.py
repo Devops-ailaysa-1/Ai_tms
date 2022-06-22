@@ -1782,3 +1782,17 @@ def vendor_onboard_complete(request):#######while using social signups##########
         VendorsInfo.objects.create(user=request.user,cv_file = cv_file )
         VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
     return JsonResponse({"msg": "Onboarding completed successfully"})
+
+
+
+
+
+
+@api_view(['POST'])
+def get_user(request):
+    email = request.POST.get('email')
+    try:
+        user = AiUser.objects.get(email=email)
+        return Response({'user_exist':True})
+    except:
+        return Response({'user_exist':False})
