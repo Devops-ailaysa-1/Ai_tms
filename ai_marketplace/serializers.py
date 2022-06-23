@@ -10,7 +10,7 @@ from ai_staff.models import Languages,Currencies
 from django.db.models import Q
 from ai_workspace.models import Project,Job
 from drf_writable_nested import WritableNestedModelSerializer
-import json,requests
+import json,requests,os
 from ai_workspace.models import Steps
 from itertools import groupby
 from rest_framework.response import Response
@@ -466,6 +466,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
 
 
     def get_service_info(self,obj):
+        key_ = os.getenv("FIXER-API-KEY")
         vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         service_details=[]
@@ -482,15 +483,21 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
             #########################if user preffered currency exists,then use that or pick first instance matching that job pair and convert to user_preffered_currency###############
             if res:
                 vendor_currency_code = Currencies.objects.get(id = res[0].get('currency')).currency_code
-                # vpc = currency
-                # upc = obj.currency.currency_code
-                # payload = {'q': vpc+'_'+upc}
-                # res1 = requests.get('https://free.currconv.com/api/v7/convert?compact=ultra&apiKey=78341dcc54736bbff6e1',params=payload)
-                # rate = res1.json().get(payload.get('q'))
-                # out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,"user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":currency,"mtpe_rate":float(res[0].get('service__mtpe_rate'))*rate,"mtpe_hourly_rate":float(res[0].get('service__mtpe_hourly_rate'))*rate,"mtpe_count_unit":float(res[0].get('service__mtpe_count_unit'))*rate}]
+                if vendor_currency_code == obj.currency.currency_code:
+                    mtpe_rate = res[0].get('service__mtpe_rate')
+                    hourly_rate = res[0].get('service__mtpe_hourly_rate')
+                else:
+                    if res[0].get('service__mtpe_rate')!=None:
+                        res1 =requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_rate')})
+                        mtpe_rate = round(res1.json().get('result'),2) if res1.json().get('success') == True else None
+                    else:mtpe_rate = None
+                    if res[0].get('service__mtpe_hourly_rate')!=None:
+                        res2 = requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_hourly_rate')})
+                        hourly_rate = round(res2.json().get('result'),2) if res1.json().get('success') == True else None
+                    else:hourly_rate = None
                 out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,\
                     "user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":res[0].get('currency'),\
-                    "vendor_given_currency_code":vendor_currency_code,"mtpe_rate":res[0].get('service__mtpe_rate'),"mtpe_hourly_rate":res[0].get('service__mtpe_hourly_rate'),\
+                    "vendor_given_currency_code":vendor_currency_code,"mtpe_rate":mtpe_rate,"mtpe_hourly_rate":hourly_rate,\
                     "mtpe_count_unit":res[0].get('service__mtpe_count_unit')}]
             else:
                 out=[]

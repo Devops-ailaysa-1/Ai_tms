@@ -15,6 +15,9 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.models import Group
 
 
+
+
+
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
 		os.makedirs(path)

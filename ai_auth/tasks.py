@@ -1,7 +1,7 @@
 from django.core.mail import send_mail
 import smtplib
 from celery.utils.log import get_task_logger
-import celery
+import celery,re
 import djstripe
 logger = get_task_logger(__name__)
 from celery.decorators import task
@@ -16,6 +16,10 @@ from notifications.models import Notification
 from ai_auth import forms as auth_forms
 
 extend_mail_sent= 0
+
+def striphtml(data):
+    p = re.compile(r'<.*?>')
+    return p.sub('', data)
 # @shared_task
 # def test_task():
 #     print("this is task")
@@ -115,7 +119,7 @@ def send_notification_email_for_unread_messages():
            details=[]
            for j in q2:
                actor_obj = AiUser.objects.get(id = j.actor_object_id)
-               recent_message = j.description
+               recent_message = striphtml(j.description) if j.description else None
                details.append({"From":actor_obj.fullname,"Message":recent_message})
            email = AiUser.objects.get(id = i.recipient_id).email
            email_list.append({"email":email,"details":details})
