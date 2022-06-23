@@ -1,11 +1,14 @@
 from django.contrib import admin
 from .models import (AiUser, UserAttribute,
                     TempPricingPreference,CreditPack,UserCredits,
-                    BillingAddress,UserTaxInfo,Team,InternalMember, VendorOnboarding)
+                    BillingAddress,UserTaxInfo,Team,InternalMember, 
+                    VendorOnboarding,ExistingVendorOnboardingCheck)
+from ai_vendor.models import VendorOnboardingInfo,VendorLanguagePair
 from django.contrib.auth.models import Permission
 from django.contrib.admin import AdminSite
-#from django.contrib.auth.admin import UserAdmin 
+#from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import ugettext_lazy as _
+from django.db.models import Count
 # from ai_staff.forms import AiUserCreationForm, AiUserChangeForm
 #from django.contrib.auth import get_user_model
 
@@ -105,6 +108,47 @@ class VAAdmin(admin.ModelAdmin):
 #     )
     list_display = ("name", "email", "cv_file","status")
 
+@admin.register(VendorOnboardingInfo)
+@admin.register(VendorOnboardingInfo, site=staff_admin_site)
+class VOIAdmin(admin.ModelAdmin):
+    list_display = ("user","fullname","country","vendor_status","cv_uploaded","service_rates_status")
+    def cv_uploaded(self, obj):
+        ven = VendorOnboarding.objects.filter(email=obj.user.email)
+        if ven.exists():
+            return True
+        else:
+            return False
+    def fullname(self,obj):
+        return obj.user.fullname
+    def country(self,obj):
+        return obj.user.country.name
+    cv_uploaded.boolean = True
+
+    def service_rates_status(self,obj):
+        res = VendorLanguagePair.objects.filter(user=obj.user).values('user').annotate(service=Count('service')).annotate(service_type=Count('servicetype'))
+        if res[0].get('service',0) > 0 or  res[0].get('servicetype',0) > 0:
+            return True
+        else:
+            return False
+
+    service_rates_status.boolean= True
+
+    def vendor_status(self,obj):
+        try:
+            ven = VendorOnboarding.objects.get(email=obj.user.email)
+            if ven.get_status_display() == "Accepted":
+                return True
+            else:
+                return False
+        except:
+            return False
+
+    vendor_status.boolean= True
+
+
+@admin.register(ExistingVendorOnboardingCheck)
+class ExistingVendorEmailAdmin(admin.ModelAdmin):
+    list_display = ("user","gen_password","mail_sent","mail_sent_time")
 
 # Custom Admin Page  #
 

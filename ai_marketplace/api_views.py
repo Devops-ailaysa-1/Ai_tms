@@ -457,6 +457,9 @@ class JobFilter(django_filters.FilterSet):
         # groups = [
         #     RequiredGroup(['source', 'target']),
         #  ]
+class NoPagination(PageNumberPagination):
+      page_size = None
+
 
 class AvailableJobsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -465,7 +468,8 @@ class AvailableJobsListView(generics.ListAPIView):
     ordering_fields = ['bid_deadline','proj_deadline','id']
     ordering = ('-id')
     filterset_class = JobFilter
-    pagination.PageNumberPagination.page_size = None
+    pagination_class = NoPagination
+    # page_size = None
 
     def validate(self):
         if self.request.user.is_vendor == False:
@@ -595,7 +599,7 @@ class GetVendorListViewNew(generics.ListAPIView):
     serializer_class = GetVendorListSerializer
     filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
     filterset_class = VendorFilterNew
-    page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+    pagination.PageNumberPagination.page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
 
     def validate(self):
         data = self.request.GET
@@ -621,7 +625,7 @@ class GetVendorListViewNew(generics.ListAPIView):
             target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                     .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
+                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(email='ailaysateam@gmail.com')
         if max_price and min_price and count_unit and currency:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):

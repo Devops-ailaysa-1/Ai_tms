@@ -262,7 +262,7 @@ class TempProjectSetupSerializer(serializers.ModelSerializer):
 		print("intial-->",self.initial_data )
 		source_language = json.loads(self.initial_data["source_language"])
 		target_languages = json.loads(self.initial_data["target_languages"])
-		self.initial_data['mt_engine_id'] = json.loads(self.initial_data["mt_engine"])
+		self.initial_data['mt_engine_id'] = json.loads(self.initial_data.get("mt_engine","1"))
 		if source_language and target_languages:
 			self.initial_data['langpair'] = [{"source_language": source_language, "target_language": \
 				target_language} for target_language in target_languages]
@@ -434,10 +434,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 
 	def run_validation(self,data):
-		if self.context['request']._request.method == 'POST':
-			pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
-			if pt!=4 and data.get('target_languages')==None:
-					raise serializers.ValidationError({"msg":"target languages needed for translation project"})
+		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
+				pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
+				if pt!=4 and data.get('target_languages')==None:
+						raise serializers.ValidationError({"msg":"target languages needed for translation project"})
 		if data.get('target_languages')!=None:
 			comparisons = [source == target for (source, target) in itertools.product(data['source_language'],data['target_languages'])]
 			if True in comparisons:
@@ -456,7 +456,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:
 			data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 		print('data[files]-------------->',data['files'])
-		if self.context['request']._request.method == 'POST':
+		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [None])]
 		else:
@@ -894,6 +894,7 @@ class GetAssignToSerializer(serializers.Serializer):
 			tt=[]
 		request = self.context['request']
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+		qs = qs.filter(~Q(user__email = "ailaysateam@gmail.com"))
 		ser = HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data
 		for i in ser:
 			if i.get("vendor_lang_pair")!=[]:

@@ -301,3 +301,21 @@ def user_trial_extend_mail(user):
         html_message=msg_html,
     )
     print("trial_exten_mail_sent-->>>")
+
+
+
+def existing_vendor_onboarding_mail(user,gen_password):
+    context = {'user':user.fullname,'email':user.email,'gen_password':gen_password}
+    email = user.email
+    msg_html = render_to_string("existing_vendor_onboarding.html",context)
+    sent =send_mail(
+        'Become a member of Ailaysa freelancer marketplace',None,
+        'himanshi.gupta@langscape.com',
+        [email],
+        html_message=msg_html,
+    )
+    print("existing_vendor_onboarding_mail-->>>")
+    if sent==0:
+        return False
+    else:
+        return True

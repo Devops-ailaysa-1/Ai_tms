@@ -8,7 +8,7 @@ from celery.decorators import task
 from datetime import date
 from django.utils import timezone
 from django.db.models import Q
-from .models import AiUser,UserAttribute,HiredEditors
+from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
 import datetime
 from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
@@ -141,3 +141,20 @@ def email_send_subscription_extension():
         extend_mail_sent+=1
     except IndexError:
         logger.info("all-email-sent succesfully")
+
+
+
+@task
+def existing_vendor_onboard_check():
+    obj = ExistingVendorOnboardingCheck.objects.filter(mail_sent=False).first()
+    status = auth_forms.existing_vendor_onboarding_mail(obj.user,obj.gen_password)
+    if obj:
+        user_email=obj.user.email
+        if status:
+            obj.mail_sent=True
+            obj.save()     
+            logger.info("succesfully sent mail ")
+        else:
+            logger.info("mail not sent ")
+    else:
+        logger.info("No record Found ")
