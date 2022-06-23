@@ -310,18 +310,21 @@ class ProjectPostJobSerializer(serializers.ModelSerializer):
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
     bid_count = serializers.SerializerMethodField()
     bid_details = BidPropasalDetailSerializer(many=True,read_only=True)
+    src_lang_name = serializers.ReadOnlyField(source = 'src_lang.language')
+    tar_lang_name = serializers.ReadOnlyField(source = 'tar_lang.language')
     # bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
     class Meta:
         model=ProjectPostJobDetails
-        fields=('id','src_lang','tar_lang','bid_count','bid_details',)
+        fields=('id','src_lang','src_lang_name','tar_lang','tar_lang_name','bid_count','bid_details',)
 
     def get_bid_count(self, obj):
         return obj.bid_details.count()
 
 class ProjectPostContentTypeSerializer(serializers.ModelSerializer):
+    content_type_name = serializers.ReadOnlyField(source='content_type.name')
     class Meta:
         model = ProjectPostContentType
-        fields = ('id','content_type',)
+        fields = ('id','content_type','content_type_name',)
 
 class ProjectPostStepsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -329,9 +332,10 @@ class ProjectPostStepsSerializer(serializers.ModelSerializer):
         fields = ('steps',)
 
 class ProjectPostSubjectFieldSerializer(serializers.ModelSerializer):
+    subject_name = serializers.ReadOnlyField(source='subject.name')
     class Meta:
         model = ProjectPostSubjectField
-        fields = ('id','subject',)
+        fields = ('id','subject','subject_name',)
 
 
 class ProjectPostTemplateStepsSerializer(serializers.ModelSerializer):
@@ -368,6 +372,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     projectpost_steps=ProjectPostStepsSerializer(many=True,required=False)
     project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True))#,write_only=True)
     customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
+    bidding_currency = serializers.ReadOnlyField(source='currency.currency_code')
     # steps_id = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),write_only=True)
     class Meta:
         model=ProjectboardDetails
@@ -375,11 +380,11 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
                  'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',
-                 'closed_at','deleted_at','created_at',)#'bidproject_details',
+                 'closed_at','deleted_at','created_at','bidding_currency',)#'bidproject_details',
 
     def get_bid_count(self, obj):
         bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
-        print(obj.bidproject_details.count())
+        # print(obj.bidproject_details.count())
         return obj.bidproject_details.count()
 
     def get_status(self,obj):
