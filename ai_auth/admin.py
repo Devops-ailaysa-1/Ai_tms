@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (AiUser, UserAttribute,
                     TempPricingPreference,CreditPack,UserCredits,
-                    BillingAddress,UserTaxInfo,Team,InternalMember, VendorOnboarding)
+                    BillingAddress,UserTaxInfo,Team,InternalMember, 
+                    VendorOnboarding,ExistingVendorOnboardingCheck)
 from ai_vendor.models import VendorOnboardingInfo,VendorLanguagePair
 from django.contrib.auth.models import Permission
 from django.contrib.admin import AdminSite
@@ -143,6 +144,11 @@ class VOIAdmin(admin.ModelAdmin):
             return False
 
     vendor_status.boolean= True
+
+
+@admin.register(ExistingVendorOnboardingCheck)
+class ExistingVendorEmailAdmin(admin.ModelAdmin):
+    list_display = ("user","gen_password","mail_sent","mail_sent_time")
 
 # Custom Admin Page  #
 
