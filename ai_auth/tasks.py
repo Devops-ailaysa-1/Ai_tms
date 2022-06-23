@@ -149,10 +149,10 @@ def existing_vendor_onboard_check():
     obj = ExistingVendorOnboardingCheck.objects.filter(mail_sent=False).first()
     status = auth_forms.existing_vendor_onboarding_mail(obj.user,obj.gen_password)
     if obj:
+        user_email=obj.user.email
         if status:
             obj.mailsent=True
-            obj.save()
-            user_email=obj.user.email
+            obj.save()     
             logger.info("succesfully sent mail for ",user_email)
         else:
             logger.info("mail not sent ",user_email)
