@@ -151,7 +151,7 @@ def existing_vendor_onboard_check():
     if obj:
         user_email=obj.user.email
         if status:
-            obj.mailsent=True
+            obj.mail_sent=True
             obj.save()     
             logger.info("succesfully sent mail ")
         else:
