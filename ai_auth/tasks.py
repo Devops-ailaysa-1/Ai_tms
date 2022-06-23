@@ -152,8 +152,8 @@ def existing_vendor_onboard_check():
         if status:
             obj.mailsent=True
             obj.save()
-            logger.info("succesfully sent mail for ",user.email)
+            logger.info("succesfully sent mail for ",obj.user.email)
         else:
-            logger.info("mail not sent for ",user.email)
+            logger.info("mail not sent for ",obj.user.email)
     else:
-        logger.info("No record Found ",user.email)
+        logger.info("No record Found ",obj.user.email)
