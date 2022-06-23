@@ -152,12 +152,13 @@ def email_send_subscription_extension():
 def existing_vendor_onboard_check():
     obj = ExistingVendorOnboardingCheck.objects.filter(mail_sent=False).first()
     status = auth_forms.existing_vendor_onboarding_mail(obj.user,obj.gen_password)
-    if obj.exists():
+    if obj:
+        user_email=obj.user.email
         if status:
-            obj.mailsent=True
-            obj.save()
-            logger.info("succesfully sent mail for ",obj.user.email)
+            obj.mail_sent=True
+            obj.save()     
+            logger.info("succesfully sent mail ")
         else:
-            logger.info("mail not sent for ",obj.user.email)
+            logger.info("mail not sent ")
     else:
-        logger.info("No record Found ",obj.user.email)
+        logger.info("No record Found ")
