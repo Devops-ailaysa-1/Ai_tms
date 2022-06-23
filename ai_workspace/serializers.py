@@ -887,7 +887,7 @@ class GetAssignToSerializer(serializers.Serializer):
 	def get_external_editors(self,obj):
 		try:
 			default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
-			try:profile = default.hired_editor.professional_identity_info.avatar_url
+			try:profile = default.professional_identity_info.avatar_url
 			except:profile = None
 			tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'status':'Invite Accepted','avatar':profile}]
 		except:
