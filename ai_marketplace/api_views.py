@@ -457,6 +457,9 @@ class JobFilter(django_filters.FilterSet):
         # groups = [
         #     RequiredGroup(['source', 'target']),
         #  ]
+class NoPagination(PageNumberPagination):
+      page_size = None
+
 
 class AvailableJobsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -465,7 +468,8 @@ class AvailableJobsListView(generics.ListAPIView):
     ordering_fields = ['bid_deadline','proj_deadline','id']
     ordering = ('-id')
     filterset_class = JobFilter
-    pagination.PageNumberPagination.page_size = None
+    pagination_class = NoPagination
+    # page_size = None
 
     def validate(self):
         if self.request.user.is_vendor == False:
