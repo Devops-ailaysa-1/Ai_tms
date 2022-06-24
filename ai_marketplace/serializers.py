@@ -121,10 +121,13 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
             return "Projectpost Deleted"
         else:  ##############################Need to revise this##############################
             if obj.status_id == 3:
-                ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor=user_).first()
-                if not ht:
-                    ht = HiredEditors.objects.filter(user=user_,hired_editor=obj.vendor).first()
-                return str(ht.get_status_display())
+                try:
+                    ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor=user_).first()
+                    if not ht:
+                        ht = HiredEditors.objects.filter(user=user_,hired_editor=obj.vendor).first()
+                    return str(ht.get_status_display())
+                except:
+                    return None
             else:
                 return obj.status.status
 
