@@ -185,8 +185,7 @@ def user_projectpost_list(request):
     present = timezone.now()
     new=[]
     try:
-        queryset = ProjectboardDetails.objects.filter(customer_id=customer_id).all()
-        print(queryset)
+        queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
         for i in queryset:
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
             projectpost_title = i.proj_name
