@@ -684,9 +684,10 @@ def get_previous_accepted_rate(request):
 def customer_mp_dashboard_count(request):
     user = request.user
     present = datetime.now()
-    query = ProjectboardDetails.objects.filter(customer = user)
+    query = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
+    #query = ProjectboardDetails.objects.filter(customer = user)
     posted_project_count = query.count()
-    inprogress_project_count = query.filter(bid_deadline__gte = present).count()
+    inprogress_project_count = query.filter(bid_deadline__gte = present).filter(closed_at = None).count()
     bid_deadline_expired_project_count = query.filter(bid_deadline__lte = present).count()
     return JsonResponse({"posted_project_count":posted_project_count,\
     "inprogress_project_count":inprogress_project_count,\
