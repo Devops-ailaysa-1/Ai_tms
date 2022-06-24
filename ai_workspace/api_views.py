@@ -1179,7 +1179,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             msg_send(sender,Receiver,tasks[0])
-            if Receiver in hired_editors:
+            if Receiver in hired_editors or Receiver.email == 'ailaysateam@gmail.com':
                 ws_forms.task_assign_detail_mail(Receiver,assignment_id)
             # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
             return Response({"msg":"Task Assigned"})

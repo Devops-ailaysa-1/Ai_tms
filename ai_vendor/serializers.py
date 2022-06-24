@@ -27,6 +27,7 @@ class VendorServiceTypeSerializer(serializers.ModelSerializer):
        fields=('id','services','unit_rate','unit_type','hourly_rate',)
 
 class VendorServiceInfoSerializer(serializers.ModelSerializer):
+    # mtpe_rate = serializers.DecimalField(max_digits=12, decimal_places=2)
     class Meta:
         model=VendorServiceInfo
         # fields = ('id','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit',)
