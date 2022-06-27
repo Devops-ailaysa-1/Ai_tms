@@ -194,4 +194,4 @@ docx2txt==0.8
 weasyprint==55.0
 gevent
 hunspell
-
+indic-nlp-library==0.81
