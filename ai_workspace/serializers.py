@@ -611,6 +611,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     def create(self, data):
         print('validated data kk==>',data)
+        user1 = self.context.get('request').user
         task_list = data.pop('tasks')
         assign_to = data.pop('assign_to')
         total_word_count = data.pop('total_word_count',None)
@@ -618,7 +619,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         with transaction.atomic():
           task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task.id,total_word_count = task.task_word_count) for task in task_obj_list]
           task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
-          generate_client_po(task_assign_info)
+          if user1.is_internal_member == False:
+             generate_client_po(task_assign_info)
         return task_assign_info
 
     def update(self,instance,data):
