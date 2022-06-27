@@ -42,7 +42,7 @@ from ai_workspace.models import File
 from .utils import SpacesService,text_to_speech
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
-from .utils import download_file, bl_title_format, bl_cell_format
+from .utils import download_file, bl_title_format, bl_cell_format,get_res_path
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -117,10 +117,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             DocumentViewByTask.correct_fields(data)
             # print("data--->", data)
             params_data = {**data, "output_type": None}
-            res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                         "fprm_file_path": None,
-                         "use_spaces" : settings.USE_SPACES
-                         }
+            # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+            #              "fprm_file_path": None,
+            #              "use_spaces" : settings.USE_SPACES
+            #              }
+            res_paths = get_res_path(params_data["source_language"])
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
@@ -523,10 +524,11 @@ class DocumentToFile(views.APIView):
                 "-" + task_data["target_language"] + ")" + ext
 
         params_data = {**task_data, "output_type": output_type}
-        res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                     "fprm_file_path": None,
-                     "use_spaces" : settings.USE_SPACES
-                     }
+        # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+        #              "fprm_file_path": None,
+        #              "use_spaces" : settings.USE_SPACES
+        #              }
+        res_paths = get_res_path(task_data["source_language"])
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
