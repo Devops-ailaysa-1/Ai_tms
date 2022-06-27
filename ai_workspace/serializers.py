@@ -611,9 +611,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     def create(self, data):
         print('validated data kk==>',data)
-        user1 = self.context.get('request').user
         task_list = data.pop('tasks')
         assign_to = data.pop('assign_to')
+        user1 = AiUser.objects.get(id=assign_to)
         total_word_count = data.pop('total_word_count',None)
         task_obj_list = Task.objects.filter(id__in=task_list)
         with transaction.atomic():
