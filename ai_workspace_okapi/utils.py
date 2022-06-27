@@ -311,3 +311,19 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
     #     out.write(response.audio_content)
     #     print('Audio content written to file',filename)
     # return os.path.join(dir,filename)
+
+
+def get_res_path(source_lang):
+
+    if source_lang not in ['hi','bn','or','ne','pa']:
+        res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
+                     "fprm_file_path": None,
+                     "use_spaces": settings.USE_SPACES
+                     }
+        return res_paths
+    else:
+        res_paths = {"srx_file_path": "okapi_resources/indian_lang.srx",
+                     "fprm_file_path": None,
+                     "use_spaces": settings.USE_SPACES
+                     }
+        return res_paths
