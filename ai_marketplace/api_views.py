@@ -10,6 +10,7 @@ from os.path import join
 from ai_auth.models import AiUser
 from ai_staff.models import Languages,ContentTypes
 from django.conf import settings
+from decimal import *
 from notifications.signals import notify
 from notifications.models import Notification
 from django.db.models import Q, Max
@@ -169,6 +170,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors) 
 
     def delete(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
@@ -184,8 +186,7 @@ def user_projectpost_list(request):
     present = timezone.now()
     new=[]
     try:
-        queryset = ProjectboardDetails.objects.filter(customer_id=customer_id).all()
-        print(queryset)
+        queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
         for i in queryset:
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
             projectpost_title = i.proj_name
@@ -355,8 +356,8 @@ def bid_proposal_status(request):
                 token = invite_accept_token.make_token(tt)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 context = {'name':obj.vendor.fullname,'team':user.fullname,'link':link,'job':obj.bidpostjob.source_target_pair_names,
-                           'hourly_rate': str(obj.mtpe_hourly_rate) + '(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit,\
-                            'unit_rate':str(obj.mtpe_rate) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
+                           'hourly_rate': str(obj.mtpe_hourly_rate.quantize(Decimal("0.00"))) + '(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit,\
+                            'unit_rate':str(obj.mtpe_rate.quantize(Decimal("0.00"))) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
                             'job_id':obj.bidpostjob.postjob_id,'project':obj.projectpost.proj_name,\
                             'date':obj.created_at.date().strftime('%d-%m-%Y')}
                 print("Mail------>",obj.vendor.email)
@@ -599,7 +600,7 @@ class GetVendorListViewNew(generics.ListAPIView):
     serializer_class = GetVendorListSerializer
     filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
     filterset_class = VendorFilterNew
-    pagination.PageNumberPagination.page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
+    pagination.PageNumberPagination.page_size = None#settings.REST_FRAMEWORK["PAGE_SIZE"]
 
     def validate(self):
         data = self.request.GET
@@ -683,9 +684,10 @@ def get_previous_accepted_rate(request):
 def customer_mp_dashboard_count(request):
     user = request.user
     present = datetime.now()
-    query = ProjectboardDetails.objects.filter(customer = user)
+    query = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
+    #query = ProjectboardDetails.objects.filter(customer = user)
     posted_project_count = query.count()
-    inprogress_project_count = query.filter(bid_deadline__gte = present).count()
+    inprogress_project_count = query.filter(bid_deadline__gte = present).filter(closed_at = None).count()
     bid_deadline_expired_project_count = query.filter(bid_deadline__lte = present).count()
     return JsonResponse({"posted_project_count":posted_project_count,\
     "inprogress_project_count":inprogress_project_count,\
