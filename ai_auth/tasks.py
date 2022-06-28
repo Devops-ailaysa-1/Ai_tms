@@ -7,7 +7,7 @@ logger = get_task_logger(__name__)
 from celery.decorators import task
 from datetime import date
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q,F
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
 import datetime
 from djstripe.models import Subscription
@@ -76,8 +76,8 @@ from datetime import datetime, timedelta
 def renewal_list():
     cycle_date = timezone.now()
     subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
-                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active').filter(~Q(current_period_start__year=cycle_date.year,
-                        current_period_start__month=cycle_date.month,current_period_start__day=cycle_date.day))
+                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active').filter(~Q(billing_cycle_anchor__year=F('current_period_start__year'),
+                        billing_cycle_anchor__month=F('current_period_start__month'),billing_cycle_anchor__day=F('current_period_start__day')))
     print(subs)
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
