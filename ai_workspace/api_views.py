@@ -33,7 +33,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails, TaskAssignInfo,TaskTranscriptDetails
+    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
+    TaskAssignInfo,TaskTranscriptDetails,TaskAssignHistory
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -1376,7 +1377,7 @@ class ShowMTChoices(APIView):
             info =info +' '+ i
             nltk_tokens = nltk.word_tokenize(info)
             count = len([word for word in nltk_tokens if word not in punctuation])
-            print("Count------------>",count)
+            #print("Count------------>",count)
             if count in range(90,100) or count>100:
                 return info.lstrip()
             else:
@@ -1469,6 +1470,7 @@ def transcribe_file(request):
 
 #text_to_speech(ssml_file,target_language,filename,voice_gender)
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def transcribe_and_download_text_to_speech_source(request):#########working############Transcribe and Download
     tasks =[]
     project = request.GET.get('project',None)
@@ -1511,6 +1513,7 @@ def transcribe_and_download_text_to_speech_source(request):#########working#####
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def download_text_to_speech_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)
@@ -1525,3 +1528,23 @@ def download_text_to_speech_source(request):
     # dir = os.path.dirname(obj.file.file.path)
     # loc = os.path.join(dir,"Audio",name)
     # return download_file(loc)
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def task_unassign(request):
+    task = request.GET.getlist('task')
+    assigns = TaskAssignInfo.objects.filter(Q(task_id__in=task))
+    for obj in assigns:
+        user = obj.task.job.project.ai_user
+        team_members = [i.internal_member for i in user.team.internal_member_team_info.filter(role=1)] if user.team else []
+        if request.user == user or request.user in team_members:
+            segment_count=0 if obj.task.document == None else obj.task.get_progress.get('confirmed_segments')
+            task_history = TaskAssignHistory.objects.create(task =obj.task,previous_assign_id=obj.task.assign_to_id,task_segment_confirmed=segment_count)
+            obj.task.assign_to = user
+            obj.task.save()
+            obj.delete()
+        else:
+            return Response({'msg':'Permission Denied'})
+    return Response({"msg":"Tasks Unassigned Successfully"},status=200)

@@ -64,6 +64,7 @@ urlpatterns += [
 	path('transcribe_file/',api_views.transcribe_file),
 	path('transcribe_and_download_text_to_speech_source/',api_views.transcribe_and_download_text_to_speech_source),
 	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
+	path('task/unassign/',api_views.task_unassign),
 ]
 # views urls adding for local testing
 urlpatterns += [
