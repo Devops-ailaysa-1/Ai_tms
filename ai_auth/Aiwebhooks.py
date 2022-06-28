@@ -9,6 +9,8 @@ from ai_auth import models
 from ai_auth import forms as auth_forms
 from django.db.models import Q
 from django.utils import timezone
+from django.db import transaction
+import logging
 import calendar
 
 def check_referred(user):
@@ -124,7 +126,10 @@ def remove_trial_sub(customer,subscription):
     trials = customer.subscriptions.filter(status='trialing').filter(~Q(id=subscription.id))
     for trial in trials:
         trial.cancel(at_period_end=False)
-
+def remove_pro_v_sub(customer,subscription):
+    subs = customer.subscriptions.filter(status='active').filter(plan__product__name='Pro - V').filter(~Q(id=subscription.id))
+    for sub in subs:
+        sub.cancel(at_period_end=False)
 
 @webhooks.handler("invoice.paid")
 def my_handler(event, **kwargs):
@@ -510,20 +515,24 @@ def renew_user_credits_yearly(subscription):
     prev_cp = models.UserCredits.objects.filter(user=subscription.customer.subscriber,credit_pack_type='Subscription',price_id=subscription.plan.id,ended_at=None).last()
     expiry = expiry_yearly_sub(subscription)
     creditsls= models.UserCredits.objects.filter(user=subscription.customer.subscriber).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
-    for credit in creditsls:
-        credit.ended_at=timezone.now()
-        credit.save()
+    try:
+        with transaction.atomic():
+            for credit in creditsls:
+                credit.ended_at=timezone.now()
+                credit.save()
 
-    kwarg = {
-    'user':subscription.customer.subscriber,
-    'stripe_cust_id':subscription.customer,
-    'price_id':subscription.plan.id,
-    'buyed_credits':pack.credits,
-    'credits_left':pack.credits,
-    'expiry': expiry,
-    'paymentintent':prev_cp.paymentintent,
-    'invoice':prev_cp.invoice,
-    'credit_pack_type': pack.type,
-    'ended_at': None
-    }
-    us = models.UserCredits.objects.create(**kwarg)
+            kwarg = {
+            'user':subscription.customer.subscriber,
+            'stripe_cust_id':subscription.customer,
+            'price_id':subscription.plan.id,
+            'buyed_credits':pack.credits,
+            'credits_left':pack.credits,
+            'expiry': expiry,
+            'paymentintent':prev_cp.paymentintent,
+            'invoice':prev_cp.invoice,
+            'credit_pack_type': pack.type,
+            'ended_at': None
+            }
+            us = models.UserCredits.objects.create(**kwarg)
+    except Exception as e:
+        logging.error('Failed to do something: ' + str(e))

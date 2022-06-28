@@ -76,7 +76,8 @@ from datetime import datetime, timedelta
 def renewal_list():
     cycle_date = timezone.now()
     subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
-                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active')
+                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active').filter(~Q(current_period_start__year=cycle_date.year,
+                        current_period_start__month=cycle_date.month,current_period_start__day=cycle_date.day))
     print(subs)
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
