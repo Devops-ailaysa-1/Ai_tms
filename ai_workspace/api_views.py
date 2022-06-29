@@ -1391,7 +1391,7 @@ class ShowMTChoices(APIView):
         target_languages = json.loads(data["target_language"])
         sl_code = json.loads(data["source_language"])
         text_1 = self.reduce_text(text,self.get_lang_code(sl_code))
-        print("###",text_1)
+        # print("###",text_1)
         res = {}
 
         for tl in target_languages:

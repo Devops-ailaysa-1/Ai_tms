@@ -375,6 +375,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     projectpost_steps=ProjectPostStepsSerializer(many=True,required=False)
     project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True))#,write_only=True)
     customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
+    posted_by_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
     bidding_currency = serializers.ReadOnlyField(source='currency.currency_code')
     # steps_id = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),write_only=True)
     class Meta:
@@ -383,7 +384,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
                  'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',
-                 'closed_at','deleted_at','created_at','bidding_currency',)#'bidproject_details',
+                 'closed_at','deleted_at','created_at','bidding_currency','posted_by_id',)#'bidproject_details',
 
     def get_bid_count(self, obj):
         bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
@@ -400,6 +401,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
             return "Active"
 
     def run_validation(self, data):
+        print("DAta---------->",data)
         # if data.get('steps'):
         #     data['steps'] = json.loads(data['steps'])
         if data.get('contents') and isinstance( data.get("contents"), str):

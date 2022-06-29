@@ -37,6 +37,7 @@ class ProjectboardDetails(models.Model):
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='rate_currency', on_delete=models.CASCADE)
     unit = models.ForeignKey(Billingunits,blank=True, null=True, related_name='bill_unit', on_delete=models.CASCADE)
     milestone = models.CharField(max_length=191,blank=True, null=True)
+    posted_by = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True,related_name="posted_by")
     closed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
@@ -54,7 +55,7 @@ class ProjectboardDetails(models.Model):
     def get_steps_name(self):
         return [{'step':obj.steps.name,'id':obj.steps.id} for obj in self.projectpost_steps.all()]
 
-post_save.connect(shortlisted_vendor_list_send_email_new, sender=ProjectboardDetails,)
+# post_save.connect(shortlisted_vendor_list_send_email_new, sender=ProjectboardDetails,)
 
 
 class ProjectPostJobDetails(models.Model):
@@ -96,7 +97,7 @@ class ProjectPostSteps(models.Model):
 
 class ProjectboardTemplateDetails(models.Model):
     template_name = models.CharField(max_length=1000,blank=False, null=False)
-    project=models.ForeignKey(Project, on_delete=models.CASCADE,related_name="project_detail")
+    project=models.ForeignKey(Project,blank=True, null=True, on_delete=models.SET_NULL,related_name="project_detail")
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
     proj_name = models.CharField(max_length=191,blank=True, null=True)

@@ -7,6 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter as SF, OrderingFilter as OF
 from django.shortcuts import render
 from os.path import join
+#from ai_auth.signals import email_notification_to_vendors
 from ai_auth.models import AiUser
 from ai_staff.models import Languages,ContentTypes
 from django.conf import settings
@@ -55,6 +56,7 @@ from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
 from ai_auth.models import  AiUser, Professionalidentity, HiredEditors
 from ai_auth.serializers import AiUserDetailsSerializer
 import json,requests
+from ai_auth.tasks import shortlisted_vendor_list_send_email_new
 from django.db.models import Count
 from django.http import JsonResponse
 from django.core.mail import EmailMessage
@@ -116,12 +118,14 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     page_size = 20
 
     def get(self, request):
+        print("TT",request.user)
         try:
             projectpost_id = request.GET.get('project_post_id')
             if projectpost_id:
                 queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
             else:
-                queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
+                queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = request.user.id) | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
+                # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = ProjectPostSerializer(pagin_tc,many=True,context={'request':request})
             response = self.get_paginated_response(serializer.data)
@@ -132,16 +136,19 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 
     def create(self, request):
         template = request.POST.get('is_template',None)
+        customer = request.user.team.owner if request.user.team else request.user
         if template: ####template create only added.........update and delete need to be included#############
-            serializer1 = ProjectPostTemplateSerializer(data={**request.POST.dict(),'customer_id':request.user.id})
+            serializer1 = ProjectPostTemplateSerializer(data={**request.POST.dict(),'customer_id':customer.id})
             if serializer1.is_valid():
                 serializer1.save()
-        customer = request.user.id
-        serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer},context={'request':request})
+        # customer = request.user.id
+        serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer.id,'posted_by_id':request.user.id},context={'request':request})
         if serializer.is_valid():
             serializer.save()
-            post_id = serializer.data.get('id')
-            # shortlisted_vendor_list_send_email_new(post_id)
+            print("ID------------------->",serializer.data.get('id'))
+            shortlisted_vendor_list_send_email_new.apply_async((
+            serializer.data.get('id'),
+            ))
             return Response(serializer.data)
         return Response(serializer.errors)
 
@@ -170,7 +177,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors) 
+        return Response(serializer.errors)
 
     def delete(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
@@ -186,7 +193,8 @@ def user_projectpost_list(request):
     present = timezone.now()
     new=[]
     try:
-        queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
+        queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer = request.user)|Q(project__team__owner = request.user)|Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
+        # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
         for i in queryset:
             jobs =ProjectPostJobDetails.objects.filter(projectpost = i.id).count()
             projectpost_title = i.proj_name
@@ -229,7 +237,7 @@ def user_projectpost_list(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def project_post_template_options(request):
-    query = ProjectboardTemplateDetails.objects.filter(customer=request.user)
+    query = ProjectboardTemplateDetails.objects.filter(Q(customer=request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1)))
     out = []
     for i in query:
         res = {'id':i.id,'template_name':i.template_name,}
@@ -240,7 +248,7 @@ def project_post_template_options(request):
 @permission_classes([IsAuthenticated])
 def project_post_template_get(request):
     template = request.GET.get('template')
-    query = ProjectboardTemplateDetails.objects.filter(Q(id=template) &Q(customer = request.user))
+    query = ProjectboardTemplateDetails.objects.filter(Q(id=template))# & Q(customer = request.user))
     if query:
         ser = ProjectPostTemplateSerializer(query,many=True)
         return Response(ser.data)
@@ -333,7 +341,6 @@ def post_bid_primary_details(request):############need to include currency conve
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def bid_proposal_status(request):
-    print("#@#@#@#@#")
     bid_detail_id= request.POST.get('id')
     obj = BidPropasalDetails.objects.get(id = bid_detail_id)
     status = json.loads(request.POST.get('status'))
@@ -438,9 +445,12 @@ class ChatMessageListView(viewsets.ModelViewSet):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_incomplete_projects_list(request):
-    query = ProjectboardDetails.objects.filter(customer = request.user.id)
+    query = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer = request.user)\
+            |Q(project__team__owner = request.user)|Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
     projects = [i.project_id for i in query] if query else []
-    queryset=[x for x in Project.objects.filter(ai_user=request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]#.filter(voice_proj_detail__isnull=True)
+    queryset=[x for x in Project.objects.filter(Q(ai_user=request.user)\
+                |Q(team__owner = request.user)|Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).\
+                filter(~Q(id__in = projects)).order_by('-id').distinct() if x.progress != "completed" ]#.filter(voice_proj_detail__isnull=True)
     ser = SimpleProjectSerializer(queryset,many=True)
     return Response(ser.data)
 
@@ -684,7 +694,9 @@ def get_previous_accepted_rate(request):
 def customer_mp_dashboard_count(request):
     user = request.user
     present = datetime.now()
-    query = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
+    query = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer = request.user.id)\
+                                    |Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
+    # query = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).all()
     #query = ProjectboardDetails.objects.filter(customer = user)
     posted_project_count = query.count()
     inprogress_project_count = query.filter(bid_deadline__gte = present).filter(closed_at = None).count()

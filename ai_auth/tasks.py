@@ -14,6 +14,7 @@ from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
+from ai_marketplace.models import ProjectboardDetails
 
 extend_mail_sent= 0
 
@@ -156,9 +157,36 @@ def existing_vendor_onboard_check():
         user_email=obj.user.email
         if status:
             obj.mail_sent=True
-            obj.save()     
+            obj.save()
             logger.info("succesfully sent mail ")
         else:
             logger.info("mail not sent ")
     else:
         logger.info("No record Found ")
+
+
+
+
+@task
+def shortlisted_vendor_list_send_email_new(projectpost_id):
+    from ai_vendor.models import VendorLanguagePair
+    from ai_auth import forms as auth_forms
+    instance = ProjectboardDetails.objects.get(id=projectpost_id)
+    lang_pair = VendorLanguagePair.objects.none()
+    jobs = instance.get_postedjobs
+    for obj in jobs:
+        if obj.src_lang_id == obj.tar_lang_id:
+            query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) | Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+        else:
+            query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+        lang_pair = lang_pair.union(query)
+    res={}
+    for object in lang_pair:
+        tt = object.source_lang.language if object.source_lang_id == object.target_lang_id else object.target_lang.language
+        print(object.user.fullname)
+        if object.user_id in res:
+            res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':tt})
+        else:
+            res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':instance.proj_deadline,'bid_deadline':instance.bid_deadline}
+    auth_forms.vendor_notify_post_jobs(res)
+    print("mailsent")

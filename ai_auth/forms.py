@@ -253,7 +253,7 @@ def vendor_notify_post_jobs(detail):
         context = detail.get(i)
         email = context.get('user_email')
         msg_html = render_to_string("job_alert_email.html",context)
-        send_mail(
+        tt = send_mail(
             'Available jobs alert from ailaysa',None,
             settings.DEFAULT_FROM_EMAIL,
             #['thenmozhivijay20@gmail.com'],
