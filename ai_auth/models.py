@@ -143,7 +143,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
 
             #carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
             #    Q(ended_at__isnull=False)).last()
-            carry_credits =UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription")).order_by('-id')
+            carry_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription")).order_by('-id')
             avai_cp= 0
             for credits in carry_credits:
                 if credits.ended_at == None:
