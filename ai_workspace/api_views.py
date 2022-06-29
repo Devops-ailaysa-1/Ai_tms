@@ -1,6 +1,6 @@
 from rest_framework.exceptions import ValidationError
 import django_filters
-import shutil,docx2txt
+import shutil,docx2txt,regex
 from ai_workspace import forms as ws_forms
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -19,6 +19,8 @@ from ai_auth.models import AiUser, UserCredits, Team, InternalMember, HiredEdito
 from rest_framework import viewsets, status
 from integerations.base.utils import DjRestUtils
 from rest_framework.response import Response
+from indicnlp.tokenize.sentence_tokenize import sentence_split
+from indicnlp.tokenize.indic_tokenize import trivial_tokenize
 from ai_workspace_okapi.utils import download_file,text_to_speech
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
     ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
@@ -31,7 +33,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails, TaskAssignInfo,TaskTranscriptDetails
+    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
+    TaskAssignInfo,TaskTranscriptDetails,TaskAssignHistory
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -54,7 +57,7 @@ from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from django.core.files import File as DJFile
 from django.http import JsonResponse
 from tablib import Dataset
-import shutil
+import shutil,nltk
 from datetime import datetime
 from django.db.models import Q, Sum
 from rest_framework.decorators import permission_classes
@@ -1360,19 +1363,42 @@ class ShowMTChoices(APIView):
     def get_lang_code(lang_id):
         return LanguagesLocale.objects.filter(language_id = lang_id).first().locale_code
 
+    @staticmethod
+    def reduce_text(text,lang_code):
+        punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+        info =''
+        lang_list = ['hi','bn','or','ne','pa']
+        if lang_code in lang_list:
+            sents = sentence_split(text, lang_code, delim_pat='auto')
+            # sents = regex.split(u"([.।?!])?[\n]+|[.।?!] ", text)
+        else:
+            sents = nltk.sent_tokenize(text)
+        for i in sents:
+            info =info +' '+ i
+            nltk_tokens = nltk.word_tokenize(info)
+            count = len([word for word in nltk_tokens if word not in punctuation])
+            #print("Count------------>",count)
+            if count in range(90,100) or count>100:
+                return info.lstrip()
+            else:
+                continue
+        return info.lstrip()
+
+
     def post(self, request):
         data = request.POST.dict()
         text = data.get("text", "")
         target_languages = json.loads(data["target_language"])
         sl_code = json.loads(data["source_language"])
-
+        text_1 = self.reduce_text(text,self.get_lang_code(sl_code))
+        # print("###",text_1)
         res = {}
 
         for tl in target_languages:
             mt_responses = {}
             for mt_engine in AilaysaSupportedMtpeEngines.objects.all():
                 try:
-                    mt_responses[mt_engine.name] = get_translation(mt_engine.id, text, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
+                    mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
                 except:
                     mt_responses[mt_engine.name] = None
                 res[tl] = mt_responses
@@ -1444,6 +1470,7 @@ def transcribe_file(request):
 
 #text_to_speech(ssml_file,target_language,filename,voice_gender)
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def transcribe_and_download_text_to_speech_source(request):#########working############Transcribe and Download
     tasks =[]
     project = request.GET.get('project',None)
@@ -1486,6 +1513,7 @@ def transcribe_and_download_text_to_speech_source(request):#########working#####
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def download_text_to_speech_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)
@@ -1500,3 +1528,23 @@ def download_text_to_speech_source(request):
     # dir = os.path.dirname(obj.file.file.path)
     # loc = os.path.join(dir,"Audio",name)
     # return download_file(loc)
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def task_unassign(request):
+    task = request.GET.getlist('task')
+    assigns = TaskAssignInfo.objects.filter(Q(task_id__in=task))
+    for obj in assigns:
+        user = obj.task.job.project.ai_user
+        team_members = [i.internal_member for i in user.team.internal_member_team_info.filter(role=1)] if user.team else []
+        if request.user == user or request.user in team_members:
+            segment_count=0 if obj.task.document == None else obj.task.get_progress.get('confirmed_segments')
+            task_history = TaskAssignHistory.objects.create(task =obj.task,previous_assign_id=obj.task.assign_to_id,task_segment_confirmed=segment_count)
+            obj.task.assign_to = user
+            obj.task.save()
+            obj.delete()
+        else:
+            return Response({'msg':'Permission Denied'})
+    return Response({"msg":"Tasks Unassigned Successfully"},status=200)

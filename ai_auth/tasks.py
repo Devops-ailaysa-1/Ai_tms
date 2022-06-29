@@ -7,13 +7,14 @@ logger = get_task_logger(__name__)
 from celery.decorators import task
 from datetime import date
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q,F
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
 import datetime
 from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
+from ai_marketplace.models import ProjectboardDetails
 
 extend_mail_sent= 0
 
@@ -76,7 +77,8 @@ from datetime import datetime, timedelta
 def renewal_list():
     cycle_date = timezone.now()
     subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
-                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active')
+                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active').filter(~Q(billing_cycle_anchor__year=F('current_period_start__year'),
+                        billing_cycle_anchor__month=F('current_period_start__month'),billing_cycle_anchor__day=F('current_period_start__day')))
     print(subs)
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
@@ -156,9 +158,36 @@ def existing_vendor_onboard_check():
         user_email=obj.user.email
         if status:
             obj.mail_sent=True
-            obj.save()     
+            obj.save()
             logger.info("succesfully sent mail ")
         else:
             logger.info("mail not sent ")
     else:
         logger.info("No record Found ")
+
+
+
+
+@task
+def shortlisted_vendor_list_send_email_new(projectpost_id):
+    from ai_vendor.models import VendorLanguagePair
+    from ai_auth import forms as auth_forms
+    instance = ProjectboardDetails.objects.get(id=projectpost_id)
+    lang_pair = VendorLanguagePair.objects.none()
+    jobs = instance.get_postedjobs
+    for obj in jobs:
+        if obj.src_lang_id == obj.tar_lang_id:
+            query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) | Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+        else:
+            query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+        lang_pair = lang_pair.union(query)
+    res={}
+    for object in lang_pair:
+        tt = object.source_lang.language if object.source_lang_id == object.target_lang_id else object.target_lang.language
+        print(object.user.fullname)
+        if object.user_id in res:
+            res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':tt})
+        else:
+            res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':instance.proj_deadline,'bid_deadline':instance.bid_deadline}
+    auth_forms.vendor_notify_post_jobs(res)
+    print("mailsent")
