@@ -836,6 +836,7 @@ class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
 class HiredEditorDetailSerializer(serializers.Serializer):
 	name = serializers.ReadOnlyField(source='hired_editor.fullname')
 	id = serializers.ReadOnlyField(source='hired_editor_id')
+	obj_id = serializers.ReadOnlyField(source='id')
 	status = serializers.ReadOnlyField(source='get_status_display')
 	avatar= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
 	vendor_lang_pair = serializers.SerializerMethodField()
