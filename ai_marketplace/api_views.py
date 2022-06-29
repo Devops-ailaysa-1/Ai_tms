@@ -146,9 +146,9 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             print("ID------------------->",serializer.data.get('id'))
-            shortlisted_vendor_list_send_email_new.apply_async((
-            serializer.data.get('id'),
-            ))
+            # shortlisted_vendor_list_send_email_new.apply_async((
+            # serializer.data.get('id'),
+            # ))
             return Response(serializer.data)
         return Response(serializer.errors)
 
