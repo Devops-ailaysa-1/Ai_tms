@@ -153,8 +153,8 @@ def email_send_subscription_extension():
 @task
 def existing_vendor_onboard_check():
     obj = ExistingVendorOnboardingCheck.objects.filter(mail_sent=False).first()
-    status = auth_forms.existing_vendor_onboarding_mail(obj.user,obj.gen_password)
     if obj:
+        status = auth_forms.existing_vendor_onboarding_mail(obj.user,obj.gen_password)
         user_email=obj.user.email
         if status:
             obj.mail_sent=True
