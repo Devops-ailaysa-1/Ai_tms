@@ -1174,6 +1174,11 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         Receiver = AiUser.objects.get(id = receiver)
+        ################################Need to change########################################
+        user = request.user.team.owner  if request.user.team  else request.user
+        if Receiver.email == 'ailaysateam@gmail.com':
+            HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
+        ##########################################################################################
         task = request.POST.getlist('task')
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
         tasks= [json.loads(i) for i in task]
@@ -1182,7 +1187,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             msg_send(sender,Receiver,tasks[0])
-            if Receiver in hired_editors or Receiver.email == 'ailaysateam@gmail.com':
+            if Receiver in hired_editors:
                 ws_forms.task_assign_detail_mail(Receiver,assignment_id)
             # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
             return Response({"msg":"Task Assigned"})
@@ -1191,8 +1196,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     def update(self, request,pk=None):
         task = request.POST.getlist('task')
         file = request.FILES.get('instruction_file')
+        assign_to = request.POST.get('assign_to',None)
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+        ###############################Need to change############################################
+        if assign_to:
+            Receiver = AiUser.objects.get(id = assign_to)
+            user = request.user.team.owner  if request.user.team  else request.user
+            if Receiver.email == 'ailaysateam@gmail.com':
+                HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=assign_to,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
+        ###########################################################################################
         for i in task:
             try:
                 task_assign_info = TaskAssignInfo.objects.get(task_id = i)
