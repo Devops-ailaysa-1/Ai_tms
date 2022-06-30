@@ -1174,6 +1174,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         sender = self.request.user
         receiver = request.POST.get('assign_to')
         Receiver = AiUser.objects.get(id = receiver)
+        if Receiver.email == 'ailaysateam@gmail.com':
+            HiredEditors.objects.get_or_create(user_id=request.user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
         task = request.POST.getlist('task')
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
         tasks= [json.loads(i) for i in task]
@@ -1182,7 +1184,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             msg_send(sender,Receiver,tasks[0])
-            if Receiver in hired_editors or Receiver.email == 'ailaysateam@gmail.com':
+            if Receiver in hired_editors:
                 ws_forms.task_assign_detail_mail(Receiver,assignment_id)
             # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
             return Response({"msg":"Task Assigned"})
