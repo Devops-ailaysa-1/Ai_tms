@@ -1554,7 +1554,7 @@ def task_unassign(request):
         team_members = [i.internal_member for i in user.team.internal_member_team_info.filter(role=1)] if user.team else []
         if request.user == user or request.user in team_members:
             segment_count=0 if obj.task.document == None else obj.task.get_progress.get('confirmed_segments')
-            task_history = TaskAssignHistory.objects.create(task =obj.task,previous_assign_id=obj.task.assign_to_id,task_segment_confirmed=segment_count)
+            task_history = TaskAssignHistory.objects.create(task =obj.task,previous_assign_id=obj.task.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=request.user)
             obj.task.assign_to = user
             obj.task.save()
             obj.delete()

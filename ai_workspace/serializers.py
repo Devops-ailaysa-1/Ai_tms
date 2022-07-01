@@ -628,7 +628,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
             task = Task.objects.get(id = instance.task_id)
             segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
             task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
-            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count)
+            task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=self.context.get('request').user)
             instance.task_ven_accepted = False
             instance.save()
 		# if 'task_ven_accepted' in data:

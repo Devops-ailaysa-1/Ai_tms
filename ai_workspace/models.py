@@ -804,6 +804,8 @@ class TaskAssignHistory(models.Model):
             related_name="task_assign_history")
     previous_assign = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=False, blank=False)
     task_segment_confirmed = models.IntegerField(null=True, blank=True)
+    unassigned_by = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True, related_name='unassigned_by')
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
 class TaskDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_details")
