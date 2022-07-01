@@ -95,7 +95,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BidPropasalDetails
-        fields = ('id','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
+        fields = ('id','is_shortlisted','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
                     'mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status','current_status','edited_count','service_and_rates','bid_step',\
                     'original_project_id','job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity','created_at',)
         extra_kwargs = {

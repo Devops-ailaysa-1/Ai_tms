@@ -343,7 +343,11 @@ def post_bid_primary_details(request):############need to include currency conve
 def bid_proposal_status(request):
     bid_detail_id= request.POST.get('id')
     obj = BidPropasalDetails.objects.get(id = bid_detail_id)
-    status = json.loads(request.POST.get('status'))
+    shortlist = request.POST.get('shortlist',None)
+    if shortlist:
+        obj.is_shortlisted = True if shortlist == 'true' else False
+        obj.save()
+    status = json.loads(request.POST.get('status')) if request.POST.get('status') else None
     if status == 2 or status == 4:
         BidPropasalDetails.objects.filter(id = bid_detail_id).update(status = status)
     elif status == 3:
