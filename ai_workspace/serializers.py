@@ -665,7 +665,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id","filename", "ai_taskid","source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable",)
+			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",)
 
 	def get_bid_job_detail_info(self,obj):
 		if obj.job.project.proj_detail.all():

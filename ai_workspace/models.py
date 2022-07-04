@@ -705,6 +705,11 @@ class Task(models.Model):
         return ret
 
     @property
+    def first_time_open(self):
+        if self.document_id:return False
+        else:return True
+
+    @property
     def processor_name(self):
         return  get_processor_name(self.file.file.name).get("processor_name", None)
 
