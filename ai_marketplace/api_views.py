@@ -118,7 +118,6 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     page_size = 20
 
     def get(self, request):
-        print("TT",request.user)
         try:
             projectpost_id = request.GET.get('project_post_id')
             if projectpost_id:
@@ -785,8 +784,8 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 
 
 @api_view(['GET',])
-def sample_file_download(request,bidpostjob_id):
-    sample_file = BidPropasalDetails.objects.get(bidpostjob_id=bidpostjob_id).sample_file
+def sample_file_download(request,bid_propasal_id):
+    sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
         fl_path = sample_file.path
         filename = os.path.basename(fl_path)
