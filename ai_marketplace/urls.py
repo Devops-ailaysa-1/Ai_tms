@@ -29,7 +29,7 @@ urlpatterns+= [
     path('get_vendor_list/',api_views.GetVendorListViewNew.as_view(),name='get-vendor-list'),
     # path('get_incomplete_projects_list/',api_views.IncompleteProjectListView.as_view(),name='get-incomplete-project'),
     path('get_incomplete_projects_list/',api_views.get_incomplete_projects_list),
-    path('sample_file_download/<int:bidpostjob_id>/',api_views.sample_file_download),
+    path('sample_file_download/<int:bid_propasal_id>/',api_views.sample_file_download),
     path('get_available_threads/',api_views.get_available_threads),
     url('^notifications/', include(notifications.urls, namespace='notifications')),
     path('chat/unread/notifications/',api_views.chat_unread_notifications,name='chat-notifications'),

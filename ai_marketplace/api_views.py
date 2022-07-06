@@ -118,7 +118,6 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     page_size = 20
 
     def get(self, request):
-        print("TT",request.user)
         try:
             projectpost_id = request.GET.get('project_post_id')
             if projectpost_id:
@@ -343,7 +342,11 @@ def post_bid_primary_details(request):############need to include currency conve
 def bid_proposal_status(request):
     bid_detail_id= request.POST.get('id')
     obj = BidPropasalDetails.objects.get(id = bid_detail_id)
-    status = json.loads(request.POST.get('status'))
+    shortlist = request.POST.get('shortlist',None)
+    if shortlist:
+        obj.is_shortlisted = True if shortlist == 'true' else False
+        obj.save()
+    status = json.loads(request.POST.get('status')) if request.POST.get('status') else None
     if status == 2 or status == 4:
         BidPropasalDetails.objects.filter(id = bid_detail_id).update(status = status)
     elif status == 3:
@@ -781,8 +784,8 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 
 
 @api_view(['GET',])
-def sample_file_download(request,bidpostjob_id):
-    sample_file = BidPropasalDetails.objects.get(bidpostjob_id=bidpostjob_id).sample_file
+def sample_file_download(request,bid_propasal_id):
+    sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
         fl_path = sample_file.path
         filename = os.path.basename(fl_path)
