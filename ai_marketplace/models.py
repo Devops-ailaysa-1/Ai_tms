@@ -213,6 +213,7 @@ class BidPropasalDetails(models.Model):
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='bidding_currency_detail', on_delete=models.CASCADE)
     bid_step = models.ForeignKey(Steps, on_delete=models.CASCADE,related_name="bidpost_steps",blank=True, null=True,default= 1)
     status = models.ForeignKey(BidStatus,on_delete=models.CASCADE,related_name="bid_status",blank=True, null=True,default = 1)
+    is_shortlisted = models.BooleanField(default = False)
     edited_count =  models.IntegerField(blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 

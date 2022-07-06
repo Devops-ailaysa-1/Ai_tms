@@ -1149,9 +1149,11 @@ class WordApiView(viewsets.ViewSet):
         if 'success' in data.keys():
             data =  "no synonmys"
             return data
-        for i in data['results']:
-            if 'synonyms' in i.keys():
-                syn.extend(i['synonyms'])
+        if data.get('results'):
+            for i in data.get('results'):
+                if 'synonyms' in i.keys():
+                    syn.extend(i['synonyms'])
+                    syn = syn[:10]
         return syn
 
 

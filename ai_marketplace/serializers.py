@@ -95,7 +95,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BidPropasalDetails
-        fields = ('id','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
+        fields = ('id','is_shortlisted','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
                     'mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status','current_status','edited_count','service_and_rates','bid_step',\
                     'original_project_id','job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity','created_at',)
         extra_kwargs = {
@@ -123,21 +123,11 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
             if obj.status_id == 3:
                 try:
                     ht = HiredEditors.objects.filter(user=obj.bidpostjob.projectpost.customer,hired_editor=user_).first()
-                    if not ht:
-                        ht = HiredEditors.objects.filter(user=user_,hired_editor=obj.vendor).first()
                     return str(ht.get_status_display())
                 except:
                     return None
             else:
                 return obj.status.status
-
-    # def get_projectpost_status(self,obj):
-    #     if obj.projectpost.closed_at != None:
-    #         return "closed"
-    #     elif obj.projectpost.deleted_at !=None:
-    #         return "deleted"
-    #     else:
-    #         return "Active"
 
 
     def run_validation(self, data):
@@ -310,9 +300,52 @@ class ProjectPostJobSerializer(serializers.ModelSerializer):
         model=ProjectPostJobDetails
         fields=('id','src_lang','tar_lang',)
 
+class ProjectPostBidDetailSerializer(serializers.ModelSerializer):
+    service_and_rates = BidPropasalServicesRatesSerializer(many=True,required=False)
+    projectpost_id  = serializers.PrimaryKeyRelatedField(queryset=ProjectboardDetails.objects.all().values_list('pk', flat=True))
+    vendor_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
+    job_id = serializers.SerializerMethodField()
+    bid_vendor_uid = serializers.ReadOnlyField(source =  'vendor.uid')
+    bid_vendor_name = serializers.ReadOnlyField(source = 'vendor.fullname')
+    projectpost_title = serializers.ReadOnlyField(source = 'projectpost.proj_name')
+    original_project_id = serializers.ReadOnlyField(source = 'projectpost.project.id')
+    bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
+    professional_identity= serializers.ReadOnlyField(source='vendor.professional_identity_info.avatar_url')
+    current_status = serializers.SerializerMethodField()#ReadOnlyField(source='status.status')
+
+    class Meta:
+        model = BidPropasalDetails
+        fields = ('id','is_shortlisted','projectpost_id','projectpost_title','vendor_id','bidpostjob','proposed_completion_date','description','sample_file','filename',\
+                    'mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency','status','current_status','edited_count','service_and_rates','bid_step',\
+                    'original_project_id','job_id','bidpostjob_name','bid_vendor_name','bid_vendor_uid','professional_identity','created_at',)
+        extra_kwargs = {
+        	"bidpostjob":{
+        		"required": False
+        	}
+        }
+
+    def get_job_id(self,obj):
+        tar_lang = None if obj.bidpostjob.src_lang_id == obj.bidpostjob.tar_lang_id else obj.bidpostjob.tar_lang_id
+        pr = obj.bidpostjob.projectpost.project
+        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
+        return job[0].id if job else None
+
+    def get_current_status(self,obj):
+        user = self.context.get("request").user
+        user_ = user.team.owner if user.team else user
+        if obj.status_id == 3:
+            try:
+                ht = HiredEditors.objects.filter(user=user_,hired_editor=obj.vendor).first()
+                return str(ht.get_status_display())
+            except:
+                return None
+        else:
+            return obj.status.status
+
+
 class ProjectPostJobDetailSerializer(serializers.ModelSerializer):
     bid_count = serializers.SerializerMethodField()
-    bid_details = BidPropasalDetailSerializer(many=True,read_only=True)
+    bid_details = ProjectPostBidDetailSerializer(many=True,read_only=True)
     src_lang_name = serializers.ReadOnlyField(source = 'src_lang.language')
     tar_lang_name = serializers.ReadOnlyField(source = 'tar_lang.language')
     # bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
