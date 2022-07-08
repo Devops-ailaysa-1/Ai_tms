@@ -1,7 +1,7 @@
 from django.core.mail import send_mail
 import smtplib
 from celery.utils.log import get_task_logger
-import celery,re
+import celery,re,pickle
 import djstripe
 logger = get_task_logger(__name__)
 from celery.decorators import task
@@ -9,12 +9,16 @@ from datetime import date
 from django.utils import timezone
 from django.db.models import Q,F
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
-import datetime
+import datetime,os,json
 from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
 from ai_marketplace.models import ProjectboardDetails
+
+
+
+
 
 extend_mail_sent= 0
 
@@ -191,3 +195,10 @@ def shortlisted_vendor_list_send_email_new(projectpost_id):
             res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':instance.proj_deadline,'bid_deadline':instance.bid_deadline}
     auth_forms.vendor_notify_post_jobs(res)
     print("mailsent")
+
+
+@task
+def check_dict(dict):
+    print("dct------->",dict)
+    dict1 = json.loads(dict)
+    logger.info("RRRR",dict)

@@ -188,7 +188,7 @@ def vendor_status_mail(email,status):
     else:
         msg_html = render_to_string("account/email/vendor_status_fail.html", context)
     send_mail(
-        "Become an Editor application status with Ailaysa",None,
+        "Ailaysa Vendor profile application status",None,
         # msg_plain,
         settings.DEFAULT_FROM_EMAIL,
         [email],

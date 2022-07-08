@@ -9,7 +9,7 @@ from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from contextlib import closing
 from django.db import connection
 from django.utils import timezone
-
+import collections
 client = translate.Client()
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):

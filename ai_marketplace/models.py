@@ -12,7 +12,7 @@ from django.db.models import Q
 import os,random
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth import get_user_model
-from ai_auth.signals import create_postjob_id,shortlisted_vendor_list_send_email_new
+from ai_auth.signals import create_postjob_id
 # Create your models here.
 
 
@@ -55,7 +55,7 @@ class ProjectboardDetails(models.Model):
     def get_steps_name(self):
         return [{'step':obj.steps.name,'id':obj.steps.id} for obj in self.projectpost_steps.all()]
 
-# post_save.connect(shortlisted_vendor_list_send_email_new, sender=ProjectboardDetails,)
+
 
 
 class ProjectPostJobDetails(models.Model):
