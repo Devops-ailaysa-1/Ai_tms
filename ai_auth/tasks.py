@@ -15,10 +15,10 @@ from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
 from ai_marketplace.models import ProjectboardDetails
+from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 
-
-
-
+from contextlib import closing
+from django.db import connection
 
 extend_mail_sent= 0
 
@@ -202,3 +202,67 @@ def check_dict(dict):
     print("dct------->",dict)
     dict1 = json.loads(dict)
     logger.info("RRRR",dict)
+
+@task
+def write_segments_to_db(validated_str_data, document_id): #validated_data
+
+    decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
+    validated_data = decoder.decode(validated_str_data)
+    # print("TYPE OF incoming data ========> ", type(validated_str_data)) # str
+    print("Validdated ata task -------------> ", validated_data)
+    # print("^^^^^^^^^ TYPE OF Validdated ata task -------------> ", type(validated_data)) #ordered dict
+
+    text_unit_ser_data = validated_data.pop("text_unit_ser", [])
+    text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
+
+    # USING SQL BATCH INSERT
+
+    # print("****  Task text unit data *****---> ", text_unit_ser_data)
+
+    text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
+        ', '.join(['(%s, %s)'] * len(text_unit_ser_data)),
+    )
+    tu_params = []
+    for text_unit in text_unit_ser_data:
+        tu_params.extend([text_unit["okapi_ref_translation_unit_id"], document_id])
+
+    with closing(connection.cursor()) as cursor:
+        cursor.execute(text_unit_sql, tu_params)
+
+    seg_params = []
+    seg_count = 0
+
+    from ai_workspace_okapi.models import TextUnit, Segment
+
+    for text_unit in text_unit_ser_data:
+        text_unit_id = TextUnit.objects.get(
+            Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
+            Q(document_id=document_id)).id
+        segs = text_unit.pop("segment_ser", [])
+
+        # print("**** Task Segment ser data ****---> ", segs)
+
+        for seg in segs:
+            seg_count += 1
+            tagged_source, _, target_tags = (
+                set_ref_tags_to_runs(seg["coded_source"],
+                                     get_runs_and_ref_ids(seg["coded_brace_pattern"],
+                                                          json.loads(seg["coded_ids_sequence"])))
+            )
+            target = "" if seg["target"] is None else seg["target"]
+            seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+                               str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
+                               str(text_unit["okapi_ref_translation_unit_id"]), \
+                               timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
+
+            # seg_params.extend([(seg["source"]), target, "", (seg["coded_source"]), (tagged_source), \
+            #                    (seg["coded_brace_pattern"]), (seg["coded_ids_sequence"]), (target_tags),
+            #                    (text_unit["okapi_ref_translation_unit_id"]), \
+            #                    timezone.now(), text_unit_id, (seg["random_tag_ids"])])
+
+    segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
+                               coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
+        ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+
+    with closing(connection.cursor()) as cursor:
+        cursor.execute(segment_sql, seg_params)
