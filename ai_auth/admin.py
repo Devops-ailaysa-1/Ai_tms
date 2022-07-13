@@ -147,16 +147,17 @@ class VOIAdmin(admin.ModelAdmin):
 
     def email_sent(self,obj):
         try:
-            exe_ven = ExistingVendorOnboardingCheck.objects.get(email=obj.user.email)
+            exe_ven = ExistingVendorOnboardingCheck.objects.get(user=obj.user)
             return exe_ven.mail_sent
-        except:
+        except BaseException as e:
+            print("error",str(e))
             return False
 
     email_sent.boolean= True
 
     def email_sent_time(self,obj):
         try:
-            exe_ven = ExistingVendorOnboardingCheck.objects.get(email=obj.user.email)
+            exe_ven = ExistingVendorOnboardingCheck.objects.get(user=obj.user)
             return exe_ven.mail_sent_time
         except:
             return None

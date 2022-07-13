@@ -497,4 +497,4 @@ class ExistingVendorOnboardingCheck(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='existing_vendor_info')
     gen_password = models.CharField(max_length=255)
     mail_sent = models.BooleanField(default=False)
-    mail_sent_time = models.DateTimeField(auto_now=True,blank=True, null=True)
+    mail_sent_time = models.DateTimeField(blank=True, null=True)
