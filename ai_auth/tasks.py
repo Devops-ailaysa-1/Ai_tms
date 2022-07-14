@@ -162,6 +162,7 @@ def existing_vendor_onboard_check():
         user_email=obj.user.email
         if status:
             obj.mail_sent=True
+            obj.mail_sent_time=timezone.now()
             obj.save()
             logger.info("succesfully sent mail ")
         else:

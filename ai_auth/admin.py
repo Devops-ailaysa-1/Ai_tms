@@ -111,7 +111,7 @@ class VAAdmin(admin.ModelAdmin):
 @admin.register(VendorOnboardingInfo)
 @admin.register(VendorOnboardingInfo, site=staff_admin_site)
 class VOIAdmin(admin.ModelAdmin):
-    list_display = ("user","fullname","country","vendor_status","cv_uploaded","service_rates_status")
+    list_display = ("user","fullname","country","vendor_status","cv_uploaded","service_rates_status","email_sent","email_sent_time","last_login")
     def cv_uploaded(self, obj):
         ven = VendorOnboarding.objects.filter(email=obj.user.email)
         if ven.exists():
@@ -144,6 +144,29 @@ class VOIAdmin(admin.ModelAdmin):
             return False
 
     vendor_status.boolean= True
+
+    def email_sent(self,obj):
+        try:
+            exe_ven = ExistingVendorOnboardingCheck.objects.get(user=obj.user)
+            return exe_ven.mail_sent
+        except BaseException as e:
+            print("error",str(e))
+            return False
+
+    email_sent.boolean= True
+
+    def email_sent_time(self,obj):
+        try:
+            exe_ven = ExistingVendorOnboardingCheck.objects.get(user=obj.user)
+            return exe_ven.mail_sent_time
+        except:
+            return None
+
+    def last_login(self,obj):
+        last_login = obj.user.last_login
+        return last_login
+
+
 
 
 @admin.register(ExistingVendorOnboardingCheck)
