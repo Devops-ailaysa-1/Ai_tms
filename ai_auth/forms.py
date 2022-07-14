@@ -310,7 +310,7 @@ def existing_vendor_onboarding_mail(user,gen_password):
     msg_html = render_to_string("existing_vendor_onboarding.html",context)
     sent =send_mail(
         'Become a member of Ailaysa freelancer marketplace',None,
-        'himanshi.gupta@langscape.com',
+        'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
         [email],
         html_message=msg_html,
     )
