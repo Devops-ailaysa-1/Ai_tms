@@ -10,7 +10,7 @@ from ai_staff.models import Languages,Currencies
 from django.db.models import Q
 from ai_workspace.models import Project,Job
 from drf_writable_nested import WritableNestedModelSerializer
-import json,requests,os
+import json,requests,os,pickle
 from ai_workspace.models import Steps
 from itertools import groupby
 from rest_framework.response import Response
@@ -19,7 +19,7 @@ from ai_auth.serializers import ProfessionalidentitySerializer
 from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
 from  django.utils import timezone
-
+from ai_auth.tasks import check_dict
 
 class SimpleProjectSerializer(serializers.ModelSerializer):
     # project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
@@ -457,6 +457,11 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
                 data["projectpost_jobs"] = [{"src_lang": source_language, "tar_lang":None}]
         # print("data---->",data["projectpost_jobs"])
         return super().run_validation(data)
+
+    # def create(self,validated_data):
+    #     data = json.dumps(validated_data,default=str)
+    #     check_dict.apply_async((data,),)
+    #     return super().create(validated_data)
 
     def update(self, instance, validated_data):
         jobs = validated_data.pop("projectpost_jobs",[])
