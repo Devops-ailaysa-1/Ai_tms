@@ -56,7 +56,7 @@ from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
 from ai_auth.models import  AiUser, Professionalidentity, HiredEditors
 from ai_auth.serializers import AiUserDetailsSerializer
 import json,requests
-from ai_auth.tasks import shortlisted_vendor_list_send_email_new
+from ai_auth.tasks import shortlisted_vendor_list_send_email_new,check_dict
 from django.db.models import Count
 from django.http import JsonResponse
 from django.core.mail import EmailMessage
@@ -209,29 +209,6 @@ def user_projectpost_list(request):
     except:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# # @api_view(['POST',])
-# # @permission_classes([IsAuthenticated])
-# def shortlisted_vendor_list_send_email_new(projectpost_id):
-#     # projectpost_id=request.POST.get('projectpost_id')
-#     projectpost = ProjectboardDetails.objects.get(id=projectpost_id)
-#     jobs = projectpost.get_postedjobs
-#     lang_pair = VendorLanguagePair.objects.none()
-#     for obj in jobs:
-#         if obj.src_lang_id == obj.tar_lang_id:
-#             query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) | Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
-#         else:
-#             query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
-#         lang_pair = lang_pair.union(query)
-#     res={}
-#     for object in lang_pair:
-#         tt = object.source_lang.language if object.source_lang_id == object.target_lang_id else object.source_lang.language
-#         print(object.user.fullname)
-#         if object.user_id in res:
-#             res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':tt})
-#         else:
-#             res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':projectpost.proj_deadline,'bid_deadline':projectpost.bid_deadline}
-#     auth_forms.vendor_notify_post_jobs(res)
-#     return {"msg":"mailsent"}
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
@@ -784,6 +761,7 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 
 
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def sample_file_download(request,bid_propasal_id):
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:

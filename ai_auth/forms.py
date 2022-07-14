@@ -188,7 +188,7 @@ def vendor_status_mail(email,status):
     else:
         msg_html = render_to_string("account/email/vendor_status_fail.html", context)
     send_mail(
-        "Become an Editor application status with Ailaysa",None,
+        "Ailaysa Vendor profile application status",None,
         # msg_plain,
         settings.DEFAULT_FROM_EMAIL,
         [email],
@@ -310,7 +310,7 @@ def existing_vendor_onboarding_mail(user,gen_password):
     msg_html = render_to_string("existing_vendor_onboarding.html",context)
     sent =send_mail(
         'Become a member of Ailaysa freelancer marketplace',None,
-        'himanshi.gupta@langscape.com',
+        'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
         [email],
         html_message=msg_html,
     )
