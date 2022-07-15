@@ -775,3 +775,14 @@ def sample_file_download(request,bid_propasal_id):
         return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def sample_file_delete(request,bid_propasal_id):
+    sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
+    if sample_file:
+        BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file.delete()
+        return JsonResponse({"msg":"File Deleted Successfully"})
+    else:
+        return JsonResponse({"msg":"no file associated with it"})
