@@ -305,14 +305,14 @@
             <li>{{task.source_language.language}}</li>
             <li>{{task.target_language.language}}</li>
             <li>{{task.unit_type.unit}}</li>
-            <li>{{task.unit_price}}</li>
+            <li>{{task.unit_price|floatformat:"-4"}}</li>
             {% if task.unit_type.unit == "Char" %}
             <li>{{task.char_count}}</li>
             {%endif%}
             {% if task.unit_type.unit == "Word" %}
             <li>{{task.word_count}}</li>
             {% endif %}
-            <li>{{task.total_amount}}</li>
+            <li>{{task.total_amount|floatformat:"-2"}}</li>
         </ul>
         {% endfor %}
 
@@ -325,7 +325,7 @@
             <li></li>
             <li></li>
             <li>Total Amount</li>
-            <li>{{po_total_amount}}</li>
+            <li>{{po_total_amount|floatformat:"-2"}}</li>
         </ul>
     </div>
 
