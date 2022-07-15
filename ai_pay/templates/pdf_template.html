@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+
+<head>
+	<title>Invoice</title>
+
+	<link  rel="stylesheet" href="{% static 'css/bootstrap.css' %}" >
+	<link  rel="stylesheet" href="{% static 'css/custom.css' %}" >
+	<link  rel="stylesheet" href="{% static 'css/responsive.css' %}" >
+	<link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet"></link>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+	<style type="text/css">
+
+		body {
+			background: #e6e6e6 !important;
+		}
+		@media print {
+			#print-invoice{
+				display: none;
+			}
+			@page {
+			    size: portrait;
+			    margin: 5mm 5mm 5mm 5mm; /* change the margins as you want them to be. */
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="project-owner-reg">
+ 	<section class="invoice new">
+ 		<section class="">
+	 		<section class="invoice-add">
+
+
+				<div class="col-12">
+				 <div class="col-12 col-md-6">
+					<img src="http://ailaysa.bleaptestserver.com/public/img/logo-ailaysa-big.png" width="180">
+					</div>
+				<div class="col-12 col-md-6" style="text-align: right;">
+					<h2> Invoice </h2>
+					<h6> 001 </h6>
+
+					<span align="right" class="inv-date"> 04/06.21 </span>
+					</div>
+				<div class="clearfix"> </div>
+				</div>
+
+
+ 			 	<div class="table-responsive">
+		            <table width="100%">
+
+			            <tbody>
+			            	<tr>
+			            		<td width="50%" valign="top" class="col">
+
+									<p>Langscape Language Solutions</p>
+									<p>abcd@gmail.com</p>
+									<p>1234567</p>
+									<p>GST: 12345</p>
+									<p>State Code: 33</p>
+								</td>
+			            		<td width="50%" valign="top" class="col">
+						<p><b>BILLING TO: </b><br><br>
+							Ailaysa Demo</p>
+							<p>abdcd@gmail.com</p>
+							<p>Tel: 12345</p>
+								<p>State Code: 33</p>
+			            	</tr>
+			            </tbody>
+			        </table>
+			    </div>
+	 		</section>
+	 		<section class="project-blk table-responsive">
+				<table width="100%" style="width: 100%;" >
+				<tr>
+					<td width="50%" align="left" valign="top" style="border-bottom: 0px !important;" class="col"><div class="prj-wrap inv-pro-name"><label>Project ID:</label><span> 001 </span></div>
+				<div class="prj-wrap"><label> Project Name: </label><span> Test Project </span></div>
+				<div class="prj-wrap"><label>Order Date: </label><span>
+					04.06.21</span></div>
+				<div class="prj-wrap"><label>Issued by: </label><span>Online Order</span></div>
+				<div class="prj-wrap"><label>Project Completed on: 04.06.21</label></div>
+				</td>
+					<td width="50%" align="left" valign="top" style="border-bottom: 0px !important;" class="col"><div class="prj-wrap inv-pro-name"><label>Currency: INR </label> </div>  </td>
+					</tr>
+
+
+				</table>
+	 		</section>
+ 		<section class="table">
+            <div class="table-responsive"><!--table-->
+
+
+
+	<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tbody>
+     <tr>
+		                    <th>Job ID</th>
+		                    <th>Service Description</th>
+		                    <th>SAC</tdh>
+		                    <th>SL</th>
+		                    <th>TL</th>
+		                    <th>Unit Type</th>
+		                    <th>Unit Rate</th>
+		                    <th>Total Units</th>
+		                    <th>Job Total</th>
+		                </tr>
+
+			            	<tr>
+			            		<td><p class="text-center">001</p></td>
+			            		<td><p class="text-center"> MTPE</p></td>
+			            		<td><p class="text-center">123456</p></td>
+			            		<td><p class="text-center">English</p></td>
+			            		<td><p class="text-center">Tamil</p></td>
+			            		<td><p class="text-center">
+			            			Words
+			            		</p></td>
+			            		<td><p class="text-center"> 1.01</p></td>
+			            		<td><p class="text-center">58</p></td>
+
+
+
+			            		<td><p class="text-center">60Rs</p></td>
+
+			            	</tr>
+
+
+
+                                <tr>
+                                  <td style="border-bottom: 0px !important;" colspan="9"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                    <tbody>
+
+                                      <tr>
+                                        <td width="63%" class="text-right" >&nbsp;</td>
+                                        <td width="19%" class="text-center" style="text-align: right; color: #000;">Sub Total</td>
+                                        <td style="text-align: center;" width="10%">58Rs</td>
+                                      </tr>
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td class="text-center" style="text-align: right;"><span class="text-right" style="color: #000;">Minimum Order Processing Fee</span></td>
+                                        <td style="text-align: center;">
+		                        <p style="text-align: center;" class="text-right">0.00</p></td>
+                                      </tr>
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-right"><span class="text-center">Total Before GST</span></td>
+                                        <td style="text-align: right;">55</td>
+                                      </tr>
+
+
+
+                                      <tr class="hide-discount">
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-center">Discount</td>
+                                        <td style="text-align: center;">10%</td>
+                                      </tr>
+
+
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">IGST @ 9%</span></td>
+                                        <td style="text-align: center;">9%</td>
+                                      </tr>
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">SGST @ 9%</span></td>
+                                        <td style="text-align: center;">20%</td>
+                                      </tr>
+
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td style="text-align: right;" class="text-center"><span class="text-right" style="color: #000;">GST @ 18%</span></td>
+                                        <td style="text-align: center;">18</td>
+                                      </tr>
+
+
+                                      <tr>
+                                        <td class="text-right" >&nbsp;</td>
+                                        <td class="text-right" style="padding-right: 0px;"><span class="inv-blue">Total </span></td>
+                                        <td style="background: #16a1e2; border-top-right-radius: 8px; border-bottom-right-radius: 8px;"><p class="text-center"><span class="inv-blue">60</span> </p></td>
+                                      </tr>
+                                      <tr>
+                                        <td class="text-right">&nbsp;</td>
+                                        <td colspan="2" style="font-weight:500; color:#000;">Sixty only</td>
+                                      </tr>
+                                      </tbody>
+                                  </table></td>
+                                </tr>
+            </tbody>
+</table>
+
+
+		  </div><!--./table-->
+		</section>
+		<section class="terms clearfix">
+			<h3>Specific Terms and Conditions:</h3>
+
+
+			<ol>
+				<li>All payments are fully paid in advance.</li>
+				<li>Ordering process is completed only when the payment process is successfully completed. Any problem in payment process would be discussed between the customer and the company before commencing of the project</li>
+				<li>All bank or payment gateway fees are at the customer’s expense.</li>
+				<li>The order (sale order) and invoice may differ in values (unit count and other), if the company find any discrepancy or change in the parameters of the order, including error in automatic word count, and additional tasks if the customer added later.</li>
+				<li>All terms and conditions of the service are listed in the terms of service document that you accepted when ordering.</li>
+			</ol>
+ 		</section>
+ 	</section>
+</section>
+<center style="margin-top:30px"><a href="#" id="print-invoice" class="btn btn-primary"> Print Invoice</a></center>
+		</div>
+
+		<script type="text/javascript">
+			$(document).ready(function(){
+				$('#print-invoice').click(function(){
+	                window.print();
+	            });
+	        });
+		</script>
+</body>
+</html>

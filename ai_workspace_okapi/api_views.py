@@ -1,10 +1,13 @@
-import json
-import jwt
-import logging
-import os
-import re
-import urllib.parse
-import xlsxwriter
+from datetime import datetime
+from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
+                          SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
+                          TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
+                          TM_FetchSerializer,VerbSerializer)
+from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer,TaskTranscriptDetailSerializer
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
+from rest_framework import viewsets, authentication
+from rest_framework import views
+import json,jwt,logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
 
@@ -20,8 +23,13 @@ from rest_framework.decorators import api_view
 from rest_framework.exceptions import APIException
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from spellchecker import SpellChecker
+from rest_framework.parsers import JSONParser
+from django.http import  FileResponse
+from rest_framework.views import APIView
+from django.db.models import Q
+import urllib.parse
+import hunspell,nltk
+from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 
 from ai_auth.models import AiUser, UserCredits
@@ -47,6 +55,12 @@ from rest_framework import serializers
 import os, io, zipfile, requests
 from django.http import HttpResponse
 from controller.models import DownloadController
+from ai_workspace.models import File
+from .utils import SpacesService,text_to_speech
+from django.contrib.auth import settings
+from ai_auth.utils import get_plan_name
+from .utils import download_file, bl_title_format, bl_cell_format,get_res_path
+
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -119,13 +133,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             data = ser.data
             DocumentViewByTask.correct_fields(data)
             params_data = {**data, "output_type": None}
-
-            # print("Data to spring ===> ", params_data)
-
-            res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                         "fprm_file_path": None,
-                         "use_spaces" : settings.USE_SPACES
-                         }
+            # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+            #              "fprm_file_path": None,
+            #              "use_spaces" : settings.USE_SPACES
+            #              }
+            res_paths = get_res_path(params_data["source_language"])
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
@@ -443,6 +455,36 @@ class DocumentToFile(views.APIView):
         source_file_path = self.get_source_file_path(document_id)
         return download_file(source_file_path)
 
+
+    #For Downloading Audio File################only for voice project###########
+    def download_audio_file(self,res,document_id,voice_gender,language_locale):
+        if res.status_code in [200, 201]:
+            file_path = res.text
+            doc = DocumentToFile.get_object(document_id)
+            task = doc.task_set.first()
+            ser = TaskSerializer(task)
+            task_data = ser.data
+            filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
+            target_language = language_locale if language_locale else task_data["target_language"]
+            dir,name_ = os.path.split(os.path.abspath(self.get_source_file_path(document_id)))
+            filename = name_ + "_out"+ ".mp3"
+            res1,f2 = text_to_speech(file_path,target_language,filename,voice_gender)
+            if task.task_transcript_details.first()==None:
+                ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
+            else:
+                t = task.task_transcript_details.first()
+                ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
+            if ser.is_valid():
+                ser.save()
+            print(ser.errors)
+            f2.close()
+            os.remove(filename)
+            return download_file(task.task_transcript_details.last().translated_audio_file.path)
+        else:
+            return Response({"msg":"something went wrong"})
+
+
+
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
         return re.sub(rf'</?\d+>', "", string)
@@ -497,6 +539,8 @@ class DocumentToFile(views.APIView):
     def get(self, request, document_id):
         token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
+        voice_gender = request.GET.get("voice_gender", "FEMALE")
+        language_locale = request.GET.get("locale", None)
         payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
         user_id_payload = payload.get("user_id", 0)
         user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
@@ -510,8 +554,12 @@ class DocumentToFile(views.APIView):
             if output_type == "BILINGUAL":
                 return self.download_bilingual_file(document_id)
 
-            output_type = request.GET.get("output_type", "")
-            res = self.document_data_to_file(output_type, document_id)
+            # For Downloading Audio File
+            if output_type == "AUDIO":
+                res = self.document_data_to_file(request, document_id)
+                return self.download_audio_file(res,document_id,voice_gender,language_locale)
+
+            res = self.document_data_to_file(request, document_id)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 try:
@@ -542,6 +590,7 @@ class DocumentToFile(views.APIView):
         task = document.task_set.first()
         ser = TaskSerializer(task)
         task_data = ser.data
+        print("Task data ---> ", task_data)
         DocumentViewByTask.correct_fields(task_data)
         # print("---->", output_type)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
@@ -554,11 +603,11 @@ class DocumentToFile(views.APIView):
                 "-" + task_data["target_language"] + ")" + ext
 
         params_data = {**task_data, "output_type": output_type}
-        # print("Params data ----> ", params_data)
-        res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                     "fprm_file_path": None,
-                     "use_spaces" : settings.USE_SPACES
-                     }
+        # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+        #              "fprm_file_path": None,
+        #              "use_spaces" : settings.USE_SPACES
+        #              }
+        res_paths = get_res_path(task_data["source_language"])
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
@@ -571,8 +620,7 @@ class DocumentToFile(views.APIView):
 
             with open(task_data["output_file_path"], "rb") as f:
                 SpacesService.put_object(output_file_path=File
-                    .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
-        print("res--->", res.text)
+                                        .get_aws_file_path(task_data["output_file_path"]), f_stream=f)
         return res
 
 OUTPUT_TYPES = dict(
@@ -581,6 +629,7 @@ OUTPUT_TYPES = dict(
     TMX = "TMX",
     SOURCE = "SOURCE",
     BILINGUAL = "BILINGUAL",
+    # AUDIO = "AUDIO",
 )
 
 def output_types(request):
@@ -1332,7 +1381,7 @@ def WiktionaryWorkSpace(request,doc_id):
     return JsonResponse({"out":res}, safe = False, json_dumps_params={'ensure_ascii':False})
 
 
-######  USING PY SPELLCHECKER  ######
+######  USING PY SPELLCHECKER  AND HunSpell######
 @api_view(['GET', 'POST',])
 def spellcheck(request):
     tar = request.POST.get('target')
@@ -1340,22 +1389,38 @@ def spellcheck(request):
     doc = Document.objects.get(id=doc_id)
     out,res = [],[]
     try:
-        spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
-        if spellchecker=="pyspellchecker":
-            code = doc.target_language_code
-            spell = SpellChecker(code)
-            words=spell.split_words(tar)#list
-            misspelled=spell.unknown(words)#set
-            for word in misspelled:
-                suggestion=list(spell.candidates(word))
-                for k in words:
-                    if k==word.capitalize():
-                        out=[{"word":k,"Suggested Words":suggestion}]
-                        break
-                    else:
-                        out=[{"word":word,"Suggested Words":suggestion}]
-                res.extend(out)
+        if doc.target_language_code == 'en':
+            lang = doc.target_language_code
+            dic = r'/ai_home/dictionaries/{lang}.dic'.format(lang = lang)
+            aff = r'/ai_home/dictionaries/{lang}.aff'.format(lang = lang)
+            hobj = hunspell.HunSpell(dic,aff )
+            punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+            nltk_tokens = nltk.word_tokenize(tar)
+            tokens_new = [word for word in nltk_tokens if word not in punctuation]
+            for word in tokens_new:
+                suggestions=[]
+                if hobj.spell(word)==False:
+                     suggestions.extend(hobj.suggest(word))
+                     out=[{"word":word,"Suggested Words":suggestions}]
+                     res.extend(out)
             return JsonResponse({"result":res},safe=False)
+        else:
+            spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
+            if spellchecker=="pyspellchecker":
+                code = doc.target_language_code
+                spell = SpellChecker(code)
+                words=spell.split_words(tar)#list
+                misspelled=spell.unknown(words)#set
+                for word in misspelled:
+                    suggestion=list(spell.candidates(word))
+                    for k in words:
+                        if k==word.capitalize():
+                            out=[{"word":k,"Suggested Words":suggestion}]
+                            break
+                        else:
+                            out=[{"word":word,"Suggested Words":suggestion}]
+                    res.extend(out)
+                return JsonResponse({"result":res},safe=False)
     except:
         return JsonResponse({"message":"Spellcheck not available"},safe=False)
 
@@ -1429,3 +1494,95 @@ def get_segment_history(request):
         return Response(ser.data)
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
+####################################################### Hemanth #########################################################
+
+@api_view(['POST',])############### only available for english ###################
+def paraphrasing(request):
+    sentence = request.POST.get('sentence')
+    try:
+        text = {}
+        text['sentence'] = sentence
+        end_pts = settings.END_POINT +"paraphrase/"
+        data = requests.post(end_pts , text)
+        return JsonResponse(data.json())
+    except:
+        return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
+
+
+
+@api_view(['POST',])############### only available for english ###################
+def synonmys_lookup(request):
+    if request.method == "POST":
+        try:
+            data = {}
+            txt = request.POST["text"]
+            end_pts = settings.END_POINT +"synonyms/"
+            data['text'] = txt
+            result = requests.post(end_pts , data )
+            serialize = VerbSerializer(result.json())
+            return JsonResponse(serialize.data)
+        except:
+            return JsonResponse({"message":"error in synonmys"},safe=False)
+
+
+
+@api_view(['POST',])############### only available for english ###################
+def grammar_check_model(request):
+    text = request.POST.get('target')
+    data = {}
+    data['text'] = text
+    end_pts = settings.END_POINT +"grammar-checker/"
+    result = requests.post(end_pts , data )
+    try:return JsonResponse(result.json())
+    except:return JsonResponse({'msg':'something went wrong'})
+
+
+headers = {
+    "X-RapidAPI-Key": os.getenv("X-RapidAPI-Key"),
+    "X-RapidAPI-Host":  os.getenv("X-RapidAPI-Host")
+}
+
+class WordApiView(viewsets.ViewSet):
+    def lemma_word(self,text):
+        import spacy
+        nlp = spacy.load("en_core_web_sm")
+        text  = nlp(text)
+        return [i.lemma_ for i in text][0]
+
+
+    def wordsapi_request(self,text):
+        url = "https://wordsapiv1.p.rapidapi.com/words/{synonyms_request}".format(synonyms_request = text)
+        response = requests.request("GET", url, headers=headers)
+        return response
+
+
+    def create_syn_list(self,data):
+        data =data.json()
+        syn = []
+        if 'success' in data.keys():
+            data =  "no synonmys"
+            return data
+        if data.get('results'):
+            for i in data.get('results'):
+                if 'synonyms' in i.keys():
+                    syn.extend(i['synonyms'])
+                    syn = syn[:10]
+        return syn
+
+
+    def create(self,request):
+        word = request.POST.get('word')
+        context = {}
+        context['word'] = word
+        response =self.wordsapi_request(word)
+        data = self.create_syn_list(response)
+        if len(data)==0:
+            word = self.lemma_word(word)
+            response =self.wordsapi_request(word)
+            data = self.create_syn_list(response)
+            if len(data) == 0:
+                data = "Not Available"
+                context['synonyms'] = data
+                return JsonResponse({'context':context})
+        context['synonyms'] = data
+        return JsonResponse({'context':context})

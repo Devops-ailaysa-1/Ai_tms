@@ -2,8 +2,13 @@ from django import forms
 from .models import Project, Job, File, Task, VersionChoices, Version
 from ai_staff.models import Languages
 from ai_auth.models import AiUser
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
 from ai_staff.models import Languages
 import json
+from decimal import *
+from ai_workspace.models import TaskAssignInfo
 
 class JobForm(forms.ModelForm):
     # project = forms.CharField(required=False)
@@ -89,3 +94,24 @@ class ProjectFormv2(forms.ModelForm):
         # self.cleaned_data
 
 
+def task_assign_detail_mail(Receiver,assignment_id):
+    task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
+    ins = TaskAssignInfo.objects.filter(assignment_id = assignment_id).first()
+    file_detail = []
+    for i in task_assgn_objs:
+        if i.mtpe_count_unit.unit == 'Word':
+            out = [{"file":i.task.file.filename,"words":i.task.task_word_count,"unit":i.mtpe_count_unit.unit}]
+        elif i.mtpe_count_unit.unit == 'Char':
+            out = [{"file":i.task.file.filename,"characters":i.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
+        file_detail.extend(out)
+    context = {'name':Receiver.fullname,'project':ins.task.job.project,'job':ins.task.job.source_target_pair_names, 'rate':str(ins.mtpe_rate.quantize(Decimal("0.00")))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
+    'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y')}
+    msg_html = render_to_string("assign_detail_mail.html", context)
+    send_mail(
+        "Regarding Assigned Task Detail Info",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [Receiver.email],
+        #['thenmozhivijay20@gmail.com',],
+        html_message=msg_html,
+    )
+    print("assign detail mailsent>>")

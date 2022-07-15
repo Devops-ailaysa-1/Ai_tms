@@ -17,6 +17,7 @@ from ai_workspace_okapi.models import SegmentHistory
 
 import re
 
+import collections
 client = translate.Client()
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -322,7 +323,7 @@ class DocumentSerializerV2(DocumentSerializer):
                   "source_language", "target_language", "source_language_id",
                   "target_language_id", "source_language_code", "target_language_code", "doc_credit_check_open_alert",
                   "is_first_doc_view",'assign_detail',
-                  "target_language_script",
+                  "target_language_script",'download_audio_output_file',
                   )
 
 class DocumentSerializerV3(DocumentSerializerV2):
@@ -378,6 +379,34 @@ class MT_RawSerializer(serializers.ModelSerializer):
             source_lang_code,
             target_lang_code,
         )
+    #    # print("data--->", data)
+    #    segment_id = data.get("segment")
+    #    # print("Segment ID ---> ", segment_id)
+    #    obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
+    #    mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
+
+    #    # data["mt_engine"] = data.get("mt_engine", 1)
+    #    data["mt_engine"] = mt_engine_id
+    #    return super().to_internal_value(data=data)
+
+    #def create(self, validated_data):
+
+    #    # print("Validated data ---> ", validated_data)
+
+    #    segment = validated_data["segment"]
+    #    mt_engine= validated_data["mt_engine"]
+
+    #    text_unit_id = segment.text_unit_id
+    #    doc = TextUnit.objects.get(id=text_unit_id).document
+
+    #    sl_code = doc.source_language_code
+    #    tl_code = doc.target_language_code
+
+        # validated_data["mt_raw"]= client.translate(segment.source,
+        #     target_language=segment.target_language_code, format_="text")\
+        #     .get("translatedText")
+
+     #   validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
 
         data = validated_data.pop("segment")
         instance = MT_RawTranslation.objects.create(**validated_data)
@@ -386,6 +415,10 @@ class MT_RawSerializer(serializers.ModelSerializer):
         seg_instance.save()
 
         return instance
+
+
+
+
 
 class TM_FetchSerializer(serializers.ModelSerializer):
     pentm_dir_path = serializers.CharField(source=\
@@ -546,3 +579,7 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = SegmentHistory
         fields = '__all__'
+
+class VerbSerializer(serializers.Serializer):
+    text_string = serializers.CharField()
+    synonyms_form =serializers.ListField()

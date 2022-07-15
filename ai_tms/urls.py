@@ -54,6 +54,7 @@ urlpatterns = [
     path("tm/", include("ai_tm_management.urls")),
     path("nlp/", include("ai_nlp.urls")),
 
+    path("aipay/", include("ai_pay.urls")),
 ]
 
 if settings.MANAGEMENT:

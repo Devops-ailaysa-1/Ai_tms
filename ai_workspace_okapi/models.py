@@ -5,7 +5,7 @@ from django.db.models.signals import post_save, pre_save
 from .signals import set_segment_tags_in_source_and_target, create_segment_controller
 import json
 from ai_auth.models import AiUser
-from ai_staff.models import LanguageMetaDetails, Languages, AilaysaSupportedMtpeEngines
+from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
 from django.utils.functional import cached_property
 from django.db.models import Q, UniqueConstraint, CheckConstraint, F
@@ -283,6 +283,31 @@ class Document(models.Model):
     @property
     def project(self):
         return self.job.project.id
+
+    @property
+    def download_audio_output_file(self):
+        try:
+            voice_pro = self.job.project.voice_proj_detail
+            if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+                locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language = self.job.target_language)
+                return [{"locale":i.language_locale.locale_code,'has_male':i.has_male,'has_female':i.has_female}\
+                        for i in locale_list] if locale_list else []
+            else:
+                return False
+        except:
+            return None
+
+    # @property
+    # def download_audio_output_choices(self):
+    #     try:
+    #         voice_pro = self.job.project.voice_proj_detail
+    #         if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+    #             return True
+    #         else:
+    #             return False
+    #     except:
+    #         return None
+
 
     @property
     def mt_usage(self):

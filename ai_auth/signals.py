@@ -13,6 +13,10 @@ from allauth.account.signals import email_confirmed, password_changed
 from ai_auth import forms as auth_forms
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.models import Group
+from django.db.models import Q
+
+
+
 
 
 def create_dirs_if_not_exists(path):
@@ -36,9 +40,9 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
     print("status----->",instance.get_status_display())
     if instance.get_status_display() == "Accepted":
        user = auth_model.AiUser.objects.get(email = instance.email)
-       user.is_vendor = True
-       user.save()
-       sub = subscribe_vendor(user)
+       # user.is_vendor = True
+       # user.save()
+       # sub = subscribe_vendor(user)
        email = instance.email
        auth_forms.vendor_status_mail(email,instance.get_status_display())
     elif (instance.get_status_display() == "Waitlisted"):
@@ -48,12 +52,22 @@ def  vendor_status_send_email(sender, instance, *args, **kwargs):
     elif instance.get_status_display() == "Request Sent":
        auth_forms.vendor_request_admin_mail(instance)
 
+
 # def updated_billingaddress(sender, instance, *args, **kwargs):
 #     '''Updating user billing address to stripe'''
 #     res=update_billing_address(address=instance)
 #     print("-----------updated customer address-------")
 
-
+# def vendorsinfo_update(sender, instance, created, *args, **kwargs):
+# 	from ai_vendor.models import VendorsInfo
+# 	if created:
+# 		try:
+# 			user = AiUser.objects.get(email = instance.email)
+# 			query = VendorsInfo.objects.filter(user=user)
+# 			tt = query.update(cv_file=instance.cv_file)
+# 			print("@@@@",tt)
+# 		except:
+# 			pass
 
 
 # def update_billing_address(address):
@@ -211,5 +225,25 @@ def update_internal_member_status(sender, instance, *args, **kwargs):
             print("status updated")
 
 
+def get_currency_based_on_country(sender, instance, created, *args, **kwargs):
+	if created:
+		if instance.is_internal_member == True:
+			instance.currency_based_on_country_id = 144
+			instance.save()
+		else:
+			queryset = staff_model.CurrencyBasedOnCountry.objects.filter(country_id = instance.country_id)
+			if queryset:
+				instance.currency_based_on_country_id = queryset.first().currency_id
+				instance.save()
+			else:
+				instance.currency_based_on_country_id = 144
+				instance.save()
+
+
+
 
 # def updated_user_taxid(sender, instance, *args, **kwargs):
+def create_postjob_id(sender, instance, *args, **kwargs):
+    if instance.postjob_id == None:
+        instance.postjob_id = str(random.randint(1,10000))+"j"+str(instance.id)
+        instance.save()

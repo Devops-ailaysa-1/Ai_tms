@@ -139,11 +139,7 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
-    "ai_tm_management",
-    # 'reversion',
-    # 'drf_yasg',
-
-    # 'rest_framework_swagger',
+    "ai_pay"
     # 'dbbackup',
     # 'django_q',
 ]
@@ -448,6 +444,7 @@ CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
 CEO_EMAIL = os.getenv("CEO_EMAIL")
+END_POINT = os.getenv('END_POINT')
 
 STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
 STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
@@ -494,11 +491,11 @@ LOGGING = {
     },
 
     'loggers' : {
-        'django' : {
-            'handlers' : ['file',],
-            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-            'propogate' : True,
-        },
+        # 'django' : {
+        #     'handlers' : ['file',],
+        #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+        #     'propogate' : True,
+        # },
 
         'django' : {
             'handlers' : ['file_prod',],

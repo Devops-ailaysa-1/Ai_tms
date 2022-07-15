@@ -64,6 +64,8 @@ urlpatterns+= [
      path('confirm/',api_views.vendor_renewal_invite_accept,name='confirm'),
      path('replace_password/',api_views.change_old_password,name='replace-password'),
      path('vendor_renewal_change/',api_views.vendor_renewal_change),
+     path('vendor_onboard_complete/',api_views.vendor_onboard_complete),
+     path('email_check/',api_views.get_user),
 
      #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")
      # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),

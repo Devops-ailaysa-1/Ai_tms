@@ -50,6 +50,9 @@ urlpatterns+=[
     path("project/download/<int:pk>", api_views.ProjectDownload.as_view({"get": "zip",
             "post":"push_to_repo"}), name="project-download"),
     path("segment_history/",api_views.get_segment_history,name='segment-history'),
+    path('synonyms/',api_views.WordApiView.as_view({'post': 'create'}), name ='synonyms'),
+    path('grammercheck/',api_views.grammar_check_model, name ='grammercheck'),
+    path('paraphrase/',api_views.paraphrasing, name = 'paraphrase'),
 ]
 
 urlpatterns+=[

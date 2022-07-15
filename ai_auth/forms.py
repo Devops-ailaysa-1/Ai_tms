@@ -188,7 +188,7 @@ def vendor_status_mail(email,status):
     else:
         msg_html = render_to_string("account/email/vendor_status_fail.html", context)
     send_mail(
-        "Become an Editor application status with Ailaysa",None,
+        "Ailaysa Vendor profile application status",None,
         # msg_plain,
         settings.DEFAULT_FROM_EMAIL,
         [email],
@@ -247,6 +247,21 @@ def internal_user_credential_mail(context):
     )
     print("mailsent>>")
 
+def vendor_notify_post_jobs(detail):
+    #pass
+    for i in detail:
+        context = detail.get(i)
+        email = context.get('user_email')
+        msg_html = render_to_string("job_alert_email.html",context)
+        tt = send_mail(
+            'Available jobs alert from ailaysa',None,
+            settings.DEFAULT_FROM_EMAIL,
+            #['thenmozhivijay20@gmail.com'],
+            [email],
+            html_message=msg_html,
+        )
+        print("available job alert mail sent>>")
+
 
 def vendor_notify_post_jobs(detail):
     #pass
@@ -288,3 +303,35 @@ def unread_notification_mail(email_list):
             html_message=msg_html,
         )
     print("notification mailsent>>")
+
+
+
+def user_trial_extend_mail(user):
+    context = {'user':user.fullname}
+    email = user.email
+    msg_html = render_to_string("user_trial_extend.html",context)
+    send_mail(
+        'Trial-Extension',None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("trial_exten_mail_sent-->>>")
+
+
+
+def existing_vendor_onboarding_mail(user,gen_password):
+    context = {'user':user.fullname,'email':user.email,'gen_password':gen_password}
+    email = user.email
+    msg_html = render_to_string("existing_vendor_onboarding.html",context)
+    sent =send_mail(
+        'Become a member of Ailaysa freelancer marketplace',None,
+        'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
+        [email],
+        html_message=msg_html,
+    )
+    print("existing_vendor_onboarding_mail-->>>")
+    if sent==0:
+        return False
+    else:
+        return True
