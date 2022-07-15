@@ -41,5 +41,5 @@ urlpatterns+= [
     path('vendor_list_based_on_projects/',api_views.GetVendorListBasedonProjects.as_view({'get': 'list'}),name='vendor-list'),
     path('templates/',api_views.project_post_template_options),
     path('get_template/',api_views.project_post_template_get),
-    path('delete_sample_file/',api_views.sample_file_delete),
+    path('delete_sample_file/<int:bid_propasal_id>/',api_views.sample_file_delete),
     ]
