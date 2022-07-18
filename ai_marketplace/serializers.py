@@ -783,9 +783,17 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     status = serializers.SerializerMethodField()
     verified = serializers.SerializerMethodField()
+    language = serializers.SerializerMethodField()
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified',)
+        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified','language',)
+
+
+    def get_language(self,obj):
+        source_lang = self.context['sl']
+        target_lang = self.context['tl']
+        return {'source_lang_id':source_lang,'target_lang_id':target_lang}
+
 
 
     def get_verified(self,obj):
