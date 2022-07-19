@@ -277,7 +277,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         document = Document.objects.create(**validated_data)
 
         text_unit_stream = io.StringIO()
-        text_unit_writer = csv.writer(text_unit_stream, delimiter='\t')
+        text_unit_writer = csv.writer(text_unit_stream, delimiter=',')
 
         for text_unit in text_unit_ser_data:
             text_unit_writer.writerow([text_unit["okapi_ref_translation_unit_id"], document.id])
@@ -288,12 +288,12 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             cursor.copy_from(
                 file = text_unit_stream,
                 table = 'ai_workspace_okapi_textunit',
-                sep = '\t',
+                sep = ',',
                 columns = ('okapi_ref_translation_unit_id', 'document_id'),
             )
 
         segment_stream = io.StringIO()
-        segment_writer = csv.writer(segment_stream, delimiter='\t')
+        segment_writer = csv.writer(segment_stream, delimiter=',')
 
         for text_unit in text_unit_ser_data:
             text_unit_id = TextUnit.objects.get(
@@ -318,12 +318,14 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                                    timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
 
         segment_stream.seek(0)
+        result = segment_stream.read()
+        print("Stream---------->",result)
 
         with closing(connection.cursor()) as cursor:
             cursor.copy_from(
                 file = segment_stream,
                 table = 'ai_workspace_okapi_segment',
-                sep = '\t',
+                sep = ',',
                 columns = ('source', 'target', 'temp_target', 'coded_source', 'tagged_source', \
                        'coded_brace_pattern', 'coded_ids_sequence', 'target_tags', 'okapi_ref_segment_id', 'updated_at', 'text_unit_id', 'random_tag_ids'),
                         )

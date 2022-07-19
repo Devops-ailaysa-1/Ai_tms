@@ -182,17 +182,18 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 write_segments_to_db.apply_async((task_write_data, document.id), )
 
             ###########
-            doc = Document.objects.filter(file_id=task.file_id).last()
-            doc_data = DocumentSerializerV3(doc).data
+            else:
+                doc = Document.objects.filter(file_id=task.file_id).last()
+                doc_data = DocumentSerializerV3(doc).data
 
-            serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                     "file": task.file.id, "job": task.job.id,
-                                                     }, ))
-            if serializer.is_valid(raise_exception=True):
-                document = serializer.save()
-                task.document = document
-                print("********   Document written using existing file  ***********")
-                task.save()
+                serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                         "file": task.file.id, "job": task.job.id,
+                                                         }, ))
+                if serializer.is_valid(raise_exception=True):
+                    document = serializer.save()
+                    task.document = document
+                    print("********   Document written using existing file  ***********")
+                    task.save()
 
         else:
             data = TaskSerializer(task).data
@@ -210,7 +211,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 doc_data = doc.json()
                 # print("Doc data from spring---> ", doc_data)
 
-                if doc_data["total_word_count"] >= 10:
+                if doc_data["total_word_count"] >= 10000000:
 
                     source_file_path = params_data["source_file_path"]
                     path_list = re.split("source/", source_file_path)
@@ -235,7 +236,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
-            if doc_data["total_word_count"] >= 10:
+            if doc_data["total_word_count"] >= 10000000:
                 doc_data_task = DocumentViewByTask.correct_segment_for_task(doc_json_path,
                                                                             needed_keys)  # check if there is no content, skip this part
                 # print("Doc data from json file =====>", doc_data_task)

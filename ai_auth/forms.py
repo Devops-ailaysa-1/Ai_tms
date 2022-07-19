@@ -15,7 +15,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from datetime import date
 
 from ai_auth import models as auth_models
-
+from django.core.mail import EmailMessage
 from django.utils.translation import ugettext_lazy as _
 
 
@@ -308,12 +308,25 @@ def existing_vendor_onboarding_mail(user,gen_password):
     context = {'user':user.fullname,'email':user.email,'gen_password':gen_password}
     email = user.email
     msg_html = render_to_string("existing_vendor_onboarding.html",context)
-    sent =send_mail(
-        'Become a member of Ailaysa freelancer marketplace',None,
+    # sent =send_mail(
+    #     'Become a member of Ailaysa freelancer marketplace',None,
+    #     'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
+    #     [email],
+    #     html_message=msg_html,
+    # )
+
+    msg = EmailMessage(
+        'Become a member of Ailaysa freelancer marketplace',
+         msg_html,
         'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
         [email],
-        html_message=msg_html,
+        bcc=['vendormanager@ailaysa.com'],
+        reply_to=['vendormanager@ailaysa.com'],
     )
+
+    msg.content_subtype = "html"
+
+    sent=msg.send()
     print("existing_vendor_onboarding_mail-->>>")
     if sent==0:
         return False
