@@ -10,6 +10,9 @@ from contextlib import closing
 from django.db import connection
 from django.utils import timezone
 import collections
+import csv
+import io
+
 client = translate.Client()
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -178,10 +181,10 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
 
     def create(self, validated_data, **kwargs):
-        text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
-        text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
-
-        document = Document.objects.create(**validated_data)
+        # text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
+        # text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
+        #
+        # document = Document.objects.create(**validated_data)
 
         # USING DJANGO SAVE() METHOD
         # for text_unit in text_unit_ser_data:
@@ -231,41 +234,111 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         # print("********** Created segments **********")
 
         # USING SQL BATCH INSERT
-        text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
-        ', '.join(['(%s, %s)'] * len(text_unit_ser_data)),
-        )
-        tu_params = []
+        # text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
+        # ', '.join(['(%s, %s)'] * len(text_unit_ser_data)),
+        # )
+        # tu_params = []
+        # for text_unit in text_unit_ser_data:
+        #     tu_params.extend([text_unit["okapi_ref_translation_unit_id"], document.id])
+        #
+        # with closing(connection.cursor()) as cursor:
+        #     cursor.execute(text_unit_sql, tu_params)
+        #
+        # seg_params = []
+        # seg_count = 0
+        # for text_unit in text_unit_ser_data:
+        #     text_unit_id = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
+        #                                     Q(document_id=document.id)).id
+        #     segs = text_unit.pop("segment_ser", [])
+        #
+        #     for seg in segs:
+        #         seg_count += 1
+        #         tagged_source, _ , target_tags = (
+        #                 set_ref_tags_to_runs(seg["coded_source"],
+        #                 get_runs_and_ref_ids(seg["coded_brace_pattern"],
+        #                 json.loads(seg["coded_ids_sequence"])))
+        #             )
+        #         target = "" if seg["target"] is None else seg["target"]
+        #         seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+        #             str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
+        #                 timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
+        #
+        # segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
+        #                coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
+        #                    ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+        #
+        # with closing(connection.cursor()) as cursor:
+        #     cursor.execute(segment_sql, seg_params)
+
+        # Using PostgreSQL COPY FROM
+        text_unit_ser_data = validated_data.pop("text_unit_ser", [])
+        text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
+
+        document = Document.objects.create(**validated_data)
+
+        text_unit_stream = io.StringIO()
+        text_unit_writer = csv.writer(text_unit_stream, delimiter='\t')
+
         for text_unit in text_unit_ser_data:
-            tu_params.extend([text_unit["okapi_ref_translation_unit_id"], document.id])
+            text_unit_writer.writerow([text_unit["okapi_ref_translation_unit_id"], document.id])
+
+        text_unit_stream.seek(0)
 
         with closing(connection.cursor()) as cursor:
-            cursor.execute(text_unit_sql, tu_params)
+            cursor.copy_from(
+                file = text_unit_stream,
+                table = 'ai_workspace_okapi_textunit',
+                sep = '\t',
+                columns = ('okapi_ref_translation_unit_id', 'document_id'),
+            )
 
-        seg_params = []
-        seg_count = 0
+        segment_stream = io.StringIO()
+        segment_writer = csv.writer(segment_stream, delimiter='\t')
+
         for text_unit in text_unit_ser_data:
-            text_unit_id = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
-                                            Q(document_id=document.id)).id
+            text_unit_id = TextUnit.objects.get(
+                Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
+                Q(document_id=document.id)).id
             segs = text_unit.pop("segment_ser", [])
 
-            for seg in segs:
-                seg_count += 1
-                tagged_source, _ , target_tags = (
-                        set_ref_tags_to_runs(seg["coded_source"],
-                        get_runs_and_ref_ids(seg["coded_brace_pattern"],
-                        json.loads(seg["coded_ids_sequence"])))
-                    )
-                target = "" if seg["target"] is None else seg["target"]
-                seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
-                    str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
-                        timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
+            # segment_stream = StringIO()
+            # segment_writer = csv.writer(segment_stream, delimiter = '\t')
 
-        segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
-                       coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
-                           ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+            for seg in segs:
+                tagged_source, _, target_tags = (
+                    set_ref_tags_to_runs(seg["coded_source"],
+                                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
+                                                              json.loads(seg["coded_ids_sequence"])))
+                )
+                target = "" if seg["target"] is None else seg["target"]
+
+                segment_writer.writerow([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+                                   str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
+                                   str(text_unit["okapi_ref_translation_unit_id"]), \
+                                   timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
+
+        segment_stream.seek(0)
 
         with closing(connection.cursor()) as cursor:
-            cursor.execute(segment_sql, seg_params)
+            cursor.copy_from(
+                file = segment_stream,
+                table = 'ai_workspace_okapi_segment',
+                sep = '\t',
+                columns = ('source', 'target', 'temp_target', 'coded_source', 'tagged_source', \
+                       'coded_brace_pattern', 'coded_ids_sequence', 'target_tags', 'okapi_ref_segment_id', 'updated_at', 'text_unit_id', 'random_tag_ids'),
+                        )
+
+                # seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+                #                    str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
+                #                    str(text_unit["okapi_ref_translation_unit_id"]), \
+                #                    timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
+        #
+        # segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
+        #                        coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
+        #     ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+        #
+        # with closing(connection.cursor()) as cursor:
+        #     cursor.execute(segment_sql, seg_params)
 
         return document
 

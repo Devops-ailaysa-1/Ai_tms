@@ -562,7 +562,6 @@ class DocumentToFile(views.APIView):
                 row += 1
         workbook.close()
 
-        # return JsonResponse({"msg": "file successfully created"}, safe=False)
         return download_file(bilingual_file_path)
 
 
@@ -574,9 +573,10 @@ class DocumentToFile(views.APIView):
             return JsonResponse({"msg": "File under process. Please wait a little while. \
                     Hit refresh and try again"}, status=401)
 
-        print("Request auth type ----> ", type(request.auth))
+        # print("Request auth type ----> ", type(request.auth))
 
-        token = request.GET.get("token")
+        token = str(request.auth)
+        # token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
         language_locale = request.GET.get("locale", None)
