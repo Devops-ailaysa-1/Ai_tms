@@ -105,7 +105,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         for key, value in text.items():
             needed_keys.append(key)
             count += len(value)
-            if count >= 3:
+            if count >= 20:
                 break
 
         for key in text.copy():
@@ -130,12 +130,15 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     def create_document_for_task_if_not_exists(task):
 
         if task.document != None:
-            print("*** Document exists *****")
+            # print("*** Document exists *****")
             return task.document
 
         elif Document.objects.filter(file_id=task.file_id).exists():
 
-            json_file_path = TaskSerializer(task).data["source_file_path"] + ".json"
+            # json_file_path = TaskSerializer(task).data["source_file_path"] + ".json"
+            source_file_path = TaskSerializer(task).data["source_file_path"]
+            path_list = re.split("source/", source_file_path)
+            json_file_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
 
             if exists(json_file_path):
                 data = TaskSerializer(task).data
@@ -175,7 +178,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
                                                                          "file": task.file.id, "job": task.job.id, })
                 task_write_data = json.dumps(validated_data, default=str)
-                print("Task write data ===========> ", task_write_data)
+                # print("Task write data ===========> ", task_write_data)
                 write_segments_to_db.apply_async((task_write_data, document.id), )
 
             ###########
@@ -203,11 +206,17 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
 
             if doc.status_code == 200 :
+                # print("Doc status code ---> ", doc.status_code)
                 doc_data = doc.json()
                 # print("Doc data from spring---> ", doc_data)
 
                 if doc_data["total_word_count"] >= 10:
-                    doc_json_path = params_data["source_file_path"] + ".json"
+
+                    source_file_path = params_data["source_file_path"]
+                    path_list = re.split("source/", source_file_path)
+                    os.mkdir(os.path.join(path_list[0], "doc_json"))
+                    doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+
                     with open(doc_json_path, "w") as outfile:
                         json.dump(doc_data, outfile)
                         doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
@@ -226,20 +235,21 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
-            doc_data_task = DocumentViewByTask.correct_segment_for_task(doc_json_path,
-                                                                        needed_keys)  # check if there is no content, skip this part
-            print("Doc data from json file =====>", doc_data_task)
+            if doc_data["total_word_count"] >= 10:
+                doc_data_task = DocumentViewByTask.correct_segment_for_task(doc_json_path,
+                                                                            needed_keys)  # check if there is no content, skip this part
+                # print("Doc data from json file =====>", doc_data_task)
 
-            # For celery task
-            serializer_task = DocumentSerializerV2(data={**doc_data_task, \
-                                                         "file": task.file.id, "job": task.job.id, }, )
+                # For celery task
+                serializer_task = DocumentSerializerV2(data={**doc_data_task, \
+                                                             "file": task.file.id, "job": task.job.id, }, )
 
-            ## without serializer.is_valid()
-            validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
-                                                                     "file": task.file.id, "job": task.job.id, })
-            task_write_data = json.dumps(validated_data, default=str)
-            print("Task write data ===========> ", task_write_data)
-            write_segments_to_db.apply_async((task_write_data, document.id), )
+                ## without serializer.is_valid()
+                validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
+                                                                         "file": task.file.id, "job": task.job.id, })
+                task_write_data = json.dumps(validated_data, default=str)
+                # print("Task write data ===========> ", task_write_data)
+                write_segments_to_db.apply_async((task_write_data, document.id), )
 
 
         return document
@@ -557,6 +567,15 @@ class DocumentToFile(views.APIView):
 
 
     def get(self, request, document_id):
+
+        # Incomplete segments in db
+        segment_count = Segment.objects.filter(text_unit__document=document_id).count()
+        if Document.objects.get(id=document_id).total_segment_count != segment_count:
+            return JsonResponse({"msg": "File under process. Please wait a little while. \
+                    Hit refresh and try again"}, status=401)
+
+        print("Request auth type ----> ", type(request.auth))
+
         token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
@@ -609,7 +628,7 @@ class DocumentToFile(views.APIView):
         task = document.task_set.first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        print("Task data ---> ", task_data)
+        # print("Task data ---> ", task_data)
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
