@@ -8,6 +8,7 @@ from django.views.static import serve
 from django.urls import re_path
 from dj_rest_auth.registration.views import VerifyEmailView
 from dj_rest_auth.views import PasswordResetConfirmView
+from ai_auth.soc_auth import GoogleLogin
 
 
 router = DefaultRouter()
@@ -64,6 +65,9 @@ urlpatterns+= [
      path('confirm/',api_views.vendor_renewal_invite_accept,name='confirm'),
      path('replace_password/',api_views.change_old_password,name='replace-password'),
      path('vendor_renewal_change/',api_views.vendor_renewal_change),
+     path('dj-rest-auth/google/', GoogleLogin.as_view(), name='google_login'),
+     path('ai-soc/',api_views.ai_social_login,name='ai_soc'),
+    path('ai-soc-callback/',api_views.ai_social_callback,name='ai_soc_callback')
 
      #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")
      # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
@@ -71,3 +75,6 @@ urlpatterns+= [
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
 ]
+
+
+

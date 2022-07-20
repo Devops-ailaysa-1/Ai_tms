@@ -2,7 +2,9 @@ from logging import INFO
 import re , requests
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
+from ai_auth.soc_auth import GoogleLogin
 from allauth.account.models import EmailAddress
+from dj_rest_auth.registration.serializers import SocialLoginSerializer
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from django.urls import reverse
@@ -57,6 +59,20 @@ from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
+
+#for soc
+from django.test.client import RequestFactory
+from django.test import Client
+from allauth.socialaccount.providers.google.views import ( GoogleOAuth2Adapter,)
+from allauth.socialaccount.providers.oauth2.views import (
+    OAuth2Adapter,
+    OAuth2CallbackView,
+    OAuth2LoginView,
+)
+from django.contrib.sessions.models import Session
+from django.http import HttpResponseRedirect
+from urllib.parse import parse_qs, urlencode,  urlsplit
+from django.shortcuts import redirect
 
 
 # class MyObtainTokenPairView(TokenObtainPairView):
@@ -1737,3 +1753,133 @@ def vendor_renewal_change(request):
         user.is_vendor = data
         user.save()
     return JsonResponse({"msg": "changed successfully"})
+
+
+
+@api_view(['POST'])
+def ai_social_login(request):
+    provider = request.GET.get('provider')
+    print('provider>>',provider)
+    print('requests>>',request)
+    base_url="http://127.0.0.1:8089"
+    provider_id="google"
+    # print(reverse(provider_id +'_login'))
+    # url=base_url+reverse(provider_id +'_login')
+    
+    # req = RequestFactory().get(
+    #         reverse(provider_id + "_login"), dict(process="login")
+    #     )
+
+    adapter = GoogleOAuth2Adapter(request)
+    
+    print("adapter",adapter)
+    print("request",request)
+    provider=adapter.get_provider()
+    oauth2_login = OAuth2LoginView.adapter_view(GoogleOAuth2Adapter)
+    
+    # req = requests.get(url,params={'process':'login'}, headers={'Connection':'close'},allow_redirects=False)
+    rs=oauth2_login(request)
+    print(rs.url)
+    print(rs)
+    url =rs.url
+    parsed = urlsplit(url)
+    query_dict = parse_qs(parsed.query)
+    query_dict['redirect_uri'][0] = "http://localhost:3000/final-step"
+    query_new = urlencode(query_dict, doseq=True)
+    parsed=parsed._replace(query=query_new)
+    url_new = (parsed.geturl())
+    # req.close()
+
+    # with requests.get(url, stream=True) as r:
+    #     print(r.content)
+
+
+    #ses = requests.Session()
+    # ses.config['keep_alive'] = False
+
+    #res = ses.get("http://127.0.0.1:8089/accounts/google/login/",params={'process':'login'},allow_redirects=False)
+    #r = ses.get("http://127.0.0.1:8089/accounts/google/login/",params={'process':'login'},allow_redirects=False)
+    # client = requests.session()
+
+    # auth_redirect_url=req.headers['Location']
+    return JsonResponse({"msg": "redirect","url":url_new},status=302)
+
+
+
+@api_view(['POST'])   
+def ai_social_callback(request):
+    import requests
+    # try:
+    #     ses_id= request.COOKIES.get('sessionid')
+    #     session=Session.objects.get(session_key=ses_id)
+    # except KeyError as e:
+    #     print("session not found ",str(e))
+    #     return JsonResponse({"msg": "session expired"},status=440)
+    # #session=Session.objects.get(session_key="9helhig4y4izzshs93wtzj7ow9yjydi5")
+
+    # request.session['socialaccount_state']=session.get_decoded().get('socialaccount_state')
+    # # print("session print",request.session['socialaccount_state'])
+    # print("code an data",request.GET.dict())
+    # adapter = GoogleOAuth2Adapter(request)
+    # oauth2_callback = OAuth2CallbackView.adapter_view(GoogleOAuth2Adapter)
+
+    # rs = oauth2_callback(request)
+
+    # print(rs)
+    # print("content",rs.content)
+    
+    code = request.GET.get('code')
+    data = {"code":code}
+    print("code",code)
+    # request.method = 'POST'
+    #request._request.data['code']=code
+    print("request data",request.data)
+    print("request in",request._request)
+    print("request post dict",request._request.POST.dict())
+
+    # data = request.POST.copy()
+
+    # # remember old state
+    # _mutable = data._mutable
+
+    # # set to mutable
+    # data._mutable = True
+
+    # # сhange the values you want
+    # data.update({'code':code})
+
+    # # set mutable flag back
+    # data._mutable = _mutable
+
+    # request.POST = data
+
+    #request._request.method = 'POST'
+
+    # mutable = request.POST._mutable
+    # request.POST._mutable = True
+    # request.POST['code'] = code
+    # request.POST._mutable = mutable
+
+
+    #                    request._request.POST['code']=code
+    # print("request post dict",request._request.POST.dict())
+    # print("request data",request.data)
+    # #url = "http://127.0.0.1:8089/auth/dj-rest-auth/google/"
+    # #res= requests.post(url,data)
+    # #print(res)
+    response = GoogleLogin.as_view()(request=request._request).data
+    print(response)
+    #ss=SocialLoginSerializer(data={"code":code},context={"request":request,"view":GoogleLogin.as_view()})
+    #response = GoogleLogin.post(request=request._request)
+    #response = reverse("google_login",request)
+
+
+    # r = requests.post(
+    #         request.build_absolute_uri(reverse('google_login')), 
+    #         data = {'code':code}
+    # )
+    # print(r.content)
+     
+
+    return JsonResponse({"msg": "success"},status=200)
+    #return HttpResponseRedirect(reverse('google_login'))
