@@ -1,4 +1,5 @@
 from logging import INFO
+import logging
 import re , requests
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
@@ -73,6 +74,7 @@ from django.contrib.sessions.models import Session
 from django.http import HttpResponseRedirect
 from urllib.parse import parse_qs, urlencode,  urlsplit
 from django.shortcuts import redirect
+import json
 
 
 # class MyObtainTokenPairView(TokenObtainPairView):
@@ -1759,6 +1761,7 @@ def vendor_renewal_change(request):
 @api_view(['POST'])
 def ai_social_login(request):
     provider = request.GET.get('provider')
+    is_vendor = request.GET.get('is_vendor')
     print('provider>>',provider)
     print('requests>>',request)
     base_url="http://127.0.0.1:8089"
@@ -1769,6 +1772,11 @@ def ai_social_login(request):
     # req = RequestFactory().get(
     #         reverse(provider_id + "_login"), dict(process="login")
     #     )
+
+    if is_vendor=='True':
+        request.session['socialaccount_user_state']='vendor'
+    else:
+        request.session['socialaccount_user_state']='customer'
 
     adapter = GoogleOAuth2Adapter(request)
     
@@ -1788,6 +1796,7 @@ def ai_social_login(request):
     query_new = urlencode(query_dict, doseq=True)
     parsed=parsed._replace(query=query_new)
     url_new = (parsed.geturl())
+    # VendorOnboardingInfo.objects.get_or_create(user=user,onboarded_as_vendor=True)
     # req.close()
 
     # with requests.get(url, stream=True) as r:
@@ -1808,14 +1817,18 @@ def ai_social_login(request):
 
 @api_view(['POST'])   
 def ai_social_callback(request):
-    import requests
-    # try:
-    #     ses_id= request.COOKIES.get('sessionid')
-    #     session=Session.objects.get(session_key=ses_id)
-    # except KeyError as e:
-    #     print("session not found ",str(e))
-    #     return JsonResponse({"msg": "session expired"},status=440)
+    try:
+        ses_id= request.COOKIES.get('sessionid')
+        session=Session.objects.get(session_key=ses_id)
+    except BaseException as e:
+        logging.warning("session not found ",str(e))
+        return JsonResponse({"msg": "session expired or not found"},status=440)
     # #session=Session.objects.get(session_key="9helhig4y4izzshs93wtzj7ow9yjydi5")
+
+    # print(session.get_decoded())
+    # print(session.get_decoded().get('socialaccount_user_state',None))
+    user_state = session.get_decoded().get('socialaccount_user_state',None)
+
 
     # request.session['socialaccount_state']=session.get_decoded().get('socialaccount_state')
     # # print("session print",request.session['socialaccount_state'])
@@ -1828,9 +1841,9 @@ def ai_social_callback(request):
     # print(rs)
     # print("content",rs.content)
     
-    code = request.GET.get('code')
-    data = {"code":code}
-    print("code",code)
+    # code = request.GET.get('code')
+    # data = {"code":code}
+    # print("code",code)
     # request.method = 'POST'
     #request._request.data['code']=code
     print("request data",request.data)
@@ -1867,8 +1880,30 @@ def ai_social_callback(request):
     # #url = "http://127.0.0.1:8089/auth/dj-rest-auth/google/"
     # #res= requests.post(url,data)
     # #print(res)
-    response = GoogleLogin.as_view()(request=request._request).data
-    print(response)
+    # try:
+    try:
+        response = GoogleLogin.as_view()(request=request._request).data
+    except BaseException as e:
+        logging.error("on social login",str(e))
+        return JsonResponse({"error":str(e)},status=400)
+
+    required=[]
+    try:
+        response.get('access_token')
+        resp_data =response
+    except ValueError as e:
+        logging.info("on social login",str(e))
+        return JsonResponse(resp_data,status=400)
+        
+    required.append('country')
+    if user_state!=None:
+            if user_state == 'vendor':
+                required.append('language_pair')
+    resp_data.update({"required_details":required})
+
+    # except BaseException as e:
+    #     return JsonResponse({"msg": "success"},status=200)
+        
     #ss=SocialLoginSerializer(data={"code":code},context={"request":request,"view":GoogleLogin.as_view()})
     #response = GoogleLogin.post(request=request._request)
     #response = reverse("google_login",request)
@@ -1881,5 +1916,5 @@ def ai_social_callback(request):
     # print(r.content)
      
 
-    return JsonResponse({"msg": "success"},status=200)
+    return JsonResponse(resp_data,status=200)
     #return HttpResponseRedirect(reverse('google_login'))
