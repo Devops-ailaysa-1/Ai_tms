@@ -201,11 +201,14 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             params_data = {**data, "output_type": None}
 
             res_paths = get_res_path(params_data["source_language"])
+            st = time.time()
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
-
+            et = time.time()
+            elapsed_time = et - st
+            print("okapi Execution time---------------->",elapsed_time)
             if doc.status_code == 200 :
                 # print("Doc status code ---> ", doc.status_code)
                 doc_data = doc.json()
@@ -227,10 +230,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                                 },))
 
                 if serializer.is_valid(raise_exception=True):
-                    with transaction.atomic():
-                        document = serializer.save()
-                        task.document = document
-                        task.save()
+                    #with transaction.atomic():
+                    document = serializer.save()
+                    task.document = document
+                    task.save()
             else:
                 # logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
                 logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
