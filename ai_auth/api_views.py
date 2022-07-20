@@ -1868,7 +1868,7 @@ def ai_social_callback(request):
     # #res= requests.post(url,data)
     # #print(res)
     response = GoogleLogin.as_view()(request=request._request).data
-
+    print(response)
     #ss=SocialLoginSerializer(data={"code":code},context={"request":request,"view":GoogleLogin.as_view()})
     #response = GoogleLogin.post(request=request._request)
     #response = reverse("google_login",request)
