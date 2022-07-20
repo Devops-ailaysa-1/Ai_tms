@@ -579,8 +579,8 @@ class DocumentToFile(views.APIView):
 
         # print("Request auth type ----> ", type(request.auth))
 
-        token = str(request.auth)
-        # token = request.GET.get("token")
+        #token = str(request.auth)
+        token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
         language_locale = request.GET.get("locale", None)
