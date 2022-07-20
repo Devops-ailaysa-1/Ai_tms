@@ -1784,7 +1784,7 @@ def ai_social_login(request):
     url =rs.url
     parsed = urlsplit(url)
     query_dict = parse_qs(parsed.query)
-    query_dict['redirect_uri'][0] = "http://localhost:3000/final-step"
+    query_dict['redirect_uri'][0] = settings.GOOGLE_CALLBACK_URL
     query_new = urlencode(query_dict, doseq=True)
     parsed=parsed._replace(query=query_new)
     url_new = (parsed.geturl())
