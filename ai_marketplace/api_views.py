@@ -785,7 +785,7 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 
 
 @api_view(['GET',])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def sample_file_download(request,bid_propasal_id):
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
