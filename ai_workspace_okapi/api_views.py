@@ -208,13 +208,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             })
             et = time.time()
             elapsed_time = et - st
-            print("okapi Execution time---------------->",elapsed_time)
+            # print("okapi Execution time---------------->",elapsed_time)
             if doc.status_code == 200 :
                 # print("Doc status code ---> ", doc.status_code)
                 doc_data = doc.json()
                 # print("Doc data from spring---> ", doc_data)
 
-                if doc_data["total_word_count"] >= 10000000:
+                if doc_data["total_word_count"] >= 50000:
 
                     source_file_path = params_data["source_file_path"]
                     path_list = re.split("source/", source_file_path)
@@ -239,7 +239,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
-            if doc_data["total_word_count"] >= 10000000:
+            if doc_data["total_word_count"] >= 50000:
                 doc_data_task = DocumentViewByTask.correct_segment_for_task(doc_json_path,
                                                                             needed_keys)  # check if there is no content, skip this part
                 # print("Doc data from json file =====>", doc_data_task)
