@@ -483,6 +483,8 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 
+GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
+
 # LOGGING = {
 #     'version' : 1,
 #     'disable_existing_loggers' : False,
