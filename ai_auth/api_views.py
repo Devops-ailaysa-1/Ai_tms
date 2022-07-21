@@ -541,21 +541,10 @@ def subscribe_trial(price,customer=None):
     return subscription
 
 def subscribe_vendor(user):
-    try:
-        cust = Customer.objects.get(subscriber=user)
-    except Customer.DoesNotExist:
-        customer = Customer.get_or_create(subscriber=user)
-        cust=customer[0]
-    if cust.currency=='':
-        if user.country.id == 101 :
-            currency = 'inr'
-        else:
-            currency ='usd'
-    else:
-        currency =cust.currency
-    price = Price.objects.get(product__name="Pro - V",currency=currency)
     plan = get_plan_name(user)
-    if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
+    cust = Customer.objects.get(subscriber=user)
+    price = Price.objects.get(product__name="Pro - V",currency=cust.currency)
+    if plan!= None and (plan != "Pro - V" and plan.startswith('Pro')):
         sub=subscribe(price=price,customer=cust)
         return sub
 
@@ -1250,12 +1239,10 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
 
     # def update(self, request, pk):
     #     cv_file=request.FILES.get('cv_file')
-    #     queryset = VendorOnboarding.objects.get(id=pk)
-    #     serializer = VendorOnboardingSerializer(queryset,data={'cv_file':cv_file},partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #     try:
+    #         queryset = VendorOnboarding.objects.get(id=pk)
+    #     except VendorOnboarding.DoesNotExist:
+    #         return Response(status=204)
     #     rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
     #     serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
     #     if serializer.is_valid():
@@ -1691,36 +1678,30 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-def vendor_onboard_check(email,user):
-    from ai_vendor.models import VendorsInfo,VendorOnboardingInfo
+def vendor_onboard_check(email):
     try:
         obj = VendorOnboarding.objects.get(email = email)
-        current = "verified" if obj.get_status_display() == "Accepted" else "unverified"
-        return JsonResponse({'id':obj.id,'email':email,'status':current})
-    except:
-        try:
-            obj1 = VendorOnboardingInfo.objects.get(user = user)
-            if obj1.onboarded_as_vendor == True:
-                return JsonResponse({'msg':'onboarded_as_vendor and profile incomplete'})
-        except:
-            return Response(status=204)
+        print(obj)
+        return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
+    except VendorOnboarding.DoesNotExist:
+        return Response(status=204)
 
 
 @api_view(['POST',])
 def vendor_form_filling_status(request):
     email = request.POST.get('email')
+    print("Email---->",email)
     try:
         user = AiUser.objects.get(email=email)
         if user.is_vendor == True:
-            res = vendor_onboard_check(email,user)
-            return res
+            return JsonResponse({"msg":"Already a vendor"})
         elif user.email in users_list:
             res = vendor_onboard_check(email,user)
             return res
         else:
             pass
     except:
-        res = vendor_onboard_check(email,None)
+        res = vendor_onboard_check(email)
         return res
 
 class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
@@ -1815,10 +1796,10 @@ def get_user(request):
     except:
         return Response({'user_exist':False})
 
-@api_view(['POST'])      
+@api_view(['POST'])
 def ai_social_login(request):
-    provider = request.GET.get('provider')
-    is_vendor = request.GET.get('is_vendor')
+    provider = request.POST.get('provider')
+    is_vendor = request.POST.get('is_vendor')
     print('provider>>',provider)
     print('requests>>',request)
     base_url="http://127.0.0.1:8089"
@@ -1832,11 +1813,11 @@ def ai_social_login(request):
     state_data=dict()
     if is_vendor=='True':
         #request.session['socialaccount_user_state']='vendor'
-        state_data['socialaccount_user_state']='vendor'
+        state_data["socialaccount_user_state"]="vendor"
 
     else:
         #request.session['socialaccount_user_state']='customer'
-        state_data['socialaccount_user_state']='customer'
+        state_data["socialaccount_user_state"]="customer"
 
     adapter = GoogleOAuth2Adapter(request)
     
@@ -1858,7 +1839,7 @@ def ai_social_login(request):
     parsed=parsed._replace(query=query_new)
     url_new = (parsed.geturl())
 
-    SocStates.objects.create()
+    soc_state = SocStates.objects.create(state=state,data=json.dumps(state_data))
     # VendorOnboardingInfo.objects.get_or_create(user=user,onboarded_as_vendor=True)
     # req.close()
 
@@ -1880,17 +1861,28 @@ def ai_social_login(request):
 
 @api_view(['POST'])   
 def ai_social_callback(request):
-    try:
-        ses_id= request.COOKIES.get('sessionid')
-        session=Session.objects.get(session_key=ses_id)
-    except BaseException as e:
-        logging.warning("session not found ",str(e))
-        return JsonResponse({"msg": "session expired or not found"},status=440)
+    state = request.POST.get('state')
+    # try:
+    #     ses_id= request.COOKIES.get('sessionid')
+    #     session=Session.objects.get(session_key=ses_id)
+    # except BaseException as e:
+    #     logging.warning("session not found ",str(e))
+    #     return JsonResponse({"msg": "session expired or not found"},status=440)
     # #session=Session.objects.get(session_key="9helhig4y4izzshs93wtzj7ow9yjydi5")
 
     # print(session.get_decoded())
     # print(session.get_decoded().get('socialaccount_user_state',None))
-    user_state = session.get_decoded().get('socialaccount_user_state',None)
+    user_state=None
+    try:
+        soc_state=SocStates.objects.get(state=state)
+        user_state = json.loads(soc_state.data).get('socialaccount_user_state',None)
+    except SocStates.DoesNotExist:
+        logging.error("invalid_state")
+        return JsonResponse({"error": "invalid_state"},status=440)
+    except AttributeError:
+        logging.error("state_info_not_found")
+        return JsonResponse({"error": "state_info_not_found"},status=440)
+
 
 
     # request.session['socialaccount_state']=session.get_decoded().get('socialaccount_state')

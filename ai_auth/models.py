@@ -500,5 +500,5 @@ class ExistingVendorOnboardingCheck(models.Model):
     mail_sent_time = models.DateTimeField(blank=True, null=True)
     
 class SocStates(models.Model):
-    state = models.CharField(max_length=150, blank=True, null=True)
+    state = models.CharField(max_length=150,unique=True)
     data = models.CharField(max_length=255, blank=True, null=True)
