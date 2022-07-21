@@ -30,7 +30,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors,VendorOnboarding)
+                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -1772,11 +1772,14 @@ def ai_social_login(request):
     # req = RequestFactory().get(
     #         reverse(provider_id + "_login"), dict(process="login")
     #     )
-
+    state_data=dict()
     if is_vendor=='True':
-        request.session['socialaccount_user_state']='vendor'
+        #request.session['socialaccount_user_state']='vendor'
+        state_data['socialaccount_user_state']='vendor'
+
     else:
-        request.session['socialaccount_user_state']='customer'
+        #request.session['socialaccount_user_state']='customer'
+        state_data['socialaccount_user_state']='customer'
 
     adapter = GoogleOAuth2Adapter(request)
     
@@ -1793,9 +1796,12 @@ def ai_social_login(request):
     parsed = urlsplit(url)
     query_dict = parse_qs(parsed.query)
     query_dict['redirect_uri'][0] = settings.GOOGLE_CALLBACK_URL
+    state = query_dict['state'][0]
     query_new = urlencode(query_dict, doseq=True)
     parsed=parsed._replace(query=query_new)
     url_new = (parsed.geturl())
+
+    SocStates.objects.create()
     # VendorOnboardingInfo.objects.get_or_create(user=user,onboarded_as_vendor=True)
     # req.close()
 

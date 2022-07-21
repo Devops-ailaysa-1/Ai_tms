@@ -487,3 +487,7 @@ class ReferredUsers(models.Model):
 class CampaignUsers(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
     campaign_name = models.CharField(max_length=255, blank=True, null=True)
+
+class SocStates(models.Model):
+    state = models.CharField(max_length=150, blank=True, null=True)
+    data = models.CharField(max_length=255, blank=True, null=True)

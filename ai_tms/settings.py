@@ -305,6 +305,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 
+SOCIALACCOUNT_ADAPTER="ai_auth.ai_adapters.SocialAdapter"
 
 SOCIALACCOUNT_PROVIDERS = {
     'github': {
