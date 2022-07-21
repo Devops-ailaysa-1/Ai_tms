@@ -40,3 +40,7 @@ def get_plan_name(user):
 		name = sub.plan.product.name
 		return name
 	else: return None
+
+
+def get_currency_based_on_country(user):
+	pass

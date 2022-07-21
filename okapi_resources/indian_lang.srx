@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<srx xmlns="http://www.lisa.org/srx20" xmlns:okpsrx="http://okapi.sf.net/srx-extensions" version="2.0">
+<header segmentsubflows="yes" cascade="no">
+<formathandle type="start" include="no"></formathandle>
+<formathandle type="end" include="yes"></formathandle>
+<formathandle type="isolated" include="no"></formathandle>
+<okpsrx:options oneSegmentIncludesAll="no" trimLeadingWhitespaces="no" trimTrailingWhitespaces="no" useJavaRegex="yes" useIcu4JBreakRules="no" treatIsolatedCodesAsWhitespace="no"></okpsrx:options>
+<okpsrx:sample language="hi" useMappedRules="yes">एक अनुच्छेद बढ़िया तालमेल वाले वाक्यों का एक समूह होता है। इन वाक्यों की सहायता से एक विषय को विकसित किया जाता है। किसी एक भाव या विचार को व्यक्त करने के लिए लिखे गए संबंधित और छोटे वाक्य समूह को anuched lekhan कहते हैं। अनुच्छेद के तीन भाग हैं- उचित प्रस्तुतिकरण, विकास तथा विश्वसनीय निष्कर्ष। आइए विस्तार से जानते हैं कि paragraph writing in Hindi क्या होता है और कैसे इसे अमल में लाया जाता है। फिर एक लाइन का गेप रखकर हाशिए के पास से अनुच्छेद लेखन शुरू करें. शुरू के कुछ वाक्य विषय के परिचय के लिखें. बीच के कुछ वाक्य विषय के विकास के लिए लिखें. इसमें तथ्य, आँकड़े, तुलनाएँ, तर्क आदि दें. अन्त के कुछ वाक्य निष्कर्ष, चेतावनी, सुझाव आदि के दें. अनुच्छेद एक माला के जैसे होता है, जिसमें अनेक फूल मिलकर एक माला बनाते हैं.</okpsrx:sample>
+<okpsrx:rangeRule></okpsrx:rangeRule>
+</header>
+<body>
+<languagerules>
+<languagerule languagerulename="default">
+<rule break="yes">
+<beforebreak></beforebreak>
+<afterbreak>(?:(?&lt;=[\|.!?])|(?&lt;=[\।.]))\s+</afterbreak>
+</rule>
+</languagerule>
+</languagerules>
+<maprules>
+<languagemap languagepattern=".*" languagerulename="default"></languagemap>
+</maprules>
+</body>
+</srx>

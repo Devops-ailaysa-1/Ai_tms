@@ -4,7 +4,7 @@ import os, mimetypes, requests, uuid, json, xlwt, boto3
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
-
+from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 
 client = translate.Client()
@@ -178,6 +178,14 @@ bl_cell_format = {
     'align': 'left',
 }
 
+def get_aws_lang_code(lang_code):
+    if lang_code == "zh-Hans":
+        return lang_code[:2]
+    elif lang_code == "zh-Hant":
+        return "zh-TW"
+    else:
+        return lang_code
+
 def ms_translation(source_string, source_lang_code, target_lang_code):
 
     # Add your subscription key and endpoint
@@ -220,6 +228,8 @@ def aws_translate(source_string, source_lang_code, target_lang_code):
                              aws_access_key_id = os.getenv("aws_iam_access_key_id"),
                              aws_secret_access_key = os.getenv("aws_iam_secret_access_key")
                                 )
+    source_lang_code = get_aws_lang_code(source_lang_code)
+    target_lang_code = get_aws_lang_code(target_lang_code)
     return translate.translate_text( Text = source_string,
                                      SourceLanguageCode = source_lang_code,
                                      TargetLanguageCode = target_lang_code)["TranslatedText"]
@@ -265,3 +275,55 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
     # LINGVANEX TRANSLATE
     elif mt_engine_id == 4:
         return lingvanex(source_string, source_lang_code, target_lang_code)
+
+
+def text_to_speech(ssml_file,target_language,filename,voice_gender):
+    from google.cloud import texttospeech
+    # print("@#@#@#@#@#",voice_gender)
+    gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
+    #filename = filename + "_out"+ ".mp3"
+    path, name = os.path.split(ssml_file)
+    client = texttospeech.TextToSpeechClient()
+    with open(ssml_file, "r") as f:
+        ssml = f.read()
+        input_text = texttospeech.SynthesisInput(ssml=ssml)
+    voice = texttospeech.VoiceSelectionParams(
+        language_code=target_language, ssml_gender=gender
+    )
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+    response = client.synthesize_speech(
+        input=input_text, voice=voice, audio_config=audio_config
+    )
+    with open(filename,"wb") as out:
+        out.write(response.audio_content)
+        print('Audio content written to file',filename)
+    out.close()
+    f2 = open(filename, 'rb')
+    file_obj = DJFile(f2)
+    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)
+    return file_obj,f2
+    # dir = os.path.join(path,"Audio")
+    # if not os.path.exists(dir):
+    #     os.mkdir(dir)
+    # with open(os.path.join(dir,filename), "wb") as out:
+    #     out.write(response.audio_content)
+    #     print('Audio content written to file',filename)
+    # return os.path.join(dir,filename)
+
+
+def get_res_path(source_lang):
+
+    if source_lang not in ['hi','bn','or','ne','pa']:
+        res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
+                     "fprm_file_path": None,
+                     "use_spaces": settings.USE_SPACES
+                     }
+        return res_paths
+    else:
+        res_paths = {"srx_file_path": "okapi_resources/indian_lang.srx",
+                     "fprm_file_path": None,
+                     "use_spaces": settings.USE_SPACES
+                     }
+        return res_paths

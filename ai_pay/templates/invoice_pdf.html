@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+    <!-- <link href="./style.css" media="print" rel="stylesheet"> -->
+    <title>Invoice Html</title>
+    <style>
+        @page{
+            size: auto;
+            margin: 58px; 
+            page-break-before: always;
+           
+
+        }
+        body{
+            font-family: 'Roboto', sans-serif !important;
+            /* background-color: #F1F2F4; */
+        }
+
+        .ailaysa-invoice-info{
+        text-align: right;
+        margin-top: 10px;
+        }
+
+        h1{
+        margin: 0;
+        font-size: 30px;
+        font-weight: 600;
+        }   
+
+        h3{
+        margin: 0;
+        font-size: 18px;
+        font-weight: 550;
+        margin-bottom: 8px;
+        }
+
+        h4{
+        margin: 0;
+        font-size: 17px;
+        font-weight: 400;
+        }
+
+        .text-head{
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500; 
+        }
+
+        /* h3{
+        margin: 0;
+        font-size: 20px;
+        font-weight: 400;
+        } */
+
+        p{
+        margin: 0;
+        font-size: 15px;
+        font-weight: 350;
+        line-height: 1.5;
+        }
+
+        p:not(:last-child){
+        margin-bottom: 5px;
+        }
+
+        .ailaysa-contact-info-wrapper{
+        background: #FFFFFF;
+        border: 1px solid #E0E0E0;
+        border-radius: 4px;
+        margin-top: 10px;
+        display: flex;
+        }
+
+        .ailaysa-purchase-info-wrapper{
+        background: #FFFFFF;
+        border: 1px solid #E0E0E0;
+        border-radius: 4px;
+        margin-top: 10px;
+        padding: 10px 15px 15px 15px;
+        }
+
+        .ailaysa-content-header{
+        padding-bottom: 10px;
+        border-bottom: 1px solid #E0E0E0;
+        }
+
+        ul.header-row-list{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-left: 0px;
+        margin-bottom: 0px;
+        list-style-type: none;
+        }
+
+        ul.header-row-list li{
+        width: 11.111%;
+        max-width: 100%;
+        text-align: center;
+        font-weight: 450;
+        font-size: 18px;
+        }
+
+        ul.data-row-total-list-final,
+        ul.data-row-total-list{
+        display: flex;
+        align-items: center;
+        padding-left: 0px;
+        margin-bottom: 0px;
+        list-style-type: none;
+        width: 100%;
+        }
+
+        ul.data-row-list{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-left: 0px;
+        margin-bottom: 0px;
+        list-style-type: none;
+        width: 100%;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #E0E0E0;
+        font-weight: 350;
+        font-size: 15px;
+        }
+
+        ul.data-row-list li{
+        width: 11.111%;
+        max-width: 100%;
+        text-align: center;
+        }
+
+        ul.data-row-total-list-final li{
+        width: 11.111%;
+        max-width: 100%;
+        text-align: right;
+        }
+        ul.data-row-total-list li{
+        width: 11.111%;
+        max-width: 100%;
+        text-align: left;
+        }
+
+        ul.data-row-total-list li:nth-child(8){
+        width: 40%;
+        max-width: 100%;
+        font-weight: 500;
+        }
+
+        ul.data-row-total-list-final li:last-child{
+        width: 40%;
+        max-width: 100%;
+        }
+
+        ul.data-row-total-list li:nth-child(8),
+        ul.data-row-total-list li:last-child{
+        padding-bottom: 10px;
+        border-bottom: 1px solid #E0E0E0;
+        }
+
+
+        .col-1{
+        width: 50%;
+        max-width: 100%;
+        padding: 10px;
+        border-right: 1px solid #E0E0E0;
+        }
+
+        .border-bot-add{
+        border-bottom: 1px solid #E0E0E0;
+        }
+
+        .border-right-rmove{
+        border-right: 0px solid #E0E0E0;
+        }
+
+        .padd-remove{
+        padding: 0px !important;
+        }
+
+        .col-new{
+        padding: 10px;
+        }
+
+        /* span{
+        margin: 0;
+        font-size: 18px;
+        font-weight: 500px !important;
+        } */
+
+        .invoice-final-note{
+        margin-top: 15px;
+        }
+        .pad{
+            padding-left: 10px;
+        }
+        .txt{
+            font-size: 15px;
+            font-weight: 350;
+            line-height: 1.5;
+        }
+        .tel{
+            font-size: 15px;
+            font-weight: 350;
+            line-height: 1.5;
+        }
+        .tel-head{
+            font-weight: 450;
+
+        }
+        .height-aut{
+
+            height: auto;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- <img src="ailaysa-logo.svg" width="190" alt="ailaysa-logo"/> -->
+    <div class="ailaysa-invoice-info">
+        <h1>INVOICE</h1>
+        <h4>{{invo.invoid}}</h4>
+        <h4>{{invo.created_at|date:'N-d-Y'}} {{invo.created_at|time:'H:i'}} UTC</h4>
+    </div>
+    <div class="ailaysa-contact-info-wrapper">
+        <div class="col-1 height-aut">
+            <p class="address">
+                <p>{{client.fullname}}</p>
+                <p>{{client.billing_addr_user.line1}}</p>
+                <p>{{client.billing_addr_user.line2}}</p>
+                <p>{{client.billing_addr_user.city}}</p>
+                <p>{{client.billing_addr_user.state}}</p>
+                <p>{{client.billing_addr_user.country.name}}</p>
+            </p>
+            <p class="email">{{client.email}}</p>
+            {%if client.profile_info.phonenumber%}
+            <p>
+                <span class="tel-head">Ph:</span><spann class="tel">{{client.profile_info.phonenumber}}</spa>
+                {% endif %}
+            </p>
+            <!-- <p class="state-code">State Code: 33</p> -->
+        </div>
+        <div class="col-1 padd-remove height-aut">
+            <div class="col-new border-bot-add">
+                <h3>BILLING TO:</h3>
+                <p class="billing-info">{{seller.fullname}}</p>
+                <p>{{seller.billing_addr_user.line1}}</p>
+                <p>{{seller.billing_addr_user.line2}}</p>
+                <p>{{seller.billing_addr_user.city}}</p>
+                <p>{{seller.billing_addr_user.state}}</p>
+                <p>{{seller.billing_addr_user.country.name}}</p>
+                <p >{{seller.email}}</p>
+                {%if seller.profile_info.phonenumber%}
+                <p><span class="tel-head">Ph:</span><span class="tel">{{seller.profile_info.phonenumber}} </span></p>
+                <!-- <p >Ph:{{seller.profile_info.phonenumber}} </p> -->
+                {% endif %}
+                <!-- {%if seller.gst%} 
+                <p><span class="tel-head">GST:</span><span class="tel">33AADCL1254F2ZY</span></p>
+                {%endif%}     -->
+
+            </div>
+            <div class="col-new">
+
+            </div>
+        </div>
+    </div>
+    <div class="ailaysa-contact-info-wrapper">
+        <div class="col-1 border-right-rmove">
+            <span class="text-head">PO ID:</span><span class="txt">{% for ids in pos_ids %}
+                {{ids.poid}},
+                {% endfor %}</span>
+            <!-- <p class="txt"><span>Order Date:</span> May 13, 2021 19:07 Asia/Kolkata</p>
+            <p class="txt"><span>Issued by:</span> Online order</p>     -->
+        </div>
+        <div class="col-1">
+            <span class="text-head">Currency:</span><span class="txt pad">{{invo.currency.currency_code}}</span>
+        </div>
+    </div>
+    <div class="ailaysa-purchase-info-wrapper">
+        <div class="ailaysa-content-header">
+            <ul class="header-row-list">
+                <li>Task ID</li>
+                <!-- <li>Service Description</li>
+                <li>SAC</li> -->
+                <li>Project ID</li>
+                <li>SL</li>
+                <li>TL</li>
+                <li>Unit Type</li>
+                <li>Unit Rate</li>
+                <li>Total Units</li>
+                <li>Amount</li>
+            </ul>
+        </div>
+        {% for task in tasks %}
+        <ul class="data-row-list">
+            <li>{{ task.id }}</li>
+            <!-- <li>MTPE</li>
+            <li>998395</li> -->
+            <li>{{task.project_id}}</li>
+            <li>{{task.source_language.language}}</li>
+            <li>{{task.target_language.language}}</li>
+            <li>{{task.unit_type.unit}}</li>
+            <li>{{task.unit_price|floatformat:"-4"}}</li>
+            {% if task.unit_type.unit == "Char" %}
+            <li>{{task.char_count}}</li>
+            {%endif%}
+            {% if task.unit_type.unit == "Word" %}
+            <li>{{task.word_count}}</li>
+            {% endif %}
+            <li>{{task.total_amount|floatformat:"-2"}}</li>
+        </ul>
+        {% endfor %}
+        <!-- <ul class="data-row-total-list">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li>Sub Total</li>
+            <li>{{invo.total_amount}}</li>
+        </ul> -->
+        <!-- <ul class="data-row-total-list">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li>Minimum OrderProcessing Fee</li>
+            <li>0.00</li>
+        </ul> -->
+        <!-- <ul class="data-row-total-list">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li>CGST @9%</li>
+            <li>5.27</li>
+        </ul>
+        <ul class="data-row-total-list">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li>SGST @9%</li>
+            <li>5.27</li>
+        </ul>
+        <ul class="data-row-total-list">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>   
+            <li></li>
+            <li></li>
+            <li>IGST @0%</li>
+            <li>0</li> -->
+        </ul>
+        <ul class="data-row-total-list">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li>Total Amount</li>
+            <li>{{invo.grand_total|floatformat:"-2"}}</li>
+        </ul>
+    </div>
+
+    <!-- <div class="invoice-final-note">
+        <h2>Specific Terms and Conditions:</h2>
+        <p>The terms and conditions listed in the Terms of Service and Privacy Policy documents in ailaysa.com websiteapply.</p>
+    </div> -->
+</body>
+</html>

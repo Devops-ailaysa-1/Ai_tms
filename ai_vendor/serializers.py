@@ -27,6 +27,7 @@ class VendorServiceTypeSerializer(serializers.ModelSerializer):
        fields=('id','services','unit_rate','unit_type','hourly_rate',)
 
 class VendorServiceInfoSerializer(serializers.ModelSerializer):
+    # mtpe_rate = serializers.DecimalField(max_digits=12, decimal_places=2)
     class Meta:
         model=VendorServiceInfo
         # fields = ('id','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit',)
@@ -85,12 +86,13 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
      existing_lang_pair_id=serializers.PrimaryKeyRelatedField(queryset=VendorLanguagePair.objects.all().values_list('pk', flat=True),required=False,write_only=True)
      apply_for_reverse=serializers.IntegerField(write_only=True,required=False)
      user_id=serializers.IntegerField()
+     currency_code =  serializers.ReadOnlyField(source ='currency.currency_code')
      source_lang_name = serializers.ReadOnlyField(source ='source_lang.language')
      target_lang_name = serializers.ReadOnlyField(source ='target_lang.language')
 
      class Meta:
          model = VendorLanguagePair
-         fields=('id','user_id','source_lang','target_lang','currency','source_lang_name','target_lang_name','service','servicetype','translationfile','mtpesamples','existing_lang_pair_id','apply_for_reverse',)
+         fields=('id','user_id','source_lang','target_lang','currency','currency_code','source_lang_name','target_lang_name','service','servicetype','translationfile','mtpesamples','existing_lang_pair_id','apply_for_reverse',)
          extra_kwargs = {
             'translationfile':{'read_only':True},
             'MtpeSamples':{'read_only':True},
@@ -101,13 +103,22 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
 
 
      def run_validation(self, data):
-         # if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
-         #    or ((("existing_lang_pair_id") in data) and (((("source_lang") in data) and(("target_lang") in data))\
-         #    or("apply_for_reverse") in data))):
+         print("Data--->",data)
+         data["user_id"] = self.context.get("request").user.id
          # if self.context['request']._request.method == 'POST':
-         #     if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
-         #        or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
-         #         raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
+         #     if "source_lang" in data and "target_lang" in data:
+         #         tt = VendorLanguagePair.objects.filter(source_lang_id=data.get('source_lang'),target_lang_id=data.get('target_lang'),user_id=data['user_id'])
+         #         if len(tt) == 1:
+         #             if tt.first().service.exists():pass
+         #             elif tt.first().servicetype.exists():pass
+         #             else:tt.delete()
+         # # if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
+         # #    or ((("existing_lang_pair_id") in data) and (((("source_lang") in data) and(("target_lang") in data))\
+         # #    or("apply_for_reverse") in data))):
+         # # if self.context['request']._request.method == 'POST':
+         # #     if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
+         # #        or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
+         # #         raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
          if "source_lang" in data:
              if data.get('source_lang')==data.get('target_lang'):
                  raise serializers.ValidationError({"message":"source and target language should not be same"})
@@ -135,7 +146,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
              lang = VendorLanguagePair.objects.get(id=existing_lang_pair_id)
 
          if apply_for_reverse:
-             reverse_data={"source_lang_id":lang.target_lang_id,"target_lang_id":lang.source_lang_id,"user_id":user_id}
+             reverse_data={"source_lang_id":lang.target_lang_id,"target_lang_id":lang.source_lang_id,"currency":lang.currency,"user_id":user_id}
              print("reverse_data--->",reverse_data)
              lang_reverse = VendorLanguagePair.objects.create(**reverse_data)
 

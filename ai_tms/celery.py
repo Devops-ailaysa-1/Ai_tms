@@ -42,12 +42,16 @@ app.conf.beat_schedule = {
     'schedule': crontab(minute='*/15'),
     'args': (),
     },
-
-   'send-mail-30-minutes': {
-    'task': 'ai_auth.tasks.email_send_subscription_extension',
-    'schedule': crontab(minute='*/30'),
+   'send-ext-ven-mail-5-min': {
+    'task': 'ai_auth.tasks.existing_vendor_onboard_check',
+    'schedule': crontab(minute='*/5'),
     'args': (),
     },
+   # 'send-mail-30-minutes': {
+   #  'task': 'ai_auth.tasks.email_send_subscription_extension',
+   #  'schedule': crontab(minute='*/30'),
+   #  'args': (),
+   #  },
 }
 
 app.conf.timezone = 'UTC'
@@ -72,4 +76,3 @@ def debug_task(self):
 
 # @app.task(bind=True):
 #     pass
-

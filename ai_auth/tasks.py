@@ -1,21 +1,35 @@
 from django.core.mail import send_mail
 import smtplib
 from celery.utils.log import get_task_logger
-import celery
+import celery,re,pickle, copy
 import djstripe
 logger = get_task_logger(__name__)
 from celery.decorators import task
 from datetime import date
 from django.utils import timezone
-from django.db.models import Q
-from .models import AiUser,UserAttribute,HiredEditors
-import datetime
+from django.db.models import Q,F
+from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
+import datetime,os,json, collections
 from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
+from ai_marketplace.models import ProjectboardDetails
+
+
+from contextlib import closing
+from django.db import connection
+from django.db.models import Q
+from django.utils import timezone
+
+from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
+
 
 extend_mail_sent= 0
+
+def striphtml(data):
+    p = re.compile(r'<.*?>')
+    return p.sub('', data)
 # @shared_task
 # def test_task():
 #     print("this is task")
@@ -72,7 +86,8 @@ from datetime import datetime, timedelta
 def renewal_list():
     cycle_date = timezone.now()
     subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
-                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active')
+                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active').filter(~Q(billing_cycle_anchor__year=F('current_period_start__year'),
+                        billing_cycle_anchor__month=F('current_period_start__month'),billing_cycle_anchor__day=F('current_period_start__day')))
     print(subs)
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
@@ -115,7 +130,7 @@ def send_notification_email_for_unread_messages():
            details=[]
            for j in q2:
                actor_obj = AiUser.objects.get(id = j.actor_object_id)
-               recent_message = j.description
+               recent_message = striphtml(j.description) if j.description else None
                details.append({"From":actor_obj.fullname,"Message":recent_message})
            email = AiUser.objects.get(id = i.recipient_id).email
            email_list.append({"email":email,"details":details})
@@ -141,3 +156,119 @@ def email_send_subscription_extension():
         extend_mail_sent+=1
     except IndexError:
         logger.info("all-email-sent succesfully")
+
+
+
+@task
+def existing_vendor_onboard_check():
+    obj = ExistingVendorOnboardingCheck.objects.filter(mail_sent=False).first()
+    if obj:
+        status = auth_forms.existing_vendor_onboarding_mail(obj.user,obj.gen_password)
+        user_email=obj.user.email
+        if status:
+            obj.mail_sent=True
+            obj.mail_sent_time=timezone.now()
+            obj.save()
+            logger.info("succesfully sent mail ")
+        else:
+            logger.info("mail not sent ")
+    else:
+        logger.info("No record Found ")
+
+
+
+
+@task
+def shortlisted_vendor_list_send_email_new(projectpost_id):
+    from ai_vendor.models import VendorLanguagePair
+    from ai_auth import forms as auth_forms
+    instance = ProjectboardDetails.objects.get(id=projectpost_id)
+    lang_pair = VendorLanguagePair.objects.none()
+    jobs = instance.get_postedjobs
+    for obj in jobs:
+        if obj.src_lang_id == obj.tar_lang_id:
+            query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) | Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+        else:
+            query = VendorLanguagePair.objects.filter(Q(source_lang_id=obj.src_lang_id) & Q(target_lang_id=obj.tar_lang_id) & Q(deleted_at=None)).distinct('user')
+        lang_pair = lang_pair.union(query)
+    res={}
+    for object in lang_pair:
+        tt = object.source_lang.language if object.source_lang_id == object.target_lang_id else object.target_lang.language
+        print(object.user.fullname)
+        if object.user_id in res:
+            res[object.user_id].get('lang').append({'source':object.source_lang.language,'target':tt})
+        else:
+            res[object.user_id]={'name':object.user.fullname,'user_email':object.user.email,'lang':[{'source':object.source_lang.language,'target':tt}],'project_deadline':instance.proj_deadline,'bid_deadline':instance.bid_deadline}
+    auth_forms.vendor_notify_post_jobs(res)
+    print("mailsent")
+
+
+@task
+def check_dict(dict):
+    print("dct------->",dict)
+    dict1 = json.loads(dict)
+    logger.info("RRRR",dict)
+
+@task
+def write_segments_to_db(validated_str_data, document_id): #validated_data
+
+    decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
+    validated_data = decoder.decode(validated_str_data)
+    # print("TYPE OF incoming data ========> ", type(validated_str_data)) # str
+    # print("Validdated ata task -------------> ", validated_data)
+    # print("^^^^^^^^^ TYPE OF Validdated ata task -------------> ", type(validated_data)) #ordered dict
+
+    text_unit_ser_data = validated_data.pop("text_unit_ser", [])
+    text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
+
+    # USING SQL BATCH INSERT
+
+    # print("****  Task text unit data *****---> ", text_unit_ser_data)
+
+    text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
+        ', '.join(['(%s, %s)'] * len(text_unit_ser_data)),
+    )
+    tu_params = []
+    for text_unit in text_unit_ser_data:
+        tu_params.extend([text_unit["okapi_ref_translation_unit_id"], document_id])
+
+    with closing(connection.cursor()) as cursor:
+        cursor.execute(text_unit_sql, tu_params)
+
+    seg_params = []
+    seg_count = 0
+
+    from ai_workspace_okapi.models import TextUnit, Segment
+
+    for text_unit in text_unit_ser_data:
+        text_unit_id = TextUnit.objects.get(
+            Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
+            Q(document_id=document_id)).id
+        segs = text_unit.pop("segment_ser", [])
+
+        # print("**** Task Segment ser data ****---> ", segs)
+
+        for seg in segs:
+            seg_count += 1
+            tagged_source, _, target_tags = (
+                set_ref_tags_to_runs(seg["coded_source"],
+                                     get_runs_and_ref_ids(seg["coded_brace_pattern"],
+                                                          json.loads(seg["coded_ids_sequence"])))
+            )
+            target = "" if seg["target"] is None else seg["target"]
+            seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+                               str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
+                               str(text_unit["okapi_ref_translation_unit_id"]), \
+                               timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
+
+            # seg_params.extend([(seg["source"]), target, "", (seg["coded_source"]), (tagged_source), \
+            #                    (seg["coded_brace_pattern"]), (seg["coded_ids_sequence"]), (target_tags),
+            #                    (text_unit["okapi_ref_translation_unit_id"]), \
+            #                    timezone.now(), text_unit_id, (seg["random_tag_ids"])])
+
+    segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
+                               coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
+        ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+
+    with closing(connection.cursor()) as cursor:
+        cursor.execute(segment_sql, seg_params)

@@ -1,3 +1,5 @@
+import random
+import string
 from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_auth.utils import get_unique_pid
@@ -14,7 +16,8 @@ from django.contrib.auth import settings
 import os, re,time
 from ai_auth.models import AiUser,Team,HiredEditors
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
-    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits
+    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,ProjectType,\
+    ProjectTypeDetail
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document, Segment
 from ai_staff.models import ParanoidModel
@@ -23,11 +26,11 @@ from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from django.db.models import Q, Sum
 from django.utils.functional import cached_property
-
+from ai_workspace.utils import create_ai_project_id_if_not_exists
 from django.db.models.fields.files import FieldFile, FileField
 
 from .manager import AilzaManager
-from .utils import create_dirs_if_not_exists
+from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.utils import SpacesService
 from .signals import (create_allocated_dirs, create_project_dir, \
     create_pentm_dir_of_project,set_pentm_dir_of_project, \
@@ -37,6 +40,7 @@ from .manager import ProjectManager, FileManager, JobManager,\
 from django.db.models.fields import Field
 from integerations.github_.models import ContentFile
 from integerations.base.utils import DjRestUtils
+
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -81,6 +85,8 @@ class PenseiveTM(models.Model):
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
 class Project(models.Model):
+    project_type = models.ForeignKey(ProjectType, null=False, blank=False,on_delete=models.CASCADE,default=1)
+    # project_type_detail = models.ForeignKey(ProjectTypeDetail,null=True,blank=True,on_delete=models.CASCADE)
     project_name = models.CharField(max_length=200, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
@@ -115,9 +121,12 @@ class Project(models.Model):
         ''' try except block created for logging the exception '''
 
         if not self.ai_project_id:
-            # self.ai_user shoould be set before save
-            self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
-            objects.filter(ai_user=self.ai_user).count()+1)
+            self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
+
+        # if not self.ai_project_id:
+        #     # self.ai_user shoould be set before save
+        #     self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
+        #     objects.filter(ai_user=self.ai_user).count()+1)
 
         if not self.project_name:
             #self.project_name = self.ai_project_id
@@ -178,9 +187,27 @@ class Project(models.Model):
         return reverse("", kwargs={"project_id":self.id})
 
     @property
+    def get_assignable_tasks(self):
+        tasks=[]
+        for job in self.project_jobs_set.all():
+            for task in job.job_tasks_set.all():
+               if (task.job.target_language == None):
+                   if (task.file.get_file_extension == '.mp3'):
+                       tasks.append(task)
+                   else:pass
+               else:tasks.append(task)
+        return tasks
+
+    @property
+    def get_mtpe_tasks(self):
+        return [task for job in self.project_jobs_set.filter(~Q(target_language = None)) for task \
+            in job.job_tasks_set.all()]
+
+    @property
     def get_tasks(self):
         return [task for job in self.project_jobs_set.all() for task \
             in job.job_tasks_set.all()]
+
     @property
     def tasks_count(self):
         return len([task for job in self.project_jobs_set.all() for task \
@@ -361,6 +388,31 @@ class Project(models.Model):
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
 
+
+def get_audio_file_upload_path(instance, filename):
+    file_path = os.path.join(instance.voice_project.project.ai_user.uid,instance.voice_project.project.ai_project_id,\
+            "Audio",filename)
+    return file_path
+
+
+class VoiceProjectDetail(models.Model):
+    project = models.OneToOneField(Project, on_delete = models.CASCADE,related_name="voice_proj_detail")
+    source_language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,related_name="voice_proj_source_language")
+    project_type_sub_category = models.ForeignKey(ProjectTypeDetail,null=True,blank=True,on_delete=models.CASCADE)
+    # source_language_locale = models.ForeignKey(LanguagesLocale, null=True, blank=True, on_delete=models.CASCADE,related_name="voice_proj_source_language_locale")
+    # has_male = models.BooleanField(blank=True,null=True)
+    # has_female = models.BooleanField(blank=True,null=True)
+
+
+# class VoiceProjectFile(models.Model):
+#     voice_project = models.ForeignKey(VoiceProjectDetail, null=True, blank=True, on_delete=models.CASCADE,related_name='voice_proj')
+#     audio_file =  models.FileField (upload_to=get_audio_file_upload_path,blank=True, null=True)
+#
+#     @property
+#     def filename(self):
+#         if self.audio_file:
+#             return  os.path.basename(self.audio_file.file.name)
+
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
                         related_name="proj_content_type")
@@ -376,7 +428,7 @@ class ProjectSubjectField(models.Model):
 class Job(models.Model):
     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,\
         related_name="source_language")
-    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,\
+    target_language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE,\
         related_name="target_language")
     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.CASCADE,\
         related_name="project_jobs_set",)
@@ -402,15 +454,21 @@ class Job(models.Model):
 
     @property
     def source_target_pair(self): # code repr
-        return "%s-%s"%(self.source_language.locale.first().locale_code,\
-            self.target_language.locale.first().locale_code)
+        if self.target_language != None:
+            return "%s-%s"%(self.source_language.locale.first().locale_code,\
+                self.target_language.locale.first().locale_code)
+        else:
+            return "%s-%s"%(self.source_language.locale.first().locale_code,None)
 
     @property
     def source_target_pair_names(self):
-        return "%s->%s"%(
-            self.source_language.language,
-            self.target_language.language
-        )
+        if self.target_language != None:
+            return "%s->%s"%(
+                self.source_language.language,
+                self.target_language.language)
+        else:
+            return "%s->%s"%(
+                self.source_language.language,None)
 
     @property
     def source_language_code(self):
@@ -433,7 +491,10 @@ class Job(models.Model):
         return  self.target_language_code
 
     def __str__(self):
-        return self.source_language.language+"->"+self.target_language.language
+        try:
+            return self.source_language.language+"->"+self.target_language.language
+        except:
+            return self.source_language.language
 
 # class ProjectTeamInfo(models.Model):
 #     project = models.ForeignKey(Project, null=False, blank=False, on_delete=models.\
@@ -564,6 +625,11 @@ class File(models.Model):
         return self.filename
 
     @property
+    def get_file_extension(self):
+        file,ext = os.path.splitext(self.file.path)
+        return ext
+
+    @property
     def get_source_tmx_path(self):
         prefix, ext = os.path.splitext(self.filename)
         return os.path.join(self.project.project_penseivetm.source_tmx_dir_path, prefix+".tmx")
@@ -590,7 +656,16 @@ class Version(models.Model):
     def __str__(self):
         return self.version_name
 
+
+def id_generator_ws(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
 class Task(models.Model):
+    def generate_task_id():
+        return "TK-{0}".format(id_generator_ws())
+
+    ai_taskid=models.CharField(max_length=50,unique=True,null=True)
+
     file = models.ForeignKey(File, on_delete=models.CASCADE, null=False, blank=False,
             related_name="file_tasks_set")
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
@@ -609,15 +684,30 @@ class Task(models.Model):
 
     objects = TaskManager()
 
+    def save(self, *args, **kwargs):
+        if not self.ai_taskid:
+            self.ai_taskid = create_task_id()
+        super().save()
+
     @property
     def get_document_url(self):
-        return reverse("ws_okapi:document", kwargs={"task_id": self.id})
+        try:
+            if self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+                return None
+            else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
+        except:
+            return reverse("ws_okapi:document", kwargs={"task_id": self.id})
 
     @property
     def extension(self):
         try:ret=get_file_extension(self.file.file.path)
         except:ret=''
         return ret
+
+    @property
+    def first_time_open(self):
+        if self.document_id:return False
+        else:return True
 
     @property
     def processor_name(self):
@@ -628,18 +718,30 @@ class Task(models.Model):
         if self.document_id:
             document = Document.objects.get(id = self.document_id)
             return document.total_word_count
-        else:
+        elif self.task_details.exists():
             t = TaskDetails.objects.get(task_id = self.id)
             return t.task_word_count
+        else:
+            return None
 
     @property
     def task_char_count(self):
         if self.document_id:
             document = Document.objects.get(id = self.document_id)
             return document.total_char_count
-        else:
+        elif self.task_details.first():
             t = TaskDetails.objects.get(task_id = self.id)
             return t.task_char_count
+        else:
+            return None
+
+    @property
+    def assignable(self):
+        if self.job.target_language == None:
+            if self.file.get_file_extension == '.mp3':
+                return True
+            else:return False
+        else:return True
 
     @property
     def corrected_segment_count(self):
@@ -671,6 +773,8 @@ def ref_file_upload_path(instance, filename):
     return file_path
 
 class TaskAssignInfo(models.Model):
+    PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
+                    ("stripe","stripe")]
     task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
@@ -678,13 +782,14 @@ class TaskAssignInfo(models.Model):
     assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)
-    mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
+    mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
             related_name="user_assign_info")
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     task_ven_accepted = models.BooleanField(default=False)
+    payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
@@ -697,12 +802,15 @@ class TaskAssignInfo(models.Model):
             return  os.path.basename(self.instruction_file.file.name)
         except:
             return None
+# post_save.connect(generate_client_po, sender=TaskAssignInfo)
 
 class TaskAssignHistory(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_history")
     previous_assign = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=False, blank=False)
     task_segment_confirmed = models.IntegerField(null=True, blank=True)
+    unassigned_by = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True, related_name='unassigned_by')
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
 class TaskDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_details")
@@ -713,6 +821,17 @@ class TaskDetails(models.Model):
 
     def __str__(self):
         return "file=> "+ str(self.task.file) + ", job=> "+ str(self.task.job)
+
+def audio_file_path(instance, filename):
+    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
+            "Audio", filename)
+    return file_path
+
+class TaskTranscriptDetails(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
+    transcripted_text = models.TextField(null=True,blank=True)
+    source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
+    translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
 
 
 class TmxFile(models.Model):
@@ -823,3 +942,15 @@ class Steps(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+
+
+
+# class TempAudioFiles(models.model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name="user")
+#     audio_file = models.FileField(upload_to=get_temp_file_upload_path,\
+#         null=False, blank=False, max_length=1000)
+#     text_file = models.FileField(upload_to=get_temp_file_upload_path,\
+#         null=False, blank=False, max_length=1000)

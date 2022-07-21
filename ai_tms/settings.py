@@ -131,7 +131,8 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
-     'debug_toolbar',
+    'ai_pay',
+    'debug_toolbar',
     # 'dbbackup',
     # 'django_q',
 ]
@@ -447,6 +448,7 @@ CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
 CEO_EMAIL = os.getenv("CEO_EMAIL")
+END_POINT = os.getenv('END_POINT')
 
 STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
 STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
@@ -485,56 +487,56 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
 
-# LOGGING = {
-#     'version' : 1,
-#     'disable_existing_loggers' : False,
-#
-#     'formatters' : {
-#         'dev_formatter' : {
-#             'format' : '{levelname} {asctime} {pathname} {message}',
-#             'style' : '{',
-#         }
-#     },
-#
-#     'loggers' : {
-#         'django' : {
-#             'handlers' : ['file',],
-#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-#             'propogate' : True,
-#         },
-#
-#         'django' : {
-#             'handlers' : ['file_prod',],
-#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-#             'propogate' : True,
-#         },
-#     },
-#
-#     'handlers' : {
-#
-#         'file' : {
-#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-#             'class' : 'logging.FileHandler',
-#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
-#             'formatter' : 'dev_formatter',
-#         },
-#
-#        'file_prod' : {
-#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-#             'class' : 'logging.FileHandler',
-#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
-#             'formatter' : 'dev_formatter',
-#         },
-#
-#         # 'mail_admins' : {
-#         #     'level' : 'ERROR',
-#         #     'class': 'django.utils.log.AdminEmailHandler',
-#         #     'formatter' : 'dev_formatter',
-#         # }
-#     },
-#
-#
-# }
+LOGGING = {
+    'version' : 1,
+    'disable_existing_loggers' : False,
+
+    'formatters' : {
+        'dev_formatter' : {
+            'format' : '{levelname} {asctime} {pathname} {message}',
+            'style' : '{',
+        }
+    },
+
+    'loggers' : {
+        # 'django' : {
+        #     'handlers' : ['file',],
+        #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+        #     'propogate' : True,
+        # },
+
+        'django' : {
+            'handlers' : ['file_prod',],
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'propogate' : True,
+        },
+    },
+
+    'handlers' : {
+
+        'file' : {
+            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+       'file_prod' : {
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+        # 'mail_admins' : {
+        #     'level' : 'ERROR',
+        #     'class': 'django.utils.log.AdminEmailHandler',
+        #     'formatter' : 'dev_formatter',
+        # }
+    },
+
+
+}
 
 
 sentry_sdk.init(

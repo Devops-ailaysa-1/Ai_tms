@@ -1,5 +1,6 @@
 import os
 import random
+import string
 
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
@@ -14,11 +15,34 @@ def print_key_value(keys, values):
 
 def create_assignment_id():
 	from ai_workspace.models import TaskAssignInfo
-	rand_id = "AssId-"+str(random.randint(1,10000))
+	chars=string.ascii_uppercase + string.digits
+	size=6
+	rand_id = "AS-"+''.join(random.choice(chars) for _ in range(size))
 	pr = TaskAssignInfo.objects.filter(assignment_id = rand_id)
 	if not pr:
 		return  rand_id
 	return create_assignment_id()
+
+
+
+def create_task_id():
+	from ai_workspace.models import Task
+	chars=string.ascii_uppercase + string.digits
+	size=6
+	rand_id = "TK-"+''.join(random.choice(chars) for _ in range(size))
+	pr = Task.objects.filter(ai_taskid = rand_id)
+	if not pr:
+		return  rand_id
+	return create_task_id()
+
+
+def create_ai_project_id_if_not_exists(user):
+	from ai_workspace.models import Project
+	rand_id = user.uid+"p"+str(random.randint(1,10000))
+	pr = Project.objects.filter(ai_project_id = rand_id)
+	if not pr:
+		return  rand_id
+	return create_ai_project_id_if_not_exists(user)
 # //////////////// References \\\\\\\\\\\\\\\\\\\\
 
 # random.choice([1,2,3])  ---> 2

@@ -15,7 +15,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from datetime import date
 
 from ai_auth import models as auth_models
-
+from django.core.mail import EmailMessage
 from django.utils.translation import ugettext_lazy as _
 
 
@@ -188,7 +188,7 @@ def vendor_status_mail(email,status):
     else:
         msg_html = render_to_string("account/email/vendor_status_fail.html", context)
     send_mail(
-        "Become an Editor application status with Ailaysa",None,
+        "Ailaysa Vendor profile application status",None,
         # msg_plain,
         settings.DEFAULT_FROM_EMAIL,
         [email],
@@ -253,7 +253,7 @@ def vendor_notify_post_jobs(detail):
         context = detail.get(i)
         email = context.get('user_email')
         msg_html = render_to_string("job_alert_email.html",context)
-        send_mail(
+        tt = send_mail(
             'Available jobs alert from ailaysa',None,
             settings.DEFAULT_FROM_EMAIL,
             #['thenmozhivijay20@gmail.com'],
@@ -301,3 +301,34 @@ def user_trial_extend_mail(user):
         html_message=msg_html,
     )
     print("trial_exten_mail_sent-->>>")
+
+
+
+def existing_vendor_onboarding_mail(user,gen_password):
+    context = {'user':user.fullname,'email':user.email,'gen_password':gen_password}
+    email = user.email
+    msg_html = render_to_string("existing_vendor_onboarding.html",context)
+    # sent =send_mail(
+    #     'Become a member of Ailaysa freelancer marketplace',None,
+    #     'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
+    #     [email],
+    #     html_message=msg_html,
+    # )
+
+    msg = EmailMessage(
+        'Become a member of Ailaysa freelancer marketplace',
+         msg_html,
+        'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
+        [email],
+        bcc=['vendormanager@ailaysa.com'],
+        reply_to=['vendormanager@ailaysa.com'],
+    )
+
+    msg.content_subtype = "html"
+
+    sent=msg.send()
+    print("existing_vendor_onboarding_mail-->>>")
+    if sent==0:
+        return False
+    else:
+        return True
