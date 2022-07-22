@@ -17,7 +17,7 @@ from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,Team
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
-                                TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
+                                TempPricingPreferenceSerializer, UserRegistrationSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
                                 TeamSerializer,InternalMemberSerializer,HiredEditorSerializer)
 from rest_framework.response import Response
@@ -53,7 +53,7 @@ from datetime import datetime,date,timedelta
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
-from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
+from ai_staff.models import Countries, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
 from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
@@ -61,6 +61,8 @@ from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
+from ai_vendor.models import VendorsInfo,VendorLanguagePair
+from django.db import transaction
 
 #for soc
 from django.test.client import RequestFactory
@@ -1857,7 +1859,18 @@ def ai_social_login(request):
     # auth_redirect_url=req.headers['Location']
     return JsonResponse({"msg": "redirect","url":url_new},status=302)
 
-
+def load_state(state_id):
+    user_state=None
+    try:
+        soc_state=SocStates.objects.get(state=state_id)
+        user_state = json.loads(soc_state.data).get('socialaccount_user_state',None)
+    except SocStates.DoesNotExist:
+        logging.error(f"invalid_state : {state_id}")
+        return None
+    except AttributeError:
+        logging.error(f"key error user_state_not_found : {state_id}")
+        return None
+    return user_state
 
 @api_view(['POST'])   
 def ai_social_callback(request):
@@ -1872,19 +1885,10 @@ def ai_social_callback(request):
 
     # print(session.get_decoded())
     # print(session.get_decoded().get('socialaccount_user_state',None))
-    user_state=None
-    try:
-        soc_state=SocStates.objects.get(state=state)
-        user_state = json.loads(soc_state.data).get('socialaccount_user_state',None)
-    except SocStates.DoesNotExist:
-        logging.error("invalid_state")
+    user_state=load_state(state)
+    if user_state == None:
         return JsonResponse({"error": "invalid_state"},status=440)
-    except AttributeError:
-        logging.error("state_info_not_found")
-        return JsonResponse({"error": "state_info_not_found"},status=440)
-
-
-
+ 
     # request.session['socialaccount_state']=session.get_decoded().get('socialaccount_state')
     # # print("session print",request.session['socialaccount_state'])
     # print("code an data",request.GET.dict())
@@ -1973,3 +1977,62 @@ def ai_social_callback(request):
 
     return JsonResponse(resp_data,status=200)
     #return HttpResponseRedirect(reverse('google_login'))
+
+
+class UserDetailView(viewsets.ViewSet):
+    permission_classes=[IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return AiUser.objects.get(user_id=pk)
+        except AiUser.DoesNotExist:
+            raise Http404
+
+    def create(self,request):
+        country = request.POST.get('country',None)
+        source_lang = request.POST.get('source_language',None)
+        target_lang = request.POST.get('target_language',None)
+        cv_file = request.FILES.get('cv_file',None)
+        state = request.POST.get('state',None)
+        user = request.user
+
+        user_state=load_state(state)
+        if user_state == None:
+            return JsonResponse({"error": "invalid_state_or _state_not_found"},status=440)
+        
+        if user_state == 'vendor':
+            if not (source_lang and target_lang):
+                return JsonResponse({"error": "language_pair_required"},status=400)
+
+        
+        # serializer = UserRegistrationSerializer(obj,data={**request.POST.dict()},partial=True)
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data,status=200)
+        # else:
+        #     return Response(serializer.errors,status=400)
+        try:
+            with transaction.atomic():
+                user_obj = AiUser.objects.get(id=user.id)
+                if country:                   
+                    if user_obj.country==None:
+                        user_obj.country_id= country
+                        user_obj.save()
+                    else:
+                        logging.error(f"user_country_already_updated : {user_obj.uid}")
+                        raise ValueError
+                
+                if source_lang and target_lang:
+                    VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang)
+                    user_obj.is_vendor=True
+                    user_obj.save()
+
+                if cv_file:
+                    VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
+                    VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+            return Response({'msg':'details_updated_successsfully'},status=200)
+        except BaseException as e:
+            return Response({'error':f'updation failed {str(e)}'},status=400)
+
+    
+
