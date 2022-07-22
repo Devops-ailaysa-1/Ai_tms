@@ -1998,11 +1998,11 @@ class UserDetailView(viewsets.ViewSet):
 
         user_state=load_state(state)
         if user_state == None:
-            return JsonResponse({"error": "invalid_state_or _state_not_found"},status=440)
+            return Response({"error": "invalid_state_or _state_not_found"},status=440)
         
         if user_state == 'vendor':
             if not (source_lang and target_lang):
-                return JsonResponse({"error": "language_pair_required"},status=400)
+                return Response({"error": "language_pair_required"},status=400)
 
         
         # serializer = UserRegistrationSerializer(obj,data={**request.POST.dict()},partial=True)
