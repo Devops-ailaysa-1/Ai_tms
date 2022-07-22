@@ -689,6 +689,21 @@ def customer_mp_dashboard_count(request):
 class GetVendorListBasedonProjects(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def dt(res,K):
+        res_2={}
+        for key, val in res.items():
+            res_2[key]=val[:K]
+            count_1 = sum(len(v) for k, v in res_2.items())
+            if count_1<3:
+                continue
+            elif count_1>=4:
+                res_2[key]=val[:1]
+                break
+        return res_2
+
+
+
     def list(self,request):
         user = self.request.user
         sltl_list = Project.objects.filter(ai_user = user).distinct().\
@@ -705,9 +720,18 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
                         .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
                         .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
             ser = GetVendorListBasedonProjectSerializer(queryset,many=True,context={'request':request,'sl':source_lang,'tl':target_lang})
-            tt = str(source_lang_name) + '---->' + str(target_lang_name)
-            res[tt] = ser.data
-        return Response(res)
+            if ser.data != []:
+                tt = str(source_lang_name) + '---->' + str(target_lang_name)
+                res[tt] = ser.data
+        print("RES-------->",len(res))
+        if len(res)>=3:
+            return Response(self.dt(res,1))
+        elif len(res)==2:
+            return Response(self.dt(res,2))
+        elif len(res)==1:
+            return Response(self.dt(res,3))
+        else:
+            return Response([])
 
 
 
@@ -761,7 +785,7 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 
 
 @api_view(['GET',])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def sample_file_download(request,bid_propasal_id):
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
@@ -773,5 +797,16 @@ def sample_file_download(request,bid_propasal_id):
         response = HttpResponse(fl, content_type=mime_type)
         response['Content-Disposition'] = "attachment; filename=%s" % filename
         return response
+    else:
+        return JsonResponse({"msg":"no file associated with it"})
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def sample_file_delete(request,bid_propasal_id):
+    sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
+    if sample_file:
+        BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file.delete()
+        return JsonResponse({"msg":"File Deleted Successfully"})
     else:
         return JsonResponse({"msg":"no file associated with it"})
