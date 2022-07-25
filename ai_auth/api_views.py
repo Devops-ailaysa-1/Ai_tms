@@ -53,7 +53,7 @@ from datetime import datetime,date,timedelta
 from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
 import stripe
 from django.conf import settings
-from ai_staff.models import Countries, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
+from ai_staff.models import Countries, CurrencyBasedOnCountry, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
 from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
@@ -1801,7 +1801,9 @@ def get_user(request):
 @api_view(['POST'])
 def ai_social_login(request):
     provider = request.POST.get('provider')
-    is_vendor = request.POST.get('is_vendor')
+    is_vendor = request.POST.get('is_vendor',None)
+    plan_name =request.POST.get('plan_name',None)
+    price_id =request.POST.get('price_id',None)
     print('provider>>',provider)
     print('requests>>',request)
     base_url="http://127.0.0.1:8089"
@@ -1813,6 +1815,8 @@ def ai_social_login(request):
     #         reverse(provider_id + "_login"), dict(process="login")
     #     )
     state_data=dict()
+    state_data["socialaccount_user_plan"]=plan_name
+    state_data["socialaccount_user_price"]=price_id
     if is_vendor=='True':
         #request.session['socialaccount_user_state']='vendor'
         state_data["socialaccount_user_state"]="vendor"
@@ -1842,6 +1846,9 @@ def ai_social_login(request):
     url_new = (parsed.geturl())
 
     soc_state = SocStates.objects.create(state=state,data=json.dumps(state_data))
+    if soc_state == None:
+        logging.warning(f"state not created {state}")
+
     # VendorOnboardingInfo.objects.get_or_create(user=user,onboarded_as_vendor=True)
     # req.close()
 
@@ -2017,6 +2024,9 @@ class UserDetailView(viewsets.ViewSet):
                 if country:                   
                     if user_obj.country==None:
                         user_obj.country_id= country
+                        queryset = CurrencyBasedOnCountry.objects.filter(country_id =user_obj.country_id)
+                        if queryset:
+                            user_obj.currency_based_on_country_id = queryset.first().currency_id                
                         user_obj.save()
                     else:
                         logging.error(f"user_country_already_updated : {user_obj.uid}")
@@ -2030,6 +2040,7 @@ class UserDetailView(viewsets.ViewSet):
                 if cv_file:
                     VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
                     VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+
             return Response({'msg':'details_updated_successsfully'},status=200)
         except BaseException as e:
             return Response({'error':f'updation failed {str(e)}'},status=400)
