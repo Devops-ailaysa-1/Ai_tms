@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.github',
+    'allauth.socialaccount.providers.google',
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
@@ -130,7 +131,8 @@ INSTALLED_APPS = [
     'storages',
     "guardian",
     'django_celery_results',
-    "ai_pay"
+    'ai_pay',
+    # 'debug_toolbar',
     # 'dbbackup',
     # 'django_q',
 ]
@@ -147,6 +149,7 @@ ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
+    # "debug_toolbar.middleware.DebugToolbarMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -303,6 +306,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 
+# SOCIALACCOUNT_ADAPTER="ai_auth.ai_adapter.SocialAdapter"
 
 SOCIALACCOUNT_PROVIDERS = {
     'github': {
@@ -311,7 +315,16 @@ SOCIALACCOUNT_PROVIDERS = {
             'repo',
             'read:org',
         ],
-    }
+    },
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+        }
+}
 }
 
 
@@ -469,6 +482,10 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
 
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
 
 LOGGING = {
     'version' : 1,
@@ -535,3 +552,19 @@ sentry_sdk.init(
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii = os.getenv("send_default_pii")
 )
+
+
+
+# INTERNAL_IPS = [
+#     # ...
+#     "127.0.0.1",
+#     # ...
+# ]
+
+
+
+# if DEBUG:
+#     import os  # only if you haven't already imported this
+#     import socket  # only if you haven't already imported this
+#     hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+#     INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2"]
