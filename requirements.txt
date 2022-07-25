@@ -193,5 +193,6 @@ zope.interface==5.4.0
 docx2txt==0.8
 weasyprint==55.0
 gevent
-hunspell
 indic-nlp-library==0.81
+google.cloud.storage==1.44.0
+mutagen

@@ -107,11 +107,11 @@ class ProjectPostSubjectField(models.Model):
                         related_name="projectpost_subject")
 
 
-class ProjectPostSteps(models.Model):
-    project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
-                        related_name="projectpost_steps")
-    steps = models.ForeignKey(Steps, on_delete=models.CASCADE,
-                        related_name="projectpost_steps")
+# class ProjectPostSteps(models.Model):
+#     project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
+#                         related_name="projectpost_steps")
+#     steps = models.ForeignKey(Steps, on_delete=models.CASCADE,
+#                         related_name="projectpost_steps")
 
 class ProjectboardTemplateDetails(models.Model):
     template_name = models.CharField(max_length=1000,blank=False, null=False)

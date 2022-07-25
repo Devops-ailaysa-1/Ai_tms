@@ -1,4 +1,4 @@
-import django_filters
+import django_filters, mutagen
 import shutil,docx2txt,regex,zipfile
 from ai_workspace import forms as ws_forms
 from django_filters.rest_framework import DjangoFilterBackend
@@ -34,7 +34,7 @@ import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
     TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
-    TaskAssignInfo,TaskTranscriptDetails,TaskAssignHistory, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory
+    TaskAssignInfo,TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -63,6 +63,12 @@ from ai_marketplace.serializers import ThreadSerializer
 from controller.serializer_mapper import serializer_map
 # from ai_workspace_okapi.api_views import DocumentViewByTask
 from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
+from mutagen.mp3 import MP3
+from google.cloud import speech
+from google.cloud import speech_v1p1beta1 as speech
+import io
+from google.cloud import storage
+
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -625,25 +631,20 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         # print("Project Creation request data----->", request.data)
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
-        if text_data:
-            if urlparse(text_data).scheme:
-                return Response({"msg":"Url not Accepted"},status = 406)
-            file_obj2, f2, name = text_file_processing(text_data)
-            serializer = ProjectQuickSetupSerializer(data={**request.data,"files":[file_obj2]},context={"request": request})
         audio_file = request.FILES.getlist('audio_file',None)
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
             name =  text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
             im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
-            serializer = ProjectQuickSetupSerializer(data={**request.data,"files":[im_file]},context={"request": request})
+            serializer = ser(data={**request.data,"files":[im_file]},context={"request": request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
             #serlzr = ser(data={**request.data, "files": request.FILES.getlist("files")}, context={"request": request})
-            serlzr = ProjectQuickSetupSerializer(data=\
+            serlzr = ser(data=\
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request})
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
@@ -1298,7 +1299,9 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     def history(self,instance):
         segment_count=0 if instance.task_assign.task.document == None else instance.task_assign.task.get_progress.get('confirmed_segments')
-        task_history = TaskAssignHistory.objects.create(task_assign =instance.task_assign,previous_assign_id=instance.task_assign.assign_to_id,task_segment_confirmed=segment_count)
+        task_history = TaskAssignHistory.objects.create(task_assign =instance.task_assign,\
+                                                        previous_assign_id=instance.task_assign.assign_to_id,\
+                                                        task_segment_confirmed=segment_count,unassigned_by=self.request.user)
 
 
     @integrity_error
@@ -1317,9 +1320,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task = request.POST.getlist('task')
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
         tasks= [json.loads(i) for i in task]
-        #serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'files':files,'task':request.POST.getlist('task')},context={'request':request})
         assignment_id = create_assignment_id()
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
+        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
+        # assignment_id = create_assignment_id()
+        # serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
         if serializer.is_valid():
             serializer.save()
             msg_send(sender,Receiver,tasks[0])
@@ -1714,24 +1718,9 @@ class ShowMTChoices(APIView):
         return Response(res, status=status.HTTP_200_OK)
 
 
-# def write_transcripts(transcript_filename,transcript):
-#     f= open(output_filepath + transcript_filename,"w+")
-#     f.write(transcript)
-#     f.close()
-################################need to revise############# working
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def transcribe_file(request):
-    task_id = request.POST.get('task')
-    target_language = request.POST.getlist('target_languages')
-    obj = Task.objects.get(id = task_id)
-    source = [obj.job.source_language.id]
-    source_code = obj.job.source_language_code
-    speech_file = obj.file.file.path
-    from google.cloud import speech
-    from google.cloud import speech_v1p1beta1 as speech
-    import io
+###########################Transcribe Short File############################## #######
 
+def transcribe_short_file(speech_file,source_code,obj):
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -1740,46 +1729,110 @@ def transcribe_file(request):
     audio = speech.RecognitionAudio(content=content)
 
     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code,)
-
-    # if os.path.splitext(file)[1] == '.mp3':
-    #     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source,)
-    # elif os.path.splitext(file)[1] == '.wav':
-    #     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-    #         sample_rate_hertz=44100, #for .wav files
-    #         audio_channel_count=2,# for .wav files
-    #         language_code=source,
-    #     )
     try:
         response = client.recognize(config=config, audio=audio)
         transcript=''
         for result in response.results:
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
-        # transcript = 'This is for sample check..'
         ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id})
         if ser.is_valid():
             ser.save()
-            return Response(ser.data)
-        return Response(ser.errors)
+            return (ser.data)
+        return (ser.errors)
     except:
-        return Response({'msg':'Audio File Size Too long Error'})
-    # transcript = 'This is for sample check..'
-    # return Response({'transcripted_msg':transcript})
-    # name =  transcript.split()[0]+ ".txt" if len(transcript.split()[0])<=15 else transcript[:5]+ ".txt"
-    # im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = transcript.encode(),file_name=name)
-    # team = True if obj.job.project.team else False
-    # pr = obj.job.project
-    # serializer = ProjectQuickSetupSerializer(pr,data={"files":[im_file],"team":[team],\
-    #             "source_language":source,'target_languages':target_language},context={"request": request}, partial=True)
-    # if serializer.is_valid():
-    #     serializer.save()
-    #     return Response(serializer.data)
-    # return Response(serializer.errors)
+        return ({'msg':'Something  went wrong in Google Cloud Api'})
 
-#text_to_speech(ssml_file,target_language,filename,voice_gender)
-@api_view(["GET"])
+###########################Transcribe Long File##############################
+
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
+
+
+def delete_blob(bucket_name, blob_name):
+    """Deletes a blob from the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    blob.delete()
+
+
+
+def transcribe_long_file(speech_file,source_code,filename,obj):
+
+    bucket_name = os.getenv("BUCKET")
+    source_file_name = speech_file
+    destination_blob_name = filename
+
+    upload_blob(bucket_name, source_file_name, destination_blob_name)
+
+    gcs_uri = os.getenv("BUCKET_URL") + filename
+    transcript = ''
+
+    client = speech.SpeechClient()
+    audio = speech.RecognitionAudio(uri=gcs_uri)
+
+    config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code,)
+
+
+    # Detects speech in the audio file
+    operation = client.long_running_recognize(config=config, audio=audio)
+    response = operation.result(timeout=10000)
+
+    for result in response.results:
+        transcript += result.alternatives[0].transcript
+    print("Transcript--------->",transcript)
+
+    delete_blob(bucket_name, destination_blob_name)
+
+    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id})
+    if ser.is_valid():
+        ser.save()
+        return (ser.data)
+    return (ser.errors)
+
+
+
+################################speech-to-text############# working#############################3
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def transcribe_and_download_text_to_speech_source(request):#########working############Transcribe and Download
+def transcribe_file(request):
+    task_id = request.POST.get('task')
+    target_language = request.POST.getlist('target_languages')
+    queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
+    if queryset:
+        ser = TaskTranscriptDetailSerializer(queryset,many=True)
+        return Response(ser.data)
+    else:
+        obj = Task.objects.get(id = task_id)
+        source = [obj.job.source_language.id]
+        source_code = obj.job.source_language_code
+        filename = obj.file.filename
+        speech_file = obj.file.file.path
+        try:
+            audio = MP3(speech_file)
+            length = int(audio.info.length)
+        except:
+            length=None
+        print("Length----->",length)
+        if length and length<60:
+            res = transcribe_short_file(speech_file,source_code,obj)
+        else:
+            res = transcribe_long_file(speech_file,source_code,filename,obj)
+        print("RES----->",res)
+        return JsonResponse(res,safe=False)
+
+
+
+@api_view(["GET"])
+#@permission_classes([IsAuthenticated])
+def convert_and_download_text_to_speech_source(request):#########working############Transcribe and Download
     tasks =[]
     project = request.GET.get('project',None)
     # task = request.GET.get('task',None)
@@ -1830,16 +1883,29 @@ def download_text_to_speech_source(request):
         return download_file(file.path)
     except:
         return Response({'msg':'something went wrong'})
-    # obj = Task.objects.get(id = task)
-    # file,ext = os.path.splitext(os.path.basename(obj.file.file.path))
-    # name =file +'_source.mp3'
-    # dir = os.path.dirname(obj.file.file.path)
-    # loc = os.path.join(dir,"Audio",name)
-    # return download_file(loc)
 
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def download_speech_to_text_source(request):
+    task = request.GET.get('task')
+    obj = Task.objects.get(id = task)
+    try:
+        # output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
+        # return download_file(output_from_writer.path)
+        text = obj.task_transcript_details.first().transcripted_text
+        with open('out.txt', "w") as out:
+            out.write(text)
+        res = download_file('out.txt')
+        os.remove('out.txt')
+        return res
+    except:
+        return Response({'msg':'something went wrong'})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def project_download(request,project_id):
     # projects = request.GET.getlist('project')
     pr = Project.objects.get(id=project_id)
@@ -1863,6 +1929,7 @@ def zipit(folders, zip_filename):
     zip_file.close()
 
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def project_list_download(request):
     projects = request.GET.getlist('project')
     dest = []
@@ -1875,6 +1942,9 @@ def project_list_download(request):
     tt = download_file(zip_file_name)
     os.remove(zip_file_name)
     return tt
+
+
+############################Deprecated###########################################
 @permission_classes([IsAuthenticated])
 def task_unassign(request):
     task = request.GET.getlist('task')
@@ -1891,3 +1961,104 @@ def task_unassign(request):
         else:
             return Response({'msg':'Permission Denied'})
     return Response({"msg":"Tasks Unassigned Successfully"},status=200)
+
+##################################Need to revise#######################################
+@api_view(['PUT',])
+@permission_classes([IsAuthenticated])
+def update_project_from_writer(request,id):
+    project = Project.objects.get(id=id)
+    ser = ProjectQuickSetupSerializer(project, data=\
+        {**request.data, "files": request.FILES.get("files")},
+        context={"request": request}, partial=True)
+    if ser.is_valid():
+        ser.save()
+    ser1 = TaskTranscriptDetailSerializer(data={"transcripted_file_writer":request.FILES.get('files'),"task":task.id})
+    if ser1.is_valid():
+        ser1.save()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # client = speech.SpeechClient()
+    #
+    # with io.open(speech_file, "rb") as audio_file:
+    #     content = audio_file.read()
+    #
+    # audio = speech.RecognitionAudio(content=content)
+    #
+    # config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code,)
+    #
+    # # if os.path.splitext(file)[1] == '.mp3':
+    # #     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source,)
+    # # elif os.path.splitext(file)[1] == '.wav':
+    # #     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+    # #         sample_rate_hertz=44100, #for .wav files
+    # #         audio_channel_count=2,# for .wav files
+    # #         language_code=source,
+    # #     )
+    # try:
+    #     response = client.recognize(config=config, audio=audio)
+    #     transcript=''
+    #     for result in response.results:
+    #         print(u"Transcript: {}".format(result.alternatives[0].transcript))
+    #         transcript += result.alternatives[0].transcript
+    #     # transcript = 'This is for sample check..'
+    #     ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id})
+    #     if ser.is_valid():
+    #         ser.save()
+    #         return Response(ser.data)
+    #     return Response(ser.errors)
+    # except:
+    #     return Response({'msg':'Audio File Size Too long Error'})
+    # transcript = 'This is for sample check..'
+    # return Response({'transcripted_msg':transcript})
+    # name =  transcript.split()[0]+ ".txt" if len(transcript.split()[0])<=15 else transcript[:5]+ ".txt"
+    # im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = transcript.encode(),file_name=name)
+    # team = True if obj.job.project.team else False
+    # pr = obj.job.project
+    # serializer = ProjectQuickSetupSerializer(pr,data={"files":[im_file],"team":[team],\
+    #             "source_language":source,'target_languages':target_language},context={"request": request}, partial=True)
+    # if serializer.is_valid():
+    #     serializer.save()
+    #     return Response(serializer.data)
+    # return Response(serializer.errors)
+
+
+        # obj = Task.objects.get(id = task)
+        # file,ext = os.path.splitext(os.path.basename(obj.file.file.path))
+        # name =file +'_source.mp3'
+        # dir = os.path.dirname(obj.file.file.path)
+        # loc = os.path.join(dir,"Audio",name)
+        # return download_file(loc)

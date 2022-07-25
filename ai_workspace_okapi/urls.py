@@ -46,7 +46,7 @@ urlpatterns+=[
     path('get_wikipedia/<int:doc_id>/', api_views.WikipediaWorkspace, name='get-wikipedia'),
     path('get_wiktionary/<int:doc_id>/', api_views.WiktionaryWorkSpace, name='get-wiktionary'),
     path('spellcheck/', api_views.spellcheck, name='spellcheck'),
-    path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment'),
+    #path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment'),
     path("project/download/<int:pk>", api_views.ProjectDownload.as_view({"get": "zip",
             "post":"push_to_repo"}), name="project-download"),
     path("segment_history/",api_views.get_segment_history,name='segment-history'),

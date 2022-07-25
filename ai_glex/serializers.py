@@ -77,8 +77,8 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
             # glossary_instance = Glossary.objects.get(project_id = instance.id)
             glossary_data = validated_data.pop('glossary')
             glossary_serializer.update(glossary_instance, glossary_data)
-            tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
-                    project = instance)
+            # tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
+            #         project = instance)
         # task_assign = TaskAssign.objects.assign_task(project=instance)
         return super().update(instance, validated_data)
 

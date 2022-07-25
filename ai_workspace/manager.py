@@ -110,9 +110,9 @@ class TaskManager(models.Manager):
         if not assign_to:
             raise ValueError("You should send parameter either project "
                              "object or assign_to user")
-        tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files_list for job in jobs_list]
+        #tasks = [self.get_or_create(file=file, job=job, defaults = {"assign_to": assign_to}) for file in files_list for job in jobs_list]
         # tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
-        #tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
+        tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
         #print(tasks)
         return tasks
 
@@ -127,13 +127,46 @@ class TaskManager(models.Manager):
 
     def create_glossary_tasks_of_jobs(self, jobs, klass,\
           project = None):
+        for job in jobs:
+            if job.target_language == None:
+                job.target_language = job.source_language
+                job.save()
         glossary_tasks = [self.get_or_create(job=job) for job in jobs]
         return glossary_tasks
 
     def create_glossary_tasks_of_jobs_by_project(self, project):
         jobs = project.project_jobs_set.all()
+        print([[job.source_language,job.target_language] for job in jobs ])
         return self.create_glossary_tasks_of_jobs(
             jobs=jobs, klass=None)
+
+    def create_tasks_of_audio_files(self, files,jobs,klass,project = None):
+        file_formats = ['.mp3']
+        if hasattr(project, "ai_user"):
+            assign_to = project.ai_user
+
+        files_list = [file for file in files if  os.path.splitext(file.file.path)[1] not in file_formats]
+        audio_files = [file for file in files if  os.path.splitext(file.file.path)[1] in file_formats]
+        additional_job = [job for job in jobs if job.target_language == None]
+        jobs_list = [job for job in jobs if job.target_language!=None]
+        if not assign_to:
+            raise ValueError("You should send parameter either project "
+                             "object or assign_to user")
+        if project.voice_proj_detail.project_type_sub_category_id == 1 :
+            tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in jobs_list ]#, version_id=1, defaults = {"assign_to": assign_to}
+            additional_tasks = [self.get_or_create(file=file, job = job) for file in audio_files for job in additional_job]#version_id=1, defaults = {"assign_to": assign_to})
+        else:
+            tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in jobs_list ]#, version_id=1, defaults = {"assign_to": assign_to}
+            additional_tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in additional_job]#, version_id=1, defaults = {"assign_to": assign_to}
+        return tasks
+
+    def create_tasks_of_audio_files_by_project(self, project):
+        files = project.project_files_set.all()
+        jobs = project.project_jobs_set.all()
+        print(files,jobs,project)
+        return self.create_tasks_of_audio_files(
+            files=files, jobs=jobs, klass=None, project=project
+        )
 
 class TaskAssignManager(models.Manager):
 
@@ -159,29 +192,30 @@ class TaskAssignManager(models.Manager):
         self.task_assign_update(data,mt_engine,mt_enable)
         # print("tASK ASSIGN --> ", task_assign)
         return task_assign
-    def create_tasks_of_audio_files(self, files,jobs,klass,project = None):
-        if hasattr(project, "ai_user"):
-            assign_to = project.ai_user
 
-        files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.mp3']
-        audio_files = [file for file in files if  os.path.splitext(file.file.path)[1] == '.mp3']
-        additional_job = [job for job in jobs if job.target_language == None]
-        jobs_list = [job for job in jobs if job.target_language!=None]
-        if not assign_to:
-            raise ValueError("You should send parameter either project "
-                             "object or assign_to user")
-        if project.voice_proj_detail.project_type_sub_category_id == 1:
-            tasks = [self.get_or_create(file=file, job = job, version_id=1, defaults = {"assign_to": assign_to}) for file in files_list for job in jobs_list ]
-            additional_tasks = [self.get_or_create(file=file, job = job, version_id=1, defaults = {"assign_to": assign_to}) for file in audio_files for job in additional_job]
-        else:
-            tasks = [self.get_or_create(file=file, job = job, version_id=1, defaults = {"assign_to": assign_to}) for file in files_list for job in jobs_list ]
-            additional_tasks = [self.get_or_create(file=file, job = job, version_id=1, defaults = {"assign_to": assign_to}) for file in files_list for job in additional_job]
-        return tasks
-
-    def create_tasks_of_audio_files_by_project(self, project):
-        files = project.project_files_set.all()
-        jobs = project.project_jobs_set.all()
-        print(files,jobs,project)
-        return self.create_tasks_of_audio_files(
-            files=files, jobs=jobs, klass=None, project=project
-        )
+    # def create_tasks_of_audio_files(self, files,jobs,klass,project = None):
+    #     if hasattr(project, "ai_user"):
+    #         assign_to = project.ai_user
+    #
+    #     files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.mp3']
+    #     audio_files = [file for file in files if  os.path.splitext(file.file.path)[1] == '.mp3']
+    #     additional_job = [job for job in jobs if job.target_language == None]
+    #     jobs_list = [job for job in jobs if job.target_language!=None]
+    #     if not assign_to:
+    #         raise ValueError("You should send parameter either project "
+    #                          "object or assign_to user")
+    #     if project.voice_proj_detail.project_type_sub_category_id == 1:
+    #         tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in jobs_list ]#, version_id=1, defaults = {"assign_to": assign_to}
+    #         additional_tasks = [self.get_or_create(file=file, job = job) for file in audio_files for job in additional_job]#version_id=1, defaults = {"assign_to": assign_to})
+    #     else:
+    #         tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in jobs_list ]#, version_id=1, defaults = {"assign_to": assign_to}
+    #         additional_tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in additional_job]#, version_id=1, defaults = {"assign_to": assign_to}
+    #     return tasks
+    #
+    # def create_tasks_of_audio_files_by_project(self, project):
+    #     files = project.project_files_set.all()
+    #     jobs = project.project_jobs_set.all()
+    #     print(files,jobs,project)
+    #     return self.create_tasks_of_audio_files(
+    #         files=files, jobs=jobs, klass=None, project=project
+    #     )

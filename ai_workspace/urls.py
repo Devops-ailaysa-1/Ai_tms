@@ -70,8 +70,9 @@ urlpatterns += [
 
 	path("mt_samples/",api_views.ShowMTChoices.as_view(), name='mt-samples'),
 	path('transcribe_file/',api_views.transcribe_file),
-	path('transcribe_and_download_text_to_speech_source/',api_views.transcribe_and_download_text_to_speech_source),
+	path('convert_and_download_text_to_speech_source/',api_views.convert_and_download_text_to_speech_source),
 	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
+	path('download_speech_to_text_source/',api_views.download_speech_to_text_source),
 	path('task/unassign/',api_views.task_unassign),
 ]
 # views urls adding for local testing

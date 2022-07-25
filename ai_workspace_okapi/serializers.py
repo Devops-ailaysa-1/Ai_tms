@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Document, Segment, TextUnit, MT_RawTranslation, \
-    MT_Engine, TranslationStatus, FontSize, Comment, MergeSegment
+    MT_Engine, TranslationStatus, FontSize, Comment#, MergeSegment
 import json, copy
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
@@ -59,9 +59,6 @@ class SegmentSerializer(serializers.ModelSerializer):
             "temp_target",
             "status",
             "has_comment",
-            "is_merged",
-            "text_unit",
-            "is_merge_start",
             "random_tag_ids",
         )
 
@@ -73,9 +70,6 @@ class SegmentSerializer(serializers.ModelSerializer):
             # "random_tag_ids" : {"read_only": True},
             "tagged_source": {"read_only": True},
             "target_tags": {"read_only": True},
-            "is_merged": {"required": False, "default": False},
-            "text_unit": {"read_only": True},
-            "is_merge_start": {"read_only": True},
             # "id",
         }
 
@@ -102,50 +96,35 @@ class SegmentSerializer(serializers.ModelSerializer):
 class SegmentSerializerV2(SegmentSerializer):
     temp_target = serializers.CharField(trim_whitespace=False)
     target = serializers.CharField(trim_whitespace=False, required=False)
-    status = serializers.PrimaryKeyRelatedField(required=False,
-                queryset=TranslationStatus.objects.all())
-    user  = serializers.PrimaryKeyRelatedField(required=False,queryset=AiUser.objects.all())
-    class Meta(SegmentSerializer.Meta):
-        fields = ("target", "id", "temp_target", "status", "random_tag_ids", "tagged_source", "target_tags","user",)
+    status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
 
-    def run_validation(self, data):
-        if 'user' not in data:
-            raise serializers.ValidationError({"msg":"user_id required"})
-        return super().run_validation(data)
+    class Meta(SegmentSerializer.Meta):
+        fields = ("target", "id", "temp_target", "status", "random_tag_ids", "tagged_source", "target_tags")
 
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
     def update(self, instance, validated_data):
-        user = validated_data.pop('user')
-        content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
-            SegmentHistory.objects.create(segment_id=instance.id, user = user, target= content, status= validated_data.get('status') )
             return res
-        SegmentHistory.objects.create(segment_id=instance.id, user = user, target= content, status= validated_data.get('status') )
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
-    target = serializers.CharField(read_only=True, source="get_merge_target_if_have",
-        trim_whitespace=False)
-    merge_segment_count = serializers.IntegerField(read_only=True,
-        source="get_merge_segment_count", )
-
+    target = serializers.CharField(read_only=True, source="coded_target", trim_whitespace=False)
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
-            'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
-        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
-            'coded_ids_sequence']
+        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence', "random_tag_ids"]
+        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
         return ret
+
 
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)
@@ -166,12 +145,13 @@ class TextUnitSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data=data)
 
 class TextUnitSerializerV2(serializers.ModelSerializer):
-    segment_ser = SegmentSerializerV3(many=True ,read_only=True,
-            source="text_unit_segment_set_exclude_merge_dummies")
+    segment_ser = SegmentSerializerV3(many=True ,read_only=True, source="text_unit_segment_set")
 
     class Meta:
         model = TextUnit
-        fields = ("segment_ser", "okapi_ref_translation_unit_id")
+        fields = (
+            "segment_ser","okapi_ref_translation_unit_id"
+        )
 
     def to_representation(self, instance):
         ret = super(TextUnitSerializerV2, self).to_representation(instance=instance)
@@ -491,17 +471,17 @@ class PentmUpdateSerializer(serializers.ModelSerializer):
         return json.dumps(PentmUpdateParamSerializer(object).data)
 
 
-class MergeSegmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MergeSegment
-        fields = ("segments", "text_unit")
-
-    def validate(self, data):
-        segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
-        text_unit = data["text_unit"]
-        if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
-            raise serializers.ValidationError("all segments should be have same text unit id...")
-        return super().validate(data)
+# class MergeSegmentSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = MergeSegment
+#         fields = ("segments", "text_unit")
+#
+#     def validate(self, data):
+#         segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
+#         text_unit = data["text_unit"]
+#         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
+#             raise serializers.ValidationError("all segments should be have same text unit id...")
+#         return super().validate(data)
 
 class ListSegmentIntgerationUpdateSerializer(serializers.ListSerializer):
     def create(self, validated_data, text_unit):
@@ -525,12 +505,12 @@ class SegmentIntgerationUpdateSerializer(serializers.ModelSerializer):
             "coded_brace_pattern",
             "coded_ids_sequence",
             "text_unit",
-            "is_merge_start",
+            #"is_merge_start",
             "random_tag_ids",
         )
 
         extra_kwargs = {
-            "is_merged": {"required": False, "default": False},
+            #"is_merged": {"required": False, "default": False},
             "text_unit": {"required": False},
         }
 

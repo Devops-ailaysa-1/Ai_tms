@@ -155,7 +155,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
                     print("else")
                     if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') \
                                     <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
-                    if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
+                    # if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
                         startdate = credits.created_at
                         enddate = credits.expiry
                         print("inside else")

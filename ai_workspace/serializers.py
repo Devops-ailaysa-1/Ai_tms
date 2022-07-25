@@ -6,7 +6,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
-		ProjectFilesCreateType,ProjectSteps,,VoiceProjectDetail,TaskTranscriptDetails#,TaskAssignRateInfo
+		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails#,TaskAssignRateInfo
 import json
 import pickle,itertools
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
@@ -457,13 +457,13 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		model = Project
 		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
-					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps",)
+					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects",)
 
 
 	def run_validation(self,data):
 		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 				pt = json.loads(data.get('project_type')[0]) if data.get('project_type') else 1
-				if pt!=4 and data.get('target_languages')==None:
+				if pt not in [4 ,3] and data.get('target_languages')==None:
 						raise serializers.ValidationError({"msg":"target languages needed for translation project"})
 		if data.get('target_languages')!=None:
 			comparisons = [source == target for (source, target) in itertools.
@@ -476,41 +476,45 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def to_internal_value(self, data):
 
 		# print("Internal value ===> ", data)
-
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
-		# data['workflow_id'] = data.get('workflow',[1])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
 		data['pre_translate'] = data.get('pre_translate',['false'])[0]
+
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
-		data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 		data['team_exist'] = data.get('team',[None])[0]
+
 		if data.get('subjects'):
 			data["subjects"] = [{"subject":sub} for sub in data.get('subjects',[])]
+
 		if data.get("contents"):
 			data["contents"]=[{"content_type":cont} for cont in data.get('contents',[])]
+
 		data["steps"] = [{"steps":step} for step in data.get('steps',[])] if data.get('steps') else [{"steps":1}]
-		# print('dtatatat---->',data)
-		data["project_type_id"] = data.get("project_type",[1])[0]
+
 		if data.get('sub_category'):
 			data["voice_proj_detail"] = {"source_language": data.get("source_language", [None])[0],\
 										"project_type_sub_category":data.get("sub_category",[None])[0]}
+
 		if data.get('audio_file'):
 		 	data['files'] = [{"file": file, "usage_type": 1} for file in data.get('audio_file', [])]
 		else:
 			data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
 		print('data[files]-------------->',data['files'])
+
 		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [None])]
 		else:
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [])]
+
 		data['team_exist'] = data.get('team',[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
+
 		return super().to_internal_value(data=data)
 
 	def get_project_analysis(self,instance):
@@ -569,38 +573,39 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
+		with transaction.atomic():
+			project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
+				validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
+				f_klass=File,j_klass=Job, ai_user=ai_user,\
+				team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
+			ProjectFilesCreateType.objects.create(project=project)
 
-		project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
-			validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
-			f_klass=File,j_klass=Job, ai_user=ai_user,\
-			team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
-		ProjectFilesCreateType.objects.create(project=project)
+			if proj_subject:
+				[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
+			if proj_content_type:
+				[project.proj_content_type.create(**content_data) for content_data in proj_content_type]
+			if proj_steps:
+				[project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 
-		if proj_subject:
-			[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
-		if proj_content_type:
-			[project.proj_content_type.create(**content_data) for content_data in proj_content_type]
-		if proj_steps:
-			[project.proj_steps.create(**steps_data) for steps_data in proj_steps]
+			# steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]#need to include custom workflows
+			# print("STEP---->",proj_steps)
 
-		# steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]#need to include custom workflows
-		# print("STEP---->",proj_steps)
+			if project_type == 1 or project_type == 2:
+				tasks = Task.objects.create_tasks_of_files_and_jobs(
+					files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 
-		if project_type == 1 or project_type == 2:
-			tasks = Task.objects.create_tasks_of_files_and_jobs(
-				files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
+			if voice_proj_detail:
+				voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
+				if voice_project.project_type_sub_category.id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
+					rr = voice_project.project.project_jobs_set.filter(~Q(target_language = None))
+					if voice_project.project_type_sub_category.id == 2 and rr:
+						tasks = Task.objects.create_tasks_of_files_and_jobs(
+							files=files, jobs=jobs, project=project, klass=Task)
+					else:
+						tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
+			# tasks = Task.objects.create_tasks_of_files_and_jobs(
+			# 	files=files, jobs=jobs, project=project, klass=Task)
 			task_assign = TaskAssign.objects.assign_task(project=project)
-		if voice_proj_detail:
-			voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
-			if voice_project.project_type_sub_category.id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
-				rr = voice_project.project.project_jobs_set.filter(~Q(target_language = None))
-				if voice_project.project_type_sub_category.id == 2 and rr:
-					tasks = Task.objects.create_tasks_of_files_and_jobs(
-						files=files, jobs=jobs, project=project, klass=Task)
-				else:
-					tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
-		tasks = Task.objects.create_tasks_of_files_and_jobs(
-			files=files, jobs=jobs, project=project, klass=Task)  # For self assign quick setup run)
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
@@ -641,9 +646,15 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		jobs_data = validated_data.pop("project_jobs_set")
 		project_type = instance.project_type_id
 
-		project, files, jobs= Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
-							files_data, jobs_data,f_klass=File,\
-							j_klass=Job)
+		with transaction.atomic():
+			project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
+									files_data, jobs_data, f_klass=File, j_klass=Job)
+			try:
+				if instance.voice_proj_detail.project_type_sub_category_id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
+						tasks = Task.objects.create_tasks_of_audio_files_by_project(project=project)
+			except:
+				tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
+					project=project)
 
 		contents_data = validated_data.pop("proj_content_type",[])
 		subjects_data = validated_data.pop("proj_subject",[])
@@ -656,16 +667,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if project_type == 1 or project_type == 2:
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
+		if project_type == 3:
+			tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
+			        project = instance)
 		task_assign = TaskAssign.objects.assign_task(project=project)
-		#with transaction.atomic():
-		#	project, files, jobs = Project.objects.create_and_jobs_files_bulk_create_for_project(instance,\
-		#							files_data, jobs_data, f_klass=File, j_klass=Job)
-		#	try:
-		#		if instance.voice_proj_detail.project_type_sub_category_id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
-		#				tasks = Task.objects.create_tasks_of_audio_files_by_project(project=project)
-		#	except:
-		#		tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
-		#			project=project)
+
 		return  project
 
 	def to_representation(self, value):
@@ -720,9 +726,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_file','step','filename','task_ven_accepted',\
+        fields = ('id','instruction','instruction_files','step','task_ven_accepted',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
-                   'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
+                   'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable','pre_translate','task_assign_detail',)
         extra_kwargs = {
             'assigned_by':{'write_only':True},
@@ -731,10 +737,11 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     def get_assign_to_details(self,instance):
 	    if instance.task_assign.assign_to:
+	        external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
 	        email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
 	        try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
 	        except:avatar = None
-	        return {"id":instance.task_assign.assign_to_id,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar}
+	        return {"id":instance.task_assign.assign_to_id,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor}
 	    #if instance.task.assign_to:
 	    #    external_editor = True if instance.task.assign_to.is_internal_member==False else False
 	    #    email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
@@ -789,17 +796,18 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         mt_enable = data.pop('mt_enable',None)
         pre_translate = data.pop('pre_translate',None)
         task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step)) for task in task_list]
-        task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
-        for i in task_assign_info:
-            try:total_word_count = i.task_assign.task.document.total_word_count
-            except:
-                try:total_word_count = i.task_assign.task.task_details.first().task_word_count
-                except:total_word_count=None
-            TaskAssignInfo.objects.filter(id=i.id).update(total_word_count = total_word_count)
-        [Instructionfiles.objects.create(**instruction_file,task_assign_info = assign) for instruction_file in files for assign in task_assign_info]
-        task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(assign_to_id = assign_to) for task in task_list]
-        if mt_engine_id or mt_enable or pre_translate:
-           [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_engine_id=mt_engine_id,mt_enable=mt_enable,pre_translate=pre_translate) for task in task_list]
+        with transaction.atomic():
+            task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
+            for i in task_assign_info:
+                try:total_word_count = i.task_assign.task.document.total_word_count
+                except:
+                    try:total_word_count = i.task_assign.task.task_details.first().task_word_count
+                    except:total_word_count=None
+                TaskAssignInfo.objects.filter(id=i.id).update(total_word_count = total_word_count)
+            tt = [Instructionfiles.objects.create(**instruction_file,task_assign_info = assign) for instruction_file in files for assign in task_assign_info]
+            task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(assign_to_id = assign_to) for task in task_list]
+            if mt_engine_id or mt_enable or pre_translate:
+                [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_engine_id=mt_engine_id,mt_enable=mt_enable,pre_translate=pre_translate) for task in task_list]
         return task_assign_info
 
         #print('validated data kk==>',data)
@@ -846,10 +854,11 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
 	progress = serializers.DictField(source="get_progress", read_only=True)
-	task_assign_info = TaskAssignInfoSerializer(required=False)
+	#task_assign_info = TaskAssignInfoSerializer(required=False)
+	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	bid_job_detail_info = serializers.SerializerMethodField()
 	open_in =  serializers.SerializerMethodField()
-	can_open = serializers.SerializerMethodField()
+	#can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
@@ -858,10 +867,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id","filename", "ai_taskid","source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",'can_open',)
+			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",)
 
-		else:
-			return None
 
 	def get_open_in(self,obj):
 		try:
@@ -873,6 +880,24 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			else:return "Transeditor"
 		except:
 			return "Transeditor"
+
+	def get_bid_job_detail_info(self,obj):
+		if obj.job.project.proj_detail.all():
+			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id))
+			return ProjectPostJobDetailSerializer(qs,many=True).data
+		else:
+			return None
+
+	def get_task_assign_info(self, obj):
+		task_assign = obj.task_info.filter(task_assign_info__isnull=False)
+		if task_assign:
+			task_assign_info=[]
+			for i in task_assign:
+				try:task_assign_info.append(i.task_assign_info)
+				except:pass
+			return TaskAssignInfoSerializer(task_assign_info,many=True).data
+		else: return None
+
 	# def get_task_word_count(self,instance):
 	# 	if instance.document_id:
 	# 		document = Document.objects.get(id = instance.document_id)

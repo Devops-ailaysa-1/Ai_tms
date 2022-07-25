@@ -741,11 +741,11 @@ class Task(models.Model):
 
     ai_taskid=models.CharField(max_length=50,unique=True,null=True)
 
-    file = models.ForeignKey(File, on_delete=models.CASCADE, null=False, blank=False,
+    file = models.ForeignKey(File, on_delete=models.CASCADE, null=True, blank=True,
             related_name="file_tasks_set")
     job = models.ForeignKey(Job, on_delete=models.CASCADE, null=False, blank=False,
             related_name="job_tasks_set")
-    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True, related_name='task_document')
+    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True,)
 
     class Meta:
         constraints = [
@@ -814,51 +814,67 @@ class Task(models.Model):
             else:return False
         else:return True
 
+    # @property
+    # def corrected_segment_count(self):
+    #     confirm_list = [102, 104, 106]
+    #     total_seg_count = 0
+    #     confirm_count = 0
+    #     doc = self.document
+    #     # return Segment.objects.filter(
+    #     #     text_unit__document=doc
+    #     # ).count()
+    #
+    #     segs = Segment.objects.filter(text_unit__document=doc)
+    #     for seg in segs:
+    #         # continue if seg.is_merged and (not seg.is_merge_start) else total_seg_count += 1
+    #
+    #         # if not (seg.is_merged and (not seg.is_merge_start)):
+    #         #     total_seg_count += 1
+    #
+    #         if seg.is_merged == True and seg.is_merge_start == False:
+    #             continue
+    #         else:
+    #             total_seg_count += 1
+    #
+    #         seg_new = seg.get_active_object()
+    #         if seg_new.status_id in confirm_list:
+    #             confirm_count += 1
+    #
+    #     return total_seg_count, confirm_count
+    #
+    #     # for seg in segs:
+    #     #     seg_new = seg.get_active_object()
+    #     #     if seg_new.status_id in confirm_list:
+    #     #         confirm_count += 1
+
     @property
     def corrected_segment_count(self):
-        confirm_list = [102, 104, 106]
-        total_seg_count = 0
-        confirm_count = 0
         doc = self.document
-        # return Segment.objects.filter(
-        #     text_unit__document=doc
-        # ).count()
-
-        segs = Segment.objects.filter(text_unit__document=doc)
-        for seg in segs:
-            # continue if seg.is_merged and (not seg.is_merge_start) else total_seg_count += 1
-
-            # if not (seg.is_merged and (not seg.is_merge_start)):
-            #     total_seg_count += 1
-
-            if seg.is_merged == True and seg.is_merge_start == False:
-                continue
-            else:
-                total_seg_count += 1
-
-            seg_new = seg.get_active_object()
-            if seg_new.status_id in confirm_list:
-                confirm_count += 1
-
-        return total_seg_count, confirm_count
-
-        # for seg in segs:
-        #     seg_new = seg.get_active_object()
-        #     if seg_new.status_id in confirm_list:
-        #         confirm_count += 1
-
+        return Segment.objects.filter(
+            text_unit__document=doc
+        ).count()
 
 
     @property
     def get_progress(self):
-        # confirm_list = [102, 104, 106]
-        # total_segment_count = self.corrected_segment_count
-        # segments_confirmed_count = self.document.segments.filter(
-        #     status__status_id__in=confirm_list
-        # ).count()
-        total_segment_count, segments_confirmed_count = self.corrected_segment_count
+        confirm_list = [102, 104, 106]
+        # total_segment_count = self.document.total_segment_count
+        total_segment_count = self.corrected_segment_count
+        segments_confirmed_count = self.document.segments.filter(
+            status__status_id__in=confirm_list
+        ).count()
         return {"total_segments": total_segment_count, \
                 "confirmed_segments": segments_confirmed_count}
+    # @property
+    # def get_progress(self):
+    #     # confirm_list = [102, 104, 106]
+    #     # total_segment_count = self.corrected_segment_count
+    #     # segments_confirmed_count = self.document.segments.filter(
+    #     #     status__status_id__in=confirm_list
+    #     # ).count()
+    #     total_segment_count, segments_confirmed_count = self.corrected_segment_count
+    #     return {"total_segments": total_segment_count, \
+    #             "confirmed_segments": segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
@@ -903,12 +919,14 @@ class TaskAssign(models.Model):
 
 class TaskAssignInfo(models.Model):
     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,
+                    related_name="task_assign_info")
     PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
                     ("stripe","stripe")]
     instruction = models.TextField(max_length=1000, blank=True, null=True)
     assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)
+    mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
     mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
@@ -979,6 +997,7 @@ class TaskTranscriptDetails(models.Model):
     transcripted_text = models.TextField(null=True,blank=True)
     source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
+    transcripted_file_writer = models.FileField(upload_to=audio_file_path,null=True,blank=True)
 
 
 class TmxFile(models.Model):
@@ -1081,17 +1100,24 @@ class TempFiles(models.Model):
         return  os.path.basename(self.files.file.name)
 
 
-class Steps(models.Model):
-    name = models.CharField(max_length=191)
-    short_name = models.CharField(max_length=50, null=True, blank=True)
+# class Steps(models.Model):
+#     name = models.CharField(max_length=191)
+#     short_name = models.CharField(max_length=50, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+#
+#     def __str__(self):
+#         return self.name
+
+
+class WorkflowSteps(models.Model):
+    workflow = models.ForeignKey(Workflows,on_delete=models.CASCADE,blank=True,null=True,related_name='workflow')
+    steps = models.ForeignKey(Steps,on_delete=models.CASCADE,blank=True,null=True,related_name='step')
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     def __str__(self):
-        return self.name
-
-
-
+        return self.workflow.name + "-" + self.steps.name
 
 
 

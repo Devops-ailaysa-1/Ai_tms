@@ -20,13 +20,14 @@ from ai_workspace.models import TaskAssign, Task
 from ai_workspace.excel_utils import WriteToExcel_lite,WriteToExcel
 from django.http import JsonResponse,HttpResponse
 import xml.etree.ElementTree as ET
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace.models import Task
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.db.models import Q
 from .serializers import TermsSerializer
-
+from rest_framework.decorators import api_view,permission_classes
 from nltk import word_tokenize
 from ai_workspace.models import Task,Project,TaskAssign
 from ai_workspace_okapi.models import Document
@@ -134,6 +135,7 @@ class GlossaryFileView(viewsets.ViewSet):
 
     def delete(self,request,pk=None):
         file_delete_ids = request.GET.get('file_delete_ids')
+        print("FDI------->",file_delete_ids)
         delete_list = file_delete_ids.split(',')
         job = request.GET.get('job')
         [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list]
@@ -185,6 +187,7 @@ class TermUploadView(viewsets.ModelViewSet):
 
 ########################GlossaryTemplateDownload###################################
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def glossary_template_lite(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Glossary_template_lite.xlsx'
@@ -194,6 +197,7 @@ def glossary_template_lite(request):
 
 
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def glossary_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Glossary_template.xlsx'
@@ -208,7 +212,7 @@ def tbx_write(request,task_id):
     try:
         job = Task.objects.get(id = task_id).job
         sl_code = job.source_language_code
-        tl_code = job.target_language_code
+        tl_code = job.target_language_code if job.target_language else None
         objs = TermsModel.objects.filter(job = job)
         root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
                                 nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
@@ -234,11 +238,14 @@ def tbx_write(request,task_id):
             Termsec         = ET.SubElement(langSec,"termSec")
             Term = ET.SubElement(Termsec,"term")
             Term.text = obj.sl_term.strip()
-            langSec1 = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": tl_code})
-            termSec1 = ET.SubElement(langSec1,"termSec")
-            Term1 = ET.SubElement(termSec1,"term")
-            Term1.text = obj.tl_term.strip() if obj.tl_term else obj.tl_term
-        out_fileName = job.project.project_name+"(" + sl_code + "-" + tl_code + ")"+ ".tbx"
+            if tl_code:
+                langSec1 = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": tl_code})
+                termSec1 = ET.SubElement(langSec1,"termSec")
+                Term1 = ET.SubElement(termSec1,"term")
+                Term1.text = obj.tl_term.strip() if obj.tl_term else obj.tl_term
+        if tl_code:
+            out_fileName = job.project.project_name+"(" + sl_code + "-" + tl_code + ")"+ ".tbx"
+        else:out_fileName= job.project.project_name+"(" + sl_code + ")" +".tbx"
         ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
         fl_path=os.getcwd()+"/"+out_fileName
         filename = out_fileName
@@ -256,12 +263,15 @@ def tbx_write(request,task_id):
 
 
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def glossaries_list(request,project_id):
     project = Project.objects.get(id=project_id)
     target_languages = project.get_target_languages
     queryset = Project.objects.filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
+                .filter(glossary_project__term__isnull=False)\
                 .exclude(id=project.id).distinct()
+
     serializer = GlossaryListSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
 
@@ -296,6 +306,7 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['POST',])
+@permission_classes([IsAuthenticated])
 def glossary_search(request):
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
@@ -358,6 +369,7 @@ class GetTranslation(APIView):
 
 
 @api_view(['POST',])
+@permission_classes([IsAuthenticated])
 def adding_term_to_glossary_from_workspace(request):
     sl_term = request.POST.get('source')
     tl_term = request.POST.get('target',"")
@@ -380,3 +392,21 @@ def adding_term_to_glossary_from_workspace(request):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def clone_source_terms(request):
+    current_job = request.GET.get('job_id')
+    existing_job = request.GET.get('copy_from_job_id')
+    queryset = TermsModel.objects.filter(job = existing_job)
+    with transaction.atomic():
+        for i in queryset:
+            i.pk = None
+            i.job_id = current_job
+            i.tl_term = None
+            i.tl_source = None
+            i.tl_definition = None
+            #i.save()
+        TermsModel.objects.bulk_create(queryset)
+    return JsonResponse({'msg':'SourceTerms Cloned'})
