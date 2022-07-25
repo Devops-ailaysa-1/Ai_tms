@@ -69,7 +69,7 @@ urlpatterns+= [
      path('vendor_renewal_change/',api_views.vendor_renewal_change),
      path('vendor_onboard_complete/',api_views.vendor_onboard_complete),
      path('email_check/',api_views.get_user),
-     path('dj-rest-auth/google/', GoogleLogin.as_view(), name='google_login'),
+     # path('dj-rest-auth/google/', GoogleLogin.as_view(), name='google_login'),
      path('ai-soc/',api_views.ai_social_login,name='ai_soc'),
      path('ai-soc-callback/',api_views.ai_social_callback,name='ai_soc_callback'),
      path('user-details/',api_views.UserDetailView.as_view({'post':'create'}),name='user-details')

@@ -132,7 +132,7 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     'ai_pay',
-    'debug_toolbar',
+    # 'debug_toolbar',
     # 'dbbackup',
     # 'django_q',
 ]
@@ -142,14 +142,14 @@ MANAGEMENT = False
 if MANAGEMENT:
     INSTALLED_APPS += ["ai_management", ]
 
-SITE_ID = 2
+SITE_ID = 1
 
 WSGI_APPLICATION = 'ai_tms.wsgi.application'
 ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
+    # "debug_toolbar.middleware.DebugToolbarMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -563,8 +563,8 @@ sentry_sdk.init(
 
 
 
-if DEBUG:
-    import os  # only if you haven't already imported this
-    import socket  # only if you haven't already imported this
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2"]
+# if DEBUG:
+#     import os  # only if you haven't already imported this
+#     import socket  # only if you haven't already imported this
+#     hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+#     INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2"]
