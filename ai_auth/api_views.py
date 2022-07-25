@@ -1802,7 +1802,7 @@ def get_user(request):
 def ai_social_login(request):
     provider = request.POST.get('provider')
     is_vendor = request.POST.get('is_vendor',None)
-    plan_name =request.POST.get('plan_name',None)
+    product_id =request.POST.get('product_id',None)
     price_id =request.POST.get('price_id',None)
     print('provider>>',provider)
     print('requests>>',request)
@@ -1815,7 +1815,7 @@ def ai_social_login(request):
     #         reverse(provider_id + "_login"), dict(process="login")
     #     )
     state_data=dict()
-    state_data["socialaccount_user_plan"]=plan_name
+    state_data["socialaccount_user_product"]=product_id
     state_data["socialaccount_user_price"]=price_id
     if is_vendor=='True':
         #request.session['socialaccount_user_state']='vendor'
@@ -1866,11 +1866,11 @@ def ai_social_login(request):
     # auth_redirect_url=req.headers['Location']
     return JsonResponse({"msg": "redirect","url":url_new},status=302)
 
-def load_state(state_id):
+def load_state(state_id,key=None):
     user_state=None
     try:
         soc_state=SocStates.objects.get(state=state_id)
-        user_state = json.loads(soc_state.data).get('socialaccount_user_state',None)
+        user_state = json.loads(soc_state.data)
     except SocStates.DoesNotExist:
         logging.error(f"invalid_state : {state_id}")
         return None
@@ -1962,10 +1962,25 @@ def ai_social_callback(request):
         return JsonResponse(resp_data,status=400)
         
     required.append('country')
-    if user_state!=None:
-            if user_state == 'vendor':
+
+    user_type = user_state.get('socialaccount_user_state',None)
+    if user_type!=None:
+            if user_type == 'vendor':
                 required.append('language_pair')
     resp_data.update({"required_details":required})
+
+    user_product = user_state.get('socialaccount_user_product',None)
+    user_price = user_state.get('socialaccount_user_price',None)
+
+    if user_price and user_product :
+        user_email=resp_data.get('user').get('email')
+        try:
+            temp_price=TempPricingPreference.objects.create(product_id=user_product,
+                                            price_id=user_price,email=user_email)
+        except BaseException as e:
+            logging.error(f"unable to create temp pricing data for {user_email} :  {str(e)}")
+
+
 
     # except BaseException as e:
     #     return JsonResponse({"msg": "success"},status=200)
@@ -2004,12 +2019,18 @@ class UserDetailView(viewsets.ViewSet):
         user = request.user
 
         user_state=load_state(state)
-        if user_state == None:
-            return Response({"error": "invalid_state_or _state_not_found"},status=440)
+
         
-        if user_state == 'vendor':
+        if user_state == None:
+            return Response({"error": "invalid_state_or_state_not_found"},status=440)
+        
+
+        user_type = user_state.get('socialaccount_user_state',None)
+        if user_type == 'vendor':
             if not (source_lang and target_lang):
                 return Response({"error": "language_pair_required"},status=400)
+
+        #user_pricing = user_state.get('socialaccount_user_state',None)
 
         
         # serializer = UserRegistrationSerializer(obj,data={**request.POST.dict()},partial=True)
