@@ -1804,6 +1804,7 @@ def ai_social_login(request):
     is_vendor = request.POST.get('is_vendor',None)
     product_id =request.POST.get('product_id',None)
     price_id =request.POST.get('price_id',None)
+    process = request.POST.get('process',None)
     print('provider>>',provider)
     print('requests>>',request)
     base_url="http://127.0.0.1:8089"
@@ -1817,6 +1818,7 @@ def ai_social_login(request):
     state_data=dict()
     state_data["socialaccount_user_product"]=product_id
     state_data["socialaccount_user_price"]=price_id
+    state_data["socialaccount_process"]=process
     if is_vendor=='True':
         #request.session['socialaccount_user_state']='vendor'
         state_data["socialaccount_user_state"]="vendor"
@@ -1960,17 +1962,26 @@ def ai_social_callback(request):
     except ValueError as e:
         logging.info("on social login",str(e))
         return JsonResponse(resp_data,status=400)
-        
-    required.append('country')
+    
 
-    user_type = user_state.get('socialaccount_user_state',None)
-    if user_type!=None:
-            if user_type == 'vendor':
-                required.append('language_pair')
-    resp_data.update({"required_details":required})
+    process = user_state.get('socialaccount_process',None)
+    
+    if process == 'signup':
+        required.append('country')
+
+        user_type = user_state.get('socialaccount_user_state',None)
+        if user_type!=None:
+                if user_type == 'vendor':
+                    required.append('language_pair')
+        
+        
+        resp_data.update({"required_details":required})
+    else:
+        resp_data.update({"required_details":None})
 
     user_product = user_state.get('socialaccount_user_product',None)
     user_price = user_state.get('socialaccount_user_price',None)
+    
 
     if user_price and user_product :
         user_email=resp_data.get('user').get('email')
@@ -2024,6 +2035,8 @@ class UserDetailView(viewsets.ViewSet):
         if user_state == None:
             return Response({"error": "invalid_state_or_state_not_found"},status=440)
         
+        if country==None and request.user.country==None:
+            return Response({"error": "country_required"},status=400)
 
         user_type = user_state.get('socialaccount_user_state',None)
         if user_type == 'vendor':
