@@ -154,8 +154,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
                 if doc.status_code == 200:
                     doc_data = doc.json()
+                    st1 = time.time()
                     doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-
+                    et1 = time.time()
+                    diff1 = et1-st1
+                    print("DDDDDDDDDDDDd-------------------->",diff1)
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
                     if serializer.is_valid(raise_exception=True):
@@ -169,7 +172,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
                 doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path,
                                                                             needed_keys)  # check if there is no content, skip this part
-
+                
                 # For celery task
                 serializer_task = DocumentSerializerV2(data={**doc_data_task, \
                                                              "file": task.file.id, "job": task.job.id, }, )
@@ -223,8 +226,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
                     with open(doc_json_path, "w") as outfile:
                         json.dump(doc_data, outfile)
+                        st = time.time()
                         doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-
+                        et = time.time()
+                        diff = et-st
+                        print("*********************",diff)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 },))
