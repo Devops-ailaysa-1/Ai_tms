@@ -64,7 +64,7 @@ class JobSerializer(serializers.ModelSerializer):
 		model = Job
 		fields = ("id","project", "source_language", "target_language", "source_target_pair",
 				  "source_target_pair_names", "source_language_code", "target_language_code",\
-				  "can_delete")
+				  "can_delete",'assignable',)
 		read_only_fields = ("id","source_target_pair", "source_target_pair_names")
 
 class FileSerializer(serializers.ModelSerializer):
@@ -705,7 +705,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = TaskAssignInfo
 		fields = ('instruction','assignment_id','deadline','mtpe_rate','mtpe_count_unit','total_word_count','currency',\
-				  'assigned_by','task_assign_info',)
+				  'assigned_by','task_assign_info','task_ven_accepted',)
 
 ####################Need to change################################
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
@@ -1150,15 +1150,16 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		return super().to_internal_value(data)
 
 	def update(self,instance,data):
+		task_assign_serializer = TaskAssignSerializer()
+		task_assign_info_serializer = TaskAssignInfoNewSerializer()
 		if 'task_assign' in data:
-			task_assign_serializer = TaskAssignSerializer()
 			task_assign_data = data.get('task_assign')
 			if task_assign_data.get('assign_to'):
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
+				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_accepted':False})
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
-			task_assign_info_serializer = TaskAssignInfoNewSerializer()
 			task_assign_info_data = data.get('task_assign_info')
 			try:task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
 			except:pass

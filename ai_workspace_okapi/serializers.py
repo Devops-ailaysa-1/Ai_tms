@@ -109,7 +109,9 @@ class SegmentSerializerV2(SegmentSerializer):
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
+            SegmentHistory.objects.create(segment_id=instance.id, user = user, target= content, status= validated_data.get('status') )
             return res
+        SegmentHistory.objects.create(segment_id=instance.id, user = user, target= content, status= validated_data.get('status') )
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only

@@ -1806,6 +1806,7 @@ def transcribe_file(request):
     task_id = request.POST.get('task')
     target_language = request.POST.getlist('target_languages')
     queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
+    print("QS--->",queryset)
     if queryset:
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)

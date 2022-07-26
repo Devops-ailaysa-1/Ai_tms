@@ -31,6 +31,7 @@ from rest_framework.decorators import api_view,permission_classes
 from nltk import word_tokenize
 from ai_workspace.models import Task,Project,TaskAssign
 from ai_workspace_okapi.models import Document
+from ai_workspace_okapi.utils import get_translation
 # from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
@@ -212,8 +213,10 @@ def tbx_write(request,task_id):
     try:
         job = Task.objects.get(id = task_id).job
         sl_code = job.source_language_code
-        tl_code = job.target_language_code if job.target_language else None
+        tl_code = job.target_language_code if (job.target_language != job.source_language) and (job.target_language != None) else None
         objs = TermsModel.objects.filter(job = job)
+        if not objs:
+            return JsonResponse({'msg':'There are no terms in glossary'})
         root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
                                 nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
         tbxHeader = ET.Element("tbxHeader")
@@ -347,15 +350,19 @@ class GetTranslation(APIView):
         task_obj = Task.objects.get(id=task_id)
         source = request.POST.get("source", "")
         sl_code = task_obj.job.source_language_code
-        tl_code = task_obj.job.target_language_code
-        mt_engine_id = task_obj.task_info.get(step__name="PostEditing").mt_engine_id
+        if task_obj.job.target_language:
+            tl_code = task_obj.job.target_language_code
+        else:
+            return Response({'msg':'Monolingual dictionary'})
+        mt_engine_id = task_obj.task_info.get(step__name="Post Editing").mt_engine_id
 
         # Finding the debit user
         project = task_obj.job.project
         user = project.team.owner if project.team else project.ai_user
 
-        credit_balance = user.credit_balance.get("total")
-        word_count = GetTranslation.word_count(source)
+        credit_balance = user.credit_balance.get("total_left")
+        print("SOURCE---------->",source)
+        word_count = GetTranslation.word_count(self,source)
 
         if credit_balance > word_count:
 
