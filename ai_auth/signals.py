@@ -248,12 +248,12 @@ def create_postjob_id(sender, instance, *args, **kwargs):
 
 
 @receiver(user_signed_up)
-def populate_user_details(sociallogin, user, **kwargs):
+def populate_user_details(user, sociallogin=None,**kwargs):
 
+    if sociallogin:
+        if sociallogin.account.provider == 'google':
+            user_data = user.socialaccount_set.filter(provider='google')[0].extra_data
+            full_name = user_data['name']
 
-    if sociallogin.account.provider == 'google':
-        user_data = user.socialaccount_set.filter(provider='google')[0].extra_data
-        full_name = user_data['name']
-
-    user.fullname = full_name
-    user.save()
+        user.fullname = full_name
+        user.save()
