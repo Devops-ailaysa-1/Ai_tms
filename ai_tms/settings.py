@@ -142,7 +142,7 @@ MANAGEMENT = False
 if MANAGEMENT:
     INSTALLED_APPS += ["ai_management", ]
 
-SITE_ID = 1
+SITE_ID = os.getenv('SITE_ID')
 
 WSGI_APPLICATION = 'ai_tms.wsgi.application'
 ASGI_APPLICATION = 'ai_tms.asgi.application'
