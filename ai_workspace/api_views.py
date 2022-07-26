@@ -560,7 +560,7 @@ class TbxUploadView(APIView):
 
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
-    filter = django_filters.CharFilter(field_name='glossary_project',method='filter_not_empty')
+    filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
     team = django_filters.CharFilter(field_name='team__name',method='filter_team')#lookup_expr='isnull')
     type = django_filters.NumberFilter(field_name='project_type_id')
     class Meta:
@@ -577,8 +577,17 @@ class ProjectFilter(django_filters.FilterSet):
 
     def filter_not_empty(self,queryset, name, value):
         if value == "glossary":
-            lookup = '__'.join([name, 'isnull'])
-            return queryset.filter(**{lookup: False})
+            queryset = queryset.filter(Q(glossary_project__isnull=False))
+            return queryset
+        if value == "voice":
+            queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
+            return queryset
+        # if value == "glossary":
+        #     lookup = '__'.join([name, 'isnull'])
+        #     return queryset.filter(**{lookup: False})
+        # if value == "voice":
+        #     lookup = '__'.join([name, 'isnull'])
+        #     return queryset.filter(**{lookup: False})
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
