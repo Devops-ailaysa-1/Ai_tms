@@ -17,7 +17,7 @@ from datetime import date
 from ai_auth import models as auth_models
 from django.core.mail import EmailMessage
 from django.utils.translation import ugettext_lazy as _
-
+import logging
 
 
 
@@ -116,13 +116,35 @@ def send_welcome_mail(current_site,user):
     email =user.email
     msg_plain = render_to_string("account/email/welcome.txt", context)
     msg_html = render_to_string("account/email/welcome.html", context)
-    send_mail(
+    sent=send_mail(
         "Welcome to Ailaysa!",
         msg_plain,
         settings.CEO_EMAIL,
         [email],
         html_message=msg_html,
     )
+    if sent ==1:
+        send_admin_new_user_notify(user)
+    else:
+        logging.error(f"welcome mail sending failed for {email}")
+        
+        
+def send_admin_new_user_notify(user):
+    context = {
+    "user":user
+    }
+    email =user.email
+    msg_html = render_to_string("new_user_notify.html", context)
+    sent=send_mail(
+        "New User Added",
+        None,
+       settings.DEFAULT_FROM_EMAIL,
+        ["admin@ailaysa.com"],
+        html_message=msg_html,
+    )
+
+
+   
 
 def send_password_change_mail(current_site,user):
     today = date.today()
