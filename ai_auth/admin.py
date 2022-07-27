@@ -106,7 +106,7 @@ class VAAdmin(admin.ModelAdmin):
 #     #(_('Permissions'), {'fields': (,)}),
 #    # (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
 #     )
-    list_display = ("name", "email", "cv_file","status","country"))
+    list_display = ("name", "email", "cv_file","status","country")
     def country(self,obj):
         try:
             user = AiUser.objects.get(email=obj.email)
