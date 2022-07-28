@@ -2,7 +2,7 @@ from django.db import models
 # from ai_workspace.models import File, Job
 # Create your models here.
 from django.db.models.signals import post_save, pre_save
-from .signals import set_segment_tags_in_source_and_target, create_segment_controller
+from .signals import set_segment_tags_in_source_and_target, create_segment_controller,translate_segments
 import json
 from ai_auth.models import AiUser
 from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines
@@ -116,6 +116,7 @@ class Segment(models.Model):
         return super(Segment, self).save(*args, **kwargs)
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
+post_save.connect(translate_segments,sender=Segment)
 
 class MT_RawTranslation(models.Model):
 

@@ -170,11 +170,11 @@ class TaskManager(models.Manager):
 
 class TaskAssignManager(models.Manager):
 
-    def task_assign_update(self, pk, mt_engine , mt_enable):
-        self.filter(pk__in=pk).update(mt_engine_id = mt_engine, mt_enable = mt_enable)
+    def task_assign_update(self, pk, mt_engine , mt_enable, pre_translate):
+        self.filter(pk__in=pk).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate)
 
     def assign_task(self,project):
-        # print("PRO---->",project.id)
+        #print("PRO---->",project.id)
         if hasattr(project, "ai_user"):
             assign_to = project.created_by
         tasks = project.get_tasks
@@ -182,14 +182,14 @@ class TaskAssignManager(models.Manager):
         mt_enable = project.mt_enable
         pre_translate = project.pre_translate
         steps = project.get_steps
-        # print("Inside Manager---------->",tasks)
+        #print("Inside Manager---------->",pre_translate)
         # print("Inside---->",steps)
         task_assign = [self.get_or_create(task=task,step=step,\
                          defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
                          "mt_enable":mt_enable,"pre_translate":pre_translate})\
                         for task in tasks for step in steps]
         data = [i[0].id for i in task_assign if i[1]==False]
-        self.task_assign_update(data,mt_engine,mt_enable)
+        self.task_assign_update(data,mt_engine,mt_enable,pre_translate)
         # print("tASK ASSIGN --> ", task_assign)
         return task_assign
 

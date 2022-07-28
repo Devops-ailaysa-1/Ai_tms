@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
 from ai_workspace_okapi.models import SegmentHistory
-
+from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 
 import collections
@@ -194,11 +194,17 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
 
     def create(self, validated_data, **kwargs):
+        from .api_views import MT_RawAndTM_View
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
         document = Document.objects.create(**validated_data)
-
+        pr_obj = document.job.project
+        if pr_obj.pre_translate == True:
+            target_get = True
+            mt_engine = pr_obj.mt_engine_id
+            user = pr_obj.ai_user
+        else:target_get = False
         # USING DJANGO SAVE() METHOD
         # for text_unit in text_unit_ser_data:
         #     segs = text_unit.pop("segment_ser", [])
@@ -271,7 +277,15 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
-                target = "" if seg["target"] is None else seg["target"]
+                # target = "" if seg["target"] is None else seg["target"]
+                if target_get == False:target = ""
+                else:
+                    initial_credit = user.credit_balance.get("total_left")
+                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
+                    if initial_credit > consumable_credits:
+                        target =get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
+                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    else:target=""
                 seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
                         timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
@@ -282,6 +296,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
         with closing(connection.cursor()) as cursor:
             cursor.execute(segment_sql, seg_params)
+
 
         return document
 

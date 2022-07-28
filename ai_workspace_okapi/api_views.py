@@ -10,8 +10,8 @@ from rest_framework import views
 import json,jwt,logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
-
 import requests
+from ai_auth.tasks import write_segments_to_db
 from django.contrib.auth import settings
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
@@ -28,7 +28,7 @@ from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
-import hunspell,nltk
+import nltk
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 
@@ -61,6 +61,7 @@ from .utils import SpacesService,text_to_speech
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
 from .utils import download_file, bl_title_format, bl_cell_format,get_res_path
+from os.path import exists
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -172,7 +173,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
                     et1 = time.time()
                     diff1 = et1-st1
-                    print("DDDDDDDDDDDDd-------------------->",diff1)
+                    #print("DDDDDDDDDDDDd-------------------->",diff1)
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
                     if serializer.is_valid(raise_exception=True):
@@ -250,7 +251,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                                 },))
 
                 if serializer.is_valid(raise_exception=True):
-                    print("VAli Data----------",serializer.validated_data)
+                    #print("VAli Data----------",serializer.validated_data)
                     document = serializer.save()
                     task.document = document
                     task.save()
@@ -390,9 +391,9 @@ class MT_RawAndTM_View(views.APIView):
             return None
 
     @staticmethod
-    def get_consumable_credits(doc, segment):
+    def get_consumable_credits(doc, segment,seg):
         # segment_source = Segment.objects.get(id=segment_id).source
-        segment_source = segment.source
+        segment_source = segment.source if segment != None else seg
         seg_data = { "segment_source" : segment_source,
                      "source_language" : doc.source_language_code,
                      "target_language" : doc.target_language_code,
@@ -443,7 +444,7 @@ class MT_RawAndTM_View(views.APIView):
         initial_credit = user.credit_balance.get("total_left")
 
         # getting word count
-        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment)
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment,None)
 
         if initial_credit > consumable_credits:
 
@@ -460,7 +461,7 @@ class MT_RawAndTM_View(views.APIView):
 
             if mt_raw_serlzr.is_valid(raise_exception=True):
                 mt_raw_serlzr.save(segment=segment)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, consumable_credits)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return mt_raw_serlzr.data, 201, "available"
 
         else:
@@ -1230,6 +1231,7 @@ def WiktionaryWorkSpace(request,doc_id):
 ######  USING PY SPELLCHECKER  AND HunSpell######
 @api_view(['GET', 'POST',])
 def spellcheck(request):
+    import hunspell
     tar = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
     doc = Document.objects.get(id=doc_id)
@@ -1432,3 +1434,15 @@ class WordApiView(viewsets.ViewSet):
                 return JsonResponse({'context':context})
         context['synonyms'] = data
         return JsonResponse({'context':context})
+
+# def mt_only(project,request):
+#     token = str(request.auth)
+#     print(token)
+#     if project.pre_translate == True:
+#         headers = {'Authorization':'Bearer '+token}
+#         print(headers)
+#         tasks = project.get_mtpe_tasks
+#         for i in project.get_mtpe_tasks:
+#             url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
+#             res = requests.request("GET", url, headers=headers)
+#     print("doc--->",res.text)

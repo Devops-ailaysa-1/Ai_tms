@@ -32,6 +32,8 @@
                 <p>File : {{i.file}},&emsp;Words : {{i.words}}</p>
                 {% elif i.unit == 'Char' %}
                 <p>File : {{i.file}},&emsp;Characters : {{i.characters}}</p>
+                {% else %}
+                  <p>File : {{i.file}},&emsp;Words : {{i.words}}</p>
                 {% endif %}
                 {% endfor %}
             </div>

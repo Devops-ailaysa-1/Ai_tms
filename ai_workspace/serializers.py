@@ -555,7 +555,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
-
 		# print("Validated data ===> ", validated_data)
 
 		if self.context.get("request")!=None:
@@ -606,6 +605,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			# tasks = Task.objects.create_tasks_of_files_and_jobs(
 			# 	files=files, jobs=jobs, project=project, klass=Task)
 			task_assign = TaskAssign.objects.assign_task(project=project)
+			#tt = mt_only(project,self.context.get('request'))
+			#print(tt)
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
@@ -638,8 +639,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.project_manager_id = validated_data.get('project_manager_id')
 			instance.save()
 
-		if validated_data.get('mt_engine_id'):
-			instance.mt_engine_id = validated_data.get('mt_engine_id')
+		if 'pre_translate' in validated_data:##################Need to check this mt-only edit option#######
+			instance.pre_translate = validated_data.get("pre_translate",\
+									instance.pre_translate)
 			instance.save()
 
 		files_data = validated_data.pop("project_files_set")

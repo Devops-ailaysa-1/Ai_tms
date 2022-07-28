@@ -68,7 +68,7 @@ from google.cloud import speech
 from google.cloud import speech_v1p1beta1 as speech
 import io
 from google.cloud import storage
-
+from ai_auth.tasks import mt_only
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -657,6 +657,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request})
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
+                print("tt======>",serlzr.data.get('id'), str(request.auth))
+                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                #check_dict.apply_async(serlzr.data,)
                 return Response(serlzr.data, status=201)
             return Response(serlzr.errors, status=409)
 
@@ -953,7 +956,7 @@ class UpdateTaskCreditStatus(APIView):
     permission_classes = [IsAuthenticated]
 
     @staticmethod
-    def update_addon_credit(request, user, actual_used_credits=None, credit_diff=None):
+    def update_addon_credit(user, actual_used_credits=None, credit_diff=None):
         add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon"))
         if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
@@ -973,7 +976,7 @@ class UpdateTaskCreditStatus(APIView):
             return False
 
     @staticmethod
-    def update_usercredit(request, user, actual_used_credits):
+    def update_usercredit(user, actual_used_credits):
         # doc = Document.objects.get(id = doc_id)
         # user = doc.doc_credit_debit_user
         print("Credit User",type(user))
@@ -1000,18 +1003,18 @@ class UpdateTaskCreditStatus(APIView):
                     credit_diff = actual_used_credits - user_credit.credits_left
                     user_credit.credits_left = 0
                     user_credit.save()
-                    from_addon = UpdateTaskCreditStatus.update_addon_credit(request, user, credit_diff)
+                    from_addon = UpdateTaskCreditStatus.update_addon_credit( user, credit_diff)
                     return from_addon
             else:
                 raise Exception
 
         except Exception as e:
-            from_addon = UpdateTaskCreditStatus.update_addon_credit(request, user, actual_used_credits)
+            from_addon = UpdateTaskCreditStatus.update_addon_credit(user, actual_used_credits)
             return from_addon
 
     @staticmethod
-    def update_credits(request, user, actual_used_credits):
-        credit_status = UpdateTaskCreditStatus.update_usercredit(request, user, actual_used_credits)
+    def update_credits( user, actual_used_credits):
+        credit_status = UpdateTaskCreditStatus.update_usercredit(user, actual_used_credits)
         # print("CREDIT STATUS----->", credit_status)
 
         if credit_status:
