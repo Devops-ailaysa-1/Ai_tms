@@ -8,6 +8,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		TaskAssignInfo,TaskAssignHistory,TaskDetails,VoiceProjectDetail,TaskTranscriptDetails
 import json
 import pickle,itertools
+from ai_workspace import forms as ws_forms
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 # from ai_marketplace.models import AvailableVendors
 from django.shortcuts import reverse
@@ -624,6 +625,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         return task_assign_info
 
     def update(self,instance,data):
+        print("DATA-------->",data)
         if 'assign_to' in data:
             task = Task.objects.get(id = instance.task_id)
             segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
@@ -631,9 +633,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
             task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=self.context.get('request').user)
             instance.task_ven_status = None
             instance.save()
-		# if 'task_ven_accepted' in data:
-		# 	Purchaseorder.objects.filter(assignment__assignment_id=instance.assignment_id)
-		# 	if data['task_ven_accepted']==True
+        if 'task_ven_status' in data:
+            ws_forms.task_assign_ven_status_mail(instance.task,instance.task_ven_status)
+        if 'mtpe_rate' in data or 'mtpe_count_unit' in data or 'currency' in data:
+            if instance.task_ven_status == 'change_request':
+                instance.task_ven_status = None
+                instance.save()
+            elif instance.task_ven_status == 'task_accepted':
+                raise serializers.ValidationError("Rates Can't be changed..Vendor already accepted rates and started working!!!")
         return super().update(instance, data)
 
     # def to_representation(self, instance):
