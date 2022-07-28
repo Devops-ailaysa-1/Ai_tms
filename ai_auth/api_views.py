@@ -566,7 +566,7 @@ def subscribe_vendor(user):
 
 
 def subscribe(price,customer=None):
-    product_name = Price.objects.get(id = price,djstripe_owner_account=default_djstripe_owner).product.name
+    product_name = Price.objects.get(id = price.id,djstripe_owner_account=default_djstripe_owner).product.name
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -578,7 +578,7 @@ def subscribe(price,customer=None):
     customer=customer.id,
     items=[
     {
-        'price': price,
+        'price': price.id,
     },
     ],
     #default_tax_rates=tax_rate,
