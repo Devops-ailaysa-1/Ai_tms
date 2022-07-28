@@ -47,7 +47,7 @@ from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime,date,timedelta
-from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
+from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate,Account
 import stripe
 from django.conf import settings
 from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
@@ -59,6 +59,8 @@ from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
 
+
+default_djstripe_owner=Account.get_default_account()
 
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
@@ -369,7 +371,7 @@ class TempPricingPreferenceCreateView(viewsets.ViewSet):
 def get_payment_details(request):
     user,user_invoice_details=None,None
     try:
-        user = Customer.objects.get(subscriber_id = request.user.id).id
+        user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         user_invoice_details=Invoice.objects.filter(customer_id = user).all()
         print(user_invoice_details)
     except Exception as error:
@@ -393,7 +395,7 @@ def get_payment_details(request):
 def get_addon_details(request):
     user,add_on_list=None,None
     try:
-        user = Customer.objects.get(subscriber_id = request.user.id).id
+        user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         add_on_list = PaymentIntent.objects.filter(Q(customer_id=user)&Q(metadata__contains={"type":"Addon"})).all()
         print(add_on_list)
     except Exception as error:
@@ -405,7 +407,7 @@ def get_addon_details(request):
                 add_on=Charge.objects.get(Q(payment_intent_id=i.id)&Q(status='succeeded'))
             except:
                 add_on = None
-            name = Price.objects.get(id=i.metadata["price"]).product.name
+            name = Price.objects.get(id=i.metadata["price"],djstripe_owner_account=default_djstripe_owner).product.name
             output ={"Name":name,"Quantity":i.metadata["quantity"],"Amount": (i.amount)/100,"Currency":i.currency,"Date":i.created.date(),"Receipt":add_on.receipt_url if add_on else None,"Status":"succeeded" if add_on else "incomplete"}
             out.append(output)
     else:
@@ -413,7 +415,7 @@ def get_addon_details(request):
     return JsonResponse({"out":out},safe=False)
 
 def create_checkout_session(user,price,customer=None,trial=False):
-    product_name = Price.objects.get(id = price).product.name
+    product_name = Price.objects.get(id = price,djstripe_owner_account=default_djstripe_owner).product.name
     domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -498,7 +500,8 @@ def find_taxrate(user,trial=False):
 
 
 def subscribe_trial(price,customer=None):
-    product_name = Price.objects.get(id = price).product.name
+    product_name = Price.objects.get(id = price.id,djstripe_owner_account=default_djstripe_owner).product.name
+    print("product_name>>",product_name)
     domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -511,7 +514,7 @@ def subscribe_trial(price,customer=None):
     customer=customer.id,
     items=[
     {
-        'price': price,
+        'price': price.id,
     },
     ],
     default_tax_rates=tax_rate,
@@ -524,7 +527,7 @@ def subscribe_trial(price,customer=None):
 
 def subscribe_vendor(user):
     try:
-        cust = Customer.objects.get(subscriber=user)
+        cust = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
         customer = Customer.get_or_create(subscriber=user)
         cust=customer[0]
@@ -535,7 +538,7 @@ def subscribe_vendor(user):
             currency ='usd'
     else:
         currency =cust.currency
-    price = Price.objects.get(product__name="Pro - V",currency=currency)
+    price = Price.objects.get(product__name="Pro - V",currency=currency,djstripe_owner_account=default_djstripe_owner)
     plan = get_plan_name(user)
     if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
         sub=subscribe(price=price,customer=cust)
@@ -543,7 +546,7 @@ def subscribe_vendor(user):
 
 
 def subscribe(price,customer=None):
-    product_name = Price.objects.get(id = price).product.name
+    product_name = Price.objects.get(id = price,djstripe_owner_account=default_djstripe_owner).product.name
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -634,7 +637,7 @@ def is_active_subscription(user):
     #(F,T)-->(No active subscription,Customer exist in stripe)
     #(T,T)-->(Has active subscriptionor trial subscription,Customer exist in stripe)
     try:
-        customer = Customer.objects.get(subscriber=user)
+        customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
         return False,False
     #subscription = Subscription.objects.filter(customer=customer).last()
@@ -729,11 +732,11 @@ def buy_addon(request):
         return Response({'msg':'User is not active'}, status=423)
     quantity=request.POST.get('quantity',1)
     try:
-        price = Price.objects.get(id=request.POST.get('price'))
+        price = Price.objects.get(id=request.POST.get('price'),djstripe_owner_account=default_djstripe_owner)
     except (KeyError,Price.DoesNotExist) :
          return Response({'msg':'Invalid price'}, status=406)
 
-    cust=Customer.objects.get(subscriber=user)
+    cust=Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     try:
         addr=BillingAddress.objects.get(user=user)
     except BillingAddress.DoesNotExist:
@@ -787,7 +790,7 @@ def subscriptin_modify_default_tax_rate(customer,addr=None):
 def customer_portal_session(request):
     user = request.user
     try:
-        customer = Customer.objects.get(subscriber=user)
+        customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
         #addr = BillingAddress.objects.get(user=request.user)
         session=generate_portal_session(customer)
         if not customer.subscriptions.exists():
@@ -807,7 +810,7 @@ def customer_portal_session(request):
 def check_subscription(request):
     is_active = is_active_subscription(request.user)
     if is_active == (False,True):
-        customer = Customer.objects.get(subscriber=request.user)
+        customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
         subscriptions = Subscription.objects.filter(customer=customer).last()
         if subscriptions is not None:
             trial = 'true' if subscriptions.metadata.get('type') == 'subscription_trial' else 'false'
@@ -817,7 +820,7 @@ def check_subscription(request):
         else:
             return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None,'trial':None,'canceled_at':None}, status=200)
     if is_active == (True,True):
-        customer = Customer.objects.get(subscriber=request.user)
+        customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
         #subscription = Subscription.objects.filter(customer=customer).last()
         subscription=customer.subscriptions.filter(Q(status='trialing')|Q(status='active')).last()
         trial = 'true' if subscription.metadata.get('type') == 'subscription_trial' else 'false'
@@ -836,7 +839,7 @@ def buy_subscription(request):
     if is_deactivated(user):
         return Response({'msg':'User is not active'}, status=423)
     try:
-        price = Price.objects.get(id=request.POST.get('price'))
+        price = Price.objects.get(id=request.POST.get('price'),djstripe_owner_account=default_djstripe_owner)
         addr = BillingAddress.objects.get(user=request.user)
     except (KeyError,Price.DoesNotExist) :
         return Response({'msg':'Invalid price'}, status=406)
@@ -844,7 +847,7 @@ def buy_subscription(request):
         return Response({'Error':'Billing Address Not Found'}, status=412)
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
-        customer= Customer.objects.get(subscriber=user)
+        customer= Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
         session=create_checkout_session(user=user,price=price,customer=customer)
         return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
     else:
@@ -856,7 +859,7 @@ def buy_subscription(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_currency(request):
-    curr=Customer.objects.get(subscriber=request.user).currency
+    curr=Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner).currency
     return Response({'currency':curr})
 
 class UserSubscriptionCreateView(viewsets.ViewSet):
@@ -870,7 +873,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
         is_active = is_active_subscription(user=request.user)
         if is_active[0] == False:
             try:
-                customer = Customer.objects.get(subscriber=request.user)
+                customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
             except Customer.DoesNotExist:
                 cust = Customer.get_or_create(subscriber=user)
                 customer=cust[0]
@@ -912,6 +915,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
 
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
+                print('price>>',price)
                 response=subscribe_trial(price,customer)
                 print(response)
                 #customer.subscribe(price=price)
@@ -997,7 +1001,7 @@ def user_taxid_delete(taxid):
     return response
 
 def cancel_subscription(user):
-    cust=Customer.objects.get(subscriber=user)
+    cust=Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     subs = cust.subscriptions.all()
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
