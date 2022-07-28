@@ -474,8 +474,17 @@ def po_request_payment(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def po_pdf_get(request):
-    poid = request.GET.get('poid')
-    po =PurchaseOrder.objects.get(poid=poid)
+    poid = request.GET.get('poid',None)
+    assignmentid=request.GET.get('assignment_id',None)
+    if poid:
+        po =PurchaseOrder.objects.get(poid=poid)
+    elif assignmentid:
+        try:
+            po =PurchaseOrder.objects.get(assignment__assignment_id=assignmentid)
+        except PurchaseOrder.MultipleObjectsReturned as e:
+            logging.error(f"for assignmentid: {assignmentid} {str(e)}")
+    else:
+        return JsonResponse({'error':'poid_or_assignmenid_field_is_required'},status=400)
     if not po.po_file:
         po_pdf = po_generate_pdf(po)
     return JsonResponse({'url':po.get_pdf},safe=False,status=200)
