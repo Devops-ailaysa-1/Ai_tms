@@ -435,7 +435,7 @@ def get_addon_details(request):
     return JsonResponse({"out":out},safe=False)
 
 def create_checkout_session(user,price,customer=None,trial=False):
-    product_name = Price.objects.get(id = price,djstripe_owner_account=default_djstripe_owner).product.name
+    product_name = Price.objects.get(id = price.id,djstripe_owner_account=default_djstripe_owner).product.name
     domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -485,7 +485,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
         mode='subscription',
         line_items=[
             {
-                'price': price,
+                'price': price.id,
                 'quantity': 1,
                 'tax_rates':tax_rate,
             }
