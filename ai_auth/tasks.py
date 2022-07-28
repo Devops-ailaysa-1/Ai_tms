@@ -272,5 +272,5 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
     with closing(connection.cursor()) as cursor:
         cursor.execute(segment_sql, seg_params)
-        
+
     logger.info("segments wrriting completed")
