@@ -729,17 +729,11 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskAssignInfo
-<<<<<<< HEAD
-        fields = ('id','instruction','instruction_files','step','task_ven_accepted',\
+        fields = ('id','instruction','instruction_files','step','task_ven_status',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable','pre_translate','task_assign_detail',)
-=======
-        fields = ('id','instruction','instruction_file','filename','task_ven_status',\
-                   'job','project','assigned_by','assignment_id','deadline','created_at',\
-                   'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency',\
-                    'total_word_count','assign_to_details','assigned_by_details','payment_type')
->>>>>>> origin/production-marketplace
+
         extra_kwargs = {
             'assigned_by':{'write_only':True},
             # 'assign_to':{'write_only':True}
