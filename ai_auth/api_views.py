@@ -1,8 +1,11 @@
 from logging import INFO
+import logging
 import re , requests
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
+from ai_auth.soc_auth import GoogleLogin
 from allauth.account.models import EmailAddress
+from dj_rest_auth.registration.serializers import SocialLoginSerializer
 from djstripe.models.billing import Plan, TaxId
 from rest_framework import response
 from django.urls import reverse
@@ -14,7 +17,7 @@ from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,Team
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
-                                TempPricingPreferenceSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
+                                TempPricingPreferenceSerializer, UserRegistrationSerializer, UserTaxInfoSerializer,AiUserProfileSerializer,
                                 CarrierSupportSerializer,VendorOnboardingSerializer,GeneralSupportSerializer,
                                 TeamSerializer,InternalMemberSerializer,HiredEditorSerializer)
 from rest_framework.response import Response
@@ -28,7 +31,7 @@ from rest_framework import generics , viewsets
 from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
-                            Team,InternalMember,HiredEditors,VendorOnboarding)
+                            Team,InternalMember,HiredEditors,VendorOnboarding,SocStates)
 from django.http import Http404,JsonResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_text
@@ -47,10 +50,10 @@ from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime,date,timedelta
-from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate
+from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate,Account
 import stripe
 from django.conf import settings
-from ai_staff.models import IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
+from ai_staff.models import Countries, CurrencyBasedOnCountry, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
 from django.db.models import Q
 from  django.utils import timezone
 import time,pytz,six
@@ -58,7 +61,26 @@ from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
 from ai_auth.utils import get_plan_name
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
+from ai_vendor.models import VendorsInfo,VendorLanguagePair
+from django.db import transaction
 
+#for soc
+from django.test.client import RequestFactory
+from django.test import Client
+from allauth.socialaccount.providers.google.views import ( GoogleOAuth2Adapter,)
+from allauth.socialaccount.providers.oauth2.views import (
+    OAuth2Adapter,
+    OAuth2CallbackView,
+    OAuth2LoginView,
+)
+from django.contrib.sessions.models import Session
+from django.http import HttpResponseRedirect
+from urllib.parse import parse_qs, urlencode,  urlsplit
+from django.shortcuts import redirect
+import json
+
+
+default_djstripe_owner=Account.get_default_account()
 
 
 def striphtml(data):
@@ -373,7 +395,7 @@ class TempPricingPreferenceCreateView(viewsets.ViewSet):
 def get_payment_details(request):
     user,user_invoice_details=None,None
     try:
-        user = Customer.objects.get(subscriber_id = request.user.id).id
+        user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         user_invoice_details=Invoice.objects.filter(customer_id = user).all()
         print(user_invoice_details)
     except Exception as error:
@@ -397,7 +419,7 @@ def get_payment_details(request):
 def get_addon_details(request):
     user,add_on_list=None,None
     try:
-        user = Customer.objects.get(subscriber_id = request.user.id).id
+        user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         add_on_list = PaymentIntent.objects.filter(Q(customer_id=user)&Q(metadata__contains={"type":"Addon"})).all()
         print(add_on_list)
     except Exception as error:
@@ -409,7 +431,7 @@ def get_addon_details(request):
                 add_on=Charge.objects.get(Q(payment_intent_id=i.id)&Q(status='succeeded'))
             except:
                 add_on = None
-            name = Price.objects.get(id=i.metadata["price"]).product.name
+            name = Price.objects.get(id=i.metadata["price"],djstripe_owner_account=default_djstripe_owner).product.name
             output ={"Name":name,"Quantity":i.metadata["quantity"],"Amount": (i.amount)/100,"Currency":i.currency,"Date":i.created.date(),"Receipt":add_on.receipt_url if add_on else None,"Status":"succeeded" if add_on else "incomplete"}
             out.append(output)
     else:
@@ -417,7 +439,7 @@ def get_addon_details(request):
     return JsonResponse({"out":out},safe=False)
 
 def create_checkout_session(user,price,customer=None,trial=False):
-    product_name = Price.objects.get(id = price).product.name
+    product_name = Price.objects.get(id = price.id,djstripe_owner_account=default_djstripe_owner).product.name
     domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -467,7 +489,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
         mode='subscription',
         line_items=[
             {
-                'price': price,
+                'price': price.id,
                 'quantity': 1,
                 'tax_rates':tax_rate,
             }
@@ -502,7 +524,8 @@ def find_taxrate(user,trial=False):
 
 
 def subscribe_trial(price,customer=None):
-    product_name = Price.objects.get(id = price).product.name
+    product_name = Price.objects.get(id = price.id,djstripe_owner_account=default_djstripe_owner).product.name
+    print("product_name>>",product_name)
     domain_url = settings.USERPORTAL_URL
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -515,7 +538,7 @@ def subscribe_trial(price,customer=None):
     customer=customer.id,
     items=[
     {
-        'price': price,
+        'price': price.id,
     },
     ],
     default_tax_rates=tax_rate,
@@ -528,7 +551,7 @@ def subscribe_trial(price,customer=None):
 
 def subscribe_vendor(user):
     try:
-        cust = Customer.objects.get(subscriber=user)
+        cust = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
         customer = Customer.get_or_create(subscriber=user)
         cust=customer[0]
@@ -539,7 +562,7 @@ def subscribe_vendor(user):
             currency ='usd'
     else:
         currency =cust.currency
-    price = Price.objects.get(product__name="Pro - V",currency=currency)
+    price = Price.objects.get(product__name="Pro - V",currency=currency,djstripe_owner_account=default_djstripe_owner)
     plan = get_plan_name(user)
     if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
         sub=subscribe(price=price,customer=cust)
@@ -547,7 +570,7 @@ def subscribe_vendor(user):
 
 
 def subscribe(price,customer=None):
-    product_name = Price.objects.get(id = price).product.name
+    product_name = Price.objects.get(id = price.id,djstripe_owner_account=default_djstripe_owner).product.name
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -559,7 +582,7 @@ def subscribe(price,customer=None):
     customer=customer.id,
     items=[
     {
-        'price': price,
+        'price': price.id,
     },
     ],
     #default_tax_rates=tax_rate,
@@ -638,7 +661,7 @@ def is_active_subscription(user):
     #(F,T)-->(No active subscription,Customer exist in stripe)
     #(T,T)-->(Has active subscriptionor trial subscription,Customer exist in stripe)
     try:
-        customer = Customer.objects.get(subscriber=user)
+        customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
         return False,False
     #subscription = Subscription.objects.filter(customer=customer).last()
@@ -733,11 +756,11 @@ def buy_addon(request):
         return Response({'msg':'User is not active'}, status=423)
     quantity=request.POST.get('quantity',1)
     try:
-        price = Price.objects.get(id=request.POST.get('price'))
+        price = Price.objects.get(id=request.POST.get('price'),djstripe_owner_account=default_djstripe_owner)
     except (KeyError,Price.DoesNotExist) :
          return Response({'msg':'Invalid price'}, status=406)
 
-    cust=Customer.objects.get(subscriber=user)
+    cust=Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     try:
         addr=BillingAddress.objects.get(user=user)
     except BillingAddress.DoesNotExist:
@@ -791,7 +814,7 @@ def subscriptin_modify_default_tax_rate(customer,addr=None):
 def customer_portal_session(request):
     user = request.user
     try:
-        customer = Customer.objects.get(subscriber=user)
+        customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
         #addr = BillingAddress.objects.get(user=request.user)
         session=generate_portal_session(customer)
         if not customer.subscriptions.exists():
@@ -811,7 +834,7 @@ def customer_portal_session(request):
 def check_subscription(request):
     is_active = is_active_subscription(request.user)
     if is_active == (False,True):
-        customer = Customer.objects.get(subscriber=request.user)
+        customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
         subscriptions = Subscription.objects.filter(customer=customer).last()
         if subscriptions is not None:
             trial = 'true' if subscriptions.metadata.get('type') == 'subscription_trial' else 'false'
@@ -821,7 +844,7 @@ def check_subscription(request):
         else:
             return Response({'subscription_name':None,'sub_status':None,'sub_price_id':None,'interval':None,'sub_period_end':None,'sub_currency':None,'sub_amount':None,'trial':None,'canceled_at':None}, status=200)
     if is_active == (True,True):
-        customer = Customer.objects.get(subscriber=request.user)
+        customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
         #subscription = Subscription.objects.filter(customer=customer).last()
         subscription=customer.subscriptions.filter(Q(status='trialing')|Q(status='active')).last()
         trial = 'true' if subscription.metadata.get('type') == 'subscription_trial' else 'false'
@@ -840,7 +863,7 @@ def buy_subscription(request):
     if is_deactivated(user):
         return Response({'msg':'User is not active'}, status=423)
     try:
-        price = Price.objects.get(id=request.POST.get('price'))
+        price = Price.objects.get(id=request.POST.get('price'),djstripe_owner_account=default_djstripe_owner)
         addr = BillingAddress.objects.get(user=request.user)
     except (KeyError,Price.DoesNotExist) :
         return Response({'msg':'Invalid price'}, status=406)
@@ -848,7 +871,7 @@ def buy_subscription(request):
         return Response({'Error':'Billing Address Not Found'}, status=412)
     is_active = is_active_subscription(user)
     if not is_active == (False,False):
-        customer= Customer.objects.get(subscriber=user)
+        customer= Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
         session=create_checkout_session(user=user,price=price,customer=customer)
         return Response({'msg':'Payment Session Generated ','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
     else:
@@ -860,7 +883,7 @@ def buy_subscription(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_currency(request):
-    curr=Customer.objects.get(subscriber=request.user).currency
+    curr=Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner).currency
     return Response({'currency':curr})
 
 class UserSubscriptionCreateView(viewsets.ViewSet):
@@ -874,7 +897,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
         is_active = is_active_subscription(user=request.user)
         if is_active[0] == False:
             try:
-                customer = Customer.objects.get(subscriber=request.user)
+                customer = Customer.objects.get(subscriber=request.user,djstripe_owner_account=default_djstripe_owner)
             except Customer.DoesNotExist:
                 cust = Customer.get_or_create(subscriber=user)
                 customer=cust[0]
@@ -916,6 +939,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
 
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
+                print('price>>',price)
                 response=subscribe_trial(price,customer)
                 print(response)
                 #customer.subscribe(price=price)
@@ -1001,7 +1025,7 @@ def user_taxid_delete(taxid):
     return response
 
 def cancel_subscription(user):
-    cust=Customer.objects.get(subscriber=user)
+    cust=Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     subs = cust.subscriptions.all()
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
@@ -1236,12 +1260,10 @@ class VendorOnboardingCreateView(viewsets.ViewSet):
 
     # def update(self, request, pk):
     #     cv_file=request.FILES.get('cv_file')
-    #     queryset = VendorOnboarding.objects.get(id=pk)
-    #     serializer = VendorOnboardingSerializer(queryset,data={'cv_file':cv_file},partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #     try:
+    #         queryset = VendorOnboarding.objects.get(id=pk)
+    #     except VendorOnboarding.DoesNotExist:
+    #         return Response(status=204)
     #     rejected_count = 1 if queryset.rejected_count==None else queryset.rejected_count+1
     #     serializer = VendorOnboardingSerializer(queryset,data={**request.POST.dict(),'cv_file':cv_file,'rejected_count':rejected_count,'status':1},partial=True)
     #     if serializer.is_valid():
@@ -1691,36 +1713,30 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-def vendor_onboard_check(email,user):
-    from ai_vendor.models import VendorsInfo,VendorOnboardingInfo
+def vendor_onboard_check(email):
     try:
         obj = VendorOnboarding.objects.get(email = email)
-        current = "verified" if obj.get_status_display() == "Accepted" else "unverified"
-        return JsonResponse({'id':obj.id,'email':email,'status':current})
-    except:
-        try:
-            obj1 = VendorOnboardingInfo.objects.get(user = user)
-            if obj1.onboarded_as_vendor == True:
-                return JsonResponse({'msg':'onboarded_as_vendor and profile incomplete'})
-        except:
-            return Response(status=204)
+        print(obj)
+        return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
+    except VendorOnboarding.DoesNotExist:
+        return Response(status=204)
 
 
 @api_view(['POST',])
 def vendor_form_filling_status(request):
     email = request.POST.get('email')
+    print("Email---->",email)
     try:
         user = AiUser.objects.get(email=email)
         if user.is_vendor == True:
-            res = vendor_onboard_check(email,user)
-            return res
+            return JsonResponse({"msg":"Already a vendor"})
         elif user.email in users_list:
             res = vendor_onboard_check(email,user)
             return res
         else:
             pass
     except:
-        res = vendor_onboard_check(email,None)
+        res = vendor_onboard_check(email)
         return res
 
 class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
@@ -1818,3 +1834,287 @@ def get_user(request):
         return Response({'user_exist':True})
     except:
         return Response({'user_exist':False})
+
+@api_view(['POST'])
+def ai_social_login(request):
+    provider = request.POST.get('provider')
+    is_vendor = request.POST.get('is_vendor',None)
+    product_id =request.POST.get('product_id',None)
+    price_id =request.POST.get('price_id',None)
+    process = request.POST.get('process',None)
+    print('provider>>',provider)
+    print('requests>>',request)
+    base_url="http://127.0.0.1:8089"
+    provider_id="google"
+    # print(reverse(provider_id +'_login'))
+    # url=base_url+reverse(provider_id +'_login')
+    
+    # req = RequestFactory().get(
+    #         reverse(provider_id + "_login"), dict(process="login")
+    #     )
+    state_data=dict()
+    state_data["socialaccount_user_product"]=product_id
+    state_data["socialaccount_user_price"]=price_id
+    state_data["socialaccount_process"]=process
+    if is_vendor=='True':
+        #request.session['socialaccount_user_state']='vendor'
+        state_data["socialaccount_user_state"]="vendor"
+
+    else:
+        #request.session['socialaccount_user_state']='customer'
+        state_data["socialaccount_user_state"]="customer"
+
+    adapter = GoogleOAuth2Adapter(request)
+    
+    print("adapter",adapter)
+    print("request",request)
+    provider=adapter.get_provider()
+    oauth2_login = OAuth2LoginView.adapter_view(GoogleOAuth2Adapter)
+    
+    # req = requests.get(url,params={'process':'login'}, headers={'Connection':'close'},allow_redirects=False)
+    rs=oauth2_login(request)
+    print(rs.url)
+    print(rs)
+    url =rs.url
+    parsed = urlsplit(url)
+    query_dict = parse_qs(parsed.query)
+    query_dict['redirect_uri'][0] = settings.GOOGLE_CALLBACK_URL
+    state = query_dict['state'][0]
+    query_new = urlencode(query_dict, doseq=True)
+    parsed=parsed._replace(query=query_new)
+    url_new = (parsed.geturl())
+
+    soc_state = SocStates.objects.create(state=state,data=json.dumps(state_data))
+    if soc_state == None:
+        logging.warning(f"state not created {state}")
+
+    # VendorOnboardingInfo.objects.get_or_create(user=user,onboarded_as_vendor=True)
+    # req.close()
+
+    # with requests.get(url, stream=True) as r:
+    #     print(r.content)
+
+
+    #ses = requests.Session()
+    # ses.config['keep_alive'] = False
+
+    #res = ses.get("http://127.0.0.1:8089/accounts/google/login/",params={'process':'login'},allow_redirects=False)
+    #r = ses.get("http://127.0.0.1:8089/accounts/google/login/",params={'process':'login'},allow_redirects=False)
+    # client = requests.session()
+
+    # auth_redirect_url=req.headers['Location']
+    return JsonResponse({"msg": "redirect","url":url_new},status=302)
+
+def load_state(state_id,key=None):
+    user_state=None
+    try:
+        soc_state=SocStates.objects.get(state=state_id)
+        user_state = json.loads(soc_state.data)
+    except SocStates.DoesNotExist:
+        logging.error(f"invalid_state : {state_id}")
+        return None
+    except AttributeError:
+        logging.error(f"key error user_state_not_found : {state_id}")
+        return None
+    return user_state
+
+@api_view(['POST'])   
+def ai_social_callback(request):
+    state = request.POST.get('state')
+    # try:
+    #     ses_id= request.COOKIES.get('sessionid')
+    #     session=Session.objects.get(session_key=ses_id)
+    # except BaseException as e:
+    #     logging.warning("session not found ",str(e))
+    #     return JsonResponse({"msg": "session expired or not found"},status=440)
+    # #session=Session.objects.get(session_key="9helhig4y4izzshs93wtzj7ow9yjydi5")
+
+    # print(session.get_decoded())
+    # print(session.get_decoded().get('socialaccount_user_state',None))
+    user_state=load_state(state)
+    if user_state == None:
+        return JsonResponse({"error": "invalid_state"},status=440)
+ 
+    # request.session['socialaccount_state']=session.get_decoded().get('socialaccount_state')
+    # # print("session print",request.session['socialaccount_state'])
+    # print("code an data",request.GET.dict())
+    # adapter = GoogleOAuth2Adapter(request)
+    # oauth2_callback = OAuth2CallbackView.adapter_view(GoogleOAuth2Adapter)
+
+    # rs = oauth2_callback(request)
+
+    # print(rs)
+    # print("content",rs.content)
+    
+    # code = request.GET.get('code')
+    # data = {"code":code}
+    # print("code",code)
+    # request.method = 'POST'
+    #request._request.data['code']=code
+    print("request data",request.data)
+    print("request in",request._request)
+    print("request post dict",request._request.POST.dict())
+
+    # data = request.POST.copy()
+
+    # # remember old state
+    # _mutable = data._mutable
+
+    # # set to mutable
+    # data._mutable = True
+
+    # # сhange the values you want
+    # data.update({'code':code})
+
+    # # set mutable flag back
+    # data._mutable = _mutable
+
+    # request.POST = data
+
+    #request._request.method = 'POST'
+
+    # mutable = request.POST._mutable
+    # request.POST._mutable = True
+    # request.POST['code'] = code
+    # request.POST._mutable = mutable
+
+
+    #                    request._request.POST['code']=code
+    # print("request post dict",request._request.POST.dict())
+    # print("request data",request.data)
+    # #url = "http://127.0.0.1:8089/auth/dj-rest-auth/google/"
+    # #res= requests.post(url,data)
+    # #print(res)
+    # try:
+    try:
+        response = GoogleLogin.as_view()(request=request._request).data
+    except BaseException as e:
+        logging.error("on social login",str(e))
+        return JsonResponse({"error":str(e)},status=400)
+
+    required=[]
+    try:
+        response.get('access_token')
+        resp_data =response
+    except ValueError as e:
+        logging.info("on social login",str(e))
+        return JsonResponse(resp_data,status=400)
+    
+
+    process = user_state.get('socialaccount_process',None)
+    
+    if process == 'signup':
+        required.append('country')
+
+        user_type = user_state.get('socialaccount_user_state',None)
+        if user_type!=None:
+                if user_type == 'vendor':
+                    required.append('language_pair')
+        
+        
+        resp_data.update({"required_details":required})
+    else:
+        resp_data.update({"required_details":None})
+
+    user_product = user_state.get('socialaccount_user_product',None)
+    user_price = user_state.get('socialaccount_user_price',None)
+    
+
+    if user_price and user_product :
+        user_email=resp_data.get('user').get('email')
+        try:
+            temp_price=TempPricingPreference.objects.create(product_id=user_product,
+                                            price_id=user_price,email=user_email)
+        except BaseException as e:
+            logging.error(f"unable to create temp pricing data for {user_email} :  {str(e)}")
+
+
+
+    # except BaseException as e:
+    #     return JsonResponse({"msg": "success"},status=200)
+        
+    #ss=SocialLoginSerializer(data={"code":code},context={"request":request,"view":GoogleLogin.as_view()})
+    #response = GoogleLogin.post(request=request._request)
+    #response = reverse("google_login",request)
+
+
+    # r = requests.post(
+    #         request.build_absolute_uri(reverse('google_login')), 
+    #         data = {'code':code}
+    # )
+    # print(r.content)
+     
+
+    return JsonResponse(resp_data,status=200)
+    #return HttpResponseRedirect(reverse('google_login'))
+
+
+class UserDetailView(viewsets.ViewSet):
+    permission_classes=[IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return AiUser.objects.get(user_id=pk)
+        except AiUser.DoesNotExist:
+            raise Http404
+
+    def create(self,request):
+        country = request.POST.get('country',None)
+        source_lang = request.POST.get('source_language',None)
+        target_lang = request.POST.get('target_language',None)
+        cv_file = request.FILES.get('cv_file',None)
+        state = request.POST.get('state',None)
+        user = request.user
+
+        user_state=load_state(state)
+
+        
+        if user_state == None:
+            return Response({"error": "invalid_state_or_state_not_found"},status=440)
+        
+        if country==None and request.user.country==None:
+            return Response({"error": "country_required"},status=400)
+
+        user_type = user_state.get('socialaccount_user_state',None)
+        if user_type == 'vendor':
+            if not (source_lang and target_lang):
+                return Response({"error": "language_pair_required"},status=400)
+
+        #user_pricing = user_state.get('socialaccount_user_state',None)
+
+        
+        # serializer = UserRegistrationSerializer(obj,data={**request.POST.dict()},partial=True)
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data,status=200)
+        # else:
+        #     return Response(serializer.errors,status=400)
+        try:
+            with transaction.atomic():
+                user_obj = AiUser.objects.get(id=user.id)
+                if country:                   
+                    if user_obj.country==None:
+                        user_obj.country_id= country
+                        queryset = CurrencyBasedOnCountry.objects.filter(country_id =user_obj.country_id)
+                        if queryset:
+                            user_obj.currency_based_on_country_id = queryset.first().currency_id                
+                        user_obj.save()
+                    else:
+                        logging.error(f"user_country_already_updated : {user_obj.uid}")
+                        raise ValueError
+                
+                if source_lang and target_lang:
+                    VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang)
+                    user_obj.is_vendor=True
+                    user_obj.save()
+
+                if cv_file:
+                    VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
+                    VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+
+            return Response({'msg':'details_updated_successsfully'},status=200)
+        except BaseException as e:
+            return Response({'error':f'updation failed {str(e)}'},status=400)
+
+    
+

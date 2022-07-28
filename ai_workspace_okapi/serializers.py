@@ -18,6 +18,9 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 
 import collections
+import csv
+import io,time
+
 client = translate.Client()
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -289,13 +292,81 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
                         timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
-
+        st1 = time.time()
         segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
                        coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
                            ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
 
         with closing(connection.cursor()) as cursor:
             cursor.execute(segment_sql, seg_params)
+        # et1 = time.time()
+        # el_time = et1 - st1
+        # print('Command Execution time:', el_time, 'seconds')
+        # et = time.time()
+        # elapsed_time = et - st
+        # print('Execution time:', elapsed_time, 'seconds')
+
+        #Using PostgreSQL COPY FROM
+        # st = time.time()
+        # text_unit_ser_data = validated_data.pop("text_unit_ser", [])
+        # text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
+        #
+        # document = Document.objects.create(**validated_data)
+        #
+        # text_unit_stream = io.StringIO()
+        # text_unit_writer = csv.writer(text_unit_stream, delimiter=',')
+        #
+        # for text_unit in text_unit_ser_data:
+        #     text_unit_writer.writerow([text_unit["okapi_ref_translation_unit_id"], document.id])
+        #
+        # text_unit_stream.seek(0)
+        #
+        # with closing(connection.cursor()) as cursor:
+        #     cursor.copy_from(
+        #         file = text_unit_stream,
+        #         table = 'ai_workspace_okapi_textunit',
+        #         sep = ',',
+        #         columns = ('okapi_ref_translation_unit_id', 'document_id'),
+        #     )
+        # st2 = time.time()
+        # segment_stream = io.StringIO()
+        # segment_writer = csv.writer(segment_stream, delimiter=',')
+        #
+        # for text_unit in text_unit_ser_data:
+        #     text_unit_id = TextUnit.objects.get(
+        #         Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
+        #         Q(document_id=document.id)).id
+        #     segs = text_unit.pop("segment_ser", [])
+        #
+        #
+        #     for seg in segs:
+        #         tagged_source, _, target_tags = (
+        #             set_ref_tags_to_runs(seg["coded_source"],
+        #                                  get_runs_and_ref_ids(seg["coded_brace_pattern"],
+        #                                                       json.loads(seg["coded_ids_sequence"])))
+        #         )
+        #         target = "" if seg["target"] is None else seg["target"]
+        #
+        #         segment_writer.writerow([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+        #                            str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
+        #                            str(text_unit["okapi_ref_translation_unit_id"]), \
+        #                            timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
+        #
+        # segment_stream.seek(0)
+        # et2 = time.time()
+        # diff = et2 - st2
+        # print("CSV Writer Execution time",diff,'seconds')
+        # st1 = time.time()
+        # with closing(connection.cursor()) as cursor:
+        #     cursor.copy_expert("""COPY ai_workspace_okapi_segment(source, target, temp_target, coded_source, tagged_source, \
+        #            coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids)
+        #            FROM STDIN WITH (FORMAT CSV);""", segment_stream)
+        # et1 = time.time()
+        # el_time = et1 - st1
+        # print("Command Execution:",el_time, 'seconds')
+        # et = time.time()
+        # elapsed_time = et - st
+        # print('Execution time:', elapsed_time, 'seconds')
 
 
         return document
@@ -580,3 +651,46 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
 class VerbSerializer(serializers.Serializer):
     text_string = serializers.CharField()
     synonyms_form =serializers.ListField()
+
+
+
+
+
+
+
+
+
+
+
+
+
+#For copy_from command
+
+# okapi Execution time----------------> 48.274311780929565
+# Command Execution: 0.3987123966217041 seconds
+# Execution time: 44.15513563156128 seconds
+# postman: 1 m 34.44 s
+
+
+# CSV Writer Execution time 43.151642084121704 seconds
+# Command Execution: 0.0005958080291748047 seconds
+# Execution time: 43.4935302734375 seconds
+# Postman: 1 m 2.82 s
+
+# CSV Writer Execution time 43.607571840286255 seconds
+# Command Execution: 0.0005240440368652344 seconds
+# Execution time: 43.95321273803711 seconds
+
+
+
+# For insert_into command
+
+# okapi Execution time----------------> 48.53391695022583
+# Command Execution time: 0.9105117321014404 seconds
+# Execution time: 44.53358769416809 seconds
+# Postman: 1 m 35.04 s
+
+# okapi Execution time----------------> 49.68941617012024
+# Command Execution time: 0.9043436050415039 seconds
+# Execution time: 44.367270708084106 seconds
+# Postman: 1 m 36.06 s

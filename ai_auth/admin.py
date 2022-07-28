@@ -106,7 +106,14 @@ class VAAdmin(admin.ModelAdmin):
 #     #(_('Permissions'), {'fields': (,)}),
 #    # (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
 #     )
-    list_display = ("name", "email", "cv_file","status")
+    list_display = ("name", "email", "cv_file","status","country")
+    def country(self,obj):
+        try:
+            user = AiUser.objects.get(email=obj.email)
+        except AiUser.DoesNotExist:
+            return None
+        return user.country.name
+
 
 @admin.register(VendorOnboardingInfo)
 @admin.register(VendorOnboardingInfo, site=staff_admin_site)

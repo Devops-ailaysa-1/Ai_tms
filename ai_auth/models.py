@@ -500,3 +500,7 @@ class ExistingVendorOnboardingCheck(models.Model):
     gen_password = models.CharField(max_length=255)
     mail_sent = models.BooleanField(default=False)
     mail_sent_time = models.DateTimeField(blank=True, null=True)
+    
+class SocStates(models.Model):
+    state = models.CharField(max_length=150,unique=True)
+    data = models.CharField(max_length=255, blank=True, null=True)

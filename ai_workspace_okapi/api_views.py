@@ -63,6 +63,10 @@ from ai_auth.utils import get_plan_name
 from .utils import download_file, bl_title_format, bl_cell_format,get_res_path
 from os.path import exists
 
+from ai_auth.tasks import write_segments_to_db
+from django.db import transaction
+from os.path import exists
+
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -173,7 +177,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
                     et1 = time.time()
                     diff1 = et1-st1
-                    #print("DDDDDDDDDDDDd-------------------->",diff1)
+                    print("DDDDDDDDDDDDd-------------------->",diff1)
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
                     if serializer.is_valid(raise_exception=True):
@@ -641,11 +645,20 @@ class DocumentToFile(views.APIView):
                 row += 1
         workbook.close()
 
-        # return JsonResponse({"msg": "file successfully created"}, safe=False)
         return download_file(bilingual_file_path)
 
 
     def get(self, request, document_id):
+
+        # Incomplete segments in db
+        segment_count = Segment.objects.filter(text_unit__document=document_id).count()
+        if Document.objects.get(id=document_id).total_segment_count != segment_count:
+            return JsonResponse({"msg": "File under process. Please wait a little while. \
+                    Hit refresh and try again"}, status=401)
+
+        # print("Request auth type ----> ", type(request.auth))
+
+        #token = str(request.auth)
         token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
@@ -701,7 +714,7 @@ class DocumentToFile(views.APIView):
         task = document.task_set.first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        print("Task data ---> ", task_data)
+        # print("Task data ---> ", task_data)
         DocumentViewByTask.correct_fields(task_data)
         # print("---->", output_type)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
