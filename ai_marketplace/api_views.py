@@ -656,8 +656,10 @@ def get_previous_accepted_rate(request):
     vendor_id = request.POST.get('vendor_id')
     job_id = request.POST.get('job_id')
     job_obj = Job.objects.get(id=job_id)
-    # print(job_obj.source_language,job_obj.target_language)
+    print(job_obj.source_language,job_obj.target_language)
     vendor = AiUser.objects.get(id=vendor_id)
+    print(vendor)
+    #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
     query = TaskAssignInfo.objects.filter(Q(task_ven_accepted = True) & Q(assigned_by = user) & Q(task__assign_to = vendor))
     query_final = query.filter(Q(task__job__source_language = job_obj.source_language) & Q(task__job__target_language = job_obj.target_language))
     rates =[]
@@ -785,7 +787,7 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 
 
 @api_view(['GET',])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def sample_file_download(request,bid_propasal_id):
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:

@@ -291,7 +291,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
         editor = AiUser.objects.get(uid = obj.uid)
         if editor in user.get_hired_editors:
             hired = HiredEditors.objects.get(Q(hired_editor = editor)&Q(user = user))
-            return hired.get_status_display()
+            return {'status_display':hired.get_status_display(),'hired_editor_obj_id':hired.id}
         else:
             return None
 
@@ -336,7 +336,7 @@ class ProjectPostBidDetailSerializer(serializers.ModelSerializer):
         if obj.status_id == 3:
             try:
                 ht = HiredEditors.objects.filter(user=user_,hired_editor=obj.vendor).first()
-                return str(ht.get_status_display())
+                return {'status_display':str(ht.get_status_display()),'hired_editor_obj_id':ht.id}
             except:
                 return None
         else:
@@ -811,7 +811,7 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
         editor = AiUser.objects.get(uid = obj.uid)
         if editor in user.get_hired_editors:
             hired = HiredEditors.objects.get(Q(hired_editor = editor)&Q(user = user))
-            return hired.get_status_display()
+            return {'status_display':hired.get_status_display(),'hired_editor_obj_id':hired.id}
         else:
             return None
 

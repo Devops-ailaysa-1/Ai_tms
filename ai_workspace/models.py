@@ -20,7 +20,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ProjectTypeDetail
 from ai_staff.models import ContentTypes, Languages, SubjectFields
 from ai_workspace_okapi.models import Document, Segment
-from ai_staff.models import ParanoidModel
+from ai_staff.models import ParanoidModel, Billingunits
 from django.shortcuts import reverse
 from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
@@ -775,6 +775,8 @@ def ref_file_upload_path(instance, filename):
 class TaskAssignInfo(models.Model):
     PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
                     ("stripe","stripe")]
+    ACCEPT_STATUS =[("task_accepted","task_accepted"),
+                    ("change_request","change_request")]
     task = models.OneToOneField(Task, on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_assign_info")
     instruction = models.TextField(max_length=1000, blank=True, null=True)
@@ -783,12 +785,12 @@ class TaskAssignInfo(models.Model):
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)
     mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
-    mtpe_count_unit=models.ForeignKey(ServiceTypeunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
+    mtpe_count_unit=models.ForeignKey(Billingunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
             related_name="user_assign_info")
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    task_ven_accepted = models.BooleanField(default=False)
+    task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
 
     def save(self, *args, **kwargs):

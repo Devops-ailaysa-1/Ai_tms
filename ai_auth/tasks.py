@@ -215,7 +215,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
     decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
     validated_data = decoder.decode(validated_str_data)
     # print("TYPE OF incoming data ========> ", type(validated_str_data)) # str
-    print("Validdated ata task -------------> ", validated_data)
+    # print("Validdated ata task -------------> ", validated_data)
     # print("^^^^^^^^^ TYPE OF Validdated ata task -------------> ", type(validated_data)) #ordered dict
 
     text_unit_ser_data = validated_data.pop("text_unit_ser", [])
@@ -272,3 +272,5 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
     with closing(connection.cursor()) as cursor:
         cursor.execute(segment_sql, seg_params)
+
+    logger.info("segments wrriting completed")

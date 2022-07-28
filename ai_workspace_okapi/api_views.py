@@ -154,8 +154,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
                 if doc.status_code == 200:
                     doc_data = doc.json()
+                    st1 = time.time()
                     doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-
+                    et1 = time.time()
+                    diff1 = et1-st1
+                    print("DDDDDDDDDDDDd-------------------->",diff1)
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
                     if serializer.is_valid(raise_exception=True):
@@ -169,7 +172,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
                 doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path,
                                                                             needed_keys)  # check if there is no content, skip this part
-
+                
                 # For celery task
                 serializer_task = DocumentSerializerV2(data={**doc_data_task, \
                                                              "file": task.file.id, "job": task.job.id, }, )
@@ -201,17 +204,20 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             params_data = {**data, "output_type": None}
 
             res_paths = get_res_path(params_data["source_language"])
+            st = time.time()
             doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                 "doc_req_params":json.dumps(params_data),
                 "doc_req_res_params": json.dumps(res_paths)
             })
-
+            et = time.time()
+            elapsed_time = et - st
+            # print("okapi Execution time---------------->",elapsed_time)
             if doc.status_code == 200 :
                 # print("Doc status code ---> ", doc.status_code)
                 doc_data = doc.json()
                 # print("Doc data from spring---> ", doc_data)
 
-                if doc_data["total_word_count"] >= 10000000:
+                if doc_data["total_word_count"] >= 50000:
 
                     source_file_path = params_data["source_file_path"]
                     path_list = re.split("source/", source_file_path)
@@ -220,23 +226,26 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
                     with open(doc_json_path, "w") as outfile:
                         json.dump(doc_data, outfile)
+                        st = time.time()
                         doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-
+                        et = time.time()
+                        diff = et-st
+                        print("*********************",diff)
                 serializer = (DocumentSerializerV2(data={**doc_data,\
                                     "file": task.file.id, "job": task.job.id,
                                 },))
 
                 if serializer.is_valid(raise_exception=True):
-                    with transaction.atomic():
-                        document = serializer.save()
-                        task.document = document
-                        task.save()
+                    #with transaction.atomic():
+                    document = serializer.save()
+                    task.document = document
+                    task.save()
             else:
                 # logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
                 logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                 raise  ValueError("Sorry! Something went wrong with file processing.")
 
-            if doc_data["total_word_count"] >= 10000000:
+            if doc_data["total_word_count"] >= 50000:
                 doc_data_task = DocumentViewByTask.correct_segment_for_task(doc_json_path,
                                                                             needed_keys)  # check if there is no content, skip this part
                 # print("Doc data from json file =====>", doc_data_task)
@@ -576,8 +585,8 @@ class DocumentToFile(views.APIView):
 
         # print("Request auth type ----> ", type(request.auth))
 
-        token = str(request.auth)
-        # token = request.GET.get("token")
+        #token = str(request.auth)
+        token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
         language_locale = request.GET.get("locale", None)
