@@ -653,7 +653,7 @@ def get_previous_accepted_rate(request):
     vendor = AiUser.objects.get(id=vendor_id)
     print(vendor)
     #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
-    query = TaskAssignInfo.objects.filter(Q(task_ven_accepted = True) & Q(assigned_by = user) & Q(task__assign_to = vendor))
+    query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task__assign_to = vendor))
     query_final = query.filter(Q(task__job__source_language = job_obj.source_language) & Q(task__job__target_language = job_obj.target_language))
     rates =[]
     for i in query_final:
