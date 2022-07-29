@@ -1986,7 +1986,7 @@ def ai_social_callback(request):
             process='login'
     except AttributeError as e:
         logging.warning(f"user key not found in response {str(e)}")
-        return JsonResponse({"error":"user_already_exist"},resp_data,status=409)
+        return JsonResponse({"error":"user_already_exist"},status=409)
     
     if process == 'signup':
         required.append('country')
