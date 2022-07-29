@@ -1980,11 +1980,13 @@ def ai_social_callback(request):
     
 
     process = user_state.get('socialaccount_process',None)
-
-    if response.get('user').get('country') != None:
-        logging.info(f"user-{response.get('user').get('pk')} already registerd")
-        process='login'
-        
+    try:
+        if response.get('user').get('country')==None:
+            logging.info(f"user-{response.get('user').get('pk')} already registerd")
+            process='login'
+    except AttributeError as e:
+        logging.warning(f"user key not found in response {str(e)}")
+        return JsonResponse({"error":"user_already_exist"},resp_data,status=409)
     
     if process == 'signup':
         required.append('country')
