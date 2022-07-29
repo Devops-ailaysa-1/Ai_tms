@@ -183,6 +183,15 @@ def customer_create_conn_account(client,seller):
     return conn_cust_create.get('id')
 
 
+def webhook_wait(invo_id):
+    print("inside webhook wait")
+    try:
+        Invoice.objects.get(id=invo_id)
+    except:
+        time.sleep(1)
+        return webhook_wait(invo_id)
+    return True
+
 def create_invoice_conn_direct(cust,vendor):  
     stripe.api_key=get_stripe_key()
     #percent=3
@@ -198,16 +207,12 @@ def create_invoice_conn_direct(cust,vendor):
 
     # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
     #         customer=cust.id,amount =amount,currency=currency)
-    try:
-        inv=Invoice.objects.get(id=invo.id)
-        logging.info(f"invoice created : {inv.id}")
-    except:
-        time.sleep(1)
-        try:
-            Invoice.objects.get(id=invo.id)
-        except:
-            time.sleep(2)
-
+    print("invo__id",invo.id)
+    if webhook_wait(invo.id):
+        logging.info(f"invoice created : {invo.id}")
+    else:
+        logging.error(f"invoice creation failed: {invo.id}")  
+        return None
     return invo.id
 
 def stripe_invoice_finalize(invoice_id,vendor) -> bool:
