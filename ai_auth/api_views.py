@@ -2092,6 +2092,7 @@ class UserDetailView(viewsets.ViewSet):
                     VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang)
                     user_obj.is_vendor=True
                     user_obj.save()
+                    sub=subscribe_vendor(user_obj)
 
                 if cv_file:
                     VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
