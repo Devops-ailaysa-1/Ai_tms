@@ -23,6 +23,8 @@ from django.db.models import Q
 from django.utils import timezone
 
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
+from ai_workspace.models import Task
+import os, json
 
 
 extend_mail_sent= 0
@@ -214,16 +216,12 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
     decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
     validated_data = decoder.decode(validated_str_data)
-    # print("TYPE OF incoming data ========> ", type(validated_str_data)) # str
-    # print("Validdated ata task -------------> ", validated_data)
-    # print("^^^^^^^^^ TYPE OF Validdated ata task -------------> ", type(validated_data)) #ordered dict
+
 
     text_unit_ser_data = validated_data.pop("text_unit_ser", [])
     text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
     # USING SQL BATCH INSERT
-
-    # print("****  Task text unit data *****---> ", text_unit_ser_data)
 
     text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
         ', '.join(['(%s, %s)'] * len(text_unit_ser_data)),
@@ -245,8 +243,6 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
             Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
             Q(document_id=document_id)).id
         segs = text_unit.pop("segment_ser", [])
-
-        # print("**** Task Segment ser data ****---> ", segs)
 
         for seg in segs:
             seg_count += 1
@@ -274,3 +270,22 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
         cursor.execute(segment_sql, seg_params)
 
     logger.info("segments wrriting completed")
+
+@task
+def write_doc_json_file(doc_data, task_id):
+
+    from ai_workspace.serializers import TaskSerializer
+    task = Task.objects.get(id=task_id)
+    data = TaskSerializer(task).data
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    DocumentViewByTask.correct_fields(data)
+    params_data = {**data, "output_type": None}
+
+    source_file_path = params_data["source_file_path"]
+    path_list = re.split("source/", source_file_path)
+    os.mkdir(os.path.join(path_list[0], "doc_json"))
+    doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+
+    with open(doc_json_path, "w") as outfile:
+        json.dump(doc_data, outfile)
+    logger.info("Document json data written as a file")

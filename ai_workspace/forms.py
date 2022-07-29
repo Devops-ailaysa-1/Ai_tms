@@ -115,3 +115,16 @@ def task_assign_detail_mail(Receiver,assignment_id):
         html_message=msg_html,
     )
     print("assign detail mailsent>>")
+
+
+def task_assign_ven_status_mail(task,task_ven_status):
+    context = {'name':task.task_assign_info.assigned_by.fullname,'task':task.ai_taskid,'task_ven_status':task_ven_status,'assign_to':task.assign_to.fullname,'project':task.job.project}
+    email = task.task_assign_info.assigned_by.email
+    msg_html = render_to_string("task_assign_ven_status_mail.html",context)
+    send_mail(
+        'Task Assign Vendor Status',None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("assign vendor status-->>>")
