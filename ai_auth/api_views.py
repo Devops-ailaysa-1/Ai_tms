@@ -1981,7 +1981,7 @@ def ai_social_callback(request):
 
     process = user_state.get('socialaccount_process',None)
 
-    if response.get('user').get('country')==None:
+    if response.get('user').get('country') != None:
         logging.info(f"user-{response.get('user').get('pk')} already registerd")
         process='login'
         
