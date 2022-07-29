@@ -182,11 +182,6 @@ def customer_create_conn_account(client,seller):
     return conn_cust_create
 
 
-def invoice_finalise():
-    pass
-
-
-
 def create_invoice_conn_direct(cust,vendor):  
     stripe.api_key=get_stripe_key()
     #percent=3
@@ -210,13 +205,16 @@ def create_invoice_conn_direct(cust,vendor):
             Invoice.objects.get(id=invo.id)
         except:
             time.sleep(1)
-
     return invo.id
 
 def stripe_invoice_finalize(invoice_id,vendor) -> bool:
         stripe.api_key=get_stripe_key()
-        res=stripe.Invoice.finalize_invoice(invoice_id,stripe_account=vendor.id)
-        return res
+        try:
+            res=stripe.Invoice.finalize_invoice(invoice_id,stripe_account=vendor.id)
+        except BaseException as e:
+            logging.error(f"invoice finalize failed - {invoice_id} :{str(e)}")
+            return False
+        return True
 
 
 # payment_intent = stripe.PaymentIntent.create(
@@ -428,10 +426,8 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
                 logging.error(f"invoice item error {po.poid} : {str(e)}")
                 return None
         
-        stripe_invoice_finalize(invo_id,vendor)
-
-
-
+    return stripe_invoice_finalize(invo_id,vendor)
+    
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

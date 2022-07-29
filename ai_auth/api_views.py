@@ -1976,10 +1976,15 @@ def ai_social_callback(request):
         resp_data =response
     except ValueError as e:
         logging.info("on social login",str(e))
-        return JsonResponse(resp_data,status=400)
+        return JsonResponse({"error":f"{str(e)}"},status=400)
     
 
     process = user_state.get('socialaccount_process',None)
+
+    if response.get('user').get('country')==None:
+        logging.info(f"user-{response.get('user').get('pk')} already registerd")
+        process='login'
+        
     
     if process == 'signup':
         required.append('country')
