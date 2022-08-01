@@ -637,7 +637,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         if 'task_ven_status' in data:
             # instance.task_ven_status = data.get('task_ven_status')
             # instance.save()
-            ws_forms.task_assign_ven_status_mail(instance.task,instance.task_ven_status)
+            ws_forms.task_assign_ven_status_mail(instance.task,data.get('task_ven_status'))
         if 'mtpe_rate' in data or 'mtpe_count_unit' in data or 'currency' in data:
             if instance.task_ven_status == 'change_request':
                 instance.task_ven_status = None
