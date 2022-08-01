@@ -120,6 +120,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.github',
+    'allauth.socialaccount.providers.google',
     "allauth.socialaccount.providers.twitter",
     'dj_rest_auth.registration',
     'ai_vendor',
@@ -150,13 +151,14 @@ MANAGEMENT = False
 if MANAGEMENT:
     INSTALLED_APPS += ["ai_management", ]
 
-SITE_ID = 1
+SITE_ID = 1#os.getenv('SITE_ID')
 
 WSGI_APPLICATION = 'ai_tms.wsgi.application'
 ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
+    # "debug_toolbar.middleware.DebugToolbarMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -314,6 +316,7 @@ REST_FRAMEWORK = {
 
 }
 
+# SOCIALACCOUNT_ADAPTER="ai_auth.ai_adapter.SocialAdapter"
 
 SOCIALACCOUNT_PROVIDERS = {
     'github': {
@@ -322,7 +325,16 @@ SOCIALACCOUNT_PROVIDERS = {
             'repo',
             'read:org',
         ],
-    }
+    },
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+        }
+}
 }
 
 
@@ -479,73 +491,77 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
 
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
 
-# LOGGING = {
-#     'version' : 1,
-#     'disable_existing_loggers' : False,
-#
-#     'formatters' : {
-#         'dev_formatter' : {
-#             'format' : '{levelname} {asctime} {pathname} {message}',
-#             'style' : '{',
-#         }
-#     },
-#
-#     'loggers' : {
-#         # 'django' : {
-#         #     'handlers' : ['file',],
-#         #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-#         #     'propogate' : True,
-#         # },
-#
-#         'django' : {
-#             'handlers' : ['file_prod',],
-#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-#             'propogate' : True,
-#         },
-#     },
-#
-#     'handlers' : {
-#
-#         'file' : {
-#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-#             'class' : 'logging.FileHandler',
-#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
-#             'formatter' : 'dev_formatter',
-#         },
-#
-#        'file_prod' : {
-#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-#             'class' : 'logging.FileHandler',
-#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
-#             'formatter' : 'dev_formatter',
-#         },
-#
-#         # 'mail_admins' : {
-#         #     'level' : 'ERROR',
-#         #     'class': 'django.utils.log.AdminEmailHandler',
-#         #     'formatter' : 'dev_formatter',
-#         # }
-#     },
-# }
-#
-# # FOR ERD DIAGRAM
-# GRAPH_MODELS = {
-#     'all_applications': True,
-#     'group_models': True,
-# }
-#
-#
-# sentry_sdk.init(
-#     dsn = os.getenv("dsn"),
-#     integrations=[DjangoIntegration()],
-#
-#     # Set traces_sample_rate to 1.0 to capture 100%
-#     # of transactions for performance monitoring.
-#     # We recommend adjusting this value in production.
-#     traces_sample_rate = os.getenv("traces_sample_rate"),
-#
-#     # If you wish to associate users to errors (assuming you are using
-#     # django.contrib.auth) you may enable sending PII data.
-#     send_default_pii = os.getenv("send_default_pii")
-# )
+LOGGING = {
+    'version' : 1,
+    'disable_existing_loggers' : False,
+
+    'formatters' : {
+        'dev_formatter' : {
+            'format' : '{levelname} {asctime} {pathname} {message}',
+            'style' : '{',
+        }
+    },
+
+    'loggers' : {
+        # 'django' : {
+        #     'handlers' : ['file',],
+        #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+        #     'propogate' : True,
+        # },
+
+        'django' : {
+            'handlers' : ['file_prod',],
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'propogate' : True,
+        },
+    },
+
+    'handlers' : {
+
+        'file' : {
+            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+       'file_prod' : {
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+        # 'mail_admins' : {
+        #     'level' : 'ERROR',
+        #     'class': 'django.utils.log.AdminEmailHandler',
+        #     'formatter' : 'dev_formatter',
+        # }
+    },
+
+
+}
+
+
+sentry_sdk.init(
+    dsn = os.getenv("dsn"),
+    integrations=[DjangoIntegration()],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate = os.getenv("traces_sample_rate"),
+
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii = os.getenv("send_default_pii")
+)
+
+
+
+STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")

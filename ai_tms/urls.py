@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
-
+# import debug_toolbar
 
 from django.conf import settings
 from django.conf.urls.static import static
@@ -55,6 +55,7 @@ urlpatterns = [
     path("nlp/", include("ai_nlp.urls")),
 
     path("aipay/", include("ai_pay.urls")),
+   # path('__debug__/', include('debug_toolbar.urls')),
 ]
 
 if settings.MANAGEMENT:

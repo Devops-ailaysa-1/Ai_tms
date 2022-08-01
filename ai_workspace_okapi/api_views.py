@@ -65,6 +65,10 @@ from os.path import exists
 from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
 
+from ai_auth.tasks import write_segments_to_db
+from django.db import transaction
+from os.path import exists
+
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -607,11 +611,20 @@ class DocumentToFile(views.APIView):
                 row += 1
         workbook.close()
 
-        # return JsonResponse({"msg": "file successfully created"}, safe=False)
         return download_file(bilingual_file_path)
 
 
     def get(self, request, document_id):
+
+        # Incomplete segments in db
+        segment_count = Segment.objects.filter(text_unit__document=document_id).count()
+        if Document.objects.get(id=document_id).total_segment_count != segment_count:
+            return JsonResponse({"msg": "File under process. Please wait a little while. \
+                    Hit refresh and try again"}, status=401)
+
+        # print("Request auth type ----> ", type(request.auth))
+
+        #token = str(request.auth)
         token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
@@ -667,7 +680,7 @@ class DocumentToFile(views.APIView):
         task = document.task_set.first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        print("Task data ---> ", task_data)
+        # print("Task data ---> ", task_data)
         DocumentViewByTask.correct_fields(task_data)
         # print("---->", output_type)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"

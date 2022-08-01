@@ -1,7 +1,7 @@
 from django.core.mail import send_mail
 import smtplib
 from celery.utils.log import get_task_logger
-import celery,re,pickle
+import celery,re,pickle, copy
 import djstripe
 logger = get_task_logger(__name__)
 from celery.decorators import task
@@ -9,16 +9,22 @@ from datetime import date
 from django.utils import timezone
 from django.db.models import Q,F
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
-import datetime,os,json
+import datetime,os,json, collections
 from djstripe.models import Subscription
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
 from ai_marketplace.models import ProjectboardDetails
 import requests
+from contextlib import closing
+from django.db import connection
+from django.db.models import Q
+from django.utils import timezone
 
 from ai_workspace.models import Task
 import os, json
+from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
+
 
 extend_mail_sent= 0
 
@@ -203,7 +209,6 @@ def check_dict(dict):
     print("dct------->",dict)
     dict1 = json.loads(dict)
     logger.info("RRRR",dict)
-
 
 @task
 def write_segments_to_db(validated_str_data, document_id): #validated_data

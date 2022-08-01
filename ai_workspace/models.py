@@ -933,6 +933,8 @@ class TaskAssignInfo(models.Model):
                     related_name="task_assign_info")
     PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
                     ("stripe","stripe")]
+    ACCEPT_STATUS =[("task_accepted","task_accepted"),
+                    ("change_request","change_request")]
     instruction = models.TextField(max_length=1000, blank=True, null=True)
     assignment_id = models.CharField(max_length=191, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
@@ -943,7 +945,7 @@ class TaskAssignInfo(models.Model):
     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
             related_name="user_assign_info")
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    task_ven_accepted = models.BooleanField(default=False)
+    task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
 
     def save(self, *args, **kwargs):

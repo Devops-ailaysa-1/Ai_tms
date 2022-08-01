@@ -9,6 +9,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails#,TaskAssignRateInfo
 import json
 import pickle,itertools
+from ai_workspace import forms as ws_forms
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.shortcuts import reverse
@@ -728,10 +729,11 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_files','step','task_ven_accepted',\
+        fields = ('id','instruction','instruction_files','step','task_ven_status',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable','pre_translate','task_assign_detail',)
+
         extra_kwargs = {
             'assigned_by':{'write_only':True},
             # 'assign_to':{'write_only':True}
@@ -812,31 +814,24 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                 [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_engine_id=mt_engine_id,mt_enable=mt_enable,pre_translate=pre_translate) for task in task_list]
         return task_assign_info
 
-        #print('validated data kk==>',data)
-        #task_list = data.pop('tasks')
-        #assign_to = data.pop('assign_to')
-        #user1 = AiUser.objects.get(id=assign_to)
-        #total_word_count = data.pop('total_word_count',None)
-        #task_obj_list = Task.objects.filter(id__in=task_list)
-        #with transaction.atomic():
-        #  task_assign_info = [TaskAssignInfo.objects.create(**data,task_id = task.id,total_word_count = task.task_word_count) for task in task_obj_list]
-        #  task_info = [Task.objects.filter(id = task).update(assign_to_id = assign_to) for task in task_list]
-        #  if user1.is_internal_member == False:
-        #     generate_client_po(task_assign_info)
-        #return task_assign_info
-
-    #def update(self,instance,data):
-    #    if 'assign_to' in data:
-    #        task = Task.objects.get(id = instance.task_id)
-    #        segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
-    #        task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
-    #        task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=self.context.get('request').user)
-    #        instance.task_ven_accepted = False
-    #        instance.save()
-	#	# if 'task_ven_accepted' in data:
-	#	# 	Purchaseorder.objects.filter(assignment__assignment_id=instance.assignment_id)
-	#	# 	if data['task_ven_accepted']==True
-    #    return super().update(instance, data)
+    # def update(self,instance,data):
+    #     print("DATA-------->",data)
+    #     if 'assign_to' in data:
+    #         task = Task.objects.get(id = instance.task_id)
+    #         segment_count=0 if task.document == None else task.get_progress.get('confirmed_segments')
+    #         task_info = Task.objects.filter(id = instance.task_id).update(assign_to = data.get('assign_to'))
+    #         task_history = TaskAssignHistory.objects.create(task_id =instance.task_id,previous_assign_id=task.assign_to_id,task_segment_confirmed=segment_count,unassigned_by=self.context.get('request').user)
+    #         instance.task_ven_status = None
+    #         instance.save()
+    #     if 'task_ven_status' in data:
+    #         ws_forms.task_assign_ven_status_mail(instance.task,instance.task_ven_status)
+    #     if 'mtpe_rate' in data or 'mtpe_count_unit' in data or 'currency' in data:
+    #         if instance.task_ven_status == 'change_request':
+    #             instance.task_ven_status = None
+    #             instance.save()
+    #         elif instance.task_ven_status == 'task_accepted':
+    #             raise serializers.ValidationError("Rates Can't be changed..Vendor already accepted rates and started working!!!")
+    #     return super().update(instance, data)
 
     # def to_representation(self, instance):
     #     data = super().to_representation(instance)

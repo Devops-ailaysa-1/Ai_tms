@@ -356,7 +356,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
         editor = AiUser.objects.get(uid = obj.uid)
         if editor in user.get_hired_editors:
             hired = HiredEditors.objects.get(Q(hired_editor = editor)&Q(user = user))
-            return hired.get_status_display()
+            return {'status_display':hired.get_status_display(),'hired_editor_obj_id':hired.id}
         else:
             return None
 
@@ -401,7 +401,7 @@ class ProjectPostBidDetailSerializer(serializers.ModelSerializer):
         if obj.status_id == 3:
             try:
                 ht = HiredEditors.objects.filter(user=user_,hired_editor=obj.vendor).first()
-                return str(ht.get_status_display())
+                return {'status_display':str(ht.get_status_display()),'hired_editor_obj_id':ht.id}
             except:
                 return None
         else:
@@ -998,9 +998,17 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     status = serializers.SerializerMethodField()
     verified = serializers.SerializerMethodField()
+    language = serializers.SerializerMethodField()
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified',)
+        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified','language',)
+
+
+    def get_language(self,obj):
+        source_lang = self.context['sl']
+        target_lang = self.context['tl']
+        return {'source_lang_id':source_lang,'target_lang_id':target_lang}
+
 
 
     def get_verified(self,obj):
@@ -1018,7 +1026,7 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
         editor = AiUser.objects.get(uid = obj.uid)
         if editor in user.get_hired_editors:
             hired = HiredEditors.objects.get(Q(hired_editor = editor)&Q(user = user))
-            return hired.get_status_display()
+            return {'status_display':hired.get_status_display(),'hired_editor_obj_id':hired.id}
         else:
             return None
 
