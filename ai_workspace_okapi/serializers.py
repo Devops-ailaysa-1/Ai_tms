@@ -108,13 +108,14 @@ class SegmentSerializerV2(SegmentSerializer):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
     def update(self, instance, validated_data):
+        content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
-            SegmentHistory.objects.create(segment_id=instance.id, user = user, target= content, status= validated_data.get('status') )
+            SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
-        SegmentHistory.objects.create(segment_id=instance.id, user = user, target= content, status= validated_data.get('status') )
+        SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only

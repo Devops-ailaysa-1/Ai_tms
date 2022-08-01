@@ -17,7 +17,7 @@ urlpatterns+=[
          name="document-by-document-id"),
     path("file_extensions/", api_views.get_supported_file_extensions, name="get-file-extensions"),
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
-    path("segment/update/<int:pk>", api_views.SegmentsUpdateView.as_view({"put": "partial_update"}), \
+    path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put": "update"}), \
          name="segment-update"),
     path("segment/restore/<int:pk>", api_views.MergeSegmentDeleteView.as_view({"delete": "destroy"}), \
          name="segment-update"),

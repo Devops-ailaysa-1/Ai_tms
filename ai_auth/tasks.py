@@ -20,8 +20,8 @@ from contextlib import closing
 from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
-
-
+from ai_workspace.models import Task
+import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 
 
@@ -299,21 +299,37 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
 @task
 def mt_only(project_id,token):
-    print(token)
     from ai_workspace.models import Project,Task
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
-    if pr.pre_translate == True:
-        tasks = pr.get_tasks
-        print("TASKS Inside CELERY----->",tasks)
-        for i in pr.get_tasks:
-            document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
-            doc = DocumentSerializerV2(document).data
-            print(doc)
+    #if pr.pre_translate == True:
+    tasks = pr.get_tasks
+    print("TASKS Inside CELERY----->",tasks)
+    for i in pr.get_mtpe_tasks:
+        document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
+        doc = DocumentSerializerV2(document).data
+        print(doc)
 
 
+@task
+def write_doc_json_file(doc_data, task_id):
 
+    from ai_workspace.serializers import TaskSerializer
+    task = Task.objects.get(id=task_id)
+    data = TaskSerializer(task).data
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    DocumentViewByTask.correct_fields(data)
+    params_data = {**data, "output_type": None}
+
+    source_file_path = params_data["source_file_path"]
+    path_list = re.split("source/", source_file_path)
+    os.mkdir(os.path.join(path_list[0], "doc_json"))
+    doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+
+    with open(doc_json_path, "w") as outfile:
+        json.dump(doc_data, outfile)
+    logger.info("Document json data written as a file")
 
 
 
