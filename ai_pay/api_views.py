@@ -152,6 +152,18 @@ class CreateChargeVendor(viewsets.ViewSet):
         pass
 
 
+def void_stripe_invoice(vendor,id):
+    stripe.api_key=get_stripe_key()
+    try:
+        voided = stripe.Invoice.void_invoice(
+        stripe_account=vendor.id,
+        sid=id,
+        )   
+    except BaseException as e:
+        logging.error(f"invoice voiding failed: {id}")
+        return False
+    return True
+
 
 def create_invoice_conn(cust,vendor):
     stripe.api_key=get_stripe_key()
@@ -519,12 +531,22 @@ def po_pdf_get(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def invoice_pdf_get(request):
-    invoid = request.GET.get('invoice_id')
-    invo =AilaysaGeneratedInvoice.objects.get(invoid=invoid)
+    id = request.GET.get('id')
+    invo =AilaysaGeneratedInvoice.objects.get(id=id)
     if not invo.invo_file:
         invo_pdf = generate_invoice_pdf(invo)
     return JsonResponse({'url':invo.get_pdf},safe=False,status=200)
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def cancel_stripe_invoice(request):
+    try:
+        id = request.GET.get('id')
+        vendor = Account.objects.get(email=request.user.email)
+        void_stripe_invoice(vendor,id)
+    except:
+        return JsonResponse({'msg':'invoice_status_updation_failed'},safe=False,status=400)
+    return JsonResponse({'msg':'invoice_status_updated'},safe=False,status=200)
 
 
 class InvoiceListView(generics.ListAPIView):
