@@ -192,7 +192,7 @@ def webhook_wait(invo_id):
         return webhook_wait(invo_id)
     return True
 
-def create_invoice_conn_direct(cust,vendor):  
+def create_invoice_conn_direct(cust,vendor,currency):  
     stripe.api_key=get_stripe_key()
     #percent=3
     #app_fee_amount=percent/100*amount
@@ -203,6 +203,7 @@ def create_invoice_conn_direct(cust,vendor):
         customer=cust.id,
         #application_fee_amount=app_fee_amount,
         stripe_account=vendor.id,
+        currency=currency,
         pending_invoice_items_behavior='exclude')
 
     # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
@@ -427,7 +428,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
     else:
         seller  = pos.last().seller
         client = pos.last().client
-        #currency = pos.last().currency
+        currency = pos.last().currency.currency_code
         try:
             vendor = Account.objects.get(email=seller.email)
             cust =Customer.objects.get(subscriber=client,djstripe_owner_account=vendor)
@@ -440,7 +441,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
                 cust =Customer.objects.get(id=cust_id,djstripe_owner_account=vendor)
             except Customer.DoesNotExist:
                 time.sleep(1)
-        invo_id = create_invoice_conn_direct(cust,vendor)
+        invo_id = create_invoice_conn_direct(cust,vendor,currency)
         for po in pos:
             try:
                 po_amount=converttocent(po.po_total_amount,po.currency.currency_code)
@@ -527,7 +528,7 @@ def invoice_pdf_get(request):
 class InvoiceListView(generics.ListAPIView):
     #permission_classes=[IsAuthenticated]
     serializer_class = InvoiceListSerializer
-    #filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
     #search_fields = ['']
 
     def get_queryset(self):
@@ -539,6 +540,7 @@ class InvoiceListView(generics.ListAPIView):
         # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = InvoiceListSerializer(queryset,context=request)
+        
         return Response(serializer.data)
 
 
