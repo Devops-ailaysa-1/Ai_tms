@@ -605,7 +605,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         else:
            data['tasks'] = [json.loads(data.pop('task'))]
         # print(data['tasks'])
-        data['assigned_by'] = self.context['request'].user.id
+        if self.context['request']._request.method == 'POST':
+           data['assigned_by'] = self.context['request'].user.id
         # print("validated data run validation----->",data)
         return super().run_validation(data)
 
@@ -634,6 +635,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
             instance.task_ven_status = None
             instance.save()
         if 'task_ven_status' in data:
+            # instance.task_ven_status = data.get('task_ven_status')
+            # instance.save()
             ws_forms.task_assign_ven_status_mail(instance.task,instance.task_ven_status)
         if 'mtpe_rate' in data or 'mtpe_count_unit' in data or 'currency' in data:
             if instance.task_ven_status == 'change_request':
