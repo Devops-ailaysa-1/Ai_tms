@@ -170,6 +170,7 @@ def create_invoice_conn(cust,vendor):
 
 
 def customer_create_conn_account(client,seller):
+    stripe.api_key=get_stripe_key()
     cust =Customer.objects.get(subscriber=client,djstripe_owner_account=default_djstripe_owner)
     vendor = Account.objects.get(email=seller.email)
     if cust:
