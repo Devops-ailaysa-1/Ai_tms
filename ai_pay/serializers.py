@@ -2,6 +2,7 @@ from rest_framework import serializers
 from ai_pay.models import POAssignment, POTaskDetails, PurchaseOrder,AilaysaGeneratedInvoice
 from django.http import HttpRequest
 from django.db.models import Q
+from djstripe.models import Invoice,Customer
 
 class POTaskSerializer(serializers.ModelSerializer):
 
@@ -80,10 +81,22 @@ class AilaysaGeneratedInvoiceSerializer(serializers.ModelSerializer):
              #"created_at":{"write_only":True}
             }
 
+class StripeInvoiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Invoice
+        #fields ="__all__"
+        fields =('id','status','account_name','customer_name','total','tax','currency','created')
+
+
+
 
 class InvoiceListSerializer(serializers.Serializer):
+    
+    
     payable=serializers.SerializerMethodField()
     receivable=serializers.SerializerMethodField()
+    stripe_invoices_payable=serializers.SerializerMethodField()
+    stripe_invoices_receivable=serializers.SerializerMethodField()
 
 
     def _get_request(self):
@@ -96,7 +109,21 @@ class InvoiceListSerializer(serializers.Serializer):
         query = obj.filter(client = self._get_request().user)
         return AilaysaGeneratedInvoiceSerializer(query,many=True).data
 
-
     def get_receivable(self,obj):
         query = obj.filter(seller = self._get_request().user)
         return AilaysaGeneratedInvoiceSerializer(query,many=True).data
+
+    def get_stripe_invoices_payable(self,obj):
+        cust=Customer.objects.filter(subscriber=self._get_request().user)
+        query = Invoice.objects.filter(customer__in=cust)
+        return StripeInvoiceSerializer(query,many=True).data
+    
+    def get_stripe_invoices_receivable(self,obj):
+        from ai_pay.api_views import get_connect_account
+        acc = get_connect_account(self._get_request().user)
+        if acc:
+            query = Invoice.objects.filter(djstripe_owner_account=acc)
+        else:
+            query=None
+        return StripeInvoiceSerializer(query,many=True).data
+        
