@@ -545,7 +545,7 @@ def cancel_stripe_invoice(request):
         vendor = Account.objects.get(email=request.user.email)
         void_stripe_invoice(vendor,id)
     except:
-        return JsonResponse({'msg':'invoice_status_updation_failed'},safe=False,status=400)
+        return JsonResponse({'msg':'invoice_status_updation_failed'},status=400)
     return JsonResponse({'msg':'invoice_status_updated'},safe=False,status=200)
 
 

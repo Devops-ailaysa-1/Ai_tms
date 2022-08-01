@@ -19,7 +19,7 @@ urlpatterns = [
     path('po-pdf/',api_views.po_pdf_get,name='get_po_pdf'),
     path('invo-pdf/',api_views.invoice_pdf_get,name='get_invo_pdf'),
     path('invo-list/',api_views.InvoiceListView.as_view(),name='invo_list'),
-    path('invo-stripe-cancel',api_views.cancel_stripe_invoice,name='invo_stripe_cancel')
+    path('invo-stripe-cancel/',api_views.cancel_stripe_invoice,name='invo_stripe_cancel')
 ]
 
 
