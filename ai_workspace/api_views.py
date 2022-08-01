@@ -43,6 +43,7 @@ from .models import Task, TbxFile, Instructionfiles
 from django.http import JsonResponse
 from .models import Task,Tbxfiles
 from lxml import etree as ET
+from django.db import transaction
 from ai_marketplace.models import ChatMessage
 from django.http import JsonResponse,HttpResponse
 import requests, json, os,mimetypes
@@ -658,6 +659,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 print("tt======>",serlzr.data.get('id'), str(request.auth))
+                pr = Project.objects.get(id=serlzr.data.get('id'))
+                print("TASks--------->",pr.get_tasks)
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
                 #check_dict.apply_async(serlzr.data,)
                 return Response(serlzr.data, status=201)
@@ -1333,17 +1336,18 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
         tasks= [json.loads(i) for i in task]
         assignment_id = create_assignment_id()
-        serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
-        # assignment_id = create_assignment_id()
-        # serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
-        if serializer.is_valid():
-            serializer.save()
-            msg_send(sender,Receiver,tasks[0])
-            if Receiver in hired_editors:
-                ws_forms.task_assign_detail_mail(Receiver,assignment_id)
-            # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
-            return Response({"msg":"Task Assigned"})
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
+            # assignment_id = create_assignment_id()
+            # serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
+            if serializer.is_valid():
+                serializer.save()
+                msg_send(sender,Receiver,tasks[0])
+                if Receiver in hired_editors:
+                    ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+                # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
+                return Response({"msg":"Task Assigned"})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # def update(self, request,pk=None):
     #     task = request.POST.get('task')

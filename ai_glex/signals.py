@@ -6,7 +6,7 @@ def update_words_from_template(sender, instance, *args, **kwargs):
     glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
     dataset = Dataset()
     imported_data = dataset.load(instance.file.read(), format='xlsx')
-    if instance.source_only == False:
+    if instance.source_only == False and instance.job.source_language != instance.job.target_language:
         for data in imported_data:
             if data[2]:
                 try:

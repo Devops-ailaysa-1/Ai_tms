@@ -21,6 +21,7 @@ from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
 
+
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 
 
@@ -299,16 +300,39 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 @task
 def mt_only(project_id,token):
     print(token)
-    from ai_workspace.models import Project
-    #import os
+    from ai_workspace.models import Project,Task
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
-    #host = os.environ.get("HOST")
     if pr.pre_translate == True:
-        headers = {'Authorization':'Bearer '+token}
-        print(headers)
-        tasks = pr.get_mtpe_tasks
-        for i in pr.get_mtpe_tasks:
-            print(i.id)
-            url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
-            res = requests.request("GET", url, headers=headers)
-    print("doc--->",res.text)
+        tasks = pr.get_tasks
+        print("TASKS Inside CELERY----->",tasks)
+        for i in pr.get_tasks:
+            document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
+            doc = DocumentSerializerV2(document).data
+            print(doc)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # host = os.environ.get("HOST")
+    # #Base_Url = "http://127.0.0.1:8089/"
+    # #DocumentViewByTask.as_view()(self.request)
+
+        # headers = {'Authorization':'Bearer '+token}
+        # print(headers)
+#task = DocumentViewByTask.get_object(task_id=i)
+            # print("Begin-------------->",i.id)
+            # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
+            # res = requests.request("GET", url, headers=headers)
+            # print("doc--->",res.text)
