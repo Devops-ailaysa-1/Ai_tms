@@ -442,6 +442,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
                 cust =Customer.objects.get(id=cust_id,djstripe_owner_account=vendor)
             except Customer.DoesNotExist:
                 time.sleep(1)
+                cust =Customer.objects.get(id=cust_id,djstripe_owner_account=vendor)
         invo_id = create_invoice_conn_direct(cust,vendor,currency)
         for po in pos:
             try:
