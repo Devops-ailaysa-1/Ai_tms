@@ -152,7 +152,7 @@ class CreateChargeVendor(viewsets.ViewSet):
         pass
 
 
-def void_stripe_invoice(cust,vendor,id):
+def void_stripe_invoice(vendor,id):
     stripe.api_key=get_stripe_key()
     try:
         voided = stripe.Invoice.void_invoice(
@@ -160,7 +160,7 @@ def void_stripe_invoice(cust,vendor,id):
         sid=id,
         )   
     except BaseException as e:
-        logging.erro(f"invoice voiding failed: {id}")
+        logging.error(f"invoice voiding failed: {id}")
         return False
     return True
 
