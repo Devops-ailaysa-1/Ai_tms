@@ -69,6 +69,7 @@ from google.cloud import speech_v1p1beta1 as speech
 import io
 from google.cloud import storage
 from ai_auth.tasks import mt_only
+from ai_auth.tasks import write_doc_json_file
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -1191,7 +1192,9 @@ class ProjectAnalysisProperty(APIView):
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
-                        # task_words.append({task.id : doc_data.get('total_word_count')})
+                        if doc_data["total_word_count"] >= 50000:
+                            task_write_data = json.dumps(doc_data, default=str)
+                            write_doc_json_file.apply_async((task_write_data, task.id))
 
                         task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
                                                                 "task_char_count":doc_data.get('total_char_count', 0),

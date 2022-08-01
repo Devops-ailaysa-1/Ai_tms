@@ -17,7 +17,8 @@ from ai_auth import forms as auth_forms
 from ai_marketplace.models import ProjectboardDetails
 import requests
 
-
+from ai_workspace.models import Task
+import os, json
 
 extend_mail_sent= 0
 
@@ -308,3 +309,22 @@ def mt_only(project_id,token):
             url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
             res = requests.request("GET", url, headers=headers)
     print("doc--->",res.text)
+
+@task
+def write_doc_json_file(doc_data, task_id):
+
+    from ai_workspace.serializers import TaskSerializer
+    task = Task.objects.get(id=task_id)
+    data = TaskSerializer(task).data
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    DocumentViewByTask.correct_fields(data)
+    params_data = {**data, "output_type": None}
+
+    source_file_path = params_data["source_file_path"]
+    path_list = re.split("source/", source_file_path)
+    os.mkdir(os.path.join(path_list[0], "doc_json"))
+    doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+
+    with open(doc_json_path, "w") as outfile:
+        json.dump(doc_data, outfile)
+    logger.info("Document json data written as a file")
