@@ -196,19 +196,33 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 mt_engine = task.job.project.mt_engine_id
                 segments = Segment.objects.filter(text_unit__document=task.document)
                 update_list = []
+                mt_segments = []
                 for i in segments:
+                    print(i)
                     if i.target == '':
                         initial_credit = user.credit_balance.get("total_left")
                         consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,i.source)
                         if initial_credit > consumable_credits:
                             i.target =get_translation(mt_engine,i.source,task.document.source_language_code,task.document.target_language_code)
                             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                            mt_segments.append(i)
                         else:
                             i.target=""
                         update_list.append(i)
                 Segment.objects.bulk_update(update_list,['target'])
+                instances = [
+                        MT_RawTranslation(
+                            mt_raw=i.target,
+                            mt_engine_id = mt_engine,
+                            segment_id=i.id,
+                        )
+                        for i in mt_segments
+                    ]
+                print("Ins---------->",instances)
+                MT_RawTranslation.objects.bulk_create(instances)
             # print("*** Document exists *****")
             return task.document
+
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():

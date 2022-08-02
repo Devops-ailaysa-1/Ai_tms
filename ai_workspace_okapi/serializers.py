@@ -13,7 +13,7 @@ from django.db import connection
 from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
-from ai_workspace_okapi.models import SegmentHistory
+from ai_workspace_okapi.models import SegmentHistory,Segment
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 
@@ -282,28 +282,42 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         json.loads(seg["coded_ids_sequence"])))
                     )
                 # target = "" if seg["target"] is None else seg["target"]
-                if target_get == False:target = ""
+                if target_get == False:seg['target'] = ""
                 else:
                     initial_credit = user.credit_balance.get("total_left")
                     consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
                     if initial_credit > consumable_credits:
-                        target =get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
+                        seg['target'] =get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
                         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                    else:target=""
-                seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+                    else:seg['target']=""
+
+                seg_params.extend([str(seg["source"]), seg['target'], "", str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
                         timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
-        st1 = time.time()
+
+
         segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
                        coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
                            ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
-        if target_get == True:
-            pass
-            # mt_raw = 'INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id', 'reverse_string_for_segment','segment_id')\
-            #     VALUES (seg['target'],mt_engine,);'
-
         with closing(connection.cursor()) as cursor:
             cursor.execute(segment_sql, seg_params)
+
+
+        if target_get == True:
+            mt_params = []
+            count = 0
+            segments = Segment.objects.filter(text_unit__document=document)
+            for i in segments:
+                if i.target != "":
+                    count += 1
+                    mt_params.extend([i.target,mt_engine,None,"ai_workspace_okapi.segment",i.id])
+            print("MT-------------->",mt_params)
+            mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id, reverse_string_for_segment,segment_id)\
+            VALUES {}".format(','.join(['(%s, %s, %s, %s, %s)'] * count))
+            if mt_params:
+                with closing(connection.cursor()) as cursor:
+                    cursor.execute(mt_raw_sql, mt_params)
+
         # et1 = time.time()
         # el_time = et1 - st1
         # print('Command Execution time:', el_time, 'seconds')

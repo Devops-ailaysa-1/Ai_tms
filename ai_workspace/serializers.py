@@ -513,6 +513,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [])]
+			data['pre_translate'] = data.get('pre_translate')[0]
 
 		data['team_exist'] = data.get('team',[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
@@ -881,9 +882,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				else:return "Transeditor"
 			else:return "Transeditor"
 		except:
-			if obj.job.project.glossary_project:
-				return "GlossaryEditor"
-			else:
+			try:
+				if obj.job.project.glossary_project:
+					return "GlossaryEditor"
+			except:
 				return "Transeditor"
 
 	def get_bid_job_detail_info(self,obj):

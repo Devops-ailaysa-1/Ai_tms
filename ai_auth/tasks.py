@@ -296,6 +296,22 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
     logger.info("segments wrriting completed")
 
+    if target_get == True:
+        mt_params = []
+        count = 0
+        segments = Segment.objects.filter(text_unit__document=document)
+        for i in segments:
+            if i.target != "":
+                count += 1
+                mt_params.extend([i.target,mt_engine,None,"ai_workspace_okapi.segment",i.id])
+        print("MT-------------->",mt_params)
+        mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id, reverse_string_for_segment,segment_id)\
+        VALUES {}".format(','.join(['(%s, %s, %s, %s, %s)'] * count))
+        if mt_params:
+            with closing(connection.cursor()) as cursor:
+                cursor.execute(mt_raw_sql, mt_params)
+    logger.info("mt_raw wrriting completed")
+
 
 @task
 def mt_only(project_id,token):
@@ -303,6 +319,7 @@ def mt_only(project_id,token):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
+    print("PRE TRANSLATE-------------->",pr.pre_translate)
     if pr.pre_translate == True:
         tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)

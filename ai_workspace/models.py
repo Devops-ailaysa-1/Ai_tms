@@ -780,9 +780,10 @@ class Task(models.Model):
                 else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
             else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
         except:
-            if self.job.project.glossary_project:
-                return None
-            else:
+            try:
+                if self.job.project.glossary_project:
+                    return None
+            except:
                 return reverse("ws_okapi:document", kwargs={"task_id": self.id})
 
     @property
