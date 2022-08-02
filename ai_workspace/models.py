@@ -775,10 +775,15 @@ class Task(models.Model):
     def get_document_url(self):
         try:
             if self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-                return None
+                if self.job.target_language == None:
+                    return None
+                else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
             else:return reverse("ws_okapi:document", kwargs={"task_id": self.id})
         except:
-            return reverse("ws_okapi:document", kwargs={"task_id": self.id})
+            if self.job.project.glossary_project:
+                return None
+            else:
+                return reverse("ws_okapi:document", kwargs={"task_id": self.id})
 
     @property
     def extension(self):

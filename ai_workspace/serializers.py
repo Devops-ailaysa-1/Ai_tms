@@ -482,7 +482,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
-		data['pre_translate'] = data.get('pre_translate',['false'])[0]
+		#data['pre_translate'] = data.get('pre_translate',['false'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
@@ -509,6 +509,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [None])]
+			data['pre_translate'] = data.get('pre_translate',['false'])[0]
 		else:
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [])]
@@ -869,14 +870,21 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_open_in(self,obj):
 		try:
-			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:return "Ailaysa Writer"
+			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+				if obj.job.target_language==None:
+					return "Ailaysa Writer or Text Editor"
+				else:
+					return "Transeditor"
 			elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
 				if obj.job.target_language==None:
 					return "Download"
 				else:return "Transeditor"
 			else:return "Transeditor"
 		except:
-			return "Transeditor"
+			if obj.job.project.glossary_project:
+				return "GlossaryEditor"
+			else:
+				return "Transeditor"
 
 	def get_bid_job_detail_info(self,obj):
 		if obj.job.project.proj_detail.all():

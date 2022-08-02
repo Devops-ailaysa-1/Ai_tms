@@ -659,7 +659,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request})
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
-                print("tt======>",serlzr.data.get('id'), str(request.auth))
                 pr = Project.objects.get(id=serlzr.data.get('id'))
                 print("TASks--------->",pr.get_mtpe_tasks)
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
@@ -670,6 +669,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def update(self, request, pk, format=None):
         instance = self.get_object()
         ser = self.get_serializer_class()
+        text_data=request.POST.get('text_data')
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -704,13 +704,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if subject_delete_ids:
             subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=subject_delete_ids)
-
         serlzr = ser(instance, data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request}, partial=True)
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
+            mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
     # def delete(self, request, pk):
