@@ -297,6 +297,10 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
                        coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
                            ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+        if target_get == True:
+            pass
+            # mt_raw = 'INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id', 'reverse_string_for_segment','segment_id')\
+            #     VALUES (seg['target'],mt_engine,);'
 
         with closing(connection.cursor()) as cursor:
             cursor.execute(segment_sql, seg_params)
@@ -412,79 +416,124 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
+# class MT_RawSerializer(serializers.ModelSerializer):
+#     mt_engine_name = serializers.CharField(source="mt_engine.engine_name",
+#         read_only=True)
+#     segment = serializers.CharField(read_only=True, source="get_segment")
+#
+#     class Meta:
+#         model = MT_RawTranslation
+#         fields = (
+#             'mt_engine', 'mt_raw', "mt_engine_name", "task_mt_engine", "reverse_string_for_segment", "segment",
+#         ) #, "target_language"
+#
+#         extra_kwargs = {
+#             "reverse_string_for_segment": {"write_only": True},
+#             "mt_engine": {"default": MT_Engine.objects.get(id=1)},
+#             "mt_raw": {"required": False},
+#             # "mt_engine" : {"required": False},
+#         }
+#
+#     def to_internal_value(self, data):
+#
+#         # data["mt_engine"] = data.get("mt_engine", 1)
+#         data["task_mt_engine"] = data.get("mt_engine", 1)
+#         return super().to_internal_value(data=data)
+#
+#     def create(self, validated_data):
+#         # MT FEED DATA
+#         source_string = validated_data["segment"].source
+#         source_lang_code = validated_data["segment"].source_language_code
+#         target_lang_code = validated_data["segment"].target_language_code
+#
+#         validated_data["mt_raw"] = get_translation(
+#             validated_data["task_mt_engine"].id,
+#             source_string,
+#             source_lang_code,
+#             target_lang_code,
+#         )
+#     #    # print("data--->", data)
+#     #    segment_id = data.get("segment")
+#     #    # print("Segment ID ---> ", segment_id)
+#     #    obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
+#     #    mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
+#
+#     #    # data["mt_engine"] = data.get("mt_engine", 1)
+#     #    data["mt_engine"] = mt_engine_id
+#     #    return super().to_internal_value(data=data)
+#
+#     #def create(self, validated_data):
+#
+#     #    # print("Validated data ---> ", validated_data)
+#
+#     #    segment = validated_data["segment"]
+#     #    mt_engine= validated_data["mt_engine"]
+#
+#     #    text_unit_id = segment.text_unit_id
+#     #    doc = TextUnit.objects.get(id=text_unit_id).document
+#
+#     #    sl_code = doc.source_language_code
+#     #    tl_code = doc.target_language_code
+#
+#         # validated_data["mt_raw"]= client.translate(segment.source,
+#         #     target_language=segment.target_language_code, format_="text")\
+#         #     .get("translatedText")
+#
+#      #   validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
+#
+#         data = validated_data.pop("segment")
+#         instance = MT_RawTranslation.objects.create(**validated_data)
+#         seg_instance = apps.get_model(instance.reverse_string_for_segment).objects.get(id=data.id)
+#         seg_instance.mt_raw_translation = instance
+#         seg_instance.save()
+#
+#         return instance
 class MT_RawSerializer(serializers.ModelSerializer):
-    mt_engine_name = serializers.CharField(source="mt_engine.engine_name",
-        read_only=True)
-    segment = serializers.CharField(read_only=True, source="get_segment")
+    mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
 
     class Meta:
         model = MT_RawTranslation
         fields = (
-            'mt_engine', 'mt_raw', "mt_engine_name", "task_mt_engine", "reverse_string_for_segment", "segment",
-        ) #, "target_language"
+            "segment", 'mt_engine', 'mt_raw',"task_mt_engine", "reverse_string_for_segment", "mt_engine_name", "target_language"
+        )
 
         extra_kwargs = {
-            "reverse_string_for_segment": {"write_only": True},
-            "mt_engine": {"default": MT_Engine.objects.get(id=1)},
             "mt_raw": {"required": False},
-            # "mt_engine" : {"required": False},
         }
 
     def to_internal_value(self, data):
 
+        # print("data--->", data)
+        segment_id = data.get("segment")
+        # print("Segment ID ---> ", segment_id)
+        obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
+        mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
+
         # data["mt_engine"] = data.get("mt_engine", 1)
-        data["task_mt_engine"] = data.get("mt_engine", 1)
+        data["mt_engine"] = mt_engine_id
         return super().to_internal_value(data=data)
 
     def create(self, validated_data):
-        # MT FEED DATA
-        source_string = validated_data["segment"].source
-        source_lang_code = validated_data["segment"].source_language_code
-        target_lang_code = validated_data["segment"].target_language_code
 
-        validated_data["mt_raw"] = get_translation(
-            validated_data["task_mt_engine"].id,
-            source_string,
-            source_lang_code,
-            target_lang_code,
-        )
-    #    # print("data--->", data)
-    #    segment_id = data.get("segment")
-    #    # print("Segment ID ---> ", segment_id)
-    #    obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
-    #    mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
+        # print("Validated data ---> ", validated_data)
 
-    #    # data["mt_engine"] = data.get("mt_engine", 1)
-    #    data["mt_engine"] = mt_engine_id
-    #    return super().to_internal_value(data=data)
+        segment = validated_data["segment"]
+        mt_engine= validated_data["mt_engine"]
 
-    #def create(self, validated_data):
+        text_unit_id = segment.text_unit_id
+        doc = TextUnit.objects.get(id=text_unit_id).document
 
-    #    # print("Validated data ---> ", validated_data)
-
-    #    segment = validated_data["segment"]
-    #    mt_engine= validated_data["mt_engine"]
-
-    #    text_unit_id = segment.text_unit_id
-    #    doc = TextUnit.objects.get(id=text_unit_id).document
-
-    #    sl_code = doc.source_language_code
-    #    tl_code = doc.target_language_code
+        sl_code = doc.source_language_code
+        tl_code = doc.target_language_code
 
         # validated_data["mt_raw"]= client.translate(segment.source,
         #     target_language=segment.target_language_code, format_="text")\
         #     .get("translatedText")
 
-     #   validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
+        validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
 
-        data = validated_data.pop("segment")
         instance = MT_RawTranslation.objects.create(**validated_data)
-        seg_instance = apps.get_model(instance.reverse_string_for_segment).objects.get(id=data.id)
-        seg_instance.mt_raw_translation = instance
-        seg_instance.save()
-
         return instance
-
 
 
 

@@ -709,7 +709,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = TaskAssignInfo
 		fields = ('instruction','assignment_id','deadline','mtpe_rate','mtpe_count_unit','total_word_count','currency',\
-				  'assigned_by','task_assign_info','task_ven_accepted',)
+				  'assigned_by','task_assign_info','task_ven_status',)
 
 ####################Need to change################################
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
@@ -1165,6 +1165,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_accepted':False})
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
+			if 'task_ven_status' in data:
+				ws_forms.task_assign_ven_status_mail(instance.task,data.get('task_ven_status'))
 			task_assign_info_data = data.get('task_assign_info')
 			try:task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
 			except:pass

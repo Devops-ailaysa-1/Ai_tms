@@ -303,13 +303,13 @@ def mt_only(project_id,token):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
-    #if pr.pre_translate == True:
-    tasks = pr.get_mtpe_tasks
-    print("TASKS Inside CELERY----->",tasks)
-    for i in pr.get_mtpe_tasks:
-        document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
-        doc = DocumentSerializerV2(document).data
-        print(doc)
+    if pr.pre_translate == True:
+        tasks = pr.get_mtpe_tasks
+        print("TASKS Inside CELERY----->",tasks)
+        for i in pr.get_mtpe_tasks:
+            document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
+            doc = DocumentSerializerV2(document).data
+            print(doc)
 
 
 @task
