@@ -210,59 +210,59 @@ def glossary_template(request):
 
 @api_view(['GET',])
 def tbx_write(request,task_id):
-    #try:
-    job = Task.objects.get(id = task_id).job
-    sl_code = job.source_language_code
-    tl_code = job.target_language_code if (job.target_language != job.source_language) and (job.target_language != None) else None
-    objs = TermsModel.objects.filter(job = job)
-    if not objs:
-        return JsonResponse({'msg':'There are no terms in glossary'})
-    root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
-                            nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
-    tbxHeader = ET.Element("tbxHeader")
-    root.append (tbxHeader)
-    Filedesc=ET.SubElement(tbxHeader,"fileDesc")
-    TitleStmt=ET.SubElement(Filedesc,"titleStmt")
-    Title=ET.SubElement(TitleStmt,"title")
-    Title.text=job.project.project_name
-    SourceDesc=ET.SubElement(Filedesc,"sourceDesc")
-    Info=ET.SubElement(SourceDesc,"p")
-    Info.text="TBX created from " + job.term_job.last().file.filename
-    EncodingDesc=ET.SubElement(tbxHeader,"encodingDesc")
-    EncodingInfo=ET.SubElement(EncodingDesc,"p",type="XCSURI")
-    EncodingInfo.text="TBXXCSV02.xcs"
-    Text= ET.Element("text")
-    root.append(Text)
-    Body=ET.SubElement(Text,"body")
-    for i,obj in enumerate(objs):
-        i=i+1
-        conceptEntry    = ET.SubElement(Body,"conceptEntry",id="c"+str(i))
-        langSec         = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code})
-        Termsec         = ET.SubElement(langSec,"termSec")
-        Term = ET.SubElement(Termsec,"term")
-        Term.text = obj.sl_term.strip()
+    try:
+        job = Task.objects.get(id = task_id).job
+        sl_code = job.source_language_code
+        tl_code = job.target_language_code if (job.target_language != job.source_language) and (job.target_language != None) else None
+        objs = TermsModel.objects.filter(job = job)
+        if not objs:
+            return JsonResponse({'msg':'There are no terms in glossary'})
+        root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
+                                nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
+        tbxHeader = ET.Element("tbxHeader")
+        root.append (tbxHeader)
+        Filedesc=ET.SubElement(tbxHeader,"fileDesc")
+        TitleStmt=ET.SubElement(Filedesc,"titleStmt")
+        Title=ET.SubElement(TitleStmt,"title")
+        Title.text=job.project.project_name
+        SourceDesc=ET.SubElement(Filedesc,"sourceDesc")
+        Info=ET.SubElement(SourceDesc,"p")
+        Info.text="TBX created from " + job.term_job.last().file.filename if job.term_job.last().file else "TBX created from " +  job.project.project_name
+        EncodingDesc=ET.SubElement(tbxHeader,"encodingDesc")
+        EncodingInfo=ET.SubElement(EncodingDesc,"p",type="XCSURI")
+        EncodingInfo.text="TBXXCSV02.xcs"
+        Text= ET.Element("text")
+        root.append(Text)
+        Body=ET.SubElement(Text,"body")
+        for i,obj in enumerate(objs):
+            i=i+1
+            conceptEntry    = ET.SubElement(Body,"conceptEntry",id="c"+str(i))
+            langSec         = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code})
+            Termsec         = ET.SubElement(langSec,"termSec")
+            Term = ET.SubElement(Termsec,"term")
+            Term.text = obj.sl_term.strip()
+            if tl_code:
+                langSec1 = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": tl_code})
+                termSec1 = ET.SubElement(langSec1,"termSec")
+                Term1 = ET.SubElement(termSec1,"term")
+                Term1.text = obj.tl_term.strip() if obj.tl_term else obj.tl_term
         if tl_code:
-            langSec1 = ET.SubElement(conceptEntry,"langSec",**{"{http://www.w3.org/XML/1998/namespace}lang": tl_code})
-            termSec1 = ET.SubElement(langSec1,"termSec")
-            Term1 = ET.SubElement(termSec1,"term")
-            Term1.text = obj.tl_term.strip() if obj.tl_term else obj.tl_term
-    if tl_code:
-        out_fileName = job.project.project_name+"(" + sl_code + "-" + tl_code + ")"+ ".tbx"
-    else:out_fileName= job.project.project_name+"(" + sl_code + ")" +".tbx"
-    ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
-    print("TBX FILE----------------->",out_fileName)
-    fl_path=os.getcwd()+"/"+out_fileName
-    filename = out_fileName
-    fl = open(fl_path, 'rb')
-    mime_type, _ = mimetypes.guess_type(fl_path)
-    response = HttpResponse(fl, content_type=mime_type)
-    response['Content-Disposition'] = "attachment; filename=%s" % filename
-    os.remove(os.getcwd()+"/"+out_fileName)
-    return response
+            out_fileName = job.project.project_name+"(" + sl_code + "-" + tl_code + ")"+ ".tbx"
+        else:out_fileName= job.project.project_name+"(" + sl_code + ")" +".tbx"
+        ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
+        print("TBX FILE----------------->",out_fileName)
+        fl_path=os.getcwd()+"/"+out_fileName
+        filename = out_fileName
+        fl = open(fl_path, 'rb')
+        mime_type, _ = mimetypes.guess_type(fl_path)
+        response = HttpResponse(fl, content_type=mime_type)
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        os.remove(os.getcwd()+"/"+out_fileName)
+        return response
 
-    # except Exception as e:
-    #     print("Exception1-->", e)
-    #     return Response(data={"Message":"Something wrong in TBX conversion"})
+    except Exception as e:
+        print("Exception1-->", e)
+        return Response(data={"Message":"Something wrong in TBX conversion"})
 
 
 
