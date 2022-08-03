@@ -355,7 +355,7 @@ class GetTranslation(APIView):
             tl_code = task_obj.job.target_language_code
         else:
             return Response({'msg':'Monolingual dictionary'})
-        mt_engine_id = task_obj.task_info.get(step__name="Post Editing").mt_engine_id
+        mt_engine_id = task_obj.task_info.get(step__name="PostEditing").mt_engine_id
 
         # Finding the debit user
         project = task_obj.job.project
