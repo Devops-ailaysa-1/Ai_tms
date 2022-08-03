@@ -893,14 +893,20 @@ class Task(models.Model):
 
     @property
     def get_progress(self):
-        confirm_list = [102, 104, 106]
-        # total_segment_count = self.document.total_segment_count
-        total_segment_count = self.corrected_segment_count
-        segments_confirmed_count = self.document.segments.filter(
-            status__status_id__in=confirm_list
-        ).count()
-        return {"total_segments": total_segment_count, \
-                "confirmed_segments": segments_confirmed_count}
+        if self.job.project.project_type_id != 3:
+            confirm_list = [102, 104, 106]
+            # total_segment_count = self.document.total_segment_count
+            total_segment_count = self.corrected_segment_count
+            segments_confirmed_count = self.document.segments.filter(
+                status__status_id__in=confirm_list
+            ).count()
+            return {"total_segments": total_segment_count, \
+                    "confirmed_segments": segments_confirmed_count}
+        else:
+            target_words = self.job.term_job.filter(Q(tl_term__isnull=False)).exclude(tl_term='').count()
+            source_words = self.job.term_job.filter(Q(sl_term__isnull=False)).exclude(sl_term='').count()
+            return {"source_words":source_words,\
+                    "target_words":target_words}
     # @property
     # def get_progress(self):
     #     # confirm_list = [102, 104, 106]
