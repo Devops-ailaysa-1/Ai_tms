@@ -21,3 +21,12 @@ class GithubApiTestCase(APITestCase):
             pass
 
         self.assertTrue(username_attr_exist)
+
+
+
+
+
+
+
+
+
