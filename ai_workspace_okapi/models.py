@@ -138,10 +138,10 @@ class MT_RawTranslation(models.Model):
     def target_language(self):
         return self.get_segment.text_unit.document.job.target_language_code
 
-    @property
-    def get_segment(self):
-        return apps.get_model(self.reverse_string_for_segment).objects\
-            .filter(mt_raw_translation=self).first()
+    # @property
+    # def get_segment(self):
+    #     return apps.get_model(self.reverse_string_for_segment).objects\
+    #         .filter(mt_raw_translation=self).first()
 
 class Comment(models.Model):
     comment = models.TextField()
