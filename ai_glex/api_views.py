@@ -250,6 +250,7 @@ def tbx_write(request,task_id):
             out_fileName = job.project.project_name+"(" + sl_code + "-" + tl_code + ")"+ ".tbx"
         else:out_fileName= job.project.project_name+"(" + sl_code + ")" +".tbx"
         ET.ElementTree(root).write(out_fileName, encoding="utf-8",xml_declaration=True)
+        print("TBX FILE----------------->",out_fileName)
         fl_path=os.getcwd()+"/"+out_fileName
         filename = out_fileName
         fl = open(fl_path, 'rb')
@@ -368,7 +369,7 @@ class GetTranslation(APIView):
 
             # get translation
             translation = get_translation(mt_engine_id, source, sl_code, tl_code)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(request, user, word_count)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
             return Response({"res": translation}, status=200)
 
         else:

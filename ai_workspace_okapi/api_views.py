@@ -1278,16 +1278,23 @@ def wikipedia_ws(code,codesrc,user_input):
 #WIKIPEDIA
 @api_view(['GET',])
 # @permission_classes((HasToken,))
-def WikipediaWorkspace(request,doc_id):
+def WikipediaWorkspace(request):
+    doc_id =request.GET.get('doc_id')
+    task_id = request.GET.get('task_id')
     data=request.GET.dict()
     lang_list = ["zh-Hans","zh-Hant"]
     user_input=data.get("term")
     term_type=data.get("term_type","source")
     user_input=user_input.strip()
     user_input=user_input.strip('0123456789')
-    doc = Document.objects.get(id=doc_id)
-    src = doc.source_language_code if doc.source_language_code not in lang_list else "zh"
-    tar = doc.target_language_code if doc.target_language_code not in lang_list else "zh"
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        src = doc.source_language_code if doc.source_language_code not in lang_list else "zh"
+        tar = doc.target_language_code if doc.target_language_code not in lang_list else "zh"
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        src = task.job.source_language_code if task.job.source_language_code not in lang_list else "zh"
+        tar = task.job.target_language_code if task.job.target_language_code not in lang_list else "zh"
     if term_type=="source":
         codesrc = src
         code = tar
@@ -1339,16 +1346,23 @@ def wiktionary_ws(code,codesrc,user_input):
 #WIKTIONARY
 @api_view(['GET',])
 # @permission_classes((HasToken,))
-def WiktionaryWorkSpace(request,doc_id):
+def WiktionaryWorkSpace(request):
     data=request.GET.dict()
+    doc_id =request.GET.get('doc_id')
+    task_id = request.GET.get('task_id')
     lang_list = ["zh-Hans","zh-Hant"]
     user_input=data.get("term")
     term_type=data.get("term_type")
     user_input=user_input.strip()
     user_input=user_input.strip('0123456789')
-    doc = Document.objects.get(id=doc_id)
-    src = doc.source_language_code if doc.source_language_code not in lang_list else "zh"
-    tar = doc.target_language_code if doc.target_language_code not in lang_list else "zh"
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        src = doc.source_language_code if doc.source_language_code not in lang_list else "zh"
+        tar = doc.target_language_code if doc.target_language_code not in lang_list else "zh"
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        src = task.job.source_language_code if task.job.source_language_code not in lang_list else "zh"
+        tar = task.job.target_language_code if task.job.target_language_code not in lang_list else "zh"
     if term_type=="source":
         codesrc =src
         code = tar
