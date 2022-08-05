@@ -584,6 +584,9 @@ class ProjectFilter(django_filters.FilterSet):
         if value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
             return queryset
+        if value == "files":
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
+            return queryset
         # if value == "glossary":
         #     lookup = '__'.join([name, 'isnull'])
         #     return queryset.filter(**{lookup: False})
