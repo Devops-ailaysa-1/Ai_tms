@@ -70,7 +70,7 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
         return project
 
     def update(self, instance, validated_data):
-        print("In update",validated_data)
+        print("In update----------->",validated_data)
         if 'glossary' in validated_data:
             glossary_serializer = self.fields['glossary']
             glossary_instance = instance.glossary_project

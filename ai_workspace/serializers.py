@@ -513,7 +513,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		else:
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [])]
-			data['pre_translate'] = data.get('pre_translate')[0]
+			if data.get('pre_translate'):
+				data['pre_translate'] = data.get('pre_translate')[0] 
 
 		data['team_exist'] = data.get('team',[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
