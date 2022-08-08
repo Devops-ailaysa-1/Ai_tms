@@ -244,14 +244,18 @@ class DocumentViewByDocumentId(views.APIView):
 
     def get(self, request, document_id):
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
+        try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
+        except:managers =[]
         if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
             dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
+            dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
             document = self.get_object(document_id)
             data = DocumentSerializerV2(document).data
             data.update(dict)
+            data.update(dict_1)
             return Response(data, status=200)
         else:
             return Response({"msg" : "Unauthorised"}, status=401)
@@ -556,8 +560,13 @@ class DocumentToFile(views.APIView):
         language_locale = request.GET.get("locale", None)
         payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
         user_id_payload = payload.get("user_id", 0)
-        user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        if user_id_payload == user_id_document:
+        request_user = AiUser.objects.get(id=user_id_payload)
+        # team_members = doc_user.get_team_members if doc_user.get_team_members else []
+        document_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
+        except:managers = []
+
+        if (request_user ==  document_user) or (request_user in managers):
 
             # FOR DOWNLOADING SOURCE FILE
             if output_type == "SOURCE":

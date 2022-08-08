@@ -726,14 +726,10 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
                 tt = str(source_lang_name) + '---->' + str(target_lang_name)
                 res[tt] = ser.data
         print("RES-------->",len(res))
-        if len(res)>=3:
-            return Response(self.dt(res,1))
-        elif len(res)==2:
-            return Response(self.dt(res,2))
-        elif len(res)==1:
-            return Response(self.dt(res,3))
-        else:
-            return Response([])
+        if len(res)>=3:return Response(self.dt(res,1))
+        elif len(res)==2:return Response(self.dt(res,2))
+        elif len(res)==1:return Response(self.dt(res,3))
+        else:return Response([])
 
 
 
