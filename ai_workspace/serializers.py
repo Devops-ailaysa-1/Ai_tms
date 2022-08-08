@@ -65,7 +65,7 @@ class JobSerializer(serializers.ModelSerializer):
 		model = Job
 		fields = ("id","project", "source_language", "target_language", "source_target_pair",
 				  "source_target_pair_names", "source_language_code", "target_language_code",\
-				  "can_delete",'assignable',)
+				  "can_delete",'assignable',"type_of_job",)
 		read_only_fields = ("id","source_target_pair", "source_target_pair_names")
 
 class FileSerializer(serializers.ModelSerializer):
@@ -514,7 +514,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [])]
 			if data.get('pre_translate'):
-				data['pre_translate'] = data.get('pre_translate')[0] 
+				data['pre_translate'] = data.get('pre_translate')[0]
 
 		data['team_exist'] = data.get('team',[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
