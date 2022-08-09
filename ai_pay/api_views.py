@@ -86,7 +86,7 @@ def conn_account_create(user):
             account=acc.id,
             refresh_url=settings.USERPORTAL_URL,
             return_url=settings.USERPORTAL_URL,
-            type= link_type if not 'link_type' in locals() else "account_onboarding"
+            type= link_type if 'link_type' in locals() else "account_onboarding"
             )
         return True,acc_link
     else:
@@ -467,7 +467,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
                 logging.error(f"invoice item error {po.poid} : {str(e)}")
                 return False
         
-    return stripe_invoice_finalize(invo_id,vendor)
+        return stripe_invoice_finalize(invo_id,vendor)
 
 
 
