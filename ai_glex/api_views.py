@@ -138,8 +138,14 @@ class GlossaryFileView(viewsets.ViewSet):
         file_delete_ids = request.GET.get('file_delete_ids')
         print("FDI------->",file_delete_ids)
         delete_list = file_delete_ids.split(',')
-        job = request.GET.get('job')
-        [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list]
+        job = request.GET.get('job',None)
+        project =request.GET.get('project')
+        if job:
+            [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list]
+        else:
+            proj = Project.objects.get(id=project)
+            jobs = proj.get_jobs
+            [GlossaryFiles.objects.filter(job=job,id=i).delete() for i in delete_list for job in jobs]
         return Response({"Msg":"Files Deleted"})
 
 ###############################Terms CRUD########################################
@@ -406,8 +412,8 @@ def adding_term_to_glossary_from_workspace(request):
 @permission_classes([IsAuthenticated])
 def clone_source_terms(request):
     current_job = request.GET.get('job_id')
-    existing_job = request.GET.get('copy_from_job_id')
-    queryset = TermsModel.objects.filter(job = existing_job)
+    existing_job = request.GET.getlist('copy_from_job_id')
+    queryset = TermsModel.objects.filter(job_id__in = existing_job)
     with transaction.atomic():
         for i in queryset:
             i.pk = None

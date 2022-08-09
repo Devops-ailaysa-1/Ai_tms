@@ -42,6 +42,7 @@ from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
 
 
+
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
     create_dirs_if_not_exists(path)
@@ -345,10 +346,15 @@ class Project(models.Model):
 
     @property
     def PR_step_edit(self):
-        for task in self.get_tasks:
-            if task.task_info.filter(task_assign_info__isnull=False).filter(step_id=2):
+        if self.proj_detail.exists():
+            if self.proj_detail.first().projectpost_steps.filter(steps_id=2).exists():
                 return False
-        return True
+            else:return True
+        else:
+            for task in self.get_tasks:
+                if task.task_info.filter(task_assign_info__isnull=False).filter(step_id=2):
+                    return False
+            return True
 
 
     @property
