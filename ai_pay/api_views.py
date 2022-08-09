@@ -4,6 +4,7 @@ from locale import currency
 from ai_auth.models import AiUser, BillingAddress
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment
 from ai_staff.models import IndianStates
+from ai_workspace.models import TaskAssignInfo
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from django.conf import settings
@@ -337,24 +338,26 @@ def generate_client_po(task_assign_info):
 
     with transaction.atomic():
         po_total_amt=0.0
-        for instance in task_assign_info:
-            assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id)[0]
+        for obj_id in task_assign_info:
+            instance = TaskAssignInfo.objects.get(id=obj_id)
+            assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
             if instance.mtpe_count_unit.unit=='Word':
                 tot_amount =instance.total_word_count * instance.mtpe_rate
             elif instance.mtpe_count_unit.unit =='Char':
-                tot_amount = instance.task.task_details.last().task_char_count * instance.mtpe_rate
+                tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
             else:
                 # rasie error on invalid price should be rised
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
-            insert={'task_id':instance.task.id,'assignment':assign,'project_name':instance.task.job.project.project_name,'projectid':instance.task.job.project.ai_project_id,
-                    'word_count':instance.total_word_count,'char_count':instance.task.task_char_count,'unit_price':instance.mtpe_rate,
-                    'unit_type':instance.mtpe_count_unit,'source_language':instance.task.job.source_language,'target_language':instance.task.job.target_language,'total_amount':tot_amount}
+            insert={'task_id':instance.task_assign.task.id,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
+                    'word_count':instance.total_word_count,'char_count':instance.task_assign.task.task_char_count,'unit_price':instance.mtpe_rate,
+                    'unit_type':instance.mtpe_count_unit,'source_language':instance.task_assign.task.job.source_language,'target_language':instance.task_assign.task.job.target_language,'total_amount':tot_amount}
             # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
             # print("po_task",po_task)
             po_total_amt+=float(tot_amount)
-        insert2={'client':instance.assigned_by,'seller':instance.task.assign_to,
+
+        insert2={'client':instance.assigned_by,'seller':instance.task_assign.assign_to,
                 'assignment':assign,'currency':instance.currency,
                 'po_status':'issued','po_total_amount':po_total_amt}
         # print("insert2",insert2)

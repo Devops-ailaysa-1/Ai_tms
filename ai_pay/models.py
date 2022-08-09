@@ -2,11 +2,13 @@ import random,string
 from django.db import models
 from ai_auth.models import AiUser
 from ai_staff.models import Billingunits, Currencies, Languages, ServiceTypeunits
-
+from ai_workspace.models import Steps
 
 class POAssignment(models.Model):
     #task_assign =  models.CharField(max_length=191, blank=True, null=True)
     assignment_id =  models.CharField(max_length=191, blank=True, null=True)
+    step = models.ForeignKey(Steps,on_delete=models.CASCADE, null=False, blank=False,
+            related_name="po_assignment_step")
 
     def __unicode__(self):
         return self.assignment_id

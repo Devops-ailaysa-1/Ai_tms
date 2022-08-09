@@ -801,6 +801,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         files = data.pop('files')
         mt_engine_id = data.pop('mt_engine_id',None)
         mt_enable = data.pop('mt_enable',None)
+        user1 = AiUser.objects.get(id=assign_to)
         pre_translate = data.pop('pre_translate',None)
         task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step)) for task in task_list]
         with transaction.atomic():
@@ -813,8 +814,12 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                 TaskAssignInfo.objects.filter(id=i.id).update(total_word_count = total_word_count)
             tt = [Instructionfiles.objects.create(**instruction_file,task_assign_info = assign) for instruction_file in files for assign in task_assign_info]
             task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(assign_to_id = assign_to) for task in task_list]
+            print("Task Assign-------->",[TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first().assign_to for task in task_list])
             if mt_engine_id or mt_enable or pre_translate:
                 [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_engine_id=mt_engine_id,mt_enable=mt_enable,pre_translate=pre_translate) for task in task_list]
+        if user1.is_internal_member == False:
+          print("task_assing id",[i.task_assign.assign_to for i in task_assign_info])
+          generate_client_po([i.id for i in task_assign_info])
         return task_assign_info
 
     # def update(self,instance,data):
