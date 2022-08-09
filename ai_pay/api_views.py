@@ -364,9 +364,15 @@ def generate_client_po(task_assign_info):
             instance = TaskAssignInfo.objects.get(id=obj_id)
             assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
             if instance.mtpe_count_unit.unit=='Word':
-                tot_amount =instance.total_word_count * instance.mtpe_rate
+                if instance.total_word_count:
+                    tot_amount =instance.total_word_count * instance.mtpe_rate
+                else:
+                    tot_amount = 0
             elif instance.mtpe_count_unit.unit =='Char':
-                tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
+                if instance.task_assign.task.task_char_count:
+                    tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
+                else:
+                     tot_amount = 0
             else:
                 # rasie error on invalid price should be rised
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
@@ -385,6 +391,13 @@ def generate_client_po(task_assign_info):
         # print("insert2",insert2)
         po=PurchaseOrder.objects.create(**insert2)
         # print("po2",po)
+
+
+def po_modify(task_assign_info):
+    pass
+
+def extend_po() :
+    pass
 
 
 
