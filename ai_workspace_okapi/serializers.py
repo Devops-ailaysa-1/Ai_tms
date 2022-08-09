@@ -306,7 +306,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         if target_get == True:
             mt_params = []
             count = 0
-            segments = Segment.objects.filter(text_unit__document=document)
+            segments = Segment.objects.filter(text_unit__document=document) #####Need to check this##########
             for i in segments:
                 if i.target != "":
                     count += 1

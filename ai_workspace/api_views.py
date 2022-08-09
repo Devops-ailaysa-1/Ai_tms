@@ -584,6 +584,9 @@ class ProjectFilter(django_filters.FilterSet):
         if value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
             return queryset
+        if value == "files":
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
+            return queryset
         # if value == "glossary":
         #     lookup = '__'.join([name, 'isnull'])
         #     return queryset.filter(**{lookup: False})
@@ -605,6 +608,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         project_type = json.loads(self.request.POST.get('project_type','1'))
+        print("type---->",project_type)
         if project_type == 3:
             return GlossarySetupSerializer
         # if project_type == 4:
@@ -669,6 +673,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def update(self, request, pk, format=None):
         instance = self.get_object()
         ser = self.get_serializer_class()
+        print("ser----------->",ser)
         text_data=request.POST.get('text_data')
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"

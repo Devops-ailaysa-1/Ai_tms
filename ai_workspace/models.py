@@ -601,6 +601,21 @@ class Job(models.Model):
         return self.source_language_code
 
     @property
+    def type_of_job(self):
+        if self.project.project_type_id == 4:
+            if self.project.voice_proj_detail.project_type_sub_category_id == 1:
+                if self.target_language == None:
+                    return "Transcibe post editing"
+                else:return "MTPE"
+            else:return "MTPE"
+        elif self.project.project_type_id == 3:
+            if self.source_language == self.target_language:
+                return "Glossary Term Addition"
+            else: return "Glossary Translation"
+        else:return "MTPE"
+
+
+    @property
     def target__language(self):
         #print("called every time!!!")
         # return self.target_language.locale.first().language

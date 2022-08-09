@@ -91,10 +91,10 @@ def post_project_primary_details(request):
                      # ai_user=self.request.user)
     jobs = project.project_jobs_set.all()
     try:
-        if project.voice_proj_detail.project_type_sub_category_id == 2:
+        if project.voice_proj_detail.project_type_sub_category_id == 2:     ###########text-to-speech
             jobs =  project.project_jobs_set.filter(~Q(target_language=None))
             tasks = project.get_assignable_tasks
-        else:
+        else:  ###########speech-to-text#################
             jobs = project.project_jobs_set.all()
             tasks = project.get_tasks
     except:
@@ -106,8 +106,9 @@ def post_project_primary_details(request):
     contents = ProjectContentTypeSerializer(contents,many=True)
     subjects = ProjectSubjectSerializer(subjects,many=True)
     # tasks = project.get_tasks
-    task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,'word_count':i.task_word_count if i.task_details.exists() else None} for i in tasks]
-    result = {'project_name':project.project_name,'task_count_detail':task_count_detail,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
+    task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,\
+                        'word_count':i.task_word_count if i.task_details.exists() else None} for i in tasks]
+    result = {'project_name':project.project_name,'project_type':project.project_type_id,'task_count_detail':task_count_detail,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
     return JsonResponse({"res":result},safe=False)
 
 
@@ -136,6 +137,13 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
 
     def create(self, request):
         template = request.POST.get('is_template',None)
+        customer = request.user.team.owner if request.user.team else request.user
+        if template: ####template create only added.........update and delete need to be included#############
+            serializer1 = ProjectPostTemplateSerializer(data={**request.POST.dict(),'customer_id':customer.id})
+            if serializer1.is_valid():
+                serializer1.save()
+        # customer = request.user.id
+        serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer.id,'posted_by_id':request.user.id},context={'request':request})
 
         if serializer.is_valid():
             serializer.save()
@@ -653,11 +661,11 @@ def get_previous_accepted_rate(request):
     vendor = AiUser.objects.get(id=vendor_id)
     print(vendor)
     #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
-    query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task__assign_to = vendor)).order_by('-id')
-    query_final = query.filter(Q(task__job__source_language = job_obj.source_language) & Q(task__job__target_language = job_obj.target_language))
+    query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
+    query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language))
     rates =[]
     for i in query_final:
-        out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id}]
+        out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
         rates.append(out)
     return JsonResponse({"Previously Agreed Rates":rates})
 
