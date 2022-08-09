@@ -411,8 +411,10 @@ def adding_term_to_glossary_from_workspace(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def clone_source_terms(request):
-    current_job = request.GET.get('job_id')
-    existing_job = request.GET.getlist('copy_from_job_id')
+    current_task = request.GET.get('task_id')
+    existing_task = request.GET.getlist('copy_from_task_id')
+    current_job = Task.objects.get(id=current_task).job_id
+    existing_job = [i.job_id for i in Task.objects.filter(id__in=existing_task)]
     queryset = TermsModel.objects.filter(job_id__in = existing_job)
     with transaction.atomic():
         for i in queryset:
