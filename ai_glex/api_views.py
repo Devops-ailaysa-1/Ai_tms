@@ -154,7 +154,7 @@ class TermUploadView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = TermsSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
-    ordering_fields = ['created_date','id']
+    ordering_fields = ['created_date','id','sl_term','tl_term']
     search_fields = ['sl_term','tl_term']
     ordering = ('-id')
 
@@ -415,6 +415,7 @@ def clone_source_terms(request):
     existing_task = request.GET.getlist('copy_from_task_id')
     current_job = Task.objects.get(id=current_task).job_id
     existing_job = [i.job_id for i in Task.objects.filter(id__in=existing_task)]
+    print("Existing Job---->",existing_job)
     queryset = TermsModel.objects.filter(job_id__in = existing_job)
     with transaction.atomic():
         for i in queryset:
