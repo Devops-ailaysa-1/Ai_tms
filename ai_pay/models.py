@@ -34,9 +34,9 @@ class POTaskDetails(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.total_amount:
-            if self.unit_type.unit=='Char':
+            if self.unit_type.unit=='Char' and self.char_count!=None:
                 self.total_amount = self.unit_price * self.char_count
-            elif self.unit_type.unit=='Word':
+            elif self.unit_type.unit=='Word' and self.word_count!=None:
                 self.total_amount = self.unit_price * self.word_count
             #self.assignment_id = self.task.job.project.ai_project_id+"t"+str(TaskAssignInfo.objects.filter(task=self.task).count()+1)
         super().save()
