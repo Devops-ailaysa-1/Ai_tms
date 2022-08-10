@@ -27,6 +27,7 @@
                   <p>Job : {{job}}</p>
                   <p>Rate : {{rate}}</p>
                   <p>Deadline : {{deadline}}
+                {% if files %}
                 {% for i in files %}
                 {% if i.unit == 'Word' %}
                 <p>File : {{i.file}},&emsp;Words : {{i.words}}</p>
@@ -36,6 +37,7 @@
                 <p>File : {{i.file}},&emsp;Words : {{i.words}}</p>
                 {% endif %}
                 {% endfor %}
+                {% endif %}
             </div>
             <p>Log into Ailaysa to approve rates and start the task</p>
         </td></tr></tbody>

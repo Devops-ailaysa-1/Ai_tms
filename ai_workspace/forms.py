@@ -99,7 +99,9 @@ def task_assign_detail_mail(Receiver,assignment_id):
     ins = TaskAssignInfo.objects.filter(assignment_id = assignment_id).first()
     file_detail = []
     for i in task_assgn_objs:
-        if i.mtpe_count_unit.unit == 'Word' or 'Hour' or 'Total':
+        if i.task_assign.task.job.project.project_type_id == 3:
+            out = []
+        elif i.mtpe_count_unit.unit == 'Word' or 'Hour' or 'Total':
             out = [{"file":i.task_assign.task.file.filename,"words":i.task_assign.task.task_word_count,"unit":i.mtpe_count_unit.unit}]
         elif i.mtpe_count_unit.unit == 'Char':
             out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
