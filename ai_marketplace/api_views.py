@@ -344,7 +344,7 @@ def bid_proposal_status(request):
                 token = invite_accept_token.make_token(tt)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 context = {'name':obj.vendor.fullname,'team':user.fullname,'link':link,'job':obj.bidpostjob.source_target_pair_names,
-                           'hourly_rate': str(obj.mtpe_hourly_rate.quantize(Decimal("0.00"))) + '(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit,\
+                           'hourly_rate': str(obj.mtpe_hourly_rate.quantize(Decimal("0.00"))) if obj.mtpe_rate else None + '(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit,\
                             'unit_rate':str(obj.mtpe_rate.quantize(Decimal("0.00"))) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
                             'job_id':obj.bidpostjob.postjob_id,'project':obj.projectpost.proj_name,\
                             'date':obj.created_at.date().strftime('%d-%m-%Y')}

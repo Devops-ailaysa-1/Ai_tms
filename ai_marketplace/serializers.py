@@ -606,13 +606,31 @@ class AvailablePostJobSerializer(serializers.Serializer):
         fields = ('post_id', 'post_name', 'post_desc','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
 
     def get_apply(self, obj):
+        print( self.context.get("request").user)
         vendor = self.context.get("request").user
-        jobs = obj.get_jobs
+        jobs = obj.get_postedjobs
+        steps = obj.get_steps
+        matched_jobs,applied_jobs=[],[]
         for i in jobs:
-            res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            if i.src_lang_id == i.tar_lang_id:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
+            else:
+                res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:
-                return True
-        return False
+                matched_jobs.append(i)
+            bid_info = i.bid_details.filter(vendor_id = vendor.id)
+            if bid_info:
+                if len(steps) == 1:
+                    applied_jobs.append(i)
+                else:
+                    if bid_info.filter(Q(bid_step_id=1)) and bid_info.filter(Q(bid_step_id=2)):
+                        applied_jobs.append(i)
+        if len(matched_jobs)== 0:
+            return False
+        elif len(matched_jobs) == len(applied_jobs):
+            return "Applied"
+        else:
+            return True
 
 class ProjectPostTemplateSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     template_name = serializers.CharField()
