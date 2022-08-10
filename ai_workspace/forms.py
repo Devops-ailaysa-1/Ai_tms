@@ -119,9 +119,9 @@ def task_assign_detail_mail(Receiver,assignment_id):
     print("assign detail mailsent>>")
 
 
-def task_assign_ven_status_mail(task,task_ven_status):
-    context = {'name':task.task_assign_info.assigned_by.fullname,'task':task.ai_taskid,'task_ven_status':task_ven_status,'assign_to':task.assign_to.fullname,'project':task.job.project}
-    email = task.task_assign_info.assigned_by.email
+def task_assign_ven_status_mail(task_assign,task_ven_status):
+    context = {'name':task_assign.task_assign_info.assigned_by.fullname,'task':task_assign.task.ai_taskid,'task_ven_status':task_ven_status,'assign_to':task_assign.assign_to.fullname,'project':task_assign.task.job.project}
+    email = task_assign.task_assign_info.assigned_by.email
     msg_html = render_to_string("task_assign_ven_status_mail.html",context)
     send_mail(
         'Task Assign Vendor Status',None,

@@ -10,6 +10,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 import json
 import pickle,itertools
 from ai_workspace import forms as ws_forms
+from notifications.signals import notify
 from ai_workspace_okapi.utils import get_file_extension, get_processor_name
 from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.shortcuts import reverse
@@ -1138,7 +1139,24 @@ class WorkflowsStepsSerializer(serializers.ModelSerializer):
            [WorkflowSteps.objects.create(workflow = instance,steps_id = i )for i in data.get('steps')]
         return super().update(instance, data)
 
-
+def msg_send_vendor_accept(task_assign,input):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    sender = task_assign.assign_to
+    receiver =  task_assign.task_assign_info.assigned_by
+    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    #print("Thread--->",thread_id)
+    if input == 'task_accepted':
+       message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
+    elif input == 'change_request':
+       message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has submitted change request and waiting for your response."
+    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
 
 class TaskAssignUpdateSerializer(serializers.Serializer):
@@ -1173,8 +1191,9 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_accepted':False})
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
-			if 'task_ven_status' in data:
-				ws_forms.task_assign_ven_status_mail(instance.task,data.get('task_ven_status'))
+			if 'task_ven_status' in data.get('task_assign_info'):
+				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
+				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
 			task_assign_info_data = data.get('task_assign_info')
 			try:task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
 			except:pass
