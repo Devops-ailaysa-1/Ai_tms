@@ -1179,5 +1179,5 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			try:task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
 			except:pass
 		if 'files' in data:
-			[Instructionfiles.objects.create(**instruction_file,task_assign_info_id = instance.id) for instruction_file in data['files']]
+			[Instructionfiles.objects.create(**instruction_file,task_assign_info = instance.task_assign_info) for instruction_file in data['files']]
 		return data

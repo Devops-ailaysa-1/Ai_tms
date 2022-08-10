@@ -410,7 +410,7 @@ def adding_term_to_glossary_from_workspace(request):
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
-def clone_source_terms(request):
+def clone_source_terms_from_multiple_to_single_task(request):
     current_task = request.GET.get('task_id')
     existing_task = request.GET.getlist('copy_from_task_id')
     current_job = Task.objects.get(id=current_task).job_id
@@ -427,3 +427,11 @@ def clone_source_terms(request):
             #i.save()
         TermsModel.objects.bulk_create(queryset)
     return JsonResponse({'msg':'SourceTerms Cloned'})
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def clone_source_terms_from_single_to_multiple_task(request):
+    existing_task = request.GET.get('copy_from_task_id')
+    to_task = request.GET.getlist('copy_to_ids')
+    existing_job = Task.objects.get(id=existing_task).job_id
+    pass
