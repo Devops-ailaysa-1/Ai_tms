@@ -18,5 +18,6 @@ urlpatterns += [
     path('glossary_term_search/',api_views.glossary_search,name='glossary_term_search'),
     path('get_translation/<int:task_id>/', api_views.GetTranslation.as_view(), name='get-translation'),
     path('clone_source_terms_from_multiple_to_single_task/',api_views.clone_source_terms_from_multiple_to_single_task),
+    path('clone_source_terms_from_single_to_multiple_task/',api_views.clone_source_terms_from_single_to_multiple_task),
     path('term_save/',api_views.adding_term_to_glossary_from_workspace,name='adding-term-to-glossary-from-workspace')
 ]

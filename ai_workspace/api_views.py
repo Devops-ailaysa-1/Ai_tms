@@ -742,10 +742,10 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             #     return project.get_tasks
             else:
                 return [task for job in project.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = self.request.user)]
+                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = self.request.user).exists()]#.distinct('task')]
         else:
             return [task for job in project.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = self.request.user)]
+                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = self.request.user).exists()]#.distinct('task')]
 
 
     def get_object(self):
@@ -755,6 +755,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         tasks = self.get_object()
+        #print("TASKS------------>",tasks)
         pagin_queryset = self.paginator.paginate_queryset(tasks, request, view=self)
         serlzr = VendorDashBoardSerializer(pagin_queryset, many=True,context={'request':request})
         return self.get_paginated_response(serlzr.data)

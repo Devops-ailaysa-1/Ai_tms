@@ -194,7 +194,7 @@ class TermUploadView(viewsets.ModelViewSet):
 
 ########################GlossaryTemplateDownload###################################
 @api_view(['GET',])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def glossary_template_lite(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Glossary_template_lite.xlsx'
@@ -204,7 +204,7 @@ def glossary_template_lite(request):
 
 
 @api_view(['GET',])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def glossary_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Glossary_template.xlsx'
@@ -277,7 +277,7 @@ def tbx_write(request,task_id):
 def glossaries_list(request,project_id):
     project = Project.objects.get(id=project_id)
     target_languages = project.get_target_languages
-    queryset = Project.objects.filter(glossary_project__isnull=False)\
+    queryset = Project.objects.filter(ai_user=request.user).filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
                 .exclude(id=project.id).distinct()
@@ -424,6 +424,8 @@ def clone_source_terms_from_multiple_to_single_task(request):
             i.tl_term = None
             i.tl_source = None
             i.tl_definition = None
+            i.file_id = None
+            i.glossary_id = current_job.project.glossary_project.id
             #i.save()
         TermsModel.objects.bulk_create(queryset)
     return JsonResponse({'msg':'SourceTerms Cloned'})
@@ -434,4 +436,23 @@ def clone_source_terms_from_single_to_multiple_task(request):
     existing_task = request.GET.get('copy_from_task_id')
     to_task = request.GET.getlist('copy_to_ids')
     existing_job = Task.objects.get(id=existing_task).job_id
-    pass
+    to_job_ids = [i.job_id for i in Task.objects.filter(id__in=to_task)]
+    queryset = TermsModel.objects.filter(job_id = existing_job)
+    obj =[
+            TermsModel(pk = None,
+            job_id = j,
+            sl_term = i.sl_term,
+            sl_source = i.sl_source,
+            sl_definition = i.sl_definition,
+            pos = i.pos,
+            context = i.context,
+            note = i.note,
+            gender=i.gender,
+            termtype=i.termtype,
+            geographical_usage=i.geographical_usage,
+            term_location=i.term_location,
+            glossary_id=Job.objects.get(id=j).project.glossary_project.id,#glossary_id,file_id clone need to revise
+            )for j in to_job_ids for i in queryset ]
+    print(obj)
+    TermsModel.objects.bulk_create(obj)
+    return JsonResponse({'msg':'SourceTerms Cloned'})
