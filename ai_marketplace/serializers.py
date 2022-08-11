@@ -593,7 +593,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
         #         res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
         #     if res:
         #         return True
-        return False
+        #return False
 
 class ProjectPostTemplateSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     template_name = serializers.CharField()

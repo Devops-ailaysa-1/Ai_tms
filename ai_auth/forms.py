@@ -129,8 +129,6 @@ def send_welcome_mail(current_site,user):
     else:
         logging.error(f"welcome mail sending failed for {email}")
 
-
-
 def send_admin_new_user_notify(user):
     context = {
     "user":user
@@ -144,6 +142,7 @@ def send_admin_new_user_notify(user):
         ["admin@ailaysa.com"],
         html_message=msg_html,
     )
+
 
 
 
