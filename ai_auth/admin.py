@@ -113,8 +113,6 @@ class VAAdmin(admin.ModelAdmin):
         except AiUser.DoesNotExist:
             return None
         return user.country.name
-
-
 @admin.register(VendorOnboardingInfo)
 @admin.register(VendorOnboardingInfo, site=staff_admin_site)
 class VOIAdmin(admin.ModelAdmin):
