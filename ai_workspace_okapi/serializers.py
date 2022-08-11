@@ -234,8 +234,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         # # Segment.objects.bulk_create(segment_instances)
         # # print("********** Created segments **********")
         #
-        # #USING SQL BATCH INSERT  1 m 55.44 s
-        # st = time.time()
+        # #USING SQL BATCH INSERT
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 

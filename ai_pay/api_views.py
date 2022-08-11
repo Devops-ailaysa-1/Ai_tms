@@ -1,3 +1,4 @@
+from asyncio.log import logger
 import decimal
 from locale import currency
 from ai_auth.models import AiUser, BillingAddress
@@ -10,10 +11,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 import stripe
 from django.http import JsonResponse
-from djstripe.models import Account,Customer
+from djstripe.models import Account,Customer,Invoice
 from weasyprint import HTML
 from django.template.loader import render_to_string
-
+from decimal import Decimal
 from django.db.models import Count
 import logging
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -28,7 +29,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter,OrderingFilter
 from django.db.models import Q
 from django.conf import settings
+import time
 
+default_djstripe_owner=Account.get_default_account()
 
 def get_stripe_key():
     '''gets stripe api key for current environment'''
@@ -38,32 +41,61 @@ def get_stripe_key():
         api_key = settings.STRIPE_TEST_SECRET_KEY
     return api_key
 
+def get_connect_account(user):
+    '''get connected account details'''
+    ##(True,False) -->
+    ##(False,False) -->
+
+    try:
+        acc= Account.objects.get(email=user.email)
+        return acc
+    except Account.MultipleObjectsReturned:
+        logger.warning(f"{user.uid} has more thn one connect account.")
+        return None
+    except Account.DoesNotExist:
+        return None
+
+
 
 def conn_account_create(user):
     '''creating stripe connect account'''
+    ##(acc_created_flag,acc_linl_object) -->
+
     stripe.api_key=get_stripe_key()
-    acc_create=stripe.Account.create(
-        type="standard",
-        country=user.country.sortname,
-        email=user.email,
-        metadata={'uid':user.uid}
-        #business_type = 'individual',
-        #settings={"payouts": {"schedule": {"delay_days": 31}}},
-        )
+    acc= get_connect_account(user)
+    if acc:
+        if acc.payouts_enabled:
+            return True,None            
+        else:
+            link_type = "account_update"
+    else:
+        acc=stripe.Account.create(
+            type="standard",
+            country=user.country.sortname,
+            email=user.email,
+            metadata={'uid':user.uid}
+            #business_type = 'individual',
+            #settings={"payouts": {"schedule": {"delay_days": 31}}},
+            )
+    
     # print(acc_create)
-    if acc_create:
+    if acc:
         acc_link = stripe.AccountLink.create(
-        account=acc_create.id,
-        refresh_url=settings.USERPORTAL_URL,
-        return_url=settings.USERPORTAL_URL,
-        type="account_onboarding"
-        )
-        return acc_link
+            account=acc.id,
+            refresh_url=settings.USERPORTAL_URL,
+            return_url=settings.USERPORTAL_URL,
+            type= link_type if not 'link_type' in locals() else "account_onboarding"
+            )
+        return True,acc_link
+    else:
+        logging.error("Account_creation_failed for uid:",user.uid)
+        return False,None
+
 
 class AiConnectOnboarding(viewsets.ViewSet):
     #permission_classes = [IsAuthenticated]
     def create(self,request):
-        acc_link = conn_account_create(request.user)
+        acc_link = conn_account_create(request.user)[1]
         if acc_link:
             return Response({'msg':'Connect Account Link Generated','url':acc_link.url,'expiry':acc_link.expires_at},status=200)
         else:
@@ -120,6 +152,18 @@ class CreateChargeVendor(viewsets.ViewSet):
         pass
 
 
+def void_stripe_invoice(vendor,id):
+    stripe.api_key=get_stripe_key()
+    try:
+        voided = stripe.Invoice.void_invoice(
+        stripe_account=vendor.id,
+        sid=id,
+        )   
+    except BaseException as e:
+        logging.error(f"invoice voiding failed: {id}")
+        return False
+    return True
+
 
 def create_invoice_conn(cust,vendor):
     stripe.api_key=get_stripe_key()
@@ -137,29 +181,62 @@ def create_invoice_conn(cust,vendor):
     )
 
 
-def customer_create_conn_account(user,vendor):
-    cust =Customer.objects.get(subscriber=user)
+def customer_create_conn_account(client,seller):
+    stripe.api_key=get_stripe_key()
+    cust =Customer.objects.get(subscriber=client,djstripe_owner_account=default_djstripe_owner)
+    vendor = Account.objects.get(email=seller.email)
     if cust:
         conn_cust_create = stripe.Customer.create(
         email=cust.email,
         metadata=cust.metadata,
         address=cust.address,
-        stripe_account=vendor.id
+        stripe_account=vendor.id,
+        name=cust.subscriber.fullname
         )
+    return conn_cust_create.get('id')
 
-def create_invoice_conn_direct(cust,vendor,amount,currency,finalize=True):
+
+def webhook_wait(invo_id):
+    print("inside webhook wait")
+    try:
+        Invoice.objects.get(id=invo_id)
+    except:
+        time.sleep(1)
+        return webhook_wait(invo_id)
+    return True
+
+def create_invoice_conn_direct(cust,vendor,currency):  
     stripe.api_key=get_stripe_key()
-    percent=3
+    #percent=3
     #app_fee_amount=percent/100*amount
-    invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
-                customer=cust.id,amount =amount,currency=currency)
+    # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
+    #             customer=cust.id,amount =amount,currency=currency)
 
     invo = stripe.Invoice.create(
         customer=cust.id,
         #application_fee_amount=app_fee_amount,
-        stripe_account=vendor.id,)
-    if finalize:
-        stripe.Invoice.finalize_invoice(invo.id,stripe_account=vendor.id)
+        stripe_account=vendor.id,
+        currency=currency,
+        pending_invoice_items_behavior='exclude')
+
+    # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
+    #         customer=cust.id,amount =amount,currency=currency)
+    print("invo__id",invo.id)
+    if webhook_wait(invo.id):
+        logging.info(f"invoice created : {invo.id}")
+    else:
+        logging.error(f"invoice creation failed: {invo.id}")  
+        return None
+    return invo.id
+
+def stripe_invoice_finalize(invoice_id,vendor) -> bool:
+        stripe.api_key=get_stripe_key()
+        try:
+            res=stripe.Invoice.finalize_invoice(invoice_id,stripe_account=vendor.id)
+        except BaseException as e:
+            logging.error(f"invoice finalize failed - {invoice_id} :{str(e)}")
+            return False
+        return True
 
 
 # payment_intent = stripe.PaymentIntent.create(
@@ -171,6 +248,19 @@ def create_invoice_conn_direct(cust,vendor,amount,currency,finalize=True):
 # )
 
 
+def update_invoice_items_stripe(cust,vendor,amount,currency,invo_id,po_id):
+    stripe.api_key=get_stripe_key()
+    invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
+    stripe_account=vendor.id,
+    customer=cust.id,
+    amount =amount,
+    description=f"{po_id}",
+    currency=currency,
+    metadata={"poid":po_id},
+    invoice=invo_id
+    )
+
+    return invoice_it.get('id')
 
 
 class CreateInvoiceVendor(viewsets.ViewSet):
@@ -334,29 +424,56 @@ class POListView(generics.ListAPIView):
         serializer = PurchaseOrderListSerializer(queryset,context=request)
         return Response(serializer.data)
 
-def generat_invoice_by_stripe(po_li,user,gst=None):
+def converttocent(amount,currency_code=None):
+    return int(amount*100)
+
+def generate_invoice_by_stripe(po_li,user,gst=None):
+    print("user>.",user)
     pos = PurchaseOrder.objects.filter(poid__in=po_li)
     res  = pos.values('currency').annotate(dcount=Count('currency')).order_by().count()
     res2 = pos.values('seller_id').annotate(dcount=Count('seller_id')).order_by().count()
     res3 = pos.values('client_id').annotate(dcount=Count('client_id')).order_by().count()
-    if user.id != pos.last().seller.id:
-        pass
+    if user.id != pos.last().seller.id: # validate seller
+        print("given user is not po owner")
     elif res&res2&res3 >1:
-        logging.error("Invoice creation Failed More Than on currency or users")
+        logging.error("Invoice creation Failed More Than on currency or clients")
         return None
     else:
-        cust  = pos.last().seller
-        ven = pos.last().client
-        # create_invoice_conn_direct(cust,ven,amount,currency)
-
-
+        seller  = pos.last().seller
+        client = pos.last().client
+        currency = pos.last().currency.currency_code
+        try:
+            vendor = Account.objects.get(email=seller.email)
+            cust =Customer.objects.get(subscriber=client,djstripe_owner_account=vendor)
+        except Account.DoesNotExist:
+            logging.error("{user.uid} has no stripe connect account")
+            return False
+        except Customer.DoesNotExist:
+            cust_id = customer_create_conn_account(client,seller)
+            try:
+                cust =Customer.objects.get(id=cust_id,djstripe_owner_account=vendor)
+            except Customer.DoesNotExist:
+                time.sleep(1)
+                cust =Customer.objects.get(id=cust_id,djstripe_owner_account=vendor)
+        invo_id = create_invoice_conn_direct(cust,vendor,currency)
+        for po in pos:
+            try:
+                po_amount=converttocent(po.po_total_amount,po.currency.currency_code)
+                update_invoice_items_stripe(cust,vendor,po_amount,po.currency.currency_code,invo_id,po.poid)
+            except BaseException as e:
+                logging.error(f"invoice item error {po.poid} : {str(e)}")
+                return False
+        
+    return stripe_invoice_finalize(invo_id,vendor)
+    
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def po_request_payment(request):
+    '''API - Generate Invoice based on user selection'''
     user = request.user
     poids = request.POST.getlist('poids')
-    gst=request.POST.get('gst')
+    gst=request.POST.get('gst',None)
     stripe_con = request.POST.get('stripe_con',None)
     # print("stripe_con >>",stripe_con)
 
@@ -368,17 +485,21 @@ def po_request_payment(request):
         return JsonResponse({"msg":"invoice with po already open"},safe=False,status=409)
     if stripe_con == 'True':
         # invo = generat_invoice_by_stripe(poids,gst,user=request.user)
-        from djstripe.models import Account
-        acc=Account.objects.filter(email=user.email)
-        if acc.count()==0:
-            acc_link=conn_account_create(user)
+        print('user>>',user)
+        acc = get_connect_account(user)
+        print('acc>',acc)
+        if acc == None:
+            acc_created,acc_link=conn_account_create(user)
+            if acc_created:
+                #return JsonResponse({"msg":"redirecting to stripe dashboard","url":f"{settings.STRIPE_DASHBOARD_URL}/invoices/create"},status=302)
+                invo = generate_invoice_by_stripe(poids,user=user,gst=gst)
             if acc_link:
                 return Response({'msg':'Connect Account Link Generated','url':acc_link.url,'expiry':acc_link.expires_at},status=302)
             else:
                 return Response({"msg":"Invoice creation failed"},status=400)
-        ## need to check uid 
-           
-        return JsonResponse({"msg":"redirecting to stripe dashboard","url":"https://dashboard.stripe.com/invoices/create"},status=302)
+        else:
+            invo=generate_invoice_by_stripe(poids,user=user,gst=gst)
+        ## need to check uid        
     else:
         invo = generate_invoice_offline(poids,gst,user=user)
     if invo:
@@ -391,8 +512,17 @@ def po_request_payment(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def po_pdf_get(request):
-    poid = request.GET.get('poid')
-    po =PurchaseOrder.objects.get(poid=poid)
+    poid = request.GET.get('poid',None)
+    assignmentid=request.GET.get('assignment_id',None)
+    if poid:
+        po =PurchaseOrder.objects.get(poid=poid)
+    elif assignmentid:
+        try:
+            po =PurchaseOrder.objects.get(assignment__assignment_id=assignmentid)
+        except PurchaseOrder.MultipleObjectsReturned as e:
+            logging.error(f"for assignmentid: {assignmentid} {str(e)}")
+    else:
+        return JsonResponse({'error':'poid_or_assignmenid_field_is_required'},status=400)
     if not po.po_file:
         po_pdf = po_generate_pdf(po)
     return JsonResponse({'url':po.get_pdf},safe=False,status=200)
@@ -401,18 +531,28 @@ def po_pdf_get(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def invoice_pdf_get(request):
-    invoid = request.GET.get('invoice_id')
-    invo =AilaysaGeneratedInvoice.objects.get(invoid=invoid)
+    id = request.GET.get('id')
+    invo =AilaysaGeneratedInvoice.objects.get(id=id)
     if not invo.invo_file:
         invo_pdf = generate_invoice_pdf(invo)
     return JsonResponse({'url':invo.get_pdf},safe=False,status=200)
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def cancel_stripe_invoice(request):
+    try:
+        id = request.GET.get('id')
+        vendor = Account.objects.get(email=request.user.email)
+        void_stripe_invoice(vendor,id)
+    except:
+        return JsonResponse({'msg':'invoice_status_updation_failed'},status=400)
+    return JsonResponse({'msg':'invoice_status_updated'},safe=False,status=200)
 
 
 class InvoiceListView(generics.ListAPIView):
     #permission_classes=[IsAuthenticated]
     serializer_class = InvoiceListSerializer
-    #filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
     #search_fields = ['']
 
     def get_queryset(self):
@@ -424,6 +564,7 @@ class InvoiceListView(generics.ListAPIView):
         # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = InvoiceListSerializer(queryset,context=request)
+        
         return Response(serializer.data)
 
 

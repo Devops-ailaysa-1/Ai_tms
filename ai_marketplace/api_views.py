@@ -656,9 +656,11 @@ def get_previous_accepted_rate(request):
     vendor_id = request.POST.get('vendor_id')
     job_id = request.POST.get('job_id')
     job_obj = Job.objects.get(id=job_id)
-    # print(job_obj.source_language,job_obj.target_language)
+    print(job_obj.source_language,job_obj.target_language)
     vendor = AiUser.objects.get(id=vendor_id)
-    query = TaskAssignInfo.objects.filter(Q(task_ven_accepted = True) & Q(assigned_by = user) & Q(task__assign_to = vendor))
+    print(vendor)
+    #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
+    query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task__assign_to = vendor))
     query_final = query.filter(Q(task__job__source_language = job_obj.source_language) & Q(task__job__target_language = job_obj.target_language))
     rates =[]
     for i in query_final:
@@ -724,14 +726,10 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
                 tt = str(source_lang_name) + '---->' + str(target_lang_name)
                 res[tt] = ser.data
         print("RES-------->",len(res))
-        if len(res)>=3:
-            return Response(self.dt(res,1))
-        elif len(res)==2:
-            return Response(self.dt(res,2))
-        elif len(res)==1:
-            return Response(self.dt(res,3))
-        else:
-            return Response([])
+        if len(res)>=3:return Response(self.dt(res,1))
+        elif len(res)==2:return Response(self.dt(res,2))
+        elif len(res)==1:return Response(self.dt(res,3))
+        else:return Response([])
 
 
 

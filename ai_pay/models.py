@@ -27,7 +27,7 @@ class POTaskDetails(models.Model):
     word_count=models.IntegerField(null=True,blank=True)
     char_count=models.IntegerField(null=True,blank=True)
     unit_price =models.DecimalField(max_digits=12, decimal_places=4)
-    unit_type = models.ForeignKey(ServiceTypeunits,related_name="po_unit",on_delete=models.PROTECT)
+    unit_type = models.ForeignKey(Billingunits,related_name="po_unit",on_delete=models.PROTECT)
     total_amount = models.DecimalField(max_digits=12, decimal_places=4)
 
     def save(self, *args, **kwargs):

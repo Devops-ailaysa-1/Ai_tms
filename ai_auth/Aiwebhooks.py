@@ -3,7 +3,7 @@ from django.conf import settings
 import stripe
 from ai_staff.models import IndianStates,Countries
 from djstripe import webhooks
-from djstripe.models import Customer,Price,Invoice,PaymentIntent
+from djstripe.models import Customer,Price,Invoice,PaymentIntent,Account
 from djstripe.models.billing import Plan, Subscription, TaxRate
 from ai_auth import models
 from ai_auth import forms as auth_forms
@@ -12,6 +12,8 @@ from django.utils import timezone
 from django.db import transaction
 import logging
 import calendar
+
+default_djstripe_owner=Account.get_default_account()
 
 def check_referred(user):
     try:
@@ -75,22 +77,22 @@ def my_handler(event, **kwargs):
     invoice=data.get('object').get('invoice',None)
     if invoice == None:
         customer=data.get('object').get('customer',None)
-        cust_obj = Customer.objects.get(id=customer)
+        cust_obj = Customer.objects.get(id=customer,djstripe_owner_account=default_djstripe_owner)
         user=cust_obj.subscriber
         paymentintent=data.get('object').get('id',None)
         
         if paymentintent:
-            payment_obj=PaymentIntent.objects.get(id=paymentintent)
+            payment_obj=PaymentIntent.objects.get(id=paymentintent,djstripe_owner_account=default_djstripe_owner)
         else :
             payment_obj=None
             
         if invoice:
-            invoice_obj=Invoice.objects.get(id=invoice)
+            invoice_obj=Invoice.objects.get(id=invoice,djstripe_owner_account=default_djstripe_owner)
         else :
             invoice_obj=None
 
         meta = data['object']['metadata']
-        price_obj= Price.objects.get(id=meta['price'])
+        price_obj= Price.objects.get(id=meta['price'],djstripe_owner_account=default_djstripe_owner)
         cp = models.CreditPack.objects.get(product=price_obj.product)
         print(data['object']['metadata'])
         quants= int(meta.get('quantity',1))
@@ -137,7 +139,7 @@ def my_handler(event, **kwargs):
     data =event.data
     paymentintent=data.get('object').get('payment_intent',None)
     if paymentintent:
-        payment_obj=PaymentIntent.objects.get(id=paymentintent)
+        payment_obj=PaymentIntent.objects.get(id=paymentintent,djstripe_owner_account=default_djstripe_owner)
     else :
         payment_obj=None
 
@@ -151,15 +153,15 @@ def my_handler(event, **kwargs):
     price=data['object']['lines']['data'][0]['price']['id']
     quants= data['object']['lines']['data'][0]['quantity']
     customer=data.get('object').get('customer')
-    cust_obj = Customer.objects.get(id=customer)
+    cust_obj = Customer.objects.get(id=customer,djstripe_owner_account=default_djstripe_owner)
     user=cust_obj.subscriber
     if user == None:
         raise ValueError("No user Found")
     print("----user-------",user)
     invoice=data.get('object').get('id') 
-    invoice_obj=Invoice.objects.get(id=invoice)
+    invoice_obj=Invoice.objects.get(id=invoice,djstripe_owner_account=default_djstripe_owner)
     sub=data['object']['lines']['data'][0]['subscription']
-    subscription = Subscription.objects.get(id=sub)
+    subscription = Subscription.objects.get(id=sub,djstripe_owner_account=default_djstripe_owner)
     bill_reason = data['object']['billing_reason'] 
     amount_paid=data['object']['amount_paid']
     if bill_reason != 'subscription_create' and amount_paid != 0:
@@ -167,7 +169,7 @@ def my_handler(event, **kwargs):
 
     remove_trial_sub(cust_obj,subscription)
     #meta = data['object']['metadata']
-    price_obj= Price.objects.get(id=price)
+    price_obj= Price.objects.get(id=price,djstripe_owner_account=default_djstripe_owner)
     if price_obj.id != subscription.plan.id:
         print("Subscription not updated yet")
     #sub_type=data['object']['lines']['data'][0]['metadata']['type']
@@ -337,7 +339,7 @@ def my_handler(event, **kwargs):
     data = event.data
     print(event.data)
     print("**** customer trial_end   End *****")
-    sub = Subscription.objects.get(id=data.get('object').get('id'))
+    sub = Subscription.objects.get(id=data.get('object').get('id'),djstripe_owner_account=default_djstripe_owner)
     user = sub.customer.subscriber
     auth_forms.user_trial_end(user=user,sub=sub)
     # stripe.Subscription.modify(
@@ -371,7 +373,7 @@ def my_handler(event, **kwargs):
 
 
 def update_aiuser_billing(custid,address,name=None):
-    customer = Customer.objects.get(id=custid)
+    customer = Customer.objects.get(id=custid,djstripe_owner_account=default_djstripe_owner)
     if customer.subscriber!=None:
         addr = models.BillingAddress.objects.filter(user=customer.subscriber).first()
         if addr== None:
@@ -429,7 +431,7 @@ def my_handler(event, **kwargs):
     data=event.data
     print("**** customer deleted end *****")
     custid=data.get('object').get('customer')
-    cust_obj = Customer.objects.get(id=custid)
+    cust_obj = Customer.objects.get(id=custid,djstripe_owner_account=default_djstripe_owner)
     user=cust_obj.subscriber
     subid=data.get('object').get('id')
     #invoice_obj = Invoice.objects.get(subscription_id=subid)

@@ -78,6 +78,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         else:
             try:
                 team = Team.objects.get(owner_id = self.id)
+                print("Team------>",team)
                 plan = get_plan_name(self)
                 return team if plan == "Business" else None
             except:
@@ -498,3 +499,7 @@ class ExistingVendorOnboardingCheck(models.Model):
     gen_password = models.CharField(max_length=255)
     mail_sent = models.BooleanField(default=False)
     mail_sent_time = models.DateTimeField(blank=True, null=True)
+
+class SocStates(models.Model):
+    state = models.CharField(max_length=150,unique=True)
+    data = models.CharField(max_length=255, blank=True, null=True)
