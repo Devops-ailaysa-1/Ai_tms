@@ -810,10 +810,8 @@ class DocumentToFile(views.APIView):
                 return self.download_audio_file(res,document_id,voice_gender,language_locale)
 
             res = self.document_data_to_file(request, document_id)
-            print("REE-------------->",res)
             if res.status_code in [200, 201]:
                 file_path = res.text
-                print("$$$$$$$$$$$$$$$$$$$44",file_path)
                 try:
                     if os.path.isfile(res.text):
                         if os.path.exists(file_path):
@@ -828,12 +826,13 @@ class DocumentToFile(views.APIView):
             return JsonResponse({"msg": "Unauthorised"}, status=401)
 
     @staticmethod
-    def document_data_to_file(output_type, document_id):
+    def document_data_to_file(request, document_id):
+        output_type = request.GET.get("output_type", "")
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
 
-        print("Data to write output file ---> ", data)
+        # print("Data to write output file ---> ", data)
 
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
