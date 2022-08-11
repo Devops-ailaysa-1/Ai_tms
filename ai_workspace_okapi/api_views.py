@@ -90,14 +90,14 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 check_fields.remove(i)
             else:
                 remove_keys.append(i)
-        print("remove keys--->", remove_keys)
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
 
     @staticmethod
-    def trim_segments(doc_data):
+    def trim_segments(doc_json_data):
 
+        doc_data = json.loads(doc_json_data)
         text = doc_data["text"]
         count = 0
         needed_keys = []
@@ -105,7 +105,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         for key, value in text.items():
             needed_keys.append(key)
             count += len(value)
-            if count >= 20:
+            if count >= 40:
                 break
 
         for key in text.copy():
@@ -118,7 +118,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def correct_segment_for_task(doc_json_path, needed_keys):
 
-        doc_data = json.load(open(doc_json_path))
+        doc_data_str = json.load(open(doc_json_path))
+        doc_data = json.loads(doc_data_str)
         text = doc_data["text"]
         for key in text.copy():
             if key in needed_keys:
@@ -127,61 +128,59 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         return doc_data
 
     @staticmethod
+    def get_json_file_path(task):
+        source_file_path = TaskSerializer(task).data["source_file_path"]
+        path_list = re.split("source/", source_file_path)
+        return path_list[0] + "doc_json/" + path_list[1] + ".json"
+
+    @staticmethod
+    def write_from_json_file(task, json_file_path):
+
+        # Writing first 20 segments in DB
+
+        doc_data = json.load(open(json_file_path))
+        doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
+        serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                 "file": task.file.id, "job": task.job.id,
+                                                 }, ))
+        if serializer.is_valid(raise_exception=True):
+            document = serializer.save()
+            task.document = document
+            task.save()
+
+        # Writing remaining segment using task
+        doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
+
+        if doc_data_task["text"] != {}:
+
+            # For celery task
+            serializer_task = DocumentSerializerV2(data={**doc_data_task, \
+                                                         "file": task.file.id, "job": task.job.id, }, )
+
+            validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
+                                                                     "file": task.file.id, "job": task.job.id, })
+            task_write_data = json.dumps(validated_data, default=str)
+            write_segments_to_db.apply_async((task_write_data, document.id), )
+
+        return document
+
+    @staticmethod
     def create_document_for_task_if_not_exists(task):
 
+        # If document already exists for a task
         if task.document != None:
             # print("*** Document exists *****")
             return task.document
 
+        # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
 
-            # json_file_path = TaskSerializer(task).data["source_file_path"] + ".json"
-            source_file_path = TaskSerializer(task).data["source_file_path"]
-            path_list = re.split("source/", source_file_path)
-            json_file_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+            json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
-                data = TaskSerializer(task).data
-                DocumentViewByTask.correct_fields(data)
-                params_data = {**data, "output_type": None}
+                document = DocumentViewByTask.write_from_json_file(task, json_file_path)
 
-                res_paths = get_res_path(params_data["source_language"])
-
-                doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-                    "doc_req_params": json.dumps(params_data),
-                    "doc_req_res_params": json.dumps(res_paths)
-                })
-
-                if doc.status_code == 200:
-                    doc_data = doc.json()
-                    doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-
-                    serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                             "file": task.file.id, "job": task.job.id, }, ))
-                    if serializer.is_valid(raise_exception=True):
-                        with transaction.atomic():
-                            document = serializer.save()
-                            task.document = document
-                            task.save()
-                else:
-                    logger.info(f">>>>>>>> Something went wrong with file reading in --> {task.id}<<<<<<<<<")
-                    raise ValueError("Sorry! Something went wrong with file processing.")
-
-                doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path,
-                                                                            needed_keys)  # check if there is no content, skip this part
-
-                # For celery task
-                serializer_task = DocumentSerializerV2(data={**doc_data_task, \
-                                                             "file": task.file.id, "job": task.job.id, }, )
-
-                ## without serializer.is_valid()
-                validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
-                                                                         "file": task.file.id, "job": task.job.id, })
-                task_write_data = json.dumps(validated_data, default=str)
-                # print("Task write data ===========> ", task_write_data)
-                write_segments_to_db.apply_async((task_write_data, document.id), )
-
-            ###########
+            ####  Copying segments from previous task   #######
             else:
                 doc = Document.objects.filter(file_id=task.file_id).last()
                 doc_data = DocumentSerializerV3(doc).data
@@ -195,66 +194,37 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     print("********   Document written using existing file  ***********")
                     task.save()
 
+        # Fresh task
         else:
             data = TaskSerializer(task).data
             DocumentViewByTask.correct_fields(data)
             params_data = {**data, "output_type": None}
 
             res_paths = get_res_path(params_data["source_language"])
-            st = time.time()
-            doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-                "doc_req_params":json.dumps(params_data),
-                "doc_req_res_params": json.dumps(res_paths)
-            })
-            et = time.time()
-            elapsed_time = et - st
-            # print("okapi Execution time---------------->",elapsed_time)
-            if doc.status_code == 200 :
-                # print("Doc status code ---> ", doc.status_code)
-                doc_data = doc.json()
-                # print("Doc data from spring---> ", doc_data)
+            json_file_path = DocumentViewByTask.get_json_file_path(task)
 
-                if doc_data["total_word_count"] >= 50000:
+            # For large files, json file is already written during word count
+            if exists(json_file_path):
+                document = DocumentViewByTask.write_from_json_file(task, json_file_path)
 
-                    source_file_path = params_data["source_file_path"]
-                    path_list = re.split("source/", source_file_path)
-                    os.mkdir(os.path.join(path_list[0], "doc_json"))
-                    doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
-
-                    with open(doc_json_path, "w") as outfile:
-                        json.dump(doc_data, outfile)
-                        doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-
-                serializer = (DocumentSerializerV2(data={**doc_data,\
-                                    "file": task.file.id, "job": task.job.id,
-                                },))
-
-                if serializer.is_valid(raise_exception=True):
-                    #with transaction.atomic():
-                    document = serializer.save()
-                    task.document = document
-                    task.save()
             else:
-                # logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
-                logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
-                raise  ValueError("Sorry! Something went wrong with file processing.")
+                doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+                    "doc_req_params":json.dumps(params_data),
+                    "doc_req_res_params": json.dumps(res_paths)
+                })
 
-            if doc_data["total_word_count"] >= 50000:
-                doc_data_task = DocumentViewByTask.correct_segment_for_task(doc_json_path,
-                                                                            needed_keys)  # check if there is no content, skip this part
-                # print("Doc data from json file =====>", doc_data_task)
+                if doc.status_code == 200 :
+                    doc_data = doc.json()
+                    serializer = (DocumentSerializerV2(data={**doc_data,\
+                                        "file": task.file.id, "job": task.job.id,},))
 
-                # For celery task
-                serializer_task = DocumentSerializerV2(data={**doc_data_task, \
-                                                             "file": task.file.id, "job": task.job.id, }, )
-
-                ## without serializer.is_valid()
-                validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
-                                                                         "file": task.file.id, "job": task.job.id, })
-                task_write_data = json.dumps(validated_data, default=str)
-                # print("Task write data ===========> ", task_write_data)
-                write_segments_to_db.apply_async((task_write_data, document.id), )
-
+                    if serializer.is_valid(raise_exception=True):
+                        document = serializer.save()
+                        task.document = document
+                        task.save()
+                else:
+                    logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
+                    raise  ValueError("Sorry! Something went wrong with file processing.")
 
         return document
 
@@ -274,14 +244,18 @@ class DocumentViewByDocumentId(views.APIView):
 
     def get(self, request, document_id):
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
+        try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
+        except:managers =[]
         if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
             dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
+            dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
             document = self.get_object(document_id)
             data = DocumentSerializerV2(document).data
             data.update(dict)
+            data.update(dict_1)
             return Response(data, status=200)
         else:
             return Response({"msg" : "Unauthorised"}, status=401)
@@ -586,8 +560,13 @@ class DocumentToFile(views.APIView):
         language_locale = request.GET.get("locale", None)
         payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
         user_id_payload = payload.get("user_id", 0)
-        user_id_document = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        if user_id_payload == user_id_document:
+        request_user = AiUser.objects.get(id=user_id_payload)
+        # team_members = doc_user.get_team_members if doc_user.get_team_members else []
+        document_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
+        except:managers = []
+
+        if (request_user ==  document_user) or (request_user in managers):
 
             # FOR DOWNLOADING SOURCE FILE
             if output_type == "SOURCE":

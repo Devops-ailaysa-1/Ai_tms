@@ -99,7 +99,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
     ins = TaskAssignInfo.objects.filter(assignment_id = assignment_id).first()
     file_detail = []
     for i in task_assgn_objs:
-        if i.mtpe_count_unit.unit == 'Word':
+        if i.mtpe_count_unit.unit == 'Word' or 'Hour' or 'Total':
             out = [{"file":i.task.file.filename,"words":i.task.task_word_count,"unit":i.mtpe_count_unit.unit}]
         elif i.mtpe_count_unit.unit == 'Char':
             out = [{"file":i.task.file.filename,"characters":i.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
@@ -115,3 +115,17 @@ def task_assign_detail_mail(Receiver,assignment_id):
         html_message=msg_html,
     )
     print("assign detail mailsent>>")
+
+
+def task_assign_ven_status_mail(task,task_ven_status):
+    context = {'name':task.task_assign_info.assigned_by.fullname,'task':task.ai_taskid,'task_ven_status':task_ven_status,'assign_to':task.assign_to.fullname,'project':task.job.project}
+    print("CONTEXT-------------->",context)
+    email = task.task_assign_info.assigned_by.email
+    msg_html = render_to_string("task_assign_ven_status_mail.html",context)
+    send_mail(
+        'Task Assign Vendor Status',None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("assign vendor status-->>>")

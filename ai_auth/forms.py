@@ -21,6 +21,7 @@ import logging
 
 
 
+
 class SendInviteForm(ResetPasswordForm):
     """
     used to send an invitation to onboard the platform and reset the password
@@ -127,8 +128,7 @@ def send_welcome_mail(current_site,user):
         send_admin_new_user_notify(user)
     else:
         logging.error(f"welcome mail sending failed for {email}")
-        
-        
+
 def send_admin_new_user_notify(user):
     context = {
     "user":user
@@ -144,7 +144,7 @@ def send_admin_new_user_notify(user):
     )
 
 
-   
+
 
 def send_password_change_mail(current_site,user):
     today = date.today()

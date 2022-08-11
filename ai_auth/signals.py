@@ -9,13 +9,11 @@ import os
 import random
 from djstripe.models import Customer
 import stripe
-from allauth.account.signals import email_confirmed, password_changed
+from allauth.account.signals import email_confirmed, password_changed,user_signed_up
 from ai_auth import forms as auth_forms
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.models import Group
 from django.db.models import Q
-
-
 
 
 
@@ -247,3 +245,15 @@ def create_postjob_id(sender, instance, *args, **kwargs):
     if instance.postjob_id == None:
         instance.postjob_id = str(random.randint(1,10000))+"j"+str(instance.id)
         instance.save()
+
+
+@receiver(user_signed_up)
+def populate_user_details(user, sociallogin=None,**kwargs):
+
+    if sociallogin:
+        if sociallogin.account.provider == 'google':
+            user_data = user.socialaccount_set.filter(provider='google')[0].extra_data
+            full_name = user_data['name']
+
+        user.fullname = full_name
+        user.save()
