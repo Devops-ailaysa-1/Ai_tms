@@ -866,6 +866,7 @@ class DocumentToFile(views.APIView):
                 'document-json-dump': json.dumps(data),
                 "doc_req_res_params": json.dumps(res_paths),
                 "doc_req_params": json.dumps(params_data),})
+        print("RES FROM Spring--------->",res.status_code,json.dumps(params_data))
 
         if settings.USE_SPACES:
 

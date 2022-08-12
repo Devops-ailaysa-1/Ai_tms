@@ -418,14 +418,15 @@ def adding_term_to_glossary_from_workspace(request):
 def clone_source_terms_from_multiple_to_single_task(request):
     current_task = request.GET.get('task_id')
     existing_task = request.GET.getlist('copy_from_task_id')
-    current_job = Task.objects.get(id=current_task).job_id
+    current_job = Task.objects.get(id=current_task).job
+    #current_job_id = Task.objects.get(id=current_task).job_id
     existing_job = [i.job_id for i in Task.objects.filter(id__in=existing_task)]
     print("Existing Job---->",existing_job)
     queryset = TermsModel.objects.filter(job_id__in = existing_job)
     with transaction.atomic():
         for i in queryset:
             i.pk = None
-            i.job_id = current_job
+            i.job_id = current_job.id
             i.tl_term = None
             i.tl_source = None
             i.tl_definition = None
