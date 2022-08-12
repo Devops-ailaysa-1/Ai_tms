@@ -187,8 +187,12 @@ class TermUploadView(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
-        term = TermsModel.objects.get(id=self.kwargs.get("pk"))
-        term.delete()
+        term_delete_ids =request.GET.get('term_delete_ids')
+        print("TDI------->",term_delete_ids)
+        delete_list = term_delete_ids.split(',')
+        TermsModel.objects.filter(id__in=delete_list).delete()
+        # term = TermsModel.objects.get(id=self.kwargs.get("pk"))
+        # term.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -277,7 +281,8 @@ def tbx_write(request,task_id):
 def glossaries_list(request,project_id):
     project = Project.objects.get(id=project_id)
     target_languages = project.get_target_languages
-    queryset = Project.objects.filter(ai_user=request.user).filter(glossary_project__isnull=False)\
+    user = request.user.team.owner if request.user.team else request.user
+    queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
                 .exclude(id=project.id).distinct()
