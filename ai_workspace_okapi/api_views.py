@@ -1540,55 +1540,65 @@ def grammar_check_model(request):
     except:return JsonResponse({'msg':'something went wrong'})
 
 
-headers = {
-    "X-RapidAPI-Key": os.getenv("X-RapidAPI-Key"),
-    "X-RapidAPI-Host":  os.getenv("X-RapidAPI-Host")
-}
+@api_view(['POST',])############### only available for english ###################
+def get_word_api(request):
+    text = request.POST.get('word')
+    data = {}
+    data['word'] = text
+    end_pts = settings.END_POINT +"wordsapi_synonyms/"
+    result = requests.post(end_pts , data )
+    try:return JsonResponse(result.json())
+    except:return JsonResponse({'msg':'something went wrong'})
 
-class WordApiView(viewsets.ViewSet):
-    def lemma_word(self,text):
-        import spacy
-        nlp = spacy.load("en_core_web_sm")
-        text  = nlp(text)
-        return [i.lemma_ for i in text][0]
-
-
-    def wordsapi_request(self,text):
-        url = "https://wordsapiv1.p.rapidapi.com/words/{synonyms_request}".format(synonyms_request = text)
-        response = requests.request("GET", url, headers=headers)
-        return response
-
-
-    def create_syn_list(self,data):
-        data =data.json()
-        syn = []
-        if 'success' in data.keys():
-            data =  "no synonmys"
-            return data
-        if data.get('results'):
-            for i in data.get('results'):
-                if 'synonyms' in i.keys():
-                    syn.extend(i['synonyms'])
-                    syn = syn[:10]
-        return syn
-
-
-    def create(self,request):
-        word = request.POST.get('word')
-        context = {}
-        context['word'] = word
-        response =self.wordsapi_request(word)
-        data = self.create_syn_list(response)
-        if len(data)==0:
-            word = self.lemma_word(word)
-            response =self.wordsapi_request(word)
-            data = self.create_syn_list(response)
-            if len(data) == 0:
-                data = "Not Available"
-                context['synonyms'] = data
-                return JsonResponse({'context':context})
-        context['synonyms'] = data
-        return JsonResponse({'context':context})
+# headers = {
+#     "X-RapidAPI-Key": os.getenv("X-RapidAPI-Key"),
+#     "X-RapidAPI-Host":  os.getenv("X-RapidAPI-Host")
+# }
+#
+# class WordApiView(viewsets.ViewSet):
+#     def lemma_word(self,text):
+#         import spacy
+#         nlp = spacy.load("en_core_web_sm")
+#         text  = nlp(text)
+#         return [i.lemma_ for i in text][0]
+#
+#
+#     def wordsapi_request(self,text):
+#         url = "https://wordsapiv1.p.rapidapi.com/words/{synonyms_request}".format(synonyms_request = text)
+#         response = requests.request("GET", url, headers=headers)
+#         return response
+#
+#
+#     def create_syn_list(self,data):
+#         data =data.json()
+#         syn = []
+#         if 'success' in data.keys():
+#             data =  "no synonmys"
+#             return data
+#         if data.get('results'):
+#             for i in data.get('results'):
+#                 if 'synonyms' in i.keys():
+#                     syn.extend(i['synonyms'])
+#                     syn = syn[:10]
+#         return syn
+#
+#
+#     def create(self,request):
+#         word = request.POST.get('word')
+#         context = {}
+#         context['word'] = word
+#         response =self.wordsapi_request(word)
+#         data = self.create_syn_list(response)
+#         if len(data)==0:
+#             word = self.lemma_word(word)
+#             response =self.wordsapi_request(word)
+#             data = self.create_syn_list(response)
+#             if len(data) == 0:
+#                 data = "Not Available"
+#                 context['synonyms'] = data
+#                 return JsonResponse({'context':context})
+#         context['synonyms'] = data
+#         return JsonResponse({'context':context})
 
 # def mt_only(project,request):
 #     token = str(request.auth)

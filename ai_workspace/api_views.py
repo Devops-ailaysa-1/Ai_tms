@@ -1553,6 +1553,28 @@ def instruction_file_download(request,instruction_file_id):
     else:
         return JsonResponse({"msg":"no file associated with it"})
 
+#
+# @api_view(['GET',])
+# def instruction_file_list_download(request):
+#     file_ids = request.GET.get('file_ids')
+#     file_list = file_ids.split(',')
+#     file_objs = Instructionfiles.objects.get(id__in=file_list)
+#     zipObj = ZipFile('sample.zip', 'w')
+#     for i in file_objs:
+#         print(i.instruction_file)
+#         zipObj.write(i.instruction_file)
+#     zipObj.close()
+#     # if instruction_file:
+#     #     fl_path = instruction_file.path
+#     #     filename = os.path.basename(fl_path)
+#     #     # print(os.path.dirname(fl_path))
+#     fl = open('sample.zip', 'rb')
+#     mime_type, _ = mimetypes.guess_type(fl_path)
+#     response = HttpResponse(fl, content_type=mime_type)
+#     response['Content-Disposition'] = "attachment; filename=%s" % filename
+#     return response
+#     else:
+#         return JsonResponse({"msg":"no file associated with it"})
 
 class AssignToListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
