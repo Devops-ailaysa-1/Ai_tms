@@ -709,6 +709,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if subject_delete_ids:
             subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=subject_delete_ids)
+
         serlzr = ser(instance, data=\
             {**request.data, "files": request.FILES.getlist("files")},
             context={"request": request}, partial=True)
@@ -1988,21 +1989,34 @@ def task_unassign(request):
             return Response({'msg':'Permission Denied'})
     return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
+
+
 ##################################Need to revise#######################################
 @api_view(['PUT',])
 @permission_classes([IsAuthenticated])
-def update_project_from_writer(request,id):
-    project = Project.objects.get(id=id)
-    ser = ProjectQuickSetupSerializer(project, data=\
-        {**request.data, "files": request.FILES.get("files")},
-        context={"request": request}, partial=True)
-    if ser.is_valid():
-        ser.save()
-    ser1 = TaskTranscriptDetailSerializer(data={"transcripted_file_writer":request.FILES.get('files'),"task":task.id})
-    if ser1.is_valid():
-        ser1.save()
-
-
+def update_project_from_writer(request,id):###########No  writer now...so simple text editor#############For Transcription projects
+    #id = request.POST.get('project_id')
+    task_id = request.POST.get('task_id')
+    edited_text = request.POST.get('edited_text')
+    team = request.POST.get('team')
+    name =  edited_text.split()[0]+ ".txt" if len(edited_text.split()[0])<=15 else edited_text[:5]+ ".txt"
+    im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = edited_text.encode(),file_name=name)
+    target_languages = request.POST.getlist('target_languages')
+    instance = Project.objects.get(id=id)
+    source_language = [str(instance.project_jobs_set.first().source_language_id)]
+    serializer = ProjectQuickSetupSerializer(instance,data={\
+    'source_language':source_language,'target_languages':target_languages,'team':[team],'files':[im_file]},\
+    context={"request": request}, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+        ser1 = TaskTranscriptDetailSerializer(obj,data={"transcripted_file_writer":im_file,"task":task_id},partial=True)
+        if ser1.is_valid():
+            ser1.save()
+            print("ser`1------>",ser1.data)
+        print(ser1.errors)
+        return Response(serializer.data)
+    return Response(serializer.errors)
 
 
 

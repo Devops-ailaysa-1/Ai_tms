@@ -1057,12 +1057,17 @@ def audio_file_path(instance, filename):
             "Audio", filename)
     return file_path
 
+def edited_file_path(instance, filename):
+    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
+            "Edited", filename)
+    return file_path
+
 class TaskTranscriptDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
     transcripted_text = models.TextField(null=True,blank=True)
     source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
-    transcripted_file_writer = models.FileField(upload_to=audio_file_path,null=True,blank=True)
+    transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
 
 
 class TmxFile(models.Model):

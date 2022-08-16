@@ -136,7 +136,7 @@ class GlossaryFileView(viewsets.ViewSet):
 
     def delete(self,request,pk=None):
         file_delete_ids = request.GET.get('file_delete_ids')
-        print("FDI------->",file_delete_ids)
+        #print("FDI------->",file_delete_ids)
         delete_list = file_delete_ids.split(',')
         job = request.GET.get('job',None)
         project =request.GET.get('project')

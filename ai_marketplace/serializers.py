@@ -418,15 +418,15 @@ class ProjectPostTemplateStepsSerializer(serializers.ModelSerializer):
         model = ProjectPostTemplateSteps
         fields = ('steps',)
 
-class ProjectPostTemplateJobDetailSerializer(serializers.ModelSerializer):
-    bid_count = serializers.SerializerMethodField()
-    bidjob_details = BidPropasalDetailSerializer(many=True,read_only=True)
-    class Meta:
-        model=ProjectPostTemplateJobDetails
-        fields=('id','src_lang','tar_lang','bid_count','bidjob_details',)
-
-    def get_bid_count(self, obj):
-        return obj.bidjob_details.count()
+# class ProjectPostTemplateJobDetailSerializer(serializers.ModelSerializer):
+#     bid_count = serializers.SerializerMethodField()
+#     bidjob_details = BidPropasalDetailSerializer(many=True,read_only=True)
+#     class Meta:
+#         model=ProjectPostTemplateJobDetails
+#         fields=('id','src_lang','tar_lang','bid_count','bidjob_details',)
+#
+#     def get_bid_count(self, obj):
+#         return obj.bidjob_details.count()
 
 class ProjectPostTemplateContentTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -594,6 +594,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
     post_id = serializers.ReadOnlyField(source = 'id')
     post_name = serializers.ReadOnlyField(source='proj_name')
     post_desc = serializers.ReadOnlyField(source='proj_desc')
+    posted_by = serializers.ReadOnlyField(source='customer.fullname')
     apply = serializers.SerializerMethodField()
     post_bid_deadline =serializers.ReadOnlyField(source='bid_deadline')
     post_deadline = serializers.ReadOnlyField(source='proj_deadline')
@@ -603,7 +604,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
 
 
     class Meta:
-        fields = ('post_id', 'post_name', 'post_desc','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
+        fields = ('post_id', 'post_name', 'post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
 
     def get_apply(self, obj):
         print( self.context.get("request").user)

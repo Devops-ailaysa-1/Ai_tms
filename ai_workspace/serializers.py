@@ -477,7 +477,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def to_internal_value(self, data):
 
-		# print("Internal value ===> ", data)
+		#print("Internal value ===> ", data)
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
@@ -511,13 +511,14 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [None])]
 			data['pre_translate'] = data.get('pre_translate',['false'])[0]
+
 		else:
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [])]
 			if data.get('pre_translate'):
 				data['pre_translate'] = data.get('pre_translate')[0]
 
-		data['team_exist'] = data.get('team',[None])[0]
+		#data['team_exist'] = data.get('team',[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 
 		return super().to_internal_value(data=data)
@@ -615,7 +616,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
-		# print("DATA---->",validated_data)
+		print("DATA---->",validated_data)
 		if validated_data.get('project_name'):
 			instance.project_name = validated_data.get("project_name",\
 									instance.project_name)
@@ -897,10 +898,11 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_bid_job_detail_info(self,obj):
 		if obj.job.project.proj_detail.all():
-			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id))
+			qs = obj.job.project.proj_detail.first().projectpost_jobs.filter(Q(src_lang_id = obj.job.source_language.id) & Q(tar_lang_id = obj.job.target_language.id if obj.job.target_language else obj.job.source_language_id))
 			return ProjectPostJobDetailSerializer(qs,many=True).data
 		else:
 			return None
+
 
 	def get_task_assign_info(self, obj):
 		task_assign = obj.task_info.filter(task_assign_info__isnull=False)
