@@ -1539,8 +1539,8 @@ def tasks_list(request):
     #     task_list.append({'id':i.id,'task':i.job,'file':i.file})
     # return Response(task_list)
 @api_view(['GET',])
-def instruction_file_download(request,task_assign_info_id):
-    instruction_file = TaskAssignInfo.objects.get(id=task_assign_info_id).instruction_file
+def instruction_file_download(request,instruction_file_id):
+    instruction_file = Instructionfiles.objects.get(id=instruction_file_id).instruction_file
     if instruction_file:
         fl_path = instruction_file.path
         filename = os.path.basename(fl_path)
