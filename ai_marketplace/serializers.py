@@ -623,13 +623,12 @@ class AvailablePostJobSerializer(serializers.Serializer):
                 if len(steps) == 1:
                     applied_jobs.append(i)
                 else:
-                    if bid_info.filter(Q(bid_step_id=1)) and bid_info.filter(Q(bid_step_id=2)):
+                    if bid_info.filter(bidpostjob = i).count() == 2:
                         applied_jobs.append(i)
-        if len(steps)==2: matched_count = len(matched_jobs)*2
-        else:matched_count = len(matched_jobs)
-        if matched_count == 0:
+        print("MJ,AJ--------------->",len(matched_jobs),len(applied_jobs))
+        if len(matched_jobs) == 0:
             return False
-        elif matched_count == len(applied_jobs):
+        elif len(matched_jobs) == len(applied_jobs):
             return "Applied"
         else:
             return True
