@@ -464,15 +464,22 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
 
 def get_res_path(source_lang):
 
-    if source_lang not in ['hi','bn','or','ne','pa']:
-        res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
-                     "fprm_file_path": None,
-                     "use_spaces": settings.USE_SPACES
-                     }
+    res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
+                 "fprm_file_path": None,
+                 "use_spaces": settings.USE_SPACES
+                 }
+
+    if source_lang in ['hi','bn','or','ne','pa']:
+        res_paths["srx_file_path"] = "okapi_resources/indian_lang.srx"
         return res_paths
+
+    elif source_lang in ['zh-Hans','zh-Hant','ja']:
+        res_paths["srx_file_path"] = "zh_and_ja.srx"
+        return res_paths
+
+    elif source_lang in ['th']:
+        res_paths["srx_file_path"] = "thai.srx"
+        return res_paths
+
     else:
-        res_paths = {"srx_file_path": "okapi_resources/indian_lang.srx",
-                     "fprm_file_path": None,
-                     "use_spaces": settings.USE_SPACES
-                     }
         return res_paths
