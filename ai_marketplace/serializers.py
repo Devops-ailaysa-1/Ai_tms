@@ -612,6 +612,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
         steps = obj.get_steps
         matched_jobs,applied_jobs=[],[]
         for i in jobs:
+            print("I----->",i)
             if i.src_lang_id == i.tar_lang_id:
                 res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             else:
@@ -623,6 +624,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
                 if len(steps) == 1:
                     applied_jobs.append(i)
                 else:
+                    print("Count---->",bid_info.filter(bidpostjob = i).count())
                     if bid_info.filter(bidpostjob = i).count() == 2:
                         applied_jobs.append(i)
         print("MJ,AJ--------------->",len(matched_jobs),len(applied_jobs))
