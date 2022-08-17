@@ -607,7 +607,6 @@ class AvailablePostJobSerializer(serializers.Serializer):
         fields = ('post_id', 'post_name', 'post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
 
     def get_apply(self, obj):
-        print( self.context.get("request").user)
         vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
         steps = obj.get_steps
@@ -626,9 +625,11 @@ class AvailablePostJobSerializer(serializers.Serializer):
                 else:
                     if bid_info.filter(Q(bid_step_id=1)) and bid_info.filter(Q(bid_step_id=2)):
                         applied_jobs.append(i)
-        if len(matched_jobs)== 0:
+        if len(steps)==2: matched_count = len(matched_jobs)*2
+        else:matched_count = len(matched_jobs)
+        if matched_count == 0:
             return False
-        elif len(matched_jobs) == len(applied_jobs):
+        elif matched_count == len(applied_jobs):
             return "Applied"
         else:
             return True
