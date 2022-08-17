@@ -100,6 +100,8 @@ class TaskManager(models.Manager):
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
           project = None):
 
+
+        #epub_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.epub']
         files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.mp3']
         jobs_list = [job for job in jobs if job.target_language!=None]
         #jobs_list = [job for job in jobs if job.source_language!=job.target_language]
@@ -113,6 +115,9 @@ class TaskManager(models.Manager):
         #tasks = [self.get_or_create(file=file, job=job, defaults = {"assign_to": assign_to}) for file in files_list for job in jobs_list]
         # tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
         tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
+        # if epub_list:
+        #     for i in epub_list:
+
         #print(tasks)
         return tasks
 
