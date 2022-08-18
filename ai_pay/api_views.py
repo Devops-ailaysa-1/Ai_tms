@@ -31,7 +31,10 @@ from django.db.models import Q
 from django.conf import settings
 import time
 
-default_djstripe_owner=Account.get_default_account()
+try:
+    default_djstripe_owner=Account.get_default_account()
+except BaseException as e:
+    print(f"Error : {str(e)}")
 
 def get_stripe_key():
     '''gets stripe api key for current environment'''

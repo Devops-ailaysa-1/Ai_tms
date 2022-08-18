@@ -79,8 +79,10 @@ from urllib.parse import parse_qs, urlencode,  urlsplit
 from django.shortcuts import redirect
 import json
 
-
-default_djstripe_owner=Account.get_default_account()
+try:
+    default_djstripe_owner=Account.get_default_account()
+except BaseException as e:
+    print(f"Error : {str(e)}")
 
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
