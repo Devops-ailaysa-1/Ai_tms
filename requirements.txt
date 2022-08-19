@@ -197,6 +197,7 @@ gevent
 indic-nlp-library==0.81
 google.cloud.storage==1.44.0
 mutagen
+hunspell
 htmldocx
 quill-delta[html]
 python-docx
