@@ -16,7 +16,7 @@ from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_glex.serializers import GlossarySetupSerializer,GlossaryFileSerializer,GlossarySerializer
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
-from integerations.base.utils import DjRestUtils
+from .utils import DjRestUtils
 from rest_framework.response import Response
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 from indicnlp.tokenize.indic_tokenize import trivial_tokenize
