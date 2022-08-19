@@ -430,6 +430,27 @@ class MT_RawAndTM_View(views.APIView):
         else:
             return None
 
+
+    @staticmethod
+    def get_consumable_credits(doc, segment,seg):
+        # segment_source = Segment.objects.get(id=segment_id).source
+        segment_source = segment.source if segment != None else seg
+        seg_data = { "segment_source" : segment_source,
+                     "source_language" : doc.source_language_code,
+                     "target_language" : doc.target_language_code,
+                     "processor_name" : "plain-text-processor",
+                     "extension":".txt"
+                     }
+        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
+            data={"segmentWordCountdata":json.dumps(seg_data)})
+
+        if res.status_code == 200:
+            print("Word count --->", res.json())
+            return res.json()
+        else:
+            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")
+
     @staticmethod
     def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()

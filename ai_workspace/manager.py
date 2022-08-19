@@ -1,7 +1,11 @@
 from django.contrib.auth.models import BaseUserManager
 from django.db.models import QuerySet
 from django.db import models
-import os
+import os,shutil
+import zipfile
+
+
+
 
 class SoftDeletionQuerySet(QuerySet):
 
@@ -72,6 +76,9 @@ class FileManager(models.Manager):
         files = [self.create(**item, project=project) for item in data]
         return files
 
+    # def epub_file_create(self,files,project):
+    #     files = [self.create(file = file,usage_type_id = 1,project=project) for file in files]
+
 class JobManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
@@ -97,14 +104,14 @@ class ProjectSubjectFieldManager(models.Manager):
         return subjects
 
 class TaskManager(models.Manager):
+
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
           project = None):
 
 
-        #epub_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.epub']
-        files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.mp3']
-        jobs_list = [job for job in jobs if job.target_language!=None]
-        #jobs_list = [job for job in jobs if job.source_language!=job.target_language]
+        epub_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.epub']
+        files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.epub']
+
 
         if hasattr(project, "ai_user"):
             assign_to = project.ai_user
@@ -112,13 +119,30 @@ class TaskManager(models.Manager):
         if not assign_to:
             raise ValueError("You should send parameter either project "
                              "object or assign_to user")
-        #tasks = [self.get_or_create(file=file, job=job, defaults = {"assign_to": assign_to}) for file in files_list for job in jobs_list]
-        # tasks = [self.get_or_create(file=file, job=job, version_id=1, defaults = {"assign_to": assign_to}) for file in files for job in jobs]
-        tasks = [self.get_or_create(file=file, job=job) for file in files for job in jobs]
-        # if epub_list:
-        #     for i in epub_list:
-
-        #print(tasks)
+        if epub_list: #####################################working
+           from ai_workspace.models import File
+           html_files_list =[]
+           for i in epub_list:
+               base_file,ext = os.path.splitext(i.file.path)
+               basedir = os.path.dirname(i.file.path)
+               zipped_file = base_file  + '.zip'
+               new_file = os.path.join(basedir,zipped_file)
+               shutil.copy(i.file.path,new_file)
+               zip = zipfile.ZipFile(new_file)
+               zip.extractall('epub_1')
+               for root, dirs, files in os.walk('epub_1'):
+                   for file in files:
+                        if str(file).endswith('.xhtml') or str(file).endswith('.html'):
+                            existing = os.path.join(root, file)
+                            base = os.path.join(basedir,file)
+                            file_path = os.path.join(project.ai_user.uid,project.ai_project_id,'source',file)
+                            shutil.copy(existing,base)
+                            file_obj = File.objects.create(file = file_path,usage_type_id = 1,project = project,filename=file)
+                            html_files_list.append(file_obj)
+        tasks = [self.get_or_create(file=file, job=job) for file in files_list for job in jobs]
+        shutil.rmtree('epub_1', ignore_errors=True)
+        if epub_list:
+            additional_tasks = [self.get_or_create(file=file, job=job) for file in html_files_list for job in jobs]
         return tasks
 
 

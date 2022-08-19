@@ -483,7 +483,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
-		#data['pre_translate'] = data.get('pre_translate',['false'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
@@ -505,7 +504,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 	data['files'] = [{"file": file, "usage_type": 1} for file in data.get('audio_file', [])]
 		else:
 			data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-		print('data[files]-------------->',data['files'])
 
 		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
@@ -518,7 +516,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			if data.get('pre_translate'):
 				data['pre_translate'] = data.get('pre_translate')[0]
 
-		#data['team_exist'] = data.get('team',[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 
 		return super().to_internal_value(data=data)
@@ -534,13 +531,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else:
 				tasks = [task for job in instance.project_jobs_set.all() for task \
 						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
-				# tasks = [task for job in instance.project_jobs_set.all() for task \
-				# 		in job.job_tasks_set.all().filter(assign_to_id = user)]
+
 		else:
 			tasks = [task for job in instance.project_jobs_set.all() for task \
 					in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
-			# tasks = [task for job in instance.project_jobs_set.all() for task \
-			# 			in job.job_tasks_set.all().filter(assign_to_id = user)]
+
 		res = instance.project_analysis(tasks)
 		return res
 

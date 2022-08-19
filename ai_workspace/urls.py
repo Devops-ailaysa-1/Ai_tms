@@ -23,6 +23,7 @@ router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
 				basename="project-reference-files")
 router.register(r'steps',api_views.StepsView,basename='steps')
+#router.register(r'tasks',api_views.TaskView,basename='tasks')
 router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
 urlpatterns = router.urls
@@ -30,6 +31,7 @@ urlpatterns = router.urls
 # api_views urls
 urlpatterns += [
 	path("tasks/", api_views.TaskView.as_view(), name="tasks"),
+	path("tasks/<int:id>/",api_views.TaskView.as_view(),name="delete_tasks"),
 	path("files_jobs/<int:project_id>/", api_views.Files_Jobs_List.as_view(),\
 		 name="get-files-jobs-by-project_id"),
 	path("source_tmx/<int:project_id>/", api_views.TmxFilesOfProject.as_view(),\
