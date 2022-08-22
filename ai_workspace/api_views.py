@@ -16,7 +16,7 @@ from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_glex.serializers import GlossarySetupSerializer,GlossaryFileSerializer,GlossarySerializer
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
-# from integerations.base.utils import DjRestUtils
+from .utils import DjRestUtils
 from rest_framework.response import Response
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 from indicnlp.tokenize.indic_tokenize import trivial_tokenize
@@ -70,6 +70,12 @@ from google.cloud import speech_v1p1beta1 as speech
 import io
 from google.cloud import storage
 from ai_auth.tasks import mt_only
+from ai_auth.tasks import write_doc_json_file
+from docx import Document
+from htmldocx import HtmlToDocx
+from delta import html
+
+
 from ai_auth.tasks import write_doc_json_file
 
 spring_host = os.environ.get("SPRING_HOST")
@@ -1086,6 +1092,12 @@ class TaskView(APIView):
         else:
             return Response({"msg": task_serlzr.errors}, status=400)
 
+    def delete(self, request, id):
+        task = Task.objects.get(id = id)
+        task.delete()
+        return Response(data={"Message": "Task Deleted Successfully"}, status=204)
+
+
 
 @api_view(['POST',])
 def create_project_from_temp_project_new(request):
@@ -1198,11 +1210,12 @@ class ProjectAnalysisProperty(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-                print("Status@@@@@@@@@@@@@@@@@@@@@@@@",doc.status_code)
+                print("Status-------------->",doc.status_code)
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
                         if doc_data["total_word_count"] >= 50000:
+
                             task_write_data = json.dumps(doc_data, default=str)
                             write_doc_json_file.apply_async((task_write_data, task.id))
 
@@ -2012,29 +2025,46 @@ def task_unassign(request):
     return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
 
+def docx_save(name,data):
+    document = Document()
+    new_parser = HtmlToDocx()
+    quill_data = data.get('ops')
+    docx = html.render(quill_data)
+    new_parser.add_html_to_document(docx, document)
+    document.save(name)
+    f2 = open(name, 'rb')
+    file_obj = DJFile(f2)
+    return file_obj,name,f2
 
 ##################################Need to revise#######################################
 @api_view(['PUT',])
 @permission_classes([IsAuthenticated])
 def update_project_from_writer(request,id):###########No  writer now...so simple text editor#############For Transcription projects
-    #id = request.POST.get('project_id')
     task_id = request.POST.get('task_id')
+    name = request.POST.get('name')
+    name = name + '.docx'
     edited_text = request.POST.get('edited_text')
+    edited_data = json.loads(edited_text)
     team = request.POST.get('team')
-    name =  edited_text.split()[0]+ ".txt" if len(edited_text.split()[0])<=15 else edited_text[:5]+ ".txt"
-    im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = edited_text.encode(),file_name=name)
+    file_obj,name,f2 = docx_save(name,edited_data)
     target_languages = request.POST.getlist('target_languages')
     instance = Project.objects.get(id=id)
     source_language = [str(instance.project_jobs_set.first().source_language_id)]
-    serializer = ProjectQuickSetupSerializer(instance,data={\
-    'source_language':source_language,'target_languages':target_languages,'team':[team],'files':[im_file]},\
-    context={"request": request}, partial=True)
+    if target_languages:
+        serializer = ProjectQuickSetupSerializer(instance,data={\
+        'source_language':source_language,'target_languages':target_languages,'team':[team],'files':[file_obj]},\
+        context={"request": request}, partial=True)
+    else:
+        serializer = ProjectQuickSetupSerializer(instance,data={'team':[team],'files':[file_obj]},\
+        context={"request": request}, partial=True)
     if serializer.is_valid():
         serializer.save()
         obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
-        ser1 = TaskTranscriptDetailSerializer(obj,data={"transcripted_file_writer":im_file,"task":task_id},partial=True)
+        ser1 = TaskTranscriptDetailSerializer(obj,data={"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text},partial=True)
         if ser1.is_valid():
             ser1.save()
+            f2.close()
+            os.remove(os.path.abspath(name))
             print("ser`1------>",ser1.data)
         print(ser1.errors)
         return Response(serializer.data)

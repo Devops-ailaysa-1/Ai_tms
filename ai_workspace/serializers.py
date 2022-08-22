@@ -26,6 +26,7 @@ from ai_vendor.models import VendorLanguagePair
 from django.db.models import OuterRef, Subquery
 from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.db import transaction
+from notifications.signals import notify
 
 
 
@@ -483,7 +484,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
-		#data['pre_translate'] = data.get('pre_translate',['false'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
@@ -505,7 +505,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		 	data['files'] = [{"file": file, "usage_type": 1} for file in data.get('audio_file', [])]
 		else:
 			data['files'] = [{"file": file, "usage_type": 1} for file in data.pop('files', [])]
-		print('data[files]-------------->',data['files'])
 
 		if self.context.get("request")!=None and self.context['request']._request.method == 'POST':
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
@@ -518,7 +517,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			if data.get('pre_translate'):
 				data['pre_translate'] = data.get('pre_translate')[0]
 
-		#data['team_exist'] = data.get('team',[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 
 		return super().to_internal_value(data=data)
@@ -534,13 +532,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else:
 				tasks = [task for job in instance.project_jobs_set.all() for task \
 						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
-				# tasks = [task for job in instance.project_jobs_set.all() for task \
-				# 		in job.job_tasks_set.all().filter(assign_to_id = user)]
+
 		else:
 			tasks = [task for job in instance.project_jobs_set.all() for task \
 					in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
-			# tasks = [task for job in instance.project_jobs_set.all() for task \
-			# 			in job.job_tasks_set.all().filter(assign_to_id = user)]
+
 		res = instance.project_analysis(tasks)
 		return res
 
@@ -716,6 +712,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 				  'assigned_by','task_assign_info','task_ven_status',)
 
 ####################Need to change################################
+
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
@@ -824,6 +821,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
           generate_client_po([i.id for i in task_assign_info])
         return task_assign_info
 
+
     # def update(self,instance,data):
     #     print("DATA-------->",data)
     #     if 'assign_to' in data:
@@ -842,6 +840,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     #         elif instance.task_ven_status == 'task_accepted':
     #             raise serializers.ValidationError("Rates Can't be changed..Vendor already accepted rates and started working!!!")
     #     return super().update(instance, data)
+
 
     # def to_representation(self, instance):
     #     data = super().to_representation(instance)

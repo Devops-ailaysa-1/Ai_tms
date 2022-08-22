@@ -111,7 +111,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 check_fields.remove(i)
             else:
                 remove_keys.append(i)
-        print("remove keys--->", remove_keys)
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
@@ -174,6 +173,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
 
         if doc_data_task["text"] != {}:
+
             # For celery task
             serializer_task = DocumentSerializerV2(data={**doc_data_task, \
                                                          "file": task.file.id, "job": task.job.id, }, )
@@ -188,6 +188,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def create_document_for_task_if_not_exists(task):
         from .utils import get_translation
+
         # If document already exists for a task
         if task.document != None:
             print("Pre Translate--------------->",task.job.project.pre_translate)
@@ -222,7 +223,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 MT_RawTranslation.objects.bulk_create(instances)
             # print("*** Document exists *****")
             return task.document
-
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
@@ -278,6 +278,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                     raise ValueError("Sorry! Something went wrong with file processing.")
 
+
         return document
 
     def get(self, request, task_id, format=None):
@@ -296,7 +297,7 @@ class DocumentViewByDocumentId(views.APIView):
 
     def get(self, request, document_id):
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
         try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
@@ -429,6 +430,27 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "cannot_translate"
         else:
             return None
+
+
+    @staticmethod
+    def get_consumable_credits(doc, segment,seg):
+        # segment_source = Segment.objects.get(id=segment_id).source
+        segment_source = segment.source if segment != None else seg
+        seg_data = { "segment_source" : segment_source,
+                     "source_language" : doc.source_language_code,
+                     "target_language" : doc.target_language_code,
+                     "processor_name" : "plain-text-processor",
+                     "extension":".txt"
+                     }
+        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
+            data={"segmentWordCountdata":json.dumps(seg_data)})
+
+        if res.status_code == 200:
+            print("Word count --->", res.json())
+            return res.json()
+        else:
+            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
+            raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
     @staticmethod
     def get_data(request, segment_id):
