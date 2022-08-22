@@ -55,7 +55,7 @@ from rest_framework import serializers
 import os, io, zipfile, requests, time
 from django.http import HttpResponse
 from rest_framework.response import Response
-from controller.models import DownloadController
+# from controller.models import DownloadController
 from ai_workspace.models import File
 from .utils import SpacesService,text_to_speech
 from django.contrib.auth import settings

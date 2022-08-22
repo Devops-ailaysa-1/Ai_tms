@@ -61,7 +61,7 @@ from django.db.models import Q, Sum
 from rest_framework.decorators import permission_classes
 from notifications.signals import notify
 from ai_marketplace.serializers import ThreadSerializer
-from controller.serializer_mapper import serializer_map
+#from controller.serializer_mapper import serializer_map
 # from ai_workspace_okapi.api_views import DocumentViewByTask
 from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
 from mutagen.mp3 import MP3
