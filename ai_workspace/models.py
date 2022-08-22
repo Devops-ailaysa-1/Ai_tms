@@ -37,8 +37,8 @@ from .signals import (create_allocated_dirs, create_project_dir, \
 from .manager import ProjectManager, FileManager, JobManager,\
     TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager,ProjectStepsManager
 from django.db.models.fields import Field
-from integerations.github_.models import ContentFile
-from integerations.base.utils import DjRestUtils
+# from integerations.github_.models import ContentFile
+# from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
 
 

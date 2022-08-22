@@ -16,7 +16,7 @@ from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_glex.serializers import GlossarySetupSerializer,GlossaryFileSerializer,GlossarySerializer
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
-from integerations.base.utils import DjRestUtils
+# from integerations.base.utils import DjRestUtils
 from rest_framework.response import Response
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 from indicnlp.tokenize.indic_tokenize import trivial_tokenize
@@ -1584,24 +1584,24 @@ class AssignToListView(viewsets.ModelViewSet):
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
 
-class IntegerationProject(viewsets.ViewSet):
+# class IntegerationProject(viewsets.ViewSet):
 
-    def list(self, request, *args, **kwargs):
-        project_id = self.kwargs.get("pk", None)
-        #  ownership
-        project = get_object_or_404(Project.objects.all(),
-            id=project_id)
-        #  ownership
-        download_project = project.project_download.\
-            get_download
+#     def list(self, request, *args, **kwargs):
+#         project_id = self.kwargs.get("pk", None)
+#         #  ownership
+#         project = get_object_or_404(Project.objects.all(),
+#             id=project_id)
+#         #  ownership
+#         download_project = project.project_download.\
+#             get_download
 
-        serlzr_class = serializer_map.get(
-            download_project.serializer_class_str)
+#         serlzr_class = serializer_map.get(
+#             download_project.serializer_class_str)
 
-        serlzr = serlzr_class(download_project.branch.branch_contentfiles_set
-            .all(), many=True)
+#         serlzr = serlzr_class(download_project.branch.branch_contentfiles_set
+#             .all(), many=True)
 
-        return Response(serlzr.data)
+#         return Response(serlzr.data)
 
 
 

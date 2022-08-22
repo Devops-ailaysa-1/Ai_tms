@@ -1,5 +1,5 @@
 from .models import File
-from integerations.github_.utils import DjRestUtils
+# from integerations.github_.utils import DjRestUtils
 
 class Service:
 

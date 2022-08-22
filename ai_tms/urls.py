@@ -49,8 +49,8 @@ urlpatterns = [
     path("stripe/", include("djstripe.urls", namespace="djstripe")),
     path("accounts/", include("allauth.urls")),
     path("", TemplateView.as_view(template_name="index.html"), ),
-    path("integerations/", include("integerations.github_.urls")),
-    path("integerations/", include("integerations.gitlab_.urls")),
+    # path("integerations/", include("integerations.github_.urls")),
+    # path("integerations/", include("integerations.gitlab_.urls")),
     path("tm/", include("ai_tm_management.urls")),
     path("nlp/", include("ai_nlp.urls")),
 
