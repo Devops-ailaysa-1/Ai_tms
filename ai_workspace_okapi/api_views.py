@@ -111,7 +111,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 check_fields.remove(i)
             else:
                 remove_keys.append(i)
-        print("remove keys--->", remove_keys)
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("OKAPI request fields not setted correctly!!!")
@@ -174,6 +173,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
 
         if doc_data_task["text"] != {}:
+
             # For celery task
             serializer_task = DocumentSerializerV2(data={**doc_data_task, \
                                                          "file": task.file.id, "job": task.job.id, }, )
@@ -188,6 +188,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def create_document_for_task_if_not_exists(task):
         from .utils import get_translation
+
         # If document already exists for a task
         if task.document != None:
             print("Pre Translate--------------->",task.job.project.pre_translate)
@@ -222,7 +223,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 MT_RawTranslation.objects.bulk_create(instances)
             # print("*** Document exists *****")
             return task.document
-
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
@@ -278,6 +278,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                     raise ValueError("Sorry! Something went wrong with file processing.")
 
+
         return document
 
     def get(self, request, task_id, format=None):
@@ -296,7 +297,7 @@ class DocumentViewByDocumentId(views.APIView):
 
     def get(self, request, document_id):
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
-        doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
+        doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
         try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
@@ -1463,49 +1464,49 @@ def spellcheck(request):
 #             obj.update_segments(serlzr.validated_data.get("segments"))
 #             return Response(MergeSegmentSerializer(obj).data)
 
-class ProjectDownload(viewsets.ModelViewSet):
-    def get_queryset(self):
-        # limiting queryset for current user
-        qs = Project.objects.filter(ai_user=self.request.user).all()
-        return  qs
+# class ProjectDownload(viewsets.ModelViewSet):
+#     def get_queryset(self):
+#         # limiting queryset for current user
+#         qs = Project.objects.filter(ai_user=self.request.user).all()
+#         return  qs
 
-    def get_files_info(self):
-        self.project = project = self.get_object()
-        documents = Document.objects.filter(file__project=project).all()
+#     def get_files_info(self):
+#         self.project = project = self.get_object()
+#         documents = Document.objects.filter(file__project=project).all()
 
-        files_info = []
-        for document in documents:
-            res = DocumentToFile.document_data_to_file("", document_id=document.id)
-            if res.status_code == 200:
-                files_info.append({"file_path":res.text, "file_id": document.file.id,
-                                   "job_id": document.job.id})
-        return files_info
+#         files_info = []
+#         for document in documents:
+#             res = DocumentToFile.document_data_to_file("", document_id=document.id)
+#             if res.status_code == 200:
+#                 files_info.append({"file_path":res.text, "file_id": document.file.id,
+#                                    "job_id": document.job.id})
+#         return files_info
 
-    def zip(self, request, *args, **kwargs): #get
+#     def zip(self, request, *args, **kwargs): #get
 
-        file_paths = [info.get("file_path") for info in self.get_files_info()]
-        response = HttpResponse(content_type='application/zip')
-        # zf = zipfile.ZipFile(response, 'w')
-        with zipfile.ZipFile(response, 'w') as zf:
-            for file_path in file_paths:
-                with open(file_path, "rb") as f:
-                    zf.writestr(file_path.split("/")[-1], f.read())
+#         file_paths = [info.get("file_path") for info in self.get_files_info()]
+#         response = HttpResponse(content_type='application/zip')
+#         # zf = zipfile.ZipFile(response, 'w')
+#         with zipfile.ZipFile(response, 'w') as zf:
+#             for file_path in file_paths:
+#                 with open(file_path, "rb") as f:
+#                     zf.writestr(file_path.split("/")[-1], f.read())
 
-        response['Content-Disposition'] = f'attachment; filename={self.project.project_name}.zip'
+#         response['Content-Disposition'] = f'attachment; filename={self.project.project_name}.zip'
 
-        return response
+#         return response
 
-    def push_to_repo(self, request, *args, **kwargs):#post
-        files_info = self.get_files_info()
-        dc = DownloadController.objects.filter(project=self.project).first()
-        if dc :
-            try:
-                dc.get_download .download(project=self.project, files_info=files_info)
-                return Response({"message": "Successfully pushed to repository!!!"}, status=200)
-            except Exception as e:
-                print("errror--->", e)
-                return Response({"message": "Something went to wrong!!!"},status=500)
-        return Response({"message": "There is no documnent to push!!!"}, status=204)
+#     def push_to_repo(self, request, *args, **kwargs):#post
+#         files_info = self.get_files_info()
+#         dc = DownloadController.objects.filter(project=self.project).first()
+#         if dc :
+#             try:
+#                 dc.get_download .download(project=self.project, files_info=files_info)
+#                 return Response({"message": "Successfully pushed to repository!!!"}, status=200)
+#             except Exception as e:
+#                 print("errror--->", e)
+#                 return Response({"message": "Something went to wrong!!!"},status=500)
+#         return Response({"message": "There is no documnent to push!!!"}, status=204)
 
 ############################segment history#############################################
 @api_view(['GET',])

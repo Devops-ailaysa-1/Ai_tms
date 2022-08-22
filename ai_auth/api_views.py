@@ -2000,7 +2000,6 @@ def ai_social_callback(request):
         logging.info("on social login",str(e))
         return JsonResponse({"error":f"{str(e)}"},status=400)
 
-
     process = user_state.get('socialaccount_process',None)
 
     try:

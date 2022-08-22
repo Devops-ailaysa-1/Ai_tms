@@ -32,6 +32,7 @@ from django.db.models import Q
 from django.conf import settings
 import time
 
+default_djstripe_owner=Account.get_default_account()
 
 default_djstripe_owner=Account.get_default_account()
 
@@ -154,6 +155,18 @@ class CreateChargeVendor(viewsets.ViewSet):
         pass
 
 
+def void_stripe_invoice(vendor,id):
+    stripe.api_key=get_stripe_key()
+    try:
+        voided = stripe.Invoice.void_invoice(
+        stripe_account=vendor.id,
+        sid=id,
+        )   
+    except BaseException as e:
+        logging.error(f"invoice voiding failed: {id}")
+        return False
+    return True
+
 
 def void_stripe_invoice(vendor,id):
     stripe.api_key=get_stripe_key()
@@ -197,7 +210,8 @@ def customer_create_conn_account(client,seller):
         stripe_account=vendor.id,
         name=cust.subscriber.fullname
         )
-    return conn_cust_create
+
+    return conn_cust_create.get('id')
 
 def webhook_wait(invo_id):
     print("inside webhook wait")
@@ -224,12 +238,12 @@ def create_invoice_conn_direct(cust,vendor,currency):
 
     # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
     #         customer=cust.id,amount =amount,currency=currency)
+
     if webhook_wait(invo.id):
         logging.info(f"invoice created : {invo.id}")
     else:
         logging.error(f"invoice creation failed: {invo.id}")  
         return None
-
     return invo.id
 
 def stripe_invoice_finalize(invoice_id,vendor) -> bool:
@@ -445,6 +459,7 @@ def converttocent(amount,currency_code=None):
     return int(amount*100)
 
 def generate_invoice_by_stripe(po_li,user,gst=None):
+    print("user>.",user)
     pos = PurchaseOrder.objects.filter(poid__in=po_li)
     res  = pos.values('currency').annotate(dcount=Count('currency')).order_by().count()
     res2 = pos.values('seller_id').annotate(dcount=Count('seller_id')).order_by().count()
@@ -479,10 +494,8 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
             except BaseException as e:
                 logging.error(f"invoice item error {po.poid} : {str(e)}")
                 return False
-        
+
         return stripe_invoice_finalize(invo_id,vendor)
-
-
 
 
 @api_view(['POST'])
@@ -566,10 +579,11 @@ def cancel_stripe_invoice(request):
         return JsonResponse({'msg':'invoice_status_updation_failed'},status=400)
     return JsonResponse({'msg':'invoice_status_updated'},safe=False,status=200)
 
+
 class InvoiceListView(generics.ListAPIView):
     #permission_classes=[IsAuthenticated]
     serializer_class = InvoiceListSerializer
-    #filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
     #search_fields = ['']
 
     def get_queryset(self):
@@ -581,6 +595,7 @@ class InvoiceListView(generics.ListAPIView):
         # Note the use of `get_queryset()` instead of `self.queryset`
         queryset = self.get_queryset()
         serializer = InvoiceListSerializer(queryset,context=request)
+        
         return Response(serializer.data)
 
 

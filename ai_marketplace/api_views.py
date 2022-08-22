@@ -663,6 +663,7 @@ def get_previous_accepted_rate(request):
     #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
     query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
     query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language))
+
     rates =[]
     for i in query_final:
         out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
@@ -727,14 +728,10 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
                 tt = str(source_lang_name) + '---->' + str(target_lang_name)
                 res[tt] = ser.data
         print("RES-------->",len(res))
-        if len(res)>=3:
-            return Response(self.dt(res,1))
-        elif len(res)==2:
-            return Response(self.dt(res,2))
-        elif len(res)==1:
-            return Response(self.dt(res,3))
-        else:
-            return Response([])
+        if len(res)>=3:return Response(self.dt(res,1))
+        elif len(res)==2:return Response(self.dt(res,2))
+        elif len(res)==1:return Response(self.dt(res,3))
+        else:return Response([])
 
 
 

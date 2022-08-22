@@ -76,6 +76,8 @@ from htmldocx import HtmlToDocx
 from delta import html
 
 
+from ai_auth.tasks import write_doc_json_file
+
 spring_host = os.environ.get("SPRING_HOST")
 
 class IsCustomer(permissions.BasePermission):
@@ -1213,6 +1215,7 @@ class ProjectAnalysisProperty(APIView):
                     if doc.status_code == 200 :
                         doc_data = doc.json()
                         if doc_data["total_word_count"] >= 50000:
+
                             task_write_data = json.dumps(doc_data, default=str)
                             write_doc_json_file.apply_async((task_write_data, task.id))
 
@@ -1594,24 +1597,24 @@ class AssignToListView(viewsets.ModelViewSet):
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
 
-class IntegerationProject(viewsets.ViewSet):
+# class IntegerationProject(viewsets.ViewSet):
 
-    def list(self, request, *args, **kwargs):
-        project_id = self.kwargs.get("pk", None)
-        #  ownership
-        project = get_object_or_404(Project.objects.all(),
-            id=project_id)
-        #  ownership
-        download_project = project.project_download.\
-            get_download
+#     def list(self, request, *args, **kwargs):
+#         project_id = self.kwargs.get("pk", None)
+#         #  ownership
+#         project = get_object_or_404(Project.objects.all(),
+#             id=project_id)
+#         #  ownership
+#         download_project = project.project_download.\
+#             get_download
 
-        serlzr_class = serializer_map.get(
-            download_project.serializer_class_str)
+#         serlzr_class = serializer_map.get(
+#             download_project.serializer_class_str)
 
-        serlzr = serlzr_class(download_project.branch.branch_contentfiles_set
-            .all(), many=True)
+#         serlzr = serlzr_class(download_project.branch.branch_contentfiles_set
+#             .all(), many=True)
 
-        return Response(serlzr.data)
+#         return Response(serlzr.data)
 
 
 

@@ -26,6 +26,7 @@ from ai_vendor.models import VendorLanguagePair
 from django.db.models import OuterRef, Subquery
 from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.db import transaction
+from notifications.signals import notify
 
 
 
@@ -711,6 +712,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 				  'assigned_by','task_assign_info','task_ven_status',)
 
 ####################Need to change################################
+
 class TaskAssignInfoSerializer(serializers.ModelSerializer):
     assign_to=serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),required=False,write_only=True)
     tasks = serializers.ListField(required=False)
@@ -819,6 +821,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
           generate_client_po([i.id for i in task_assign_info])
         return task_assign_info
 
+
     # def update(self,instance,data):
     #     print("DATA-------->",data)
     #     if 'assign_to' in data:
@@ -837,6 +840,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     #         elif instance.task_ven_status == 'task_accepted':
     #             raise serializers.ValidationError("Rates Can't be changed..Vendor already accepted rates and started working!!!")
     #     return super().update(instance, data)
+
 
     # def to_representation(self, instance):
     #     data = super().to_representation(instance)

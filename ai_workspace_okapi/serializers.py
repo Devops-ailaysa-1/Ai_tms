@@ -199,6 +199,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
     def create(self, validated_data, **kwargs):
         from .api_views import MT_RawAndTM_View
+
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
