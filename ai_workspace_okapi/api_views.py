@@ -1464,49 +1464,49 @@ def spellcheck(request):
 #             obj.update_segments(serlzr.validated_data.get("segments"))
 #             return Response(MergeSegmentSerializer(obj).data)
 
-class ProjectDownload(viewsets.ModelViewSet):
-    def get_queryset(self):
-        # limiting queryset for current user
-        qs = Project.objects.filter(ai_user=self.request.user).all()
-        return  qs
+# class ProjectDownload(viewsets.ModelViewSet):
+#     def get_queryset(self):
+#         # limiting queryset for current user
+#         qs = Project.objects.filter(ai_user=self.request.user).all()
+#         return  qs
 
-    def get_files_info(self):
-        self.project = project = self.get_object()
-        documents = Document.objects.filter(file__project=project).all()
+#     def get_files_info(self):
+#         self.project = project = self.get_object()
+#         documents = Document.objects.filter(file__project=project).all()
 
-        files_info = []
-        for document in documents:
-            res = DocumentToFile.document_data_to_file("", document_id=document.id)
-            if res.status_code == 200:
-                files_info.append({"file_path":res.text, "file_id": document.file.id,
-                                   "job_id": document.job.id})
-        return files_info
+#         files_info = []
+#         for document in documents:
+#             res = DocumentToFile.document_data_to_file("", document_id=document.id)
+#             if res.status_code == 200:
+#                 files_info.append({"file_path":res.text, "file_id": document.file.id,
+#                                    "job_id": document.job.id})
+#         return files_info
 
-    def zip(self, request, *args, **kwargs): #get
+#     def zip(self, request, *args, **kwargs): #get
 
-        file_paths = [info.get("file_path") for info in self.get_files_info()]
-        response = HttpResponse(content_type='application/zip')
-        # zf = zipfile.ZipFile(response, 'w')
-        with zipfile.ZipFile(response, 'w') as zf:
-            for file_path in file_paths:
-                with open(file_path, "rb") as f:
-                    zf.writestr(file_path.split("/")[-1], f.read())
+#         file_paths = [info.get("file_path") for info in self.get_files_info()]
+#         response = HttpResponse(content_type='application/zip')
+#         # zf = zipfile.ZipFile(response, 'w')
+#         with zipfile.ZipFile(response, 'w') as zf:
+#             for file_path in file_paths:
+#                 with open(file_path, "rb") as f:
+#                     zf.writestr(file_path.split("/")[-1], f.read())
 
-        response['Content-Disposition'] = f'attachment; filename={self.project.project_name}.zip'
+#         response['Content-Disposition'] = f'attachment; filename={self.project.project_name}.zip'
 
-        return response
+#         return response
 
-    def push_to_repo(self, request, *args, **kwargs):#post
-        files_info = self.get_files_info()
-        dc = DownloadController.objects.filter(project=self.project).first()
-        if dc :
-            try:
-                dc.get_download .download(project=self.project, files_info=files_info)
-                return Response({"message": "Successfully pushed to repository!!!"}, status=200)
-            except Exception as e:
-                print("errror--->", e)
-                return Response({"message": "Something went to wrong!!!"},status=500)
-        return Response({"message": "There is no documnent to push!!!"}, status=204)
+#     def push_to_repo(self, request, *args, **kwargs):#post
+#         files_info = self.get_files_info()
+#         dc = DownloadController.objects.filter(project=self.project).first()
+#         if dc :
+#             try:
+#                 dc.get_download .download(project=self.project, files_info=files_info)
+#                 return Response({"message": "Successfully pushed to repository!!!"}, status=200)
+#             except Exception as e:
+#                 print("errror--->", e)
+#                 return Response({"message": "Something went to wrong!!!"},status=500)
+#         return Response({"message": "There is no documnent to push!!!"}, status=204)
 
 ############################segment history#############################################
 @api_view(['GET',])
