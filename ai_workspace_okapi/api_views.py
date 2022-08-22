@@ -1565,8 +1565,10 @@ def grammar_check_model(request):
 @api_view(['POST',])############### only available for english ###################
 def get_word_api(request):
     text = request.POST.get('word')
+    sentence = request.POST.get('sentence')
     data = {}
     data['word'] = text
+    data['sentence'] = sentence
     end_pts = settings.END_POINT +"wordsapi_synonyms/"
     result = requests.post(end_pts , data )
     try:return JsonResponse(result.json())

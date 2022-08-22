@@ -1069,6 +1069,7 @@ class TaskTranscriptDetails(models.Model):
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
     quill_data =  models.TextField(null=True,blank=True)
+    audio_file_length = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
 
 class TmxFile(models.Model):
