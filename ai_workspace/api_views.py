@@ -76,6 +76,8 @@ from htmldocx import HtmlToDocx
 from delta import html
 
 
+from ai_auth.tasks import write_doc_json_file
+
 spring_host = os.environ.get("SPRING_HOST")
 
 class IsCustomer(permissions.BasePermission):
@@ -1213,6 +1215,7 @@ class ProjectAnalysisProperty(APIView):
                     if doc.status_code == 200 :
                         doc_data = doc.json()
                         if doc_data["total_word_count"] >= 50000:
+
                             task_write_data = json.dumps(doc_data, default=str)
                             write_doc_json_file.apply_async((task_write_data, task.id))
 

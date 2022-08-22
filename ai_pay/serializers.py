@@ -109,8 +109,11 @@ class StripeInvoiceSerializer(serializers.ModelSerializer):
 
 
 class InvoiceListSerializer(serializers.Serializer):
+      
     payable=serializers.SerializerMethodField()
     receivable=serializers.SerializerMethodField()
+    # stripe_invoices_payable=serializers.SerializerMethodField()
+    # stripe_invoices_receivable=serializers.SerializerMethodField()
 
 
     def _get_request(self):
@@ -118,6 +121,11 @@ class InvoiceListSerializer(serializers.Serializer):
         if not isinstance(request, HttpRequest):
             request = request._request
         return request
+    
+    def _get_ordering(self):
+        request = self._get_request()
+        return request.GET.get('ordering','created_at')
+
 
     def _get_ordering(self):
         request = self._get_request()
@@ -165,4 +173,3 @@ class InvoiceListSerializer(serializers.Serializer):
         response["payable"] = sorted(response["payable"], key=lambda x: x[self._get_ordering()])
         response["receivable"] = sorted(response["receivable"], key=lambda x: x[self._get_ordering()])
         return response
-

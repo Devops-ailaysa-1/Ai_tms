@@ -633,6 +633,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
         else:
             return True
 
+
 class ProjectPostTemplateSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     template_name = serializers.CharField()
     projectposttemp_jobs=ProjectPostTemplateJobDetailSerializer(many=True,required=False)
