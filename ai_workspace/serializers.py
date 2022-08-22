@@ -1192,6 +1192,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
+			if 'currency' or 'mtpe_rate' or 'mtpe_hourly_rate' in data.get('task_assign_info'):
+				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 			if 'task_ven_status' in data.get('task_assign_info'):
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
 				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
