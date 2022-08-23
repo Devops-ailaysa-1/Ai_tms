@@ -455,3 +455,5 @@ class MTLanguageLocaleVoiceSupport(models.Model):
     mtpe_engines = models.ForeignKey(AilaysaSupportedMtpeEngines,related_name='support_mt',on_delete=models.CASCADE)
     has_female = models.BooleanField(default=False)
     has_male = models.BooleanField(default=False)
+    voice_name = models.CharField(max_length=300, null=True, blank=True)
+    voice_type = models.CharField(max_length=100, null=True, blank=True)#wavenet,standard,neural

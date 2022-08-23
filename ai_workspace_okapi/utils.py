@@ -430,6 +430,7 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
     from google.cloud import texttospeech
     # print("@#@#@#@#@#",voice_gender)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
+
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
     client = texttospeech.TextToSpeechClient()
