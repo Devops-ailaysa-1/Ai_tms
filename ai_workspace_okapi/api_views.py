@@ -28,7 +28,7 @@ from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
-import nltk
+import nltk,docx2txt
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 
@@ -720,6 +720,14 @@ class DocumentToFile(views.APIView):
     def download_audio_file(self,res,document_id,voice_gender,language_locale):
         if res.status_code in [200, 201]:
             file_path = res.text
+            file,ext = os.path.splitext(file_path)
+            if ext == '.docx':
+                name = file + '.txt'
+                data = docx2txt.process(file_path)
+                with open(name, "w") as out:
+                    out.write(data)
+                file_path = name
+            else:file_path = res.text
             doc = DocumentToFile.get_object(document_id)
             task = doc.task_set.first()
             ser = TaskSerializer(task)
