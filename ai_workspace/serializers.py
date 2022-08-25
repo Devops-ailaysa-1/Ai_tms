@@ -770,7 +770,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         step = instance.task_assign.step.id
         mt_enable = instance.task_assign.mt_enable
         pre_translate = instance.task_assign.pre_translate
-        return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate}
+        task_status = instance.task_assign.get_status_display()
+        if instance.task_assign.step_id == 1:
+            can_open = True
+        elif instance.task_assign.step_id == 2:
+            if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().get_status_display() == "Completed":
+                can_open = True
+            else:can_open = False
+        return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
 
     def run_validation(self, data):
         if data.get('assign_to'):
@@ -864,7 +871,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	bid_job_detail_info = serializers.SerializerMethodField()
 	open_in =  serializers.SerializerMethodField()
-	#can_open = serializers.SerializerMethodField()
+	# can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
 	# assigned_to = serializers.SerializerMethodField(source='get_assigned_to')
@@ -874,6 +881,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		fields = \
 			("id","filename", "ai_taskid","source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",)
+
 
 
 	def get_open_in(self,obj):
@@ -1160,6 +1168,43 @@ def msg_send_vendor_accept(task_assign,input):
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
 
+def msg_send_customer_rate_change(task_assign):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    sender = task_assign.task_assign_info.assigned_by
+    receiver =  task_assign.assign_to
+    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has changed rates."
+    print("Message---------------->",message)
+    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+
+
+def notify_task_completion_status(task_assign):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    sender = task_assign.assign_to
+    team = task_assign.task.job.project.ai_user.team
+    receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+    for i in receivers:
+       thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+       if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+       else:
+            thread_id = thread_ser.errors.get('thread_id')
+       message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted task."
+       print("Message---------------->",message)
+       msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+       notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+
+
+
 class TaskAssignUpdateSerializer(serializers.Serializer):
 	task_assign = TaskAssignSerializer(required=False)
 	task_assign_info = TaskAssignInfoNewSerializer(required=False)
@@ -1186,6 +1231,9 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		task_assign_info_serializer = TaskAssignInfoNewSerializer()
 		if 'task_assign' in data:
 			task_assign_data = data.get('task_assign')
+			print("status--------->",task_assign_data.get('status'))
+			if task_assign_data.get('status') == 3:
+				notify_task_completion_status(instance)
 			if task_assign_data.get('assign_to'):
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
@@ -1193,6 +1241,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
 			if 'currency' or 'mtpe_rate' or 'mtpe_hourly_rate' in data.get('task_assign_info'):
+				if instance.task_assign_info.task_ven_status == "change_request":
+					msg_send_customer_rate_change(instance)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 			if 'task_ven_status' in data.get('task_assign_info'):
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))

@@ -462,3 +462,24 @@ def clone_source_terms_from_single_to_multiple_task(request):
     print(obj)
     TermsModel.objects.bulk_create(obj)
     return JsonResponse({'msg':'SourceTerms Cloned'})
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def whole_glossary_term_search(request):
+    search_term = request.GET.get('term')
+    search_in = request.GET.get('search_in',None)
+    user = request.user.team.owner if request.user.team else request.user
+    queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                .filter(glossary_project__term__isnull=False).distinct()
+    glossary_ids = [i.glossary_project.id for i in queryset]
+    query = TermsModel.objects.filter(glossary_id__in=glossary_ids).order_by('-id')
+    if search_in == 'source':
+        res =  query.filter(Q(sl_term__icontains=search_term)).distinct('tl_term')
+    elif search_in == 'target':
+        res = query.filter(Q(tl_term__icontains=search_term)).distinct('tl_term')
+    else:
+        res = query.filter(Q(sl_term__icontains=search_term)|Q(tl_term__icontains=search_term)).distinct('tl_term')
+    #ser = TermsSerializer(res,many=True)
+    out = [{'term_id':i.id,'sl_term':i.sl_term,'tl_term':i.tl_term,'glossary_name':i.glossary.project.project_name,'job':i.job.source_target_pair_names,'task_id':Task.objects.get(job_id=i.job_id).id} for i in res]
+    return JsonResponse({'results':out})#'data':ser.data})
