@@ -772,7 +772,12 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         pre_translate = instance.task_assign.pre_translate
         task_status = instance.task_assign.get_status_display()
         if instance.task_assign.step_id == 1:
-            can_open = True
+            try:
+                #print("$$$$$$$$$",TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status)
+                if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status == 2:
+                    can_open = False
+                else:can_open = True
+            except:can_open = True
         elif instance.task_assign.step_id == 2:
             if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().get_status_display() == "Completed":
                 can_open = True
