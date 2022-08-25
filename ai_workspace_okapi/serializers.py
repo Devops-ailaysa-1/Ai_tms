@@ -111,7 +111,8 @@ class SegmentSerializerV2(SegmentSerializer):
         from ai_workspace.models import Task
         user = self.context.get('request').user
         try:
-            tt = Task.objects.filter(document_id = instance.text_unit.document.id).first().task_info.filter(assign_to = user).first().task_assign_info
+            obj = Task.objects.filter(document_id = instance.text_unit.document.id).first().task_info.filter(assign_to = user)
+            tt = obj.first().task_assign_info
             task_assigned = True
         except:task_assigned = False
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
@@ -120,10 +121,12 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.temp_target = instance.target
             instance.save()
             SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
-            if task_assigned:  Task.objects.filter(document_id = instance.text_unit.document.id).first().task_info.filter(assign_to = user).update(status = 2)
+            if task_assigned:
+                if obj.first().status!=2:obj.update(status = 2)
             return res
         SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
-        if task_assigned:  Task.objects.filter(document_id = instance.text_unit.document.id).first().task_info.filter(assign_to = user).update(status = 2)
+        if task_assigned:
+            if obj.first().status!=2:obj.update(status = 2)
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only

@@ -32,6 +32,7 @@ from nltk import word_tokenize
 from ai_workspace.models import Task,Project,TaskAssign
 from ai_workspace_okapi.models import Document
 from ai_workspace_okapi.utils import get_translation
+import pandas as pd
 # from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
@@ -118,6 +119,10 @@ class GlossaryFileView(viewsets.ViewSet):
         proj_id = request.POST.get('project')
         job_id = request.POST.get('job',None)
         files = request.FILES.getlist("glossary_file")
+        for i in files:
+            df = pd.read_excel(i)
+            if 'Source language term' not in df.head():
+                return JsonResponse({'msg':'file(s) not contained supported data'})
         if job_id:
             job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job)
