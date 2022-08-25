@@ -122,7 +122,7 @@ class GlossaryFileView(viewsets.ViewSet):
         for i in files:
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
-                return JsonResponse({'msg':'file(s) not contained supported data'})
+                return Response({'msg':'file(s) not contained supported data'},status=400)
         if job_id:
             job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job)
