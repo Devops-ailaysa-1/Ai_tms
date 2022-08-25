@@ -473,7 +473,7 @@ def whole_glossary_term_search(request):
     queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
                 .filter(glossary_project__term__isnull=False).distinct()
     glossary_ids = [i.glossary_project.id for i in queryset]
-    query = TermsModel.objects.filter(glossary_id__in=glossary_ids).order_by('-id')
+    query = TermsModel.objects.filter(glossary_id__in=glossary_ids)
     if search_in == 'source':
         res =  query.filter(Q(sl_term__icontains=search_term)).distinct('tl_term')
     elif search_in == 'target':

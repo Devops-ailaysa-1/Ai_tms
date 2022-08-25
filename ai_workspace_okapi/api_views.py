@@ -1573,9 +1573,11 @@ def grammar_check_model(request):
 def get_word_api(request):
     text = request.POST.get('word')
     sentence = request.POST.get('sentence')
+    second_word = request.POST.get('second_word')
     data = {}
     data['word'] = text
     data['sentence'] = sentence
+    data['second_word'] =second_word
     end_pts = settings.END_POINT +"wordsapi_synonyms/"
     result = requests.post(end_pts , data )
     try:return JsonResponse(result.json())
