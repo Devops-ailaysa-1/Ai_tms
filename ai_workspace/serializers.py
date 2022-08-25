@@ -460,7 +460,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		model = Project
 		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
-					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects",)
+					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at")
 
 
 	def run_validation(self,data):
@@ -1179,7 +1179,7 @@ def msg_send_customer_rate_change(task_assign):
         thread_id = thread_ser.data.get('id')
     else:
         thread_id = thread_ser.errors.get('thread_id')
-    message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has changed rates."
+    message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has changed rates. please view and accept"
     print("Message---------------->",message)
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
@@ -1231,7 +1231,6 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		task_assign_info_serializer = TaskAssignInfoNewSerializer()
 		if 'task_assign' in data:
 			task_assign_data = data.get('task_assign')
-			print("status--------->",task_assign_data.get('status'))
 			if task_assign_data.get('status') == 3:
 				notify_task_completion_status(instance)
 			if task_assign_data.get('assign_to'):
@@ -1241,8 +1240,6 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
 			task_detail = data.get('task_assign_info')
-			print("TAsksssssssssssssssss-------------------->",task_detail)
-			print("Task VEnStatus------------------------>",instance.task_assign_info.task_ven_status)
 			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail)):
 				if instance.task_assign_info.task_ven_status == "change_request":
 					msg_send_customer_rate_change(instance)
