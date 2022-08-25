@@ -79,8 +79,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             try:
                 team = Team.objects.get(owner_id = self.id)
                 print("Team------>",team)
-                #plan = get_plan_name(self)
-                return team #if plan == "Business" else None
+                plan = get_plan_name(self)
+                return team if plan == "Business" else None
             except:
                 return None
 
