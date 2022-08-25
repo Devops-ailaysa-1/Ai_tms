@@ -1240,7 +1240,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
-			if 'currency' or 'mtpe_rate' or 'mtpe_hourly_rate' in data.get('task_assign_info'):
+			task_detail = data.get('task_assign_info')
+			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail)):
 				if instance.task_assign_info.task_ven_status == "change_request":
 					msg_send_customer_rate_change(instance)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
