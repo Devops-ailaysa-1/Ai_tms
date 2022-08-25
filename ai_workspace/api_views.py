@@ -1781,7 +1781,7 @@ class ShowMTChoices(APIView):
 
 ###########################Transcribe Short File############################## #######
 
-def transcribe_short_file(speech_file,source_code,obj):
+def transcribe_short_file(speech_file,source_code,obj,length):
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -1796,7 +1796,7 @@ def transcribe_short_file(speech_file,source_code,obj):
         for result in response.results:
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
-        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id})
+        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length})
         if ser.is_valid():
             ser.save()
             return (ser.data)
@@ -1825,7 +1825,7 @@ def delete_blob(bucket_name, blob_name):
 
 
 
-def transcribe_long_file(speech_file,source_code,filename,obj):
+def transcribe_long_file(speech_file,source_code,filename,obj,length):
 
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
@@ -1852,7 +1852,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj):
 
     delete_blob(bucket_name, destination_blob_name)
 
-    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id})
+    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length})
     if ser.is_valid():
         ser.save()
         return (ser.data)
@@ -1884,9 +1884,9 @@ def transcribe_file(request):
             length=None
         print("Length----->",length)
         if length and length<60:
-            res = transcribe_short_file(speech_file,source_code,obj)
+            res = transcribe_short_file(speech_file,source_code,obj,length)
         else:
-            res = transcribe_long_file(speech_file,source_code,filename,obj)
+            res = transcribe_long_file(speech_file,source_code,filename,obj,length)
         print("RES----->",res)
         return JsonResponse(res,safe=False)
 
@@ -1938,7 +1938,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def download_text_to_speech_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)

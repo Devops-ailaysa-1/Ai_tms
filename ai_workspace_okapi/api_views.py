@@ -28,7 +28,7 @@ from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
-import nltk
+import nltk,docx2txt
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 
@@ -716,32 +716,39 @@ class DocumentToFile(views.APIView):
         return download_file(source_file_path)
 
 
-    #For Downloading Audio File################only for voice project###########
+    #For Downloading Audio File################only for voice project###########Need to work
     def download_audio_file(self,res,document_id,voice_gender,language_locale):
-        if res.status_code in [200, 201]:
-            file_path = res.text
-            doc = DocumentToFile.get_object(document_id)
-            task = doc.task_set.first()
-            ser = TaskSerializer(task)
-            task_data = ser.data
-            filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
-            target_language = language_locale if language_locale else task_data["target_language"]
-            dir,name_ = os.path.split(os.path.abspath(self.get_source_file_path(document_id)))
-            filename = name_ + "_out"+ ".mp3"
-            res1,f2 = text_to_speech(file_path,target_language,filename,voice_gender)
-            if task.task_transcript_details.first()==None:
-                ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
-            else:
-                t = task.task_transcript_details.first()
-                ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
-            if ser.is_valid():
-                ser.save()
-            print(ser.errors)
-            f2.close()
-            os.remove(filename)
-            return download_file(task.task_transcript_details.last().translated_audio_file.path)
+        filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
+        temp_name = filename + '.txt'
+        text_units = TextUnit.objects.filter(document_id=document_id)
+        with open(temp_name, "w") as out:
+            for text_unit in text_units:
+                segments = Segment.objects.filter(text_unit_id=text_unit.id)
+                for segment in segments:
+                    if segment.target!=None:
+                        out.write(segment.target)
+        file_path = temp_name
+        doc = DocumentToFile.get_object(document_id)
+        task = doc.task_set.first()
+        ser = TaskSerializer(task)
+        task_data = ser.data
+        target_language = language_locale if language_locale else task_data["target_language"]
+        filename_ = filename + "_out"+ ".mp3"
+        res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender)
+        if task.task_transcript_details.first()==None:
+            ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
         else:
-            return Response({"msg":"something went wrong"})
+            t = task.task_transcript_details.first()
+            ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
+        if ser.is_valid():
+            ser.save()
+        print(ser.errors)
+        f2.close()
+        os.remove(filename_)
+        os.remove(temp_name)
+        return download_file(task.task_transcript_details.last().translated_audio_file.path)
+    # else:
+    #     return Response({"msg":"something went wrong"})
 
 
 
@@ -854,7 +861,7 @@ class DocumentToFile(views.APIView):
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
 
-        # print("Data to write output file ---> ", data)
+        #print("Data to write output file ---> ", data)
 
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
