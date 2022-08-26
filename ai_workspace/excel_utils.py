@@ -89,15 +89,15 @@ def WriteToExcel():
     worksheet_s.protect()
     # write header
     worksheet_s.write(0, 1, ugettext("ID"), header)
-    worksheet_s.write(0, 2, ugettext("SL_Term"), header)
-    worksheet_s.write(0, 3, ugettext("TL_Term"), header)
+    worksheet_s.write(0, 2, ugettext("Source language term"), header)
+    worksheet_s.write(0, 3, ugettext("Target language term"), header)
     worksheet_s.write(0, 4, ugettext("POS"), header)
-    worksheet_s.write(0, 5, ugettext("SL_Definition"), header)
-    worksheet_s.write(0, 6, ugettext("TL_Definition"), header)
+    worksheet_s.write(0, 5, ugettext("Source language Definition"), header)
+    worksheet_s.write(0, 6, ugettext("Target language Definition"), header)
     worksheet_s.write(0, 7, ugettext("Context"), header)
     worksheet_s.write(0, 8, ugettext("Note"), header)
-    worksheet_s.write(0, 9, ugettext("SL_Source"), header)
-    worksheet_s.write(0, 10, ugettext("TL_Source"), header)
+    worksheet_s.write(0, 9, ugettext("Source language Source"), header)
+    worksheet_s.write(0, 10, ugettext("Target language Source"), header)
     worksheet_s.write(0, 11, ugettext("Gender"), header)
     worksheet_s.write(0, 12, ugettext("Termtype"), header)
     worksheet_s.write(0, 13, ugettext("Geographical_Usage"), header)
@@ -107,10 +107,10 @@ def WriteToExcel():
     # column widths
     sl_term_col_width       = 25
     tl_term_col_width       = 25
-    sl_definition_col_width = 20
-    tl_definition_col_width = 20
-    sl_source_col_width     = 15
-    tl_source_col_width     = 15
+    sl_definition_col_width = 30
+    tl_definition_col_width = 30
+    sl_source_col_width     = 25
+    tl_source_col_width     = 25
     geographical_usage_col_width = 20
 
     # change column widths
