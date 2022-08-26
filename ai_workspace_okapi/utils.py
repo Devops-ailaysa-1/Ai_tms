@@ -406,15 +406,15 @@ def get_res_path(source_lang):
         return res_paths
 
     elif source_lang in ['zh-Hans','zh-Hant','ja']:
-        res_paths["srx_file_path"] = "zh_and_ja.srx"
+        res_paths["srx_file_path"] = "okapi_resources/zh_and_ja.srx"
         return res_paths
 
     elif source_lang in ['th']:
-        res_paths["srx_file_path"] = "thai.srx"
+        res_paths["srx_file_path"] = "okapi_resources/thai.srx"
         return res_paths
 
     elif source_lang in ['ta']:
-        res_paths["srx_file_path"] = "tamil001.srx"
+        res_paths["srx_file_path"] = "okapi_resources/tamil001.srx"
         return res_paths
 
     else:
