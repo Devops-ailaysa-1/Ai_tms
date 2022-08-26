@@ -364,6 +364,19 @@ class SegmentsUpdateView(viewsets.ViewSet):
             logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
             return segment_serlzr.errors
 
+    def edit_allowed_check(self,instance):
+        from ai_workspace.models import Task,TaskAssignInfo
+        user = self.request.user
+        task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
+        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task = task_obj)
+        try:
+            task_assign_status = task_assigned_info.filter(~Q(task_assign__assign_to = user)).first().task_assign.status
+            edit_allowed = False if task_assign_status == 2 else True
+        except:
+            edit_allowed = True
+        print("Edit---------------------------------->",edit_allowed)
+        return edit_allowed
+
     def update_pentm(self, segment):
         data = PentmUpdateSerializer(segment).data
         res = requests.post(f"http://{spring_host}:8080/project/pentm/update", data=data)
@@ -374,9 +387,12 @@ class SegmentsUpdateView(viewsets.ViewSet):
             print("not successfully update")
 
     def update(self, request, segment_id):
-        print("$$$$$$$$$$$$$$$$$$$$$$$$")
         segment = self.get_object(segment_id)
-        print("::::::::",segment)
+        #print("$$$$$$$$$$$$$$$$$$$$$$$$")
+        edit_allow = self.edit_allowed_check(segment)
+        print("RRRRRRRRRRRRRRRRRR------------------>",edit_allow)
+        if edit_allow == False:
+            return Response({"msg":"Already someone is working"},status = 400)
         segment_serlzr = self.get_update(segment, request.data, request)
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         return Response(segment_serlzr.data, status=201)

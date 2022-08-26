@@ -473,6 +473,8 @@ def clone_source_terms_from_single_to_multiple_task(request):
 @permission_classes([IsAuthenticated])
 def whole_glossary_term_search(request):
     search_term = request.GET.get('term')
+    if not search_term:
+        return Response({'msg':'term required'},status=400)
     search_in = request.GET.get('search_in',None)
     user = request.user.team.owner if request.user.team else request.user
     queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
@@ -486,5 +488,5 @@ def whole_glossary_term_search(request):
     else:
         res = query.filter(Q(sl_term__icontains=search_term)|Q(tl_term__icontains=search_term)).distinct('tl_term')
     #ser = TermsSerializer(res,many=True)
-    out = [{'term_id':i.id,'sl_term':i.sl_term,'tl_term':i.tl_term,'glossary_name':i.glossary.project.project_name,'job':i.job.source_target_pair_names,'task_id':Task.objects.get(job_id=i.job_id).id} for i in res]
+    out = [{'term_id':i.id,'sl_term':i.sl_term,'tl_term':i.tl_term,'pos':i.pos,'glossary_name':i.glossary.project.project_name,'job':i.job.source_target_pair_names,'task_id':Task.objects.get(job_id=i.job_id).id} for i in res]
     return JsonResponse({'results':out})#'data':ser.data})
