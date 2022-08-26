@@ -374,6 +374,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
             edit_allowed = False if task_assign_status == 2 else True
         except:
             edit_allowed = True
+        print("Edit---------------------------------->",edit_allowed)
         return edit_allowed
 
     def update_pentm(self, segment):
@@ -389,8 +390,8 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment = self.get_object(segment_id)
         #print("$$$$$$$$$$$$$$$$$$$$$$$$")
         edit_allow = self.edit_allowed_check(segment)
-        #print("RRRRRRRRRRRRRRRRRR------------------>",edit_allow)
-        if not edit_allow:
+        print("RRRRRRRRRRRRRRRRRR------------------>",edit_allow)
+        if edit_allow == False:
             return Response({"msg":"Already someone is working"},status = 400)
         segment_serlzr = self.get_update(segment, request.data, request)
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
