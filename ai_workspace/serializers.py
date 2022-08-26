@@ -1,4 +1,4 @@
-from ai_pay.api_views import generate_client_po
+from ai_pay.api_views import generate_client_po,po_modify
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType
 from rest_framework import serializers
@@ -1249,6 +1249,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				if instance.task_assign_info.task_ven_status == "change_request":
 					msg_send_customer_rate_change(instance)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
+				## editing po
+				# po_modify(instance.task_assign_info.id)
 			if 'task_ven_status' in data.get('task_assign_info'):
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
 				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
