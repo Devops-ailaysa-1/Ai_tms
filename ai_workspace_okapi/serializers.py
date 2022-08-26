@@ -96,6 +96,7 @@ class SegmentSerializer(serializers.ModelSerializer):
         representation["target_tags"] = self.remove_random_tags(representation["target_tags"], random_tag_id_list)
         return representation
 
+from ai_workspace.models import Task,TaskAssignInfo
 class SegmentSerializerV2(SegmentSerializer):
     temp_target = serializers.CharField(trim_whitespace=False)
     target = serializers.CharField(trim_whitespace=False, required=False)
@@ -107,26 +108,26 @@ class SegmentSerializerV2(SegmentSerializer):
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
-    def update(self, instance, validated_data):
-        from ai_workspace.models import Task
-        user = self.context.get('request').user
+    def update_task_assign(self,task_obj,user):
         try:
-            obj = Task.objects.filter(document_id = instance.text_unit.document.id).first().task_info.filter(assign_to = user)
-            tt = obj.first().task_assign_info
-            task_assigned = True
-        except:task_assigned = False
+            obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
+            if obj.status != 2:
+                obj.update(status = 2)
+        except:pass
+
+    def update(self, instance, validated_data):
+        user = self.context.get('request').user
+        task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
+            self.update_task_assign(task_obj,user)
             SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
-            if task_assigned:
-                if obj.first().status!=2:obj.update(status = 2)
             return res
         SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
-        if task_assigned:
-            if obj.first().status!=2:obj.update(status = 2)
+        self.update_task_assign(task_obj,user)
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
