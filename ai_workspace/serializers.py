@@ -708,7 +708,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	task_assign_info = TaskAssignSerializer(required=False)
 	class Meta:
 		model = TaskAssignInfo
-		fields = ('instruction','assignment_id','deadline','mtpe_rate','mtpe_count_unit','total_word_count','currency',\
+		fields = ('instruction','assignment_id','deadline','mtpe_rate','estimated_hours','mtpe_count_unit','total_word_count','currency',\
 				  'assigned_by','task_assign_info','task_ven_status',)
 
 ####################Need to change################################
@@ -733,7 +733,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         model = TaskAssignInfo
         fields = ('id','instruction','instruction_files','step','task_ven_status',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
-                   'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','files',\
+                   'assign_to','tasks','mtpe_rate','estimated_hours','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable','pre_translate','task_assign_detail',)
 
         extra_kwargs = {
