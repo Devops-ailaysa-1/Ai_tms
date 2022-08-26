@@ -992,6 +992,7 @@ class TaskAssignInfo(models.Model):
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)
     mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
+    estimated_hours = models.IntegerField(blank=True,null=True)
     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
