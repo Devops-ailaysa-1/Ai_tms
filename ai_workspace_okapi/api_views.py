@@ -387,9 +387,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
 
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
-        print("$$$$$$$$$$$$$$$$$$$$$$$$")
+        #print("$$$$$$$$$$$$$$$$$$$$$$$$")
         edit_allow = self.edit_allowed_check(segment)
-        print("RRRRRRRRRRRRRRRRRR------------------>",edit_allow)
+        #print("RRRRRRRRRRRRRRRRRR------------------>",edit_allow)
         if not edit_allow:
             return Response({"msg":"Already someone is working"},status = 400)
         segment_serlzr = self.get_update(segment, request.data, request)
