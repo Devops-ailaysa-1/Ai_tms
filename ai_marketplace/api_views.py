@@ -539,7 +539,6 @@ def get_available_threads(request):
 @permission_classes([IsAuthenticated])
 def chat_unread_notifications(request):
     user = AiUser.objects.get(pk=request.user.id)
-    count = user.notifications.filter(verb='Message').unread().count()
     notification_details=[]
     notification=[]
     notification.append({'total_count':count})
@@ -553,7 +552,9 @@ def chat_unread_notifications(request):
            try:profile = sender.professional_identity_info.avatar_url
            except:profile = None
            notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
-       except: pass
+       except:
+           mark_as_read = user.notifications.filter(Q(data=i.data) & Q(actor_object_id=i.actor_object_id)).mark_all_as_read()
+    count = user.notifications.filter(verb='Message').unread().count()
     return JsonResponse({'notifications':notification,'notification_details':notification_details})
 
 @api_view(['GET',])
