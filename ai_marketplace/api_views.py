@@ -541,7 +541,6 @@ def chat_unread_notifications(request):
     user = AiUser.objects.get(pk=request.user.id)
     notification_details=[]
     notification=[]
-    notification.append({'total_count':count})
     # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
     notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
             user.notifications.unread().filter(verb='Message').order_by("data",'-timestamp').distinct("data").values('id'))).order_by("-timestamp")
@@ -554,7 +553,8 @@ def chat_unread_notifications(request):
            notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
        except:
            mark_as_read = user.notifications.filter(Q(data=i.data) & Q(actor_object_id=i.actor_object_id)).mark_all_as_read()
-    count = user.notifications.filter(verb='Message').unread().count()
+    total_count = user.notifications.filter(verb='Message').unread().count()
+    notification.append({'total_count':total_count})
     return JsonResponse({'notifications':notification,'notification_details':notification_details})
 
 @api_view(['GET',])
