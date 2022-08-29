@@ -316,6 +316,14 @@ class Document(models.Model):
         else:
             return []
 
+    @property
+    def show_mt(self):
+        from ai_workspace.models import Task,TaskAssign
+        mt_enable = Task.objects.filter(document=self).first().task_info.filter(step_id=1).first().mt_enable
+        if mt_enable:return True
+        else:return False
+
+
 
 class FontSize(models.Model):
     ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,

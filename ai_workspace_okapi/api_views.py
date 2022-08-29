@@ -477,7 +477,7 @@ class MT_RawAndTM_View(views.APIView):
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
             print("MT not enabled")
-            return {}, 424, "MT disabled"
+            return {}, 200, "MT disabled"
 
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
@@ -533,7 +533,7 @@ class MT_RawAndTM_View(views.APIView):
     def get_alert_msg(self, status_code, can_team):
         if (status_code == 424 and can_team == "unavailable"):
             return "MT doesn't work as the credits are insufficient. Please buy more or upgrade"
-        elif (status_code == 424 and can_team == "MT disabled"):
+        elif (status_code == 200 and can_team == "MT disabled"):
             return "MT Disabled"
         else:
             return "Team subscription inactive"
