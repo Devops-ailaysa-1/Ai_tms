@@ -390,30 +390,46 @@ def generate_client_po(task_assign_info):
             elif instance.mtpe_count_unit.unit =='Fixed':
                 tot_amount = instance.mtpe_rate
             elif instance.mtpe_count_unit.unit =='Hour':
-                #tot_amount = instance.estimated_hours * instance.mtpe_rate
-                tot_amount = 0
+                tot_amount = instance.estimated_hours * instance.mtpe_rate
+                # tot_amount = 0
             else:
                 # rasie error on invalid price should be rised
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
             insert={'task_id':instance.task_assign.task.id,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
                     'word_count':instance.total_word_count,'char_count':instance.task_assign.task.task_char_count,'unit_price':instance.mtpe_rate,
-                    'unit_type':instance.mtpe_count_unit,'source_language':instance.task_assign.task.job.source_language,'target_language':instance.task_assign.task.job.target_language,'total_amount':tot_amount}
+                    'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':instance.task_assign.task.job.target_language,'total_amount':tot_amount}
             # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
             # print("po_task",po_task)
             po_total_amt+=float(tot_amount)
 
-        insert2={'client':instance.assigned_by,'seller':instance.task_assign.assign_to,
+        insert2={'client':instance.task_assign.task.job.project.ai_user,'seller':instance.task_assign.assign_to,
                 'assignment':assign,'currency':instance.currency,
                 'po_status':'issued','po_total_amount':po_total_amt}
         # print("insert2",insert2)
         po=PurchaseOrder.objects.create(**insert2)
         # print("po2",po)
+    return po
 
 
-def po_modify(task_assign_info_id):
+def po_modify(task_assign_info_id,po_update):
     instance= TaskAssignInfo.objects.get(id=task_assign_info_id)
+    assignment_id= instance.assignment_id
+    task =instance.task_assign.task.id
+    po_new =None
+    with transaction.atomic():
+        task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
+        
+        po = PurchaseOrder.objects.get(assignment__assignment_id=assignment_id)
+        po.po_status="void"
+        po.save()
+        po_new = generate_client_po(task_assign_info_ids) 
+        print("new po",po_new) 
+    if po_new:
+        return True
+    else:
+        return False
 
 
 def extend_po() :

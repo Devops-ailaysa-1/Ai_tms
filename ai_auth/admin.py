@@ -178,6 +178,11 @@ class VOIAdmin(admin.ModelAdmin):
 class ExistingVendorEmailAdmin(admin.ModelAdmin):
     list_display = ("user","gen_password","mail_sent","mail_sent_time")
 
+@admin.register(UserCredits)
+class UserCreditsAdmin(admin.ModelAdmin):
+    list_display = ("id","user","stripe_cust_id","buyed_credits","credits_left","expiry","ended_at")
+    list_filter = ('user__email',)
+
 # Custom Admin Page  #
 
 # Register your models here.
@@ -186,7 +191,6 @@ admin.site.register(UserAttribute)
 admin.site.register(Permission)
 admin.site.register(TempPricingPreference)
 admin.site.register(CreditPack)
-admin.site.register(UserCredits)
 admin.site.register(BillingAddress)
 admin.site.register(UserTaxInfo)
 admin.site.register(Team)
