@@ -731,18 +731,19 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         if query.exists():
             if query[0].service.exists():
                 return VendorServiceSerializer(query, many=True, read_only=True).data
-            else:return {'service':[]}
+            else:return [{'service':[]}]
         else:
             query1 = queryset.filter(currency_id = 144)
             if query1.exists():
                 if query1[0].service.exists():
                     return VendorServiceSerializer(query1, many=True, read_only=True).data
-                else:return {'service':[]}
+                else:return [{'service':[]}]
             else:
                 objs = [data for data in queryset if data.service.exists()]
                 if objs:
-                    return VendorServiceSerializer(objs[0], many=False, read_only=True).data
-                else:return {'service':[]}
+                    data = VendorServiceSerializer(objs[0], many=False, read_only=True).data
+                    return [data]
+                else:return [{'service':[]}]
 
 
         # if query.count() > 1:
