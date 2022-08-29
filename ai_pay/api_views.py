@@ -32,9 +32,10 @@ from django.db.models import Q
 from django.conf import settings
 import time
 
-default_djstripe_owner=Account.get_default_account()
-
-default_djstripe_owner=Account.get_default_account()
+try:
+    default_djstripe_owner=Account.get_default_account()
+except BaseException as e:
+    print(f"Error : {str(e)}")
 
 def get_stripe_key():
     '''gets stripe api key for current environment'''
@@ -371,7 +372,6 @@ def generate_invoice_offline(po_li,gst=None,user=None):
 
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
-
     with transaction.atomic():
         po_total_amt=0.0
         for obj_id in task_assign_info:
@@ -387,6 +387,11 @@ def generate_client_po(task_assign_info):
                     tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
                 else:
                      tot_amount = 0
+            elif instance.mtpe_count_unit.unit =='Fixed':
+                tot_amount = instance.mtpe_rate
+            elif instance.mtpe_count_unit.unit =='Hour':
+                #tot_amount = instance.estimated_hours * instance.mtpe_rate
+                tot_amount = 0
             else:
                 # rasie error on invalid price should be rised
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
@@ -407,8 +412,9 @@ def generate_client_po(task_assign_info):
         # print("po2",po)
 
 
-def po_modify(task_assign_info):
-    pass
+def po_modify(task_assign_info_id):
+    instance= TaskAssignInfo.objects.get(id=task_assign_info_id)
+
 
 def extend_po() :
     pass
