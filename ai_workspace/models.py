@@ -915,7 +915,7 @@ class Task(models.Model):
     @property
     def get_progress(self):
         if self.job.project.project_type_id != 3:
-            confirm_list = [102, 104, 106]
+            confirm_list = [102, 104, 106,110]
             # total_segment_count = self.document.total_segment_count
             total_segment_count = self.corrected_segment_count
             segments_confirmed_count = self.document.segments.filter(
