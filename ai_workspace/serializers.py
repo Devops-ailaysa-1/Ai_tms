@@ -1194,8 +1194,14 @@ def notify_task_completion_status(task_assign):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.assign_to
-    team = task_assign.task.job.project.ai_user.team
-    receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+    receivers=[]
+    try:
+        team = task_assign.task.job.project.ai_user.team
+        receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+    except:pass
+    task_ass_list = TaskAssign.objects.filter(task=task_assign.task).filter(~Q(assign_to=task_assign.assign_to))
+    if task_ass_list: receivers.append(task_ass_list.first().assign_to)
+    print('Receivers-------------->',receivers)
     for i in receivers:
        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
        if thread_ser.is_valid():
