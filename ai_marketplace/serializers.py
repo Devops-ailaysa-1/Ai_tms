@@ -741,8 +741,7 @@ class GetVendorListSerializer(serializers.ModelSerializer):
             else:
                 objs = [data for data in queryset if data.service.exists()]
                 if objs:
-                    data = VendorServiceSerializer(objs[0], many=False, read_only=True).data
-                    return [data]
+                    return [VendorServiceSerializer(objs[0], many=False, read_only=True).data]
                 else:return [{'service':[]}]
 
 
