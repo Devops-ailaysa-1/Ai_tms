@@ -209,7 +209,7 @@ class Project(models.Model):
                     return "In Progress"
 
             status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-                Q(status_id__in=[102,104,106])).all().count()
+                Q(status_id__in=[102,104,106,110])).all().count()
 
             if total_segments == status_count:
                 return "Completed"
