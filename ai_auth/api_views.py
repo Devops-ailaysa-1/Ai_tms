@@ -2123,7 +2123,7 @@ class UserDetailView(viewsets.ViewSet):
 
                 if cv_file:
                     VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
-                    VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+                    VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
 
             return Response({'msg':'details_updated_successsfully'},status=200)
         except BaseException as e:

@@ -58,6 +58,7 @@ def po_dir_path(instance, filename):
     return '{0}/{1}/{2}'.format("ai_reports","PO",filename)
 
 class PurchaseOrder(models.Model):
+    '''Purchase Order Created During Assignment'''
     status =(
     ("draft","draft"),
     ("issued", "issued"),
@@ -78,7 +79,6 @@ class PurchaseOrder(models.Model):
     po_status =models.CharField(max_length=50,choices=status,default='draft')
     po_file = models.FileField(upload_to=po_dir_path, blank=True, null=True)
     po_total_amount = models.DecimalField(max_digits=12,decimal_places=4)
-    #po_pdf = models.FileField(upload_to ='ai_invoices/',null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
