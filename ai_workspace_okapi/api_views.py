@@ -469,15 +469,10 @@ class MT_RawAndTM_View(views.APIView):
             raise  ValueError("Sorry! Something went wrong with word count calculation.")
 
     @staticmethod
-    def get_data(request, segment_id, mt_params):
+    def get_data(request, segment_id):
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         if mt_raw:
             return MT_RawSerializer(mt_raw).data, 200, "available"
-
-        # If MT disabled for the task
-        if mt_params.get("mt_enable", True) != True:
-            print("MT not enabled")
-            return {}, 200, "MT disabled"
 
         text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
@@ -530,18 +525,9 @@ class MT_RawAndTM_View(views.APIView):
                 return []
         return []
 
-    def get_segment_MT_params(self, segment_id):
-        task_assign_obj = TaskAssign.objects.filter(
-            Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
-            Q(step_id=1)
-        ).first()
-        return TaskAssignSerializer(task_assign_obj).data
-
     def get(self, request, segment_id):
-        #data, status_code, can_team = self.get_data(request, segment_id)
+        data, status_code, can_team = self.get_data(request, segment_id)
         # print("MT Data -----> ", data)
-        mt_params = self.get_segment_MT_params(segment_id)
-        data, status_code, can_team = self.get_data(request, segment_id, mt_params)
         mt_alert = True if status_code == 424 else False
         alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
             can_team == "unavailable") else "Team subscription inactive"
