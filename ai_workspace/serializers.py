@@ -1,3 +1,4 @@
+import logging
 from ai_pay.api_views import generate_client_po,po_modify
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType
@@ -1240,6 +1241,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 	def update(self,instance,data):
 		task_assign_serializer = TaskAssignSerializer()
 		task_assign_info_serializer = TaskAssignInfoNewSerializer()
+		po_update =[]
 		if 'task_assign' in data:
 			task_assign_data = data.get('task_assign')
 			if task_assign_data.get('status') == 3:
@@ -1248,22 +1250,33 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
+				po_update.append('assign_to')
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
 			task_detail = data.get('task_assign_info')
 			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail)):
 				if instance.task_assign_info.task_ven_status == "change_request":
 					msg_send_customer_rate_change(instance)
-					## editing po
-					# po_modify(instance.task_assign_info.id)
+					# editing po
+					po_update.append('accepted_rate')
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 
 			if 'task_ven_status' in data.get('task_assign_info'):
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
 				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
 			task_assign_info_data = data.get('task_assign_info')
-			try:task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
-			except:pass
+			try:
+				task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
+			except:
+				pass
+			if len(po_update)>0:
+				try:
+					po = po_modify(instance.task_assign_info.id,po_update)
+					if not po:
+						raise ValueError("new po not generated")
+				except BaseException as e:
+					logging.error(f"po creation failed with for task_assign->{instance.id} ,error :{str(e)}")
+
 		if 'files' in data:
 			[Instructionfiles.objects.create(**instruction_file,task_assign_info = instance.task_assign_info) for instruction_file in data['files']]
 		return data

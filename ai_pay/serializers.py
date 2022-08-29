@@ -135,7 +135,7 @@ class InvoiceListSerializer(serializers.Serializer):
         query_off = obj.filter(client = self._get_request().user)
         off_payable = AilaysaGeneratedInvoiceSerializer(query_off,many=True).data
         cust=Customer.objects.filter(subscriber=self._get_request().user)
-        query_stripe = Invoice.objects.filter(customer__in=cust)
+        query_stripe = Invoice.objects.filter(Q(customer__in=cust)& ~Q(djstripe_owner_account__id="acct_1JWwU2SHaXADggwo"))
         stripe_payable=  StripeInvoiceSerializer(query_stripe,many=True).data
         #jsonArray1 = off_payable.concat(stripe_payable)
         return off_payable+stripe_payable
