@@ -586,8 +586,12 @@ def po_pdf_get(request):
         po =PurchaseOrder.objects.get(poid=poid)
     elif assignmentid:
         try:
-            po =PurchaseOrder.objects.get(assignment__assignment_id=assignmentid)
-        except PurchaseOrder.MultipleObjectsReturned as e:
+            pos =PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignmentid)&~Q(po_status='void'))
+            if pos.count()==1:
+                po = pos.last()
+            else:
+                raise ValueError('multiple po reurned for assignment')
+        except ValueError as e:
             logging.error(f"for assignmentid: {assignmentid} {str(e)}")
     else:
         return JsonResponse({'error':'poid_or_assignmenid_field_is_required'},status=400)
