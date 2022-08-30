@@ -1127,7 +1127,7 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
         return  Response(SegmentSerializer(segment).data, status=200)
 
 class ProgressView(views.APIView):
-    confirm_list = [102, 104, 106]
+    confirm_list = [102, 104, 106, 110]
 
     @staticmethod
     def get_object(document_id):
