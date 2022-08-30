@@ -305,7 +305,7 @@
             <li>{{task.source_language.language}}</li>
             <li>{{task.target_language.language}}</li>
             <li>{{task.unit_type.unit}}</li>
-            <li>{{task.unit_price|floatformat:"-4"}}</li>
+            <li>{{task.unit_price_float_format}}</li>
             {% if task.unit_type.unit == "Char" %}
             <li>{{task.char_count}}</li>
             {%endif%}
