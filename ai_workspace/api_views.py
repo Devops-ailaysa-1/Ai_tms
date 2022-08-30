@@ -17,6 +17,7 @@ from ai_glex.serializers import GlossarySetupSerializer,GlossaryFileSerializer,G
 from ai_auth.models import AiUser, UserCredits, Team, InternalMember
 from rest_framework import viewsets, status
 from .utils import DjRestUtils
+from ai_auth.models import HiredEditors
 from rest_framework.response import Response
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 from indicnlp.tokenize.indic_tokenize import trivial_tokenize

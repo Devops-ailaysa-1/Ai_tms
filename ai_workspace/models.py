@@ -209,7 +209,7 @@ class Project(models.Model):
                     return "In Progress"
 
             status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-                Q(status_id__in=[102,104,106])).all().count()
+                Q(status_id__in=[102,104,106,110])).all().count()
 
             if total_segments == status_count:
                 return "Completed"
@@ -915,7 +915,7 @@ class Task(models.Model):
     @property
     def get_progress(self):
         if self.job.project.project_type_id != 3:
-            confirm_list = [102, 104, 106]
+            confirm_list = [102, 104, 106,110]
             # total_segment_count = self.document.total_segment_count
             total_segment_count = self.corrected_segment_count
             segments_confirmed_count = self.document.segments.filter(
@@ -992,6 +992,7 @@ class TaskAssignInfo(models.Model):
     deadline = models.DateTimeField(blank=True, null=True)
     total_word_count = models.IntegerField(null=True, blank=True)
     mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
+    estimated_hours = models.IntegerField(blank=True,null=True)
     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,

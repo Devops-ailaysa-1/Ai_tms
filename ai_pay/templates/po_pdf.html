@@ -312,6 +312,12 @@
             {% if task.unit_type.unit == "Word" %}
             <li>{{task.word_count}}</li>
             {% endif %}
+            {% if task.unit_type.unit == "Hour" %}
+            <li>{{task.estimated_hours}}</li>
+            {% endif %}
+            {% if task.unit_type.unit == "Fixed" %}
+            <li>-</li>
+            {% endif %}
             <li>{{task.total_amount|floatformat:"2"}}</li>
         </ul>
         {% endfor %}

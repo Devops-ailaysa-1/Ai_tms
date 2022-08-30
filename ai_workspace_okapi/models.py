@@ -308,13 +308,21 @@ class Document(models.Model):
 
     @property
     def assign_detail(self):
-        from ai_workspace.models import TaskAssign
-        task = self.task_document.first().id
+        from ai_workspace.models import Task,TaskAssign
+        task = Task.objects.filter(document=self).first().id
         if TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False):
             rr = TaskAssign.objects.filter(task_id = task)
-            return [{'step':i.step.name,'user_id':i.assign_to.id} for i in rr]
+            return [{'assign_to_id':i.assign_to.id,'step_id':i.step.id,'task':i.task_id,'status':i.status} for i in rr]
         else:
             return []
+
+    @property
+    def show_mt(self):
+        from ai_workspace.models import Task,TaskAssign
+        mt_enable = Task.objects.filter(document=self).first().task_info.filter(step_id=1).first().mt_enable
+        if mt_enable:return True
+        else:return False
+
 
 
 class FontSize(models.Model):

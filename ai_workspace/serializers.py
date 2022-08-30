@@ -1,4 +1,5 @@
-from ai_pay.api_views import generate_client_po
+import logging
+from ai_pay.api_views import generate_client_po,po_modify
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
 from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType
 from rest_framework import serializers
@@ -708,7 +709,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	task_assign_info = TaskAssignSerializer(required=False)
 	class Meta:
 		model = TaskAssignInfo
-		fields = ('instruction','assignment_id','deadline','mtpe_rate','mtpe_count_unit','total_word_count','currency',\
+		fields = ('instruction','assignment_id','deadline','mtpe_rate','estimated_hours','mtpe_count_unit','total_word_count','currency',\
 				  'assigned_by','task_assign_info','task_ven_status',)
 
 ####################Need to change################################
@@ -733,7 +734,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         model = TaskAssignInfo
         fields = ('id','instruction','instruction_files','step','task_ven_status',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
-                   'assign_to','tasks','mtpe_rate','mtpe_count_unit','currency','files',\
+                   'assign_to','tasks','mtpe_rate','estimated_hours','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable','pre_translate','task_assign_detail',)
 
         extra_kwargs = {
@@ -743,11 +744,12 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     def get_assign_to_details(self,instance):
 	    if instance.task_assign.assign_to:
+	        deleted = True if 'deleted' in instance.task_assign.assign_to.email else False
 	        external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
 	        email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
 	        try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
 	        except:avatar = None
-	        return {"id":instance.task_assign.assign_to_id,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor}
+	        return {"id":instance.task_assign.assign_to_id,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor,"account_deleted":deleted}
 	    #if instance.task.assign_to:
 	    #    external_editor = True if instance.task.assign_to.is_internal_member==False else False
 	    #    email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
@@ -1194,8 +1196,14 @@ def notify_task_completion_status(task_assign):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.assign_to
-    team = task_assign.task.job.project.ai_user.team
-    receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+    receivers=[]
+    try:
+        team = task_assign.task.job.project.ai_user.team
+        receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+    except:pass
+    task_ass_list = TaskAssign.objects.filter(task=task_assign.task).filter(~Q(assign_to=task_assign.assign_to))
+    if task_ass_list: receivers.append(task_ass_list.first().assign_to)
+    print('Receivers-------------->',receivers)
     for i in receivers:
        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
        if thread_ser.is_valid():
@@ -1234,6 +1242,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 	def update(self,instance,data):
 		task_assign_serializer = TaskAssignSerializer()
 		task_assign_info_serializer = TaskAssignInfoNewSerializer()
+		po_update =[]
 		if 'task_assign' in data:
 			task_assign_data = data.get('task_assign')
 			if task_assign_data.get('status') == 3:
@@ -1242,19 +1251,33 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
+				po_update.append('assign_to')
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
 			task_detail = data.get('task_assign_info')
-			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail)):
+			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail) or ('estimated_hours' in task_detail)):
 				if instance.task_assign_info.task_ven_status == "change_request":
 					msg_send_customer_rate_change(instance)
+					# editing po
+					po_update.append('accepted_rate')
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
+
 			if 'task_ven_status' in data.get('task_assign_info'):
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
 				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
 			task_assign_info_data = data.get('task_assign_info')
-			try:task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
-			except:pass
+			try:
+				task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
+			except:
+				pass
+			if len(po_update)>0:
+				try:
+					po = po_modify(instance.task_assign_info.id,po_update)
+					if not po:
+						raise ValueError("new po not generated")
+				except BaseException as e:
+					logging.error(f"po creation failed with for task_assign->{instance.id} ,error :{str(e)}")
+
 		if 'files' in data:
 			[Instructionfiles.objects.create(**instruction_file,task_assign_info = instance.task_assign_info) for instruction_file in data['files']]
 		return data
