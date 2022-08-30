@@ -15,32 +15,7 @@ class POAssignment(models.Model):
     def __str__(self):
         return self.assignment_id
 
-class POTaskDetails(models.Model):
-    task_id = models.CharField(max_length=191)
-    assignment = models.ForeignKey(POAssignment,related_name='assignment_po',on_delete=models.PROTECT)
-    #step = models.ForeignKey(Steps,on_delete=models.PROTECT, null=False, blank=False,
-    #        related_name="po_step")
-    source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
-        related_name="po_source_lang")
-    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
-        related_name="po_target_lang")
-    project_name = models.CharField(max_length=223, blank=True, null=True)
-    projectid= models.CharField(max_length=223, blank=True, null=True)
-    word_count=models.IntegerField(null=True,blank=True)
-    char_count=models.IntegerField(null=True,blank=True)
-    estimated_hours=models.IntegerField(null=True,blank=True)
-    unit_price =models.DecimalField(max_digits=12, decimal_places=4)
-    unit_type = models.ForeignKey(Billingunits,related_name="po_unit",on_delete=models.PROTECT)
-    total_amount = models.DecimalField(max_digits=12, decimal_places=4)
 
-    def save(self, *args, **kwargs):
-        if not self.total_amount:
-            if self.unit_type.unit=='Char' and self.char_count!=None:
-                self.total_amount = self.unit_price * self.char_count
-            elif self.unit_type.unit=='Word' and self.word_count!=None:
-                self.total_amount = self.unit_price * self.word_count
-            #self.assignment_id = self.task.job.project.ai_project_id+"t"+str(TaskAssignInfo.objects.filter(task=self.task).count()+1)
-        super().save()
 
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
@@ -86,6 +61,39 @@ class PurchaseOrder(models.Model):
     @property
     def get_pdf(self):
         return self.po_file.url
+
+class POTaskDetails(models.Model):
+    task_id = models.CharField(max_length=191)
+    po = models.ForeignKey(PurchaseOrder,related_name="po_task",on_delete=models.CASCADE,null=True)
+    assignment = models.ForeignKey(POAssignment,related_name='assignment_po',on_delete=models.PROTECT)
+    #step = models.ForeignKey(Steps,on_delete=models.PROTECT, null=False, blank=False,
+    #        related_name="po_step")
+    source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
+        related_name="po_source_lang")
+    target_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
+        related_name="po_target_lang")
+    project_name = models.CharField(max_length=223, blank=True, null=True)
+    projectid= models.CharField(max_length=223, blank=True, null=True)
+    word_count=models.IntegerField(null=True,blank=True)
+    char_count=models.IntegerField(null=True,blank=True)
+    estimated_hours=models.IntegerField(null=True,blank=True)
+    unit_price =models.DecimalField(max_digits=12, decimal_places=4)
+    unit_type = models.ForeignKey(Billingunits,related_name="po_unit",on_delete=models.PROTECT)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=4)
+
+    def save(self, *args, **kwargs):
+        if not self.total_amount:
+            if self.unit_type.unit=='Char' and self.char_count!=None:
+                self.total_amount = self.unit_price * self.char_count
+            elif self.unit_type.unit=='Word' and self.word_count!=None:
+                self.total_amount = self.unit_price * self.word_count
+            #self.assignment_id = self.task.job.project.ai_project_id+"t"+str(TaskAssignInfo.objects.filter(task=self.task).count()+1)
+        super().save()
+
+    @property
+    def unit_price_float_format(self):
+        formatNumber = lambda n: n if n%1 else int()
+        return formatNumber(self.unit_price)
 
 
 def invoice_dir_path(instance, filename):

@@ -294,7 +294,12 @@ class CreateInvoiceVendor(viewsets.ViewSet):
 
 def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
-    tasks = po.assignment.assignment_po.all()
+    tasks = po.po_task.all()
+    ## Need to remove added for old po support
+    if tasks.count() <1:
+        pos = PurchaseOrder.objects.filter(assignment=po.assignment,po_status='void')
+        if not pos.count() > 0:
+            tasks = po.assignment.assignment_po.all()
     project_id=tasks.last().projectid
     project_name=tasks.last().project_name
     context={'client': po.client,'seller':po.seller,'poid':po.poid,
@@ -374,6 +379,14 @@ def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
     with transaction.atomic():
         po_total_amt=0.0
+        instance = TaskAssignInfo.objects.get(id=task_assign_info[-1])
+        assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
+        insert2={'client':instance.task_assign.task.job.project.ai_user,'seller':instance.task_assign.assign_to,
+                'assignment':assign,'currency':instance.currency,
+                'po_status':'issued','po_total_amount':0}
+        # print("insert2",insert2)
+
+        po=PurchaseOrder.objects.create(**insert2)       
         for obj_id in task_assign_info:
             instance = TaskAssignInfo.objects.get(id=obj_id)
             assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
@@ -390,25 +403,23 @@ def generate_client_po(task_assign_info):
             elif instance.mtpe_count_unit.unit =='Fixed':
                 tot_amount = instance.mtpe_rate
             elif instance.mtpe_count_unit.unit =='Hour':
-                tot_amount = instance.estimated_hours * instance.mtpe_rate
-                # tot_amount = 0
+                if instance.estimated_hour:
+                    tot_amount = instance.estimated_hours * instance.mtpe_rate
+                else:
+                    tot_amount = 0
             else:
                 # rasie error on invalid price should be rised
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
-            insert={'task_id':instance.task_assign.task.id,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
+            insert={'task_id':instance.task_assign.task.id,'po':po,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
                     'word_count':instance.total_word_count,'char_count':instance.task_assign.task.task_char_count,'unit_price':instance.mtpe_rate,
                     'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':instance.task_assign.task.job.target_language,'total_amount':tot_amount}
             # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
             # print("po_task",po_task)
             po_total_amt+=float(tot_amount)
-
-        insert2={'client':instance.task_assign.task.job.project.ai_user,'seller':instance.task_assign.assign_to,
-                'assignment':assign,'currency':instance.currency,
-                'po_status':'issued','po_total_amount':po_total_amt}
-        # print("insert2",insert2)
-        po=PurchaseOrder.objects.create(**insert2)
+            po.po_total_amount=po_total_amt
+            po.save()
         # print("po2",po)
     return po
 
@@ -421,7 +432,11 @@ def po_modify(task_assign_info_id,po_update):
     with transaction.atomic():
         task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
         
-        po = PurchaseOrder.objects.get(assignment__assignment_id=assignment_id)
+        pos = PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignment_id)&~Q(po_status="void"))
+        if pos.count()==1:
+            po =pos.last()
+        else:
+            raise ValueError('returned more than one po for same assignment')
         po.po_status="void"
         po.save()
         po_new = generate_client_po(task_assign_info_ids) 
