@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <srx xmlns="http://www.lisa.org/srx20" xmlns:okpsrx="http://okapi.sf.net/srx-extensions" version="2.0">
+<!--Segmentation rules for Tamil language (ta)-->
 <header segmentsubflows="yes" cascade="yes">
 <formathandle type="start" include="no"></formathandle>
 <formathandle type="end" include="yes"></formathandle>
