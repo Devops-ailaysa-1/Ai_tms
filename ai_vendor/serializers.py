@@ -148,7 +148,9 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          if apply_for_reverse:
              reverse_data={"source_lang_id":lang.target_lang_id,"target_lang_id":lang.source_lang_id,"currency":lang.currency,"user_id":user_id}
              print("reverse_data--->",reverse_data)
-             lang_reverse = VendorLanguagePair.objects.create(**reverse_data)
+             try:lang_reverse = VendorLanguagePair.objects.create(**reverse_data)
+             except BaseException as e:
+                 print(f"Error : {str(e)}")
 
          if service_data:
              for i in service_data:

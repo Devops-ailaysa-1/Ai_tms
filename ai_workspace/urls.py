@@ -76,6 +76,7 @@ urlpatterns += [
 	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
 	path('download_speech_to_text_source/',api_views.download_speech_to_text_source),
 	path('task/unassign/',api_views.task_unassign),
+	path('get_quill_data/',api_views.get_quill_data),
 ]
 # views urls adding for local testing
 urlpatterns += [

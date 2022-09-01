@@ -2075,8 +2075,16 @@ def update_project_from_writer(request,id):###########No  writer now...so simple
 
 
 
-
-
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_quill_data(request):
+    task_id = request.GET.get('task_id')
+    obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+    try:
+        data = json.loads(obj.quill_data)
+        res = data.get('ops')
+    except:res = None
+    return Response({'data':res})
 
 
 
