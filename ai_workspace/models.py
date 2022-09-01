@@ -415,6 +415,19 @@ class Project(models.Model):
     def get_project_file_create_type(self):
         return self.project_file_create_type.file_create_type
 
+    @property
+    def clone_available(self):
+        from ai_glex.models import TermsModel
+        if self.project_type_id == 3:
+            if len(self.get_tasks)>1:
+                jobs = [i.job.id for i in self.get_tasks]
+                if TermsModel.objects.filter(job_id__in = jobs).count() != 0:
+                    return True
+                else:return False
+            else:return False
+        else:return None
+
+
     def project_analysis(self,tasks):
         if self.is_proj_analysed == True:
             task_words = []

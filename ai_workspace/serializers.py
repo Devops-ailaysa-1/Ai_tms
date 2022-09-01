@@ -459,7 +459,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
+		fields = ("id", "project_name","assigned", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
 					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at")
 

@@ -147,6 +147,7 @@ class Comment(models.Model):
     comment = models.TextField()
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name=\
         "segment_comments_set")
+    #user = models.ForeignKey(AiUser, on_delete=models.SET_NULL, related_name = 'comment_user')
 
 class Document(models.Model):
     file = models.ForeignKey("ai_workspace.File", on_delete=models.CASCADE,

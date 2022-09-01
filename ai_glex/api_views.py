@@ -33,6 +33,7 @@ from ai_workspace.models import Task,Project,TaskAssign
 from ai_workspace_okapi.models import Document
 from ai_workspace_okapi.utils import get_translation
 import pandas as pd
+from ai_staff.models import LanguageMetaDetails
 # from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
@@ -167,8 +168,14 @@ class TermUploadView(viewsets.ModelViewSet):
         task = request.GET.get('task')
         job = Task.objects.get(id=task).job
         queryset = self.filter_queryset(TermsModel.objects.filter(job = job))
+        source_language = str(job.source_language)
+        try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
+        except:target_language = None
+        additional_info = [{'source_language':source_language,'target_language':target_language}]
+        print("Info------------>",additional_info)
         serializer = TermsSerializer(queryset, many=True, context={'request': request})
-        return  Response(serializer.data)
+        additional_info.extend(serializer.data)
+        return  Response(additional_info)
 
     def create(self, request):
         task = request.POST.get('task')
