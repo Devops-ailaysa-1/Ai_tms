@@ -31,6 +31,8 @@ from rest_framework.filters import SearchFilter,OrderingFilter
 from django.db.models import Q
 from django.conf import settings
 import time
+from django.http import Http404
+
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -637,3 +639,36 @@ class InvoiceListView(generics.ListAPIView):
 # @permission_classes([IsAuthenticated])
 # def gen_invoice_offline(request):
 #     poids = request.POST.getlist('poids')
+
+
+
+# @api_view(['PUT'])
+# @permission_classes([IsAuthenticated])
+# def update_aigen_invoice_status(request):
+#     try:
+#         id = request.POST.get('id')
+#         invo =AilaysaGeneratedInvoice.objects.get(id=id)
+#         if invo.invo_status == 'open':
+#             invo.invo_status = 'void'
+#         else:
+#             raise ValueError("invoice status not suitable for voiding")
+#     except BaseException as e:
+#         pass
+
+class AilaysaGeneratedInvoiceViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def get_object(self, pk):
+        try:
+            return AilaysaGeneratedInvoice.objects.get(id=pk)
+        except AilaysaGeneratedInvoice.DoesNotExist:
+            raise Http404
+
+    def update(self, request, pk=None):
+        instance=self.get_object(pk)
+        serializer = AilaysaGeneratedInvoiceSerializer(instance,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=200)
+        return Response(serializer.errors, status=400)
+
+        
