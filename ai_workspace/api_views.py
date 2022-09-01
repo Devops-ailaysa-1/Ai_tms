@@ -1401,33 +1401,33 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     #     else:
     #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     #     return Response(task, status=status.HTTP_200_OK)
-    def update(self, request,pk=None):
-        task = request.POST.getlist('task')
-        file = request.FILES.get('instruction_file')
-        assign_to = request.POST.get('assign_to',None)
-        if not task:
-            return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
-        ###############################Need to change############################################
-        if assign_to:
-            Receiver = AiUser.objects.get(id = assign_to)
-            user = request.user.team.owner  if request.user.team  else request.user
-            if Receiver.email == 'ailaysateam@gmail.com':
-                HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=assign_to,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
-        ###########################################################################################
-        for i in task:
-            try:
-                task_assign_info = TaskAssignInfo.objects.get(task_id = i)
-                if file:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
-                else:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            except TaskAssignInfo.DoesNotExist:
-                print('not exist')
-        return Response(task, status=status.HTTP_200_OK)
+    # def update(self, request,pk=None):
+    #     task = request.POST.getlist('task')
+    #     file = request.FILES.get('instruction_file')
+    #     assign_to = request.POST.get('assign_to',None)
+    #     if not task:
+    #         return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+    #     ###############################Need to change############################################
+    #     if assign_to:
+    #         Receiver = AiUser.objects.get(id = assign_to)
+    #         user = request.user.team.owner  if request.user.team  else request.user
+    #         if Receiver.email == 'ailaysateam@gmail.com':
+    #             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=assign_to,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
+    #     ###########################################################################################
+    #     for i in task:
+    #         try:
+    #             task_assign_info = TaskAssignInfo.objects.get(task_id = i)
+    #             if file:
+    #                 serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
+    #             else:
+    #                 serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+    #             if serializer.is_valid():
+    #                 serializer.save()
+    #             else:
+    #                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #         except TaskAssignInfo.DoesNotExist:
+    #             print('not exist')
+    #     return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):
         task = request.GET.getlist('task')

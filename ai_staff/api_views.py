@@ -513,7 +513,7 @@ class AilaysaSupportedMtpeEnginesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
-        queryset = AilaysaSupportedMtpeEngines.objects.all()
+        queryset = AilaysaSupportedMtpeEngines.objects.all().order_by(id)
         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
         return Response(serializer.data)
 
