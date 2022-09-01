@@ -509,13 +509,13 @@ class ServiceTypeunitsView(APIView):
         serializer = ServiceTypeUnitsSerializer(queryset, many=True)
         return Response(serializer.data)
 
-class AilaysaSupportedMtpeEnginesView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, format=None):
-        queryset = AilaysaSupportedMtpeEngines.objects.all().order_by('id')
-        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
-        return Response(serializer.data)
+# class AilaysaSupportedMtpeEnginesView(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def get(self, request, format=None):
+#         queryset = AilaysaSupportedMtpeEngines.objects.all().order_by('id')
+#         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+#         return Response(serializer.data)
 
 class SupportTypeView(APIView):
     permission_classes = []
@@ -527,6 +527,15 @@ class SupportTypeView(APIView):
 
 for klass in [LanguagesView]:
     klass.permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class AilaysaSupportedMtpeEnginesView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = AilaysaSupportedMtpeEngines.objects.all().order_by('id')
+        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 
 class SubscriptionPricingCreateView(viewsets.ViewSet):
@@ -662,13 +671,13 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
         pack.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class AilaysaSupportedMtpeEnginesView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, format=None):
-        queryset = AilaysaSupportedMtpeEngines.objects.all()
-        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
-        return Response(serializer.data)
+# class AilaysaSupportedMtpeEnginesView(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def get(self, request, format=None):
+#         queryset = AilaysaSupportedMtpeEngines.objects.all()
+#         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+#         return Response(serializer.data)
 
 class IndianStatesView(viewsets.ViewSet):
     def list(self,request):

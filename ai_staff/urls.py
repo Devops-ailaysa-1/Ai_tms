@@ -47,7 +47,7 @@ urlpatterns += [
      path('billunits/<int:pk>', api_views.BillingunitsView.as_view(), name='billunits_pk'),
      path('servicetypeunits/', api_views.ServiceTypeunitsView.as_view(), name='billunits'),
      path('support_types/',api_views.SupportTypeView.as_view(),name = 'support-types'),
-     path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view(),name = 'mt-engines'),
+     path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view({'get': 'list'}),name = 'mt-engines'),
      path('get_plan_details/',api_views.get_plan_details),
      path('get_price_details/',api_views.get_pricing_details),
      path('get-addons-details/',api_views.get_addons_details),
