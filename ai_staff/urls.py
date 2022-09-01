@@ -51,7 +51,7 @@ urlpatterns += [
      path('get_plan_details/',api_views.get_plan_details),
      path('get_price_details/',api_views.get_pricing_details),
      path('get-addons-details/',api_views.get_addons_details),
-     path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view(),name = 'mt-engines'),
+     #path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view(),name = 'mt-engines'),
      path('project_types/',api_views.ProjectTypeView.as_view({'get': 'list'}),name = 'project-type'),
      path('sub_category/',api_views.ProjectTypeDetailView.as_view({'get': 'list'}),name = 'project-type-detail'),
      path('get_languages/',api_views.get_languages),
