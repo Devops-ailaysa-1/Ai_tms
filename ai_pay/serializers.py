@@ -81,6 +81,25 @@ class AilaysaGeneratedInvoiceSerializer(serializers.ModelSerializer):
              #"created_at":{"write_only":True}
             }
 
+    def validate(self, data):
+        instance = getattr(self, 'instance', None)
+        if data['invo_status'] == 'void' and instance:
+            if instance.invo_status != 'open':
+                raise serializers.ValidationError({"invo_status": "invoice status not suitable for voiding"})
+        if data['invo_status'] == 'paid' and instance:
+            if instance.invo_status != 'open':
+                raise serializers.ValidationError({"invo_status": "invoice status not suitable for voiding"})         
+        return data
+
+    def update(self, instance, validated_data):
+        if validated_data.get('invo_status'):
+            instance.invo_status = validated_data.get("invo_status",\
+                instance.invo_status)
+            instance.save()      
+        return instance
+
+
+
 class StripeInvoiceSerializer(serializers.ModelSerializer):
     invoid = serializers.CharField(source='number') 
     invo_status = serializers.CharField(source='status')
