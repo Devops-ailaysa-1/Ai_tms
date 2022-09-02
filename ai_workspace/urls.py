@@ -72,11 +72,13 @@ urlpatterns += [
 	path("update_after_transcription/<int:id>/",api_views.update_project_from_writer),
 	path("mt_samples/",api_views.ShowMTChoices.as_view(), name='mt-samples'),
 	path('transcribe_file/',api_views.transcribe_file),
+	path('get_transcribe_file/',api_views.transcribe_file_get),
 	path('convert_and_download_text_to_speech_source/',api_views.convert_and_download_text_to_speech_source),
 	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
 	path('download_speech_to_text_source/',api_views.download_speech_to_text_source),
 	path('task/unassign/',api_views.task_unassign),
 	path('get_quill_data/',api_views.get_quill_data),
+	path('writer_save/',api_views.writer_save),
 ]
 # views urls adding for local testing
 urlpatterns += [

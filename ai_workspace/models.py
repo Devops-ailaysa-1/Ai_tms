@@ -1084,7 +1084,12 @@ class TaskTranscriptDetails(models.Model):
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
     quill_data =  models.TextField(null=True,blank=True)
     audio_file_length = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    user = models.ForeignKey(AiUser, on_delete = models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+# class TaskAudioDetails(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
 
 class TmxFile(models.Model):
 

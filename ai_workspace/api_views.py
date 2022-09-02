@@ -1782,7 +1782,7 @@ class ShowMTChoices(APIView):
 
 ###########################Transcribe Short File############################## #######
 
-def transcribe_short_file(speech_file,source_code,obj,length):
+def transcribe_short_file(speech_file,source_code,obj,length,user):
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -1797,7 +1797,7 @@ def transcribe_short_file(speech_file,source_code,obj,length):
         for result in response.results:
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
-        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length})
+        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
         if ser.is_valid():
             ser.save()
             return (ser.data)
@@ -1826,8 +1826,8 @@ def delete_blob(bucket_name, blob_name):
 
 
 
-def transcribe_long_file(speech_file,source_code,filename,obj,length):
-
+def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
+    print("User Long-------->",user.id)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
     destination_blob_name = filename
@@ -1853,7 +1853,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length):
 
     delete_blob(bucket_name, destination_blob_name)
 
-    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length})
+    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
     if ser.is_valid():
         ser.save()
         return (ser.data)
@@ -1866,6 +1866,8 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length):
 @permission_classes([IsAuthenticated])
 def transcribe_file(request):
     task_id = request.POST.get('task')
+    user = request.user
+    print("User---------->",user)
     target_language = request.POST.getlist('target_languages')
     queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
     print("QS--->",queryset)
@@ -1885,11 +1887,21 @@ def transcribe_file(request):
             length=None
         print("Length----->",length)
         if length and length<60:
-            res = transcribe_short_file(speech_file,source_code,obj,length)
+            res = transcribe_short_file(speech_file,source_code,obj,length,user)
         else:
-            res = transcribe_long_file(speech_file,source_code,filename,obj,length)
+            res = transcribe_long_file(speech_file,source_code,filename,obj,length,user)
         print("RES----->",res)
-        return JsonResponse(res,safe=False)
+        return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def transcribe_file_get(request):
+    task_id = request.GET.get('task')
+    queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
+    ser = TaskTranscriptDetailSerializer(queryset,many=True)
+    return Response(ser.data)
+
 
 
 
@@ -1925,7 +1937,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
         TaskDetails.objects.create(task = obj,task_word_count = wc,project = obj.job.project)
         audio_file = name_ + '_source'+'.mp3'
         res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE')
-        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id})
+        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":request.user})
         if ser.is_valid():
             ser.save()
         f2.close()
@@ -2044,8 +2056,9 @@ def docx_save(name,data):
 @permission_classes([IsAuthenticated])
 def update_project_from_writer(request,id):###########No  writer now...so simple text editor#############For Transcription projects
     task_id = request.POST.get('task_id')
-    name = request.POST.get('name')
-    name = name + '.docx'
+    task_obj = Task.objects.get(id=task_id)
+    filename,ext = os.path.splitext(task_obj.file.filename)
+    name = filename + '.docx'
     edited_text = request.POST.get('edited_text')
     edited_data = json.loads(edited_text)
     team = request.POST.get('team')
@@ -2087,7 +2100,22 @@ def get_quill_data(request):
     return Response({'data':res})
 
 
-
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def writer_save(request):
+    task_id = request.POST.get('task_id')
+    #task_obj = Task.objects.get(id=task_id)
+    #filename,ext = os.path.splitext(task_obj.file.filename)
+    edited_text = request.POST.get('edited_text')
+    obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+    if obj:
+        ser1 = TaskTranscriptDetailSerializer(obj,data={"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+    else:
+        ser1 = TaskTranscriptDetailSerializer(data={"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+    if ser1.is_valid():
+        ser1.save()
+        return Response(ser1.data)
+    return Response(ser1.errors)
 
 
 

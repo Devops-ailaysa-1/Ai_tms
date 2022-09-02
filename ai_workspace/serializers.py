@@ -995,9 +995,11 @@ class TaskDetailSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = TaskTranscriptDetails
         fields = "__all__"
+        #exclude = ("quill_data", "","ai_project_id")
         #read_only_fields = ("id","task",)
 
 class ProjectListSerializer(serializers.ModelSerializer):

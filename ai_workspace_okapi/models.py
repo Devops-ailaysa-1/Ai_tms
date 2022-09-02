@@ -271,7 +271,11 @@ class Document(models.Model):
             elif self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
                 if self.job.target_language!=None:
                     txt_to_spc = MTLanguageSupport.objects.filter(language__language = self.job.target_language).first().text_to_speech
-                    if txt_to_spc: return True
+                    if txt_to_spc:
+                        locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.target_language)
+                        return [{"locale":i.language_locale.locale_code,'has_male':i.has_male,\
+                                'has_female':i.has_female,"voice_type":i.voice_type,"voice_name":i.voice_name}\
+                                for i in locale_list] if locale_list else []
                     else: return False
                 else:return False
         except:

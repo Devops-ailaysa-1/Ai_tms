@@ -167,11 +167,12 @@ class TermUploadView(viewsets.ModelViewSet):
     def list(self, request):
         task = request.GET.get('task')
         job = Task.objects.get(id=task).job
+        project_name = job.project.project_name
         queryset = self.filter_queryset(TermsModel.objects.filter(job = job))
         source_language = str(job.source_language)
         try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
         except:target_language = None
-        additional_info = [{'source_language':source_language,'target_language':target_language}]
+        additional_info = [{'project_name':project_name,'source_language':source_language,'target_language':target_language}]
         print("Info------------>",additional_info)
         serializer = TermsSerializer(queryset, many=True, context={'request': request})
         additional_info.extend(serializer.data)
