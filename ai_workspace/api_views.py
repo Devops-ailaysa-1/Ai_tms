@@ -650,6 +650,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
     def create(self, request):
+        punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         # print("Project Creation request data----->", request.data)
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
@@ -657,7 +658,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
-            name =  text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
+            name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
             im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
             serializer = ser(data={**request.data,"files":[im_file]},context={"request": request})
             if serializer.is_valid(raise_exception=True):
