@@ -1964,20 +1964,21 @@ def download_text_to_speech_source(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def download_speech_to_text_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)
     try:
-        # output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
-        # return download_file(output_from_writer.path)
-        text = obj.task_transcript_details.first().transcripted_text
-        with open('out.txt', "w") as out:
-            out.write(text)
-        res = download_file('out.txt')
-        os.remove('out.txt')
-        return res
-    except:
+        output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
+        return download_file(output_from_writer.path)
+        # text = obj.task_transcript_details.first().transcripted_text
+        # with open('out.txt', "w") as out:
+        #     out.write(text)
+        # res = download_file('out.txt')
+        # os.remove('out.txt')
+        # return res
+    except BaseException as e:
+        print(f"Error : {str(e)}")
         return Response({'msg':'something went wrong'})
 
 
