@@ -1,7 +1,10 @@
 from django.db import transaction
-from ai_pay.models import POAssignment,POTaskDetails,PurchaseOrder
+# from ai_pay.models import POTaskDetails
 import logging
 from django.dispatch import receiver,Signal
+# from ai_pay.models import POTaskDetails
+from django.db.models.signals import post_save
+
 
 # generate_client_po= Signal()
 
@@ -21,3 +24,17 @@ from django.dispatch import receiver,Signal
 #     except:
 #        print("PO Not generated")
 #        logging.error("PO Generations Failed For assignment:{0}".format(instance.assignment_id))
+
+#@receiver(post_save, sender=POTaskDetails)
+def change_po_status(sender, instance, created, *args, **kwargs):
+    from ai_pay.models import POTaskDetails
+    print("inside change po signal")
+    if instance.po:
+        po_tasks = POTaskDetails.objects.filter(assignment=instance.assignment,po=instance.po)
+        po_accepted = po_tasks.filter(tsk_accepted=True)
+        if po_tasks.count() == po_accepted.count():
+            po =po_accepted.last().po
+            po.po_status = "open"
+            po.save()       
+    else:
+        print(f"instance po is null {instance.id}")

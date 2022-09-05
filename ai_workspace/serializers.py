@@ -1276,6 +1276,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 
 			if 'task_ven_status' in data.get('task_assign_info'):
+				if data.get('task_assign_info').get('task_ven_status') == 'task_accepted':
+					po_update.append("accepted")	
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
 				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
 			task_assign_info_data = data.get('task_assign_info')
@@ -1283,6 +1285,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
 			except:
 				pass
+			print("po update",po_update)
 			if len(po_update)>0:
 				try:
 					po = po_modify(instance.task_assign_info.id,po_update)
