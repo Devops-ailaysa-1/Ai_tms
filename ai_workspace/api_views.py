@@ -1,3 +1,4 @@
+from ai_pay.api_views import po_modify
 import django_filters, mutagen
 import shutil,docx2txt,regex,zipfile
 from ai_workspace import forms as ws_forms
@@ -1439,6 +1440,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if task_assign_info_ids:
             assigns = TaskAssignInfo.objects.filter(id__in = task_assign_info_ids )
         for obj in assigns:
+            try:
+                po_modify(obj.id,['unassigned',])
+            except BaseException as e:
+                logging.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user

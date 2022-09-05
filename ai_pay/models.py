@@ -3,6 +3,8 @@ from django.db import models
 from ai_auth.models import AiUser
 from ai_staff.models import Billingunits, Currencies, Languages, ServiceTypeunits
 from ai_workspace.models import Steps
+from ai_pay.signals import change_po_status
+from django.db.models.signals import post_save, pre_save
 
 class POAssignment(models.Model):
     #task_assign =  models.CharField(max_length=191, blank=True, null=True)
@@ -80,6 +82,7 @@ class POTaskDetails(models.Model):
     unit_price =models.DecimalField(max_digits=12, decimal_places=4)
     unit_type = models.ForeignKey(Billingunits,related_name="po_unit",on_delete=models.PROTECT)
     total_amount = models.DecimalField(max_digits=12, decimal_places=4)
+    tsk_accepted = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.total_amount:
@@ -95,6 +98,7 @@ class POTaskDetails(models.Model):
         formatNumber = lambda n: n if n%1 else int()
         return formatNumber(self.unit_price)
 
+post_save.connect(change_po_status, sender=POTaskDetails)
 
 def invoice_dir_path(instance, filename):
     #return '{0}/{1}/{2}/{3}'.format(instance.user.uid, "Reports","PO",filename)
