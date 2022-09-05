@@ -3,6 +3,7 @@ import decimal
 from locale import currency
 from ai_auth.models import AiUser, BillingAddress
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment
+from ai_pay.signals import update_po_status
 from ai_staff.models import IndianStates
 from ai_workspace.models import TaskAssignInfo
 from rest_framework.views import APIView
@@ -449,6 +450,12 @@ def po_modify(task_assign_info_id,po_update):
         po_new = generate_client_po(task_assign_info_ids) 
         print("new po",po_new) 
     if po_new:
+        po_tsk = po_new.po_task.last()
+        update_po_status.send(
+            sender=po_tsk.__class__,
+            instance = po_tsk,
+            created = False
+        )
         return True
     else:
         return False
