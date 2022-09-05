@@ -70,10 +70,11 @@ def conn_account_create(user):
     stripe.api_key=get_stripe_key()
     acc= get_connect_account(user)
     if acc:
-        if acc.payouts_enabled:
-            return True,None            
-        else:
-            link_type = "account_update"
+        # if acc.payouts_enabled:
+        #     return True,None            
+        # else:
+        #     link_type = "account_update"
+        pass
     else:
         acc=stripe.Account.create(
             type="standard",
@@ -399,8 +400,14 @@ def generate_client_po(task_assign_info):
                 # rasie error on invalid price should be rised
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
+            
+            if instance.task_ven_status == 'task_accepted':
+                tsk_accepted = True
+            else:
+                tsk_accepted = False
+
             insert={'task_id':instance.task_assign.task.id,'po':po,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
-                    'word_count':instance.total_word_count,'char_count':instance.task_assign.task.task_char_count,'unit_price':instance.mtpe_rate,
+                    'word_count':instance.total_word_count,'char_count':instance.task_assign.task.task_char_count,'unit_price':instance.mtpe_rate,'tsk_accepted':tsk_accepted,
                     'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':instance.task_assign.task.job.target_language,'total_amount':tot_amount}
             # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
@@ -416,10 +423,22 @@ def po_modify(task_assign_info_id,po_update):
     instance= TaskAssignInfo.objects.get(id=task_assign_info_id)
     assignment_id= instance.assignment_id
     task =instance.task_assign.task.id
+
+    if 'accepted' in po_update:
+        try:
+            po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
+            po_task_obj.tsk_accepted=True
+            po_task_obj.save()
+            return True
+        except BaseException as e:
+            logging.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
+
     po_new =None
     with transaction.atomic():
         task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
-        
+        if 'unassigned' in po_update:
+            # if task is unassigned
+            task_assign_info_ids.remove(instance.id)
         pos = PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignment_id)&~Q(po_status="void"))
         if pos.count()==1:
             po =pos.last()

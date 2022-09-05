@@ -450,10 +450,12 @@ class MTLanguageSupport(models.Model):
 
 
 class MTLanguageLocaleVoiceSupport(models.Model):
+    GENDER =(('MALE','MALE'),('FEMALE','FEMALE'))
     language = models.ForeignKey(Languages,related_name='supported_language', on_delete=models.CASCADE)
     language_locale = models.ForeignKey(LanguagesLocale,related_name='supported_locale', on_delete=models.CASCADE)
     mtpe_engines = models.ForeignKey(AilaysaSupportedMtpeEngines,related_name='support_mt',on_delete=models.CASCADE)
-    has_female = models.BooleanField(default=False)
-    has_male = models.BooleanField(default=False)
+    # has_female = models.BooleanField(default=False)
+    # has_male = models.BooleanField(default=False)
+    gender=models.CharField(max_length=50,choices=GENDER)
     voice_name = models.CharField(max_length=300, null=True, blank=True)
     voice_type = models.CharField(max_length=100, null=True, blank=True)#wavenet,standard,neural
