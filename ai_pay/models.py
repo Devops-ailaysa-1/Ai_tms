@@ -95,7 +95,7 @@ class POTaskDetails(models.Model):
 
     @property
     def unit_price_float_format(self):
-        formatNumber = lambda n: n if n%1 else int()
+        formatNumber = lambda n: n if n%1 else int(n)
         return formatNumber(self.unit_price)
 
 post_save.connect(change_po_status, sender=POTaskDetails)

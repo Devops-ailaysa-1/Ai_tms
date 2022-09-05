@@ -205,12 +205,16 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,i.source)
                         if initial_credit > consumable_credits:
                             i.target =get_translation(mt_engine,i.source,task.document.source_language_code,task.document.target_language_code)
+                            i.temp_target = i.target
+                            i.status_id = TranslationStatus.objects.get(status_id=104).id
                             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                             mt_segments.append(i)
                         else:
                             i.target=""
+                            i.temp_target = ''
+                            i.status_id = None
                         update_list.append(i)
-                Segment.objects.bulk_update(update_list,['target'])
+                Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
                 instances = [
                         MT_RawTranslation(
                             mt_raw=i.target,

@@ -10,6 +10,7 @@ import json
 from decimal import *
 from ai_workspace.models import TaskAssignInfo
 
+
 class JobForm(forms.ModelForm):
     # project = forms.CharField(required=False)
 	# source_language = forms.ChoiceField(choices=[(lang.id, lang.language) for lang in Languages.objects.all()])
@@ -95,6 +96,7 @@ class ProjectFormv2(forms.ModelForm):
 
 
 def task_assign_detail_mail(Receiver,assignment_id):
+    from ai_marketplace.api_views import unit_price_float_format
     task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
     ins = TaskAssignInfo.objects.filter(assignment_id = assignment_id).first()
     file_detail = []
@@ -106,7 +108,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
         elif i.mtpe_count_unit.unit == 'Char':
             out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
         file_detail.extend(out)
-    context = {'name':Receiver.fullname,'project':ins.task_assign.task.job.project,'job':ins.task_assign.task.job.source_target_pair_names, 'rate':str(ins.mtpe_rate.quantize(Decimal("0.00")))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
+    context = {'name':Receiver.fullname,'project':ins.task_assign.task.job.project,'job':ins.task_assign.task.job.source_target_pair_names, 'rate':str(unit_price_float_format(ins.mtpe_rate))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
     'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y')}
     msg_html = render_to_string("assign_detail_mail.html", context)
     send_mail(

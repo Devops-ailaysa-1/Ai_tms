@@ -314,6 +314,10 @@ def post_bid_primary_details(request):############need to include currency conve
         return JsonResponse({'msg':'not a vendor'})
 
 
+def unit_price_float_format(price):
+    formatNumber = lambda n: n if n%1 else int(n)
+    return formatNumber(price)
+
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
@@ -344,8 +348,8 @@ def bid_proposal_status(request):
                 token = invite_accept_token.make_token(tt)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 context = {'name':obj.vendor.fullname,'team':user.fullname,'link':link,'job':obj.bidpostjob.source_target_pair_names,
-                           'hourly_rate': str(obj.mtpe_hourly_rate.quantize(Decimal("0.00"))) +'(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit if obj.mtpe_hourly_rate else None,\
-                            'unit_rate':str(obj.mtpe_rate.quantize(Decimal("0.00"))) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
+                           'hourly_rate': str(unit_price_float_format(obj.mtpe_hourly_rate)) +'(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit if obj.mtpe_hourly_rate else None,\
+                            'unit_rate':str(unit_price_float_format(obj.mtpe_rate)) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
                             'job_id':obj.bidpostjob.postjob_id,'project':obj.projectpost.proj_name,\
                             'date':obj.created_at.date().strftime('%d-%m-%Y')}
                 print("Mail------>",obj.vendor.email)
