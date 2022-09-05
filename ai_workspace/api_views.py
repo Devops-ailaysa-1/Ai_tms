@@ -291,6 +291,7 @@ class FileView(viewsets.ModelViewSet):
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
             for obj in objs:
+                os.remove(obj.file.path)
                 obj.delete()
             return Response(status=204)
         return super().destroy(request, *args, **kwargs)
@@ -1983,15 +1984,15 @@ def download_speech_to_text_source(request):
         return Response({'msg':'something went wrong'})
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def project_download(request,project_id):
-    # projects = request.GET.getlist('project')
-    pr = Project.objects.get(id=project_id)
-    shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-    tt = download_file(pr.project_name+'.zip')
-    os.remove(pr.project_name+'.zip')
-    return tt
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def project_download(request,project_id):
+#     # projects = request.GET.getlist('project')
+#     pr = Project.objects.get(id=project_id)
+#     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+#     tt = download_file(pr.project_name+'.zip')
+#     os.remove(pr.project_name+'.zip')
+#     return tt
 
 
 
@@ -2053,6 +2054,13 @@ def docx_save(name,data):
     file_obj = DJFile(f2)
     return file_obj,name,f2
 
+
+def target_exists(project):
+    for i in project.project_jobs_set.all():
+        print(i.target_language)
+        if i.target_language != None:
+            return True
+    return False
 ##################################Need to revise#######################################
 @api_view(['PUT',])
 @permission_classes([IsAuthenticated])
@@ -2067,6 +2075,10 @@ def update_project_from_writer(request,id):###########No  writer now...so simple
     file_obj,name,f2 = docx_save(name,edited_data)
     target_languages = request.POST.getlist('target_languages')
     instance = Project.objects.get(id=id)
+    target = target_exists(instance)
+    if not target:
+        if not target_languages:
+            return Response({"msg":"Target languages are must to translate project"},status=400)
     source_language = [str(instance.project_jobs_set.first().source_language_id)]
     if target_languages:
         serializer = ProjectQuickSetupSerializer(instance,data={\
