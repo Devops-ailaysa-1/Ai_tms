@@ -24,8 +24,9 @@ from django.db.models.signals import post_save
 #     except:
 #        print("PO Not generated")
 #        logging.error("PO Generations Failed For assignment:{0}".format(instance.assignment_id))
+update_po_status= Signal()
 
-#@receiver(post_save, sender=POTaskDetails)
+@receiver(update_po_status)
 def change_po_status(sender, instance, created, *args, **kwargs):
     from ai_pay.models import POTaskDetails
     print("inside change po signal")
