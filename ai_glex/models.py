@@ -93,7 +93,14 @@ class TermsModel(models.Model):
     def __str__(self):
         return self.sl_term
 
-
+    # @property
+    # def source_language(self):
+    #     return str(self.job.source_language)
+    #
+    # @property
+    # def target_language_script(self):
+    #     target_lang_id = self.job.target_language.id
+    #     return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script
 
 ##############Glossary Tasks Model###################
 class GlossaryTasks(models.Model):

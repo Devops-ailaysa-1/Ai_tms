@@ -415,6 +415,19 @@ class Project(models.Model):
     def get_project_file_create_type(self):
         return self.project_file_create_type.file_create_type
 
+    @property
+    def clone_available(self):
+        from ai_glex.models import TermsModel
+        if self.project_type_id == 3:
+            if len(self.get_tasks)>1:
+                jobs = [i.job.id for i in self.get_tasks]
+                if TermsModel.objects.filter(job_id__in = jobs).count() != 0:
+                    return True
+                else:return False
+            else:return False
+        else:return None
+
+
     def project_analysis(self,tasks):
         if self.is_proj_analysed == True:
             task_words = []
@@ -1071,7 +1084,12 @@ class TaskTranscriptDetails(models.Model):
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
     quill_data =  models.TextField(null=True,blank=True)
     audio_file_length = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    user = models.ForeignKey(AiUser, on_delete = models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+# class TaskAudioDetails(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
 
 class TmxFile(models.Model):
 

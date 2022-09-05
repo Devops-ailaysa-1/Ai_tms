@@ -651,6 +651,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
 
     def create(self, request):
+        punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         # print("Project Creation request data----->", request.data)
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
@@ -658,7 +659,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
-            name =  text_data.split()[0]+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5]+ ".txt"
+            name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
             im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
             serializer = ser(data={**request.data,"files":[im_file]},context={"request": request})
             if serializer.is_valid(raise_exception=True):
@@ -1402,33 +1403,33 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     #     else:
     #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     #     return Response(task, status=status.HTTP_200_OK)
-    def update(self, request,pk=None):
-        task = request.POST.getlist('task')
-        file = request.FILES.get('instruction_file')
-        assign_to = request.POST.get('assign_to',None)
-        if not task:
-            return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
-        ###############################Need to change############################################
-        if assign_to:
-            Receiver = AiUser.objects.get(id = assign_to)
-            user = request.user.team.owner  if request.user.team  else request.user
-            if Receiver.email == 'ailaysateam@gmail.com':
-                HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=assign_to,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
-        ###########################################################################################
-        for i in task:
-            try:
-                task_assign_info = TaskAssignInfo.objects.get(task_id = i)
-                if file:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
-                else:
-                    serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            except TaskAssignInfo.DoesNotExist:
-                print('not exist')
-        return Response(task, status=status.HTTP_200_OK)
+    # def update(self, request,pk=None):
+    #     task = request.POST.getlist('task')
+    #     file = request.FILES.get('instruction_file')
+    #     assign_to = request.POST.get('assign_to',None)
+    #     if not task:
+    #         return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
+    #     ###############################Need to change############################################
+    #     if assign_to:
+    #         Receiver = AiUser.objects.get(id = assign_to)
+    #         user = request.user.team.owner  if request.user.team  else request.user
+    #         if Receiver.email == 'ailaysateam@gmail.com':
+    #             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=assign_to,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
+    #     ###########################################################################################
+    #     for i in task:
+    #         try:
+    #             task_assign_info = TaskAssignInfo.objects.get(task_id = i)
+    #             if file:
+    #                 serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict(),'instruction_file':file},context={'request':request},partial=True)
+    #             else:
+    #                 serializer =TaskAssignInfoSerializer(task_assign_info,data={**request.POST.dict()},context={'request':request},partial=True)
+    #             if serializer.is_valid():
+    #                 serializer.save()
+    #             else:
+    #                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #         except TaskAssignInfo.DoesNotExist:
+    #             print('not exist')
+    #     return Response(task, status=status.HTTP_200_OK)
 
     def delete(self,request):
         task = request.GET.getlist('task')
@@ -1787,7 +1788,7 @@ class ShowMTChoices(APIView):
 
 ###########################Transcribe Short File############################## #######
 
-def transcribe_short_file(speech_file,source_code,obj,length):
+def transcribe_short_file(speech_file,source_code,obj,length,user):
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -1802,7 +1803,7 @@ def transcribe_short_file(speech_file,source_code,obj,length):
         for result in response.results:
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
-        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length})
+        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
         if ser.is_valid():
             ser.save()
             return (ser.data)
@@ -1831,8 +1832,8 @@ def delete_blob(bucket_name, blob_name):
 
 
 
-def transcribe_long_file(speech_file,source_code,filename,obj,length):
-
+def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
+    print("User Long-------->",user.id)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
     destination_blob_name = filename
@@ -1858,7 +1859,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length):
 
     delete_blob(bucket_name, destination_blob_name)
 
-    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length})
+    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
     if ser.is_valid():
         ser.save()
         return (ser.data)
@@ -1871,6 +1872,8 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length):
 @permission_classes([IsAuthenticated])
 def transcribe_file(request):
     task_id = request.POST.get('task')
+    user = request.user
+    print("User---------->",user)
     target_language = request.POST.getlist('target_languages')
     queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
     print("QS--->",queryset)
@@ -1890,11 +1893,21 @@ def transcribe_file(request):
             length=None
         print("Length----->",length)
         if length and length<60:
-            res = transcribe_short_file(speech_file,source_code,obj,length)
+            res = transcribe_short_file(speech_file,source_code,obj,length,user)
         else:
-            res = transcribe_long_file(speech_file,source_code,filename,obj,length)
+            res = transcribe_long_file(speech_file,source_code,filename,obj,length,user)
         print("RES----->",res)
-        return JsonResponse(res,safe=False)
+        return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def transcribe_file_get(request):
+    task_id = request.GET.get('task')
+    queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
+    ser = TaskTranscriptDetailSerializer(queryset,many=True)
+    return Response(ser.data)
+
 
 
 
@@ -1930,7 +1943,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
         TaskDetails.objects.create(task = obj,task_word_count = wc,project = obj.job.project)
         audio_file = name_ + '_source'+'.mp3'
         res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE')
-        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id})
+        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":request.user})
         if ser.is_valid():
             ser.save()
         f2.close()
@@ -1957,20 +1970,21 @@ def download_text_to_speech_source(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def download_speech_to_text_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)
     try:
-        # output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
-        # return download_file(output_from_writer.path)
-        text = obj.task_transcript_details.first().transcripted_text
-        with open('out.txt', "w") as out:
-            out.write(text)
-        res = download_file('out.txt')
-        os.remove('out.txt')
-        return res
-    except:
+        output_from_writer =  obj.task_transcript_details.first().transcripted_file_writer
+        return download_file(output_from_writer.path)
+        # text = obj.task_transcript_details.first().transcripted_text
+        # with open('out.txt', "w") as out:
+        #     out.write(text)
+        # res = download_file('out.txt')
+        # os.remove('out.txt')
+        # return res
+    except BaseException as e:
+        print(f"Error : {str(e)}")
         return Response({'msg':'something went wrong'})
 
 
@@ -2049,8 +2063,9 @@ def docx_save(name,data):
 @permission_classes([IsAuthenticated])
 def update_project_from_writer(request,id):###########No  writer now...so simple text editor#############For Transcription projects
     task_id = request.POST.get('task_id')
-    name = request.POST.get('name')
-    name = name + '.docx'
+    task_obj = Task.objects.get(id=task_id)
+    filename,ext = os.path.splitext(task_obj.file.filename)
+    name = filename + '.docx'
     edited_text = request.POST.get('edited_text')
     edited_data = json.loads(edited_text)
     team = request.POST.get('team')
@@ -2080,11 +2095,34 @@ def update_project_from_writer(request,id):###########No  writer now...so simple
 
 
 
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_quill_data(request):
+    task_id = request.GET.get('task_id')
+    obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+    try:
+        data = json.loads(obj.quill_data)
+        res = data.get('ops')
+    except:res = None
+    return Response({'data':res})
 
 
-
-
-
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def writer_save(request):
+    task_id = request.POST.get('task_id')
+    #task_obj = Task.objects.get(id=task_id)
+    #filename,ext = os.path.splitext(task_obj.file.filename)
+    edited_text = request.POST.get('edited_text')
+    obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+    if obj:
+        ser1 = TaskTranscriptDetailSerializer(obj,data={"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+    else:
+        ser1 = TaskTranscriptDetailSerializer(data={"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+    if ser1.is_valid():
+        ser1.save()
+        return Response(ser1.data)
+    return Response(ser1.errors)
 
 
 

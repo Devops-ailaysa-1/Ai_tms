@@ -459,7 +459,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned", "jobs","assign_enable","files","files_jobs_choice_url",
+		fields = ("id", "project_name","assigned", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
 					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at")
 
@@ -878,6 +878,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
 	bid_job_detail_info = serializers.SerializerMethodField()
 	open_in =  serializers.SerializerMethodField()
+	transcribed = serializers.SerializerMethodField()
 	# can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
@@ -886,8 +887,18 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Task
 		fields = \
-			("id","filename", "ai_taskid","source_language", "target_language", "task_word_count","task_char_count","project_name",\
+			("id","filename", "transcribed", "ai_taskid","source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",)
+
+
+	def get_transcribed(self,obj):
+		if obj.job.project.project_type_id == 4 :
+			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+				if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+					return True
+				else:return False
+			else:return None
+		else:return None
 
 
 
@@ -995,9 +1006,11 @@ class TaskDetailSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = TaskTranscriptDetails
         fields = "__all__"
+        #exclude = ("quill_data", "","ai_project_id")
         #read_only_fields = ("id","task",)
 
 class ProjectListSerializer(serializers.ModelSerializer):
