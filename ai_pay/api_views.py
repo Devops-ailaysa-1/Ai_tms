@@ -617,7 +617,7 @@ def po_pdf_get(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def invoice_pdf_get(request):
-    id = request.POST.get('id')
+    id = request.GET.get('id',None)
     invo =AilaysaGeneratedInvoice.objects.get(id=id)
     if not invo.invo_file:
         invo_pdf = generate_invoice_pdf(invo)
