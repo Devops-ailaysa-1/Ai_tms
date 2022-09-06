@@ -1740,23 +1740,26 @@ def previously_created_steps(request):
 @api_view(["GET"])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
-    for i in pr.get_tasks:
-        if i.document:
-            path,filename = os.path.split(i.file.file.path)
-            name,ext =os.path.splitext(filename)
-            print('path----------->',path +'/'+ name +'_out' +"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext)
-            if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
-                print("True")
-            else:
-                from ai_workspace_okapi.api_views import DocumentToFile
-                res = DocumentToFile.document_data_to_file(request,i.document.id)
-    if os.path.exists(os.path.join(pr.project_dir_path,'source')):
-        shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-        res = download_file(pr.project_name+'.zip')
-        os.remove(pr.project_name+'.zip')
-        return res
+    if pr.project_type_id not in [3,4]:
+        for i in pr.get_tasks:
+            if i.document:
+                path,filename = os.path.split(i.file.file.path)
+                name,ext =os.path.splitext(filename)
+                print('path----------->',path +'/'+ name +'_out' +"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext)
+                if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
+                    print("True")
+                else:
+                    from ai_workspace_okapi.api_views import DocumentToFile
+                    res = DocumentToFile.document_data_to_file(request,i.document.id)
+        if os.path.exists(os.path.join(pr.project_dir_path,'source')):
+            shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+            res = download_file(pr.project_name+'.zip')
+            os.remove(pr.project_name+'.zip')
+            return res
+        else:
+            return Response({'msg':'something went wrong'},status=400)
     else:
-        return Response({'msg':'something went wrong'})
+        return Response({'msg':'project download not available'},status=400)
 
 
 class ShowMTChoices(APIView):
