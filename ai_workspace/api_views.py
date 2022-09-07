@@ -1743,14 +1743,14 @@ def project_download(request,project_id):
     if pr.project_type_id not in [3,4]:
         for i in pr.get_tasks:
             if i.document:
-                path,filename = os.path.split(i.file.file.path)
-                name,ext =os.path.splitext(filename)
-                print('path----------->',path +'/'+ name +'_out' +"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext)
-                if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
-                    print("True")
-                else:
-                    from ai_workspace_okapi.api_views import DocumentToFile
-                    res = DocumentToFile.document_data_to_file(request,i.document.id)
+                # path,filename = os.path.split(i.file.file.path)
+                # name,ext =os.path.splitext(filename)
+                # print('path----------->',path +'/'+ name +'_out' +"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext)
+                # if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
+                #     print("True")
+                # else:
+                from ai_workspace_okapi.api_views import DocumentToFile
+                res = DocumentToFile.document_data_to_file(request,i.document.id)
         if os.path.exists(os.path.join(pr.project_dir_path,'source')):
             shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
             res = download_file(pr.project_name+'.zip')
@@ -1969,7 +1969,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
         TaskDetails.objects.create(task = obj,task_word_count = wc,project = obj.job.project)
         audio_file = name_ + '_source'+'.mp3'
         res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE')
-        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":request.user})
+        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":request.user.id})
         if ser.is_valid():
             ser.save()
         f2.close()
@@ -2119,6 +2119,8 @@ def update_project_from_writer(request,id):###########No  writer now...so simple
         context={"request": request}, partial=True)
     if serializer.is_valid():
         serializer.save()
+        print("Data----------->",serializer.data)
+        #FileReferenceVoiceProject.objects.create(source_file_id=task_obj.file.id,created_file_id=)
         obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
         ser1 = TaskTranscriptDetailSerializer(obj,data={"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text},partial=True)
         if ser1.is_valid():
@@ -2148,14 +2150,17 @@ def get_quill_data(request):
 @permission_classes([IsAuthenticated])
 def writer_save(request):
     task_id = request.POST.get('task_id')
-    #task_obj = Task.objects.get(id=task_id)
-    #filename,ext = os.path.splitext(task_obj.file.filename)
+    task_obj = Task.objects.get(id=task_id)
+    filename,ext = os.path.splitext(task_obj.file.filename)
+    name = filename + '.docx'
+    file_obj,name,f2 = docx_save(name,edited_data)
     edited_text = request.POST.get('edited_text')
     obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
     if obj:
-        ser1 = TaskTranscriptDetailSerializer(obj,data={"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+
+        ser1 = TaskTranscriptDetailSerializer(obj,data={"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     else:
-        ser1 = TaskTranscriptDetailSerializer(data={"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+        ser1 = TaskTranscriptDetailSerializer(data={"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     if ser1.is_valid():
         ser1.save()
         return Response(ser1.data)

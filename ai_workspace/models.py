@@ -1088,6 +1088,11 @@ class TaskTranscriptDetails(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+
+# class FileReferenceVoiceProject(models.Model):
+#     source_file = models.OneToOneField(File, on_delete=models.CASCADE,related_name="source")
+#     created_file = models.ForeignKey(File, on_delete=models.CASCADE,related_name='created')
+
 # class TaskAudioDetails(models.Model):
 #     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
 
