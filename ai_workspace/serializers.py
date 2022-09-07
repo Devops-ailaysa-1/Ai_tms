@@ -479,7 +479,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def to_internal_value(self, data):
 
-		#print("Internal value ===> ", data)
+		print("Internal value ===> ", data)
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
@@ -1010,7 +1010,8 @@ class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskTranscriptDetails
         fields = "__all__"
-        #exclude = ("quill_data", "","ai_project_id")
+        #fields = ('id','quill_data','transcripted_text','writer_filename','writer_edited_count')
+        write_only_fields = ("source_audio_file", "translated_audio_file","transcripted_file_writer","audio_file_length","user","created_at","updated_at",)
         #read_only_fields = ("id","task",)
 
 class ProjectListSerializer(serializers.ModelSerializer):
@@ -1277,7 +1278,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 
 			if 'task_ven_status' in data.get('task_assign_info'):
 				if data.get('task_assign_info').get('task_ven_status') == 'task_accepted':
-					po_update.append("accepted")	
+					po_update.append("accepted")
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
 				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
 			task_assign_info_data = data.get('task_assign_info')

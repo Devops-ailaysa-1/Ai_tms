@@ -20,6 +20,7 @@ from rest_framework import viewsets, status
 from .utils import DjRestUtils
 from ai_auth.models import HiredEditors
 from rest_framework.response import Response
+from django.core.files.base import ContentFile
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 from indicnlp.tokenize.indic_tokenize import trivial_tokenize
 from ai_workspace_okapi.utils import download_file,text_to_speech
@@ -684,7 +685,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         instance = self.get_object()
         ser = self.get_serializer_class()
         print("ser----------->",ser)
-        text_data=request.POST.get('text_data')
+        task_id=request.POST.get('task_id',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -720,9 +721,14 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=subject_delete_ids)
 
-        serlzr = ser(instance, data=\
-            {**request.data, "files": request.FILES.getlist("files")},
-            context={"request": request}, partial=True)
+        if task_id:
+            file_obj = update_project_from_writer(task_id)
+            serlzr = ser(instance, data=\
+                {**request.data, "files":[file_obj]},context={"request": request}, partial=True)
+        else:
+            serlzr = ser(instance, data=\
+                {**request.data, "files": request.FILES.getlist("files")},
+                context={"request": request}, partial=True)
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
@@ -2091,46 +2097,20 @@ def target_exists(project):
         if i.target_language != None:
             return True
     return False
-##################################Need to revise#######################################
-@api_view(['PUT',])
-@permission_classes([IsAuthenticated])
-def update_project_from_writer(request,id):###########No  writer now...so simple text editor#############For Transcription projects
-    task_id = request.POST.get('task_id')
-    task_obj = Task.objects.get(id=task_id)
-    filename,ext = os.path.splitext(task_obj.file.filename)
-    name = filename + '.docx'
-    edited_text = request.POST.get('edited_text')
-    edited_data = json.loads(edited_text)
-    team = request.POST.get('team')
-    file_obj,name,f2 = docx_save(name,edited_data)
-    target_languages = request.POST.getlist('target_languages')
-    instance = Project.objects.get(id=id)
-    target = target_exists(instance)
-    if not target:
-        if not target_languages:
-            return Response({"msg":"Target languages are must to translate project"},status=400)
-    source_language = [str(instance.project_jobs_set.first().source_language_id)]
-    if target_languages:
-        serializer = ProjectQuickSetupSerializer(instance,data={\
-        'source_language':source_language,'target_languages':target_languages,'team':[team],'files':[file_obj]},\
-        context={"request": request}, partial=True)
-    else:
-        serializer = ProjectQuickSetupSerializer(instance,data={'team':[team],'files':[file_obj]},\
-        context={"request": request}, partial=True)
-    if serializer.is_valid():
-        serializer.save()
-        print("Data----------->",serializer.data)
-        #FileReferenceVoiceProject.objects.create(source_file_id=task_obj.file.id,created_file_id=)
-        obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
-        ser1 = TaskTranscriptDetailSerializer(obj,data={"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text},partial=True)
-        if ser1.is_valid():
-            ser1.save()
-            f2.close()
-            os.remove(os.path.abspath(name))
-            print("ser`1------>",ser1.data)
-        print(ser1.errors)
-        return Response(serializer.data)
-    return Response(serializer.errors)
+
+
+
+def update_project_from_writer(task_id):
+    obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+    writer_project_updated_count = 1 if obj.writer_project_updated_count==None else obj.writer_project_updated_count+1
+    print("project_update_count----------->",writer_project_updated_count)
+    obj.writer_project_updated_count = writer_project_updated_count
+    obj.save()
+    writer_filename = obj.writer_filename + '_edited_'+ str(obj.writer_project_updated_count)+'.docx'
+    file_obj = ContentFile(obj.transcripted_file_writer.file.read(),name=writer_filename)
+    print("FileObj------------>",file_obj)
+    return file_obj
+
 
 
 
@@ -2151,16 +2131,16 @@ def get_quill_data(request):
 def writer_save(request):
     task_id = request.POST.get('task_id')
     task_obj = Task.objects.get(id=task_id)
+    edited_text = request.POST.get('edited_text')
+    edited_data = json.loads(edited_text)
+    obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
     filename,ext = os.path.splitext(task_obj.file.filename)
     name = filename + '.docx'
     file_obj,name,f2 = docx_save(name,edited_data)
-    edited_text = request.POST.get('edited_text')
-    obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
     if obj:
-
         ser1 = TaskTranscriptDetailSerializer(obj,data={"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     else:
-        ser1 = TaskTranscriptDetailSerializer(data={"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+        ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     if ser1.is_valid():
         ser1.save()
         return Response(ser1.data)
@@ -2188,7 +2168,40 @@ def writer_save(request):
 
 
 
-
+# ##################################Need to revise#######################################
+# # @api_view(['PUT',])
+# # @permission_classes([IsAuthenticated])
+# def update_project_from_writer(task_id):###########No  writer now...so simple text editor#############For Transcription projects
+#     #task_id = request.POST.get('task_id')
+#     obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+#     writer_project_updated_count = 1 if obj.writer_project_updated_count==None else obj.writer_project_updated_count+1
+#     print("project_update_count----------->",writer_project_updated_count)
+#     obj.writer_project_updated_count = writer_project_updated_count
+#     obj.save()
+#     writer_filename = obj.writer_filename + '_edited_'+ str(obj.writer_project_updated_count)+'.docx'
+#     file_obj = ContentFile(obj.transcripted_file_writer.file.read(),name=writer_filename)
+#     print("FileObj------------>",file_obj)
+#     return file_obj
+#     # team = request.POST.get('team')
+#     # target_languages = request.POST.getlist('target_languages')
+#     # instance = Project.objects.get(id=id)
+#     # target = target_exists(instance)
+#     # if not target:
+#     #     if not target_languages:
+#     #         return Response({"msg":"Target languages are must to translate project"},status=400)
+#     # source_language = [str(instance.project_jobs_set.first().source_language_id)]
+#     # if target_languages:
+#     #     serializer = ProjectQuickSetupSerializer(instance,data={\
+#     #     'source_language':source_language,'target_languages':target_languages,'team':[team],'files':[file_obj]},\
+#     #     context={"request": request}, partial=True)
+#     # else:
+#     #     serializer = ProjectQuickSetupSerializer(instance,data={'team':[team],'files':[file_obj]},\
+#     #     context={"request": request}, partial=True)
+#     # if serializer.is_valid():
+#     #     serializer.save()
+#     #     print("Data----------->",serializer.data)
+#     #     return Response(serializer.data)
+#     # return Response(serializer.errors)
 
 
     # client = speech.SpeechClient()

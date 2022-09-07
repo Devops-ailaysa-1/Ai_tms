@@ -109,7 +109,7 @@ class Workflows(models.Model):
 class Project(models.Model):
     project_type = models.ForeignKey(ProjectType, null=False, blank=False,on_delete=models.CASCADE,default=1)
     # project_type_detail = models.ForeignKey(ProjectTypeDetail,null=True,blank=True,on_delete=models.CASCADE)
-    project_name = models.CharField(max_length=200, null=True, blank=True,)
+    project_name = models.CharField(max_length=1000, null=True, blank=True,)
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
         allow_files=False)
@@ -1087,8 +1087,17 @@ class TaskTranscriptDetails(models.Model):
     user = models.ForeignKey(AiUser, on_delete = models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    writer_project_updated_count = models.IntegerField(null=True,blank=True)
+    writer_filename = models.CharField(max_length=200, null=True, blank=True)
 
-
+    # @property
+    # def writer_filename(self):
+    #     if self.writer_edited_count == None:
+    #         return  os.path.basename(self.transcripted_file_writer.file.name)
+    #     else:
+    #         name = os.path.basename(self.transcripted_file_writer.file.name)
+    #         filename,ext = os.path.splitext(name)
+    #         return filename+ '_edited_'+ str(self.writer_edited_count)+ ext
 # class FileReferenceVoiceProject(models.Model):
 #     source_file = models.OneToOneField(File, on_delete=models.CASCADE,related_name="source")
 #     created_file = models.ForeignKey(File, on_delete=models.CASCADE,related_name='created')
