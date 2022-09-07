@@ -367,6 +367,8 @@ def generate_invoice_offline(po_li,gst=None,user=None):
 
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
+    if len(task_assign_info) == 0:
+        return None
     with transaction.atomic():
         po_total_amt=0.0
         instance = TaskAssignInfo.objects.get(id=task_assign_info[-1])
@@ -439,7 +441,7 @@ def po_modify(task_assign_info_id,po_update):
         task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
         if 'unassigned' in po_update:
             # if task is unassigned
-            task_assign_info_ids.remove(instance.id)
+            task_assign_info_ids.remove(instance.id)      
         pos = PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignment_id)&~Q(po_status="void"))
         if pos.count()==1:
             po =pos.last()
@@ -447,6 +449,8 @@ def po_modify(task_assign_info_id,po_update):
             raise ValueError('returned more than one po for same assignment')
         po.po_status="void"
         po.save()
+        if len(task_assign_info_ids)==0:
+            return True
         po_new = generate_client_po(task_assign_info_ids) 
         print("new po",po_new) 
     if po_new:
