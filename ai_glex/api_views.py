@@ -481,13 +481,14 @@ def clone_source_terms_from_single_to_multiple_task(request):
 @permission_classes([IsAuthenticated])
 def whole_glossary_term_search(request):
     search_term = request.GET.get('term')
+    glossary_id = request.GET.get('glossary_id',None)
     if not search_term:
         return Response({'msg':'term required'},status=400)
     search_in = request.GET.get('search_in',None)
     user = request.user.team.owner if request.user.team else request.user
     queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
                 .filter(glossary_project__term__isnull=False).distinct()
-    glossary_ids = [i.glossary_project.id for i in queryset]
+    glossary_ids = [glossary_id] if glossary_id else [i.glossary_project.id for i in queryset]
     query = TermsModel.objects.filter(glossary_id__in=glossary_ids)
     if search_in == 'source':
         res =  query.filter(Q(sl_term__icontains=search_term)).distinct('tl_term')
@@ -498,3 +499,14 @@ def whole_glossary_term_search(request):
     #ser = TermsSerializer(res,many=True)
     out = [{'term_id':i.id,'sl_term':i.sl_term,'tl_term':i.tl_term,'pos':i.pos,'glossary_name':i.glossary.project.project_name,'job':i.job.source_target_pair_names,'task_id':Task.objects.get(job_id=i.job_id).id} for i in res]
     return JsonResponse({'results':out})#'data':ser.data})
+
+
+class GlossaryListView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        user = request.user.team.owner if request.user.team else request.user
+        queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                    .filter(glossary_project__term__isnull=False).distinct().order_by('-id')
+        serializer = GlossaryListSerializer(queryset, many=True)
+        return Response(serializer.data)

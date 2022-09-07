@@ -21,4 +21,5 @@ urlpatterns += [
     path('clone_source_terms_from_single_to_multiple_task/',api_views.clone_source_terms_from_single_to_multiple_task),
     path('term_save/',api_views.adding_term_to_glossary_from_workspace,name='adding-term-to-glossary-from-workspace'),
     path('whole_glossary_term_search/',api_views.whole_glossary_term_search),
+    path('glossaries_list/',api_views.GlossaryListView.as_view({'get': 'list'}),name='glossaries-list'),
 ]

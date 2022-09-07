@@ -479,7 +479,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	def to_internal_value(self, data):
 
-		print("Internal value ===> ", data)
+		#print("Internal value ===> ", data)
 		data["project_type_id"] = data.get("project_type",[1])[0]
 		data["project_name"] = data.get("project_name", [None])[0]
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
