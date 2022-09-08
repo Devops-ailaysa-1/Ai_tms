@@ -545,10 +545,15 @@ class MT_RawAndTM_View(views.APIView):
         return []
 
     def get_alert_msg(self, status_code, can_team):
+        #print("Status_code-------------->",status_code)
         if (status_code == 424 and can_team == "unavailable"):
             return "MT doesn't work as the credits are insufficient. Please buy more or upgrade"
         elif (status_code == 200 and can_team == "MT disabled"):
             return "MT Disabled"
+        elif (status_code == 200 and can_team == "available"):
+            return None
+        elif (status_code == 201 and can_team == "available"):
+            return None
         else:
             return "Team subscription inactive"
 
