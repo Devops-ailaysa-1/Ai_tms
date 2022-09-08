@@ -395,7 +395,7 @@ def generate_client_po(task_assign_info):
             elif instance.mtpe_count_unit.unit =='Fixed':
                 tot_amount = instance.mtpe_rate
             elif instance.mtpe_count_unit.unit =='Hour':
-                if instance.estimated_hour:
+                if instance.estimated_hours:
                     tot_amount = instance.estimated_hours * instance.mtpe_rate
                 else:
                     tot_amount = 0
