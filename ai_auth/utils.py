@@ -1,6 +1,11 @@
 import random
-from djstripe.models import Customer,Subscription
+from djstripe.models import Customer,Subscription,Account
 from django.db.models import Q
+
+try:
+    default_djstripe_owner=Account.get_default_account()
+except BaseException as e:
+    print(f"Error : {str(e)}")
 
 max_iter = ((10**6)/3)
 
@@ -33,7 +38,7 @@ def get_unique_pid(klass, iter_count=1):
 
 
 def get_plan_name(user):
-	customer = Customer.objects.get(subscriber=user)
+	customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
 	#subscriptions = Subscription.objects.filter(customer=customer).last()
 	sub = customer.subscriptions.filter(Q(status='active')|Q(status='trialing')|Q(status='past_due')).last()
 	if sub:
