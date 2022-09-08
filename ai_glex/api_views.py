@@ -164,6 +164,34 @@ class TermUploadView(viewsets.ModelViewSet):
     search_fields = ['sl_term','tl_term']
     ordering = ('-id')
 
+
+    def edit_allowed_check(self,job):
+        from ai_workspace.models import Task,TaskAssignInfo
+        user = self.request.user
+        task_obj = Task.objects.get(job_id = job.id)
+        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task = task_obj)
+        assigners = [i.task_assign.assign_to for i in task_assigned_info]
+        if user not in assigners:
+            edit_allowed = True
+        else:
+            try:
+                task_assign_status = task_assigned_info.filter(~Q(task_assign__assign_to = user)).first().task_assign.status
+                edit_allowed = False if task_assign_status == 2 else True
+            except:
+                edit_allowed = True
+        return edit_allowed
+
+    def update_task_assign(self,job,user):
+        from ai_workspace.models import Task,TaskAssignInfo
+        task_obj = Task.objects.get(job_id = job.id)
+        try:
+            obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
+            if obj.status != 2:
+                obj.status = 2
+                obj.save()
+        except Exception as e:
+            print("Exception1-->", e)
+
     def list(self, request):
         task = request.GET.get('task')
         job = Task.objects.get(id=task).job
@@ -173,29 +201,37 @@ class TermUploadView(viewsets.ModelViewSet):
         try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
         except:target_language = None
         additional_info = [{'project_name':project_name,'source_language':source_language,'target_language':target_language}]
-        print("Info------------>",additional_info)
         serializer = TermsSerializer(queryset, many=True, context={'request': request})
         additional_info.extend(serializer.data)
         return  Response(additional_info)
 
     def create(self, request):
+        user = self.request.user
         task = request.POST.get('task')
         job = Task.objects.get(id=task).job
         if not task:
             return Response({'msg':'Task id required'},status=status.HTTP_400_BAD_REQUEST)
-        # job_obj = Job.objects.get(id=job)
         glossary = job.project.glossary_project.id
+        edit_allow = self.edit_allowed_check(job)
+        if edit_allow == False:
+            return Response({"msg":"Already someone is working"},status = 400)
         serializer = TermsSerializer(data={**request.POST.dict(),"job":job.id,"glossary":glossary})
         if serializer.is_valid():
             serializer.save()
+            self.update_task_assign(job,user)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, pk):
+        user = self.request.user
         queryset = TermsModel.objects.get(id=pk)
+        edit_allow = self.edit_allowed_check(queryset.job)
+        if edit_allow == False:
+            return Response({"msg":"Already someone is working"},status = 400)
         serializer =TermsSerializer(queryset,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
             serializer.save()
+            self.update_task_assign(queryset.job,user)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -204,8 +240,6 @@ class TermUploadView(viewsets.ModelViewSet):
         print("TDI------->",term_delete_ids)
         delete_list = term_delete_ids.split(',')
         TermsModel.objects.filter(id__in=delete_list).delete()
-        # term = TermsModel.objects.get(id=self.kwargs.get("pk"))
-        # term.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -475,6 +509,14 @@ def clone_source_terms_from_single_to_multiple_task(request):
     print(obj)
     TermsModel.objects.bulk_create(obj)
     return JsonResponse({'msg':'SourceTerms Cloned'})
+
+
+
+
+# class WholeGlossaryTermSearchView(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated]
+#
+#     def list(self,request):
 
 
 @api_view(['GET',])
