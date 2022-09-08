@@ -540,7 +540,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
 
-        # print("data--->", data)
+        #print("data--->", data)
         segment_id = data.get("segment")
         # print("Segment ID ---> ", segment_id)
         obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
@@ -552,7 +552,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
 
-        # print("Validated data ---> ", validated_data)
+        #print("Validated data ---> ", validated_data)
 
         segment = validated_data["segment"]
         mt_engine= validated_data["mt_engine"]
@@ -568,7 +568,6 @@ class MT_RawSerializer(serializers.ModelSerializer):
         #     .get("translatedText")
 
         validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
-
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
 

@@ -459,8 +459,8 @@ class MT_RawAndTM_View(views.APIView):
 
 
     @staticmethod
-    def get_consumable_credits(doc, segment,seg):
-        # segment_source = Segment.objects.get(id=segment_id).source
+    def get_consumable_credits(doc, segment_id,seg):
+        segment = Segment.objects.get(id=segment_id)
         segment_source = segment.source if segment != None else seg
         seg_data = { "segment_source" : segment_source,
                      "source_language" : doc.source_language_code,
@@ -480,9 +480,16 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_data(request, segment_id, mt_params):
+        from .utils import get_translation
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
+        task_assign_mt_engine = TaskAssign.objects.filter(
+            Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
+            Q(step_id=1)
+        ).first().mt_engine
         if mt_raw:
-            return MT_RawSerializer(mt_raw).data, 200, "available"
+            if mt_raw.mt_engine == task_assign_mt_engine:
+                return MT_RawSerializer(mt_raw).data, 200, "available"
+
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
@@ -503,27 +510,23 @@ class MT_RawAndTM_View(views.APIView):
 
         initial_credit = user.credit_balance.get("total_left")
 
-        segment_source = Segment.objects.get(id=segment_id).source
-        seg_data = {"segment_source":segment_source, "source_language":doc.source_language_code, "target_language":doc.target_language_code,\
-                     "processor_name":"plain-text-processor", "extension":".txt"}
-
-        res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-            data={"segmentWordCountdata":json.dumps(seg_data)})
-        if res.status_code == 200:
-            print("Word count --->", res.json())
-            consumable_credits = res.json()
-        else:
-            logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
-            raise  ValueError("Sorry! Something went wrong with word count calculation.")
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id,None)
 
         if initial_credit > consumable_credits :
-            mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
-                            context={"request": request})
-            if mt_raw_serlzr.is_valid(raise_exception=True):
-                mt_raw_serlzr.save()
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                # print("DEBIT STATUS -----> ", debit_status["msg"])
-                return mt_raw_serlzr.data, 201, "available"
+            if mt_raw:
+                ################################Update###########################
+                translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, doc.source_language_code, doc.target_language_code)
+                tt = MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation,mt_engine = task_assign_mt_engine)
+                return MT_RawSerializer(tt.first()).data, 200, "available"
+            else:
+                ###############################Create############################
+                mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
+                                context={"request": request})
+                if mt_raw_serlzr.is_valid(raise_exception=True):
+                    mt_raw_serlzr.save()
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    # print("DEBIT STATUS -----> ", debit_status["msg"])
+                    return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
 
