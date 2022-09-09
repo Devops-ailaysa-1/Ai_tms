@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_auth.models import AiUser
 from .models import (   Glossary,TermsModel,Tbx_Download,GlossaryFiles,\
-                        GlossaryTasks,GlossarySelected,MyGlossary,\
+                        GlossaryTasks,GlossarySelected,MyGlossary,GlossaryMt\
                     )
 from rest_framework.validators import UniqueValidator
 from ai_workspace.serializers import JobSerializer,ProjectQuickSetupSerializer
@@ -37,10 +37,10 @@ class GlossarySelectedSerializer(serializers.ModelSerializer):
         model = GlossarySelected
         fields = ('id','project','glossary','glossary_name',)
 
-# class GlossaryTaskSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = GlossaryTasks
-#         fields = "__all__"
+class GlossaryMtSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GlossaryMt
+        fields = "__all__"
 
 class GlossarySetupSerializer(ProjectQuickSetupSerializer):
     glossary = GlossarySerializer(required= False)
@@ -90,3 +90,16 @@ class GlossaryListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Glossary
         fields = ("glossary_id", "glossary_name", )
+
+
+class WholeGlossaryTermSerializer(serializers.ModelSerializer):
+    term_id = serializers.ReadOnlyField(source = 'id')
+    sl_term = serializers.ReadOnlyField(source='sl_term')
+    tl_term = serializers.ReadOnlyField(source='tl_term')
+    pos = serializers.ReadOnlyField(source='pos')
+    glossary_name = serializers.ReadOnlyField(source='glossary.project.project_name')
+    job = serializers.ReadOnlyField(source='job.source_target_pair_names')
+    task_id = serializers.ReadOnlyField(source='job.job_tasks_set.all().first()')
+
+    class Meta:
+        fields = ('term_id','sl_term','tl_term','pos','glossary_name','job','task_id',)

@@ -2,6 +2,7 @@
 .env2
 .env
 docker-compose.yml
+docker-compose.staging-v4.yml
 ailaysa.yml
 celerybeat-schedule
 file.sql

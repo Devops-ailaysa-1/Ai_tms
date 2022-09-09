@@ -1944,7 +1944,7 @@ def transcribe_file_get(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def convert_and_download_text_to_speech_source(request):#########working############Transcribe and Download
     tasks =[]
     project = request.GET.get('project',None)
@@ -2002,7 +2002,7 @@ def download_text_to_speech_source(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def download_speech_to_text_source(request):
     task = request.GET.get('task')
     obj = Task.objects.get(id = task)

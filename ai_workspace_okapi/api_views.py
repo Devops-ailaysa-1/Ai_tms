@@ -516,8 +516,9 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw:
                 ################################Update###########################
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, doc.source_language_code, doc.target_language_code)
-                tt = MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation,mt_engine = task_assign_mt_engine)
-                return MT_RawSerializer(tt.first()).data, 200, "available"
+                MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation,mt_engine = task_assign_mt_engine)
+                obj = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
+                return MT_RawSerializer(obj).data, 200, "available"
             else:
                 ###############################Create############################
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
@@ -544,10 +545,15 @@ class MT_RawAndTM_View(views.APIView):
         return []
 
     def get_alert_msg(self, status_code, can_team):
+        #print("Status_code-------------->",status_code)
         if (status_code == 424 and can_team == "unavailable"):
             return "MT doesn't work as the credits are insufficient. Please buy more or upgrade"
         elif (status_code == 200 and can_team == "MT disabled"):
             return "MT Disabled"
+        elif (status_code == 200 and can_team == "available"):
+            return None
+        elif (status_code == 201 and can_team == "available"):
+            return None
         else:
             return "Team subscription inactive"
 
