@@ -1,8 +1,8 @@
 from django.db import models
-from ai_staff.models import Languages
+from ai_staff.models import Languages, AilaysaSupportedMtpeEngines
 from ai_auth.models import AiUser
 from django.db.models.fields.files import FieldFile, FileField
-from ai_workspace.models import Project,Job
+from ai_workspace.models import Project,Job,Task
 import os
 from .manager import GlossaryTasksManager
 from ai_staff.models import AssetUsageTypes
@@ -88,6 +88,7 @@ class TermsModel(models.Model):
     glossary        = models.ForeignKey(Glossary, null=True, on_delete=models.CASCADE,related_name='term')
     file            = models.ForeignKey(GlossaryFiles, null=True, on_delete=models.CASCADE,related_name='term_file')
     job             = models.ForeignKey(Job, null=True, on_delete=models.CASCADE,related_name='term_job')
+    #tl_term_mt      = models.CharField(max_length=200, null=True, blank=True)
     # user            = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -101,6 +102,13 @@ class TermsModel(models.Model):
     # def target_language_script(self):
     #     target_lang_id = self.job.target_language.id
     #     return LanguageMetaDetails.objects.get(language_id=target_lang_id).lang_name_in_script
+class GlossaryMt(models.Model):
+    task        = models.ForeignKey(Task, null=True, on_delete=models.CASCADE,related_name='term_task')
+    source      = models.CharField(max_length=200, null=True, blank=True)
+    target_mt   = models.CharField(max_length=200, null=True, blank=True)
+    mt_engine   = models.ForeignKey(AilaysaSupportedMtpeEngines,on_delete=models.CASCADE,related_name='term_mt_engine',null=True, blank=True)
+
+
 
 ##############Glossary Tasks Model###################
 class GlossaryTasks(models.Model):

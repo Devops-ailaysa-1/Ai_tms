@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status
+from rest_framework.pagination import PageNumberPagination
 import json
 import mimetypes
 import os
@@ -9,11 +10,12 @@ from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.conf import settings
-from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected, MyGlossary
+from .models import Glossary, GlossaryFiles, TermsModel,GlossarySelected, MyGlossary, GlossaryMt
 from .serializers import GlossarySerializer,GlossaryFileSerializer,TermsSerializer,\
                         GlossaryListSerializer,GlossarySelectedSerializer,\
-                        MyGlossarySerializer
+                        MyGlossarySerializer,WholeGlossaryTermSerializer,GlossaryMtSerializer
 import json,mimetypes,os
+from rest_framework import filters,generics
 from rest_framework.views import APIView
 from ai_workspace.serializers import Job
 from ai_workspace.models import TaskAssign, Task
@@ -393,7 +395,7 @@ def glossary_search(request):
         res=None
     return JsonResponse({'res':res},safe=False)
 
-class GetTranslation(APIView):
+class GetTranslation(APIView):#############Mt update need to work###################
     permission_classes = [IsAuthenticated]
 
     @staticmethod
@@ -404,7 +406,6 @@ class GetTranslation(APIView):
         return len(tokens_new)
 
     def post(self, request, task_id):
-
         # input data
         task_obj = Task.objects.get(id=task_id)
         source = request.POST.get("source", "")
@@ -414,13 +415,16 @@ class GetTranslation(APIView):
         else:
             return Response({'msg':'Monolingual dictionary'})
         mt_engine_id = task_obj.task_info.get(step_id = 1).mt_engine_id
+        target_mt = GlossaryMt.objects.filter(Q(task_id = task_id) & Q(source = source) & Q(mt_engine_id = mt_engine_id)).first()
+        if target_mt:
+            return Response(GlossaryMtSerializer(target_mt).data,status=200)
 
         # Finding the debit user
         project = task_obj.job.project
         user = project.team.owner if project.team else project.ai_user
 
         credit_balance = user.credit_balance.get("total_left")
-        print("SOURCE---------->",source)
+        #print("SOURCE---------->",source)
         word_count = GetTranslation.word_count(self,source)
 
         if credit_balance > word_count:
@@ -428,7 +432,9 @@ class GetTranslation(APIView):
             # get translation
             translation = get_translation(mt_engine_id, source, sl_code, tl_code)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
-            return Response({"res": translation}, status=200)
+            tt = GlossaryMt.objects.create(task_id = task_id,source = source,target_mt = translation,mt_engine_id=mt_engine_id)
+            return Response(GlossaryMtSerializer(tt).data,status=201)
+            #return Response({"res": translation}, status=200)
 
         else:
             return Response({"res": "Insufficient credits"}, status=424)
@@ -511,12 +517,28 @@ def clone_source_terms_from_single_to_multiple_task(request):
     return JsonResponse({'msg':'SourceTerms Cloned'})
 
 
+#########################Not used, Need to test#################################
+class NoPagination(PageNumberPagination):
+      page_size = None
 
 
-# class WholeGlossaryTermSearchView(viewsets.ViewSet):
-#     permission_classes = [IsAuthenticated]
-#
-#     def list(self,request):
+class WholeGlossaryTermSearchView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = WholeGlossaryTermSerializer
+    filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
+    ordering_fields = ['sl_term','tl_term','id']
+    ordering = ('-id')
+    search_fields = ['sl_term','tl_term']
+    pagination_class = NoPagination
+    # page_size = None
+
+    def get_queryset(self):
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                    .filter(glossary_project__term__isnull=False).distinct()
+        glossary_ids = [glossary_id] if glossary_id else [i.glossary_project.id for i in queryset]
+        query = TermsModel.objects.filter(glossary_id__in=glossary_ids)
+        return query
 
 
 @api_view(['GET',])
