@@ -1,4 +1,5 @@
 from logging import INFO
+from langdetect import detect
 import logging
 import re , requests
 from django.core.mail import send_mail
@@ -2130,3 +2131,14 @@ class UserDetailView(viewsets.ViewSet):
             return Response({'msg':'details_updated_successsfully'},status=200)
         except BaseException as e:
             return Response({'error':f'updation failed {str(e)}'},status=400)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def lang_detect(request):
+    from ai_staff.models import Languages
+    text = request.GET.get('text')
+    lang = detect(text)
+    lang_obj = Languages.objects.filter(locale__locale_code = lang).first()
+    return Response({'lang_id':lang_obj.id,'language':lang_obj.language})

@@ -201,3 +201,4 @@ hunspell
 htmldocx
 quill-delta[html]
 python-docx
+langdetect==1.0.9

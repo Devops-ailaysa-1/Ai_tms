@@ -388,6 +388,13 @@ class Project(models.Model):
             return False
 
     @property
+    def text_to_speech_source_download(self):
+        if self.project_type_id == 4:
+            if self.voice_proj_detail.project_type_sub_category_id == 2:
+                if self.get_target_languages[0] == None:
+                    return True
+
+    @property
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
             # print("Doc opened")

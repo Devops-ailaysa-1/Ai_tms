@@ -459,7 +459,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
+		fields = ("id", "project_name","assigned","text_to_speech_source_download", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
 					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at")
 
@@ -1006,13 +1006,16 @@ class TaskDetailSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
-
+    project_name = serializers.ReadOnlyField(source ='task.job.project.project_name')
+    source_lang = serializers.SerializerMethodField()
     class Meta:
         model = TaskTranscriptDetails
         fields = "__all__"
         #fields = ('id','quill_data','transcripted_text','writer_filename','writer_edited_count')
-        write_only_fields = ("source_audio_file", "translated_audio_file","transcripted_file_writer","audio_file_length","user","created_at","updated_at",)
+        write_only_fields = ("project_name",'source_lang',"source_audio_file", "translated_audio_file","transcripted_file_writer","audio_file_length","user","created_at","updated_at",)
         #read_only_fields = ("id","task",)
+    def get_source_lang(self,obj):
+        return obj.task.job.project.project_jobs_set.first().source_language.language
 
 class ProjectListSerializer(serializers.ModelSerializer):
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
