@@ -9,6 +9,7 @@ from google.cloud import translate_v2 as translate
 
 client = translate.Client()
 
+client = translate.Client()
 
 class DebugVariables(object): # For Class Functions only to use
     def __init__(self,flags):
@@ -48,15 +49,20 @@ def get_processor_name(file_path):  # Full File Path Assumed
         raise ValueError("File extension cannot be null and empty!!!")
 
 def get_runs_and_ref_ids(format_pattern, run_reference_ids):
+    # print("Format pattern ---> ", format_pattern)
+    # print("Reference tag list ---> ", run_reference_ids)
     coll = []
     start_series = 57616
+
     for i, j  in zip(format_pattern, run_reference_ids):
         tag_type_no = 57601 if i == "(" else 57602
         coll.append( [f'{chr(tag_type_no)}{chr(start_series)}',j])
         start_series += 1
+
     return coll
 
 def set_ref_tags_to_runs(text_content, runs_and_ref_ids):
+
     run_tags, run_id_tags = [], []
     for run, ref_id in runs_and_ref_ids:
         if "\ue101" in run:
@@ -70,9 +76,12 @@ def set_ref_tags_to_runs(text_content, runs_and_ref_ids):
         run_tags.append(run)
         run_id_tags.append(run_id_tag)
         text_content = text_content.replace(run, run_id_tag)
+
     return (text_content, run_tags, ''.join(run_id_tags))
 
 def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
+
+
     if not text_content:
         return text_content
 
@@ -129,6 +138,78 @@ def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
 
     return text_content
 
+
+# def download_file(file_path):
+#
+#     filename = os.path.basename(file_path)
+#     fl = open(file_path, 'rb')
+#     mime_type, _ = mimetypes.guess_type(file_path)
+#     response = HttpResponse(fl, content_type=mime_type)
+#     response['Content-Disposition'] = "attachment; filename=%s" % filename
+#     return response
+#
+# def ms_translation(source_string, source_lang_code, target_lang_code):
+#
+#     # Add your subscription key and endpoint
+#     subscription_key = os.getenv("MST_KEY")
+#     endpoint = os.getenv("MST_API")
+#
+#     # Add your location, also known as region. The default is global.
+#     # This is required if using a Cognitive Services resource.
+#     location = os.getenv("MST_LOCATION")
+#
+#     path = '/translate'
+#     constructed_url = endpoint + path
+#
+#     params = {
+#         'api-version': '3.0',
+#         'from': source_lang_code,
+#         'to': [target_lang_code]
+#     }
+#
+#     headers = {
+#         'Ocp-Apim-Subscription-Key': subscription_key,
+#         'Ocp-Apim-Subscription-Region': location,
+#         'Content-type': 'application/json',
+#         'X-ClientTraceId': str(uuid.uuid4())
+#     }
+#
+#     # You can pass more than one object in body.
+#     body = [{
+#         'text': source_string
+#     }]
+#
+#     request = requests.post(constructed_url, params=params, headers=headers, json=body)
+#     return request.json()[0]["translations"][0]["text"]
+#
+#     # print(json.dumps(response, sort_keys=True, ensure_ascii=False, indent=4, separators=(',', ': ')))
+#
+# def aws_translate(source_string, source_lang_code, target_lang_code):
+#     translate = boto3.client(service_name = 'translate',
+#                              region_name = os.getenv('aws_iam_region_name'),
+#                              aws_access_key_id = os.getenv("aws_iam_access_key_id"),
+#                              aws_secret_access_key = os.getenv("aws_iam_secret_access_key")
+#                                 )
+#     return translate.translate_text( Text = source_string,
+#                                      SourceLanguageCode = source_lang_code,
+#                                      TargetLanguageCode = target_lang_code)["TranslatedText"]
+#
+#
+# def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_code):
+#     # FOR GOOGLE TRANSLATE
+#     if mt_engine_id == 1:
+#
+#         return client.translate(source_string,
+#                                 target_language=target_lang_code,
+#                                 format_="text").get("translatedText")
+#     # FOR MICROSOFT TRANSLATE
+#     elif mt_engine_id == 2:
+#         return ms_translation(source_string, source_lang_code, target_lang_code)
+#
+#     # AMAZON TRANSLATE
+#     elif mt_engine_id == 3:
+#         return aws_translate(source_string, source_lang_code, target_lang_code)
+
 class SpacesService:
 
     def get_client():
@@ -156,9 +237,9 @@ class SpacesService:
         client.delete_object(Bucket=bucket_name, Key=file_path)
         print("FIle is deleted successfully!!!")
 
-class OkapiUtils:
-    def get_translated_file_(self):
-        pass
+# class OkapiUtils:
+#     def get_translated_file_(self):
+#         pass
 
 def download_file(file_path):
     filename = os.path.basename(file_path)
@@ -302,7 +383,7 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
     out.close()
     f2 = open(filename, 'rb')
     file_obj = DJFile(f2)
-    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)
+    # print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)
     return file_obj,f2
     # dir = os.path.join(path,"Audio")
     # if not os.path.exists(dir):
@@ -315,15 +396,26 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
 
 def get_res_path(source_lang):
 
-    if source_lang not in ['hi','bn','or','ne','pa']:
-        res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
-                     "fprm_file_path": None,
-                     "use_spaces": settings.USE_SPACES
-                     }
+    res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
+                 "fprm_file_path": None,
+                 "use_spaces": settings.USE_SPACES
+                 }
+
+    if source_lang in ['hi','bn','or','ne','pa']:
+        res_paths["srx_file_path"] = "okapi_resources/indian_lang.srx"
         return res_paths
+
+    elif source_lang in ['zh-Hans','zh-Hant','ja']:
+        res_paths["srx_file_path"] = "okapi_resources/zh_and_ja.srx"
+        return res_paths
+
+    elif source_lang in ['th']:
+        res_paths["srx_file_path"] = "okapi_resources/thai.srx"
+        return res_paths
+
+    elif source_lang in ['ta']:
+        res_paths["srx_file_path"] = "okapi_resources/tamil001.srx"
+        return res_paths
+
     else:
-        res_paths = {"srx_file_path": "okapi_resources/indian_lang.srx",
-                     "fprm_file_path": None,
-                     "use_spaces": settings.USE_SPACES
-                     }
         return res_paths

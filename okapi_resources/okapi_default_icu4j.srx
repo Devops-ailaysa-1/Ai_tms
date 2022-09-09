@@ -5,13 +5,12 @@
 <formathandle type="end" include="yes"></formathandle>
 <formathandle type="isolated" include="no"></formathandle>
 <okpsrx:options oneSegmentIncludesAll="no" trimLeadingWhitespaces="no" trimTrailingWhitespaces="no" useJavaRegex="yes" useIcu4JBreakRules="no" treatIsolatedCodesAsWhitespace="no"></okpsrx:options>
-<okpsrx:sample language="en" useMappedRules="yes">No sorrows, It’s your day
+<okpsrx:sample language="en" useMappedRules="yes">E. V. K. S. Elangovan.
 
-Hello There, Nice to meet you. It seems so cool in the summer (not like yesterday. Really Awesome! I feel like the day started exclusively for me. Sun says enjoy your day my darling. You are the most confident boy ever seen in my like. Stay confident as you are always.
-Ignore sorrows, enjoy your days all the time. Jarvis is always with you. Keep learning and keep Growing.
-I Love you 3000.
-Thank you.
-</okpsrx:sample>
+Erode Venkata Krishnasamy Sampath Elangovan is an Indian politician who was a member of the Lok Sabha. He represented the Gobichettipalayam constituency of Tamil Nadu and is a member of the Indian National Congress party.[1] He is the son of E. V. K. Sampath and grandson of Periyar E. V. Ramasamy's brother Krishnasamy.[1] In 2009 Lok Sabha election, he lost to A. Ganeshamurthi of the MDMK by 49,336 votes in Erode constituency. He was appointed as President of Tamil Nadu Congress Committee by All India Congress Committee Chief Sonia Gandhi on 31 October 2014, followed by the resignation of B. S. Gnanadesikan. In the 2019 Lok Sabha election he lost to O. P. Ravindranath Kumar, the son of O. Panneerselvam, in Theni. Elangovan was the only candidate of the UPA to lose in the 2019 Lok Sabha elections in Tamil Nadu.He also elected as a Member of Legislative Assembly in Tamilnadu from Sathyamangalam constituency in 1985. 
+
+M. K. Stalin. 
+M.K.Stalin.</okpsrx:sample>
 <okpsrx:rangeRule></okpsrx:rangeRule>
 </header>
 <body>
@@ -715,6 +714,15 @@ Thank you.
 <rule break="no">
 <beforebreak>[AaBb]\.</beforebreak>
 <afterbreak>\s[CcDd]\.</afterbreak>
+</rule>
+<!--Do not break for initials such as M. K. Stalin, E. V. K. S. Elangovan etc.-->
+<rule break="no">
+<beforebreak>[A-Z].</beforebreak>
+<afterbreak>\s?</afterbreak>
+</rule>
+<rule break="no">
+<beforebreak>[:]</beforebreak>
+<afterbreak>\s?</afterbreak>
 </rule>
 </languagerule>
 <languagerule languagerulename="Spanish">

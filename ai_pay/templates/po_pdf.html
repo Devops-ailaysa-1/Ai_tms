@@ -305,12 +305,18 @@
             <li>{{task.source_language.language}}</li>
             <li>{{task.target_language.language}}</li>
             <li>{{task.unit_type.unit}}</li>
-            <li>{{task.unit_price|floatformat:"-4"}}</li>
+            <li>{{task.unit_price_float_format}}</li>
             {% if task.unit_type.unit == "Char" %}
             <li>{{task.char_count}}</li>
             {%endif%}
             {% if task.unit_type.unit == "Word" %}
             <li>{{task.word_count}}</li>
+            {% endif %}
+            {% if task.unit_type.unit == "Hour" %}
+            <li>{{task.estimated_hours}}</li>
+            {% endif %}
+            {% if task.unit_type.unit == "Fixed" %}
+            <li>-</li>
             {% endif %}
             <li>{{task.total_amount|floatformat:"2"}}</li>
         </ul>

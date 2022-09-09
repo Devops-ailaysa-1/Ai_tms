@@ -15,13 +15,13 @@ from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
 from ai_marketplace.models import ProjectboardDetails
-
-
+import requests
 from contextlib import closing
 from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
-
+from ai_workspace.models import Task
+import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from ai_workspace.models import Task
 import os, json
@@ -221,6 +221,20 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
     text_unit_ser_data = validated_data.pop("text_unit_ser", [])
     text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
+    from ai_workspace_okapi.models import Document
+    from ai_workspace.api_views import UpdateTaskCreditStatus
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View
+    from ai_workspace_okapi.models import TranslationStatus
+
+    document = Document.objects.get(id=document_id)
+
+    pr_obj = document.job.project
+    if pr_obj.pre_translate == True:
+        target_get = True
+        mt_engine = pr_obj.mt_engine_id
+        user = pr_obj.ai_user
+    else:target_get = False
+
     # USING SQL BATCH INSERT
 
     text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
@@ -251,11 +265,28 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                                      get_runs_and_ref_ids(seg["coded_brace_pattern"],
                                                           json.loads(seg["coded_ids_sequence"])))
             )
-            target = "" if seg["target"] is None else seg["target"]
-            seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+            #target = "" if seg["target"] is None else seg["target"]
+            if target_get == False:
+                target = ""
+                seg['temp_target'] = ""
+                status_id = None
+            else:
+                initial_credit = user.credit_balance.get("total_left")
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
+                if initial_credit > consumable_credits:
+                    mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
+                    seg['temp_target'] = mt
+                    seg['target'] = mt
+                    status_id = TranslationStatus.objects.get(status_id=104).id
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                else:
+                    target=""
+                    seg['temp_target']=""
+                    status_id=None
+            seg_params.extend([str(seg["source"]), target, seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                                str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
                                str(text_unit["okapi_ref_translation_unit_id"]), \
-                               timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
+                               timezone.now(), status_id, text_unit_id, str(seg["random_tag_ids"])])
 
             # seg_params.extend([(seg["source"]), target, "", (seg["coded_source"]), (tagged_source), \
             #                    (seg["coded_brace_pattern"]), (seg["coded_ids_sequence"]), (target_tags),
@@ -263,13 +294,46 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
             #                    timezone.now(), text_unit_id, (seg["random_tag_ids"])])
 
     segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
-                               coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
-        ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+                               coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, status_id, text_unit_id, random_tag_ids) VALUES {}'.format(
+        ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
 
     with closing(connection.cursor()) as cursor:
         cursor.execute(segment_sql, seg_params)
 
     logger.info("segments wrriting completed")
+
+    if target_get == True:
+        mt_params = []
+        count = 0
+        segments = Segment.objects.filter(text_unit__document=document)
+        for i in segments:
+            if i.target != "":
+                count += 1
+                mt_params.extend([i.target,mt_engine,None,"ai_workspace_okapi.segment",i.id])
+        print("MT-------------->",mt_params)
+        mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id, reverse_string_for_segment,segment_id)\
+        VALUES {}".format(','.join(['(%s, %s, %s, %s, %s)'] * count))
+        if mt_params:
+            with closing(connection.cursor()) as cursor:
+                cursor.execute(mt_raw_sql, mt_params)
+    logger.info("mt_raw wrriting completed")
+
+
+@task
+def mt_only(project_id,token):
+    from ai_workspace.models import Project,Task
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    from ai_workspace_okapi.serializers import DocumentSerializerV2
+    pr = Project.objects.get(id=project_id)
+    print("PRE TRANSLATE-------------->",pr.pre_translate)
+    if pr.pre_translate == True:
+        tasks = pr.get_mtpe_tasks
+        print("TASKS Inside CELERY----->",tasks)
+        for i in pr.get_mtpe_tasks:
+            document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
+            doc = DocumentSerializerV2(document).data
+            print(doc)
+
 
 @task
 def write_doc_json_file(doc_data, task_id):
@@ -289,3 +353,26 @@ def write_doc_json_file(doc_data, task_id):
     with open(doc_json_path, "w") as outfile:
         json.dump(doc_data, outfile)
     logger.info("Document json data written as a file")
+
+
+
+
+
+
+
+
+
+
+
+    # host = os.environ.get("HOST")
+    # #Base_Url = "http://127.0.0.1:8089/"
+    # #DocumentViewByTask.as_view()(self.request)
+
+        # headers = {'Authorization':'Bearer '+token}
+        # print(headers)
+#task = DocumentViewByTask.get_object(task_id=i)
+            # print("Begin-------------->",i.id)
+            # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
+            # res = requests.request("GET", url, headers=headers)
+            # print("doc--->",res.text)
+

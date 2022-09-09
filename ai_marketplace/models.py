@@ -16,7 +16,7 @@ from ai_auth.signals import create_postjob_id
 # Create your models here.
 
 
-class ProjectboardDetails(models.Model):
+class ProjectboardDetails(models.Model):#stephen subburaj
     project=models.ForeignKey(Project, on_delete=models.CASCADE,related_name="proj_detail")
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
@@ -57,6 +57,17 @@ class ProjectboardDetails(models.Model):
 
 
 
+    @property
+    def get_jobs(self):
+        return [job for job in self.projectpost_jobs.all()]
+
+    @property
+    def get_steps(self):
+        return [obj.steps for obj in self.projectpost_steps.all()]
+
+    @property
+    def get_steps_name(self):
+        return [{'step':obj.steps.name,'id':obj.steps.id} for obj in self.projectpost_steps.all()]
 
 class ProjectPostJobDetails(models.Model):
     postjob_id = models.CharField(max_length=191,blank=True,null=True)
@@ -82,6 +93,13 @@ class ProjectPostContentType(models.Model):
     content_type = models.ForeignKey(ContentTypes, on_delete=models.CASCADE,
                         related_name="projectpost_content_type")
 
+class ProjectPostSteps(models.Model):
+    project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
+                        related_name="projectpost_steps")
+    steps = models.ForeignKey(Steps, on_delete=models.CASCADE,
+                        related_name="projectpost_steps")
+
+
 class ProjectPostSubjectField(models.Model):
     project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
                         related_name="projectpost_subject")
@@ -89,11 +107,11 @@ class ProjectPostSubjectField(models.Model):
                         related_name="projectpost_subject")
 
 
-class ProjectPostSteps(models.Model):
-    project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
-                        related_name="projectpost_steps")
-    steps = models.ForeignKey(Steps, on_delete=models.CASCADE,
-                        related_name="projectpost_steps")
+# class ProjectPostSteps(models.Model):
+#     project = models.ForeignKey(ProjectboardDetails, on_delete=models.CASCADE,
+#                         related_name="projectpost_steps")
+#     steps = models.ForeignKey(Steps, on_delete=models.CASCADE,
+#                         related_name="projectpost_steps")
 
 class ProjectboardTemplateDetails(models.Model):
     template_name = models.CharField(max_length=1000,blank=False, null=False)
@@ -154,10 +172,10 @@ class BidChat(models.Model):
     class Meta:
         ordering = ('timestamp',)
 
-class AvailableJobs(models.Model):
-    projectpostjob=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="projpostjob_details")
-    vendor=models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost')
+# class AvailableJobs(models.Model):
+#     projectpostjob=models.ForeignKey(ProjectPostJobDetails, on_delete=models.CASCADE,related_name="projpostjob_details")
+#     vendor=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     projectpost=models.ForeignKey(ProjectboardDetails,on_delete=models.CASCADE,related_name='projectpost')
 
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}/{3}'.format(instance.vendor.uid,"BidDetails","Samplefiles",filename)
@@ -208,8 +226,8 @@ class BidPropasalDetails(models.Model):
     description = models.TextField(blank=True,null=True)
     sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
     mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
-    mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
-    mtpe_count_unit=models.ForeignKey(ServiceTypeunits,on_delete=models.CASCADE,related_name='bid_job_mtpe_unit_type',blank=True,null=True)
+    mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)#Deprecated
+    mtpe_count_unit=models.ForeignKey(Billingunits,on_delete=models.CASCADE,related_name='bid_job_mtpe_unit_type',blank=True,null=True)
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='bidding_currency_detail', on_delete=models.CASCADE)
     bid_step = models.ForeignKey(Steps, on_delete=models.CASCADE,related_name="bidpost_steps",blank=True, null=True,default= 1)
     status = models.ForeignKey(BidStatus,on_delete=models.CASCADE,related_name="bid_status",blank=True, null=True,default = 1)

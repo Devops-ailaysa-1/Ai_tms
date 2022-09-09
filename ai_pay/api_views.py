@@ -3,7 +3,9 @@ import decimal
 from locale import currency
 from ai_auth.models import AiUser, BillingAddress
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment
+from ai_pay.signals import update_po_status
 from ai_staff.models import IndianStates
+from ai_workspace.models import TaskAssignInfo
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from django.conf import settings
@@ -30,6 +32,7 @@ from rest_framework.filters import SearchFilter,OrderingFilter
 from django.db.models import Q
 from django.conf import settings
 import time
+from django.http import Http404
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -67,10 +70,11 @@ def conn_account_create(user):
     stripe.api_key=get_stripe_key()
     acc= get_connect_account(user)
     if acc:
-        if acc.payouts_enabled:
-            return True,None            
-        else:
-            link_type = "account_update"
+        # if acc.payouts_enabled:
+        #     return True,None            
+        # else:
+        #     link_type = "account_update"
+        pass
     else:
         acc=stripe.Account.create(
             type="standard",
@@ -87,7 +91,7 @@ def conn_account_create(user):
             account=acc.id,
             refresh_url=settings.USERPORTAL_URL,
             return_url=settings.USERPORTAL_URL,
-            type= link_type if not 'link_type' in locals() else "account_onboarding"
+            type= link_type if 'link_type' in locals() else "account_onboarding"
             )
         return True,acc_link
     else:
@@ -196,8 +200,8 @@ def customer_create_conn_account(client,seller):
         stripe_account=vendor.id,
         name=cust.subscriber.fullname
         )
-    return conn_cust_create.get('id')
 
+    return conn_cust_create.get('id')
 
 def webhook_wait(invo_id):
     print("inside webhook wait")
@@ -224,7 +228,7 @@ def create_invoice_conn_direct(cust,vendor,currency):
 
     # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
     #         customer=cust.id,amount =amount,currency=currency)
-    print("invo__id",invo.id)
+
     if webhook_wait(invo.id):
         logging.info(f"invoice created : {invo.id}")
     else:
@@ -262,7 +266,6 @@ def update_invoice_items_stripe(cust,vendor,amount,currency,invo_id,po_id):
     metadata={"poid":po_id},
     invoice=invo_id
     )
-
     return invoice_it.get('id')
 
 
@@ -280,7 +283,12 @@ class CreateInvoiceVendor(viewsets.ViewSet):
 
 def po_generate_pdf(po):
     #paragraphs = ['first paragraph', 'second paragraph', 'third paragraph']
-    tasks = po.assignment.assignment_po.all()
+    tasks = po.po_task.all()
+    ## Need to remove added for old po support
+    if tasks.count() <1:
+        pos = PurchaseOrder.objects.filter(assignment=po.assignment,po_status='void')
+        if not pos.count() > 0:
+            tasks = po.assignment.assignment_po.all()
     project_id=tasks.last().projectid
     project_name=tasks.last().project_name
     context={'client': po.client,'seller':po.seller,'poid':po.poid,
@@ -358,32 +366,106 @@ def generate_invoice_offline(po_li,gst=None,user=None):
 
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
-
+    if len(task_assign_info) == 0:
+        return None
     with transaction.atomic():
         po_total_amt=0.0
-        for instance in task_assign_info:
-            assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id)[0]
+        instance = TaskAssignInfo.objects.get(id=task_assign_info[-1])
+        assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
+        insert2={'client':instance.task_assign.task.job.project.ai_user,'seller':instance.task_assign.assign_to,
+                'assignment':assign,'currency':instance.currency,
+                'po_status':'issued','po_total_amount':0}
+        # print("insert2",insert2)
+
+        po=PurchaseOrder.objects.create(**insert2)       
+        for obj_id in task_assign_info:
+            instance = TaskAssignInfo.objects.get(id=obj_id)
+            assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
             if instance.mtpe_count_unit.unit=='Word':
-                tot_amount =instance.total_word_count * instance.mtpe_rate
+                if instance.total_word_count:
+                    tot_amount =instance.total_word_count * instance.mtpe_rate
+                else:
+                    tot_amount = 0
             elif instance.mtpe_count_unit.unit =='Char':
-                tot_amount = instance.task.task_details.last().task_char_count * instance.mtpe_rate
+                if instance.task_assign.task.task_char_count:
+                    tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
+                else:
+                     tot_amount = 0
+            elif instance.mtpe_count_unit.unit =='Fixed':
+                tot_amount = instance.mtpe_rate
+            elif instance.mtpe_count_unit.unit =='Hour':
+                if instance.estimated_hours:
+                    tot_amount = instance.estimated_hours * instance.mtpe_rate
+                else:
+                    tot_amount = 0
             else:
                 # rasie error on invalid price should be rised
                 logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
-            insert={'task_id':instance.task.id,'assignment':assign,'project_name':instance.task.job.project.project_name,'projectid':instance.task.job.project.ai_project_id,
-                    'word_count':instance.total_word_count,'char_count':instance.task.task_char_count,'unit_price':instance.mtpe_rate,
-                    'unit_type':instance.mtpe_count_unit,'source_language':instance.task.job.source_language,'target_language':instance.task.job.target_language,'total_amount':tot_amount}
+            
+            if instance.task_ven_status == 'task_accepted':
+                tsk_accepted = True
+            else:
+                tsk_accepted = False
+
+            insert={'task_id':instance.task_assign.task.id,'po':po,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
+                    'word_count':instance.total_word_count,'char_count':instance.task_assign.task.task_char_count,'unit_price':instance.mtpe_rate,'tsk_accepted':tsk_accepted,
+                    'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':instance.task_assign.task.job.target_language,'total_amount':tot_amount}
             # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
             # print("po_task",po_task)
             po_total_amt+=float(tot_amount)
-        insert2={'client':instance.assigned_by,'seller':instance.task.assign_to,
-                'assignment':assign,'currency':instance.currency,
-                'po_status':'issued','po_total_amount':po_total_amt}
-        # print("insert2",insert2)
-        po=PurchaseOrder.objects.create(**insert2)
+            po.po_total_amount=po_total_amt
+            po.save()
         # print("po2",po)
+    return po
+
+
+def po_modify(task_assign_info_id,po_update):
+    instance= TaskAssignInfo.objects.get(id=task_assign_info_id)
+    assignment_id= instance.assignment_id
+    task =instance.task_assign.task.id
+
+    if 'accepted' in po_update:
+        try:
+            po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
+            po_task_obj.tsk_accepted=True
+            po_task_obj.save()
+            return True
+        except BaseException as e:
+            logging.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
+
+    po_new =None
+    with transaction.atomic():
+        task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
+        if 'unassigned' in po_update:
+            # if task is unassigned
+            task_assign_info_ids.remove(instance.id)      
+        pos = PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignment_id)&~Q(po_status="void"))
+        if pos.count()==1:
+            po =pos.last()
+        else:
+            raise ValueError('returned more than one po for same assignment')
+        po.po_status="void"
+        po.save()
+        if len(task_assign_info_ids)==0:
+            return True
+        po_new = generate_client_po(task_assign_info_ids) 
+        print("new po",po_new) 
+    if po_new:
+        po_tsk = po_new.po_task.last()
+        update_po_status.send(
+            sender=po_tsk.__class__,
+            instance = po_tsk,
+            created = False
+        )
+        return True
+    else:
+        return False
+
+
+def extend_po() :
+    pass
 
 
 
@@ -466,9 +548,9 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
             except BaseException as e:
                 logging.error(f"invoice item error {po.poid} : {str(e)}")
                 return False
-        
-    return stripe_invoice_finalize(invo_id,vendor)
-    
+
+        return stripe_invoice_finalize(invo_id,vendor)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -521,8 +603,12 @@ def po_pdf_get(request):
         po =PurchaseOrder.objects.get(poid=poid)
     elif assignmentid:
         try:
-            po =PurchaseOrder.objects.get(assignment__assignment_id=assignmentid)
-        except PurchaseOrder.MultipleObjectsReturned as e:
+            pos =PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignmentid)&~Q(po_status='void'))
+            if pos.count()==1:
+                po = pos.last()
+            else:
+                raise ValueError('multiple po reurned for assignment')
+        except ValueError as e:
             logging.error(f"for assignmentid: {assignmentid} {str(e)}")
     else:
         return JsonResponse({'error':'poid_or_assignmenid_field_is_required'},status=400)
@@ -534,7 +620,7 @@ def po_pdf_get(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def invoice_pdf_get(request):
-    id = request.GET.get('id')
+    id = request.GET.get('id',None)
     invo =AilaysaGeneratedInvoice.objects.get(id=id)
     if not invo.invo_file:
         invo_pdf = generate_invoice_pdf(invo)
@@ -544,12 +630,19 @@ def invoice_pdf_get(request):
 @permission_classes([IsAuthenticated])
 def cancel_stripe_invoice(request):
     try:
-        id = request.GET.get('id')
+        id = request.POST.get('id',None)
+        print('id',id)
+        if not id:
+            raise ValueError("id_not_given")
         vendor = Account.objects.get(email=request.user.email)
-        void_stripe_invoice(vendor,id)
+        voided = void_stripe_invoice(vendor,id)
+        if voided:
+             return JsonResponse({'msg':'invoice_status_updated'},safe=False,status=200)
+        else:
+            raise ValueError("invoice_voiding_failed")  
     except:
         return JsonResponse({'msg':'invoice_status_updation_failed'},status=400)
-    return JsonResponse({'msg':'invoice_status_updated'},safe=False,status=200)
+   
 
 
 class InvoiceListView(generics.ListAPIView):
@@ -575,3 +668,36 @@ class InvoiceListView(generics.ListAPIView):
 # @permission_classes([IsAuthenticated])
 # def gen_invoice_offline(request):
 #     poids = request.POST.getlist('poids')
+
+
+
+# @api_view(['PUT'])
+# @permission_classes([IsAuthenticated])
+# def update_aigen_invoice_status(request):
+#     try:
+#         id = request.POST.get('id')
+#         invo =AilaysaGeneratedInvoice.objects.get(id=id)
+#         if invo.invo_status == 'open':
+#             invo.invo_status = 'void'
+#         else:
+#             raise ValueError("invoice status not suitable for voiding")
+#     except BaseException as e:
+#         pass
+
+class AilaysaGeneratedInvoiceViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def get_object(self, pk):
+        try:
+            return AilaysaGeneratedInvoice.objects.get(id=pk)
+        except AilaysaGeneratedInvoice.DoesNotExist:
+            raise Http404
+
+    def update(self, request, pk=None):
+        instance=self.get_object(pk)
+        serializer = AilaysaGeneratedInvoiceSerializer(instance,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=200)
+        return Response(serializer.errors, status=400)
+
+        

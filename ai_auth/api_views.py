@@ -84,6 +84,10 @@ try:
 except BaseException as e:
     print(f"Error : {str(e)}")
 
+
+def striphtml(data):
+    p = re.compile(r'<.*?>')
+    return p.sub('', data)
 # class MyObtainTokenPairView(TokenObtainPairView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = MyTokenObtainPairSerializer
@@ -1438,6 +1442,19 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
         return user,password
 
+    def create_thread(self,user,team):
+        print("data--->",user,team)
+        team_obj = Team.objects.get(id=team)
+        from ai_marketplace.serializers import ThreadSerializer
+        # data = [{'first_person':user.id,'second_person':i.internal_member_id} for i in team_obj.internal_member_team_info.all()]
+        for i in team_obj.internal_member_team_info.all():
+            thread_ser = ThreadSerializer(data={'first_person':user.id,'second_person':i.internal_member_id})
+            if thread_ser.is_valid():
+                thread_ser.save()
+            else:
+                print("Errors--->",thread_ser.errors)
+
+
     @integrity_error
     def create(self,request):
         data = request.POST.dict()
@@ -1447,6 +1464,8 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         existing = self.check_user(email,team_name)
         if existing:
             return Response(existing,status = status.HTTP_409_CONFLICT)
+        if InternalMember.objects.filter(team = self.request.user.team).count()>20:
+            return Response({'msg':'internal member count execeeded'},status=400)
         user,password = self.create_internal_user(data.get('name'),email)
         context = {'name':data.get('name'),'email': email,'team':team_name,'role':role_name,'password':password}
         serializer = InternalMemberSerializer(data={**request.POST.dict(),'internal_member':user.id,'status':1,\
@@ -1454,6 +1473,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             auth_forms.internal_user_credential_mail(context)
+            self.create_thread(request.user,data.get('team'))
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1786,6 +1806,10 @@ def vendor_renewal_change(request):
     return JsonResponse({"msg": "changed successfully"})
 
 
+import re
+def striphtml(data):
+    p = re.compile(r'<.*?>')
+    return p.sub('', data)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1828,7 +1852,7 @@ def ai_social_login(request):
     provider_id="google"
     # print(reverse(provider_id +'_login'))
     # url=base_url+reverse(provider_id +'_login')
-    
+
     # req = RequestFactory().get(
     #         reverse(provider_id + "_login"), dict(process="login")
     #     )
@@ -1845,12 +1869,12 @@ def ai_social_login(request):
         state_data["socialaccount_user_state"]="customer"
 
     adapter = GoogleOAuth2Adapter(request)
-    
+
     print("adapter",adapter)
     print("request",request)
     provider=adapter.get_provider()
     oauth2_login = OAuth2LoginView.adapter_view(GoogleOAuth2Adapter)
-    
+
     # req = requests.get(url,params={'process':'login'}, headers={'Connection':'close'},allow_redirects=False)
     rs=oauth2_login(request)
     print(rs.url)
@@ -1898,7 +1922,7 @@ def load_state(state_id,key=None):
         return None
     return user_state
 
-@api_view(['POST'])   
+@api_view(['POST'])
 def ai_social_callback(request):
     state = request.POST.get('state')
     # try:
@@ -1914,7 +1938,7 @@ def ai_social_callback(request):
     user_state=load_state(state)
     if user_state == None:
         return JsonResponse({"error": "invalid_state"},status=440)
- 
+
     # request.session['socialaccount_state']=session.get_decoded().get('socialaccount_state')
     # # print("session print",request.session['socialaccount_state'])
     # print("code an data",request.GET.dict())
@@ -1925,7 +1949,7 @@ def ai_social_callback(request):
 
     # print(rs)
     # print("content",rs.content)
-    
+
     # code = request.GET.get('code')
     # data = {"code":code}
     # print("code",code)
@@ -1979,9 +2003,9 @@ def ai_social_callback(request):
     except ValueError as e:
         logging.info("on social login",str(e))
         return JsonResponse({"error":f"{str(e)}"},status=400)
-    
 
     process = user_state.get('socialaccount_process',None)
+
     try:
         if response.get('user').get('country')!=None:
             logging.info(f"user-{response.get('user').get('pk')} already registerd")
@@ -1991,7 +2015,7 @@ def ai_social_callback(request):
     except AttributeError as e:
         logging.warning(f"user key not found in response {str(e)}")
         return JsonResponse({"error":"user_already_exist"},status=409)
-    
+
     if process == 'signup':
         required.append('country')
 
@@ -1999,15 +2023,15 @@ def ai_social_callback(request):
         if user_type!=None:
                 if user_type == 'vendor':
                     required.append('language_pair')
-        
-        
+
+
         resp_data.update({"required_details":required})
     else:
         resp_data.update({"required_details":None})
 
     user_product = user_state.get('socialaccount_user_product',None)
     user_price = user_state.get('socialaccount_user_price',None)
-    
+
 
     if user_price and user_product :
         user_email=resp_data.get('user').get('email')
@@ -2021,18 +2045,18 @@ def ai_social_callback(request):
 
     # except BaseException as e:
     #     return JsonResponse({"msg": "success"},status=200)
-        
+
     #ss=SocialLoginSerializer(data={"code":code},context={"request":request,"view":GoogleLogin.as_view()})
     #response = GoogleLogin.post(request=request._request)
     #response = reverse("google_login",request)
 
 
     # r = requests.post(
-    #         request.build_absolute_uri(reverse('google_login')), 
+    #         request.build_absolute_uri(reverse('google_login')),
     #         data = {'code':code}
     # )
     # print(r.content)
-     
+
 
     return JsonResponse(resp_data,status=200)
     #return HttpResponseRedirect(reverse('google_login'))
@@ -2057,10 +2081,10 @@ class UserDetailView(viewsets.ViewSet):
 
         user_state=load_state(state)
 
-        
+
         if user_state == None:
             return Response({"error": "invalid_state_or_state_not_found"},status=440)
-        
+
         if country==None and request.user.country==None:
             return Response({"error": "country_required"},status=400)
 
@@ -2071,7 +2095,7 @@ class UserDetailView(viewsets.ViewSet):
 
         #user_pricing = user_state.get('socialaccount_user_state',None)
 
-        
+
         # serializer = UserRegistrationSerializer(obj,data={**request.POST.dict()},partial=True)
         # if serializer.is_valid():
         #     serializer.save()
@@ -2081,17 +2105,17 @@ class UserDetailView(viewsets.ViewSet):
         try:
             with transaction.atomic():
                 user_obj = AiUser.objects.get(id=user.id)
-                if country:                   
+                if country:
                     if user_obj.country==None:
                         user_obj.country_id= country
                         queryset = CurrencyBasedOnCountry.objects.filter(country_id =user_obj.country_id)
                         if queryset:
-                            user_obj.currency_based_on_country_id = queryset.first().currency_id                
+                            user_obj.currency_based_on_country_id = queryset.first().currency_id
                         user_obj.save()
                     else:
                         logging.error(f"user_country_already_updated : {user_obj.uid}")
                         raise ValueError
-                
+
                 if source_lang and target_lang:
                     VendorLanguagePair.objects.create(user=user_obj,source_lang_id = source_lang,target_lang_id =target_lang)
                     user_obj.is_vendor=True
@@ -2100,11 +2124,8 @@ class UserDetailView(viewsets.ViewSet):
 
                 if cv_file:
                     VendorsInfo.objects.create(user=user_obj,cv_file = cv_file )
-                    VendorOnboarding.objects.get_or_create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+                    VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
 
             return Response({'msg':'details_updated_successsfully'},status=200)
         except BaseException as e:
             return Response({'error':f'updation failed {str(e)}'},status=400)
-
-    
-

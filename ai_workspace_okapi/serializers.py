@@ -1,14 +1,22 @@
 from rest_framework import serializers
-from .models import Document, Segment, TextUnit, MT_RawTranslation, MT_Engine, TranslationStatus, FontSize, Comment
-import json, copy, re
+from .models import Document, Segment, TextUnit, MT_RawTranslation, \
+    MT_Engine, TranslationStatus, FontSize, Comment#, MergeSegment
+import json, copy
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
-from ai_workspace.models import  Project, Job
+from ai_workspace.models import  Project,Job
+from ai_auth.models import AiUser
 from django.db.models import Q
 from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from contextlib import closing
 from django.db import connection
 from django.utils import timezone
+from django.apps import apps
+from django.http import HttpResponse, JsonResponse
+from ai_workspace_okapi.models import SegmentHistory,Segment
+from ai_workspace.api_views import UpdateTaskCreditStatus
+import re
+
 import collections
 import csv
 import io,time
@@ -88,6 +96,7 @@ class SegmentSerializer(serializers.ModelSerializer):
         representation["target_tags"] = self.remove_random_tags(representation["target_tags"], random_tag_id_list)
         return representation
 
+from ai_workspace.models import Task,TaskAssignInfo
 class SegmentSerializerV2(SegmentSerializer):
     temp_target = serializers.CharField(trim_whitespace=False)
     target = serializers.CharField(trim_whitespace=False, required=False)
@@ -99,12 +108,27 @@ class SegmentSerializerV2(SegmentSerializer):
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
+    def update_task_assign(self,task_obj,user):
+        try:
+            obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
+            if obj.status != 2:
+                obj.status = 2
+                obj.save()
+        except:pass
+
     def update(self, instance, validated_data):
+        user = self.context.get('request').user
+        task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
+        content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
+            self.update_task_assign(task_obj,user)
+            SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
+        SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+        self.update_task_assign(task_obj,user)
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
@@ -119,6 +143,7 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
         return ret
+
 
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)
@@ -154,6 +179,11 @@ class TextUnitSerializerV2(serializers.ModelSerializer):
         )
         return ret
 
+class TextUnitSerializerTest(serializers.ModelSerializer):
+    class Meta:
+        model = TextUnit
+        fields = "__all__"
+
 class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
     text_unit_ser = TextUnitSerializer(many=True,  write_only=True)
 
@@ -181,65 +211,66 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
 
     def create(self, validated_data, **kwargs):
-        # st = time.time()
-        # text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
-        # text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
-        #
-        # document = Document.objects.create(**validated_data)
-        #
-        # # USING DJANGO SAVE() METHOD
-        # # for text_unit in text_unit_ser_data:
-        # #     segs = text_unit.pop("segment_ser", [])
-        # #     text_unit = TextUnit.objects.create(**text_unit, document=document)
-        # #     for seg  in segs:
-        # #         seg = Segment.objects.create(**seg, text_unit=text_unit)
-        #
-        # # USING BULK CREATE METHOD
-        # # text_unit_instances = []
-        # # segment_instances = []
-        #
-        # # for text_unit in text_unit_ser_data:
-        # #     text_unit.pop("segment_ser", [])
-        # #     text_unit_instances.append(TextUnit(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"], document=document))
-        #
-        # # TextUnit.objects.bulk_create(text_unit_instances)
-        # # print("***** Textunits bulk created ******")
-        #
-        # # for text_unit2 in text_unit_ser_data2:
-        # #     segs = text_unit2.pop("segment_ser", [])
-        # #     text_unit_instance = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit2["okapi_ref_translation_unit_id"]) & \
-        # #                                 Q(document_id=document.id))
-        #
-        # #     for seg in segs:
-        #
-        # #         tagged_source, _ , target_tags = (
-        # #                 set_ref_tags_to_runs(seg["coded_source"],
-        # #                 get_runs_and_ref_ids(seg["coded_brace_pattern"],
-        # #                 json.loads(seg["coded_ids_sequence"])))
-        # #             )
-        #
-        # #         segment_instances.append(Segment(
-        # #             source = seg["source"],
-        # #             target = "",
-        # #             coded_source = seg["coded_source"],
-        # #             coded_brace_pattern = seg["coded_brace_pattern"],
-        # #             coded_ids_sequence = seg["coded_ids_sequence"],
-        # #             temp_target = "",
-        # #             text_unit = text_unit_instance,
-        # #             okapi_ref_segment_id = text_unit2["okapi_ref_translation_unit_id"],
-        # #             tagged_source = tagged_source,
-        # #             target_tags = target_tags,
-        # #             ))
-        #
-        # # Segment.objects.bulk_create(segment_instances)
-        # # print("********** Created segments **********")
-        #
-        # #USING SQL BATCH INSERT
+        from .api_views import MT_RawAndTM_View
+
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
         document = Document.objects.create(**validated_data)
+        pr_obj = document.job.project
+        if pr_obj.pre_translate == True:
+            target_get = True
+            mt_engine = pr_obj.mt_engine_id
+            user = pr_obj.ai_user
+        else:target_get = False
+        # USING DJANGO SAVE() METHOD
+        # for text_unit in text_unit_ser_data:
+        #     segs = text_unit.pop("segment_ser", [])
+        #     text_unit = TextUnit.objects.create(**text_unit, document=document)
+        #     for seg  in segs:
+        #         seg = Segment.objects.create(**seg, text_unit=text_unit)
 
+        # USING BULK CREATE METHOD
+        # text_unit_instances = []
+        # segment_instances = []
+
+        # for text_unit in text_unit_ser_data:
+        #     text_unit.pop("segment_ser", [])
+        #     text_unit_instances.append(TextUnit(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"], document=document))
+
+        # TextUnit.objects.bulk_create(text_unit_instances)
+        # print("***** Textunits bulk created ******")
+
+        # for text_unit2 in text_unit_ser_data2:
+        #     segs = text_unit2.pop("segment_ser", [])
+        #     text_unit_instance = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit2["okapi_ref_translation_unit_id"]) & \
+        #                                 Q(document_id=document.id))
+
+        #     for seg in segs:
+
+        #         tagged_source, _ , target_tags = (
+        #                 set_ref_tags_to_runs(seg["coded_source"],
+        #                 get_runs_and_ref_ids(seg["coded_brace_pattern"],
+        #                 json.loads(seg["coded_ids_sequence"])))
+        #             )
+
+        #         segment_instances.append(Segment(
+        #             source = seg["source"],
+        #             target = "",
+        #             coded_source = seg["coded_source"],
+        #             coded_brace_pattern = seg["coded_brace_pattern"],
+        #             coded_ids_sequence = seg["coded_ids_sequence"],
+        #             temp_target = "",
+        #             text_unit = text_unit_instance,
+        #             okapi_ref_segment_id = text_unit2["okapi_ref_translation_unit_id"],
+        #             tagged_source = tagged_source,
+        #             target_tags = target_tags,
+        #             ))
+
+        # Segment.objects.bulk_create(segment_instances)
+        # print("********** Created segments **********")
+
+        # USING SQL BATCH INSERT
         text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
         ', '.join(['(%s, %s)'] * len(text_unit_ser_data)),
         )
@@ -264,17 +295,52 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
-                target = "" if seg["target"] is None else seg["target"]
-                seg_params.extend([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
+                # target = "" if seg["target"] is None else seg["target"]
+                if target_get == False:
+                    seg['target'] = ""
+                    seg['temp_target'] = ""
+                    status_id = None
+                else:
+                    initial_credit = user.credit_balance.get("total_left")
+                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
+                    if initial_credit > consumable_credits:
+                        mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
+                        seg['temp_target'] = mt
+                        seg['target'] = mt
+                        status_id = TranslationStatus.objects.get(status_id=104).id
+                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    else:
+                        seg['target']=""
+                        seg['temp_target']=""
+                        status_id=None
+                print("Status----->",status_id)
+                seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
-                        timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
-        st1 = time.time()
-        segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
-                       coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids) VALUES {}'.format(
-                           ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
+                        timezone.now(), status_id , text_unit_id, str(seg["random_tag_ids"])])
 
+        print("SEG PARAMS---->",seg_params)
+        segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
+                       coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, status_id, text_unit_id, random_tag_ids) VALUES {}'.format(
+                           ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
         with closing(connection.cursor()) as cursor:
             cursor.execute(segment_sql, seg_params)
+
+
+        if target_get == True:
+            mt_params = []
+            count = 0
+            segments = Segment.objects.filter(text_unit__document=document) #####Need to check this##########
+            for i in segments:
+                if i.target != "":
+                    count += 1
+                    mt_params.extend([i.target,mt_engine,None,"ai_workspace_okapi.segment",i.id])
+            print("MT-------------->",mt_params)
+            mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id, reverse_string_for_segment,segment_id)\
+            VALUES {}".format(','.join(['(%s, %s, %s, %s, %s)'] * count))
+            if mt_params:
+                with closing(connection.cursor()) as cursor:
+                    cursor.execute(mt_raw_sql, mt_params)
+
         # et1 = time.time()
         # el_time = et1 - st1
         # print('Command Execution time:', el_time, 'seconds')
@@ -344,6 +410,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         # elapsed_time = et - st
         # print('Execution time:', elapsed_time, 'seconds')
 
+
         return document
 
 class DocumentSerializerV2(DocumentSerializer):
@@ -365,7 +432,7 @@ class DocumentSerializerV2(DocumentSerializer):
                   "total_segment_count", "created_by", "document_id",
                   "source_language", "target_language", "source_language_id",
                   "target_language_id", "source_language_code", "target_language_code", "doc_credit_check_open_alert",
-                  "is_first_doc_view",
+                  "is_first_doc_view",'assign_detail','show_mt',
                   "target_language_script",'download_audio_output_file',
                   )
 
@@ -386,13 +453,85 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
+# class MT_RawSerializer(serializers.ModelSerializer):
+#     mt_engine_name = serializers.CharField(source="mt_engine.engine_name",
+#         read_only=True)
+#     segment = serializers.CharField(read_only=True, source="get_segment")
+#
+#     class Meta:
+#         model = MT_RawTranslation
+#         fields = (
+#             'mt_engine', 'mt_raw', "mt_engine_name", "task_mt_engine", "reverse_string_for_segment", "segment",
+#         ) #, "target_language"
+#
+#         extra_kwargs = {
+#             "reverse_string_for_segment": {"write_only": True},
+#             "mt_engine": {"default": MT_Engine.objects.get(id=1)},
+#             "mt_raw": {"required": False},
+#             # "mt_engine" : {"required": False},
+#         }
+#
+#     def to_internal_value(self, data):
+#
+#         # data["mt_engine"] = data.get("mt_engine", 1)
+#         data["task_mt_engine"] = data.get("mt_engine", 1)
+#         return super().to_internal_value(data=data)
+#
+#     def create(self, validated_data):
+#         # MT FEED DATA
+#         source_string = validated_data["segment"].source
+#         source_lang_code = validated_data["segment"].source_language_code
+#         target_lang_code = validated_data["segment"].target_language_code
+#
+#         validated_data["mt_raw"] = get_translation(
+#             validated_data["task_mt_engine"].id,
+#             source_string,
+#             source_lang_code,
+#             target_lang_code,
+#         )
+#     #    # print("data--->", data)
+#     #    segment_id = data.get("segment")
+#     #    # print("Segment ID ---> ", segment_id)
+#     #    obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
+#     #    mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
+#
+#     #    # data["mt_engine"] = data.get("mt_engine", 1)
+#     #    data["mt_engine"] = mt_engine_id
+#     #    return super().to_internal_value(data=data)
+#
+#     #def create(self, validated_data):
+#
+#     #    # print("Validated data ---> ", validated_data)
+#
+#     #    segment = validated_data["segment"]
+#     #    mt_engine= validated_data["mt_engine"]
+#
+#     #    text_unit_id = segment.text_unit_id
+#     #    doc = TextUnit.objects.get(id=text_unit_id).document
+#
+#     #    sl_code = doc.source_language_code
+#     #    tl_code = doc.target_language_code
+#
+#         # validated_data["mt_raw"]= client.translate(segment.source,
+#         #     target_language=segment.target_language_code, format_="text")\
+#         #     .get("translatedText")
+#
+#      #   validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
+#
+#         data = validated_data.pop("segment")
+#         instance = MT_RawTranslation.objects.create(**validated_data)
+#         seg_instance = apps.get_model(instance.reverse_string_for_segment).objects.get(id=data.id)
+#         seg_instance.mt_raw_translation = instance
+#         seg_instance.save()
+#
+#         return instance
 class MT_RawSerializer(serializers.ModelSerializer):
     mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
 
     class Meta:
         model = MT_RawTranslation
         fields = (
-            "segment", 'mt_engine', 'mt_raw', "mt_engine_name", "target_language"
+            "segment", 'mt_engine', 'mt_raw',"task_mt_engine", "reverse_string_for_segment", "mt_engine_name", "target_language"
         )
 
         extra_kwargs = {
@@ -401,7 +540,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
 
-        # print("data--->", data)
+        #print("data--->", data)
         segment_id = data.get("segment")
         # print("Segment ID ---> ", segment_id)
         obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
@@ -413,7 +552,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
 
-        # print("Validated data ---> ", validated_data)
+        #print("Validated data ---> ", validated_data)
 
         segment = validated_data["segment"]
         mt_engine= validated_data["mt_engine"]
@@ -429,9 +568,11 @@ class MT_RawSerializer(serializers.ModelSerializer):
         #     .get("translatedText")
 
         validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
-
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
+
+
+
 
 class TM_FetchSerializer(serializers.ModelSerializer):
     pentm_dir_path = serializers.CharField(source=\
@@ -504,6 +645,94 @@ class PentmUpdateSerializer(serializers.ModelSerializer):
         return json.dumps(PentmUpdateParamSerializer(object).data)
 
 
+# class MergeSegmentSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = MergeSegment
+#         fields = ("segments", "text_unit")
+#
+#     def validate(self, data):
+#         segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
+#         text_unit = data["text_unit"]
+#         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
+#             raise serializers.ValidationError("all segments should be have same text unit id...")
+#         return super().validate(data)
+
+class ListSegmentIntgerationUpdateSerializer(serializers.ListSerializer):
+    def create(self, validated_data, text_unit):
+        ids = []
+        for s_data in validated_data:
+            segment = self.child.create(s_data, text_unit=text_unit, ids = ids)
+            ids.append(segment.id)
+
+class SegmentIntgerationUpdateSerializer(serializers.ModelSerializer):
+    source = serializers.CharField(trim_whitespace=False, allow_blank=True)
+    random_tag_ids = serializers.CharField(allow_blank=True, required=False)
+
+    class Meta:
+        model = Segment
+        list_serializer_class = ListSegmentIntgerationUpdateSerializer
+
+        fields = (
+            "source",
+            "target",
+            "coded_source",
+            "coded_brace_pattern",
+            "coded_ids_sequence",
+            "text_unit",
+            #"is_merge_start",
+            "random_tag_ids",
+        )
+
+        extra_kwargs = {
+            #"is_merged": {"required": False, "default": False},
+            "text_unit": {"required": False},
+        }
+
+    def to_internal_value(self, data):
+        print("child internal")
+        data["coded_ids_sequence"] = json.dumps(data["coded_ids_sequence"])
+        data["random_tag_ids"] = json.dumps(data["random_tag_ids"])
+        return super().to_internal_value(data=data)
+
+    def create(self, validated_data, text_unit, ids):
+        segment = text_unit.text_unit_segment_set.filter(
+           Q (source=validated_data.get("source")) & (~Q(id__in=ids))
+            ).first()
+        if segment:
+            return segment
+        segment = Segment.objects.create(**validated_data, text_unit=text_unit)
+        return  segment
+
+class ListTextUnitIntgerationUpdateSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        result = []
+        for s_data in validated_data:
+            result.append(self.child.create(s_data))
+        return  result
+
+class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
+    text_unit_segment_set = SegmentIntgerationUpdateSerializer(many=True)
+    class Meta:
+        list_serializer_class = ListTextUnitIntgerationUpdateSerializer
+        model = TextUnit
+        fields  = ("text_unit_segment_set", "document",
+                   "okapi_ref_translation_unit_id")
+
+    def create(self, validated_data):
+        segments = validated_data.pop("text_unit_segment_set")
+        text_unit, created = TextUnit.objects.get_or_create(
+            okapi_ref_translation_unit_id = validated_data.get("okapi_ref_translation_unit_id"),
+            document = validated_data.get("document")
+        )
+
+        ser = SegmentIntgerationUpdateSerializer(many=True)
+        ser.create(segments, text_unit=text_unit)
+        return text_unit
+
+class SegmentHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SegmentHistory
+        fields = '__all__'
 
 class VerbSerializer(serializers.Serializer):
     text_string = serializers.CharField()

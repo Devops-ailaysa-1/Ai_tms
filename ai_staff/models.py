@@ -88,6 +88,10 @@ class ContentTypes(ParanoidModel):
 
     class Meta:
         db_table = 'content_types'
+        verbose_name_plural = "Content_types"
+
+    def __str__(self):
+        return self.name
 
 class Languages(ParanoidModel):
     #lang_code = models.CharField(max_length=191)
@@ -237,6 +241,9 @@ class AssetUsageTypes(ParanoidModel):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     #deleted_at = models.DateTimeField(blank=True, null=True)
     is_active=models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.use_type
 
     class Meta:
         db_table = 'asset_usage_types'
@@ -443,8 +450,21 @@ class MTLanguageSupport(models.Model):
 
 
 class MTLanguageLocaleVoiceSupport(models.Model):
+    GENDER =(('MALE','MALE'),('FEMALE','FEMALE'))
     language = models.ForeignKey(Languages,related_name='supported_language', on_delete=models.CASCADE)
     language_locale = models.ForeignKey(LanguagesLocale,related_name='supported_locale', on_delete=models.CASCADE)
     mtpe_engines = models.ForeignKey(AilaysaSupportedMtpeEngines,related_name='support_mt',on_delete=models.CASCADE)
-    has_female = models.BooleanField(default=False)
-    has_male = models.BooleanField(default=False)
+    # has_female = models.BooleanField(default=False)
+    # has_male = models.BooleanField(default=False)
+    gender=models.CharField(max_length=50,choices=GENDER)
+    voice_name = models.CharField(max_length=300, null=True, blank=True)
+    voice_type = models.CharField(max_length=100, null=True, blank=True)#wavenet,standard,neural
+
+# class MTLanguageLocaleVoiceSupport(models.Model):
+#     language = models.ForeignKey(Languages,related_name='supported_language', on_delete=models.CASCADE)
+#     language_locale = models.ForeignKey(LanguagesLocale,related_name='supported_locale', on_delete=models.CASCADE)
+#     mtpe_engines = models.ForeignKey(AilaysaSupportedMtpeEngines,related_name='support_mt',on_delete=models.CASCADE)
+#     has_female = models.BooleanField(default=False)
+#     has_male = models.BooleanField(default=False)
+#     voice_name = models.CharField(max_length=300, null=True, blank=True)
+#     voice_type = models.CharField(max_length=100, null=True, blank=True)#wavenet,standard,neural

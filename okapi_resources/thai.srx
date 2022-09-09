@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<srx xmlns="http://www.lisa.org/srx20" xmlns:okpsrx="http://okapi.sf.net/srx-extensions" version="2.0">
+<header segmentsubflows="yes" cascade="no">
+<formathandle type="start" include="no"></formathandle>
+<formathandle type="end" include="yes"></formathandle>
+<formathandle type="isolated" include="no"></formathandle>
+<okpsrx:options oneSegmentIncludesAll="no" trimLeadingWhitespaces="no" trimTrailingWhitespaces="no" useJavaRegex="yes" useIcu4JBreakRules="no" treatIsolatedCodesAsWhitespace="no"></okpsrx:options>
+<okpsrx:sample language="en" useMappedRules="yes">มหาวิทยาลัยจำนวนมากทั่วโลกมีการเรียนการสอนภาษาญี่ปุ่น นอกจากนี้ยังมีโรงเรียนมัธยมและโรงเรียนประถมบางแห่งที่สอนภาษาญี่ปุ่นด้วย ภาษาญี่ปุ่นได้รับความสนใจตั้งแต่คริสต์ทศวรรษ 1800 และเป็นที่แพร่หลายมากขึ้นในช่วงเศรษฐกิจญี่ปุ่นกำลังเฟื่องฟูในทศวรรษ 1980 ส่วนหนึ่งเป็นเพราะวัฒนธรรมป๊อปปูล่าร์ของญี่ปุ่น (เช่น อนิเมะ และ วิดีโอเกม) กำลังแพร่หลายไปทั่วโลกตั้งแต่ทศวรรษ 1990 ใน ค.ศ. 2003 มีผู้ศึกษาภาษาญี่ปุ่นอยู่ทั้งหมด 2.3 ล้านคนทั่วโลก แบ่งเป็น ชาวเกาหลีใต้ 900,000 คน ชาวจีน 389,000 ชาวออสเตรเลีย 381,000 คน และชาวอเมริกัน 140,000 คน ในญี่ปุ่นมีชาวต่างชาติที่ศึกษาภาษาญี่ปุ่นทั้งที่มหาวิทยาลัยและที่โรงเรียนสอนภาษาอยู่ทั้งหมด 90,000 คน แบ่งเป็นชาวจีน 77,000 คน และชาวเกาหลีใต้ 15,000 นอกจากนี้ รัฐท้องถิ่นและกลุ่มองค์กรไม่หวังผลกำไรยังสนับสนุนให้มีการเรียนภาษาญี่ปุ่นฟรีสำหรับชาวต่างชาติที่พำนักอาศัยอยู่ รวมถึงชาวบราซิล-ญี่ปุ่น และชาวต่างชาติที่โอนสัญชาติเป็นญี่ปุ่นด้วย </okpsrx:sample>
+<okpsrx:rangeRule></okpsrx:rangeRule>
+</header>
+<body>
+<languagerules>
+<languagerule languagerulename="default">
+<rule break="yes">
+<beforebreak>[\n\s]+</beforebreak>
+<afterbreak></afterbreak>
+</rule>
+</languagerule>
+</languagerules>
+<maprules>
+<languagemap languagepattern=".*" languagerulename="default"></languagemap>
+</maprules>
+</body>
+</srx>

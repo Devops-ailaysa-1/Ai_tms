@@ -93,17 +93,21 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         if self.team:
             return [i.internal_member for i in self.team.internal_member_team_info.all()]
 
-
     @property
     def credit_balance(self):
         # total_credit_left = 0
-        addons = subscription = 0
+        addons = subscription = subscription_total= addon_buyed_credits= 0
         present = datetime.now()
 
         try:
             addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
             for addon in addon_credits:
                 addons += addon.credits_left
+                # addon credits doesn't have expiry so we are excluding record with zero credits_left
+                if addon.credits_left != 0:
+                    # Need to update if addon expiry is added
+                    addon_buyed_credits += addon.buyed_credits
+
         except Exception as e:
             print("NO ADD-ONS AVAILABLE")
 
@@ -112,6 +116,15 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
                                                 & Q(ended_at=None))
             if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 subscription += sub_credits.credits_left
+
+                sub_buyed_credits = sub_credits.buyed_credits
+                if sub_credits.carried_credits ==None:    
+                    carryed_credits = abs(sub_buyed_credits - subscription)
+                    sub_credits.carried_credits=carryed_credits
+                    sub_credits.save()
+                sub_carryed_credits = sub_credits.carried_credits
+                subscription_total = sub_buyed_credits + sub_carryed_credits
+            
 
             # carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
             #     Q(ended_at__isnull=False)).last()
@@ -125,7 +138,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
 
         # return total_credit_left
-        return {"addon": addons, "subscription": subscription, "total_left": addons + subscription}
+        return {"addon": addons, "subscription": subscription, "total_left": addons + subscription ,"total_buyed": subscription_total + addon_buyed_credits}
 
     @property
     def buyed_credits(self):
@@ -154,7 +167,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
                     avai_cp = credits.buyed_credits
                 else:
                     print("else")
-                    if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
+                    if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') \
+                                    <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
+                    # if startdate.strftime('%Y-%m-%d %H:%M:%S') <= credits.expiry.strftime('%Y-%m-%d %H:%M:%S') <= enddate.strftime('%Y-%m-%d %H:%M:%S'):
                         startdate = credits.created_at
                         enddate = credits.expiry
                         print("inside else")
@@ -165,9 +180,9 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             #     subscription += carry_on_credits.credits_left
         except:
             print("No active subscription")
-            return {"addon":addons, "subscription":avai_cp}
+            return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
-        return {"addon":addons, "subscription":avai_cp}
+        return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
     # @property
     # def buyed_credits(self):
@@ -329,6 +344,7 @@ class UserCredits(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     buyed_credits = models.IntegerField()
     credits_left =models.IntegerField()
+    carried_credits =models.IntegerField(blank=True, null=True)
     expiry = models.DateTimeField(blank=True, null=True)
     invoice = models.CharField(max_length=200,blank=True, null=True)
     paymentintent = models.CharField(max_length=200,blank=True, null=True)
@@ -466,6 +482,9 @@ class InternalMember(models.Model):
         return self.internal_member.email
 
 
+def default_date_hired_editor_expiry():
+    return date.today() + timedelta(days=7)
+
 class HiredEditors(models.Model):
     INVITE_SENT = 1
     INVITE_ACCEPTED = 2
@@ -479,7 +498,7 @@ class HiredEditors(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_info')
     hired_editor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='hired_editor')
     date_of_link_sent = models.DateField(blank= True, default=timezone.now)
-    date_of_expiry = models.DateField(blank= True, default=date.today() + timedelta(days=7))
+    date_of_expiry = models.DateField(blank= True, default=default_date_hired_editor_expiry)
     added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='external_team_manager',blank=True, null=True)
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:

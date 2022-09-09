@@ -89,11 +89,12 @@ def post_project_primary_details(request):
     project_id=request.POST.get('project_id')
     project = get_object_or_404(Project.objects.all(), id=project_id)
                      # ai_user=self.request.user)
+    jobs = project.project_jobs_set.all()
     try:
-        if project.voice_proj_detail.project_type_sub_category_id == 2:
+        if project.voice_proj_detail.project_type_sub_category_id == 2:     ###########text-to-speech
             jobs =  project.project_jobs_set.filter(~Q(target_language=None))
             tasks = project.get_assignable_tasks
-        else:
+        else:  ###########speech-to-text#################
             jobs = project.project_jobs_set.all()
             tasks = project.get_tasks
     except:
@@ -105,8 +106,9 @@ def post_project_primary_details(request):
     contents = ProjectContentTypeSerializer(contents,many=True)
     subjects = ProjectSubjectSerializer(subjects,many=True)
     # tasks = project.get_tasks
-    task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,'word_count':i.task_word_count if i.task_details.exists() else None} for i in tasks]
-    result = {'project_name':project.project_name,'task_count_detail':task_count_detail,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
+    task_count_detail = [{'source-target-pair':i.job.source_target_pair_names,\
+                        'word_count':i.task_word_count if i.task_details.exists() else None} for i in tasks]
+    result = {'project_name':project.project_name,'project_type':project.project_type_id,'task_count_detail':task_count_detail,'jobs':jobs.data,'subjects':subjects.data,'contents':contents.data}
     return JsonResponse({"res":result},safe=False)
 
 
@@ -142,6 +144,7 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
                 serializer1.save()
         # customer = request.user.id
         serializer = ProjectPostSerializer(data={**request.POST.dict(),'customer_id':customer.id,'posted_by_id':request.user.id},context={'request':request})
+
         if serializer.is_valid():
             serializer.save()
             # print("ID------------------->",serializer.data.get('id'))
@@ -176,7 +179,6 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors)
 
     def delete(self,request,pk):
         projectpost_info = ProjectboardDetails.objects.get(id=pk)
@@ -300,7 +302,6 @@ class BidPostInfoCreateView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def post_bid_primary_details(request):############need to include currency conversion###############
@@ -312,6 +313,10 @@ def post_bid_primary_details(request):############need to include currency conve
     else:
         return JsonResponse({'msg':'not a vendor'})
 
+
+def unit_price_float_format(price):
+    formatNumber = lambda n: n if n%1 else int(n)
+    return formatNumber(price)
 
 
 @api_view(['POST',])
@@ -343,8 +348,8 @@ def bid_proposal_status(request):
                 token = invite_accept_token.make_token(tt)
                 link = join(settings.TRANSEDITOR_BASE_URL,settings.EXTERNAL_MEMBER_ACCEPT_URL, uid,token)
                 context = {'name':obj.vendor.fullname,'team':user.fullname,'link':link,'job':obj.bidpostjob.source_target_pair_names,
-                           'hourly_rate': str(obj.mtpe_hourly_rate.quantize(Decimal("0.00"))) + '(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit,\
-                            'unit_rate':str(obj.mtpe_rate.quantize(Decimal("0.00"))) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
+                           'hourly_rate': str(unit_price_float_format(obj.mtpe_hourly_rate)) +'(' + obj.currency.currency_code + ')' + ' per ' + obj.mtpe_count_unit.unit if obj.mtpe_hourly_rate else None,\
+                            'unit_rate':str(unit_price_float_format(obj.mtpe_rate)) + '(' + obj.currency.currency_code + ')'+ ' per ' + obj.mtpe_count_unit.unit,\
                             'job_id':obj.bidpostjob.postjob_id,'project':obj.projectpost.proj_name,\
                             'date':obj.created_at.date().strftime('%d-%m-%Y')}
                 print("Mail------>",obj.vendor.email)
@@ -538,19 +543,22 @@ def get_available_threads(request):
 @permission_classes([IsAuthenticated])
 def chat_unread_notifications(request):
     user = AiUser.objects.get(pk=request.user.id)
-    count = user.notifications.filter(verb='Message').unread().count()
     notification_details=[]
     notification=[]
-    notification.append({'total_count':count})
     # notifications = user.notifications.unread().filter(verb='Message').order_by('data','-timestamp').distinct('data')
     notifications = user.notifications.unread().filter(verb='Message').filter(pk__in=Subquery(
             user.notifications.unread().filter(verb='Message').order_by("data",'-timestamp').distinct("data").values('id'))).order_by("-timestamp")
     for i in notifications:
-       count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
-       sender = AiUser.objects.get(id =i.actor_object_id)
-       try:profile = sender.professional_identity_info.avatar_url
-       except:profile = None
-       notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
+       try:
+           sender = AiUser.objects.get(id =i.actor_object_id)
+           count = user.notifications.filter(Q(data=i.data) & Q(verb='Message')).unread().count()
+           try:profile = sender.professional_identity_info.avatar_url
+           except:profile = None
+           notification_details.append({'thread_id':i.data.get('thread_id'),'avatar':profile,'sender':sender.fullname,'sender_id':sender.id,'message':i.description,'timestamp':i.timestamp,'count':count})
+       except:
+           mark_as_read = user.notifications.filter(Q(data=i.data) & Q(actor_object_id=i.actor_object_id)).mark_all_as_read()
+    total_count = user.notifications.filter(verb='Message').unread().count()
+    notification.append({'total_count':total_count})
     return JsonResponse({'notifications':notification,'notification_details':notification_details})
 
 @api_view(['GET',])
@@ -660,11 +668,12 @@ def get_previous_accepted_rate(request):
     vendor = AiUser.objects.get(id=vendor_id)
     print(vendor)
     #query = TaskAssignInfo.objects.filter(Q(assigned_by = user) & Q(task__assign_to = vendor))
-    query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task__assign_to = vendor))
-    query_final = query.filter(Q(task__job__source_language = job_obj.source_language) & Q(task__job__target_language = job_obj.target_language))
+    query = TaskAssignInfo.objects.filter(Q(task_ven_status = 'task_accepted') & Q(assigned_by = user) & Q(task_assign__assign_to = vendor)).order_by('-id')
+    query_final = query.filter(Q(task_assign__task__job__source_language = job_obj.source_language) & Q(task_assign__task__job__target_language = job_obj.target_language))
+
     rates =[]
     for i in query_final:
-        out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id}]
+        out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
         rates.append(out)
     return JsonResponse({"Previously Agreed Rates":rates})
 

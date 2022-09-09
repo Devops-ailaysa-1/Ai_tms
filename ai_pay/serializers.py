@@ -52,12 +52,12 @@ class PurchaseOrderListSerializer(serializers.Serializer):
         return request
 
     def get_payable(self,obj):
-        query = obj.filter(client = self._get_request().user)
+        query = obj.filter(client = self._get_request().user).order_by('-created_at')
         return PurchaseOrderSerializer(query,many=True).data
 
 
     def get_receivable(self,obj):
-        query = obj.filter(seller = self._get_request().user)
+        query = obj.filter(seller = self._get_request().user).order_by('-created_at')
         return PurchaseOrderSerializer(query,many=True).data
 
 
@@ -81,6 +81,25 @@ class AilaysaGeneratedInvoiceSerializer(serializers.ModelSerializer):
              #"created_at":{"write_only":True}
             }
 
+    def validate(self, data):
+        instance = getattr(self, 'instance', None)
+        if data['invo_status'] == 'void' and instance:
+            if instance.invo_status != 'open':
+                raise serializers.ValidationError({"invo_status": "invoice status not suitable for voiding"})
+        if data['invo_status'] == 'paid' and instance:
+            if instance.invo_status != 'open':
+                raise serializers.ValidationError({"invo_status": "invoice status not suitable for voiding"})         
+        return data
+
+    def update(self, instance, validated_data):
+        if validated_data.get('invo_status'):
+            instance.invo_status = validated_data.get("invo_status",\
+                instance.invo_status)
+            instance.save()      
+        return instance
+
+
+
 class StripeInvoiceSerializer(serializers.ModelSerializer):
     invoid = serializers.CharField(source='number') 
     invo_status = serializers.CharField(source='status')
@@ -96,7 +115,7 @@ class StripeInvoiceSerializer(serializers.ModelSerializer):
         # fields =('id','status','account_name','customer_name','total','tax','currency','created')
         fields = ('id','invoid','invo_status','client_name','seller_name',
         'currency','currency_code','created_at','grand_total','stripe')
-    
+
     def get_stripe(self,obj):
         return {"stripe":True,"invoice_pdf":obj.invoice_pdf,"hosted_invoice_url":obj.hosted_invoice_url}
 
@@ -105,7 +124,6 @@ class StripeInvoiceSerializer(serializers.ModelSerializer):
     #     response = super().to_representation(instance)
     #     response["payable"] = sorted(response["payable"], key=lambda x: x["created_at"])
     #     return response
-
 
 
 
@@ -128,32 +146,37 @@ class InvoiceListSerializer(serializers.Serializer):
         return request.GET.get('ordering','created_at')
 
 
+    def _get_ordering(self):
+        request = self._get_request()
+        return request.GET.get('ordering','created_at')
+
     def get_payable(self,obj):
-        query = obj.filter(client = self._get_request().user)
-        off_payable = AilaysaGeneratedInvoiceSerializer(query,many=True).data
+        query_off = obj.filter(client = self._get_request().user)
+        off_payable = AilaysaGeneratedInvoiceSerializer(query_off,many=True).data
         cust=Customer.objects.filter(subscriber=self._get_request().user)
-        query = Invoice.objects.filter(customer__in=cust)
-        stripe_payable=  StripeInvoiceSerializer(query,many=True).data
+        query_stripe = Invoice.objects.filter(Q(customer__in=cust)& ~Q(djstripe_owner_account__id="acct_1JWwU2SHaXADggwo"))
+        stripe_payable=  StripeInvoiceSerializer(query_stripe,many=True).data
         #jsonArray1 = off_payable.concat(stripe_payable)
         return off_payable+stripe_payable
+
 
     def get_receivable(self,obj):
         from ai_pay.api_views import get_connect_account
         acc = get_connect_account(self._get_request().user)
-        query = obj.filter(seller = self._get_request().user)
-        off_receivable = AilaysaGeneratedInvoiceSerializer(query,many=True).data
+        query_off = obj.filter(seller = self._get_request().user)
+        off_receivable = AilaysaGeneratedInvoiceSerializer(query_off,many=True).data
         if acc:
-            query = Invoice.objects.filter(djstripe_owner_account=acc)
+            query_stripe = Invoice.objects.filter(djstripe_owner_account=acc)
         else:
-            query=None
-        stripe_receivable=StripeInvoiceSerializer(query,many=True).data
+            query_stripe=None
+        stripe_receivable=StripeInvoiceSerializer(query_stripe,many=True).data
         return off_receivable+stripe_receivable
 
     # def get_stripe_invoices_payable(self,obj):
     #     cust=Customer.objects.filter(subscriber=self._get_request().user)
     #     query = Invoice.objects.filter(customer__in=cust)
     #     return StripeInvoiceSerializer(query,many=True).data
-    
+
     # def get_stripe_invoices_receivable(self,obj):
     #     from ai_pay.api_views import get_connect_account
     #     acc = get_connect_account(self._get_request().user)
@@ -166,7 +189,6 @@ class InvoiceListSerializer(serializers.Serializer):
     def to_representation(self, instance):
         print("ordering",self._get_ordering())
         response = super().to_representation(instance)
-        response["payable"] = sorted(response["payable"], key=lambda x: x[self._get_ordering()])
-        response["receivable"] = sorted(response["receivable"], key=lambda x: x[self._get_ordering()])
+        response["payable"] = sorted(response["payable"], key=lambda x: x[self._get_ordering()], reverse=True)
+        response["receivable"] = sorted(response["receivable"], key=lambda x: x[self._get_ordering()],reverse=True)
         return response
-        

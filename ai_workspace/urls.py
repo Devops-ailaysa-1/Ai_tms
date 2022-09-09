@@ -22,12 +22,16 @@ router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
 				basename="project-reference-files")
+router.register(r'steps',api_views.StepsView,basename='steps')
+#router.register(r'tasks',api_views.TaskView,basename='tasks')
+router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
 urlpatterns = router.urls
 
 # api_views urls
 urlpatterns += [
 	path("tasks/", api_views.TaskView.as_view(), name="tasks"),
+	path("tasks/<int:id>/",api_views.TaskView.as_view(),name="delete_tasks"),
 	path("files_jobs/<int:project_id>/", api_views.Files_Jobs_List.as_view(),\
 		 name="get-files-jobs-by-project_id"),
 	path("source_tmx/<int:project_id>/", api_views.TmxFilesOfProject.as_view(),\
@@ -52,19 +56,29 @@ urlpatterns += [
 	path("task_credit_status_update/<int:doc_id>", api_views.UpdateTaskCreditStatus.as_view(), name="task-credit-update"),
 	path("dashboard_credit_status", api_views.dashboard_credit_status, name="dashboard-credit-status"),
 	path('create_project_from_temp_project/',api_views.create_project_from_temp_project_new),
-	path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
+	# path('task_assign_update/',api_views.TaskAssignInfoCreateView.as_view({'put':'update'})),
+	path('task_assign_update/',api_views.TaskAssignUpdateView.as_view({'put':'update'})),
 	path('get_assign_to_list/',api_views.get_assign_to_list),
 	path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
 	path('assign_to/',api_views.AssignToListView.as_view({'get': 'list'}),name='assign-list'),
 	path('tasks_list/',api_views.tasks_list),
+	path('used_steps/',api_views.previously_created_steps),
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
 	path("download/<int:project_id>/",api_views.project_download),
-	path("instruction_file_download/<int:task_assign_info_id>", api_views.instruction_file_download, name="instruction-file-download"),
+	path("instruction_file_download/<int:instruction_file_id>", api_views.instruction_file_download, name="instruction-file-download"),
+	#path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"})),
+	path("listdownload/",api_views.project_list_download),
+	path("download/<int:project_id>/",api_views.project_download),
+	#path("update_after_transcription/<int:id>/",api_views.update_project_from_writer),
 	path("mt_samples/",api_views.ShowMTChoices.as_view(), name='mt-samples'),
 	path('transcribe_file/',api_views.transcribe_file),
-	path('transcribe_and_download_text_to_speech_source/',api_views.transcribe_and_download_text_to_speech_source),
+	path('get_transcribe_file/',api_views.transcribe_file_get),
+	path('convert_and_download_text_to_speech_source/',api_views.convert_and_download_text_to_speech_source),
 	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
+	path('download_speech_to_text_source/',api_views.download_speech_to_text_source),
 	path('task/unassign/',api_views.task_unassign),
+	path('get_quill_data/',api_views.get_quill_data),
+	path('writer_save/',api_views.writer_save),
 ]
 # views urls adding for local testing
 urlpatterns += [
@@ -73,6 +87,7 @@ urlpatterns += [
 	path("dj/logout", views.LoginOutView.as_view(), name="dj-logout"),
 	path("tasks_dj/<int:project_id>/", views.TaskCreateViewDj.as_view(), name="task-create-dj"),
 	path("tasks/dj", views.TaskListView.as_view(), name="task-list-dj"),
+
 	# path("document/<int:project_id>/dj", views.DocumentView.as_view(), name="document-view"), # Segments will be listed here
 
 	# path("source_tmx", )
