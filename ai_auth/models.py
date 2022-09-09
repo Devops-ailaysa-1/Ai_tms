@@ -482,6 +482,9 @@ class InternalMember(models.Model):
         return self.internal_member.email
 
 
+def default_date_hired_editor_expiry():
+    return date.today() + timedelta(days=7)
+
 class HiredEditors(models.Model):
     INVITE_SENT = 1
     INVITE_ACCEPTED = 2
@@ -495,7 +498,7 @@ class HiredEditors(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_info')
     hired_editor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='hired_editor')
     date_of_link_sent = models.DateField(blank= True, default=timezone.now)
-    date_of_expiry = models.DateField(blank= True, default=date.today() + timedelta(days=7))
+    date_of_expiry = models.DateField(blank= True, default=default_date_hired_editor_expiry)
     added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='external_team_manager',blank=True, null=True)
     role = models.ForeignKey(Role,on_delete=models.CASCADE)
     class Meta:
