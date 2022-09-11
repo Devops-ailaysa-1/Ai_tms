@@ -1974,7 +1974,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
         wc = res1.json() if res1.status_code == 200 else None
         TaskDetails.objects.create(task = obj,task_word_count = wc,project = obj.job.project)
         audio_file = name_ + '_source'+'.mp3'
-        res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE')
+        res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',None)
         ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":request.user.id})
         if ser.is_valid():
             ser.save()

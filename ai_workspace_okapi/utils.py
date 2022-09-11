@@ -358,10 +358,12 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
         return lingvanex(source_string, source_lang_code, target_lang_code)
 
 
-def text_to_speech(ssml_file,target_language,filename,voice_gender):
+def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
+    from ai_staff.models import MTLanguageLocaleVoiceSupport
     from google.cloud import texttospeech
-    # print("@#@#@#@#@#",voice_gender)
+    print("@#@#@#@#@#",voice_gender,voice_name,target_language)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
+    voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
     client = texttospeech.TextToSpeechClient()
@@ -369,7 +371,7 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
     voice = texttospeech.VoiceSelectionParams(
-        language_code=target_language, ssml_gender=gender
+        name=voice_name,language_code=target_language, ssml_gender=gender
     )
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3
@@ -383,7 +385,7 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
     out.close()
     f2 = open(filename, 'rb')
     file_obj = DJFile(f2)
-    # print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)
+    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)
     return file_obj,f2
     # dir = os.path.join(path,"Audio")
     # if not os.path.exists(dir):
