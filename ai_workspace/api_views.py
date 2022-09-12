@@ -2135,6 +2135,7 @@ def writer_save(request):
     edited_data = json.loads(edited_text)
     obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
     filename,ext = os.path.splitext(task_obj.file.filename)
+    print("Filename---------------->",filename)
     name = filename + '.docx'
     file_obj,name,f2 = docx_save(name,edited_data)
     if obj:
