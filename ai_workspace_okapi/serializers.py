@@ -13,7 +13,7 @@ from django.db import connection
 from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
-from ai_workspace_okapi.models import SegmentHistory,Segment
+from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 
@@ -62,6 +62,9 @@ class SegmentSerializer(serializers.ModelSerializer):
             "temp_target",
             "status",
             "has_comment",
+            "is_merged",
+            "text_unit",
+            "is_merge_start",
             "random_tag_ids",
         )
 
@@ -73,6 +76,9 @@ class SegmentSerializer(serializers.ModelSerializer):
             # "random_tag_ids" : {"read_only": True},
             "tagged_source": {"read_only": True},
             "target_tags": {"read_only": True},
+            "is_merged": {"required": False, "default": False},
+            "text_unit": {"read_only": True},
+            "is_merge_start": {"read_only": True},
             # "id",
         }
 
@@ -144,6 +150,22 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
         return ret
 
+class MergeSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MergeSegment
+        fields = ("segments", "text_unit")
+        # extra_kwargs = {
+        #     "segments": {"read_only": True},
+        #     "text_unit": {"read_only": True},
+        # }
+    def validate(self, data):
+        print("Running validation ++++++++")
+        print("DATA ---------> ", data)
+        segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
+        text_unit = data["text_unit"]
+        if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
+            raise serializers.ValidationError("Segments for merging should have same text_unit_id")
+        return super().validate(data)
 
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)
@@ -530,8 +552,12 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MT_RawTranslation
+        # fields = (
+        #     "segment", 'mt_engine', 'mt_raw',"task_mt_engine", "reverse_string_for_segment", "mt_engine_name", "target_language"
+        # )
         fields = (
-            "segment", 'mt_engine', 'mt_raw',"task_mt_engine", "reverse_string_for_segment", "mt_engine_name", "target_language"
+            "segment", 'mt_engine', 'mt_raw', "task_mt_engine", "mt_engine_name",
+            "target_language"
         )
 
         extra_kwargs = {

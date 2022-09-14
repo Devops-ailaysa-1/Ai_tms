@@ -39,13 +39,13 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 from ai_workspace.models import File,Project
 from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from .serializers import PentmUpdateSerializer,SegmentHistorySerializer
 from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
-                          TM_FetchSerializer)
+                          TM_FetchSerializer, MergeSegmentSerializer)
 from django.urls import reverse
 from json import JSONDecodeError
 from .utils import SpacesService
@@ -327,15 +327,33 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
-        segments = document.segments_without_blank
+        segments = document.segments_for_workspace
         len_segments = segments.count()
-        page_len = self.paginate_queryset(range(1,len_segments+1), request)
-        # print(page_len)
+        page_len = self.paginate_queryset(range(1, len_segments + 1), request)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
-        [i.update({"segment_count":j}) for i,j in  zip(segments_ser.data, page_len)]
-        return self.get_paginated_response(segments_ser.data)
 
+        data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
+                if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
+
+        [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
+
+        res = self.get_paginated_response(data)
+        return res
+
+class MergeSegmentView(viewsets.ModelViewSet):
+    serializer_class = MergeSegmentSerializer
+    def create(self, request, *args, **kwargs):
+        print("Request data =======> ", request.data)
+        serlzr = self.serializer_class(data=request.data)
+        print("^^^^ Reached ^^^^^")
+        if serlzr.is_valid(raise_exception=True):
+            print("Validated data ---> ", serlzr.validated_data)
+            serlzr.save(id=serlzr.validated_data.get("segments")[0].id)
+            print("Reached after save ****************")
+            obj =  serlzr.instance
+            obj.update_segments(serlzr.validated_data.get("segments"))
+            return Response(MergeSegmentSerializer(obj).data)
 
 def get_supported_file_extensions(request):
     return JsonResponse(CURRENT_SUPPORT_FILE_EXTENSIONS_LIST, safe=False)
@@ -350,12 +368,17 @@ class SourceTMXFilesCreate(views.APIView):
         jobs, files = self.get_queryset(project_id=project_id)
 
 class SegmentsUpdateView(viewsets.ViewSet):
-    @staticmethod
-    def get_object(segment_id):
+    # @staticmethod
+    # def get_object(segment_id):
+    #     qs = Segment.objects.all()
+    #     segment = get_object_or_404(qs, id = segment_id)
+    #     return segment
+
+    def get_object(self, segment_id):
+        # segment_id = self.kwargs["pk"]
         qs = Segment.objects.all()
         segment = get_object_or_404(qs, id = segment_id)
-        print("SEG---------->",segment)
-        return segment
+        return segment.get_active_object()
 
     @staticmethod
     def get_update(segment, data,request):
@@ -374,8 +397,6 @@ class SegmentsUpdateView(viewsets.ViewSet):
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task = task_obj)
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
-        #print("Assigners--------------->",assigners)
-        #print("RequestUser-------------->",user)
         if user not in assigners:
             edit_allowed = True
         else:
@@ -384,7 +405,6 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 edit_allowed = False if task_assign_status == 2 else True
             except:
                 edit_allowed = True
-        print("Edit---------------------------------->",edit_allowed)
         return edit_allowed
 
     def update_pentm(self, segment):
@@ -397,10 +417,10 @@ class SegmentsUpdateView(viewsets.ViewSet):
             print("not successfully update")
 
     def update(self, request, segment_id):
+        print("Request data for update ---> ", request.data)
         segment = self.get_object(segment_id)
-        #print("$$$$$$$$$$$$$$$$$$$$$$$$")
+        # segment = self.get_object()
         edit_allow = self.edit_allowed_check(segment)
-        #print("RRRRRRRRRRRRRRRRRR------------------>",edit_allow)
         if edit_allow == False:
             return Response({"msg":"Already someone is working"},status = 400)
         segment_serlzr = self.get_update(segment, request.data, request)
@@ -512,18 +532,21 @@ class MT_RawAndTM_View(views.APIView):
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id,None)
 
+        initial_credit = 100000
+
         if initial_credit > consumable_credits :
             if mt_raw:
-                ################################Update###########################
+                #############   Update   ############
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, doc.source_language_code, doc.target_language_code)
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation,mt_engine = task_assign_mt_engine)
                 obj = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
                 return MT_RawSerializer(obj).data, 200, "available"
             else:
-                ###############################Create############################
+                #########   Create   #######
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                                 context={"request": request})
                 if mt_raw_serlzr.is_valid(raise_exception=True):
+                    print("Mt serializer is valid !!!!!!")
                     mt_raw_serlzr.save()
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     # print("DEBIT STATUS -----> ", debit_status["msg"])
@@ -946,10 +969,7 @@ class DocumentToFile(views.APIView):
                 "-" + task_data["target_language"] + ")" + ext
 
         params_data = {**task_data, "output_type": output_type}
-        # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-        #              "fprm_file_path": None,
-        #              "use_spaces" : settings.USE_SPACES
-        #              }
+
         res_paths = get_res_path(task_data["source_language"])
 
         res = requests.post(
@@ -958,7 +978,6 @@ class DocumentToFile(views.APIView):
                 'document-json-dump': json.dumps(data),
                 "doc_req_res_params": json.dumps(res_paths),
                 "doc_req_params": json.dumps(params_data),})
-        print("RES FROM Spring--------->",res.status_code)
 
         if settings.USE_SPACES:
 
