@@ -23,7 +23,7 @@ from rest_framework.response import Response
 from django.core.files.base import ContentFile
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 from indicnlp.tokenize.indic_tokenize import trivial_tokenize
-from ai_workspace_okapi.utils import download_file,text_to_speech
+from ai_workspace_okapi.utils import download_file,text_to_speech,text_to_speech_long
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
     ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
@@ -77,6 +77,9 @@ from ai_auth.tasks import write_doc_json_file
 from docx import Document
 from htmldocx import HtmlToDocx
 from delta import html
+from glob import glob
+from pydub import AudioSegment
+from filesplit.split import Split
 
 
 from ai_auth.tasks import write_doc_json_file
@@ -1940,6 +1943,87 @@ def transcribe_file_get(request):
     ser = TaskTranscriptDetailSerializer(queryset,many=True)
     return Response(ser.data)
 
+def google_long_text_file_process(file,obj,language,gender,voice_name):
+    final_name,ext =  os.path.splitext(file)
+    final_audio = final_name + '.mp3'
+    dir_1 = os.path.join('/ai_home/',"output")
+    if not os.path.exists(dir_1):
+        os.mkdir(dir_1)
+    split = Split(file,dir_1)
+    split.bysize(4000,True)
+    for file in os.listdir(dir_1):
+        filepath = os.path.join(dir_1, file)
+        if file.endswith('.txt'):
+            name,ext = os.path.splitext(file)
+            dir = os.path.join('/ai_home/',"OutputAudio")
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+            audio_ = name + '.mp3'
+            audiofile = os.path.join(dir,audio_)
+            text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',None)
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'))]
+    print("ListOfAudioFiles---------------------->",list_of_audio_files)
+    combined = AudioSegment.empty()
+    for aud in list_of_audio_files:
+        combined += aud
+    combined.export(final_audio, format="mp3")
+    f2 = open(final_audio, 'rb')
+    file_obj = DJFile(f2,name=os.path.basename(final_audio))
+    shutil.rmtree(dir)
+    shutil.rmtree(dir_1)
+    os.remove(final_audio)
+    return file_obj,f2
+
+
+#####################Need to work###########################################
+
+def google_long_text_source_file_process(file,obj,language,gender,voice_name):
+    final_name,ext =  os.path.splitext(file)
+    lang_list = ['hi','bn','or','ne','pa']
+    final_audio = final_name + '.mp3'
+    dir_1 = os.path.join('/ai_home/',"output")
+    if not os.path.exists(dir_1):
+        os.mkdir(dir_1)
+        count=0
+        out_filename = file + '_out.txt'
+        with open(file) as infile, open(out_filename, 'w') as outfile:
+          lines = infile.readlines()
+          for line in lines:
+              if language in lang_list:sents = sentence_split(line, language, delim_pat='auto')
+              else:sents = nltk.sent_tokenize(line)
+              for i in sents:
+                  outfile.write(i)
+                  count = count+len(i)
+                  print("<--------------------count-------------------------->",count)
+                  if count > 3500:
+                    outfile.write('\n')
+                    count=0
+    split = Split(out_filename,dir_1)
+    split.bysize(4000,True)
+    for file in os.listdir(dir_1):
+        filepath = os.path.join(dir_1, file)
+        if file.endswith('.txt') :
+            print("File--------------->",file)
+            name,ext = os.path.splitext(file)
+            dir = os.path.join('/ai_home/',"OutputAudio")
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+            audio_ = name + '.mp3'
+            audiofile = os.path.join(dir,audio_)
+            text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',None)
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3')) if len(mp3_file)!=0]
+    print("ListOfAudioFiles---------------------->",list_of_audio_files)
+    combined = AudioSegment.empty()
+    for aud in list_of_audio_files:
+        combined += aud
+    combined.export(final_audio, format="mp3")
+    f2 = open(final_audio, 'rb')
+    file_obj = DJFile(f2,name=os.path.basename(final_audio))
+    shutil.rmtree(dir)
+    shutil.rmtree(dir_1)
+    os.remove(final_audio)
+    os.remove(out_filename)
+    return file_obj,f2
 
 
 
@@ -1947,6 +2031,7 @@ def transcribe_file_get(request):
 #@permission_classes([IsAuthenticated])
 def convert_and_download_text_to_speech_source(request):#########working############Transcribe and Download
     tasks =[]
+    user = request.user
     project = request.GET.get('project',None)
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender',None)
@@ -1961,6 +2046,9 @@ def convert_and_download_text_to_speech_source(request):#########working########
         if ext == '.docx':
             name = file + '.txt'
             data = docx2txt.process(obj.file.file.path)
+            print("Length Character Count-------------->",len(data))
+            # if len(data)>5000:
+            #     return Response({'msg': 'Character count exceeds 5000'})
             with open(name, "w") as out:
                 out.write(data)
         else:
@@ -1968,18 +2056,22 @@ def convert_and_download_text_to_speech_source(request):#########working########
             text_file = open(name, "r")
             data = text_file.read()
             text_file.close()
-        seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
-                     "processor_name":"plain-text-processor", "extension":".txt"}
-        res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
-        wc = res1.json() if res1.status_code == 200 else None
-        TaskDetails.objects.create(task = obj,task_word_count = wc,project = obj.job.project)
-        audio_file = name_ + '_source'+'.mp3'
-        res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',None)
+        if len(data)>4500:
+            print(name)
+            res2,f2 = google_long_text_source_file_process(name,obj,language,gender,None)
+        else:
+            seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
+                         "processor_name":"plain-text-processor", "extension":".txt"}
+            res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
+            wc = res1.json() if res1.status_code == 200 else None
+            TaskDetails.objects.create(task = obj,task_word_count = wc,project = obj.job.project)
+            audio_file = name_ + '_source'+'.mp3'
+            res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',None)
+            os.remove(audio_file)
         ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":request.user.id})
         if ser.is_valid():
             ser.save()
         f2.close()
-        os.remove(audio_file)
         print(ser.errors)
     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source/Audio')
     res = download_file(pr.project_name+'.zip')

@@ -191,6 +191,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If document already exists for a task
         if task.document != None:
+            print("<--------------------------Document Exists--------------------->")
             print("Pre Translate--------------->",task.job.project.pre_translate)
             if task.job.project.pre_translate == True:
                 user = task.job.project.ai_user
@@ -230,7 +231,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
-
+            print("-------------------------Document Already Processed-------------------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -252,6 +253,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # Fresh task
         else:
+            print("<--------------------------------Fresh Task-----------------------------------")
             data = TaskSerializer(task).data
             DocumentViewByTask.correct_fields(data)
             params_data = {**data, "output_type": None}
@@ -460,7 +462,7 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_consumable_credits(doc, segment_id,seg):
-        segment = Segment.objects.get(id=segment_id)
+        segment = Segment.objects.get(id=segment_id) if segment_id != None else None
         segment_source = segment.source if segment != None else seg
         seg_data = { "segment_source" : segment_source,
                      "source_language" : doc.source_language_code,
@@ -775,28 +777,37 @@ class DocumentToFile(views.APIView):
 
     #For Downloading Audio File################only for voice project###########Need to work
     def download_audio_file(self,res,document_id,voice_gender,language_locale,voice_name):
+        from ai_workspace.api_views import google_long_text_file_process
         filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
         temp_name = filename + '.txt'
         text_units = TextUnit.objects.filter(document_id=document_id)
+        counter = 0
         with open(temp_name, "w") as out:
             for text_unit in text_units:
                 segments = Segment.objects.filter(text_unit_id=text_unit.id)
-                # target_count=segments.filter(target__isnull=False).exclude(target='').count()
-                # if target_count:
                 for segment in segments:
                     if segment.target!=None:
+                        counter = counter + len(segment.target)
                         out.write(segment.target)
-                # else:
-                #     return Response({"msg":"No translated segments available"})
+                        if counter>3500:
+                            out.write('\n')
+                            counter = 0
         file_path = temp_name
         doc = DocumentToFile.get_object(document_id)
         task = doc.task_set.first()
         ser = TaskSerializer(task)
         task_data = ser.data
         target_language = language_locale if language_locale else task_data["target_language"]
-        filename_ = filename + "_out"+ ".mp3"
-        res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
-        print("REs1----------------------->",res1)
+        text_file = open(temp_name, "r")
+        data = text_file.read()
+        text_file.close()
+        print("Length of file------------------------>",len(data))
+        if len(data)>5000:
+            res1,f2 = google_long_text_file_process(file_path,None,target_language,voice_gender,voice_name)
+        else:
+            filename_ = filename + "_out"+ ".mp3"
+            res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
+            os.remove(filename_)
         if task.task_transcript_details.first()==None:
             ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
         else:
@@ -806,8 +817,8 @@ class DocumentToFile(views.APIView):
             ser.save()
         print(ser.errors)
         f2.close()
-        os.remove(filename_)
-        os.remove(temp_name)
+        #os.remove(filename_)
+        os.remove(file_path)
         return download_file(task.task_transcript_details.last().translated_audio_file.path)
     # else:
     #     return Response({"msg":"something went wrong"})

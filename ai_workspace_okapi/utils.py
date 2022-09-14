@@ -421,3 +421,34 @@ def get_res_path(source_lang):
 
     else:
         return res_paths
+
+
+
+
+
+
+def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_name):
+    from ai_staff.models import MTLanguageLocaleVoiceSupport
+    from google.cloud import texttospeech
+    print("@#@#@#@#@#",voice_gender,voice_name,target_language)
+    gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
+    voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
+    #filename = filename + "_out"+ ".mp3"
+    path, name = os.path.split(ssml_file)
+    client = texttospeech.TextToSpeechClient()
+    with open(ssml_file, "r") as f:
+        ssml = f.read()
+        input_text = texttospeech.SynthesisInput(ssml=ssml)
+    voice = texttospeech.VoiceSelectionParams(
+        name=voice_name,language_code=target_language, ssml_gender=gender
+    )
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+    response = client.synthesize_speech(
+        input=input_text, voice=voice, audio_config=audio_config
+    )
+    if len(response.audio_content) != 0:
+        with open(filename,"wb") as out:
+                out.write(response.audio_content)
+                print('Audio content written to file',filename)
