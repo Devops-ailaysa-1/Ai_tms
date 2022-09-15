@@ -344,13 +344,9 @@ class SegmentsView(views.APIView, PageNumberPagination):
 class MergeSegmentView(viewsets.ModelViewSet):
     serializer_class = MergeSegmentSerializer
     def create(self, request, *args, **kwargs):
-        print("Request data =======> ", request.data)
         serlzr = self.serializer_class(data=request.data)
-        print("^^^^ Reached ^^^^^")
         if serlzr.is_valid(raise_exception=True):
-            print("Validated data ---> ", serlzr.validated_data)
             serlzr.save(id=serlzr.validated_data.get("segments")[0].id)
-            print("Reached after save ****************")
             obj =  serlzr.instance
             obj.update_segments(serlzr.validated_data.get("segments"))
             return Response(MergeSegmentSerializer(obj).data)
@@ -368,12 +364,6 @@ class SourceTMXFilesCreate(views.APIView):
         jobs, files = self.get_queryset(project_id=project_id)
 
 class SegmentsUpdateView(viewsets.ViewSet):
-    # @staticmethod
-    # def get_object(segment_id):
-    #     qs = Segment.objects.all()
-    #     segment = get_object_or_404(qs, id = segment_id)
-    #     return segment
-
     def get_object(self, segment_id):
         # segment_id = self.kwargs["pk"]
         qs = Segment.objects.all()
@@ -381,7 +371,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         return segment.get_active_object()
 
     @staticmethod
-    def get_update(segment, data,request):
+    def get_update(segment, data, request):
         segment_serlzr = SegmentSerializerV2(segment, data=data, partial=True,\
             context={"request": request})
         if segment_serlzr.is_valid(raise_exception=True):
@@ -410,7 +400,6 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def update_pentm(self, segment):
         data = PentmUpdateSerializer(segment).data
         res = requests.post(f"http://{spring_host}:8080/project/pentm/update", data=data)
-        print("Response from spring --- >", res.json())
         if res.status_code == 200:
             print("res text--->", res.json())
         else:
@@ -422,7 +411,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         # segment = self.get_object()
         edit_allow = self.edit_allowed_check(segment)
         if edit_allow == False:
-            return Response({"msg":"Already someone is working"},status = 400)
+            return Response({"msg":"Someone is working already.."},status = 400)
         segment_serlzr = self.get_update(segment, request.data, request)
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         return Response(segment_serlzr.data, status=201)
@@ -449,15 +438,6 @@ class SegmentsUpdateView(viewsets.ViewSet):
 class MergeSegmentDeleteView(viewsets.ModelViewSet):
     def get_queryset(self):
         return  MergeSegment.objects.all()
-
-
-    # def get_object(self, pk=None):
-    #     pk = self.kwargs["pk"]
-    #     obj = get_object_or_404(Segment.objects.all(), id=pk)
-    #     if obj.is_merged == True and obj.is_merge_start:
-    #         return get_object_or_404(, id=pk)
-    #     raise serializers.ValidationError("Restore process not applicable for this segment")
-
 class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
@@ -480,7 +460,7 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_consumable_credits(doc, segment_id,seg):
-        segment = Segment.objects.get(id=segment_id)
+        segment = Segment.objects.get(id=segment_id).get_active_object()
         segment_source = segment.source if segment != None else seg
         seg_data = { "segment_source" : segment_source,
                      "source_language" : doc.source_language_code,
@@ -492,7 +472,7 @@ class MT_RawAndTM_View(views.APIView):
             data={"segmentWordCountdata":json.dumps(seg_data)})
 
         if res.status_code == 200:
-            print("Word count --->", res.json())
+            print("Word count of the segment--->", res.json())
             return res.json()
         else:
             logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
@@ -530,26 +510,29 @@ class MT_RawAndTM_View(views.APIView):
 
         initial_credit = user.credit_balance.get("total_left")
 
-        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id,None)
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
         initial_credit = 100000
 
         if initial_credit > consumable_credits :
             if mt_raw:
+
                 #############   Update   ############
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, doc.source_language_code, doc.target_language_code)
-                MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation,mt_engine = task_assign_mt_engine)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+
+                MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
+                                       mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
                 obj = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
                 return MT_RawSerializer(obj).data, 200, "available"
             else:
+
                 #########   Create   #######
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                                 context={"request": request})
                 if mt_raw_serlzr.is_valid(raise_exception=True):
-                    print("Mt serializer is valid !!!!!!")
                     mt_raw_serlzr.save()
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                    # print("DEBIT STATUS -----> ", debit_status["msg"])
                     return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
@@ -568,7 +551,7 @@ class MT_RawAndTM_View(views.APIView):
         return []
 
     def get_alert_msg(self, status_code, can_team):
-        #print("Status_code-------------->",status_code)
+
         if (status_code == 424 and can_team == "unavailable"):
             return "MT doesn't work as the credits are insufficient. Please buy more or upgrade"
         elif (status_code == 200 and can_team == "MT disabled"):
@@ -590,11 +573,8 @@ class MT_RawAndTM_View(views.APIView):
     def get(self, request, segment_id):
         mt_params = self.get_segment_MT_params(segment_id)
         data, status_code, can_team = self.get_data(request, segment_id, mt_params)
-        # print("MT Data -----> ", data)
         mt_alert = True if status_code == 424 else False
         alert_msg = self.get_alert_msg(status_code, can_team)
-        # alert_msg = "MT doesn't work as the credits are insufficient. Please buy more or upgrade." if (status_code == 424 and \
-        #     can_team == "unavailable") else "Team subscription inactive"
         tm_data = self.get_tm_data(request, segment_id)
         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
             "alert_msg":alert_msg}, status=status_code)
@@ -819,7 +799,6 @@ class DocumentToFile(views.APIView):
         target_language = language_locale if language_locale else task_data["target_language"]
         filename_ = filename + "_out"+ ".mp3"
         res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
-        print("REs1----------------------->",res1)
         if task.task_transcript_details.first()==None:
             ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
         else:
@@ -876,8 +855,11 @@ class DocumentToFile(views.APIView):
         for text_unit in text_units:
             segments = Segment.objects.filter(text_unit_id=text_unit.id)
             for segment in segments:
-                worksheet.write(row, 0, segment.source.strip(), cell_format)
-                worksheet.write(row, 1, self.remove_tags(segment.target), cell_format)
+                if segment.is_merged and (not segment.is_merge_start):
+                    continue
+                segment_new = segment.get_active_object()
+                worksheet.write(row, 0, segment_new.source.strip(), cell_format)
+                worksheet.write(row, 1, self.remove_tags(segment_new.target), cell_format)
                 row += 1
         workbook.close()
 
@@ -947,8 +929,6 @@ class DocumentToFile(views.APIView):
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
 
-        #print("Data to write output file ---> ", data)
-
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -956,9 +936,8 @@ class DocumentToFile(views.APIView):
         task = document.task_set.first()
         ser = TaskSerializer(task)
         task_data = ser.data
-        # print("Task data ---> ", task_data)
+
         DocumentViewByTask.correct_fields(task_data)
-        # print("---->", output_type)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
         pre, ext = os.path.splitext(task_data["output_file_path"])
@@ -1011,10 +990,8 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     @staticmethod
     def prepare_data(data):
         for i in data:
-            try:
-                data[i] = json.loads(data[i])
-            except:
-                pass
+            try: data[i] = json.loads(data[i])
+            except: pass
         return data
 
     @staticmethod
@@ -1023,7 +1000,8 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         document = get_object_or_404(qs, id=document_id)
         segments_all = segments = document.segments
         status_list = data.get("status_list", [])
-        print("status_list--->", status_list)
+        segments_merged = segments_all.filter(is_merged=True)
+
         if status_list:
             if 0 in status_list:
                 segments = segments.filter(Q(status=None) | \
@@ -1054,40 +1032,238 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
 
         return segments, 200
 
+    # def post(self, request, document_id):
+    #     data = self.prepare_data(request.POST.dict())
+    #     segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
+    #     page_segments = self.paginate_queryset(segments, request, view=self)
+    #     segments_ser = SegmentSerializer(page_segments, many=True)
+    #     res = self.get_paginated_response(segments_ser.data)
+    #     res.status_code = status
+    #     return res
+
+    def get_corrected_source_data(self, segments_ser, payload):
+
+        data = []
+        search_word = payload.get('payload', None)
+        match_case = payload.get("match_case", False)
+        exact_word = payload.get("exact_word", False)
+        status_list = payload.get("status_list", [])
+        lookup_field = self.lookup_field
+
+        for i in segments_ser.data:
+
+            if i.get("is_merged") == True and i.get('is_merge_start') == True:
+
+                merged_segment = MergeSegment.objects.get(segments=Segment.objects.get(id=i.get("segment_id")))
+
+                if status_list:
+                    if 0 in status_list and merged_segment.status_id == None:
+                        data.append(SegmentSerializer(merged_segment).data)
+                        continue
+                    if merged_segment.status_id in status_list:
+                        data.append(SegmentSerializer(merged_segment).data)
+                        continue
+
+                if search_word not in [None, ""]:
+
+                    if match_case and exact_word:
+                        if re.search(f'(?<!\w){search_word}(?!\w)', merged_segment.source):
+                            data.append(SegmentSerializer(merged_segment).data)
+                            continue
+
+                    elif not (match_case or exact_word):
+                        if re.search(f'{search_word}', merged_segment.source):
+                            data.append(SegmentSerializer(merged_segment).data)
+                            continue
+
+                    elif match_case:
+                        if re.search(f'{search_word}', merged_segment.source):
+                            data.append(SegmentSerializer(merged_segment).data)
+                            continue
+
+                    elif exact_word:
+                        if re.search(f'(?i)[^\w]{search_word}[^\w]', merged_segment.source):
+                            data.append(SegmentSerializer(merged_segment).data)
+                            continue
+
+            elif i.get("is_merged") == True and i.get('is_merge_start') == False:
+                continue
+
+            else:
+                # data.append(i)
+                normal_segment = Segment.objects.get(id=i.get("segment_id"))
+
+                if status_list:
+                    if 0 in status_list and normal_segment.status_id == None:
+                        data.append(SegmentSerializer(normal_segment).data)
+                        continue
+                    if normal_segment.status_id in status_list:
+                        data.append(SegmentSerializer(normal_segment).data)
+                        continue
+
+                if search_word not in [None, ""]:
+
+                    if match_case and exact_word:
+                        if re.search(f'(?<!\w){search_word}(?!\w)', normal_segment.source):
+                            data.append(SegmentSerializer(normal_segment).data)
+                            continue
+
+                    elif not (match_case or exact_word):
+                        if re.search(f'{search_word}', normal_segment.source):
+                            data.append(SegmentSerializer(normal_segment).data)
+                            continue
+
+                    elif match_case:
+                        if re.search(f'{search_word}', normal_segment.source):
+                            data.append(SegmentSerializer(normal_segment).data)
+                            continue
+
+                    elif exact_word:
+                        if re.search(f'(?i)[^\w]{search_word}[^\w]', normal_segment.source):
+                            data.append(SegmentSerializer(normal_segment).data)
+                            continue
+        return data
+
     def post(self, request, document_id):
         data = self.prepare_data(request.POST.dict())
-        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
-        page_segments = self.paginate_queryset(segments, request, view=self)
+        segments, segments_merged, status = self.get_queryset(request, data, document_id, self.lookup_field)
+        segment_final = segments.union(segments_merged).order_by('id')
+        page_segments = self.paginate_queryset(segment_final, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
-        res = self.get_paginated_response(segments_ser.data)
+
+        data = self.get_corrected_source_data(segments_ser, data)
+
+        res = self.get_paginated_response(data)
         res.status_code = status
         return res
 
 class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
+
     lookup_field = "temp_target"
+    def get_corrected_data(self, segments_ser, payload):
 
-    @staticmethod
-    def unconfirm_status(segment):
-        segment.status_id = {102:101, 104:103, 106:105}.get(
-            segment.status_id, segment.status_id)
+        data = []
+        search_word = payload.get('payload', None)
+        match_case = payload.get("match_case", False)
+        exact_word = payload.get("exact_word", False)
+        status_list = payload.get("status_list", [])
+        lookup_field = self.lookup_field
 
-    @staticmethod
-    def confirm_status(segment):
-        segment.status_id = {101:102, 103:104, 105:106}.get(
-            segment.status_id, segment.status_id)
+        for i in segments_ser.data:
 
-    def paginate_response(self, segments, request, status):
+            if i.get("is_merged") == True and i.get('is_merge_start') == True:
+
+                merged_segment = MergeSegment.objects.get(segments=Segment.objects.get(id=i.get("segment_id")))
+
+                if status_list:
+                    if 0 in status_list or merged_segment.status_id in status_list:
+                        data.append(SegmentSerializer(merged_segment).data)
+                        continue
+
+                if search_word not in [None, ""]:
+
+                    if match_case and exact_word:
+                        if re.search(f'(?<!\w){search_word}(?!\w)', merged_segment.temp_target):
+                            data.append(SegmentSerializer(merged_segment).data)
+                            continue
+
+                    elif not (match_case or exact_word):
+                        if re.search(f'{search_word}', merged_segment.temp_target):
+                            data.append(SegmentSerializer(merged_segment).data)
+                            continue
+
+                    elif match_case:
+                        if re.search(f'{search_word}', merged_segment.temp_target):
+                            data.append(SegmentSerializer(merged_segment).data)
+                            continue
+
+                    elif exact_word:
+                        if re.search(f'(?i)[^\w]{search_word}[^\w]', merged_segment.temp_target):
+                            data.append(SegmentSerializer(merged_segment).data)
+                            continue
+
+            elif i.get("is_merged") == True and i.get('is_merge_start') == False:
+                continue
+
+            else:
+                # data.append(i)
+                normal_segment = Segment.objects.get(id=i.get("segment_id"))
+
+                if status_list:
+                    if 0 in status_list or normal_segment.status_id in status_list:
+                        data.append(SegmentSerializer(normal_segment).data)
+                        continue
+
+                if search_word not in [None, ""]:
+
+                    if match_case and exact_word:
+                        if re.search(f'(?<!\w){search_word}(?!\w)', normal_segment.temp_target):
+                            data.append(SegmentSerializer(normal_segment).data)
+                            continue
+
+                    elif not (match_case or exact_word):
+                        if re.search(f'{search_word}', normal_segment.temp_target):
+                            data.append(SegmentSerializer(normal_segment).data)
+                            continue
+
+                    elif match_case:
+                        if re.search(f'{search_word}', normal_segment.temp_target):
+                            data.append(SegmentSerializer(normal_segment).data)
+                            continue
+
+                    elif exact_word:
+                        if re.search(f'(?i)[^\w]{search_word}[^\w]', normal_segment.temp_target):
+                            data.append(SegmentSerializer(normal_segment).data)
+                            continue
+
+        return data
+    def paginate_response(self, segments, request, status, data, is_update=False):
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
-        res = self.get_paginated_response(segments_ser.data)
+
+        if is_update:
+            data = [
+                SegmentSerializer(MergeSegment.objects.get(segments=Segment.objects.get(id=i.get("segment_id")))).data
+                if i.get("is_merged") == True else i for i in segments_ser.data]
+        else:
+            data = self.get_corrected_data(segments_ser, data)
+
+        res = self.get_paginated_response(data)
         res.status_code = status
         return res
-
     def post(self, request, document_id):
         data = self.prepare_data(request.POST.dict())
-        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
-        return self.paginate_response(segments, request, status)
+        print("Data ===> ", data)
+        segments, segments_merged, status = self.get_queryset(request, data, document_id, self.lookup_field)
+        segment_final = segments.union(segments_merged).order_by('id')
+        return self.paginate_response(segment_final, request, status, data)
+    @staticmethod
+    def unconfirm_status(segment, merged_segment=None):
 
+        if segment.is_merged and segment.is_merge_start:
+            merged_segment.status_id = {102: 101, 104: 103, 106: 105}.get(
+                merged_segment.status_id, merged_segment.status_id)
+
+        elif segment.is_merged and segment.is_merge_start == False:
+            pass
+
+        else:
+            segment.status_id = {102: 101, 104: 103, 106: 105}.get(
+                segment.status_id, segment.status_id)
+
+    @staticmethod
+    def confirm_status(segment, merged_segment=None):
+
+        if segment.is_merged and segment.is_merge_start:
+            merged_segment.status_id = {101: 102, 103: 104, 105: 106}.get(
+                merged_segment.status_id, merged_segment.status_id)
+
+        elif segment.is_merged and segment.is_merge_start == False:
+            pass
+
+        else:
+            segment.status_id = {101: 102, 103: 104, 105: 106}.get(
+                segment.status_id, segment.status_id)
     @staticmethod
     def update_segments(request, data, segments, self):
         search_word = data.get('search_word', '')
@@ -1109,28 +1285,72 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
                 regex = re.compile(r'((?i)' + search_word + r')')
 
         for instance in segments:
-            self.unconfirm_status(instance)
-            if do_confirm:
-                self.confirm_status(instance)
-                segment_serlzr = SegmentSerializerV2(instance, data={"target":\
-                    re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
-                    partial=True, context={"request": request})
-            else:
-                self.unconfirm_status(instance)
-                segment_serlzr = SegmentSerializerV2(instance, data={"temp_target":\
-                    re.sub(regex, replace_word, instance.temp_target), "status_id": instance.status_id},\
-                    partial=True, context={"request": request})
 
-            if segment_serlzr.is_valid(raise_exception=True):
-                segment_serlzr.save()
+            # if instance.get("is_merged") == True and instance.get('is_merge_start') == True:
+            if instance.is_merged == True and instance.is_merge_start == True:
+
+                # merged_segment = MergeSegment.objects.get(segments=Segment.objects.get(id=instance.get("segment_id")))
+                merged_segment = MergeSegment.objects.get(segments=Segment.objects.get(id=instance.id))
+
+                self.unconfirm_status(instance, merged_segment)
+
+                if do_confirm:
+                    self.confirm_status(instance, merged_segment)
+                    # merged_segment_serlzr = MergeSegmentSerializer(merged_segment, data={
+                    #     "temp_target": re.sub(regex, replace_word, merged_segment.temp_target),
+                    #     "status_id": merged_segment.status_id}, partial=True, context={"request": request})
+                    merged_segment.target = re.sub(regex, replace_word, merged_segment.temp_target)
+                    merged_segment.status_id = merged_segment.status_id
+                    merged_segment.save()
+
+                else:
+                    self.unconfirm_status(instance, merged_segment)
+                    # merged_segment_serlzr = MergeSegmentSerializer(merged_segment, data={
+                    #     "temp_target":  re.sub(regex, replace_word, merged_segment.temp_target),
+                    #      "status_id": merged_segment.status_id}, partial=True, context={"request": request})
+
+                    merged_segment.temp_target = re.sub(regex, replace_word, merged_segment.temp_target)
+                    merged_segment.status_id = merged_segment.status_id
+                    merged_segment.save()
+
+                # if merged_segment_serlzr.is_valid(raise_exception=True):
+                #     merged_segment_serlzr.save()
+
+            elif instance.is_merged == True and instance.is_merge_start == False:
+                continue
+
+            else:
+
+                self.unconfirm_status(instance)
+                if do_confirm:
+                    self.confirm_status(instance)
+                    segment_serlzr = SegmentSerializerV2(instance, data={"target": \
+                                                                             re.sub(regex, replace_word,
+                                                                                    instance.temp_target),
+                                                                         "status_id": instance.status_id}, \
+                                                         partial=True, context={"request": request})
+                else:
+                    self.unconfirm_status(instance)
+                    segment_serlzr = SegmentSerializerV2(instance, data={"temp_target": \
+                                                                             re.sub(regex, replace_word,
+                                                                                    instance.temp_target),
+                                                                         "status_id": instance.status_id}, \
+                                                         partial=True, context={"request": request})
+
+                if segment_serlzr.is_valid(raise_exception=True):
+                    segment_serlzr.save()
 
         return segments, 200
 
     def update(self, request, document_id):
         data = self.prepare_data(request.POST.dict())
-        segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
-        segments, status = self.update_segments(request, data, segments, self=self)
-        return self.paginate_response(segments, request, status)
+        print("Prepared data ===> ", data)
+        segments, segments_merged, status = self.get_queryset(request, data, document_id, self.lookup_field)
+
+        segment_final = segments.union(segments_merged).order_by('id')
+
+        segments, status = self.update_segments(request, data, segment_final, self=self)
+        return self.paginate_response(segments, request, status, data, is_update=True)
 
 class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
 
@@ -1171,8 +1391,6 @@ class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
         return  Response(SegmentSerializer(segment).data, status=200)
 
 class ProgressView(views.APIView):
-    confirm_list = [102, 104, 106, 110]
-
     @staticmethod
     def get_object(document_id):
         document = get_object_or_404(
@@ -1181,19 +1399,29 @@ class ProgressView(views.APIView):
         return document
 
     @staticmethod
-    def get_progress(document, confirm_list):
-        # total_segment_count = document.total_segment_count - document.segments_with_blank.count()
-        total_segment_count = Segment.objects.filter(
-            text_unit__document=document
-        ).count()
-        segments_confirmed_count = document.segments.filter(
-            status__status_id__in=confirm_list
-        ).count()
-        return total_segment_count, segments_confirmed_count
+    def get_progress(document):
+
+        confirm_list = [102, 104, 106]
+        total_seg_count = 0
+        confirm_count = 0
+
+        segs = Segment.objects.filter(text_unit__document=document)
+        for seg in segs:
+
+            if seg.is_merged == True and seg.is_merge_start == False:
+                continue
+            else:
+                total_seg_count += 1
+
+            seg_new = seg.get_active_object()
+            if seg_new.status_id in confirm_list:
+                confirm_count += 1
+
+        return total_seg_count, confirm_count
 
     def get(self, request, document_id):
         document = self.get_object(document_id)
-        total_segment_count, segments_confirmed_count = self.get_progress(document, self.confirm_list)
+        total_segment_count, segments_confirmed_count = self.get_progress(document)
         return JsonResponse(
             dict(total_segment_count=total_segment_count,
                  segments_confirmed_count=segments_confirmed_count), safe=False

@@ -21,9 +21,9 @@ class TextUnit(models.Model):
     document = models.ForeignKey("Document", on_delete=models.CASCADE, related_name=\
         "document_text_unit_set")
 
-    # @property
-    # def text_unit_segment_set_exclude_merge_dummies(self):
-    #     return self.text_unit_segment_set.exclude(Q(is_merged=True)&Q(is_merge_start=False))
+    @property
+    def text_unit_segment_set_exclude_merge_dummies(self):
+        return self.text_unit_segment_set.exclude(Q(is_merged=True)&Q(is_merge_start=False))
 
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)
@@ -183,6 +183,9 @@ class MergeSegment(BaseSegment):
             seg.target = ""
             seg.save()
 
+        first_seg_in_merge = self.segments.all().first()
+        MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
+
         return  super(MergeSegment, self).delete(using=using,
             keep_parents=keep_parents)
 
@@ -208,10 +211,10 @@ class MergeSegment(BaseSegment):
 
 class MT_RawTranslation(models.Model):
 
-    SegmentStringChoices = (
-        ("ai_workspace_okapi.segment", "Segment"),
-        ("ai_workspace_okapi.mergesegment", "MergeSegment")
-    )
+    # SegmentStringChoices = (
+    #     ("ai_workspace_okapi.segment", "Segment"),
+    #     ("ai_workspace_okapi.mergesegment", "MergeSegment")
+    # )
 
     segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="segment_mt_engine")
@@ -226,10 +229,10 @@ class MT_RawTranslation(models.Model):
     def target_language(self):
         return self.get_segment.text_unit.document.job.target_language_code
 
-    @property
-    def get_segment(self):
-        return apps.get_model(self.reverse_string_for_segment).objects\
-            .filter(mt_raw_translation=self).first()
+    # @property
+    # def get_segment(self):
+    #     return apps.get_model(self.reverse_string_for_segment).objects\
+    #         .filter(mt_raw_translation=self).first()
 
 class Comment(models.Model):
     comment = models.TextField()
@@ -424,85 +427,6 @@ class FontSize(models.Model):
     font_size = models.IntegerField()
     language = models.ForeignKey(Languages, on_delete=models.CASCADE,
                                  related_name="language_font_size_set")
-
-# class MergeSegment(BaseSegment):
-#     segments = models.ManyToManyField(Segment, related_name=\
-#         "segments_merge_segments_set")
-#     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE,
-#         related_name="text_unit_merge_segment_set")
-#
-#     def update_segments(self, segs):
-#         self.source = "".join([seg.source for seg in segs])
-#         # self.target = "".join([seg.target for seg in segs])
-#         self.target = ""
-#         self.coded_source = "".join([seg.coded_source for seg in segs])
-#         # self.temp_target = "".join([seg.temp_target for seg in segs])
-#         self.temp_target = ""
-#         self.target_tags = "".join([seg.target_tags for seg in segs])
-#         self.tagged_source = "".join([seg.tagged_source for seg in segs])
-#         self.coded_brace_pattern = "".join([seg.coded_brace_pattern for seg in segs])
-#         self.status_id = None
-#         ids_seq = []
-#         for seg in segs:
-#             ids_seq+=json.loads(seg.coded_ids_sequence)
-#         self.coded_ids_sequence = json.dumps(ids_seq)
-#
-#         random_ids = []
-#         for seg in segs:
-#             random_ids+=json.loads(seg.random_tag_ids)
-#         self.random_tag_ids = json.dumps(random_ids)
-#
-#         self.okapi_ref_segment_id = segs[0].okapi_ref_segment_id
-#         self.save()
-#         self.update_segment_is_merged_true(segs=segs)
-#         return self
-#
-#     def delete(self, using=None, keep_parents=False):
-#         for seg in self.segments.all():
-#             seg.is_merged = False
-#             seg.is_merge_start = False
-#             seg.status_id = None
-#             seg.temp_target = ""
-#             seg.target = ""
-#             seg.save()
-#
-#         return  super(MergeSegment, self).delete(using=using,
-#             keep_parents=keep_parents)
-#
-#     objects = MergeSegmentManager()
-#
-#     @property
-#     def is_merged(self):
-#         return True
-#
-#     def update_segment_is_merged_true(self,segs):
-#         segs[0].is_merge_start = True
-#         for seg  in segs:
-#             seg.is_merged = True
-#             seg.save()
-#
-#     @property
-#     def validate_record(self):
-#         return all([segment.text_unit.id==self.text_unit.id for segment
-#             in self.segments.all()])
-#     @property
-#     def is_merged(self):
-#         return True
-#
-#     # class Meta:
-#     #     constraints = [
-#     #         CheckConstraint(
-#     #             check = Q(text_unit=F('segments__text_unit')),
-#     #             name = 'check_start_date',
-#     #         ),
-#     #     ]
-#
-# class SplitSegment(models.Model):
-#     pass
-#
-
-
-
 class SegmentHistory(models.Model):
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
     target = models.TextField(null=True, blank=True)

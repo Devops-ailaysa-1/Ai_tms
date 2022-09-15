@@ -12,6 +12,7 @@ ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
      ('.doc',
       '.docx',
       '.xlsx',
+      '.xls',
       '.pptx',
       '.docm',
       '.dotx',

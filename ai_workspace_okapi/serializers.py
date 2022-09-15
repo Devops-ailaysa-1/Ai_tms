@@ -4,7 +4,7 @@ from .models import Document, Segment, TextUnit, MT_RawTranslation, \
 import json, copy
 from google.cloud import translate_v2 as translate
 from ai_workspace.serializers import PentmWriteSerializer
-from ai_workspace.models import  Project,Job
+from ai_workspace.models import  Project,Job, TaskAssign
 from ai_auth.models import AiUser
 from django.db.models import Q
 from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
@@ -138,12 +138,18 @@ class SegmentSerializerV2(SegmentSerializer):
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
-    target = serializers.CharField(read_only=True, source="coded_target", trim_whitespace=False)
+    target = serializers.CharField(read_only=True, source="get_merge_target_if_have",
+        trim_whitespace=False)
+    merge_segment_count = serializers.IntegerField(read_only=True,
+        source="get_merge_segment_count", )
+
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence', "random_tag_ids"]
-        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern', 'coded_ids_sequence']
+        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
+        read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+            'coded_ids_sequence']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
@@ -154,14 +160,16 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = MergeSegment
         fields = ("segments", "text_unit")
-        # extra_kwargs = {
-        #     "segments": {"read_only": True},
-        #     "text_unit": {"read_only": True},
-        # }
     def validate(self, data):
-        print("Running validation ++++++++")
-        print("DATA ---------> ", data)
         segments = data["segments"] = sorted(data["segments"], key=lambda x: x.id)
+
+        # Resetting the raw MT for normal segments once merged
+        for segment in segments:
+            try:
+                MT_RawTranslation.objects.get(segment_id=segment.id).delete()
+            except:
+                print(f"No raw MT available for this segment --> {segment.id}")
+
         text_unit = data["text_unit"]
         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
             raise serializers.ValidationError("Segments for merging should have same text_unit_id")
@@ -245,52 +253,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             mt_engine = pr_obj.mt_engine_id
             user = pr_obj.ai_user
         else:target_get = False
-        # USING DJANGO SAVE() METHOD
-        # for text_unit in text_unit_ser_data:
-        #     segs = text_unit.pop("segment_ser", [])
-        #     text_unit = TextUnit.objects.create(**text_unit, document=document)
-        #     for seg  in segs:
-        #         seg = Segment.objects.create(**seg, text_unit=text_unit)
 
-        # USING BULK CREATE METHOD
-        # text_unit_instances = []
-        # segment_instances = []
-
-        # for text_unit in text_unit_ser_data:
-        #     text_unit.pop("segment_ser", [])
-        #     text_unit_instances.append(TextUnit(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"], document=document))
-
-        # TextUnit.objects.bulk_create(text_unit_instances)
-        # print("***** Textunits bulk created ******")
-
-        # for text_unit2 in text_unit_ser_data2:
-        #     segs = text_unit2.pop("segment_ser", [])
-        #     text_unit_instance = TextUnit.objects.get(Q(okapi_ref_translation_unit_id=text_unit2["okapi_ref_translation_unit_id"]) & \
-        #                                 Q(document_id=document.id))
-
-        #     for seg in segs:
-
-        #         tagged_source, _ , target_tags = (
-        #                 set_ref_tags_to_runs(seg["coded_source"],
-        #                 get_runs_and_ref_ids(seg["coded_brace_pattern"],
-        #                 json.loads(seg["coded_ids_sequence"])))
-        #             )
-
-        #         segment_instances.append(Segment(
-        #             source = seg["source"],
-        #             target = "",
-        #             coded_source = seg["coded_source"],
-        #             coded_brace_pattern = seg["coded_brace_pattern"],
-        #             coded_ids_sequence = seg["coded_ids_sequence"],
-        #             temp_target = "",
-        #             text_unit = text_unit_instance,
-        #             okapi_ref_segment_id = text_unit2["okapi_ref_translation_unit_id"],
-        #             tagged_source = tagged_source,
-        #             target_tags = target_tags,
-        #             ))
-
-        # Segment.objects.bulk_create(segment_instances)
-        # print("********** Created segments **********")
 
         # USING SQL BATCH INSERT
         text_unit_sql = 'INSERT INTO ai_workspace_okapi_textunit (okapi_ref_translation_unit_id, document_id) VALUES {}'.format(
@@ -335,12 +298,11 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         seg['target']=""
                         seg['temp_target']=""
                         status_id=None
-                print("Status----->",status_id)
+
                 seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
                         timezone.now(), status_id , text_unit_id, str(seg["random_tag_ids"])])
 
-        print("SEG PARAMS---->",seg_params)
         segment_sql = 'INSERT INTO ai_workspace_okapi_segment (source, target, temp_target, coded_source, tagged_source, \
                        coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, status_id, text_unit_id, random_tag_ids) VALUES {}'.format(
                            ', '.join(['(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'] * seg_count))
@@ -356,83 +318,12 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 if i.target != "":
                     count += 1
                     mt_params.extend([i.target,mt_engine,None,"ai_workspace_okapi.segment",i.id])
-            print("MT-------------->",mt_params)
+
             mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id, reverse_string_for_segment,segment_id)\
             VALUES {}".format(','.join(['(%s, %s, %s, %s, %s)'] * count))
             if mt_params:
                 with closing(connection.cursor()) as cursor:
                     cursor.execute(mt_raw_sql, mt_params)
-
-        # et1 = time.time()
-        # el_time = et1 - st1
-        # print('Command Execution time:', el_time, 'seconds')
-        # et = time.time()
-        # elapsed_time = et - st
-        # print('Execution time:', elapsed_time, 'seconds')
-
-        #Using PostgreSQL COPY FROM
-        # st = time.time()
-        # text_unit_ser_data = validated_data.pop("text_unit_ser", [])
-        # text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
-        #
-        # document = Document.objects.create(**validated_data)
-        #
-        # text_unit_stream = io.StringIO()
-        # text_unit_writer = csv.writer(text_unit_stream, delimiter=',')
-        #
-        # for text_unit in text_unit_ser_data:
-        #     text_unit_writer.writerow([text_unit["okapi_ref_translation_unit_id"], document.id])
-        #
-        # text_unit_stream.seek(0)
-        #
-        # with closing(connection.cursor()) as cursor:
-        #     cursor.copy_from(
-        #         file = text_unit_stream,
-        #         table = 'ai_workspace_okapi_textunit',
-        #         sep = ',',
-        #         columns = ('okapi_ref_translation_unit_id', 'document_id'),
-        #     )
-        # st2 = time.time()
-        # segment_stream = io.StringIO()
-        # segment_writer = csv.writer(segment_stream, delimiter=',')
-        #
-        # for text_unit in text_unit_ser_data:
-        #     text_unit_id = TextUnit.objects.get(
-        #         Q(okapi_ref_translation_unit_id=text_unit["okapi_ref_translation_unit_id"]) & \
-        #         Q(document_id=document.id)).id
-        #     segs = text_unit.pop("segment_ser", [])
-        #
-        #
-        #     for seg in segs:
-        #         tagged_source, _, target_tags = (
-        #             set_ref_tags_to_runs(seg["coded_source"],
-        #                                  get_runs_and_ref_ids(seg["coded_brace_pattern"],
-        #                                                       json.loads(seg["coded_ids_sequence"])))
-        #         )
-        #         target = "" if seg["target"] is None else seg["target"]
-        #
-        #         segment_writer.writerow([str(seg["source"]), target, "", str(seg["coded_source"]), str(tagged_source), \
-        #                            str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
-        #                            str(text_unit["okapi_ref_translation_unit_id"]), \
-        #                            timezone.now(), text_unit_id, str(seg["random_tag_ids"])])
-        #
-        # segment_stream.seek(0)
-        # et2 = time.time()
-        # diff = et2 - st2
-        # print("CSV Writer Execution time",diff,'seconds')
-        # st1 = time.time()
-        # with closing(connection.cursor()) as cursor:
-        #     cursor.copy_expert("""COPY ai_workspace_okapi_segment(source, target, temp_target, coded_source, tagged_source, \
-        #            coded_brace_pattern, coded_ids_sequence, target_tags, okapi_ref_segment_id, updated_at, text_unit_id, random_tag_ids)
-        #            FROM STDIN WITH (FORMAT CSV);""", segment_stream)
-        # et1 = time.time()
-        # el_time = et1 - st1
-        # print("Command Execution:",el_time, 'seconds')
-        # et = time.time()
-        # elapsed_time = et - st
-        # print('Execution time:', elapsed_time, 'seconds')
-
-
         return document
 
 class DocumentSerializerV2(DocumentSerializer):
@@ -475,86 +366,11 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
-# class MT_RawSerializer(serializers.ModelSerializer):
-#     mt_engine_name = serializers.CharField(source="mt_engine.engine_name",
-#         read_only=True)
-#     segment = serializers.CharField(read_only=True, source="get_segment")
-#
-#     class Meta:
-#         model = MT_RawTranslation
-#         fields = (
-#             'mt_engine', 'mt_raw', "mt_engine_name", "task_mt_engine", "reverse_string_for_segment", "segment",
-#         ) #, "target_language"
-#
-#         extra_kwargs = {
-#             "reverse_string_for_segment": {"write_only": True},
-#             "mt_engine": {"default": MT_Engine.objects.get(id=1)},
-#             "mt_raw": {"required": False},
-#             # "mt_engine" : {"required": False},
-#         }
-#
-#     def to_internal_value(self, data):
-#
-#         # data["mt_engine"] = data.get("mt_engine", 1)
-#         data["task_mt_engine"] = data.get("mt_engine", 1)
-#         return super().to_internal_value(data=data)
-#
-#     def create(self, validated_data):
-#         # MT FEED DATA
-#         source_string = validated_data["segment"].source
-#         source_lang_code = validated_data["segment"].source_language_code
-#         target_lang_code = validated_data["segment"].target_language_code
-#
-#         validated_data["mt_raw"] = get_translation(
-#             validated_data["task_mt_engine"].id,
-#             source_string,
-#             source_lang_code,
-#             target_lang_code,
-#         )
-#     #    # print("data--->", data)
-#     #    segment_id = data.get("segment")
-#     #    # print("Segment ID ---> ", segment_id)
-#     #    obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
-#     #    mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
-#
-#     #    # data["mt_engine"] = data.get("mt_engine", 1)
-#     #    data["mt_engine"] = mt_engine_id
-#     #    return super().to_internal_value(data=data)
-#
-#     #def create(self, validated_data):
-#
-#     #    # print("Validated data ---> ", validated_data)
-#
-#     #    segment = validated_data["segment"]
-#     #    mt_engine= validated_data["mt_engine"]
-#
-#     #    text_unit_id = segment.text_unit_id
-#     #    doc = TextUnit.objects.get(id=text_unit_id).document
-#
-#     #    sl_code = doc.source_language_code
-#     #    tl_code = doc.target_language_code
-#
-#         # validated_data["mt_raw"]= client.translate(segment.source,
-#         #     target_language=segment.target_language_code, format_="text")\
-#         #     .get("translatedText")
-#
-#      #   validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
-#
-#         data = validated_data.pop("segment")
-#         instance = MT_RawTranslation.objects.create(**validated_data)
-#         seg_instance = apps.get_model(instance.reverse_string_for_segment).objects.get(id=data.id)
-#         seg_instance.mt_raw_translation = instance
-#         seg_instance.save()
-#
-#         return instance
 class MT_RawSerializer(serializers.ModelSerializer):
     mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
 
     class Meta:
         model = MT_RawTranslation
-        # fields = (
-        #     "segment", 'mt_engine', 'mt_raw',"task_mt_engine", "reverse_string_for_segment", "mt_engine_name", "target_language"
-        # )
         fields = (
             "segment", 'mt_engine', 'mt_raw', "task_mt_engine", "mt_engine_name",
             "target_language"
@@ -566,22 +382,29 @@ class MT_RawSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
 
-        #print("data--->", data)
         segment_id = data.get("segment")
-        # print("Segment ID ---> ", segment_id)
-        obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
-        mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
 
-        # data["mt_engine"] = data.get("mt_engine", 1)
-        data["mt_engine"] = mt_engine_id
+        # Getting the MT engine of Project
+        obj = Project.objects.filter(project_jobs_set__file_job_set__document_text_unit_set__text_unit_segment_set=segment_id).first()
+        proj_mt_engine_id = obj.mt_engine.id if obj.mt_engine else 1
+
+        # Getting the MT engine for task
+        task_mt_engine_id = TaskAssign.objects.filter(
+            Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
+            Q(step_id=1)
+        ).first().mt_engine.id
+
+
+        data["mt_engine"] = proj_mt_engine_id
+        data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
         return super().to_internal_value(data=data)
 
     def create(self, validated_data):
 
-        #print("Validated data ---> ", validated_data)
-
         segment = validated_data["segment"]
+        active_segment = segment.get_active_object()
         mt_engine= validated_data["mt_engine"]
+        task_mt_engine = validated_data["task_mt_engine"]
 
         text_unit_id = segment.text_unit_id
         doc = TextUnit.objects.get(id=text_unit_id).document
@@ -589,16 +412,9 @@ class MT_RawSerializer(serializers.ModelSerializer):
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
 
-        # validated_data["mt_raw"]= client.translate(segment.source,
-        #     target_language=segment.target_language_code, format_="text")\
-        #     .get("translatedText")
-
-        validated_data["mt_raw"] = get_translation(mt_engine.id, segment.source, sl_code, tl_code)
+        validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code)
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
-
-
-
 
 class TM_FetchSerializer(serializers.ModelSerializer):
     pentm_dir_path = serializers.CharField(source=\
