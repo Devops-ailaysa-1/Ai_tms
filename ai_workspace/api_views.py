@@ -2041,42 +2041,51 @@ def convert_and_download_text_to_speech_source(request):#########working########
         if _task.task_transcript_details.first() == None:
             tasks.append(_task)
     for obj in tasks:
-        file,ext = os.path.splitext(obj.file.file.path)
-        dir,name_ = os.path.split(os.path.abspath(file))
-        if ext == '.docx':
-            name = file + '.txt'
-            data = docx2txt.process(obj.file.file.path)
-            print("Length Character Count-------------->",len(data))
-            # if len(data)>5000:
-            #     return Response({'msg': 'Character count exceeds 5000'})
-            with open(name, "w") as out:
-                out.write(data)
-        else:
-            name = obj.file.file.path
-            text_file = open(name, "r")
-            data = text_file.read()
-            text_file.close()
-        if len(data)>4500:
-            print(name)
-            res2,f2 = google_long_text_source_file_process(name,obj,language,gender,None)
-        else:
-            seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
-                         "processor_name":"plain-text-processor", "extension":".txt"}
-            res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
-            wc = res1.json() if res1.status_code == 200 else None
-            TaskDetails.objects.create(task = obj,task_word_count = wc,project = obj.job.project)
-            audio_file = name_ + '_source'+'.mp3'
-            res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',None)
-            os.remove(audio_file)
-        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":request.user.id})
-        if ser.is_valid():
-            ser.save()
-        f2.close()
-        print(ser.errors)
+        text_to_speech_task(obj,language,gender,user)
     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source/Audio')
     res = download_file(pr.project_name+'.zip')
     os.remove(pr.project_name+'.zip')
     return res
+
+
+def text_to_speech_task(obj,language,gender,user):
+    #obj = Task.objects.get(id=task_id)
+    file,ext = os.path.splitext(obj.file.file.path)
+    print("File---------->",file)
+    dir,name_ = os.path.split(os.path.abspath(file))
+    if ext == '.docx':
+        name = file + '.txt'
+        data = docx2txt.process(obj.file.file.path)
+        print("Length Character Count-------------->",len(data))
+        with open(name, "w") as out:
+            out.write(data)
+    else:
+        name = obj.file.file.path
+        text_file = open(name, "r")
+        data = text_file.read()
+        text_file.close()
+    if len(data)>4500:
+        print(name)
+        res2,f2 = google_long_text_source_file_process(name,obj,language,gender,None)
+    else:
+        seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
+                     "processor_name":"plain-text-processor", "extension":".txt"}
+        res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
+        wc = res1.json() if res1.status_code == 200 else None
+        TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc})
+        audio_file = name_ + '_source'+'.mp3'
+        res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',None)
+        os.remove(audio_file)
+    ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
+    if ext == '.docx':
+        os.remove(name)
+    if ser.is_valid():
+        ser.save()
+        f2.close()
+        return Response(ser.data)
+    f2.close()
+    #os.remove(name)
+    return Response(ser.errors)
 
 
 
@@ -2084,12 +2093,15 @@ def convert_and_download_text_to_speech_source(request):#########working########
 #@permission_classes([IsAuthenticated])
 def download_text_to_speech_source(request):
     task = request.GET.get('task')
+    language = request.GET.get('language_locale',None)
+    gender = request.GET.get('gender')
+    user = request.user
     obj = Task.objects.get(id = task)
-    try:
-        file = obj.task_transcript_details.first().source_audio_file
-        return download_file(file.path)
-    except:
-        return Response({'msg':'something went wrong'})
+    if obj.task_transcript_details.exists()==False:
+        tt = text_to_speech_task(obj,language,gender,user)
+    file = obj.task_transcript_details.first().source_audio_file
+    return download_file(file.path)
+
 
 
 

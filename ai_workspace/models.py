@@ -867,7 +867,7 @@ class Task(models.Model):
             document = Document.objects.get(id = self.document_id)
             return document.total_word_count
         elif self.task_details.exists():
-            t = TaskDetails.objects.get(task_id = self.id)
+            t = TaskDetails.objects.filter(task_id = self.id).first()
             return t.task_word_count
         else:
             return None
@@ -878,7 +878,7 @@ class Task(models.Model):
             document = Document.objects.get(id = self.document_id)
             return document.total_char_count
         elif self.task_details.first():
-            t = TaskDetails.objects.get(task_id = self.id)
+            t = TaskDetails.objects.filter(task_id = self.id).first()
             return t.task_char_count
         else:
             return None

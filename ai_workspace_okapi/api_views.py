@@ -18,6 +18,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from rest_framework import views
+from nltk.tokenize import TweetTokenizer
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import APIException
@@ -1501,8 +1502,10 @@ def spellcheck(request):
             aff = r'/ai_home/dictionaries/{lang}.aff'.format(lang = lang)
             hobj = hunspell.HunSpell(dic,aff )
             punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-            nltk_tokens = nltk.word_tokenize(tar)
+            tknzr = TweetTokenizer()
+            nltk_tokens = tknzr.tokenize(tar)
             tokens_new = [word for word in nltk_tokens if word not in punctuation]
+            print(tokens_new)
             for word in tokens_new:
                 suggestions=[]
                 if hobj.spell(word)==False:
