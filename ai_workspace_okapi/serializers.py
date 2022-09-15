@@ -43,7 +43,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 
 class SegmentSerializer(serializers.ModelSerializer):
     segment_id = serializers.IntegerField(read_only=True, source="id")
-    temp_target = serializers.CharField(read_only=True, source="get_temp_target")
+    temp_target = serializers.CharField(read_only=True, source="get_temp_target", allow_blank=True, allow_null=True,)
     status = serializers.IntegerField(read_only=True, source="status.status_id")
     source = serializers.CharField(trim_whitespace=False, allow_blank=True)
     random_tag_ids = serializers.CharField(allow_blank=True, required=False)
@@ -104,7 +104,7 @@ class SegmentSerializer(serializers.ModelSerializer):
 
 from ai_workspace.models import Task,TaskAssignInfo
 class SegmentSerializerV2(SegmentSerializer):
-    temp_target = serializers.CharField(trim_whitespace=False)
+    temp_target = serializers.CharField(trim_whitespace=False, allow_null=True)
     target = serializers.CharField(trim_whitespace=False, required=False)
     status = serializers.PrimaryKeyRelatedField(required=False, queryset=TranslationStatus.objects.all())
 
@@ -345,7 +345,7 @@ class DocumentSerializerV2(DocumentSerializer):
                   "total_segment_count", "created_by", "document_id",
                   "source_language", "target_language", "source_language_id",
                   "target_language_id", "source_language_code", "target_language_code", "doc_credit_check_open_alert",
-                  "is_first_doc_view",'assign_detail','show_mt',
+                  'assign_detail','show_mt','project_type_sub_category',
                   "target_language_script",'download_audio_output_file',
                   )
 

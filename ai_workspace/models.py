@@ -803,7 +803,7 @@ class Task(models.Model):
             document = Document.objects.get(id = self.document_id)
             return document.total_word_count
         elif self.task_details.exists():
-            t = TaskDetails.objects.get(task_id = self.id)
+            t = TaskDetails.objects.filter(task_id = self.id).first()
             return t.task_word_count
         else:
             return None
@@ -814,7 +814,7 @@ class Task(models.Model):
             document = Document.objects.get(id = self.document_id)
             return document.total_char_count
         elif self.task_details.first():
-            t = TaskDetails.objects.get(task_id = self.id)
+            t = TaskDetails.objects.filter(task_id = self.id).first()
             return t.task_char_count
         else:
             return None
@@ -1001,7 +1001,7 @@ class TaskTranscriptDetails(models.Model):
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
     quill_data =  models.TextField(null=True,blank=True)
-    audio_file_length = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    audio_file_length = models.IntegerField(null=True,blank=True)
     user = models.ForeignKey(AiUser, on_delete = models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

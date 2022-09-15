@@ -305,6 +305,13 @@ class Document(models.Model):
         return self.job.project.id
 
     @property
+    def project_type_sub_category(self):
+        try:
+            return self.job.project.voice_proj_detail.project_type_sub_category_id
+        except:
+            return None
+
+    @property
     def doc_credit_debit_user(self):
         project = self.job.project
         if project.team:
