@@ -355,6 +355,11 @@ def write_doc_json_file(doc_data, task_id):
     logger.info("Document json data written as a file")
 
 
+@task
+def text_to_speech(task_id):
+    obj = Task.objects.get(id=task_id)
+    text_to_speech(obj)
+    logger.info("Text to speech called")
 
 
 
@@ -375,4 +380,3 @@ def write_doc_json_file(doc_data, task_id):
             # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
             # res = requests.request("GET", url, headers=headers)
             # print("doc--->",res.text)
-

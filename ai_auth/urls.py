@@ -74,6 +74,7 @@ urlpatterns+= [
      path('ai-soc/',api_views.ai_social_login,name='ai_soc'),
      path('ai-soc-callback/',api_views.ai_social_callback,name='ai_soc_callback'),
      path('user-details/',api_views.UserDetailView.as_view({'post':'create'}),name='user-details')
+     
 
      #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")
      # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
