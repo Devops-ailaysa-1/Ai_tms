@@ -454,13 +454,14 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
+	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
 
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","assigned","text_to_speech_source_download", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable","pre_translate","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
+		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable","pre_translate","copy_paste_enable","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
 					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at")
 
 
@@ -485,6 +486,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		data["project_deadline"] = data.get("project_deadline",[None])[0]
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
 		data['mt_enable'] = data.get('mt_enable',['true'])[0]
+		data['copy_paste_enable'] = data.get('copy_paste_enable',['true'])[0]
 
 		data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 			target_language} for target_language in data.get("target_languages", [])]
@@ -629,6 +631,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 									instance.mt_enable)
 			instance.save()
 
+		if 'copy_paste_enable' in validated_data:
+			instance.copy_paste_enable = validated_data.get("copy_paste_enable",\
+									instance.copy_paste_enable)
+			instance.save()
+
 		if validated_data.get('project_deadline'):
 			instance.project_deadline = validated_data.get("project_deadline",\
 									instance.project_deadline)
@@ -703,7 +710,7 @@ class TaskAssignSerializer(serializers.ModelSerializer):
 	# step = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),required=False)
 	class Meta:
 		model = TaskAssign
-		fields =('task_info','step','assign_to','mt_enable','mt_engine','pre_translate','status',)
+		fields =('task_info','step','assign_to','mt_enable','mt_engine','pre_translate','copy_paste_enable','status',)
 
 class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	task_assign_info = TaskAssignSerializer(required=False)
@@ -772,6 +779,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         step = instance.task_assign.step.id
         mt_enable = instance.task_assign.mt_enable
         pre_translate = instance.task_assign.pre_translate
+        copy_paste_enable = instance.task_assign.copy_paste_enable
         task_status = instance.task_assign.get_status_display()
         if instance.task_assign.step_id == 1:
             try:

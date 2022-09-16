@@ -129,6 +129,7 @@ class Project(models.Model):
     pre_translate = models.BooleanField(default=False)
     mt_enable = models.BooleanField(default=True)
     project_deadline = models.DateTimeField(blank=True, null=True)
+    copy_paste_enable = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -990,6 +991,7 @@ class TaskAssign(models.Model):
         on_delete=models.CASCADE, related_name="task_mt_engine")
     pre_translate = models.BooleanField(null=True, blank=True)
     mt_enable = models.BooleanField(null=True, blank=True)
+    copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
 
     objects = TaskAssignManager()
