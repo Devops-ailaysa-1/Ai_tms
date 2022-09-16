@@ -2071,6 +2071,35 @@ def text_to_speech_task(obj,language,gender,user):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_media_link(request,task_id):
+    obj = Task.objects.get(id = task_id)
+    try:
+        task_transcript_obj = TaskTranscriptDetails.objects.filter(task = obj).first()
+        return Response({'url':task_transcript_obj.source_audio_file.url})
+    except:
+        return Response({'msg':'something went wrong'})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def convert_text_to_speech_source(request):
+    task = request.GET.get('task')
+    language = request.GET.get('language_locale',None)
+    gender = request.GET.get('gender')
+    user = request.user
+    obj = Task.objects.get(id = task)
+    if obj.task_transcript_details.exists()==False:
+        #text_to_speech.apply_async((obj.id,), ) ###need to check####
+        tt = text_to_speech_task(obj,language,gender,user)
+        return Response(tt.data)
+    else:
+        ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
+        return Response(ser.data)
+    # file = obj.task_transcript_details.first().source_audio_file
+    # return download_file(file.path)
+
+@api_view(["GET"])
 #@permission_classes([IsAuthenticated])
 def download_text_to_speech_source(request):
     task = request.GET.get('task')
@@ -2078,8 +2107,8 @@ def download_text_to_speech_source(request):
     gender = request.GET.get('gender')
     user = request.user
     obj = Task.objects.get(id = task)
-    if obj.task_transcript_details.exists()==False:
-        tt = text_to_speech_task(obj,language,gender,user)
+    # if obj.task_transcript_details.exists()==False:
+    #     tt = text_to_speech_task(obj,language,gender,user)
     file = obj.task_transcript_details.first().source_audio_file
     return download_file(file.path)
 
