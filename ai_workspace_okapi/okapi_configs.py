@@ -7,7 +7,7 @@ ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
      ('.tmx',): 'tmx-processor',
      ('.json',): 'json-processor',
      ('.properties',): 'properties-filter',
-     ('.po',): 'po-processor',
+     ('.po', '.pot'): 'po-processor',
      ('.ts',): 'ts-processor',
      ('.doc',
       '.docx',
