@@ -32,7 +32,7 @@ import urllib.parse
 import nltk,docx2txt
 from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
-
+from ai_workspace.utils import get_consumable_credits_for_text_to_speech
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.utils import get_plan_name
 from ai_staff.models import SpellcheckerLanguages
@@ -777,7 +777,7 @@ class DocumentToFile(views.APIView):
 
 
     #For Downloading Audio File################only for voice project###########Need to work
-    def download_audio_file(self,res,document_id,voice_gender,language_locale,voice_name):
+    def download_audio_file(self,res,document_user,document_id,voice_gender,language_locale,voice_name):
         from ai_workspace.api_views import google_long_text_file_process
         filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
         temp_name = filename + '.txt'
@@ -803,26 +803,30 @@ class DocumentToFile(views.APIView):
         data = text_file.read()
         text_file.close()
         print("Length of file------------------------>",len(data))
-        if len(data)>5000:
-            res1,f2 = google_long_text_file_process(file_path,None,target_language,voice_gender,voice_name)
+        consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
+        initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
+        if initial_credit > consumable_credits:
+            if len(data)>5000:
+                res1,f2 = google_long_text_file_process(file_path,None,target_language,voice_gender,voice_name)
+            else:
+                filename_ = filename + "_out"+ ".mp3"
+                res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
+                os.remove(filename_)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
+            if task.task_transcript_details.first()==None:
+                ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
+            else:
+                t = task.task_transcript_details.first()
+                ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
+            if ser.is_valid():
+                ser.save()
+            print(ser.errors)
+            f2.close()
+            #os.remove(filename_)
+            os.remove(file_path)
+            return download_file(task.task_transcript_details.last().translated_audio_file.path)
         else:
-            filename_ = filename + "_out"+ ".mp3"
-            res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
-            os.remove(filename_)
-        if task.task_transcript_details.first()==None:
-            ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
-        else:
-            t = task.task_transcript_details.first()
-            ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
-        if ser.is_valid():
-            ser.save()
-        print(ser.errors)
-        f2.close()
-        #os.remove(filename_)
-        os.remove(file_path)
-        return download_file(task.task_transcript_details.last().translated_audio_file.path)
-    # else:
-    #     return Response({"msg":"something went wrong"})
+            return Response({"msg":"Insufficient credits to convert text file to audio file"},status=400)
 
 
 
@@ -911,7 +915,7 @@ class DocumentToFile(views.APIView):
             # For Downloading Audio File
             if output_type == "AUDIO":
                 res = self.document_data_to_file(request, document_id)
-                return self.download_audio_file(res,document_id,voice_gender,language_locale,voice_name)
+                return self.download_audio_file(res,document_user,document_id,voice_gender,language_locale,voice_name)
 
             res = self.document_data_to_file(request, document_id)
             if res.status_code in [200, 201]:

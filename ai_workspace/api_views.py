@@ -2020,7 +2020,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
-            text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',None)
+            text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
     list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3')) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
@@ -2047,18 +2047,18 @@ def convert_and_download_text_to_speech_source(request):#########working########
     gender = request.GET.get('gender',None)
     # task = request.GET.get('task',None)
     pr = Project.objects.get(id=project)
-    for _task in pr.get_tasks:
+    for _task in pr.get_source_only_tasks:
         if _task.task_transcript_details.first() == None:
             tasks.append(_task)
     for obj in tasks:
-        text_to_speech_task(obj,language,gender,user)
+        text_to_speech_task(obj,language,gender,user,None)
     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source/Audio')
     res = download_file(pr.project_name+'.zip')
     os.remove(pr.project_name+'.zip')
     return res
 
 
-def text_to_speech_task(obj,language,gender,user):
+def text_to_speech_task(obj,language,gender,user,voice_name):
     #obj = Task.objects.get(id=task_id)
     project = obj.job.project
     account_debit_user = project.team.owner if project.team else project.ai_user
@@ -2082,7 +2082,7 @@ def text_to_speech_task(obj,language,gender,user):
     if initial_credit > consumable_credits:
         if len(data)>4500:
             print(name)
-            res2,f2 = google_long_text_source_file_process(name,obj,language,gender,None)
+            res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             print("Ds,Sc------------------>",debit_status,status_code)
         else:
@@ -2092,7 +2092,7 @@ def text_to_speech_task(obj,language,gender,user):
             wc = res1.json() if res1.status_code == 200 else None
             TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc})
             audio_file = name_ + '_source'+'.mp3'
-            res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',None)
+            res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             print("Ds,Sc------------------>",debit_status,status_code)
             os.remove(audio_file)
@@ -2126,17 +2126,36 @@ def get_media_link(request,task_id):
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
     task = request.GET.get('task')
+    project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender')
+    voice_name = request.GET.get('voice_name')
     user = request.user
-    obj = Task.objects.get(id = task)
-    if obj.task_transcript_details.exists()==False:
-        #text_to_speech.apply_async((obj.id,), ) ###need to check####
-        tt = text_to_speech_task(obj,language,gender,user)
-        return Response(tt.data)
-    else:
-        ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
+    if task:
+        obj = Task.objects.get(id = task)
+        if obj.task_transcript_details.exists()==False:
+            #text_to_speech.apply_async((obj.id,), ) ###need to check####
+            tt = text_to_speech_task(obj,language,gender,user,voice_name)
+            return Response(tt.data)
+        else:
+            ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
+            return Response(ser.data)
+    if project:
+        tasks =[]
+        task_list = []
+        pr = Project.objects.get(id=project)
+        for _task in pr.get_source_only_tasks:
+            if _task.task_transcript_details.first() == None:
+                tasks.append(_task)
+        for obj in tasks:
+            conversion = text_to_speech_task(obj,language,gender,user,voice_name)
+            if conversion.status_code == 200:
+                task_list.append(obj.id)
+        queryset = TaskTranscriptDetails.objects.filter(task__in = pr.get_source_only_tasks)
+        ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
+    else:
+        return Response({'msg':'task_id or project_id must'})
     # file = obj.task_transcript_details.first().source_audio_file
     # return download_file(file.path)
 

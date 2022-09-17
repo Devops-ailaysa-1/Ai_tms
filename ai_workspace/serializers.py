@@ -895,7 +895,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Task
 		fields = \
-			("id","filename", "transcribed", "ai_taskid","source_language", "target_language", "task_word_count","task_char_count","project_name",\
+			("id", "filename", "download_audio_source_file", "transcribed", "ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",)
 
 
