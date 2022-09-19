@@ -415,7 +415,6 @@ class SegmentsUpdateView(viewsets.ViewSet):
             print("not successfully update")
 
     def update(self, request, segment_id):
-        print("Request data for update ---> ", request.data)
         segment = self.get_object(segment_id)
         # segment = self.get_object()
         edit_allow = self.edit_allowed_check(segment)
@@ -521,7 +520,7 @@ class MT_RawAndTM_View(views.APIView):
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
-        # initial_credit = 0
+        # initial_credit = 1000000
 
         if initial_credit > consumable_credits :
             if mt_raw:
