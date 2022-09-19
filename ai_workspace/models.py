@@ -858,39 +858,6 @@ class Task(models.Model):
         except:
             return None
 
-    # @property
-    # def corrected_segment_count(self):
-    #     confirm_list = [102, 104, 106]
-    #     total_seg_count = 0
-    #     confirm_count = 0
-    #     doc = self.document
-    #     # return Segment.objects.filter(
-    #     #     text_unit__document=doc
-    #     # ).count()
-    #
-    #     segs = Segment.objects.filter(text_unit__document=doc)
-    #     for seg in segs:
-    #         # continue if seg.is_merged and (not seg.is_merge_start) else total_seg_count += 1
-    #
-    #         # if not (seg.is_merged and (not seg.is_merge_start)):
-    #         #     total_seg_count += 1
-    #
-    #         if seg.is_merged == True and seg.is_merge_start == False:
-    #             continue
-    #         else:
-    #             total_seg_count += 1
-    #
-    #         seg_new = seg.get_active_object()
-    #         if seg_new.status_id in confirm_list:
-    #             confirm_count += 1
-    #
-    #     return total_seg_count, confirm_count
-    #
-    #     # for seg in segs:
-    #     #     seg_new = seg.get_active_object()
-    #     #     if seg_new.status_id in confirm_list:
-    #     #         confirm_count += 1
-
     @property
     def corrected_segment_count(self):
         confirm_list = [102, 104, 106]
@@ -923,16 +890,6 @@ class Task(models.Model):
             source_words = self.job.term_job.filter(Q(sl_term__isnull=False)).exclude(sl_term='').count()
             return {"source_words":source_words,\
                     "target_words":target_words}
-    # @property
-    # def get_progress(self):
-    #     # confirm_list = [102, 104, 106]
-    #     # total_segment_count = self.corrected_segment_count
-    #     # segments_confirmed_count = self.document.segments.filter(
-    #     #     status__status_id__in=confirm_list
-    #     # ).count()
-    #     total_segment_count, segments_confirmed_count = self.corrected_segment_count
-    #     return {"total_segments": total_segment_count, \
-    #             "confirmed_segments": segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
