@@ -23,7 +23,6 @@ tms
 tmsenv
 venv/
 *.json
-req_nand.txt
 ai_tms/local_settings.py
 AiWorkspace.postman_collection.json
 AiWorkspace.postman_collection.json
@@ -112,3 +111,4 @@ wordsapi_sample.json
 kite-installer
 staticfiles/
 panda1.gif
+ai_workspace_okapi/dummy.txt

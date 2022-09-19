@@ -1008,22 +1008,10 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_usercredit(user, actual_used_credits):
-        # doc = Document.objects.get(id = doc_id)
-        # user = doc.doc_credit_debit_user
-        print("Credit User",type(user))
         present = datetime.now()
         try:
-            # carry_on_credits = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & \
-            #     Q(ended_at__isnull=False)).last()
 
             user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-
-            # Check whether to debit from carry-on-credit or current subscription credit record
-            # if (carry_on_credits) and \
-            #     (user_credit.created_at.strftime('%Y-%m-%d %H:%M:%S') <= carry_on_credits.expiry.strftime('%Y-%m-%d %H:%M:%S')):
-            #     credit_record = carry_on_credits
-            # else:
-            #     credit_record = user_credit
 
             if present.strftime('%Y-%m-%d %H:%M:%S') <= user_credit.expiry.strftime('%Y-%m-%d %H:%M:%S'):
                 if not actual_used_credits > user_credit.credits_left:
@@ -1046,7 +1034,6 @@ class UpdateTaskCreditStatus(APIView):
     @staticmethod
     def update_credits( user, actual_used_credits):
         credit_status = UpdateTaskCreditStatus.update_usercredit(user, actual_used_credits)
-        # print("CREDIT STATUS----->", credit_status)
 
         if credit_status:
             msg = "Successfully debited MT credits"
@@ -1060,14 +1047,9 @@ class UpdateTaskCreditStatus(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_credit_status(request):
-    # if (request.user.is_internal_member) and (InternalMember.objects.get(internal_member=request.user.id).role.id == 1):
-    #     return Response({"credits_left" : request.user.internal_team_manager.credit_balance,
-    #                         "total_available" : request.user.internal_team_manager.buyed_credits}, status=200)
-    # return Response({"credits_left" : request.user.credit_balance,
-    #                         "total_available" : request.user.buyed_credits}, status=200)
     return Response({"credits_left": request.user.credit_balance,}, status=200)
 
-#############Tasks Assign to vendor#################
+######### Tasks Assign to vendor #################
 class TaskView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TaskSerializer
@@ -1162,7 +1144,7 @@ class ProjectAnalysisProperty(APIView):
         print("remove keys--->", remove_keys)
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
-            raise ValueError("OKAPI request fields not setted correctly!!!")
+            raise ValueError("File processing fields not set properly !!!")
 
     @staticmethod
     def get_data_from_docs(project):
@@ -1224,7 +1206,7 @@ class ProjectAnalysisProperty(APIView):
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-                print("Status-------------->",doc.status_code)
+
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
@@ -1253,7 +1235,6 @@ class ProjectAnalysisProperty(APIView):
             else:
                 print("*************  File taken only once  **************")
                 tasks = [i for i in Task.objects.filter(file_id=task.file_id)]
-                print("####",tasks)
                 task_details = TaskDetails.objects.filter(task__in = tasks).first()
                 task_details.pk = None
                 task_details.task_id = task.id

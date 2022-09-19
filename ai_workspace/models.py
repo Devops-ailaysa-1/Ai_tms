@@ -204,65 +204,30 @@ class Project(models.Model):
                 return "Yet to start"
             else:
                 if docs.count() == tasks:
-                    for doc in docs:
-                        total_segments+=doc.total_segment_count
+
+                    total_seg_count = 0
+                    confirm_count  = 0
+                    confirm_list = [102, 104, 106]
+
+                    segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+                    for seg in segs:
+
+                        if seg.is_merged == True and seg.is_merge_start == False:
+                            continue
+                        else:
+                            total_seg_count += 1
+
+                        seg_new = seg.get_active_object()
+                        if seg_new.status_id in confirm_list:
+                            confirm_count += 1
+
                 else:
                     return "In Progress"
 
-            status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-                Q(status_id__in=[102,104,106,110])).all().count()
-
-            if total_segments == status_count:
+            if total_seg_count == confirm_count:
                 return "Completed"
             else:
                 return "In Progress"
-            # docs = Document.objects.filter(job__project_id=self.id).all()
-            # tasks = len(self.get_tasks)
-            # total_segments = 0
-            # if not docs:
-            #     return "Yet to start"
-            # else:
-            #     if docs.count() == tasks:
-            #         # for doc in docs:
-            #         #     total_segments+=doc.total_segment_count
-            #
-            #         # segs = Segment.objects.filter(text_unit__document=document)
-            #         # for seg in segs:
-            #         #     if not (seg.is_merged and (not seg.is_merge_start)):
-            #         #         total_seg_count += 1
-            #         #     seg_new = seg.get_active_object()
-            #         #     if seg_new.status_id in confirm_list:
-            #         #         confirm_count += 1
-            #
-            #         total_seg_count = 0
-            #         confirm_count  = 0
-            #         confirm_list = [102, 104, 106]
-            #
-            #         segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
-            #         for seg in segs:
-            #
-            #             # if not (seg.is_merged and (not seg.is_merge_start)):
-            #             #     total_seg_count += 1
-            #
-            #             if seg.is_merged == True and seg.is_merge_start == False:
-            #                 continue
-            #             else:
-            #                 total_seg_count += 1
-            #
-            #             seg_new = seg.get_active_object()
-            #             if seg_new.status_id in confirm_list:
-            #                 confirm_count += 1
-            #
-            #     else:
-            #         return "In Progress"
-            #
-            # # status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-            # #     Q(status_id__in=[102,104,106])).all().count()
-            #
-            # if total_seg_count == confirm_count:
-            #     return "Completed"
-            # else:
-            #     return "In Progress"
 
     @property
     def files_and_jobs_set(self):
@@ -464,9 +429,6 @@ class Project(models.Model):
                 return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                     "proj_seg_count":out.get('task_seg_count__sum'),
                                 "task_words":task_words}
-        # else:
-        #     from .api_views import ProjectAnalysisProperty
-        #     return ProjectAnalysisProperty.get(self.id)
         else:
             from .api_views import ProjectAnalysisProperty
             try:
@@ -474,32 +436,6 @@ class Project(models.Model):
             except:
                 return {"proj_word_count": 0, "proj_char_count": 0, \
                     "proj_seg_count": 0, "task_words":[]}
-    # @property
-    # def project_analysis(self):
-    #     if self.is_proj_analysed == True:
-    #         task_words = []
-    #
-    #         if self.is_all_doc_opened:
-    #             # print("Inside doccsssssssssssss")
-    #             [task_words.append({i.id:i.document.total_word_count}) for i in self.get_tasks]
-    #             out=Document.objects.filter(id__in=[j.document_id for j in self.get_tasks]).aggregate(Sum('total_word_count'),\
-    #                 Sum('total_char_count'),Sum('total_segment_count'))
-    #
-    #             return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
-    #                 "proj_seg_count":out.get('total_segment_count__sum'),\
-    #                               "task_words" : task_words }
-    #         else:
-    #             # print("Inside task detailssssss")
-    #             out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-    #             task_words = []
-    #             [task_words.append({i.id:i.task_details.first().task_word_count}) for i in self.get_tasks]
-    #
-    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-    #                 "proj_seg_count":out.get('task_seg_count__sum'),
-    #                             "task_words":task_words}
-    #     else:
-    #         from .api_views import ProjectAnalysisProperty
-    #         return ProjectAnalysisProperty.get(self.id)
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -922,56 +858,31 @@ class Task(models.Model):
         except:
             return None
 
-    # @property
-    # def corrected_segment_count(self):
-    #     confirm_list = [102, 104, 106]
-    #     total_seg_count = 0
-    #     confirm_count = 0
-    #     doc = self.document
-    #     # return Segment.objects.filter(
-    #     #     text_unit__document=doc
-    #     # ).count()
-    #
-    #     segs = Segment.objects.filter(text_unit__document=doc)
-    #     for seg in segs:
-    #         # continue if seg.is_merged and (not seg.is_merge_start) else total_seg_count += 1
-    #
-    #         # if not (seg.is_merged and (not seg.is_merge_start)):
-    #         #     total_seg_count += 1
-    #
-    #         if seg.is_merged == True and seg.is_merge_start == False:
-    #             continue
-    #         else:
-    #             total_seg_count += 1
-    #
-    #         seg_new = seg.get_active_object()
-    #         if seg_new.status_id in confirm_list:
-    #             confirm_count += 1
-    #
-    #     return total_seg_count, confirm_count
-    #
-    #     # for seg in segs:
-    #     #     seg_new = seg.get_active_object()
-    #     #     if seg_new.status_id in confirm_list:
-    #     #         confirm_count += 1
-
     @property
     def corrected_segment_count(self):
+        confirm_list = [102, 104, 106]
+        total_seg_count = 0
+        confirm_count = 0
         doc = self.document
-        return Segment.objects.filter(
-            text_unit__document=doc
-        ).count()
 
+        segs = Segment.objects.filter(text_unit__document=doc)
+        for seg in segs:
+
+            if seg.is_merged == True and seg.is_merge_start == False:
+                continue
+            else:
+                total_seg_count += 1
+
+            seg_new = seg.get_active_object()
+            if seg_new.status_id in confirm_list:
+                confirm_count += 1
+
+        return total_seg_count, confirm_count
 
     @property
     def get_progress(self):
         if self.job.project.project_type_id != 3:
-            confirm_list = [102, 104, 106,110]
-            # total_segment_count = self.document.total_segment_count
-            total_segment_count = self.corrected_segment_count
-            segments_confirmed_count = self.document.segments.filter(
-                status__status_id__in=confirm_list
-            ).count()
+            total_segment_count, segments_confirmed_count = self.corrected_segment_count
             return {"total_segments": total_segment_count, \
                     "confirmed_segments": segments_confirmed_count}
         else:
@@ -979,16 +890,6 @@ class Task(models.Model):
             source_words = self.job.term_job.filter(Q(sl_term__isnull=False)).exclude(sl_term='').count()
             return {"source_words":source_words,\
                     "target_words":target_words}
-    # @property
-    # def get_progress(self):
-    #     # confirm_list = [102, 104, 106]
-    #     # total_segment_count = self.corrected_segment_count
-    #     # segments_confirmed_count = self.document.segments.filter(
-    #     #     status__status_id__in=confirm_list
-    #     # ).count()
-    #     total_segment_count, segments_confirmed_count = self.corrected_segment_count
-    #     return {"total_segments": total_segment_count, \
-    #             "confirmed_segments": segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
