@@ -196,7 +196,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             if task.job.project.pre_translate == True:
                 user = task.job.project.ai_user
                 mt_engine = task.job.project.mt_engine_id
-                task_mt_engine_id = TaskAssign.objects.get(task=task).mt_engine.id
+                task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
                 segments = Segment.objects.filter(text_unit__document=task.document)
                 # update_list = []
                 mt_segments = []

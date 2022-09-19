@@ -601,6 +601,10 @@ class ProjectFilter(django_filters.FilterSet):
         if value == "files":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
             return queryset
+        if value == "text":
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+            return queryset
+            #queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
         # if value == "glossary":
         #     lookup = '__'.join([name, 'isnull'])
         #     return queryset.filter(**{lookup: False})
@@ -667,7 +671,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 return Response({"msg":"Url not Accepted"},status = 406)
             name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
             im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
-            serializer = ser(data={**request.data,"files":[im_file]},context={"request": request})
+            serializer = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 return Response(serializer.data, status=201)

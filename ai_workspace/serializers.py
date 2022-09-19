@@ -430,7 +430,11 @@ class TbxUploadSerializer(serializers.ModelSerializer):
 # 		return representation
 #  {'source_file_path': '/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u98163/u98163p2/source/test1.txt', 'source_language': 'af', 'target_language': 'hy', 'extension': '.txt', 'processor_name': 'plain-text-processor'}
 ######################################## nandha ##########################################
-
+class ProjectFilesCreateTypeSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = ProjectFilesCreateType
+		fields = ("id","file_create_type", "project")
+		read_only_fields = ("id","project",)
 
 
 
@@ -445,8 +449,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False)
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
-	file_create_type = serializers.CharField(read_only=True,
-			source="project_file_create_type.file_create_type")
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False)
 	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)
@@ -455,14 +457,16 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
+	from_text = serializers.BooleanField(required=False,allow_null=True)
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
+	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
 
 	class Meta:
 		model = Project
 		fields = ("id", "project_name","assigned","text_to_speech_source_download", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable","pre_translate","copy_paste_enable","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",
-					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at")
+					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at","from_text",)
 
 
 	def run_validation(self,data):
@@ -513,6 +517,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
 				target_language} for target_language in data.get("target_languages", [None])]
 			data['pre_translate'] = data.get('pre_translate',['false'])[0]
+			data['from_text'] =  data.get('from_text',[0])[0]
 
 		else:
 			data["jobs"] = [{"source_language": data.get("source_language", [None])[0], "target_language":\
@@ -521,7 +526,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				data['pre_translate'] = data.get('pre_translate')[0]
 
 		data['mt_engine_id'] = data.get('mt_engine',[1])[0]
-
 		return super().to_internal_value(data=data)
 
 	def get_project_analysis(self,instance):
@@ -560,7 +564,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			else False
 
 	def create(self, validated_data):
-		# print("Validated data ===> ", validated_data)
+		print("Validated data ===> ", validated_data)
 
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
@@ -573,6 +577,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		voice_proj_detail = validated_data.pop("voice_proj_detail",[])
 		validated_data.pop('team_exist')
 		# print("validated_data---->",validated_data)
+		create_type = validated_data.pop('from_text')
 		project_type = validated_data.get("project_type_id")
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_steps = validated_data.pop("proj_steps",[])
@@ -582,17 +587,15 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
 				f_klass=File,j_klass=Job, ai_user=ai_user,\
 				team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
-			ProjectFilesCreateType.objects.create(project=project)
-
+			if create_type == 1:
+				ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
+			else:ProjectFilesCreateType.objects.create(project=project)
 			if proj_subject:
 				[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
 			if proj_content_type:
 				[project.proj_content_type.create(**content_data) for content_data in proj_content_type]
 			if proj_steps:
 				[project.proj_steps.create(**steps_data) for steps_data in proj_steps]
-
-			# steps = [i.steps for i in WorkflowSteps.objects.filter(workflow=workflow)]#need to include custom workflows
-			# print("STEP---->",proj_steps)
 
 			if project_type == 1 or project_type == 2:
 				tasks = Task.objects.create_tasks_of_files_and_jobs(
