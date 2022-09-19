@@ -184,7 +184,8 @@ class MergeSegment(BaseSegment):
             seg.save()
 
         first_seg_in_merge = self.segments.all().first()
-        MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
+        try: MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
+        except: print("No translation done for merged segment yet !!!")
 
         return  super(MergeSegment, self).delete(using=using,
             keep_parents=keep_parents)
