@@ -6,14 +6,14 @@
 <formathandle type="end" include="yes"></formathandle>
 <formathandle type="isolated" include="no"></formathandle>
 <okpsrx:options oneSegmentIncludesAll="no" trimLeadingWhitespaces="no" trimTrailingWhitespaces="no" useJavaRegex="yes" useIcu4JBreakRules="no" treatIsolatedCodesAsWhitespace="no"></okpsrx:options>
-<okpsrx:sample language="ml" useMappedRules="yes">വെള്ളയും കറുപ്പും നിറങ്ങൾ മാത്രമുള്ള ഏക ഇനം മീൻകൊത്തിയാണ്‌ പുള്ളി മീൻകൊത്തി ഇംഗ്ലീഷ്: Pied Kingfisher. ശാസ്ത്രീയ നാമം: Ceryle rudis. കേരളത്തിൽ കാണപ്പെടുന്നവയെ Travancore Pied Kingfisher എന്നു വിളിക്കുന്നു. 6-7 ഇഞ്ചു വലിപ്പമുള്ള ചെറിയ കിളിയാണ് ഇത്. ലോകത്തിൽ ഏറ്റവും കൂടുതൽ കാണപ്പെടുന്ന മീൻ‌കൊത്തികളിൽ മൂന്നാം സ്ഥാനം ഇവക്കാണെന്ന് അനുമാനിക്കപ്പെടുന്നു. കേരളത്തിലെങ്ങും സുലഭമായ ഒരു പക്ഷിയാണിത്. ശരീരം മുഴുവൻ കറുപ്പും വെളുപ്പും നിറങ്ങൾ ഇടകലർന്ന് കാണപ്പെടുന്നു. ജലാശയങ്ങൾക്ക് മുകളിൽ ഒരു സ്ഥലത്തു തന്നെ ചിറകടിച്ച് പാറി നില്ക്കുകയും, അങ്ങനെ നിൽക്കുമ്പോൾ പെട്ടെന്നു ചിറകുകൾ മടക്കി താഴെ ജലത്തിലേയ്ക്കു കൂപ്പു കുത്തുകയും ഒരു മത്സ്യത്തെ കൊക്കിലാക്കുകയും ചെയ്യും. </okpsrx:sample>
+<okpsrx:sample language="ml" useMappedRules="yes">ദില്ലി : ചണ്ഡീഗഡ് സർവകലാശാലയിലെ വനിതാ ഹോസ്റ്റലിൽ വീഡിയോ ചോർന്നുവെന്ന പരാതിയിൽ  3 പേർ അറസ്റ്റിൽ. ആരോപണ വിധേയയായ പെൺകുട്ടിയെ കൂടാതെ ഷിംല സ്വദേശികളായ രണ്ട് പേരാണ് അറസ്റ്റിലായത്. ഒരാൾ പെൺകുട്ടിയുടെ പുരുഷ സുഹൃത്താണെന്ന് പൊലീസ് പറയുന്നു. രണ്ടുപേരെയും ഷിംല പോലീസ് അറസ്റ്റ് ചെയ്തു പഞ്ചാബ് പോലീസിന് കൈമാറി.അന്വേഷണത്തിന് ഐപിഎസ് ഉദ്യോഗസ്ഥൻ്റെ നേതൃത്വത്തിൽ പ്രത്യേക സംഘം രൂപീകരിച്ചു.മജിസ്ട്രേറ്റ് തല അന്വേഷണവും പ്രഖ്യാപിച്ചു, സർവകലാശാല സപ്തംബർ 24 വരെ അടച്ചിടും.</okpsrx:sample>
 <okpsrx:rangeRule></okpsrx:rangeRule>
 </header>
 <body>
 <languagerules>
 <languagerule languagerulename="Malayalam">
 <rule break="no">
-<beforebreak>\b(അ|ആ|ഇ|ഈ|ഉ|ഊ|ഋ|ൠ|ഌ|ൡ|എ|ഏ|ഐ|ഒ|ഓ|ഔ|ക|ഖ|ഗ|ഘ|ങ|ച|ഛ|ജ|ഝ|ഞ|ട|ഠ|ഡ|ഢ|ണ|ത|ഥ|ദ|ധ|ന|പ|ഫ|ബ|ഭ|മ|യ|ര|ല|വ|ശ|ഷ|സ|ഹ|ള|ഴ|റ|St|Gen|Hon|Dr|Mr|Ms|Mrs|Col|Maj|Brig|Sgt|Capt|Cmnd|Sen|Rev|Rep|Revd|Pr|Pres|Ibid|comp|[A-Z]+|[a-z]+|[0-9]+|)\.</beforebreak>
+<beforebreak>\b(അ|ആ|ഇ|ഈ|ഉ|ഊ|ഋ|ൠ|ഌ|ൡ|എ|ഏ|ഐ|ഒ|ഓ|ഔ|ക|ഖ|ഗ|ഘ|ങ|ച|ഛ|ജ|ഝ|ഞ|ട|ഠ|ഡ|ഢ|ണ|ത|ഥ|ദ|ധ|ന|പ|ഫ|ബ|ഭ|മ|യ|ര|ല|വ|ശ|ഷ|സ|ഹ|ള|ഴ|റ|St|Gen|Hon|Dr|Mr|Ms|Mrs|Col|Maj|Brig|Sgt|Capt|Cmnd|Sen|Rev|Rep|Revd|Pr|Pres|Ibid|comp|Thiru|Tmt|Shri|Smt|Thirumathi|Selvi|Selvan|[A-Z]+|[a-z]+|[0-9]+|)\.</beforebreak>
 <afterbreak>\s</afterbreak>
 </rule>
 <rule break="no">
