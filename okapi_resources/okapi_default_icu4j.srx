@@ -7,7 +7,7 @@
 <okpsrx:options oneSegmentIncludesAll="no" trimLeadingWhitespaces="no" trimTrailingWhitespaces="no" useJavaRegex="yes" useIcu4JBreakRules="no" treatIsolatedCodesAsWhitespace="no"></okpsrx:options>
 <okpsrx:sample language="en" useMappedRules="yes">E. V. K. S. Elangovan.
 
-Erode Venkata Krishnasamy Sampath Elangovan is an Indian politician who was a member of the Lok Sabha. He represented the Gobichettipalayam constituency of Tamil Nadu and is a member of the Indian National Congress party.[1] He is the son of E. V. K. Sampath and grandson of Periyar E. V. Ramasamy's brother Krishnasamy.[1] In 2009 Lok Sabha election, he lost to A. Ganeshamurthi of the MDMK by 49,336 votes in Erode constituency. He was appointed as President of Tamil Nadu Congress Committee by All India Congress Committee Chief Sonia Gandhi on 31 October 2014, followed by the resignation of B. S. Gnanadesikan. In the 2019 Lok Sabha election he lost to O. P. Ravindranath Kumar, the son of O. Panneerselvam, in Theni. Elangovan was the only candidate of the UPA to lose in the 2019 Lok Sabha elections in Tamil Nadu.He also elected as a Member of Legislative Assembly in Tamilnadu from Sathyamangalam constituency in 1985. 
+Erode Venkata Krishnasamy Thiru. Sampath Elangovan is an Indian politician who was a member of the Lok Sabha. He represented the Gobichettipalayam constituency of Tamil Nadu and is a member of the Indian National Congress party.[1] He is the son of E. V. K. Sampath and grandson of Periyar E. V. Ramasamy's brother Krishnasamy.[1] In 2009 Lok Sabha election, he lost to A. Ganeshamurthi of the MDMK by 49,336 votes in Erode constituency. He was appointed as President of Tamil Nadu Congress Committee by All India Congress Committee Chief Sonia Gandhi on 31 October 2014, followed by the resignation of B. S. Gnanadesikan. In the 2019 Lok Sabha election he lost to O. P. Ravindranath Kumar, the son of O. Panneerselvam, in Theni. Elangovan was the only candidate of the UPA to lose in the 2019 Lok Sabha elections in Tamil Nadu.He also elected as a Member of Legislative Assembly in Tamilnadu from Sathyamangalam constituency in 1985. 
 
 M. K. Stalin. 
 M.K.Stalin.</okpsrx:sample>
@@ -18,7 +18,7 @@ M.K.Stalin.</okpsrx:sample>
 <languagerule languagerulename="English">
 <!-- Words that follow with period and whitespace, but should not normally break -->
 <rule break="no">
-<beforebreak>\b(St|Gen|Hon|Dr|Mr|Ms|Mrs|Col|Maj|Brig|Sgt|Capt|Cmnd|Sen|Rev|Rep|Revd|Pr|Pres|Ibid|comp)\.</beforebreak>
+<beforebreak>\b(St|Gen|Hon|Dr|Mr|Ms|Mrs|Col|Maj|Brig|Sgt|Capt|Cmnd|Sen|Rev|Rep|Revd|Pr|Pres|Ibid|comp|Thiru|Tmt|Shri|Smt|Thirumathi|Selvi|Selvan)\.</beforebreak>
 <afterbreak>\s</afterbreak>
 </rule>
 <!--ICU splits this: "Normal sentence (question in parenthesis?) lowercase end."-->
