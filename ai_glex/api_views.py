@@ -375,10 +375,11 @@ def glossary_search(request):
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
+    user = request.user.team.owner if request.user.team else request.user
     glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
     target_language = doc.job.target_language
     source_language = doc.job.source_language
-    queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=request.user)& Q(sl_language__language=source_language))\
+    queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=user)& Q(sl_language__language=source_language))\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
                       params=[user_input]).distinct().values('sl_term','tl_term')
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
