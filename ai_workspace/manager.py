@@ -199,8 +199,8 @@ class TaskManager(models.Manager):
 
 class TaskAssignManager(models.Manager):
 
-    def task_assign_update(self, pk, mt_engine , mt_enable, pre_translate):
-        self.filter(pk__in=pk).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate)
+    def task_assign_update(self, pk, mt_engine , mt_enable, pre_translate,copy_paste_enable):
+        self.filter(pk__in=pk).update(mt_engine_id = mt_engine, mt_enable = mt_enable, pre_translate=pre_translate,copy_paste_enable=copy_paste_enable)
 
     def assign_task(self,project):
         #print("PRO---->",project.id)
@@ -211,15 +211,16 @@ class TaskAssignManager(models.Manager):
         mt_enable = project.mt_enable
         pre_translate = project.pre_translate
         steps = project.get_steps
+        copy_paste_enable = project.copy_paste_enable
         print("Inside Manager---------->",pre_translate)
         print("Inside---->",steps)
         task_assign = [self.get_or_create(task=task,step=step,\
                          defaults = {"assign_to": assign_to,"status":1,"mt_engine_id":mt_engine,\
-                         "mt_enable":mt_enable,"pre_translate":pre_translate})\
+                         "mt_enable":mt_enable,"pre_translate":pre_translate,'copy_paste_enable':copy_paste_enable})\
                         for task in tasks for step in steps]
         print("Insideeee-------->",task_assign)
         data = [i[0].id for i in task_assign if i[1]==False]
-        self.task_assign_update(data,mt_engine,mt_enable,pre_translate)
+        self.task_assign_update(data,mt_engine,mt_enable,pre_translate,copy_paste_enable)
         # print("tASK ASSIGN --> ", task_assign)
         return task_assign
 

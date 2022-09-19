@@ -24,6 +24,7 @@ from django.core.files.base import ContentFile
 from indicnlp.tokenize.sentence_tokenize import sentence_split
 from indicnlp.tokenize.indic_tokenize import trivial_tokenize
 from ai_workspace_okapi.utils import download_file,text_to_speech,text_to_speech_long
+from .utils import get_consumable_credits_for_text_to_speech,get_consumable_credits_for_speech_to_text
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
     ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
     ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
@@ -1898,22 +1899,30 @@ def transcribe_file(request):
         return Response(ser.data)
     else:
         obj = Task.objects.get(id = task_id)
+        project = obj.job.project
+        account_debit_user = project.team.owner if project.team else project.ai_user
         source = [obj.job.source_language.id]
         source_code = obj.job.source_language_code
         filename = obj.file.filename
         speech_file = obj.file.file.path
         try:
             audio = MP3(speech_file)
-            length = int(audio.info.length)
+            length = int(audio.info.length)###seconds####
         except:
             length=None
         print("Length----->",length)
-        if length and length<60:
-            res = transcribe_short_file(speech_file,source_code,obj,length,user)
+        initial_credit = account_debit_user.credit_balance.get("total_left")
+        consumable_credits = get_consumable_credits_for_speech_to_text(length)
+        if initial_credit > consumable_credits:
+            if length and length<60:
+                res = transcribe_short_file(speech_file,source_code,obj,length,user)
+            else:
+                res = transcribe_long_file(speech_file,source_code,filename,obj,length,user)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+            print("RES----->",res)
+            return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})
         else:
-            res = transcribe_long_file(speech_file,source_code,filename,obj,length,user)
-        print("RES----->",res)
-        return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})
+            return Response({'msg':'Insufficient Credits'},status=400)
 
 
 @api_view(["GET"])
@@ -1959,14 +1968,15 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
 #####################Need to work###########################################
 
 def google_long_text_source_file_process(file,obj,language,gender,voice_name):
+    project_id  = obj.job.project.id
     final_name,ext =  os.path.splitext(file)
     lang_list = ['hi','bn','or','ne','pa']
     final_audio = final_name + '.mp3'
-    dir_1 = os.path.join('/ai_home/',"output")
+    dir_1 = os.path.join('/ai_home/',"Output_"+str(project_id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
         count=0
-        out_filename = file + '_out.txt'
+        out_filename = final_name + '_out.txt'
         with open(file) as infile, open(out_filename, 'w') as outfile:
           lines = infile.readlines()
           for line in lines:
@@ -1986,12 +1996,12 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
         if file.endswith('.txt') :
             print("File--------------->",file)
             name,ext = os.path.splitext(file)
-            dir = os.path.join('/ai_home/',"OutputAudio")
+            dir = os.path.join('/ai_home/',"OutputAudio_"+str(project_id))
             if not os.path.exists(dir):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
-            text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',None)
+            text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
     list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3')) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
@@ -2018,26 +2028,28 @@ def convert_and_download_text_to_speech_source(request):#########working########
     gender = request.GET.get('gender',None)
     # task = request.GET.get('task',None)
     pr = Project.objects.get(id=project)
-    for _task in pr.get_tasks:
+    for _task in pr.get_source_only_tasks:
         if _task.task_transcript_details.first() == None:
             tasks.append(_task)
     for obj in tasks:
-        text_to_speech_task(obj,language,gender,user)
+        text_to_speech_task(obj,language,gender,user,None)
     shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source/Audio')
     res = download_file(pr.project_name+'.zip')
     os.remove(pr.project_name+'.zip')
     return res
 
 
-def text_to_speech_task(obj,language,gender,user):
+def text_to_speech_task(obj,language,gender,user,voice_name):
     #obj = Task.objects.get(id=task_id)
+    project = obj.job.project
+    account_debit_user = project.team.owner if project.team else project.ai_user
     file,ext = os.path.splitext(obj.file.file.path)
     print("File---------->",file)
     dir,name_ = os.path.split(os.path.abspath(file))
     if ext == '.docx':
         name = file + '.txt'
         data = docx2txt.process(obj.file.file.path)
-        print("Length Character Count-------------->",len(data))
+        #print("Length Character Count-------------->",len(data))
         with open(name, "w") as out:
             out.write(data)
     else:
@@ -2045,28 +2057,38 @@ def text_to_speech_task(obj,language,gender,user):
         text_file = open(name, "r")
         data = text_file.read()
         text_file.close()
-    if len(data)>4500:
-        print(name)
-        res2,f2 = google_long_text_source_file_process(name,obj,language,gender,None)
-    else:
-        seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
-                     "processor_name":"plain-text-processor", "extension":".txt"}
-        res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
-        wc = res1.json() if res1.status_code == 200 else None
-        TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc})
-        audio_file = name_ + '_source'+'.mp3'
-        res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',None)
-        os.remove(audio_file)
-    ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
-    if ext == '.docx':
-        os.remove(name)
-    if ser.is_valid():
-        ser.save()
+    print("Length Character Count-------------->",len(data))
+    consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
+    initial_credit = account_debit_user.credit_balance.get("total_left")#########need to update owner account######
+    if initial_credit > consumable_credits:
+        if len(data)>4500:
+            print(name)
+            res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+            print("Ds,Sc------------------>",debit_status,status_code)
+        else:
+            seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
+                         "processor_name":"plain-text-processor", "extension":".txt"}
+            res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
+            wc = res1.json() if res1.status_code == 200 else None
+            TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc})
+            audio_file = name_ + '_source'+'.mp3'
+            res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+            print("Ds,Sc------------------>",debit_status,status_code)
+            os.remove(audio_file)
+        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
+        if ext == '.docx':
+            os.remove(name)
+        if ser.is_valid():
+            ser.save()
+            f2.close()
+            return Response(ser.data)
         f2.close()
-        return Response(ser.data)
-    f2.close()
-    #os.remove(name)
-    return Response(ser.errors)
+        #os.remove(name)
+        return Response(ser.errors)
+    else:
+        return Response({'msg':'Insufficient Credits'},status=400)
 
 
 
@@ -2085,17 +2107,36 @@ def get_media_link(request,task_id):
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
     task = request.GET.get('task')
+    project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender')
+    voice_name = request.GET.get('voice_name')
     user = request.user
-    obj = Task.objects.get(id = task)
-    if obj.task_transcript_details.exists()==False:
-        #text_to_speech.apply_async((obj.id,), ) ###need to check####
-        tt = text_to_speech_task(obj,language,gender,user)
-        return Response(tt.data)
-    else:
-        ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
+    if task:
+        obj = Task.objects.get(id = task)
+        if obj.task_transcript_details.exists()==False:
+            #text_to_speech.apply_async((obj.id,), ) ###need to check####
+            tt = text_to_speech_task(obj,language,gender,user,voice_name)
+            return Response(tt.data)
+        else:
+            ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
+            return Response(ser.data)
+    if project:
+        tasks =[]
+        task_list = []
+        pr = Project.objects.get(id=project)
+        for _task in pr.get_source_only_tasks:
+            if _task.task_transcript_details.first() == None:
+                tasks.append(_task)
+        for obj in tasks:
+            conversion = text_to_speech_task(obj,language,gender,user,voice_name)
+            if conversion.status_code == 200:
+                task_list.append(obj.id)
+        queryset = TaskTranscriptDetails.objects.filter(task__in = pr.get_source_only_tasks)
+        ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
+    else:
+        return Response({'msg':'task_id or project_id must'})
     # file = obj.task_transcript_details.first().source_audio_file
     # return download_file(file.path)
 

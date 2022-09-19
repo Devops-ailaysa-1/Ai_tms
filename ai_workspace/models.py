@@ -19,7 +19,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,ProjectTypeDetail
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 from ai_workspace_okapi.models import Document, Segment
-from ai_staff.models import ParanoidModel,Billingunits
+from ai_staff.models import ParanoidModel,Billingunits,MTLanguageLocaleVoiceSupport
 from django.shortcuts import reverse
 from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
@@ -129,6 +129,7 @@ class Project(models.Model):
     pre_translate = models.BooleanField(default=False)
     mt_enable = models.BooleanField(default=True)
     project_deadline = models.DateTimeField(blank=True, null=True)
+    copy_paste_enable = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -261,6 +262,14 @@ class Project(models.Model):
     def get_tasks(self):
         return [task for job in self.project_jobs_set.all() for task \
             in job.job_tasks_set.all()]
+    @property
+    def get_source_only_tasks(self):
+        tasks=[]
+        for job in self.project_jobs_set.all():
+            for task in job.job_tasks_set.all():
+               if (task.job.target_language == None):
+                       tasks.append(task)
+        return tasks
 
     @property
     def tasks_count(self):
@@ -828,6 +837,61 @@ class Task(models.Model):
         else:return True
 
     @property
+    def download_audio_source_file(self):
+        try:
+            voice_pro = self.job.project.voice_proj_detail
+            if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:##text_to_speech
+                locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.source_language)
+                return [{"locale":i.language_locale.locale_code,'gender':i.gender,\
+                        "voice_type":i.voice_type,"voice_name":i.voice_name}\
+                        for i in locale_list] if locale_list else []
+            elif self.job.project.voice_proj_detail.project_type_sub_category_id == 1:##speech_to_text(checking for speech_to_speech)
+                if self.job.target_language!=None:
+                    txt_to_spc = MTLanguageSupport.objects.filter(language__language = self.job.source_language).first().text_to_speech
+                    if txt_to_spc:
+                        locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.target_language)
+                        return [{"locale":i.language_locale.locale_code,'gender':i.gender,\
+                                "voice_type":i.voice_type,"voice_name":i.voice_name}\
+                                for i in locale_list] if locale_list else []
+                    else: return False
+                else:return False
+        except:
+            return None
+
+    # @property
+    # def corrected_segment_count(self):
+    #     confirm_list = [102, 104, 106]
+    #     total_seg_count = 0
+    #     confirm_count = 0
+    #     doc = self.document
+    #     # return Segment.objects.filter(
+    #     #     text_unit__document=doc
+    #     # ).count()
+    #
+    #     segs = Segment.objects.filter(text_unit__document=doc)
+    #     for seg in segs:
+    #         # continue if seg.is_merged and (not seg.is_merge_start) else total_seg_count += 1
+    #
+    #         # if not (seg.is_merged and (not seg.is_merge_start)):
+    #         #     total_seg_count += 1
+    #
+    #         if seg.is_merged == True and seg.is_merge_start == False:
+    #             continue
+    #         else:
+    #             total_seg_count += 1
+    #
+    #         seg_new = seg.get_active_object()
+    #         if seg_new.status_id in confirm_list:
+    #             confirm_count += 1
+    #
+    #     return total_seg_count, confirm_count
+    #
+    #     # for seg in segs:
+    #     #     seg_new = seg.get_active_object()
+    #     #     if seg_new.status_id in confirm_list:
+    #     #         confirm_count += 1
+
+    @property
     def corrected_segment_count(self):
         confirm_list = [102, 104, 106]
         total_seg_count = 0
@@ -901,6 +965,7 @@ class TaskAssign(models.Model):
         on_delete=models.CASCADE, related_name="task_mt_engine")
     pre_translate = models.BooleanField(null=True, blank=True)
     mt_enable = models.BooleanField(null=True, blank=True)
+    copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
 
     objects = TaskAssignManager()
