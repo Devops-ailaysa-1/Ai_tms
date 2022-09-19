@@ -131,6 +131,7 @@ class Project(models.Model):
     project_deadline = models.DateTimeField(blank=True, null=True)
     copy_paste_enable = models.BooleanField(default=True)
 
+
     class Meta:
         unique_together = ("project_name", "ai_user")
         #managed = False
@@ -508,6 +509,7 @@ class ProjectFilesCreateType(models.Model):
     class FileType(models.TextChoices):
         upload_file = 'upload', "Files from usual upload"
         integeration = "integeration", "Files from integerations"
+        from_text   = "From insta text"
 
     file_create_type = models.TextField(choices=FileType.choices,
         default=FileType.upload_file)
