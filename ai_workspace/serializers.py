@@ -890,6 +890,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	bid_job_detail_info = serializers.SerializerMethodField()
 	open_in =  serializers.SerializerMethodField()
 	transcribed = serializers.SerializerMethodField()
+	text_to_speech_convert_enable = serializers.SerializerMethodField()
 	# can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
@@ -898,7 +899,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Task
 		fields = \
-			("id", "filename", "download_audio_source_file", "transcribed", "ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
+			("id", "filename", "download_audio_source_file", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",)
 
 
@@ -911,7 +912,16 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			else:return None
 		else:return None
 
-
+	def get_text_to_speech_convert_enable(self,obj):
+		if obj.job.project.project_type_id == 4 :
+			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+				if obj.job.target_language==None:
+					if obj.task_transcript_details.exists():
+						return False
+					else:return True
+				else:return None
+			else:return None
+		else:return None
 
 	def get_open_in(self,obj):
 		try:
