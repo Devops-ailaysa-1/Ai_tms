@@ -181,7 +181,7 @@ class TaskManager(models.Manager):
         if not assign_to:
             raise ValueError("You should send parameter either project "
                              "object or assign_to user")
-        if project.voice_proj_detail.project_type_sub_category_id == 1 :
+        if project.voice_proj_detail.project_type_sub_category_id == 1:
             tasks = [self.get_or_create(file=file, job = job) for file in files_list for job in jobs_list ]#, version_id=1, defaults = {"assign_to": assign_to}
             additional_tasks = [self.get_or_create(file=file, job = job) for file in audio_files for job in additional_job]#version_id=1, defaults = {"assign_to": assign_to})
         else:

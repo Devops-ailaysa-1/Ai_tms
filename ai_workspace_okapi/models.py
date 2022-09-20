@@ -361,12 +361,12 @@ class Document(models.Model):
     def download_audio_output_file(self):
         try:
             voice_pro = self.job.project.voice_proj_detail
-            if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+            if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:##text_to_speech
                 locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.target_language)
                 return [{"locale":i.language_locale.locale_code,'gender':i.gender,\
                         "voice_type":i.voice_type,"voice_name":i.voice_name}\
                         for i in locale_list] if locale_list else []
-            elif self.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+            elif self.job.project.voice_proj_detail.project_type_sub_category_id == 1:##speech_to_text&&&speech_to_speech
                 if self.job.target_language!=None:
                     txt_to_spc = MTLanguageSupport.objects.filter(language__language = self.job.target_language).first().text_to_speech
                     if txt_to_spc:

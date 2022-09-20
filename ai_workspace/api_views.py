@@ -1817,7 +1817,7 @@ def transcribe_short_file(speech_file,source_code,obj,length,user):
 
     audio = speech.RecognitionAudio(content=content)
 
-    config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code,)
+    config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code, enable_automatic_punctuation=True,)
     try:
         response = client.recognize(config=config, audio=audio)
         transcript=''
@@ -1867,7 +1867,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
     client = speech.SpeechClient()
     audio = speech.RecognitionAudio(uri=gcs_uri)
 
-    config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code,)
+    config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code, enable_automatic_punctuation=True,)
 
 
     # Detects speech in the audio file
@@ -1915,6 +1915,8 @@ def transcribe_file(request):
         except:
             length=None
         print("Length----->",length)
+        if length==None:
+            return Response({'msg':'something wrong in input file'},status=400)
         initial_credit = account_debit_user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_speech_to_text(length)
         if initial_credit > consumable_credits:
