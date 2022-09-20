@@ -166,7 +166,7 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
         # Resetting the raw MT for normal segments once merged
         for segment in segments:
             try:
-                MT_RawTranslation.objects.get(segment_id=segment.id).delete()
+                MT_RawTranslation.objects.get(segment_id = segment.id).delete()
             except:
                 print(f"No raw MT available for this segment --> {segment.id}")
 

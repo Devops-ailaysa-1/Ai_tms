@@ -150,10 +150,8 @@ class MergeSegment(BaseSegment):
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
-        # self.target = "".join([seg.target for seg in segs])
         self.target = ""
         self.coded_source = "".join([seg.coded_source for seg in segs])
-        # self.temp_target = "".join([seg.temp_target for seg in segs])
         self.temp_target = ""
         self.target_tags = "".join([seg.target_tags for seg in segs])
         self.tagged_source = "".join([seg.tagged_source for seg in segs])
@@ -183,9 +181,13 @@ class MergeSegment(BaseSegment):
             seg.target = ""
             seg.save()
 
+        # Resetting the raw MT once a merged segment is restored
         first_seg_in_merge = self.segments.all().first()
         try: MT_RawTranslation.objects.get(segment_id=first_seg_in_merge.id).delete()
         except: print("No translation done for merged segment yet !!!")
+
+        # Clearing the relations between MergeSegment and Segment
+        self.segments.clear()
 
         return  super(MergeSegment, self).delete(using=using,
             keep_parents=keep_parents)
@@ -206,9 +208,6 @@ class MergeSegment(BaseSegment):
     def validate_record(self):
         return all([segment.text_unit.id==self.text_unit.id for segment
             in self.segments.all()])
-    @property
-    def is_merged(self):
-        return True
 
 class MT_RawTranslation(models.Model):
 
