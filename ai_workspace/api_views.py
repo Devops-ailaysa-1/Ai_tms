@@ -2048,12 +2048,10 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     project = obj.job.project
     account_debit_user = project.team.owner if project.team else project.ai_user
     file,ext = os.path.splitext(obj.file.file.path)
-    print("File---------->",file)
     dir,name_ = os.path.split(os.path.abspath(file))
     if ext == '.docx':
         name = file + '.txt'
         data = docx2txt.process(obj.file.file.path)
-        #print("Length Character Count-------------->",len(data))
         with open(name, "w") as out:
             out.write(data)
     else:
@@ -2061,15 +2059,13 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
         text_file = open(name, "r")
         data = text_file.read()
         text_file.close()
-    print("Length Character Count-------------->",len(data))
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
-    initial_credit = account_debit_user.credit_balance.get("total_left")#########need to update owner account######
+    initial_credit = account_debit_user.credit_balance.get("total_left")
     if initial_credit > consumable_credits:
         if len(data)>4500:
             print(name)
             res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
-            print("Ds,Sc------------------>",debit_status,status_code)
         else:
             seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
                          "processor_name":"plain-text-processor", "extension":".txt"}
@@ -2079,7 +2075,6 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             audio_file = name_ + '_source'+'.mp3'
             res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
-            print("Ds,Sc------------------>",debit_status,status_code)
             os.remove(audio_file)
         ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
         if ext == '.docx':
@@ -2136,6 +2131,8 @@ def convert_text_to_speech_source(request):
             conversion = text_to_speech_task(obj,language,gender,user,voice_name)
             if conversion.status_code == 200:
                 task_list.append(obj.id)
+            elif conversion.status_code == 400:
+                return Response({'msg':'Insufficient Credits'},status=400)
         queryset = TaskTranscriptDetails.objects.filter(task__in = pr.get_source_only_tasks)
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
