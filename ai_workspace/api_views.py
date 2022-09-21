@@ -1818,21 +1818,21 @@ def transcribe_short_file(speech_file,source_code,obj,length,user):
     audio = speech.RecognitionAudio(content=content)
 
     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code, enable_automatic_punctuation=True,)
-    #try:
-    response = client.recognize(config=config, audio=audio)
-    transcript=''
-    for result in response.results:
-        print(u"Transcript: {}".format(result.alternatives[0].transcript))
-        transcript += result.alternatives[0].transcript
-        file_length = int(result.result_end_time.seconds)
-        print("Len--------->",file_length)
-    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
-    if ser.is_valid():
-        ser.save()
-        return (ser.data)
-    return (ser.errors)
-    # except:
-    #     return ({'msg':'Something  went wrong in Google Cloud Api'})
+    try:
+        response = client.recognize(config=config, audio=audio)
+        transcript=''
+        for result in response.results:
+            print(u"Transcript: {}".format(result.alternatives[0].transcript))
+            transcript += result.alternatives[0].transcript
+            file_length = int(result.result_end_time.seconds)
+            print("Len--------->",file_length)
+        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
+        if ser.is_valid():
+            ser.save()
+            return (ser.data)
+        return (ser.errors)
+    except:
+        return ({'msg':'Something  went wrong in Google Cloud Api'})
 
 ###########################Transcribe Long File##############################
 
@@ -1944,7 +1944,8 @@ def transcribe_file_get(request):
 
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     final_name,ext =  os.path.splitext(file)
-    final_audio = final_name +'_' + obj.task.ai_taskid +'('+ obj.job.source_language_code + '-' +obj.job.target_language_code + ')' + '.mp3'
+    final_audio = final_name + '.mp3'
+    #final_audio = final_name +'_' + obj.task.ai_taskid +'('+ obj.job.source_language_code + '-' +obj.job.target_language_code + ')' + '.mp3'
     dir_1 = os.path.join('/ai_home/',"output")
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
@@ -1980,7 +1981,8 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     project_id  = obj.job.project.id
     final_name,ext =  os.path.splitext(file)
     lang_list = ['hi','bn','or','ne','pa']
-    final_audio = final_name +'_' + obj.ai_taskid + '(' + obj.job.source_language_code + ')' + '.mp3'
+    final_audio = final_name + '.mp3'
+    #final_audio = final_name +'_' + obj.ai_taskid + '(' + obj.job.source_language_code + ')' + '.mp3'
     dir_1 = os.path.join('/ai_home/',"Output_"+str(project_id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
