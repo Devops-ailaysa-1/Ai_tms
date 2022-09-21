@@ -1825,6 +1825,7 @@ def transcribe_short_file(speech_file,source_code,obj,length,user):
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
             file_length = int(result.result_end_time.seconds)
+        print("Len--------->",file_length)
         ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
         if ser.is_valid():
             ser.save()
@@ -1877,6 +1878,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
     for result in response.results:
         transcript += result.alternatives[0].transcript
         file_length = int(result.result_end_time.seconds)
+    print("Len------->",file_length)
     print("Transcript--------->",transcript)
 
     delete_blob(bucket_name, destination_blob_name)
