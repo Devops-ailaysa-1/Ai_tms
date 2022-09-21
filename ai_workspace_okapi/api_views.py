@@ -832,7 +832,7 @@ class DocumentToFile(views.APIView):
             print(ser.errors)
             f2.close()
             #os.remove(filename_)
-            os.remove(file_path)
+            #os.remove(file_path)
             return download_file(task.task_transcript_details.last().translated_audio_file.path)
         else:
             return Response({"msg":"Insufficient credits to convert text file to audio file"},status=400)

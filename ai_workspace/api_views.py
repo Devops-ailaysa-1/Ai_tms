@@ -1818,21 +1818,21 @@ def transcribe_short_file(speech_file,source_code,obj,length,user):
     audio = speech.RecognitionAudio(content=content)
 
     config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=16000,language_code=source_code, enable_automatic_punctuation=True,)
-    try:
-        response = client.recognize(config=config, audio=audio)
-        transcript=''
-        for result in response.results:
-            print(u"Transcript: {}".format(result.alternatives[0].transcript))
-            transcript += result.alternatives[0].transcript
-            file_length = int(result.result_end_time.seconds)
-        print("Len--------->",file_length)
-        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
-        if ser.is_valid():
-            ser.save()
-            return (ser.data)
-        return (ser.errors)
-    except:
-        return ({'msg':'Something  went wrong in Google Cloud Api'})
+    #try:
+    response = client.recognize(config=config, audio=audio)
+    transcript=''
+    for result in response.results:
+        print(u"Transcript: {}".format(result.alternatives[0].transcript))
+        transcript += result.alternatives[0].transcript
+        file_length = int(result.result_end_time.seconds)
+    print("Len--------->",file_length)
+    ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
+    if ser.is_valid():
+        ser.save()
+        return (ser.data)
+    return (ser.errors)
+    # except:
+    #     return ({'msg':'Something  went wrong in Google Cloud Api'})
 
 ###########################Transcribe Long File##############################
 
