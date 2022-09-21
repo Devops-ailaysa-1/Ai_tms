@@ -1824,7 +1824,7 @@ def transcribe_short_file(speech_file,source_code,obj,length,user):
         for result in response.results:
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
-            file_length = result.result_end_time.seconds
+            file_length = int(result.result_end_time.seconds)
         ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
         if ser.is_valid():
             ser.save()
