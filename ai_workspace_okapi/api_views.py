@@ -1424,14 +1424,14 @@ class ProgressView(views.APIView):
     @staticmethod
     def get_progress(document):
 
-        confirm_list = [102, 104, 106]
+        confirm_list = [102, 104, 106, 110]
         total_seg_count = 0
         confirm_count = 0
 
         segs = Segment.objects.filter(text_unit__document=document)
         for seg in segs:
 
-            if seg.is_merged == True and seg.is_merge_start == False:
+            if (seg.is_merged == True and seg.is_merge_start is None):
                 continue
             else:
                 total_seg_count += 1

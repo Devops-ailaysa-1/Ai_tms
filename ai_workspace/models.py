@@ -208,12 +208,12 @@ class Project(models.Model):
 
                     total_seg_count = 0
                     confirm_count  = 0
-                    confirm_list = [102, 104, 106]
+                    confirm_list = [102, 104, 106, 110]
 
                     segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
                     for seg in segs:
 
-                        if seg.is_merged == True and seg.is_merge_start == False:
+                        if seg.is_merged == True and seg.is_merge_start is None:
                             continue
                         else:
                             total_seg_count += 1
@@ -862,7 +862,7 @@ class Task(models.Model):
 
     @property
     def corrected_segment_count(self):
-        confirm_list = [102, 104, 106]
+        confirm_list = [102, 104, 106, 110]
         total_seg_count = 0
         confirm_count = 0
         doc = self.document
@@ -870,7 +870,7 @@ class Task(models.Model):
         segs = Segment.objects.filter(text_unit__document=doc)
         for seg in segs:
 
-            if seg.is_merged == True and seg.is_merge_start == False:
+            if seg.is_merged == True and seg.is_merge_start is None:
                 continue
             else:
                 total_seg_count += 1
