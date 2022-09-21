@@ -603,7 +603,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 			if voice_proj_detail:
 				voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
-				if voice_project.project_type_sub_category.id == 1 or 2: #1--->speech-to-text #2--->text-to-speech
+				if voice_project.project_type_sub_category.id == 1 or 2 : #1--->speech-to-text #2--->text-to-speech
 					rr = voice_project.project.project_jobs_set.filter(~Q(target_language = None))
 					if voice_project.project_type_sub_category.id == 2 and rr:
 						tasks = Task.objects.create_tasks_of_files_and_jobs(

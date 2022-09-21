@@ -807,6 +807,7 @@ class DocumentToFile(views.APIView):
         ser = TaskSerializer(task)
         task_data = ser.data
         target_language = language_locale if language_locale else task_data["target_language"]
+        source_lang = task_data['source_language']
         text_file = open(temp_name, "r")
         data = text_file.read()
         text_file.close()
@@ -817,7 +818,7 @@ class DocumentToFile(views.APIView):
             if len(data)>5000:
                 res1,f2 = google_long_text_file_process(file_path,None,target_language,voice_gender,voice_name)
             else:
-                filename_ = filename + "_out"+ ".mp3"
+                filename_ = filename + "_"+ doc.task.ai_taskid+ "_out" + "(" + source_lang +'-'+ target_language+')' + ".mp3"
                 res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
                 os.remove(filename_)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
