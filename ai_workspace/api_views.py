@@ -1824,6 +1824,8 @@ def transcribe_short_file(speech_file,source_code,obj,length,user):
         for result in response.results:
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
+            file_length = int(result.result_end_time.seconds)
+            print("Len--------->",file_length)
         ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
         if ser.is_valid():
             ser.save()
@@ -1873,9 +1875,10 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
     # Detects speech in the audio file
     operation = client.long_running_recognize(config=config, audio=audio)
     response = operation.result(timeout=10000)
-
     for result in response.results:
         transcript += result.alternatives[0].transcript
+        file_length = int(result.result_end_time.seconds)
+        print("Len------->",file_length)
     print("Transcript--------->",transcript)
 
     delete_blob(bucket_name, destination_blob_name)
@@ -1910,8 +1913,8 @@ def transcribe_file(request):
         filename = obj.file.filename
         speech_file = obj.file.file.path
         try:
-            audio = MP3(speech_file)
-            length = int(audio.info.length)###seconds####
+            audio = AudioSegment.from_file(speech_file)
+            length = int(audio.duration_seconds)###seconds####
         except:
             length=None
         print("Length----->",length)
@@ -1942,6 +1945,7 @@ def transcribe_file_get(request):
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     final_name,ext =  os.path.splitext(file)
     final_audio = final_name + '.mp3'
+    #final_audio = final_name +'_' + obj.task.ai_taskid +'('+ obj.job.source_language_code + '-' +obj.job.target_language_code + ')' + '.mp3'
     dir_1 = os.path.join('/ai_home/',"output")
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
@@ -1956,7 +1960,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
-            text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',None)
+            text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',None)
     list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'))]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
@@ -1978,6 +1982,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     final_name,ext =  os.path.splitext(file)
     lang_list = ['hi','bn','or','ne','pa']
     final_audio = final_name + '.mp3'
+    #final_audio = final_name +'_' + obj.ai_taskid + '(' + obj.job.source_language_code + ')' + '.mp3'
     dir_1 = os.path.join('/ai_home/',"Output_"+str(project_id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
@@ -2074,7 +2079,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
             wc = res1.json() if res1.status_code == 200 else None
             TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc})
-            audio_file = name_ + '_source'+'.mp3'
+            audio_file = name_ +'_'+ obj.ai_taskid + '_source'+ '(' + obj.job.source_language_code + ')' + '.mp3'
             res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             os.remove(audio_file)
