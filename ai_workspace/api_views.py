@@ -674,7 +674,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             serializer = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
-                pr = Project.objects.get(id=serlzr.data.get('id'))
+                pr = Project.objects.get(id=serializer.data.get('id'))
                 print("TASks--------->",pr.get_mtpe_tasks)
                 if pr.pre_translate == True:
                     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
