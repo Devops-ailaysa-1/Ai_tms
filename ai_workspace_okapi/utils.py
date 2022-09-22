@@ -297,7 +297,7 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
         name=voice_name,language_code=target_language, ssml_gender=gender
     )
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
+        audio_encoding=texttospeech.AudioEncoding.MP3,sample_rate_hertz=24000
     )
     response = client.synthesize_speech(
         input=input_text, voice=voice, audio_config=audio_config
@@ -375,7 +375,7 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
         name=voice_name,language_code=target_language, ssml_gender=gender
     )
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
+        audio_encoding=texttospeech.AudioEncoding.MP3,sample_rate_hertz=24000
     )
     response = client.synthesize_speech(
         input=input_text, voice=voice, audio_config=audio_config

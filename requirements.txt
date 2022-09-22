@@ -203,4 +203,4 @@ quill-delta[html]
 python-docx
 langdetect==1.0.9
 pydub
-filesplit
+filesplit==4.0.1

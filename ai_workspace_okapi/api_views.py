@@ -198,7 +198,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 mt_engine = task.job.project.mt_engine_id
                 task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
                 segments = Segment.objects.filter(text_unit__document=task.document)
-                # update_list = []
+                update_list = []
                 mt_segments = []
 
                 for seg in segments:
@@ -217,9 +217,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 #             i.target= ""
                 #             i.temp_target = ''
                 #             i.status_id = None
-                #         update_list.append(i)
+                        update_list.append(i)
                 #
-                # Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+                Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
 
 
                 instances = [
@@ -294,12 +294,32 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         return document
 
-    def get(self, request, task_id, format=None):
-        task = self.get_object(task_id=task_id)
-        document = self.create_document_for_task_if_not_exists(task)
-        doc = DocumentSerializerV2(document).data
-        return Response(doc, status=201)
 
+
+    def get(self, request, task_id, format=None):
+        from ai_workspace.models import MTonlytaskCeleryStatus
+        from django_celery_results.models import TaskResult
+        task = self.get_object(task_id=task_id)
+        if task.job.project.pre_translate == True:
+            ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+            if ins.status == 1:
+                obj = TaskResult.objects.filter(task_id = ins.celery_task_id).first()
+                if obj !=None and obj.status == "FAILURE":
+                    Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+                    document = self.create_document_for_task_if_not_exists(task)
+                    doc = DocumentSerializerV2(document).data
+                    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
+                    return Response(doc, status=201)
+                else:
+                    return Response({"msg": "File under process. Please wait a little while. \
+                            Hit refresh and try again"}, status=401)
+            else:
+                doc = DocumentSerializerV2(task.document).data
+                return Response(doc, status=201)
+        else:
+            document = self.create_document_for_task_if_not_exists(task)
+            doc = DocumentSerializerV2(document).data
+            return Response(doc, status=201)
 
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
@@ -468,8 +488,8 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def get_consumable_credits(doc, segment_id, seg):
-        segment = Segment.objects.get(id=segment_id).get_active_object()
-        segment_source = segment.source if segment != None else seg
+        segment = Segment.objects.filter(id=segment_id).first().get_active_object() if segment_id else None
+        segment_source = segment.source if segment!= None else seg
         seg_data = { "segment_source" : segment_source,
                      "source_language" : doc.source_language_code,
                      "target_language" : doc.target_language_code,

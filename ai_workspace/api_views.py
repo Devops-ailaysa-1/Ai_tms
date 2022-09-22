@@ -674,6 +674,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             serializer = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                pr = Project.objects.get(id=serlzr.data.get('id'))
+                print("TASks--------->",pr.get_mtpe_tasks)
+                if pr.pre_translate == True:
+                    mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
@@ -684,7 +688,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 serlzr.save()
                 pr = Project.objects.get(id=serlzr.data.get('id'))
                 print("TASks--------->",pr.get_mtpe_tasks)
-                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                if pr.pre_translate == True:
+                    mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
                 #check_dict.apply_async(serlzr.data,)
                 return Response(serlzr.data, status=201)
             return Response(serlzr.errors, status=409)

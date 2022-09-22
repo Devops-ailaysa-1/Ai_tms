@@ -289,11 +289,16 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     initial_credit = user.credit_balance.get("total_left")
                     consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
                     if initial_credit > consumable_credits:
-                        mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
-                        seg['temp_target'] = mt
-                        seg['target'] = mt
-                        status_id = TranslationStatus.objects.get(status_id=104).id
-                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                        try:
+                            mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
+                            seg['temp_target'] = mt
+                            seg['target'] = mt
+                            status_id = TranslationStatus.objects.get(status_id=104).id
+                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                        except:
+                            seg['target']=""
+                            seg['temp_target']=""
+                            status_id=None
                     else:
                         seg['target']=""
                         seg['temp_target']=""
@@ -317,10 +322,10 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             for i in segments:
                 if i.target != "":
                     count += 1
-                    mt_params.extend([i.target,mt_engine,None,"ai_workspace_okapi.segment",i.id])
+                    mt_params.extend([i.target,mt_engine,None,i.id])
 
-            mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id, reverse_string_for_segment,segment_id)\
-            VALUES {}".format(','.join(['(%s, %s, %s, %s, %s)'] * count))
+            mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
+            VALUES {}".format(','.join(['(%s, %s, %s, %s)'] * count))
             if mt_params:
                 with closing(connection.cursor()) as cursor:
                     cursor.execute(mt_raw_sql, mt_params)
