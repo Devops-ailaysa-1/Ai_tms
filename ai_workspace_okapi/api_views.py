@@ -1052,7 +1052,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
                 segments = segments.filter(**{f'{lookup_field}'
                     f'__regex':f'(?i)[^\w]{search_word}[^\w]'})  # temp regex
 
-        return segments, 200
+        return segments, segments_merged, 200
 
     # def post(self, request, document_id):
     #     data = self.prepare_data(request.POST.dict())
