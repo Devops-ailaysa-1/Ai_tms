@@ -302,7 +302,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         task = self.get_object(task_id=task_id)
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
-            if ins.status == 1:
+            if not ins:
+                Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+                document = self.create_document_for_task_if_not_exists(task)
+                doc = DocumentSerializerV2(document).data
+                MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
+                return Response(doc, status=201)
+            elif ins.status == 1:
                 obj = TaskResult.objects.filter(task_id = ins.celery_task_id).first()
                 if obj !=None and obj.status == "FAILURE":
                     Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
