@@ -300,7 +300,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         from ai_workspace.models import MTonlytaskCeleryStatus
         from django_celery_results.models import TaskResult
         task = self.get_object(task_id=task_id)
-        if task.job.project.pre_translate == True:
+        if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
             if ins.status == 1:
                 obj = TaskResult.objects.filter(task_id = ins.celery_task_id).first()
