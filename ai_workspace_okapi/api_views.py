@@ -189,7 +189,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def create_document_for_task_if_not_exists(task):
         from .utils import get_translation
-
         # If document already exists for a task
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
@@ -201,7 +200,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 update_list = []
                 mt_segments = []
 
-                for seg in segments:
+                for seg in segments:###############Need to revise####################
                     i = seg.get_active_object()
                     if i.target == '':
                         initial_credit = user.credit_balance.get("total_left")
@@ -308,8 +307,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 doc = DocumentSerializerV2(document).data
                 MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
                 return Response(doc, status=201)
-            elif ins.status == 1:
-                obj = TaskResult.objects.filter(task_id = ins.celery_task_id).first()
+            if ins.status == 1:
+                obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
                 if obj !=None and obj.status == "FAILURE":
                     Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
                     document = self.create_document_for_task_if_not_exists(task)
@@ -320,7 +319,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return Response({"msg": "File under process. Please wait a little while. \
                             Hit refresh and try again"}, status=401)
             else:
-                doc = DocumentSerializerV2(task.document).data
+                document = self.create_document_for_task_if_not_exists(task)
+                doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
             document = self.create_document_for_task_if_not_exists(task)
@@ -842,9 +842,9 @@ class DocumentToFile(views.APIView):
         initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
         if initial_credit > consumable_credits:
             if len(data)>5000:
-                res1,f2 = google_long_text_file_process(file_path,None,target_language,voice_gender,voice_name)
+                res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
             else:
-                filename_ = filename + "_"+ task.ai_taskid+ "_out" + "(" + source_lang +'-'+ target_language+')' + ".mp3"
+                filename_ = filename + "_"+ task.ai_taskid+ "_out" + "(" + source_lang + "-" + target_language + ")" + ".mp3"
                 res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
                 os.remove(filename_)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)

@@ -1949,8 +1949,8 @@ def transcribe_file_get(request):
 
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     final_name,ext =  os.path.splitext(file)
-    final_audio = final_name + '.mp3'
-    #final_audio = final_name +'_' + obj.task.ai_taskid +'('+ obj.job.source_language_code + '-' +obj.job.target_language_code + ')' + '.mp3'
+    #final_audio = final_name + '.mp3'
+    final_audio = final_name + "_" + obj.ai_taskid + "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ".mp3"
     dir_1 = os.path.join('/ai_home/',"output")
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
@@ -1986,8 +1986,8 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     project_id  = obj.job.project.id
     final_name,ext =  os.path.splitext(file)
     lang_list = ['hi','bn','or','ne','pa']
-    final_audio = final_name + '.mp3'
-    #final_audio = final_name +'_' + obj.ai_taskid + '(' + obj.job.source_language_code + ')' + '.mp3'
+    #final_audio = final_name + '.mp3'
+    final_audio = final_name + "_" + obj.ai_taskid + "(" + obj.job.source_language_code + ")" + ".mp3"
     dir_1 = os.path.join('/ai_home/',"Output_"+str(project_id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
@@ -2084,7 +2084,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
             wc = res1.json() if res1.status_code == 200 else None
             TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc})
-            audio_file = name_ +'_'+ obj.ai_taskid + '_source'+ '(' + obj.job.source_language_code + ')' + '.mp3'
+            audio_file = name_ + "_" + obj.ai_taskid + "_source" + "(" + obj.job.source_language_code + ")" + ".mp3"
             res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             os.remove(audio_file)
@@ -2316,15 +2316,50 @@ def writer_save(request):
     return Response(ser1.errors)
 
 
+class ExpressProjectSetupView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request):
+        punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+        text_data=request.POST.get('text_data')
+        name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
+        im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['2']},context={"request": request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            pr = Project.objects.get(id=serializer.data.get('id'))
+            mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
+            res=[{'task_id':i.id} for i in pr.get_mtpe_tasks]
+            return Response({'Res':res})
+        return Response(serializer.errors)
 
 
 
-
-
-
-
-
-
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def task_get_segments(request):
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    from ai_workspace.models import MTonlytaskCeleryStatus
+    from django_celery_results.models import TaskResult
+    task_id = request.GET.get('task_id')
+    obj = Task.objects.get(id=task_id)
+    ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+    if ins.status == 1:
+        obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
+        if obj !=None and obj.status == "FAILURE":
+            Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+            document = self.create_document_for_task_if_not_exists(task)
+            MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
+        else:
+            return Response({"msg": "File under process. Please wait a little while. \
+                    Hit refresh and try again"}, status=401)
+    else:
+        document = DocumentViewByTask.create_document_for_task_if_not_exists(obj)
+    seg_out = ''
+    for j in document.segments:
+        seg_out+=j.target
+    out =[{'task_id':obj.id,"target":seg_out,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id}]
+    return Response({'Res':out})
 
 
 

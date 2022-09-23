@@ -18,6 +18,8 @@ router.register(r"project-create", api_views.ProjectCreateView, basename="projec
 router.register(r"tmx_file", api_views.TmxFileView, basename="tmx-file")
 router.register(r"project/quick/setup", api_views.QuickProjectSetupView,\
 				basename="project-quick-setup")
+router.register(r"project/express/setup", api_views.ExpressProjectSetupView,\
+				basename="project-express-setup")
 router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
@@ -81,6 +83,7 @@ urlpatterns += [
 	path('get_quill_data/',api_views.get_quill_data),
 	path('writer_save/',api_views.writer_save),
 	path('get_media_link_source_audio/<int:task_id>/',api_views.get_media_link),
+	path('task_get_segments/',api_views.task_get_segments),
 ]
 # views urls adding for local testing
 urlpatterns += [
