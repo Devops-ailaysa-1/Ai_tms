@@ -2329,7 +2329,7 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
             mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
-            res=[{'task_id':i.id} for i in pr.get_mtpe_tasks]
+            res=[{'task_id':i.id,'target_lang_name':i.job.target_language.language,"target_lang_id":i.job.target_language.id} for i in pr.get_mtpe_tasks]
             return Response({'Res':res})
         return Response(serializer.errors)
 
