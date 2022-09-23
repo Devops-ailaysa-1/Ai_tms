@@ -1,5 +1,6 @@
 from .models import File
-from integerations.github_.utils import DjRestUtils
+from .utils import DjRestUtils
+# from integerations.github_.utils import DjRestUtils
 
 class Service:
 
@@ -16,4 +17,3 @@ class Service:
     @staticmethod
     def get_project_object():
         pass
-

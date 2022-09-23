@@ -4,16 +4,20 @@ from django.dispatch import receiver
 from guardian.shortcuts import assign_perm
 
 from ai_auth.models import AiUser
-from .managers import GithubTokenManager, HookDeckManager
+from .managers import GithubTokenManager, HookDeckManager,\
+    ContentFileManager
 from .enums import GITHUB_PREFIX_NAME, HOOK_PREFIX_NAME,\
-    HOOK_DESTINATION_GITHUB_PREFIX_NAME, APP_NAME, DJ_APP_NAME
+    HOOK_DESTINATION_GITHUB_PREFIX_NAME, APP_NAME, DJ_APP_NAME,\
+    HOOK_LISTEN_ADDRESS
+
 
 from github import Github
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, reverse
 from django.utils.crypto import get_random_string
 
 from .utils import GithubUtils
-from controller.bases import DownloadBase
+from controller.bases import DownloadBase, FileBase
+from controller.models import FileController
 from datetime import datetime
 import pytz
 import cryptocode
@@ -26,6 +30,7 @@ from django import forms
 from ..base.models import IntegerationAppBase, RepositoryBase, FetchInfoBase,\
     BranchBase, ContentFileBase
 
+
 CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
 # custom lokalize_user models should have
@@ -34,16 +39,16 @@ CRYPT_PASSWORD = os.environ.get("CRYPT_PASSWORD")
 
 class GithubApp(IntegerationAppBase):
 
-    def validate_oauth_token(value):
-        print("value--->", value)
-        g = Github(value)
-        try:
-            g.get_user().login
-        except:
-            raise forms.ValidationError("Token is invalid!!!")
-        return value
+    # def validate_oauth_token(value):
+    #     print("value--->", value)
+    #     g = Github(value)
+    #     try:
+    #         g.get_user().login
+    #     except:
+    #         raise forms.ValidationError({"detail":"Token is invalid!!!"})
+    #     return value
 
-    oauth_token = models.CharField(max_length=255, validators=[validate_oauth_token])
+    oauth_token = models.CharField(max_length=255, )#validators=[validate_oauth_token])
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -201,6 +206,8 @@ class ContentFile(ContentFileBase):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE,
                 related_name="branch_contentfiles_set")
 
+    objects = ContentFileManager()
+
     def update_file(self, file):
         self.uploaded_file = file
         fc = apps.get_model("controller.FileController")\
@@ -208,6 +215,11 @@ class ContentFile(ContentFileBase):
         fc.save()
         self.controller = fc
         self.save()
+
+    @property
+    def get_contentfile_obj(self):
+        return self.branch.repo.get_repo_obj.get_contents(self.file_path,
+            ref=self.branch.branch_name)
 
     @property
     def get_content_of_file(self):
@@ -229,6 +241,7 @@ class ContentFile(ContentFileBase):
             ContentFile.objects.get_or_create(
                 branch=branch, file=file_content.name,
                 file_path=file_content.path,
+                size_of_file=file_content.size
             )
 
 post_save.connect(ContentFileBase.permission_signal(),
@@ -245,98 +258,113 @@ def contentfile_localize_register_update(sender, **kwargs):
 
 class HookDeck(models.Model):
 
-    source_name = models.TextField() #Programmatically to be setted
-    project = models.ForeignKey("ai_workspace.Project",
+    def get_password():
+        return HookDeck.objects.get_password()
+
+    def get_hook_ref_token():
+        return HookDeck.objects.get_hook_unique_token()
+
+    project = models.OneToOneField("ai_workspace.Project",
         on_delete=models.CASCADE, related_name="project_hookdeck_set")
-    hook_name = models.TextField() #Programmatically to be setted
-    destination_name = models.TextField() #Programmatically to be setted
-    hook_cli_path = models.URLField() #URL
-    password = models.TextField()
-    hookdeck_url = models.TextField() #Programmatically to be setted
+    password = models.TextField(default=get_password)
+    hook_url = models.TextField() #Programmatically to be setted
+    hook_ref_token = models.TextField(default=get_hook_ref_token)
 
     objects = HookDeckManager()
 
-    @classmethod
-    def create_hookdeck_for_project(cls, project):
-        obj = cls()
-        obj.project = project
-        obj.set_fields()
-        obj.save()
-        return obj
-
-    def set_fields(self):
-        self.set_source_name()
-        self.set_hookname_and_destname()
-        self.set_clipath_and_password()
-
     def save(self, *args, **kwargs):
+        self.hook_url = HOOK_LISTEN_ADDRESS + reverse("hooks-listen",
+                    kwargs={"token": self.hook_ref_token})
         print("You may need to call set fields function before save. please ensure")
         return super().save(*args, **kwargs)
+    #
+    # def set_source_name(self):
+    #
+    #     if not self.source_name:
+    #         self.source_name = "github"
+    #             # HookDeck.objects. \
+    #             # get_hookdeck_source_name_for_user(user= \
+    #             # self.project.ai_user)
 
-    def set_source_name(self):
+    # def set_hookname_and_destname(self):
+    #     if not self.hook_name and (not self.destination_name):
+    #         base_name = HookDeck.objects.\
+    #             get_unique_base_name()
+    #         self.hook_name, self.destination_name = \
+    #             HOOK_PREFIX_NAME +base_name, HOOK_DESTINATION_GITHUB_PREFIX_NAME+\
+    #             base_name
+    #
+    #     elif not self.hook_name:
+    #         raise ValueError(
+    #             "Something went to wrong.Destination name setted already and hookname"
+    #             "not setted")
+    #     else:
+    #         raise ValueError(
+    #             "Something went to wrong.Hook name setted already and destination name"
+    #             "not setted")
 
-        if not self.source_name:
-            self.source_name = "github"
-                # HookDeck.objects. \
-                # get_hookdeck_source_name_for_user(user= \
-                # self.project.ai_user)
-
-    def set_hookname_and_destname(self):
-        if not self.hook_name and (not self.destination_name):
-            base_name = HookDeck.objects.\
-                get_unique_base_name()
-            self.hook_name, self.destination_name = \
-                HOOK_PREFIX_NAME +base_name, HOOK_DESTINATION_GITHUB_PREFIX_NAME+\
-                base_name
-
-        elif not self.hook_name:
-            raise ValueError(
-                "Something went to wrong.Destination name setted already and hookname"
-                "not setted")
-        else:
-            raise ValueError(
-                "Something went to wrong.Hook name setted already and destination name"
-                "not setted")
-
-    def set_clipath_and_password(self):
-        url_regex = "^(\\/)+([\\/.a-zA-Z0-9-_]*)$"
-        if not self.hook_cli_path:
-            for i in range(1000):
-                encoded = "".join([get_random_string(10) for i in range(3)])
-                if ("?" not in encoded) and ("/" not in encoded) \
-                    and (re.match(url_regex, "/integerations/hooks/repo_update/"+ encoded)):
-                    break
-            else:
-                raise ValueError("Cannot generate url for match regex!!!")
-
-            self.hook_cli_path = "/integerations/hooks/repo_update/"+ encoded
-            self.password = uuid.uuid4().__str__().split("-")[-1]
-
-    @staticmethod
-    def create_or_get_hookdeck_url_for_data(data):
-        res = requests.post("http://api.hookdeck.com/2021-08-01/connections",
-            data=data, headers= {'Content-Type': 'application/json'
-            }, auth=HTTPBasicAuth('0uiz4mw193y0'
-            'bp52b177rch275878cbnbsr60uleytgdv1gzo6','')  )
-        try:
-            return res.json()
-        except:
-            raise ValueError("hookdeck new connection create or get api failed!!!")
+    # def set_clipath_and_password(self):
+    #
+    #     if not self.password:
+    #         self.password = uuid.uuid4().__str__().split("-")[-1]
+    #
+    # @staticmethod
+    # def get_hook_url():
+    #     res = requests.post("http://api.hookdeck.com/2021-08-01/connections",
+    #         data=data, headers= {'Content-Type': 'application/json'
+    #         }, auth=HTTPBasicAuth('0uiz4mw193y0'
+    #         'bp52b177rch275878cbnbsr60uleytgdv1gzo6', ''))
+    #     try:
+    #         return res.json()
+    #     except:
+    #         raise ValueError("hookdeck new connection create or get api failed!!!")
 
 class DownloadProject(DownloadBase):
 
+    branch = models.OneToOneField(Branch, on_delete=models.CASCADE, null=True,)
+
+    serializer_class_str = "github__contentfile_serializer"
+
     def save(self, *args, **kwargs):
-        print("project---->", self.project)
+        self.commit_hash = self.branch.get_branch_gh_obj.commit.sha
+        # print("project---->", self.project)
         return super().save(*args, **kwargs)
 
-    def push_to_github(self):
-        pass
+    def push_to_github(self, project, files_info):
+        GU = GithubUtils
+        repo = self.branch.repo.get_repo_obj
+        branch_name = GU.get_new_branch_name()
+        new_branch = GU.create_new_branch(repo=repo,
+                    branch_name=branch_name, from_commit_hash=self.commit_hash)
+        # print("files_info", files_info)
+        data_file_based = data_fb = {}
 
-    def download(self):
-        self.push_to_github()
+        for e in files_info:
+            fid = e.pop("file_id")
+            data_fb[fid] = data_fb.get(fid, []) + [e]
+
+        for k, vs in data_fb.items():
+            fc = FileController.objects.filter(file_id=k).first()
+            if fc:
+                # content file
+                file_path = fc.get_file.contentfile.file_path
+                for v in vs:
+                    job = apps.get_model("ai_workspace.job").objects.get(id=v.get("job_id"))
+                    with open( v.get("file_path",'rb')) as f:
+                        b_data = f.read()
+                    upload_file_path = \
+                        f"({job.source__language}-{job.target__language})".join(\
+                            os.path.splitext(file_path))
+                    GU.create_new_file(repo=repo, file_path=upload_file_path,
+                        branch_name=branch_name,
+                        commit_message="pushed from ailaysa integeration...",
+                        content=b_data)
+
+    def download(self, project, files_info):
+        self.push_to_github(project, files_info)
 
     def update_project(self, project):
-        self.project = project
+        self.project.add(project)
         print("here----")
         dc = apps.get_model("controller.DownloadController")\
             (project = project, related_model_string="github_.DownloadProject")
@@ -344,5 +372,9 @@ class DownloadProject(DownloadBase):
         self.controller = dc
         self.save()
 
+    def get_content_files_set(self):
+        return self.branch.branch_contentfiles_set
 
-
+class FileConnector(FileBase):
+    contentfile = models.OneToOneField(ContentFile, on_delete=models.SET_NULL,
+        null=True)

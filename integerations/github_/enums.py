@@ -6,3 +6,4 @@ GITHUB_PREFIX_NAME = "github-"
 
 APP_NAME = "github"
 DJ_APP_NAME = "github_"
+HOOK_LISTEN_ADDRESS = "https://11e41bb54bb45b.lhrtunnel.link"

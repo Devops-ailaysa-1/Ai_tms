@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import IntegrityError
+from ai_auth.vendor_onboard_list import users_list
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from ai_workspace_okapi.models import Document
 
@@ -25,7 +26,7 @@ from .serializers import (ServiceExpertiseSerializer,
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits, LanguageMetaDetails)
-from ai_auth.models import AiUser, Professionalidentity
+from ai_auth.models import AiUser, Professionalidentity,VendorOnboarding
 import json,requests
 from django.http import JsonResponse
 # from django.core.mail import EmailMessage
@@ -61,8 +62,12 @@ class VendorsInfoCreateView(APIView):
         serializer = VendorsInfoSerializer(data={**request.POST.dict(),'cv_file':cv_file})
         if serializer.is_valid():
             serializer.save(user_id = user_id)
+            if cv_file:
+                obj = VendorOnboarding.objects.create(name=request.user.fullname,email=request.user.email,cv_file=cv_file,status=1)
+                if request.user.email in users_list:
+                    request.user.is_vendor = True
+                    request.user.save()
             return Response(serializer.data)
-        # print("errors", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self,request):
@@ -71,6 +76,11 @@ class VendorsInfoCreateView(APIView):
         vendor_info = VendorsInfo.objects.get(user_id=request.user.id)
         if cv_file:
             serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict(),'cv_file':cv_file},partial=True)
+            try:
+                ins = VendorOnboarding.objects.get(email=request.user.email)
+                ins.cv_file = cv_file
+                ins.save()
+            except:pass
         else:
             serializer = VendorsInfoSerializer(vendor_info,data={**request.POST.dict()},partial=True)
         if serializer.is_valid():
@@ -90,13 +100,20 @@ class VendorServiceListCreate(viewsets.ViewSet, PageNumberPagination):
 
 
     def get_queryset(self):
+        print(self.request.user)
         queryset=VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
         return queryset
 
     def list(self,request):
         queryset = self.get_queryset()
-        serializer = VendorLanguagePairSerializer(queryset,many=True)
-        return Response(serializer.data)
+        res ={}
+        for i in queryset:
+            q2 = VendorLanguagePair.objects.filter(Q(source_lang = i.source_lang)&Q(target_lang=i.target_lang)&Q(user_id=i.user_id))
+            tt = str(i.source_lang.language) + '-->' + str(i.target_lang.language)
+            ser = VendorLanguagePairSerializer(q2,many=True)
+            res[tt]=ser.data
+        # serializer = VendorLanguagePairSerializer(queryset,many=True)
+        return Response(res)
 
    # def retrieve(self, request, pk=None):
    #      queryset = VendorLanguagePair.objects.filter(user_id=self.request.user.id).all()
@@ -214,6 +231,7 @@ class VendorsBankInfoCreateView(APIView):
 @api_view(['GET','POST',])
 def feature_availability(request):
     doc_id= request.POST.get("doc_id")
+    doc = Document.objects.get(id=doc_id)
     target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
     source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
 
@@ -229,11 +247,12 @@ def feature_availability(request):
     # CHECK FOR IME
     show_ime = True if LanguageMetaDetails.objects.get(language_id=target_lang_id).ime == True else False
 
-
+    #Check for paraphrase and grammercheck
+    show_paraphrase_and_grammercheck = True if doc.target_language_code == 'en' else False
     # CHECK FOR NER AVAILABILITY
     # show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False
 
-    return JsonResponse({"out":data, "show_ime":show_ime}, safe = False)
+    return JsonResponse({"out":data, "show_ime":show_ime, "show_paraphrase_and_grammercheck":show_paraphrase_and_grammercheck}, safe = False)
 
 @api_view(['GET',])
 def vendor_legal_categories_list(request):

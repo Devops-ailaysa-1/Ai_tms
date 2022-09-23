@@ -26,24 +26,39 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
         'args': (),
     },
-    'renew-test': {
-        'task': 'ai_auth.tasks.renewal_list',
-        'schedule': crontab(hour=23, minute=57),#crontab(hour=1, minute=15),
-        'args': (),
-    },
+    # 'renew-test': {
+    #     'task': 'ai_auth.tasks.renewal_list',
+    #     'schedule': crontab(hour=23, minute=57),#crontab(hour=1, minute=15),
+    #     'args': (),
+    # },
     'run-every': {
         'task': 'ai_auth.tasks.delete_hired_editors',
         'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
         'args': (),
     },
+    # 'run-every-15-minutes': {
+    #     'task': 'ai_auth.tasks.send_notification_email_for_unread_messages',
+    #     'schedule': crontab(minute='*/15'),
+    #     'args': (),
+    # },
 
    'run-every-15-minutes': {
     'task': 'ai_auth.tasks.send_notification_email_for_unread_messages',
     'schedule': crontab(minute='*/15'),
     'args': (),
-},
-
+    },
+   'send-ext-ven-mail-5-min': {
+    'task': 'ai_auth.tasks.existing_vendor_onboard_check',
+    'schedule': crontab(minute='*/5'),
+    'args': (),
+    },
+   # 'send-mail-30-minutes': {
+   #  'task': 'ai_auth.tasks.email_send_subscription_extension',
+   #  'schedule': crontab(minute='*/30'),
+   #  'args': (),
+   #  },
 }
+
 app.conf.timezone = 'UTC'
 
 # @app.task
@@ -66,4 +81,3 @@ def debug_task(self):
 
 # @app.task(bind=True):
 #     pass
-

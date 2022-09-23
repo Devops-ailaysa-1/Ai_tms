@@ -1,0 +1,251 @@
+import json
+
+import spacy
+from django.http import JsonResponse
+from nltk import word_tokenize
+from nltk.util import ngrams
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+
+@api_view(['POST', ])
+def named_entity(request):
+    src_lang_code = request.POST.get('src_lang_code')
+    target_lang_code = request.POST.get('target_lang_code')
+    src_segment = request.POST.get('src_segment')
+    if src_lang_code in ["en", "zh"]:
+        lang_model = src_lang_code + '_core_web_sm'
+    else:
+        lang_model = src_lang_code + '_core_news_sm'
+
+    nlp = spacy.load(lang_model)
+    doc = nlp(src_segment)
+    data = []
+    for entity in doc.ents:
+        # print(entity.text, entity.label_)
+        # words={'text':entity.text,'label':entity.label_,'explanation':spacy.explain(entity.label_)}
+        data.append(entity.text)
+    return JsonResponse({"src_ner": data}, safe=False)
+
+
+@api_view(['GET', 'POST'])
+def wordapi_synonyms(request):
+    words_file = open("wordsapi_sample.json")
+    word_synonyms = words_file.read()
+    res = json.loads(word_synonyms)
+
+    punctuation = '''!"#$%&'()*+,./:;<=>?@[\]^`{|}~'''
+    target_segment = request.POST.get("target_segment")
+    words = word_tokenize(target_segment)
+    tokens = [word for word in words if word not in punctuation]
+    bigrams = ngrams(tokens, 2)
+    double_words = list(" ".join(i) for i in bigrams)
+    output = []
+
+    def find_synonyms(tokens):
+        for token in tokens:
+            result = res.get(token.strip(), 0)
+            try:
+                if ((result != 0) and ("definitions" in result.keys()) and (
+                        "synonyms" in result['definitions'][0].keys())):
+                    output.append({token: result['definitions'][0]['synonyms']})
+                else:
+                    continue
+            except Exception as e:
+                print("Exception ---> ", e)
+                continue
+
+    find_synonyms(tokens)
+    find_synonyms(double_words)
+
+    return Response({"result": output}, status=status.HTTP_200_OK)
+
+############ wiktionary quick lookup ##################
+# @api_view(['GET', 'POST',])
+# def WiktionaryParse(request):
+#     user_input=request.POST.get("term")
+#     term_type=request.POST.get("term_type")
+#     doc_id=request.POST.get("doc_id")
+#     user_input=user_input.strip()
+#     user_input=user_input.strip('0123456789')
+#     doc = Document.objects.get(id=doc_id)
+#     sourceLanguage=doc.source_language
+#     targetLanguage=doc.target_language
+#     if term_type=="source":
+#         src_lang=sourceLanguage
+#         tar_lang=targetLanguage
+#     elif term_type=="target":
+#         src_lang=targetLanguage
+#         tar_lang=sourceLanguage
+#     parser = WiktionaryParser()
+#     parser.set_default_language(src_lang)
+#     parser.include_relation('Translations')
+#     word = parser.fetch(user_input)
+#     if word:
+#         if word[0].get('definitions')==[]:
+#             word=parser.fetch(user_input.lower())
+#     res=[]
+#     tar=""
+#     for i in word:
+#         defin=i.get("definitions")
+#         for j,k in enumerate(defin):
+#             out=[]
+#             pos=k.get("partOfSpeech")
+#             text=k.get("text")
+#             rel=k.get('relatedWords')
+#             # for n in rel:
+#             #     if n.get('relationshipType')=='translations':
+#             #         for l in n.get('words'):
+#             #             if tar_lang in l:
+#             #                 tar=l
+#             out=[{'pos':pos,'definitions':text,'target':tar}]
+#             res.extend(out)
+#
+#     return JsonResponse({"Output":res},safe=False)
+#
+#
+# def wikipedia_ws(code,codesrc,user_input):
+#     S = requests.Session()
+#     URL = f"https://{codesrc}.wikipedia.org/w/api.php"
+#     PARAMS = {
+#         "action": "query",
+#         "format": "json",
+#         "prop": "langlinks",
+#         "llinlanguagecode":codesrc,
+#         "titles": user_input,
+#         "redirects": 1,
+#         "llprop": "url",
+#         "lllang": code,
+#     }
+#     R = S.get(url=URL, params=PARAMS)
+#     DATA = R.json()
+#     res=DATA["query"]["pages"]
+#     srcURL=f"https://{codesrc}.wikipedia.org/wiki/{user_input}"
+#     for i in res:
+#         lang=DATA["query"]["pages"][i]
+#         if 'missing' in lang:
+#             return {"source":'',"target":'',"targeturl":'',"srcURL":''}
+#     if (lang.get("langlinks"))!=None:
+#         for j in lang.get("langlinks"):
+#             output=j.get("*")
+#             url=j.get("url")
+#         return {"source":user_input,"target":output,"targeturl":url,"srcURL":srcURL}
+#     else:
+#         output=""
+#     return {"source":user_input,"target":output,"targeturl":"","srcURL":srcURL}
+#
+#
+#
+#
+# ########  Workspace WIKI OPTIONS  ##########################
+# #WIKIPEDIA
+# @api_view(['GET',])
+# # @permission_classes((HasToken,))
+# def WikipediaWorkspace(request,doc_id):
+#     data=request.GET.dict()
+#     lang_list = ["zh-Hans","zh-Hant"]
+#     user_input=data.get("term")
+#     term_type=data.get("term_type","source")
+#     user_input=user_input.strip()
+#     user_input=user_input.strip('0123456789')
+#     doc = Document.objects.get(id=doc_id)
+#     src = doc.source_language_code if doc.source_language_code not in lang_list else "zh"
+#     tar = doc.target_language_code if doc.target_language_code not in lang_list else "zh"
+#     if term_type=="source":
+#         codesrc = src
+#         code = tar
+#     elif term_type=="target":
+#         codesrc = tar
+#         code = src
+#     res=wikipedia_ws(code,codesrc,user_input)
+#     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
+#
+#
+#
+# def wiktionary_ws(code,codesrc,user_input):
+#     S = requests.Session()
+#     URL =f" https://{codesrc}.wiktionary.org/w/api.php?"
+#     PARAMS={
+#         "action": "query",
+#         "format": "json",
+#         "prop": "iwlinks",
+#         "iwprop": "url",
+#         "iwprefix":code,
+#         "titles": user_input,
+#         "iwlocal":codesrc,
+#     }
+#     response = S.get(url=URL, params=PARAMS)
+#     try:
+#         data = response.json()
+#     except JSONDecodeError:
+#         return {"source":'',"source-url":''}
+#     srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input}"
+#     res=data["query"]["pages"]
+#     if "-1" in res:
+#         PARAMS.update({'titles':user_input.lower()})
+#         data = S.get(url=URL, params=PARAMS).json()
+#         srcURL=f"https://{codesrc}.wiktionary.org/wiki/{user_input.lower()}"
+#         res =data['query']['pages']
+#     for i in res:
+#        lang=data["query"]["pages"][i]
+#        if 'missing' in lang:
+#            return {"source":'',"source-url":''}
+#     output=[]
+#     out=[]
+#     if (lang.get("iwlinks"))!=None:
+#          for j in lang.get("iwlinks"):
+#                 out=[{'target':j.get("*"),'target-url':j.get("url")}]
+#                 output.extend(out)
+#          return {"source":user_input,"source-url":srcURL,"targets":output}
+#     return {"source":user_input,"source-url":srcURL}
+#
+# #WIKTIONARY
+# @api_view(['GET',])
+# # @permission_classes((HasToken,))
+# def WiktionaryWorkSpace(request,doc_id):
+#     data=request.GET.dict()
+#     lang_list = ["zh-Hans","zh-Hant"]
+#     user_input=data.get("term")
+#     term_type=data.get("term_type")
+#     user_input=user_input.strip()
+#     user_input=user_input.strip('0123456789')
+#     doc = Document.objects.get(id=doc_id)
+#     src = doc.source_language_code if doc.source_language_code not in lang_list else "zh"
+#     tar = doc.target_language_code if doc.target_language_code not in lang_list else "zh"
+#     if term_type=="source":
+#         codesrc =src
+#         code = tar
+#     elif term_type=="target":
+#         codesrc = tar
+#         code = src
+#     res=wiktionary_ws(code,codesrc,user_input)
+#     return JsonResponse({"out":res}, safe = False,json_dumps_params={'ensure_ascii':False})
+#
+#
+# ######  USING PY SPELLCHECKER  ######
+# @api_view(['GET', 'POST',])
+# def spellcheck(request):
+#     tar = request.POST.get('target')
+#     doc_id = request.POST.get('doc_id')
+#     doc = Document.objects.get(id=doc_id)
+#     out,res = [],[]
+#     try:
+#         spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
+#         if spellchecker=="pyspellchecker":
+#             code = doc.target_language_code
+#             spell = SpellChecker(code)
+#             words=spell.split_words(tar)#list
+#             misspelled=spell.unknown(words)#set
+#             for word in misspelled:
+#                 suggestion=list(spell.candidates(word))
+#                 for k in words:
+#                     if k==word.capitalize():
+#                         out=[{"word":k,"Suggested Words":suggestion}]
+#                         break
+#                     else:
+#                         out=[{"word":word,"Suggested Words":suggestion}]
+#                 res.extend(out)
+#             return JsonResponse({"result":res},safe=False)
+#     except:
+#         return JsonResponse({"message":"Spellcheck not available"},safe=False)

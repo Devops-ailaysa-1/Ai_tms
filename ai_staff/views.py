@@ -14,7 +14,7 @@ from .forms import UploadFileForm
 from .models import (AiUserType, Billingunits, ContentTypes, Countries,
                      Currencies, Languages, LanguagesLocale, MtpeEngines,
                      ServiceTypes, SubjectFields, SupportFiles, Timezones,IndianStates,StripeTaxId,
-                     LanguageMetaDetails, OldVendorPasswords, CurrencyBasedOnCountry)
+                     LanguageMetaDetails, OldVendorPasswords, CurrencyBasedOnCountry,MTLanguageSupport)
 from ai_auth.models import AiUser
 
 
@@ -31,9 +31,12 @@ def Bulk_insert(request):
             imported_data = dataset.load(filedata.read(), format='xlsx')
             # print(imported_data)
             for data in imported_data:
-                value = CurrencyBasedOnCountry(
-                            country_id = data[0],
-                            currency_id =data[1],
+                value = MTLanguageSupport(
+                            language_id = data[0],
+                            mtpe_engines_id =data[1],
+                            speech_to_text = data[2],
+                            text_to_speech = data[3],
+                            translate = data[4],
                             # script_id = data[2],
                             # ime = data[3],
                             # uid =data[4],

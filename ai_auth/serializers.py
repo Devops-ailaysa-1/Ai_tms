@@ -18,6 +18,7 @@ from django.conf import settings
 from allauth.account.signals import password_changed
 UserModel = get_user_model()
 from .validators import file_size
+
 try:
     from django.utils.translation import gettext_lazy as _
 except ImportError:
@@ -54,7 +55,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
     def save(self, request):
-        from ai_vendor.models import VendorLanguagePair,VendorsInfo
+        from ai_vendor.models import VendorLanguagePair,VendorOnboardingInfo,VendorsInfo
+        from ai_auth.api_views import subscribe_vendor
         user = AiUser(
             email=self.validated_data['email'],
             fullname=self.validated_data['fullname'],
@@ -78,8 +80,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         if source_language and target_language:
             VendorLanguagePair.objects.create(user=user,source_lang = source_language,target_lang=target_language)
+            user.is_vendor = True
+            user.save()
+            sub = subscribe_vendor(user)
+            if not cv_file:
+                VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
         if cv_file:
-            VendorsInfo.objects.create(user=user,cv_file = cv_file )
+            tt = VendorsInfo.objects.create(user=user,cv_file = cv_file)
+            VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
             VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
         if campaign:
             CampaignUsers.objects.create(user=user,campaign_name=campaign)
@@ -284,7 +292,7 @@ class AiUserDetailsSerializer(serializers.ModelSerializer):
         if hasattr(UserModel, 'country'):
             extra_fields.append('country')
         model = UserModel
-        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail', *extra_fields)
+        fields = ('pk','deactivate','is_internal_member','internal_member_team_detail','is_vendor', *extra_fields)
         read_only_fields = ('email',)
 
 

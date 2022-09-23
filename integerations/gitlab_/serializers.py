@@ -84,7 +84,8 @@ class ContentFileListSerializer(serializers.ListSerializer):
 class ContentFileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ['id', 'branch', 'is_localize_registered', 'file',
-                  "file_path",
+                  "file_path", "size_of_file_with_units",
+                  "is_file_size_exceeded", "is_translatable"
                   # 'created_on', 'accessed_on', 'updated_on'
                   ]
 
@@ -100,7 +101,6 @@ class ContentFileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         data = validated_data
         return super().create(data)
-
 
 class LocalizeIdsSerializer(serializers.Serializer):
     localizable_ids = serializers.ListField()

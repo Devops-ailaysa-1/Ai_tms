@@ -10,7 +10,7 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from django.http import Http404,JsonResponse
 from .models import (ContentTypes, Countries, Currencies, Languages,
                     LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
-                    SupportFiles, Timezones,Billingunits,ServiceTypeunits,
+                    SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
                     ProjectType,ProjectTypeDetail)
@@ -21,7 +21,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
-                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer)
+                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew)
 
 
 class ServiceTypesView(APIView):
@@ -509,6 +509,14 @@ class ServiceTypeunitsView(APIView):
         serializer = ServiceTypeUnitsSerializer(queryset, many=True)
         return Response(serializer.data)
 
+# class AilaysaSupportedMtpeEnginesView(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def get(self, request, format=None):
+#         queryset = AilaysaSupportedMtpeEngines.objects.all().order_by('id')
+#         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+#         return Response(serializer.data)
+
 class SupportTypeView(APIView):
     permission_classes = []
 
@@ -519,6 +527,15 @@ class SupportTypeView(APIView):
 
 for klass in [LanguagesView]:
     klass.permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class AilaysaSupportedMtpeEnginesView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = AilaysaSupportedMtpeEngines.objects.all().order_by('id')
+        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 
 class SubscriptionPricingCreateView(viewsets.ViewSet):
@@ -654,13 +671,13 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
         pack.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class AilaysaSupportedMtpeEnginesView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, format=None):
-        queryset = AilaysaSupportedMtpeEngines.objects.all()
-        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
-        return Response(serializer.data)
+# class AilaysaSupportedMtpeEnginesView(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def get(self, request, format=None):
+#         queryset = AilaysaSupportedMtpeEngines.objects.all()
+#         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+#         return Response(serializer.data)
 
 class IndianStatesView(viewsets.ViewSet):
     def list(self,request):
@@ -805,3 +822,20 @@ class VoiceSupportLanguages(viewsets.ViewSet):
             serializer2 = GetLanguagesSerializer(queryset2,many=True)
             return Response({'source_lang_list':serializer1.data,'target_lang_list':serializer2.data})
         return Response({"msg":"something went wrong"})
+
+
+
+
+@api_view(['GET',])
+def get_languages(request):
+    queryset = Languages.objects.all().order_by('language')
+    serializer = LanguagesSerializerNew(queryset, many=True)
+    return Response(serializer.data)
+
+
+
+@api_view(['GET',])
+def vendor_language_pair_currency(request):
+    queryset = Currencies.objects.filter(id__in = [48,45,63,144])
+    serializer = CurrenciesSerializer(queryset, many=True)
+    return Response(serializer.data)

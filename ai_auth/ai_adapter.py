@@ -1,10 +1,13 @@
 from django.conf import settings
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib.sites.shortcuts import get_current_site
 from urllib.parse import urljoin
 from os.path import join
 from django.utils.encoding import force_str
 from allauth.account import app_settings
+import logging
+from ai_auth.models import AiUser
 
 class MyAccountAdapter(DefaultAccountAdapter):
 
@@ -52,3 +55,17 @@ class MyAccountAdapter(DefaultAccountAdapter):
     #         site = get_current_site(self.request)
     #         prefix = "{name}".format(name=site.name)
     #     return prefix + force_str(subject)
+
+
+class SocialAdapter(DefaultSocialAccountAdapter):
+    def pre_social_login(self, request, sociallogin):
+        """Get called after a social login. check for data and save what you want."""
+        try:
+            user = AiUser.objects.get(id=request.user.id)  # Error: user not available
+            name = sociallogin.account.extra_data.get('name', None)
+            user.fullname=name
+            user.save()
+        except AiUser.DoesNotExist:
+            logging.warning("User not found:",user.email)
+        except AttributeError:
+            logging.warning("User fullname not found:",user.email)

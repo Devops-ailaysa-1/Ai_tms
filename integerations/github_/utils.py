@@ -64,25 +64,32 @@ class GithubUtils:
         return ref_branch
 
     @staticmethod
+    def get_new_branch_name():
+        now_str = datetime.today().strftime("%Y_%m_%d_%H-%M_") \
+                  + str(int(time.time()))
+        new_unique_branch ="ailaysa_"+ now_str +"_localisation"
+        return new_unique_branch
+
+    @staticmethod
     def updatefile_in_branch(repo, file_path, branch_name,
         commit_message="more +++++ tests", content="more ----- tests"):
 
         content =  repo.get_contents(file_path, ref=branch_name)
-        now_str = datetime.today().strftime("%Y_%m_%d_%H_%M_") \
-                  + str(int(time.time()))
-        new_unique_branch ="ailaysa_"+ now_str +"_localisation"
-        return repo.update_file(content.path,
-            commit_message, content, content.sha, new_unique_branch)
 
+        return repo.update_file(content.path,
+            commit_message, content, content.sha, branch_name)
+
+    @staticmethod
+    def create_new_file(repo, file_path, branch_name,
+        commit_message="more +++++ tests", content="more ----- tests"):
+        return repo.create_file(file_path, commit_message, content=content, branch=branch_name)
 
 class MongoDbUtils:
     @staticmethod
     def get_pickle_load_data(db_name, coll_name):
-
         db = cli[db_name]
         coll = db[coll_name]
         data = coll.find_one()
-
         return pickle.loads(data["data"])
 
 class ApiViewService:
@@ -91,7 +98,6 @@ class ApiViewService:
         return MongoDbUtils\
             .get_pickle_load_data(db_name="samples",
                 coll_name="github_hook_data")
-
 
     # secret = '1234'
     # signature_header = request.headers['X-Hub-Signature']

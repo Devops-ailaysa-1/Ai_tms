@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 load_dotenv(".env2")
 from pathlib import Path
 import sentry_sdk
@@ -35,6 +37,11 @@ SECRET_KEY = os.getenv("django_secret_key", "fwevbsuio")
 DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
+
+ALLOWED_HOSTS += ["11e41bb54bb45b.lhrtunnel.link", "d96ada36139e0b.lhrtunnel.link","8efe68d97d25ee.lhrtunnel.link"]
+#                   "c3c0df83ac1b86.lhrtunnel.link", 'acb69157d8c89a.lhrtunnel.link',
+#                   "414004b4a51963.lhrtunnel.link", "2b80a8d1a40052.lhrtunnel.link",
+#                   "d5db75cdd4b431.lhrtunnel.link", "68a4a1352f7fdb.lhrtunnel.link"]
 
 # SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE')
 # CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE')
@@ -65,7 +72,6 @@ CORS_ALLOW_METHODS = [
      'POST',
      'PUT',
 ]
-
 
 CORS_ALLOW_HEADERS = [
      'accept',
@@ -114,22 +120,28 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.github',
+    'allauth.socialaccount.providers.google',
+    "allauth.socialaccount.providers.twitter",
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
     "ai_workspace_okapi",
-    "integerations.github_",
-    "integerations.gitlab_",
-    "controller",
+    #"integerations.github_",
+    #"integerations.gitlab_",
+    #"controller",
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
+    'ai_glex',
+    'ai_nlp',
     'djstripe',
     'django_filters',
     'notifications',
     'storages',
     "guardian",
     'django_celery_results',
+    "ai_pay",
+    "ai_tm_management",
     # 'dbbackup',
     # 'django_q',
     'ai_writer',
@@ -141,13 +153,14 @@ MANAGEMENT = False
 if MANAGEMENT:
     INSTALLED_APPS += ["ai_management", ]
 
-SITE_ID = 1
+SITE_ID = 1#os.getenv('SITE_ID')
 
 WSGI_APPLICATION = 'ai_tms.wsgi.application'
 ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
+    # "debug_toolbar.middleware.DebugToolbarMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -301,9 +314,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+
 }
 
+# SOCIALACCOUNT_ADAPTER="ai_auth.ai_adapter.SocialAdapter"
 
 SOCIALACCOUNT_PROVIDERS = {
     'github': {
@@ -312,7 +327,16 @@ SOCIALACCOUNT_PROVIDERS = {
             'repo',
             'read:org',
         ],
-    }
+    },
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+        }
+}
 }
 
 
@@ -426,17 +450,17 @@ CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-# CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
+CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
 CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
 CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
 CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
-
-
-
+# export CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# export CELERY_BACKEND_URL = 'redis://redis:6379/0'
 
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")
 CEO_EMAIL = os.getenv("CEO_EMAIL")
+END_POINT = os.getenv('END_POINT')
 
 STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
 STRIPE_TEST_SECRET_KEY = os.getenv( "STRIPE_TEST_SECRET_KEY" )
@@ -470,57 +494,61 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
 
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
 
-# LOGGING = {
-#     'version' : 1,
-#     'disable_existing_loggers' : False,
-#
-#     'formatters' : {
-#         'dev_formatter' : {
-#             'format' : '{levelname} {asctime} {pathname} {message}',
-#             'style' : '{',
-#         }
-#     },
-#
-#     'loggers' : {
-#         'django' : {
-#             'handlers' : ['file',],
-#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-#             'propogate' : True,
-#         },
-#
-#         'django' : {
-#             'handlers' : ['file_prod',],
-#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-#             'propogate' : True,
-#         },
-#     },
-#
-#     'handlers' : {
-#
-#         'file' : {
-#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-#             'class' : 'logging.FileHandler',
-#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
-#             'formatter' : 'dev_formatter',
-#         },
-#
-#        'file_prod' : {
-#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-#             'class' : 'logging.FileHandler',
-#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
-#             'formatter' : 'dev_formatter',
-#         },
-#
-#         # 'mail_admins' : {
-#         #     'level' : 'ERROR',
-#         #     'class': 'django.utils.log.AdminEmailHandler',
-#         #     'formatter' : 'dev_formatter',
-#         # }
-#     },
-#
-#
-# }
+LOGGING = {
+    'version' : 1,
+    'disable_existing_loggers' : False,
+
+    'formatters' : {
+        'dev_formatter' : {
+            'format' : '{levelname} {asctime} {pathname} {message}',
+            'style' : '{',
+        }
+    },
+
+    'loggers' : {
+        # 'django' : {
+        #     'handlers' : ['file',],
+        #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+        #     'propogate' : True,
+        # },
+
+        'django' : {
+            'handlers' : ['file_prod',],
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'propogate' : True,
+        },
+    },
+
+    'handlers' : {
+
+        'file' : {
+            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+       'file_prod' : {
+            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+            'class' : 'logging.FileHandler',
+            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
+            'formatter' : 'dev_formatter',
+        },
+
+        # 'mail_admins' : {
+        #     'level' : 'ERROR',
+        #     'class': 'django.utils.log.AdminEmailHandler',
+        #     'formatter' : 'dev_formatter',
+        # }
+    },
+
+
+}
 
 
 sentry_sdk.init(
@@ -543,17 +571,10 @@ sentry_sdk.init(
 OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
 MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
 NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
-END_POINT = os.getenv('END_POINT')
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
 DOCX_URL = '/output_docx/'
 
-SERVICE_SETTING_CONVERTIO = os.getenv('local')
-CONVERTIO_IP = 'http://127.0.0.1:8086' if SERVICE_SETTING_CONVERTIO == 'True' else 'https://labv1.ailaysa.com' 
 
 GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
 CONVERTIO_API = os.getenv("convertio_api")
@@ -564,3 +585,4 @@ CONVERTIO_API = os.getenv("convertio_api")
  
 
  
+STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
