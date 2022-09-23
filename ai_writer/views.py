@@ -12,8 +12,8 @@ from ai_tms import settings
 from django.http import JsonResponse , HttpResponse
 from rest_framework.decorators import api_view
 import openai
-
-
+from langdetect import detect_langs
+from ai_staff.models import LanguagesLocale 
 
 
 openai.api_key = settings.OPENAI_APIKEY
@@ -109,6 +109,14 @@ def hunspell_sentence_check_and_grammar_check(request):
 
 
 
+@api_view(['POST',])
+def grammar_check_model(request):
+    text = request.POST.get('text')
+    data = {}
+    data['text'] = text
+    end_pts = END_POINT +"grammar-checker/"
+    result = requests.post(end_pts , data )
+    return JsonResponse(result.json())
 
 ################################download_docx #######################################
 
@@ -247,3 +255,18 @@ def text_creater(request):
         
 
 
+
+
+
+
+@api_view(['POST'])
+def langudetect(request):
+  # language = {}
+  sentence = request.POST.get('sentence')
+  detected = detect_langs(sentence)  
+  lang = str(detected[0]).rstrip(':.0123456789')
+  code = LanguagesLocale.objects.filter(locale_code = lang)
+  for  i in code:
+    print(i.locale_code)
+                
+  return JsonResponse({"language":lang})

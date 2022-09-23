@@ -133,6 +133,7 @@ INSTALLED_APPS = [
     # 'dbbackup',
     # 'django_q',
     'ai_writer',
+    'ai_exportpdf'
 ]
 
 MANAGEMENT = False
@@ -420,10 +421,11 @@ SIMPLE_JWT = {
 #     'AUTH_COOKIE_PATH': '/',        # The path of the auth cookie.
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
+# CELERY_BROKER_URL = "redis://:ainlp2022@redis:6379/0" 
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 
-# CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
 # CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
 CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
 CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
@@ -542,3 +544,23 @@ OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
 MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
 NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
 END_POINT = os.getenv('END_POINT')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
+DOCX_URL = '/output_docx/'
+
+SERVICE_SETTING_CONVERTIO = os.getenv('local')
+CONVERTIO_IP = 'http://127.0.0.1:8086' if SERVICE_SETTING_CONVERTIO == 'True' else 'https://labv1.ailaysa.com' 
+
+GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
+CONVERTIO_API = os.getenv("convertio_api")
+
+
+
+ 
+ 
+
+ 

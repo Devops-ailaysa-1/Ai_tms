@@ -42,7 +42,8 @@ urlpatterns = [
     path("", TemplateView.as_view(template_name="index.html"), ),
     path("integerations/", include("integerations.github_.urls")),
     path("integerations/", include("integerations.gitlab_.urls")),
-    path('aiwriter/' , include('ai_writer.urls'))
+    path('aiwriter/' , include('ai_writer.urls')),
+    path('exportpdf/',include("ai_exportpdf.urls")),
 ]
 
 if settings.MANAGEMENT:

@@ -425,3 +425,8 @@ class PentmUpdateSerializer(serializers.ModelSerializer):
 
     def get_pentm_update_params(self, object):
         return json.dumps(PentmUpdateParamSerializer(object).data)
+
+
+class VerbSerializer(serializers.Serializer):
+    text_string = serializers.CharField()
+    synonyms_form =serializers.ListField()

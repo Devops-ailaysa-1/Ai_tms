@@ -13,6 +13,7 @@ urlpatterns += [
 
     path('hunspellcheck/', views.hunspellcheck, name='hunspellcheck'),
     path('hunspell_sentence_check/',views.hunspell_sentence_check_and_grammar_check, name='symspellcheck'),
+    path('sentencegrammarchecker/',views.grammar_check_model, name='grammar-check'),
     path('download-docx/', views.download_docx),
     path('doc-save/' ,views.docx_save ),
     path('synonyms/' , views.synonmys_lookup),
