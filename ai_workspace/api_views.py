@@ -2341,6 +2341,7 @@ def task_get_segments(request):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace.models import MTonlytaskCeleryStatus
     from django_celery_results.models import TaskResult
+    user = request.user.team.owner  if request.user.team  else request.user
     task_id = request.GET.get('task_id')
     obj = Task.objects.get(id=task_id)
     ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
@@ -2356,9 +2357,14 @@ def task_get_segments(request):
     else:
         document = DocumentViewByTask.create_document_for_task_if_not_exists(obj)
     seg_out = ''
+    seg_status = None
     for j in document.segments:
+        if j.target=='':
+            if UserCredits.objects.filter(user_id=user.id).filter(ended_at__isnull=True).last().credits_left < len(j.source):
+                seg_status = 'some segments may not be translated due to insufficient credits.please subscribe and try again'
+                break
         seg_out+=j.target
-    out =[{'task_id':obj.id,"target":seg_out,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id}]
+    out =[{'task_id':obj.id,"seg_status":seg_status,"target":seg_out,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id}]
     return Response({'Res':out})
 
 
