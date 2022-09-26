@@ -2348,7 +2348,7 @@ def task_get_segments(request):
         obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
         if obj !=None and obj.status == "FAILURE":
             Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
-            document = self.create_document_for_task_if_not_exists(task)
+            document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
             MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
         else:
             return Response({"msg": "File under process. Please wait a little while. \
@@ -2358,7 +2358,7 @@ def task_get_segments(request):
     seg_out = ''
     for j in document.segments:
         seg_out+=j.target
-    out =[{'task_id':obj.id,"target":seg_out,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id}]
+    out =[{'task_id':obj.id,"target":seg_out,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id}]
     return Response({'Res':out})
 
 
