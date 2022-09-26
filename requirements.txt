@@ -232,7 +232,4 @@ filesplit==4.0.1
 django-redis
 eventlet
 numpy
-opencv-python
-opencv-contrib-python
-opencv-python-headless
 docx2txt

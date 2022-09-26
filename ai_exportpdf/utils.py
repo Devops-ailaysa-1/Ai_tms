@@ -103,46 +103,36 @@ def convertiopdf2docx(pdf_file_name ,pdf_file_name_with_extension ,ocr , languag
         return  str(response_status['data']['id'])
 
 
-
+from django.contrib.auth import settings
 
 #########ocr ######
 @shared_task(serializer='json')
-def ai_export_pdf(pdf_file_upload_path , file_language , file_name , file_path):
-    pdf = PdfFileReader(open(pdf_file_upload_path,'rb') ,strict=False)
-    pdf_len = pdf.getNumPages()
-    no_of_page_processed_counting = 0
-    ocr_pages={}
+def ai_export_pdf(serve_path , file_language , file_name , file_path):
+    pdf_path  = settings.MEDIA_ROOT+"/"+ serve_path
+    txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = serve_path)
     start = time.time()
-    txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = file_name)
-    print("file_name" ,file_name)
-    print("txt_field_obj.pdf_file",txt_field_obj.pdf_file)
-
-
-    txt_field_obj.pdf_no_of_page = int(pdf_len)
     try:
+        pdf = PdfFileReader(open(pdf_path,'rb') ,strict=False)
+        pdf_len = pdf.getNumPages()
+        no_of_page_processed_counting = 0    
+        txt_field_obj.pdf_no_of_page = int(pdf_len)
         doc = docx.Document()
-        # plain_text = ""
         for i in tqdm(range(1,pdf_len+1)):
-            image = convert_from_path(pdf_file_upload_path ,thread_count=1,fmt='png',first_page=i,last_page=i)[0]
+            image = convert_from_path(pdf_path ,thread_count=1,fmt='png',grayscale=True ,first_page=i,last_page=i ,size=(700, 700) )[0]
             # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
-            ocr_pages[i] = image_ocr_google_cloud_vision(image , inpaint=False)
-            text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', ocr_pages[i])
-            # plain_text +=text
+            text = image_ocr_google_cloud_vision(image , inpaint=False)
+            text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
             doc.add_paragraph(text) 
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
             txt_field_obj.status = "PENDING"
+            txt_field_obj.save()
         logger.info('finished ocr and saved as docx ,file_name: ' )
         txt_field_obj.status = "DONE"
-        # myfile = ContentFile(plain_text)
-        # print("file_name ccc" ,file_name)
-        # file_name_docx = str(file_name).split("/")[-1]+".txt"
-        # txt_field_obj.docx_file_load.save(file_name_docx , myfile)
-         
-        docx_file_path = os.getcwd()+"/media/"+str(file_name).split(".pdf")[0]+".docx"
+        docx_file_path = str(settings.MEDIA_ROOT+"/"+ serve_path).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
-        txt_field_obj.docx_url_field = docx_file_path
+        txt_field_obj.docx_url_field = str(settings.MEDIA_URL+ serve_path).split(".pdf")[0] +".docx"
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2)) 
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.save()
@@ -151,8 +141,9 @@ def ai_export_pdf(pdf_file_upload_path , file_language , file_name , file_path):
     except BaseException as e:
         end = time.time()
         logger.error(str(e))
-        return {'result':"something went wrong" , 
-                            'Execution time': str(int(end - start))+'sec'}  
+        txt_field_obj.status = "ERROR"
+        txt_field_obj.save()
+        return {'result':"something went wrong"}  
 
 def para_creation_from_ocr(texts):
     para_text = []

@@ -12,10 +12,10 @@ from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes
 from django.http import Http404
 from ai_tms.settings import CONVERTIO_IP
+from django.contrib.auth import settings
 from rest_framework.permissions  import IsAuthenticated
 from ai_exportpdf.utils import direct_download_urlib_docx , convertiopdf2docx ,ai_export_pdf , convertio_ocr_lang_pair  
 logger = logging.getLogger('django')
-
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
 
 class PDFTODOCX(viewsets.ViewSet):
@@ -24,45 +24,45 @@ class PDFTODOCX(viewsets.ViewSet):
     def create(self, request):
         pdf_request_file = request.FILES.get('pdf_request_file')
         file_language = request.POST.get('file_language')
-        format = request.POST.get('format') ##########text pdf(searchable ,non searchable) , image pdf 
+        format = request.POST.get('format')  
         user = request.user.id
-        file_path = AiUser.objects.get(id =user).uid
-        print("1. file_path -->" , file_path)
-        print("2. user" , user)
-        print("3. file_name" ,pdf_request_file )
+        instance_path = AiUser.objects.get(id =user).uid
+        # print("1. instance_path -->" , instance_path)
+        # print("2. user" , user)
+        # print("3. file_name" ,pdf_request_file )
         response_result = {}
         if pdf_request_file.name.endswith('.pdf') and file_language and format:
-            Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_request_file , pdf_format_option = format ,pdf_file_name = str(pdf_request_file) , pdf_language =file_language.lower()).save()  
-            # file_name = Ai_PdfUpload.objects.last(user_id = user).pdf_file.split("/")[-1]
-            # print("file_name ----> " , file_name)
-            pdf_file_name =str(sorted(Path(os.getcwd()+"/media/"+str(file_path)+"/pdf_file/").iterdir() , key=os.path.getctime)[-1])
-        
-             
+            Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_request_file , 
+                                        pdf_format_option = format ,
+                                        pdf_file_name = str(pdf_request_file) , 
+                                        pdf_language =file_language.lower()).save()  
+
+            # print("settings.MEDIA_ROOT" , settings.MEDIA_ROOT)
+            serve_path = str(Ai_PdfUpload.objects.all().filter(user_id = user).last().pdf_file)
+            pdf_file_name = settings.MEDIA_ROOT+"/"+serve_path
             pdf_file_name_with_extension = os.path.basename(pdf_file_name)
-            print("pdf_file_name_with_extension" , pdf_file_name_with_extension)
-            serve_path = str(file_path)+"/pdf_file/"+pdf_file_name_with_extension
-            pdf_file_name_path = pdf_file_name_with_extension.split('.')[0]
-            
+            pdf_file_name_only= pdf_file_name_with_extension.split('.')[0]
+            # print("serve_path" , serve_path)
+            # print("pdf_file_name" ,pdf_file_name)
+            # print("pdf_file_name_with_extension" ,pdf_file_name_with_extension)
+            # print("pdf_file_name_path" ,pdf_file_name_path)
             if file_language in google_ocr_indian_language:
                 print("[OCR]")
-                response_result = ai_export_pdf.delay(pdf_file_name , file_language , serve_path , file_path)       
+                response_result = ai_export_pdf.delay(serve_path , file_language , pdf_file_name_only , instance_path)       
                 Ai_PdfUpload.objects.filter(pdf_file = serve_path).update(pdf_task_id = response_result.id)                      
-                
                 logger.info('assigned ocr ,file_name: google colud indian language '+str(pdf_file_name))
                 return JsonResponse({'result':response_result.id} , safe=False)
             if format == 'text' :
-                response_result = convertiopdf2docx(pdf_file_name = pdf_file_name_path , pdf_file_name_with_extension = pdf_file_name_with_extension , ocr = False , language=file_language.lower())
+                response_result = convertiopdf2docx(pdf_file_name = pdf_file_name_only , pdf_file_name_with_extension = pdf_file_name_with_extension , ocr = False , language=file_language.lower())
                 logger.info('assigned pdf text ,file_name: convertio  '+str(pdf_file_name))      
                 return JsonResponse({'result':response_result} , safe=False)
-
             if format == 'ocr':
-                 
                 if file_language in list(convertio_ocr_lang_pair.keys()):
-                    response_result = convertiopdf2docx(pdf_file_name = pdf_file_name_path ,pdf_file_name_with_extension = pdf_file_name_with_extension , ocr = True ,language=file_language)
+                    response_result = convertiopdf2docx(pdf_file_name = pdf_file_name_only ,pdf_file_name_with_extension = pdf_file_name_with_extension , ocr = True ,language=file_language)
                     logger.info('assigned pdf text ,file_name: convertio '+str(pdf_file_name))      
                     return JsonResponse({'result':response_result} , safe=False)
                 else:
-                    response_result = ai_export_pdf.delay(pdf_file_name , file_language , pdf_file_name_with_extension ,file_path)    
+                    response_result = ai_export_pdf.delay(serve_path , file_language , pdf_file_name_only ,instance_path)    
                     print("----->>" , response_result.id)   
                     Ai_PdfUpload.objects.filter(pdf_file = serve_path).update(pdf_task_id = response_result.id)                       ########pdf_database_creation
                     logger.info('assigned ocr ,file_name: google cloud'+str(pdf_file_name))
@@ -70,10 +70,11 @@ class PDFTODOCX(viewsets.ViewSet):
         else:
             return JsonResponse({'result':"need pdf file to process"})    
 
+
+
     def list(self, request):
         pk = request.query_params.get('pk', None)
         if not pk:
- 
             user = request.user.id
             files = Ai_PdfUpload.objects.filter(user_id = user)
             serializer = PdfFileSerializer(files,many=True)
@@ -84,15 +85,12 @@ class PDFTODOCX(viewsets.ViewSet):
             print(serializer.data)
             return Response({'data':'data'})
 
-
     def retrieve(self, request, pk=None):
         queryset = Ai_PdfUpload.objects.all()
         user = get_object_or_404(queryset, pk=pk)
         serializer = PdfFileSerializer(user)
         return Response(serializer.data)
             
-
-    
     def destroy(self,request,pk):
         try:
             obj = Ai_PdfUpload.objects.get(id=pk)
