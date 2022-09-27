@@ -2381,7 +2381,7 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
         text_data=request.POST.get('text_data')
         name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
         im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
-        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['2']},context={"request": request})
+        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['5']},context={"request": request})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
@@ -2430,7 +2430,7 @@ def task_get_segments(request):
             out =[{'task_id':obj.id,"source":content,"mt_raw":express_obj.mt_raw,"target":express_obj.target_text,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id}]
             return Response({'Res':out})
         else:
-            return Response({'msg':'Insufficient Credits'})
+            return Response({'msg':'Insufficient Credits'},status=400)
     else:
         out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id}]
         return Response({'Res':out})
@@ -2447,6 +2447,18 @@ def task_segments_save(request):
     ser = ExpressProjectDetailSerializer(express_obj)
     return Response(ser.data)
 
+@api_view(['GET'])
+#@permission_classes([IsAuthenticated])
+def express_task_download(request,task_id):
+    obj = Task.objects.get(id = task_id)
+    express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+    file_name,ext = os.path.splitext(obj.file.filename)
+    target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
+    with open(target_filename,'w') as f:
+        f.write(express_obj.target_text)
+    res = download_file(target_filename)
+    os.remove(target_filename)
+    return res
 
 
 

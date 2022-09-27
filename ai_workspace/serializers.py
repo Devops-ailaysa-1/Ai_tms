@@ -603,7 +603,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			if proj_steps:
 				[project.proj_steps.create(**steps_data) for steps_data in proj_steps]
 
-			if project_type == 1 or project_type == 2:
+			if project_type == 1 or project_type == 2 or project_type == 5:
 				tasks = Task.objects.create_tasks_of_files_and_jobs(
 					files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
 
@@ -616,7 +616,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							files=files, jobs=jobs, project=project, klass=Task)
 					else:
 						tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
-			if project_type == 2:
+			if project_type == 5:
 				ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
 			# tasks = Task.objects.create_tasks_of_files_and_jobs(
 			# 	files=files, jobs=jobs, project=project, klass=Task)
@@ -687,14 +687,14 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							contents_data, subjects_data, steps_data,\
 							c_klass=ProjectContentType, s_klass = ProjectSubjectField, step_klass = ProjectSteps)
 
-		if project_type == 1 or project_type == 2:
+		if project_type == 1 or project_type == 2 or project_type == 5:
 			tasks = Task.objects.create_tasks_of_files_and_jobs_by_project(\
 					project=project)
 		if project_type == 3:
 			tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
 			        project = instance)
 
-		if project_type == 2:
+		if project_type == 5:
 			ex = [ExpressProjectDetail.objects.get_or_create(task = i[0]) for i in tasks]
 
 		task_assign = TaskAssign.objects.assign_task(project=project)
