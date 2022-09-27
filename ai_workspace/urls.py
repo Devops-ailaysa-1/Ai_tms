@@ -84,6 +84,7 @@ urlpatterns += [
 	path('writer_save/',api_views.writer_save),
 	path('get_media_link_source_audio/<int:task_id>/',api_views.get_media_link),
 	path('task_get_segments/',api_views.task_get_segments),
+	path('express_save/',api_views.task_segments_save),
 ]
 # views urls adding for local testing
 urlpatterns += [

@@ -478,14 +478,6 @@ class VoiceProjectDetail(models.Model):
     # has_female = models.BooleanField(blank=True,null=True)
 
 
-# class VoiceProjectFile(models.Model):
-#     voice_project = models.ForeignKey(VoiceProjectDetail, null=True, blank=True, on_delete=models.CASCADE,related_name='voice_proj')
-#     audio_file =  models.FileField (upload_to=get_audio_file_upload_path,blank=True, null=True)
-#
-#     @property
-#     def filename(self):
-#         if self.audio_file:
-#             return  os.path.basename(self.audio_file.file.name)
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -903,6 +895,13 @@ def ref_file_upload_path(instance, filename):
     file_path = os.path.join(instance.task_assign_info.task_assign.task.job.project.ai_user.uid,instance.task_assign_info.task_assign.task.job.project.ai_project_id,\
             "references", filename)
     return file_path
+
+class ExpressProjectDetail(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_task_detail")
+    target_text = models.TextField(null=True,blank=True)
+    mt_raw =models.TextField(null=True,blank=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_detail")
+
 
 
 class MTonlytaskCeleryStatus(models.Model):

@@ -7,7 +7,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
-		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails#,TaskAssignRateInfo
+		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail#,TaskAssignRateInfo
 import json
 import pickle,itertools
 from ai_workspace import forms as ws_forms
@@ -153,6 +153,12 @@ class VoiceProjectDetailSerializer(serializers.ModelSerializer):
 		model = VoiceProjectDetail
 		fields = ("id","project","source_language", "project_type_sub_category")
 		read_only_fields = ("id","project",)
+
+
+class ExpressProjectDetailSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = ExpressProjectDetail
+		fields = "__all__"
 		# extra_kwargs = {
 		# 	"audio_file":{
 		# 		"required": False
@@ -610,6 +616,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 							files=files, jobs=jobs, project=project, klass=Task)
 					else:
 						tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
+			if project_type == 2:
+				ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
 			# tasks = Task.objects.create_tasks_of_files_and_jobs(
 			# 	files=files, jobs=jobs, project=project, klass=Task)
 			task_assign = TaskAssign.objects.assign_task(project=project)
@@ -685,6 +693,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if project_type == 3:
 			tasks = Task.objects.create_glossary_tasks_of_jobs_by_project(\
 			        project = instance)
+
+		if project_type == 2:
+			ex = [ExpressProjectDetail.objects.get_or_create(task = i[0]) for i in tasks]
+
 		task_assign = TaskAssign.objects.assign_task(project=project)
 
 		return  project
@@ -925,6 +937,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_open_in(self,obj):
 		try:
+			if obj.job.project.project_type_id == 2:
+				return "ExpressEditor"
 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
 				if obj.job.target_language==None:
 					return "Ailaysa Writer or Text Editor"
