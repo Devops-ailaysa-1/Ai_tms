@@ -2143,11 +2143,11 @@ def convert_text_to_speech_source(request):
             for obj in tasks:
             #     conversion = text_to_speech_celery(obj.id,language,gender,user.id,voice_name)
             # return Response({'msg':'Text to Speech conversion ongoing. Please wait'})
-            conversion = text_to_speech_task(obj,language,gender,user,voice_name)
-            if conversion.status_code == 200:
-                task_list.append(obj.id)
-            elif conversion.status_code == 400:
-                return Response({'msg':'Insufficient Credits'},status=400)
+                conversion = text_to_speech_task(obj,language,gender,user,voice_name)
+                if conversion.status_code == 200:
+                    task_list.append(obj.id)
+                elif conversion.status_code == 400:
+                    return Response({'msg':'Insufficient Credits'},status=400)
         queryset = TaskTranscriptDetails.objects.filter(task__in = pr.get_source_only_tasks)
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
