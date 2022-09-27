@@ -1623,7 +1623,7 @@ class ProgressView(views.APIView):
     @staticmethod
     def get_progress(document):
 
-        confirm_list = [102, 104, 106, 110]
+        confirm_list = [102, 104, 106, 110, 107]
         total_seg_count = 0
         confirm_count = 0
 
