@@ -905,6 +905,20 @@ def ref_file_upload_path(instance, filename):
     return file_path
 
 
+class MTonlytaskCeleryStatus(models.Model):
+    IN_PROGRESS = 1
+    COMPLETED = 2
+    STATUS_CHOICES = [
+        (IN_PROGRESS, 'In Progress'),
+        (COMPLETED, 'Completed'),
+    ]
+    task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
+            related_name="mt_only_task_status")
+    status = models.IntegerField(choices=STATUS_CHOICES,default=1)
+    celery_task_id = models.CharField(max_length=255, blank=True, null=True)
+
+
+
 class TaskAssign(models.Model):
     YET_TO_START = 1
     IN_PROGRESS = 2
