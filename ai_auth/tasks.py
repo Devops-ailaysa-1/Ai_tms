@@ -358,16 +358,18 @@ def write_doc_json_file(doc_data, task_id):
 
 
 @task
-def text_to_speech(task_id):
+def text_to_speech_celery(task_id,language,gender,user_id,voice_name):
+    from ai_workspace.api_views import text_to_speech_task
     obj = Task.objects.get(id=task_id)
-    text_to_speech(obj)
+    user = AiUser.objects.get(id=user_id)
+    text_to_speech_task(obj,language,gender,user,voice_name)
     logger.info("Text to speech called")
 
 
 
-
-
-
+# @task
+# def google_long_text_file_process_cel()
+#
 
 
 

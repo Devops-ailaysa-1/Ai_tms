@@ -842,6 +842,8 @@ class DocumentToFile(views.APIView):
         initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
         if initial_credit > consumable_credits:
             if len(data)>5000:
+                return Response({'msg':'Conversion is going on.Please wait'})
+                #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
                 res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
             else:
                 filename_ = filename + "_"+ task.ai_taskid+ "_out" + "(" + source_lang + "-" + target_language + ")" + ".mp3"
