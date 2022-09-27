@@ -937,7 +937,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_open_in(self,obj):
 		try:
-			if obj.job.project.project_type_id == 2:
+			if obj.job.project.project_type_id == 5:
 				return "ExpressEditor"
 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
 				if obj.job.target_language==None:
