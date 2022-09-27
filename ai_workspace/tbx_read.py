@@ -89,18 +89,17 @@ def TermSearch(request):
     # LangName = getLanguageName(doc_id)
     codesrc = doc.source_language_code
     code = doc.target_language_code
-    print(codesrc)
-    print(code)
+
     job_id = Document.objects.get(id=doc_id).job_id
     project_id = Job.objects.get(id=job_id).project_id
     files =  TbxFile.objects.filter(Q(job_id=job_id) | Q(job_id=None) & Q(project_id=project_id)).all()
-    print("FILES-->", files)
+
     for i in range(len(files)):
         file_id=files[i].id
-        print("****",file_id)
+
         queryset = TbxFile.objects.all()
         file = get_object_or_404(queryset, pk=file_id)
-        print(file.tbx_file)
+
         tree = ET.parse(file.tbx_file.path)
         root=tree.getroot()
         remove_namespace(root, u"iso.org/ns/tbx/2016")
@@ -121,10 +120,10 @@ def TermSearch(request):
         out1.extend(result1)
         out1.extend(result2)
         out1.extend(result3)
-    print("^^^^^",out1)
+
     output=[]
     [output.append(x) for x in out1 if x not in output]
-    print("@@@@@@@@@@@@@",output)
+
     return JsonResponse({"out":output},safe = False,json_dumps_params={'ensure_ascii':False})
 
 def upload_template_data_to_db(file_id, job_id):

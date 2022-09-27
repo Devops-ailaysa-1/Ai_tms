@@ -208,7 +208,7 @@ class Project(models.Model):
 
                     total_seg_count = 0
                     confirm_count  = 0
-                    confirm_list = [102, 104, 106, 110]
+                    confirm_list = [102, 104, 106, 110, 107]
 
                     segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
                     for seg in segs:
@@ -862,7 +862,7 @@ class Task(models.Model):
 
     @property
     def corrected_segment_count(self):
-        confirm_list = [102, 104, 106, 110]
+        confirm_list = [102, 104, 106, 110, 107]
         total_seg_count = 0
         confirm_count = 0
         doc = self.document
