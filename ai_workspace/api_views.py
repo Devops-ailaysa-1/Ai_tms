@@ -2071,6 +2071,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
 def text_to_speech_task(obj,language,gender,user,voice_name):
     #obj = Task.objects.get(id=task_id)
     project = obj.job.project
+    print("Gender------------------->",gender)
     account_debit_user = project.team.owner if project.team else project.ai_user
     file,ext = os.path.splitext(obj.file.file.path)
     dir,name_ = os.path.split(os.path.abspath(file))
@@ -2142,7 +2143,7 @@ def convert_text_to_speech_source(request):
             #text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
             tt = text_to_speech_task(obj,language,gender,user,voice_name)
             return Response(tt.data)
-            return Response({'msg':'Text to Speech conversion ongoing. Please wait'})
+            #return Response({'msg':'Text to Speech conversion ongoing. Please wait'})
         else:
             ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
             return Response(ser.data)
