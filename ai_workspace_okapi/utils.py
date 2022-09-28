@@ -305,7 +305,6 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     with open(filename,"wb") as out:
         out.write(response.audio_content)
         print('Audio content written to file',filename)
-    out.close()
     f2 = open(filename, 'rb')
     file_obj = DJFile(f2)
     print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)

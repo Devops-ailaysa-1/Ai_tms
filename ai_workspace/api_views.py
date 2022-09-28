@@ -1962,7 +1962,8 @@ def transcribe_file_get(request):
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     final_name,ext =  os.path.splitext(file)
     #final_audio = final_name + '.mp3'
-    final_audio = final_name + "_" + obj.ai_taskid + "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ".mp3"
+    #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
+    final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
     dir_1 = os.path.join('/ai_home/',"output")
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
@@ -1999,7 +2000,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     final_name,ext =  os.path.splitext(file)
     lang_list = ['hi','bn','or','ne','pa']
     #final_audio = final_name + '.mp3'
-    final_audio = final_name + "_" + obj.ai_taskid + "(" + obj.job.source_language_code + ")" + ".mp3"
+    final_audio = final_name + "_" + obj.job.source_language_code  + ".mp3"#+ "_" + obj.ai_taskid
     dir_1 = os.path.join('/ai_home/',"Output_"+str(project_id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
@@ -2096,7 +2097,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
             wc = res1.json() if res1.status_code == 200 else None
             TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc})
-            audio_file = name_ + "_" + obj.ai_taskid + "_source" + "(" + obj.job.source_language_code + ")" + ".mp3"
+            audio_file = name_ + "_source" + "_" + obj.job.source_language_code + ".mp3"#+ "_" + obj.ai_taskid
             res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             os.remove(audio_file)
@@ -2466,7 +2467,7 @@ def express_task_download(request,task_id):###############permission need to be 
     obj = Task.objects.get(id = task_id)
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     file_name,ext = os.path.splitext(obj.file.filename)
-    target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
+    target_filename = file_name + "_out" +  "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ext
     with open(target_filename,'w') as f:
         f.write(express_obj.target_text)
     res = download_file(target_filename)

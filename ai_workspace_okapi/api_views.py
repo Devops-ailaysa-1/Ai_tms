@@ -846,7 +846,7 @@ class DocumentToFile(views.APIView):
                 #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
                 res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
             else:
-                filename_ = filename + "_"+ task.ai_taskid+ "_out" + "(" + source_lang + "-" + target_language + ")" + ".mp3"
+                filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
                 res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
                 os.remove(filename_)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
