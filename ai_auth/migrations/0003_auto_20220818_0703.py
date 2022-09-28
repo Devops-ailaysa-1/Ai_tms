@@ -14,11 +14,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='aiuser',
-            name='currency_based_on_country',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='aiuser_country_based_currency', to='ai_staff.currencies'),
-        ),
         migrations.AlterField(
             model_name='carriersupport',
             name='cv_file',
