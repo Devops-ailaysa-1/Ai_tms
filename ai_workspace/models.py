@@ -19,7 +19,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
     ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,ProjectTypeDetail
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 from ai_workspace_okapi.models import Document, Segment
-from ai_staff.models import ParanoidModel,Billingunits
+from ai_staff.models import ParanoidModel,Billingunits,MTLanguageLocaleVoiceSupport
 from django.shortcuts import reverse
 from django.core.validators import FileExtensionValidator
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
@@ -129,6 +129,8 @@ class Project(models.Model):
     pre_translate = models.BooleanField(default=False)
     mt_enable = models.BooleanField(default=True)
     project_deadline = models.DateTimeField(blank=True, null=True)
+    copy_paste_enable = models.BooleanField(default=True)
+
 
     class Meta:
         unique_together = ("project_name", "ai_user")
@@ -203,65 +205,30 @@ class Project(models.Model):
                 return "Yet to start"
             else:
                 if docs.count() == tasks:
-                    for doc in docs:
-                        total_segments+=doc.total_segment_count
+
+                    total_seg_count = 0
+                    confirm_count  = 0
+                    confirm_list = [102, 104, 106, 110, 107]
+
+                    segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+                    for seg in segs:
+
+                        if seg.is_merged == True and seg.is_merge_start is None:
+                            continue
+                        else:
+                            total_seg_count += 1
+
+                        seg_new = seg.get_active_object()
+                        if seg_new.status_id in confirm_list:
+                            confirm_count += 1
+
                 else:
                     return "In Progress"
 
-            status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-                Q(status_id__in=[102,104,106,110])).all().count()
-
-            if total_segments == status_count:
+            if total_seg_count == confirm_count:
                 return "Completed"
             else:
                 return "In Progress"
-            # docs = Document.objects.filter(job__project_id=self.id).all()
-            # tasks = len(self.get_tasks)
-            # total_segments = 0
-            # if not docs:
-            #     return "Yet to start"
-            # else:
-            #     if docs.count() == tasks:
-            #         # for doc in docs:
-            #         #     total_segments+=doc.total_segment_count
-            #
-            #         # segs = Segment.objects.filter(text_unit__document=document)
-            #         # for seg in segs:
-            #         #     if not (seg.is_merged and (not seg.is_merge_start)):
-            #         #         total_seg_count += 1
-            #         #     seg_new = seg.get_active_object()
-            #         #     if seg_new.status_id in confirm_list:
-            #         #         confirm_count += 1
-            #
-            #         total_seg_count = 0
-            #         confirm_count  = 0
-            #         confirm_list = [102, 104, 106]
-            #
-            #         segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
-            #         for seg in segs:
-            #
-            #             # if not (seg.is_merged and (not seg.is_merge_start)):
-            #             #     total_seg_count += 1
-            #
-            #             if seg.is_merged == True and seg.is_merge_start == False:
-            #                 continue
-            #             else:
-            #                 total_seg_count += 1
-            #
-            #             seg_new = seg.get_active_object()
-            #             if seg_new.status_id in confirm_list:
-            #                 confirm_count += 1
-            #
-            #     else:
-            #         return "In Progress"
-            #
-            # # status_count = Segment.objects.filter(Q(text_unit__document__job__project_id=self.id) &
-            # #     Q(status_id__in=[102,104,106])).all().count()
-            #
-            # if total_seg_count == confirm_count:
-            #     return "Completed"
-            # else:
-            #     return "In Progress"
 
     @property
     def files_and_jobs_set(self):
@@ -296,6 +263,14 @@ class Project(models.Model):
     def get_tasks(self):
         return [task for job in self.project_jobs_set.all() for task \
             in job.job_tasks_set.all()]
+    @property
+    def get_source_only_tasks(self):
+        tasks=[]
+        for job in self.project_jobs_set.all():
+            for task in job.job_tasks_set.all():
+               if (task.job.target_language == None):
+                       tasks.append(task)
+        return tasks
 
     @property
     def tasks_count(self):
@@ -388,6 +363,13 @@ class Project(models.Model):
             return False
 
     @property
+    def text_to_speech_source_download(self):
+        if self.project_type_id == 4:
+            if self.voice_proj_detail.project_type_sub_category_id == 2:
+                if self.get_target_languages[0] == None:
+                    return True
+
+    @property
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
             # print("Doc opened")
@@ -448,9 +430,6 @@ class Project(models.Model):
                 return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                     "proj_seg_count":out.get('task_seg_count__sum'),
                                 "task_words":task_words}
-        # else:
-        #     from .api_views import ProjectAnalysisProperty
-        #     return ProjectAnalysisProperty.get(self.id)
         else:
             from .api_views import ProjectAnalysisProperty
             try:
@@ -458,32 +437,6 @@ class Project(models.Model):
             except:
                 return {"proj_word_count": 0, "proj_char_count": 0, \
                     "proj_seg_count": 0, "task_words":[]}
-    # @property
-    # def project_analysis(self):
-    #     if self.is_proj_analysed == True:
-    #         task_words = []
-    #
-    #         if self.is_all_doc_opened:
-    #             # print("Inside doccsssssssssssss")
-    #             [task_words.append({i.id:i.document.total_word_count}) for i in self.get_tasks]
-    #             out=Document.objects.filter(id__in=[j.document_id for j in self.get_tasks]).aggregate(Sum('total_word_count'),\
-    #                 Sum('total_char_count'),Sum('total_segment_count'))
-    #
-    #             return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
-    #                 "proj_seg_count":out.get('total_segment_count__sum'),\
-    #                               "task_words" : task_words }
-    #         else:
-    #             # print("Inside task detailssssss")
-    #             out = TaskDetails.objects.filter(project_id=self.id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
-    #             task_words = []
-    #             [task_words.append({i.id:i.task_details.first().task_word_count}) for i in self.get_tasks]
-    #
-    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
-    #                 "proj_seg_count":out.get('task_seg_count__sum'),
-    #                             "task_words":task_words}
-    #     else:
-    #         from .api_views import ProjectAnalysisProperty
-    #         return ProjectAnalysisProperty.get(self.id)
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -492,6 +445,7 @@ class ProjectFilesCreateType(models.Model):
     class FileType(models.TextChoices):
         upload_file = 'upload', "Files from usual upload"
         integeration = "integeration", "Files from integerations"
+        from_text   = "From insta text"
 
     file_create_type = models.TextField(choices=FileType.choices,
         default=FileType.upload_file)
@@ -524,14 +478,6 @@ class VoiceProjectDetail(models.Model):
     # has_female = models.BooleanField(blank=True,null=True)
 
 
-# class VoiceProjectFile(models.Model):
-#     voice_project = models.ForeignKey(VoiceProjectDetail, null=True, blank=True, on_delete=models.CASCADE,related_name='voice_proj')
-#     audio_file =  models.FileField (upload_to=get_audio_file_upload_path,blank=True, null=True)
-#
-#     @property
-#     def filename(self):
-#         if self.audio_file:
-#             return  os.path.basename(self.audio_file.file.name)
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -860,7 +806,7 @@ class Task(models.Model):
             document = Document.objects.get(id = self.document_id)
             return document.total_word_count
         elif self.task_details.exists():
-            t = TaskDetails.objects.get(task_id = self.id)
+            t = TaskDetails.objects.filter(task_id = self.id).first()
             return t.task_word_count
         else:
             return None
@@ -871,7 +817,7 @@ class Task(models.Model):
             document = Document.objects.get(id = self.document_id)
             return document.total_char_count
         elif self.task_details.first():
-            t = TaskDetails.objects.get(task_id = self.id)
+            t = TaskDetails.objects.filter(task_id = self.id).first()
             return t.task_char_count
         else:
             return None
@@ -884,56 +830,53 @@ class Task(models.Model):
             else:return False
         else:return True
 
-    # @property
-    # def corrected_segment_count(self):
-    #     confirm_list = [102, 104, 106]
-    #     total_seg_count = 0
-    #     confirm_count = 0
-    #     doc = self.document
-    #     # return Segment.objects.filter(
-    #     #     text_unit__document=doc
-    #     # ).count()
-    #
-    #     segs = Segment.objects.filter(text_unit__document=doc)
-    #     for seg in segs:
-    #         # continue if seg.is_merged and (not seg.is_merge_start) else total_seg_count += 1
-    #
-    #         # if not (seg.is_merged and (not seg.is_merge_start)):
-    #         #     total_seg_count += 1
-    #
-    #         if seg.is_merged == True and seg.is_merge_start == False:
-    #             continue
-    #         else:
-    #             total_seg_count += 1
-    #
-    #         seg_new = seg.get_active_object()
-    #         if seg_new.status_id in confirm_list:
-    #             confirm_count += 1
-    #
-    #     return total_seg_count, confirm_count
-    #
-    #     # for seg in segs:
-    #     #     seg_new = seg.get_active_object()
-    #     #     if seg_new.status_id in confirm_list:
-    #     #         confirm_count += 1
+    @property
+    def download_audio_source_file(self):
+        try:
+            voice_pro = self.job.project.voice_proj_detail
+            if self.job.project.voice_proj_detail.project_type_sub_category_id == 2:##text_to_speech
+                locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.source_language)
+                return [{"locale":i.language_locale.locale_code,'gender':i.gender,\
+                        "voice_type":i.voice_type,"voice_name":i.voice_name}\
+                        for i in locale_list] if locale_list else []
+            elif self.job.project.voice_proj_detail.project_type_sub_category_id == 1:##speech_to_text(checking for speech_to_speech)
+                if self.job.target_language!=None:
+                    txt_to_spc = MTLanguageSupport.objects.filter(language__language = self.job.source_language).first().text_to_speech
+                    if txt_to_spc:
+                        locale_list = MTLanguageLocaleVoiceSupport.objects.filter(language__language = self.job.target_language)
+                        return [{"locale":i.language_locale.locale_code,'gender':i.gender,\
+                                "voice_type":i.voice_type,"voice_name":i.voice_name}\
+                                for i in locale_list] if locale_list else []
+                    else: return False
+                else:return False
+        except:
+            return None
 
     @property
     def corrected_segment_count(self):
+        confirm_list = [102, 104, 106, 110, 107]
+        total_seg_count = 0
+        confirm_count = 0
         doc = self.document
-        return Segment.objects.filter(
-            text_unit__document=doc
-        ).count()
 
+        segs = Segment.objects.filter(text_unit__document=doc)
+        for seg in segs:
+
+            if seg.is_merged == True and seg.is_merge_start is None:
+                continue
+            else:
+                total_seg_count += 1
+
+            seg_new = seg.get_active_object()
+            if seg_new.status_id in confirm_list:
+                confirm_count += 1
+
+        return total_seg_count, confirm_count
 
     @property
     def get_progress(self):
         if self.job.project.project_type_id != 3:
-            confirm_list = [102, 104, 106,110]
-            # total_segment_count = self.document.total_segment_count
-            total_segment_count = self.corrected_segment_count
-            segments_confirmed_count = self.document.segments.filter(
-                status__status_id__in=confirm_list
-            ).count()
+            total_segment_count, segments_confirmed_count = self.corrected_segment_count
             return {"total_segments": total_segment_count, \
                     "confirmed_segments": segments_confirmed_count}
         else:
@@ -941,16 +884,6 @@ class Task(models.Model):
             source_words = self.job.term_job.filter(Q(sl_term__isnull=False)).exclude(sl_term='').count()
             return {"source_words":source_words,\
                     "target_words":target_words}
-    # @property
-    # def get_progress(self):
-    #     # confirm_list = [102, 104, 106]
-    #     # total_segment_count = self.corrected_segment_count
-    #     # segments_confirmed_count = self.document.segments.filter(
-    #     #     status__status_id__in=confirm_list
-    #     # ).count()
-    #     total_segment_count, segments_confirmed_count = self.corrected_segment_count
-    #     return {"total_segments": total_segment_count, \
-    #             "confirmed_segments": segments_confirmed_count}
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
@@ -962,6 +895,27 @@ def ref_file_upload_path(instance, filename):
     file_path = os.path.join(instance.task_assign_info.task_assign.task.job.project.ai_user.uid,instance.task_assign_info.task_assign.task.job.project.ai_project_id,\
             "references", filename)
     return file_path
+
+class ExpressProjectDetail(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_task_detail")
+    target_text = models.TextField(null=True,blank=True)
+    mt_raw =models.TextField(null=True,blank=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_detail")
+
+
+
+class MTonlytaskCeleryStatus(models.Model):
+    IN_PROGRESS = 1
+    COMPLETED = 2
+    STATUS_CHOICES = [
+        (IN_PROGRESS, 'In Progress'),
+        (COMPLETED, 'Completed'),
+    ]
+    task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
+            related_name="mt_only_task_status")
+    status = models.IntegerField(choices=STATUS_CHOICES,default=1)
+    celery_task_id = models.CharField(max_length=255, blank=True, null=True)
+
 
 
 class TaskAssign(models.Model):
@@ -983,6 +937,7 @@ class TaskAssign(models.Model):
         on_delete=models.CASCADE, related_name="task_mt_engine")
     pre_translate = models.BooleanField(null=True, blank=True)
     mt_enable = models.BooleanField(null=True, blank=True)
+    copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
 
     objects = TaskAssignManager()
@@ -1083,7 +1038,7 @@ class TaskTranscriptDetails(models.Model):
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
     quill_data =  models.TextField(null=True,blank=True)
-    audio_file_length = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    audio_file_length = models.IntegerField(null=True,blank=True)
     user = models.ForeignKey(AiUser, on_delete = models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

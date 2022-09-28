@@ -1,4 +1,5 @@
 from logging import INFO
+from langdetect import detect
 import logging
 import re , requests
 from django.core.mail import send_mail
@@ -1717,30 +1718,33 @@ def get_team_name(request):
     return JsonResponse({"name":name})
 
 
-def vendor_onboard_check(email):
+def vendor_onboard_check(email,user):
+    from ai_vendor.models import VendorsInfo
+    from ai_vendor.models import VendorsInfo,VendorOnboardingInfo
     try:
         obj = VendorOnboarding.objects.get(email = email)
-        print(obj)
-        return JsonResponse({'id':obj.id,'email':email,'status':obj.get_status_display()})
-    except VendorOnboarding.DoesNotExist:
-        return Response(status=204)
+        current = "verified" if obj.get_status_display() == "Accepted" else "unverified"
+        return JsonResponse({'id':obj.id,'email':email,'status':current})
+    except:
+        try:
+            obj1 = VendorsInfo.objects.get(user = user)
+            obj1 = VendorOnboardingInfo.objects.get(user = user)
+            if obj1.onboarded_as_vendor == True:
+                return JsonResponse({'msg':'onboarded_as_vendor and profile incomplete'})
+        except:
+            return Response(status=204)
 
 
 @api_view(['POST',])
 def vendor_form_filling_status(request):
     email = request.POST.get('email')
-    print("Email---->",email)
     try:
         user = AiUser.objects.get(email=email)
         if user.is_vendor == True:
-            return JsonResponse({"msg":"Already a vendor"})
-        elif user.email in users_list:
             res = vendor_onboard_check(email,user)
             return res
-        else:
-            pass
     except:
-        res = vendor_onboard_check(email)
+        res = vendor_onboard_check(email,None)
         return res
 
 class VendorRenewalTokenGenerator(PasswordResetTokenGenerator):
@@ -2129,3 +2133,14 @@ class UserDetailView(viewsets.ViewSet):
             return Response({'msg':'details_updated_successsfully'},status=200)
         except BaseException as e:
             return Response({'error':f'updation failed {str(e)}'},status=400)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def lang_detect(request):
+    from ai_staff.models import Languages
+    text = request.GET.get('text')
+    lang = detect(text)
+    lang_obj = Languages.objects.filter(locale__locale_code = lang).first()
+    return Response({'lang_id':lang_obj.id,'language':lang_obj.language})

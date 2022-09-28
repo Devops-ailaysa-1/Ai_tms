@@ -69,10 +69,12 @@ urlpatterns+= [
      path('vendor_renewal_change/',api_views.vendor_renewal_change),
      path('vendor_onboard_complete/',api_views.vendor_onboard_complete),
      path('email_check/',api_views.get_user),
+     path('lang_detect/',api_views.lang_detect),
      # path('dj-rest-auth/google/', GoogleLogin.as_view(), name='google_login'),
      path('ai-soc/',api_views.ai_social_login,name='ai_soc'),
      path('ai-soc-callback/',api_views.ai_social_callback,name='ai_soc_callback'),
      path('user-details/',api_views.UserDetailView.as_view({'post':'create'}),name='user-details')
+     
 
      #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")
      # path('get_team_members/',api_views.GetTeamMemberView.as_view(),name='get-team-members'),
@@ -80,6 +82,3 @@ urlpatterns+= [
      #re_path(r'^rest-auth/password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', PasswordResetConfirmView.as_view(),name='password_reset_confirm')
 
 ]
-
-
-

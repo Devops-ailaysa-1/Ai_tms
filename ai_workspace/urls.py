@@ -18,6 +18,8 @@ router.register(r"project-create", api_views.ProjectCreateView, basename="projec
 router.register(r"tmx_file", api_views.TmxFileView, basename="tmx-file")
 router.register(r"project/quick/setup", api_views.QuickProjectSetupView,\
 				basename="project-quick-setup")
+router.register(r"project/express/setup", api_views.ExpressProjectSetupView,\
+				basename="project-express-setup")
 router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
@@ -75,10 +77,16 @@ urlpatterns += [
 	path('get_transcribe_file/',api_views.transcribe_file_get),
 	path('convert_and_download_text_to_speech_source/',api_views.convert_and_download_text_to_speech_source),
 	path('download_text_to_speech_source/',api_views.download_text_to_speech_source),
+	path('convert_text_to_speech_source/',api_views.convert_text_to_speech_source),
 	path('download_speech_to_text_source/',api_views.download_speech_to_text_source),
 	path('task/unassign/',api_views.task_unassign),
 	path('get_quill_data/',api_views.get_quill_data),
 	path('writer_save/',api_views.writer_save),
+	path('get_media_link_source_audio/<int:task_id>/',api_views.get_media_link),
+	path('task_get_segments/',api_views.task_get_segments),
+	path('express_save/',api_views.task_segments_save),
+	path('express_task_download/<int:task_id>/',api_views.express_task_download),
+	path('express_project_detail/<int:project_id>/',api_views.express_project_detail),
 ]
 # views urls adding for local testing
 urlpatterns += [

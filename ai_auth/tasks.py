@@ -23,7 +23,7 @@ from django.utils import timezone
 from ai_workspace.models import Task
 import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
-from ai_workspace.models import Task
+from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
 
 
@@ -325,15 +325,17 @@ def mt_only(project_id,token):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
+    print("celerytask-------->",mt_only.request.id)
     print("PRE TRANSLATE-------------->",pr.pre_translate)
     if pr.pre_translate == True:
         tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)
+        [MTonlytaskCeleryStatus.objects.create(task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
         for i in pr.get_mtpe_tasks:
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             doc = DocumentSerializerV2(document).data
             print(doc)
-
+            MTonlytaskCeleryStatus.objects.create(task_id = i.id,status=2,celery_task_id=mt_only.request.id)
 
 @task
 def write_doc_json_file(doc_data, task_id):
@@ -355,12 +357,19 @@ def write_doc_json_file(doc_data, task_id):
     logger.info("Document json data written as a file")
 
 
+@task
+def text_to_speech_celery(task_id,language,gender,user_id,voice_name):
+    from ai_workspace.api_views import text_to_speech_task
+    obj = Task.objects.get(id=task_id)
+    user = AiUser.objects.get(id=user_id)
+    text_to_speech_task(obj,language,gender,user,voice_name)
+    logger.info("Text to speech called")
 
 
 
-
-
-
+# @task
+# def google_long_text_file_process_cel()
+#
 
 
 
@@ -375,4 +384,3 @@ def write_doc_json_file(doc_data, task_id):
             # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
             # res = requests.request("GET", url, headers=headers)
             # print("doc--->",res.text)
-

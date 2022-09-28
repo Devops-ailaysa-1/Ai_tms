@@ -3,6 +3,7 @@ from rest_framework.pagination import PageNumberPagination
 import json
 import mimetypes
 import os
+from itertools import groupby
 import xml.etree.ElementTree as ET
 from django.http import HttpResponse
 from rest_framework import viewsets, status
@@ -36,6 +37,7 @@ from ai_workspace_okapi.models import Document
 from ai_workspace_okapi.utils import get_translation
 import pandas as pd
 from ai_staff.models import LanguageMetaDetails
+from django.db.models import Value, IntegerField, CharField
 # from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
@@ -375,25 +377,27 @@ def glossary_search(request):
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
+    user = request.user.team.owner if request.user.team else request.user
     glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
     target_language = doc.job.target_language
     source_language = doc.job.source_language
-    queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=request.user)& Q(sl_language__language=source_language))\
+    queryset1 = MyGlossary.objects.filter(Q(tl_language__language=target_language)& Q(user=user)& Q(sl_language__language=source_language))\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
-                      params=[user_input]).distinct().values('sl_term','tl_term')
+                      params=[user_input]).distinct().values('sl_term','tl_term').annotate(glossary__project__project_name=Value("MyGlossary", CharField()))
     queryset = TermsModel.objects.filter(glossary__in=glossary_selected)\
                 .filter(job__target_language__language=target_language)\
                 .extra(where={"%s ilike ('%%' || sl_term  || '%%')"},
-                      params=[user_input]).distinct().values('sl_term','tl_term')
+                      params=[user_input]).distinct().values('sl_term','tl_term','glossary__project__project_name')
     queryset_final = queryset1.union(queryset)
     if queryset_final:
         res=[]
         for data in queryset_final:
-           out = [{'source':data.get('sl_term'),'target':data.get('tl_term')}]
+           out = [{'source':data.get('sl_term'),'target':data.get('tl_term'),'name':data.get('glossary__project__project_name')}]
            res.extend(out)
     else:
         res=None
-    return JsonResponse({'res':res},safe=False)
+    res_1 = [{"glossary": key, "data": [g  for g in group]} for key, group in groupby(res, lambda x: x['name'])] if res else None
+    return JsonResponse({'res':res_1},safe=False)
 
 class GetTranslation(APIView):#############Mt update need to work###################
     permission_classes = [IsAuthenticated]
