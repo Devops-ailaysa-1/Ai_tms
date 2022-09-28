@@ -2473,7 +2473,19 @@ def express_task_download(request,task_id):###############permission need to be 
     os.remove(target_filename)
     return res
 
-
+@api_view(['GET'])
+def express_project_detail(request,project_id):
+    obj = Project.objects.get(id=project_id)
+    target_languages = [job.target_language_id for job in obj.project_jobs_set.all() if job.target_language_id != None]
+    source_lang_id =  obj.project_jobs_set.first().source_language_id
+    mt_engine_id = obj.mt_engine_id
+    project_name = obj.project_name
+    project_file = obj.project_files_set.all().first()
+    with open(project_file.file.path, "r") as file:
+        content = file.read()
+    return JsonResponse({'target_lang':target_languages,'source_lang':source_lang_id,\
+                        'mt_engine':mt_engine_id,'project_name':project_name,\
+                        'source_text':content})
 
 # ##################################Need to revise#######################################
 # # @api_view(['PUT',])
