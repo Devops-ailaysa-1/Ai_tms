@@ -2474,6 +2474,7 @@ def express_task_download(request,task_id):###############permission need to be 
     return res
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def express_project_detail(request,project_id):
     obj = Project.objects.get(id=project_id)
     target_languages = [job.target_language_id for job in obj.project_jobs_set.all() if job.target_language_id != None]
