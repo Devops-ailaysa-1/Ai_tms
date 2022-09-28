@@ -1820,7 +1820,7 @@ class ShowMTChoices(APIView):
 
 ###########################Transcribe Short File############################## #######
 
-def transcribe_short_file(speech_file,source_code,obj,length,user):
+def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -1828,7 +1828,9 @@ def transcribe_short_file(speech_file,source_code,obj,length,user):
 
     audio = speech.RecognitionAudio(content=content)
 
-    config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=8000,language_code=source_code, enable_automatic_punctuation=True,)
+    sample_hertz = hertz if hertz >= 48000 else 8000
+
+    config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=sample_hertz,language_code=source_code, enable_automatic_punctuation=True,)
     try:
         response = client.recognize(config=config, audio=audio)
         transcript=''
@@ -1866,7 +1868,7 @@ def delete_blob(bucket_name, blob_name):
 
 
 
-def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
+def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz):
     print("User Long-------->",user.id)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
@@ -1876,11 +1878,11 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
 
     gcs_uri = os.getenv("BUCKET_URL") + filename
     transcript = ''
-
+    sample_hertz = hertz if hertz >= 48000 else 8000
     client = speech.SpeechClient()
     audio = speech.RecognitionAudio(uri=gcs_uri)
 
-    config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=8000,language_code=source_code, enable_automatic_punctuation=True,)
+    config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=sample_hertz,language_code=source_code, enable_automatic_punctuation=True,)
 
 
     # Detects speech in the audio file
@@ -1926,6 +1928,7 @@ def transcribe_file(request):
         try:
             audio = AudioSegment.from_file(speech_file)
             length = int(audio.duration_seconds)###seconds####
+            hertz = audio.frame_rate
         except:
             length=None
         print("Length----->",length)
@@ -1935,9 +1938,9 @@ def transcribe_file(request):
         consumable_credits = get_consumable_credits_for_speech_to_text(length)
         if initial_credit > consumable_credits:
             if length and length<60:
-                res = transcribe_short_file(speech_file,source_code,obj,length,user)
+                res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
             else:
-                res = transcribe_long_file(speech_file,source_code,filename,obj,length,user)
+                res = transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             print("RES----->",res)
             return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})

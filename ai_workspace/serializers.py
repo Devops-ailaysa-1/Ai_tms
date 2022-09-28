@@ -1100,6 +1100,7 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 	vendor_lang_pair = serializers.SerializerMethodField()
 
 	def get_vendor_lang_pair(self,obj):
+		print("OBJ-------->",obj)
 		request = self.context['request']
 		job_id= request.query_params.get('job')
 		project_id= request.query_params.get('project')
@@ -1111,7 +1112,9 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) | Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
 			else:
 				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			print("Tr------------>",tr)
 			lang_pair = lang_pair.union(tr)
+		print("langpair----------------->",lang_pair)
 		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 
 class InternalEditorDetailSerializer(serializers.Serializer):
