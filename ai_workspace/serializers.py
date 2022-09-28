@@ -593,7 +593,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
 				f_klass=File,j_klass=Job, ai_user=ai_user,\
 				team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
-			if create_type == 1:
+			if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
 				ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
 			else:ProjectFilesCreateType.objects.create(project=project)
 			if proj_subject:

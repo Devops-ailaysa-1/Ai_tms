@@ -598,10 +598,13 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
             return queryset
         if value == "files":
-            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_file_create_type__file_create_type="From insta text")
             return queryset
         if value == "text":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+            return queryset
+        if value == "express":
+            queryset = queryset.filter(project_type_id=5)
             return queryset
             #queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
         # if value == "glossary":
