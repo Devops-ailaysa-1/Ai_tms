@@ -1535,7 +1535,7 @@ class ProjectListView(viewsets.ModelViewSet):
         serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
         data = serializer.data
         for i in data:
-            if i.get('assign_enable')==True:
+            if i.get('assign_enable')==True and i.get('assignable')==True:
                 proj_list.append(i)
         return Response(proj_list)
         # return  Response(serializer.data)
@@ -1548,7 +1548,14 @@ def tasks_list(request):
     job_id = request.GET.get("job")
     try:
         job = Job.objects.get(id = job_id)
-        tasks = job.job_tasks_set.all()
+        #tasks = job.job_tasks_set.all()
+        tasks=[]
+        for task in job.job_tasks_set.all():
+            if (task.job.target_language == None):
+                if (task.file.get_file_extension == '.mp3'):
+                    tasks.append(task)
+                else:pass
+            else:tasks.append(task)
         ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request})
         return Response(ser.data)
     except:
