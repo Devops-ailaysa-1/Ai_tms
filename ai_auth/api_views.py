@@ -553,6 +553,7 @@ def subscribe_trial(price,customer=None):
     return subscription
 
 def subscribe_vendor(user):
+    plan = None
     try:
         cust = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
@@ -568,11 +569,13 @@ def subscribe_vendor(user):
     else:
         currency =cust.currency
     price = Price.objects.get(product__name="Pro - V",currency=currency,djstripe_owner_account=default_djstripe_owner)
-    plan = get_plan_name(user)
     if plan == 'new':
-        if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
-            sub=subscribe(price=price,customer=cust)
-            return sub
+        sub=subscribe(price=price,customer=cust)
+        return sub
+    plan = get_plan_name(user)
+    if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
+        sub=subscribe(price=price,customer=cust)
+        return sub
 
 
 def subscribe(price,customer=None):
