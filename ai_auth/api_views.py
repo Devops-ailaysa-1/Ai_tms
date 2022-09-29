@@ -556,8 +556,10 @@ def subscribe_vendor(user):
     try:
         cust = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
-        customer = Customer.get_or_create(subscriber=user)
+        customer,created = Customer.get_or_create(subscriber=user)
         cust=customer[0]
+        if created:
+            plan = 'new'
     if cust.currency=='':
         if user.country.id == 101 :
             currency = 'inr'
@@ -567,9 +569,10 @@ def subscribe_vendor(user):
         currency =cust.currency
     price = Price.objects.get(product__name="Pro - V",currency=currency,djstripe_owner_account=default_djstripe_owner)
     plan = get_plan_name(user)
-    if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
-        sub=subscribe(price=price,customer=cust)
-        return sub
+    if plan == 'new':
+        if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
+            sub=subscribe(price=price,customer=cust)
+            return sub
 
 
 def subscribe(price,customer=None):
