@@ -1,6 +1,30 @@
 import os
 import random
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from io import StringIO, BytesIO
+import sys
 import string
+
+
+class DjRestUtils:
+
+    def get_a_inmemoryuploaded_file():
+        io = BytesIO()
+        with open("/home/langscape/Documents/translate_status_api.txt", "rb") as f:
+            io.write(f.read())
+        io.seek(0)
+        im = InMemoryUploadedFile(io, None, "text.txt", "text/plain",
+                sys.getsizeof(io), None)
+        return im
+
+    def convert_content_to_inmemoryfile(filecontent, file_name):
+        # text/plain hardcoded may be needs to be change as generic...
+        io = BytesIO()
+        io.write(filecontent)
+        io.seek(0)
+        im = InMemoryUploadedFile(io, None, file_name,
+                                  "text/plain", sys.getsizeof(io), None)
+        return im
 
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
@@ -48,3 +72,15 @@ def create_ai_project_id_if_not_exists(user):
 # random.choice([1,2,3])  ---> 2
 # random.choice([1,2,3])  ---> 2
 # random.choices([1,2,3])  ---> [2]
+import math
+
+def roundup(x):
+    return int(math.ceil(x / 15.0)) * 15
+
+
+
+def get_consumable_credits_for_text_to_speech(total_chars):
+    return round(total_chars/20)
+
+def get_consumable_credits_for_speech_to_text(total_seconds):#######Minimum billable 15 seconds Need to update##########
+    return round(roundup(total_seconds)/3)

@@ -2,6 +2,7 @@
 .env2
 .env
 docker-compose.yml
+docker-compose.staging-v4.yml
 ailaysa.yml
 celerybeat-schedule
 file.sql
@@ -9,9 +10,6 @@ db002.sqlite3-journal
 Dockerfile
 media
 mediafiles
-*/migrations
-*/github_/migrations
-*/gitlab_/migrations
 *.*.pyc
 */__pycache__/*
 dj_ailaysa_slim/config.py
@@ -22,7 +20,6 @@ tms
 tmsenv
 venv/
 *.json
-req_nand.txt
 ai_tms/local_settings.py
 AiWorkspace.postman_collection.json
 AiWorkspace.postman_collection.json
@@ -95,6 +92,20 @@ fprm
 /my-test-.docx
 /u599082/
 /documentation/
+ignore_data/
+/repeat-snippets.py
+/integerations/github_/migrations/
+/integerations/gitlab_/migrations/
+/*/*/migrations/
 ai_auth/block_list.py
 APP.MD
 staticfiles
+api_automation
+env
+wordsapi_sample.json
+*.dot
+*.png
+kite-installer
+staticfiles/
+panda1.gif
+ai_workspace_okapi/dummy.txt

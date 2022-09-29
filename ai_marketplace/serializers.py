@@ -74,9 +74,14 @@ class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BidPropasalDetails
-        fields = ('bidpostjob','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency',)
+        fields = ('bidpostjob','bid_step','mtpe_rate','mtpe_hourly_rate','mtpe_count_unit','currency',)
 
 
+
+    def get_job_id(self,obj):
+        pr = obj.bidpostjob.projectpost.project
+        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
+        return job[0].id if job else None
 
 
 class BidPropasalDetailSerializer(serializers.ModelSerializer):
@@ -143,7 +148,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
 
     def create(self,data):
         service = data.pop("service_and_rates",[])
-        res = [BidPropasalDetails.objects.get_or_create(bidpostjob=i.get('bidpostjob'),vendor_id=data.get('vendor_id'),\
+        res = [BidPropasalDetails.objects.get_or_create(bidpostjob=i.get('bidpostjob'),vendor_id=data.get('vendor_id'),bid_step=i.get('bid_step'),\
                 defaults={**data,'bidpostjob':i.get('bidpostjob'),'mtpe_rate':i.get('mtpe_rate'),'mtpe_hourly_rate':i.get('mtpe_hourly_rate'),\
                             'mtpe_count_unit':i.get('mtpe_count_unit'),'currency':i.get('currency')}) for i in service]
         return res
@@ -223,6 +228,12 @@ class ThreadSerializer(serializers.ModelSerializer):
             if qs.exists():
                 raise serializers.ValidationError({"msg":f'Thread between {first_person} and {second_person} already exists.','thread_id':qs[0].id})# for this {bid}.'})
         return super().run_validation(data)
+
+    # def create(self, validated_data):
+    #     first_person = validated_data.get('first_person')
+    #     second_person = validated_data.get('second_person')
+    #     tt = Thread.objects.get_or_create(first_person = first_person,second_person=second_person)
+    #     return tt
 
 
 
@@ -367,6 +378,11 @@ class ProjectPostStepsSerializer(serializers.ModelSerializer):
         model = ProjectPostSteps
         fields = ('steps',)
 
+class ProjectPostStepsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectPostSteps
+        fields = ('steps',)
+
 class ProjectPostSubjectFieldSerializer(serializers.ModelSerializer):
     subject_name = serializers.ReadOnlyField(source='subject.name')
     class Meta:
@@ -386,6 +402,31 @@ class ProjectPostTemplateJobDetailSerializer(serializers.ModelSerializer):
         fields=('id','src_lang','tar_lang',)
 
 
+
+class ProjectPostTemplateContentTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectPostTemplateContentType
+        fields = ('content_type',)
+
+class ProjectPostTemplateSubjectFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectPostTemplateSubjectField
+        fields = ('subject',)
+
+class ProjectPostTemplateStepsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectPostTemplateSteps
+        fields = ('steps',)
+
+# class ProjectPostTemplateJobDetailSerializer(serializers.ModelSerializer):
+#     bid_count = serializers.SerializerMethodField()
+#     bidjob_details = BidPropasalDetailSerializer(many=True,read_only=True)
+#     class Meta:
+#         model=ProjectPostTemplateJobDetails
+#         fields=('id','src_lang','tar_lang','bid_count','bidjob_details',)
+#
+#     def get_bid_count(self, obj):
+#         return obj.bidjob_details.count()
 
 class ProjectPostTemplateContentTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -525,7 +566,7 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
             else: res= query
             #########################if user preffered currency exists,then use that or pick first instance matching that job pair and convert to user_preffered_currency###############
             if res:
-                vendor_currency_code = Currencies.objects.get(id = res[0].get('currency')).currency_code
+                vendor_currency_code = Currencies.objects.get(id = res[0].get('currency')).currency_code if res[0].get('currency')!=None else None
                 if vendor_currency_code == obj.currency.currency_code:
                     mtpe_rate = res[0].get('service__mtpe_rate')
                     hourly_rate = res[0].get('service__mtpe_hourly_rate')
@@ -563,12 +604,12 @@ class AvailablePostJobSerializer(serializers.Serializer):
 
 
     class Meta:
-        fields = ('post_id', 'post_name','posted_by','post_desc','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
+        fields = ('post_id', 'post_name', 'post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
 
     def get_apply(self, obj):
-        print( self.context.get("request").user)
         vendor = self.context.get("request").user
         jobs = obj.get_postedjobs
+        steps = obj.get_steps
         matched_jobs,applied_jobs=[],[]
         for i in jobs:
             if i.src_lang_id == i.tar_lang_id:
@@ -577,23 +618,21 @@ class AvailablePostJobSerializer(serializers.Serializer):
                 res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
             if res:
                 matched_jobs.append(i)
-            if i.bid_details.filter(vendor_id = vendor.id):
-                applied_jobs.append(i)
-        if len(matched_jobs)== 0:
+            bid_info = i.bid_details.filter(vendor_id = vendor.id)
+            if bid_info:
+                if len(steps) == 1:
+                    applied_jobs.append(i)
+                else:
+                    if bid_info.filter(bidpostjob = i).count() == 2:
+                        applied_jobs.append(i)
+        print("MJ,AJ--------------->",len(matched_jobs),len(applied_jobs))
+        if len(matched_jobs) == 0:
             return False
         elif len(matched_jobs) == len(applied_jobs):
             return "Applied"
         else:
             return True
 
-        # for i in jobs:
-        #     if i.src_lang_id == i.tar_lang_id:
-        #         res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) | Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
-        #     else:
-        #         res = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))
-        #     if res:
-        #         return True
-        #return False
 
 class ProjectPostTemplateSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):
     template_name = serializers.CharField()
@@ -692,18 +731,18 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         if query.exists():
             if query[0].service.exists():
                 return VendorServiceSerializer(query, many=True, read_only=True).data
-            else:return {'service':[]}
+            else:return [{'service':[]}]
         else:
             query1 = queryset.filter(currency_id = 144)
             if query1.exists():
                 if query1[0].service.exists():
                     return VendorServiceSerializer(query1, many=True, read_only=True).data
-                else:return {'service':[]}
+                else:return [{'service':[]}]
             else:
                 objs = [data for data in queryset if data.service.exists()]
                 if objs:
-                    return VendorServiceSerializer(objs[0], many=False, read_only=True).data
-                else:return {'service':[]}
+                    return [VendorServiceSerializer(objs[0], many=False, read_only=True).data]
+                else:return [{'service':[]}]
 
 
         # if query.count() > 1:

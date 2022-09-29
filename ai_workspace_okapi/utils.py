@@ -9,6 +9,7 @@ from google.cloud import translate_v2 as translate
 
 client = translate.Client()
 
+client = translate.Client()
 
 class DebugVariables(object): # For Class Functions only to use
     def __init__(self,flags):
@@ -16,9 +17,7 @@ class DebugVariables(object): # For Class Functions only to use
     def __call__(self, original_func):
         decorator_self = self
         def wrappee( self_func , *args, **kwargs):
-            # print ('in decorator before wrapee with flag ',decorator_self.flag)
             out = original_func(self_func , *args,**kwargs)
-            # print ( 'in decorator after wrapee with flag ',decorator_self.flag)
             function_name = original_func.__qualname__
             for i in self.flags :
                 if type(i) == str :
@@ -40,7 +39,6 @@ def get_processor_name(file_path):  # Full File Path Assumed
     if file_ext:
         for key in afemap.keys():
             if file_ext in key:
-                # print ( os.path.splitext(  value.name  )[-1] )
                 return {"processor_name": afemap.get(key, "")}
         else:
             return {"processor_name": ""}
@@ -50,13 +48,16 @@ def get_processor_name(file_path):  # Full File Path Assumed
 def get_runs_and_ref_ids(format_pattern, run_reference_ids):
     coll = []
     start_series = 57616
+
     for i, j  in zip(format_pattern, run_reference_ids):
         tag_type_no = 57601 if i == "(" else 57602
         coll.append( [f'{chr(tag_type_no)}{chr(start_series)}',j])
         start_series += 1
+
     return coll
 
 def set_ref_tags_to_runs(text_content, runs_and_ref_ids):
+
     run_tags, run_id_tags = [], []
     for run, ref_id in runs_and_ref_ids:
         if "\ue101" in run:
@@ -70,9 +71,12 @@ def set_ref_tags_to_runs(text_content, runs_and_ref_ids):
         run_tags.append(run)
         run_id_tags.append(run_id_tag)
         text_content = text_content.replace(run, run_id_tag)
+
     return (text_content, run_tags, ''.join(run_id_tags))
 
 def set_runs_to_ref_tags(source_content, text_content, runs_and_ref_ids):
+
+
     if not text_content:
         return text_content
 
@@ -156,9 +160,9 @@ class SpacesService:
         client.delete_object(Bucket=bucket_name, Key=file_path)
         print("FIle is deleted successfully!!!")
 
-class OkapiUtils:
-    def get_translated_file_(self):
-        pass
+# class OkapiUtils:
+#     def get_translated_file_(self):
+#         pass
 
 def download_file(file_path):
     filename = os.path.basename(file_path)
@@ -277,10 +281,12 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
         return lingvanex(source_string, source_lang_code, target_lang_code)
 
 
-def text_to_speech(ssml_file,target_language,filename,voice_gender):
+def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
+    from ai_staff.models import MTLanguageLocaleVoiceSupport
     from google.cloud import texttospeech
-    # print("@#@#@#@#@#",voice_gender)
+    print("@#@#@#@#@#",voice_gender,voice_name,target_language)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
+    voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
     client = texttospeech.TextToSpeechClient()
@@ -288,10 +294,10 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
     voice = texttospeech.VoiceSelectionParams(
-        language_code=target_language, ssml_gender=gender
+        name=voice_name,language_code=target_language, ssml_gender=gender
     )
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
+        audio_encoding=texttospeech.AudioEncoding.MP3,sample_rate_hertz=24000
     )
     response = client.synthesize_speech(
         input=input_text, voice=voice, audio_config=audio_config
@@ -299,7 +305,6 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
     with open(filename,"wb") as out:
         out.write(response.audio_content)
         print('Audio content written to file',filename)
-    out.close()
     f2 = open(filename, 'rb')
     file_obj = DJFile(f2)
     print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)
@@ -315,15 +320,66 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender):
 
 def get_res_path(source_lang):
 
-    if source_lang not in ['hi','bn','or','ne','pa']:
-        res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
-                     "fprm_file_path": None,
-                     "use_spaces": settings.USE_SPACES
-                     }
+    res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
+                 "fprm_file_path": None,
+                 "use_spaces": settings.USE_SPACES
+                 }
+
+    if source_lang in ['hi','bn','or','ne','pa']:
+        res_paths["srx_file_path"] = "okapi_resources/indian_lang.srx"
         return res_paths
+
+    elif source_lang in ['zh-Hans','zh-Hant','ja']:
+        res_paths["srx_file_path"] = "okapi_resources/zh_and_ja.srx"
+        return res_paths
+
+    elif source_lang in ['th']:
+        res_paths["srx_file_path"] = "okapi_resources/thai.srx"
+        return res_paths
+
+    elif source_lang in ['ta']:
+        res_paths["srx_file_path"] = "okapi_resources/tamil001.srx"
+        return res_paths
+    elif source_lang in ['kn']:
+        res_paths["srx_file_path"] = "okapi_resources/kannada.srx"
+        return res_paths
+    elif source_lang in ['te']:
+        res_paths["srx_file_path"] = "okapi_resources/telugu.srx"
+        return res_paths
+    elif source_lang in ['ml']:
+        res_paths["srx_file_path"] = "okapi_resources/malayalam.srx"
+        return res_paths
+
     else:
-        res_paths = {"srx_file_path": "okapi_resources/indian_lang.srx",
-                     "fprm_file_path": None,
-                     "use_spaces": settings.USE_SPACES
-                     }
         return res_paths
+
+
+
+
+
+
+def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_name):
+    from ai_staff.models import MTLanguageLocaleVoiceSupport
+    from google.cloud import texttospeech
+    print("@#@#@#@#@#",voice_gender,voice_name,target_language)
+    gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
+    voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
+    #filename = filename + "_out"+ ".mp3"
+    path, name = os.path.split(ssml_file)
+    client = texttospeech.TextToSpeechClient()
+    with open(ssml_file, "r") as f:
+        ssml = f.read()
+        input_text = texttospeech.SynthesisInput(ssml=ssml)
+    voice = texttospeech.VoiceSelectionParams(
+        name=voice_name,language_code=target_language, ssml_gender=gender
+    )
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3,sample_rate_hertz=24000
+    )
+    response = client.synthesize_speech(
+        input=input_text, voice=voice, audio_config=audio_config
+    )
+    if len(response.audio_content) != 0:
+        with open(filename,"wb") as out:
+                out.write(response.audio_content)
+                print('Audio content written to file',filename)

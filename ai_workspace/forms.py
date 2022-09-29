@@ -10,6 +10,7 @@ import json
 from decimal import *
 from ai_workspace.models import TaskAssignInfo
 
+
 class JobForm(forms.ModelForm):
     # project = forms.CharField(required=False)
 	# source_language = forms.ChoiceField(choices=[(lang.id, lang.language) for lang in Languages.objects.all()])
@@ -95,16 +96,19 @@ class ProjectFormv2(forms.ModelForm):
 
 
 def task_assign_detail_mail(Receiver,assignment_id):
+    from ai_marketplace.api_views import unit_price_float_format
     task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
     ins = TaskAssignInfo.objects.filter(assignment_id = assignment_id).first()
     file_detail = []
     for i in task_assgn_objs:
-        if i.mtpe_count_unit.unit == 'Word' or 'Hour' or 'Total':
-            out = [{"file":i.task.file.filename,"words":i.task.task_word_count,"unit":i.mtpe_count_unit.unit}]
+        if i.task_assign.task.job.project.project_type_id == 3:
+            out = []
+        elif i.mtpe_count_unit.unit == 'Word' or 'Hour' or 'Total':
+            out = [{"file":i.task_assign.task.file.filename,"words":i.task_assign.task.task_word_count,"unit":i.mtpe_count_unit.unit}]
         elif i.mtpe_count_unit.unit == 'Char':
-            out = [{"file":i.task.file.filename,"characters":i.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
+            out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
         file_detail.extend(out)
-    context = {'name':Receiver.fullname,'project':ins.task.job.project,'job':ins.task.job.source_target_pair_names, 'rate':str(ins.mtpe_rate.quantize(Decimal("0.00")))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
+    context = {'name':Receiver.fullname,'project':ins.task_assign.task.job.project,'job':ins.task_assign.task.job.source_target_pair_names, 'rate':str(unit_price_float_format(ins.mtpe_rate))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
     'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y')}
     msg_html = render_to_string("assign_detail_mail.html", context)
     send_mail(
@@ -117,10 +121,10 @@ def task_assign_detail_mail(Receiver,assignment_id):
     print("assign detail mailsent>>")
 
 
-def task_assign_ven_status_mail(task,task_ven_status):
-    context = {'name':task.task_assign_info.assigned_by.fullname,'task':task.ai_taskid,'task_ven_status':task_ven_status,'assign_to':task.assign_to.fullname,'project':task.job.project}
-    print("CONTEXT-------------->",context)
-    email = task.task_assign_info.assigned_by.email
+def task_assign_ven_status_mail(task_assign,task_ven_status):
+    context = {'name':task_assign.task_assign_info.assigned_by.fullname,'task':task_assign.task.ai_taskid,'task_ven_status':task_ven_status,'assign_to':task_assign.assign_to.fullname,'project':task_assign.task.job.project}
+    email = task_assign.task_assign_info.assigned_by.email
+
     msg_html = render_to_string("task_assign_ven_status_mail.html",context)
     send_mail(
         'Task Assign Vendor Status',None,

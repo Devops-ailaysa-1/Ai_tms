@@ -37,7 +37,8 @@ class GitlabUtils:
                 contents.extend(repo.repository_tree
                     (file_content.get("path"), ref=ref_branch))
             else:
-                file_contents.append(file_content)
+                size = repo.files.get(file_path=file_content.get("path"), ref=ref_branch).size
+                file_contents.append((file_content, size))
 
         return file_contents
 

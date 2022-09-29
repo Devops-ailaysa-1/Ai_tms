@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 load_dotenv(".env2")
 from pathlib import Path
 import sentry_sdk
@@ -35,6 +37,11 @@ SECRET_KEY = os.getenv("django_secret_key", "fwevbsuio")
 DEBUG = (True if os.getenv( "Debug" ) == 'True' else False)
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split()
+
+ALLOWED_HOSTS += ["11e41bb54bb45b.lhrtunnel.link", "d96ada36139e0b.lhrtunnel.link","8efe68d97d25ee.lhrtunnel.link"]
+#                   "c3c0df83ac1b86.lhrtunnel.link", 'acb69157d8c89a.lhrtunnel.link',
+#                   "414004b4a51963.lhrtunnel.link", "2b80a8d1a40052.lhrtunnel.link",
+#                   "d5db75cdd4b431.lhrtunnel.link", "68a4a1352f7fdb.lhrtunnel.link"]
 
 # SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE')
 # CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE')
@@ -65,7 +72,6 @@ CORS_ALLOW_METHODS = [
      'POST',
      'PUT',
 ]
-
 
 CORS_ALLOW_HEADERS = [
      'accept',
@@ -115,24 +121,27 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.github',
     'allauth.socialaccount.providers.google',
+    "allauth.socialaccount.providers.twitter",
     'dj_rest_auth.registration',
     'ai_vendor',
     'ai_workspace',
     "ai_workspace_okapi",
-    "integerations.github_",
-    "integerations.gitlab_",
-    "controller",
+    #"integerations.github_",
+    #"integerations.gitlab_",
+    #"controller",
     'django_extensions',
     'sqlite3',
     'ai_marketplace',
+    'ai_glex',
+    'ai_nlp',
     'djstripe',
     'django_filters',
     'notifications',
     'storages',
     "guardian",
     'django_celery_results',
-    'ai_pay',
-    # 'debug_toolbar',
+    "ai_pay",
+    "ai_tm_management",
     # 'dbbackup',
     # 'django_q',
 ]
@@ -303,7 +312,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+
 }
 
 # SOCIALACCOUNT_ADAPTER="ai_auth.ai_adapter.SocialAdapter"
@@ -436,14 +446,13 @@ SIMPLE_JWT = {
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 
-# CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-# CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
 CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
 CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
 CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
-
-
-
+# export CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# export CELERY_BACKEND_URL = 'redis://redis:6379/0'
 
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 DEFAULT_FROM_EMAIL =os.getenv("DEFAULT_FROM_EMAIL")

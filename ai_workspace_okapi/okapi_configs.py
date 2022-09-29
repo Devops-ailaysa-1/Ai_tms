@@ -7,11 +7,12 @@ ALLOWED_FILE_EXTENSIONSFILTER_MAPPER ={
      ('.tmx',): 'tmx-processor',
      ('.json',): 'json-processor',
      ('.properties',): 'properties-filter',
-     ('.po',): 'po-processor',
+     ('.po', '.pot'): 'po-processor',
      ('.ts',): 'ts-processor',
      ('.doc',
       '.docx',
       '.xlsx',
+      '.xls',
       '.pptx',
       '.docm',
       '.dotx',
@@ -47,7 +48,7 @@ CURRENT_SUPPORT_FILE_EXTENSIONS_LIST = [
     ".txt", ".html", ".tsv", ".csv", ".odp", ".ods", ".odt", ".json",
     ".properties", ".po", ".pot", ".docx", ".xlsx", ".pptx", ".xliff", ".xlf",
     ".idml", ".srt", ".strings", ".md", ".xml", ".stringsdict", ".dtd",
-    ".php", ".yaml", ".yml",
+    ".php", ".yaml", ".yml", ".epub",
 ]#".dotx" -> file processing pending
 
 LINGVANEX_LANGUAGE_MAPPER ={
@@ -170,4 +171,3 @@ LINGVANEX_LANGUAGE_MAPPER ={
 ('zu',):'zu_ZA',
 
  }
-

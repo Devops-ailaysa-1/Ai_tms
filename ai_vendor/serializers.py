@@ -148,7 +148,9 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          if apply_for_reverse:
              reverse_data={"source_lang_id":lang.target_lang_id,"target_lang_id":lang.source_lang_id,"currency":lang.currency,"user_id":user_id}
              print("reverse_data--->",reverse_data)
-             lang_reverse = VendorLanguagePair.objects.create(**reverse_data)
+             try:lang_reverse = VendorLanguagePair.objects.create(**reverse_data)
+             except BaseException as e:
+                 print(f"Error : {str(e)}")
 
          if service_data:
              for i in service_data:
@@ -189,7 +191,7 @@ class ServiceExpertiseSerializer(WritableNestedModelSerializer,serializers.Model
         }
 
     def run_validation(self, data):
-
+        print('Data---->',data)
         if data.get("vendor_subject") and isinstance( data.get("vendor_subject"), str):
             data["vendor_subject"]=json.loads(data["vendor_subject"])
         if data.get("vendor_membership") and isinstance( data.get("vendor_membership"), str):
