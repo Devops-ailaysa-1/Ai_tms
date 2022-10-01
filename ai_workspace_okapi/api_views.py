@@ -212,7 +212,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                             mt_segments.append(i)
                         else:
-                            continue
+                            break
                 #             i.target= ""
                 #             i.temp_target = ''
                 #             i.status_id = None

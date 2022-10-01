@@ -1733,7 +1733,6 @@ def vendor_onboard_check(email,user):
         return JsonResponse({'id':obj.id,'email':email,'status':current})
     except:
         try:
-            #obj1 = VendorsInfo.objects.get(user = user)
             obj1 = VendorOnboardingInfo.objects.get(user = user)
             if obj1.onboarded_as_vendor == True:
                 return JsonResponse({'msg':'onboarded_as_vendor and profile incomplete'})

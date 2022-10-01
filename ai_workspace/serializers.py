@@ -574,8 +574,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
+			create_type = validated_data.pop('from_text',None)
 		else:
-		 	created_by = self.context.get("ai_user", None)
+			created_by = self.context.get("ai_user", None)
+			create_type = True
 		if created_by.team:ai_user = created_by.team.owner
 		else:ai_user = created_by
 		team = created_by.team if created_by.team else None
@@ -583,7 +585,6 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		voice_proj_detail = validated_data.pop("voice_proj_detail",[])
 		validated_data.pop('team_exist')
 		# print("validated_data---->",validated_data)
-		create_type = validated_data.pop('from_text')
 		project_type = validated_data.get("project_type_id")
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_steps = validated_data.pop("proj_steps",[])
