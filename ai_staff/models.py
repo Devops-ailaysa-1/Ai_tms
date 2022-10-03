@@ -460,6 +460,11 @@ class MTLanguageLocaleVoiceSupport(models.Model):
     voice_name = models.CharField(max_length=300, null=True, blank=True)
     voice_type = models.CharField(max_length=100, null=True, blank=True)#wavenet,standard,neural
 
+
+class TranscribeSupportedPunctuation(models.Model):
+    language_locale = models.ForeignKey(LanguagesLocale,related_name='punctuation_locale', on_delete=models.CASCADE)
+    mtpe_engines = models.ForeignKey(AilaysaSupportedMtpeEngines,related_name='punc_supported_mt',on_delete=models.CASCADE)
+
 # class MTLanguageLocaleVoiceSupport(models.Model):
 #     language = models.ForeignKey(Languages,related_name='supported_language', on_delete=models.CASCADE)
 #     language_locale = models.ForeignKey(LanguagesLocale,related_name='supported_locale', on_delete=models.CASCADE)

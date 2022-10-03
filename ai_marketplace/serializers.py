@@ -276,18 +276,18 @@ class GetVendorDetailSerializer(serializers.Serializer):
         if query.exists():
             if query[0].service.exists() or query[0].servicetype.exists():
                 return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
-            else:return {'service':[],'servicetype':[]}
+            else:return [{'service':[],'servicetype':[]}]
         else:
             query = queryset.filter(currency_id=144)
             if query.exists():
                 if query[0].service.exists() or query[0].servicetype.exists():
                     return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
-                else:return {'service':[],'servicetype':[]}
+                else:return [{'service':[],'servicetype':[]}]
             else:
                 objs = [data for data in queryset if data.service.exists() or data.servicetype.exists()]
                 if objs:
-                    return VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data
-                else:return {'service':[],'servicetype':[]}
+                    return [VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data]
+                else:return [{'service':[],'servicetype':[]}]
         # query = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
         # if query.count() > 1:
         #     query1 = query.filter(currency_id=obj.currency_based_on_country_id)

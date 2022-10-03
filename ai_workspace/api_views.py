@@ -747,7 +747,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
-            mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+            #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
     # def delete(self, request, pk):
