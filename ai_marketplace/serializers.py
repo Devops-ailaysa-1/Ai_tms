@@ -286,7 +286,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
             else:
                 objs = [data for data in queryset if data.service.exists() or data.servicetype.exists()]
                 if objs:
-                    return VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data
+                    return [VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data]
                 else:return {'service':[],'servicetype':[]}
         # query = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
         # if query.count() > 1:
