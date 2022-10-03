@@ -1057,7 +1057,7 @@ class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
     def get_punctuation_support(self,obj):
        lang = obj.task.job.project.project_jobs_set.first().source_language
        locale = [i.id for i in lang.locale.all()]
-       print("Locale--------------->",locale)
+       #print("Locale--------------->",locale)
        sp = TranscribeSupportedPunctuation.objects.filter(language_locale__in = locale)
        return True if sp else False
 
