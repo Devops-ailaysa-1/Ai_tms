@@ -1,7 +1,7 @@
 import logging
 from ai_pay.api_views import generate_client_po,po_modify
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
-from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType
+from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectType, TranscribeSupportedPunctuation, LanguagesLocale
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
@@ -1044,14 +1044,22 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
     project_name = serializers.ReadOnlyField(source ='task.job.project.project_name')
     source_lang = serializers.SerializerMethodField()
+    punctuation_support = serializers.SerializerMethodField()
     class Meta:
         model = TaskTranscriptDetails
         fields = "__all__"
         #fields = ('id','quill_data','transcripted_text','writer_filename','writer_edited_count')
-        write_only_fields = ("project_name",'source_lang',"source_audio_file", "translated_audio_file","transcripted_file_writer","audio_file_length","user","created_at","updated_at",)
+        write_only_fields = ("project_name",'source_lang',"source_audio_file", "translated_audio_file","transcripted_file_writer","audio_file_length","user","created_at","updated_at","punctuation_support",)
         #read_only_fields = ("id","task",)
     def get_source_lang(self,obj):
         return obj.task.job.project.project_jobs_set.first().source_language.language
+
+    def get_punctuation_support(self,obj):
+       lang = obj.task.job.project.project_jobs_set.first().source_language
+       locale = [i.id for i in lang.locale.all()]
+       print("Locale--------------->",locale)
+       sp = TranscribeSupportedPunctuation.objects.filter(language_locale__in = locale)
+       return True if sp else False
 
 class ProjectListSerializer(serializers.ModelSerializer):
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
