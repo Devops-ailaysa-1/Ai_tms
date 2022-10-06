@@ -170,6 +170,7 @@ def download_file(file_path):
     mime_type, _ = mimetypes.guess_type(file_path)
     response = HttpResponse(fl, content_type=mime_type)
     response['Content-Disposition'] = "attachment; filename=%s" % filename
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
 
 bl_title_format = {
