@@ -197,6 +197,20 @@ class Project(models.Model):
                     return "Completed"
                 else:
                     return "In Progress"
+        if self.project_type_id == 5:
+            count=0
+            for i in self.get_tasks:
+                obj = ExpressProjectDetail.objects.filter(task=i)
+                if obj.exists():
+                    if obj.first().target_text!=None:
+                        count+=1
+                else:
+                    return "Yet to start"
+            if len(self.get_tasks) == count:
+                return "Completed"
+            else:
+                return "In Progress"
+
         else:
             docs = Document.objects.filter(job__project_id=self.id).all()
             tasks = len(self.get_tasks)

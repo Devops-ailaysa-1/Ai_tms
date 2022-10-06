@@ -82,6 +82,7 @@ urlpatterns += [
 	path('task/unassign/',api_views.task_unassign),
 	path('get_quill_data/',api_views.get_quill_data),
 	path('writer_save/',api_views.writer_save),
+	#path('get_vendor_rates/',api_views.get_vendor_rates),
 	path('get_media_link_source_audio/<int:task_id>/',api_views.get_media_link),
 	path('task_get_segments/',api_views.task_get_segments),
 	path('express_save/',api_views.task_segments_save),

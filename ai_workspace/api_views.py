@@ -1749,6 +1749,17 @@ def previously_created_steps(request):
 @api_view(["GET"])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
+    if pr.project_type_id == 5:
+        for i in pr.get_tasks:
+            express_obj = ExpressProjectDetail.objects.filter(task=i).first()
+            if express_obj.target_text:
+                file_name,ext = os.path.splitext(i.file.filename)
+                target_filename = file_name + "_out" +  "[" + i.job.source_language_code + "-" + i.job.target_language_code + "]" + ext
+                with open(os.path.join(pr.project_dir_path,'source',target_filename),'w') as f:
+                    f.write(express_obj.target_text)
+            else:
+                pass
+
     if pr.project_type_id not in [3,4]:
         for i in pr.get_tasks:
             if i.document:
@@ -2490,6 +2501,21 @@ def express_project_detail(request,project_id):
                         'mt_engine':mt_engine_id,'project_name':project_name,\
                         'source_text':content})
 
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_vendor_rates(request):
+#     task_id = request.GET.get('task_id')
+#     vendor_id = request.GET.get('vendor_id')
+#     obj = Task.objects.get(id = task_id)
+#     vendor = AiUser.objects.get(id=vendor_id)
+#     query = VendorLanguagePair.objects.filter((Q(source_lang_id=obj.job.src_lang_id) & Q(target_lang_id=obj.job.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+#              .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+#     if query:
+#         return JsonResponse({'currency':query[0].get('currency'),'mtpe_rate':query[0].get('service__mtpe_rate'),\
+#                         'hourly_rate':query[0].get('service__mtpe_hourly_rate'),'count_unit':query[0].get('service__mtpe_count_unit')})
+#     else:
+#         return JsonResponse({'msg':'Not available'})
+
 # ##################################Need to revise#######################################
 # # @api_view(['PUT',])
 # # @permission_classes([IsAuthenticated])
@@ -2577,3 +2603,5 @@ def express_project_detail(request,project_id):
         # dir = os.path.dirname(obj.file.file.path)
         # loc = os.path.join(dir,"Audio",name)
         # return download_file(loc)
+# query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+#         .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
