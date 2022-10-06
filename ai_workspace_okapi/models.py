@@ -135,8 +135,9 @@ class Segment(BaseSegment):
 
     def get_active_object(self):
         if self.is_merged and self.is_merge_start:
-            self = MergeSegment.objects.get(id=self.id)
-        return self
+            return MergeSegment.objects.get(id=self.id)
+        elif self.is_split:
+            return SplitSegment.objects.filter(segment_id=self.id)
 
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)

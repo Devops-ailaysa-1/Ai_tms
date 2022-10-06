@@ -62,7 +62,7 @@ from ai_workspace.models import File
 from .utils import SpacesService,text_to_speech
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
-from .utils import download_file, bl_title_format, bl_cell_format,get_res_path
+from .utils import download_file, bl_title_format, bl_cell_format,get_res_path, get_translation
 from os.path import exists
 from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
@@ -540,33 +540,51 @@ class MT_RawAndTM_View(views.APIView):
             return None
 
     @staticmethod
-    def get_consumable_credits(doc, segment_id, seg):
-        segment = Segment.objects.filter(id=segment_id).first().get_active_object() if segment_id else None
-        segment_source = segment.source if segment!= None else seg
-        seg_data = { "segment_source" : segment_source,
-                     "source_language" : doc.source_language_code,
-                     "target_language" : doc.target_language_code,
-                     "processor_name" : "plain-text-processor",
-                     "extension":".txt"
-                     }
+    def get_word_count(segment_source, doc):
+
+        seg_data = {"segment_source": segment_source,
+                    "source_language": doc.source_language_code,
+                    "target_language": doc.target_language_code,
+                    "processor_name": "plain-text-processor",
+                    "extension": ".txt"
+                    }
         res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-            data={"segmentWordCountdata":json.dumps(seg_data)})
+                            data={"segmentWordCountdata": json.dumps(seg_data)})
 
         if res.status_code == 200:
             print("Word count of the segment--->", res.json())
             return res.json()
         else:
             logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
-            raise  ValueError("Sorry! Something went wrong with word count calculation.")
+            raise ValueError("Sorry! Something went wrong with word count calculation.")
+
+    @staticmethod
+    def get_consumable_credits(doc, segment_id, seg):
+
+        # Getting consumable credits for normal segment
+        if (Segment.objects.filter(id=segment_id).first() and \
+                Segment.objects.filter(id=segment_id).first().is_split == False):
+
+            segment = Segment.objects.filter(id=segment_id).first().get_active_object() if segment_id else None
+            segment_source = segment.source if segment!= None else seg
+            return MT_RawAndTM_View.get_word_count(segment_source, doc)
+
+        # For split segment
+        else:
+            split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
+            return MT_RawAndTM_View.get_word_count(split_seg_source, doc)
 
     @staticmethod
     def get_data(request, segment_id, mt_params):
+
         from .utils import get_translation
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
         task_assign_mt_engine = TaskAssign.objects.filter(
             Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
             Q(step_id=1)
         ).first().mt_engine
+
+        # If raw translation is already available and Proj & Task MT engines are same
         if mt_raw:
             if mt_raw.mt_engine == task_assign_mt_engine:
                 return MT_RawSerializer(mt_raw).data, 200, "available"
@@ -619,17 +637,92 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "unavailable"
 
     @staticmethod
-    def get_tm_data(request, segment_id):
-        segment = Segment.objects.filter(id=segment_id).first()
-        if segment:
-            tm_ser = TM_FetchSerializer(segment)
-            res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                    data = {'pentmsearchparams': json.dumps(tm_ser.data)})
-            if res.status_code == 200:
-                return res.json()
+    def get_split_data(request, segment_id, mt_params):
+
+        mt_raw_split = MtRawSplitSegment.objects.filter(split_segment_id=segment_id).first()
+
+        split_seg = SplitSegment.objects.filter(id=segment_id).first()
+
+        # Getting the task MT engine
+        task_assign_mt_engine = TaskAssign.objects.filter(
+            Q(task__document__document_text_unit_set__text_unit_segment_set=split_seg.segment_id) &
+            Q(step_id=1)
+        ).first().mt_engine
+
+        # If raw translation is already available and Proj & Task MT engines are same
+        if mt_raw_split:
+
+            # Getting the project MT engine
+            proj_mt_engine = Project.objects.filter(\
+                project_jobs_set__job_tasks_set__document__document_text_unit_set__text_unit_segment_set\
+                    =split_seg.segment_id).first().mt_engine
+
+            if proj_mt_engine == task_assign_mt_engine:
+                return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
+
+        # If MT disabled for the task
+        if mt_params.get("mt_enable", True) != True:
+            print("MT not enabled")
+            return {}, 200, "MT disabled"
+
+        text_unit_id = Segment.objects.get(id=split_seg.segment_id).text_unit_id
+        doc = TextUnit.objects.get(id=text_unit_id).document
+        user = doc.doc_credit_debit_user
+
+        # Checking if the request user is account owner or not
+        if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
+            can_translate = MT_RawAndTM_View.can_translate(request, user)
+            if can_translate == None:
+                pass
             else:
-                return []
-        return []
+                return MT_RawAndTM_View.can_translate(request, user)
+
+        initial_credit = user.credit_balance.get("total_left")
+        print("Document object ----> ", doc)
+
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
+
+        initial_credit = 10000
+
+        if initial_credit > consumable_credits:
+
+            # Updating raw translation of split segments
+            if mt_raw_split:
+                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                              doc.target_language_code)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
+                return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
+
+            # Creating new MT raw for split segment
+            else:
+                translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
+                                              doc.target_language_code)
+                MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
+
+        else:
+            return {}, 424, "unavailable"
+
+    @staticmethod
+    def get_tm_data(request, segment_id):
+
+        # For normal segment
+        if (Segment.objects.filter(id=segment_id).first() and \
+                Segment.objects.filter(id=segment_id).first().is_split == False):
+
+            segment = Segment.objects.filter(id=segment_id).first().get_active_object()
+            if segment:
+                tm_ser = TM_FetchSerializer(segment)
+                res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+                        data = {'pentmsearchparams': json.dumps(tm_ser.data)})
+                if res.status_code == 200:
+                    return res.json()
+                else:
+                    return []
+            return []
+        else: return []
 
     def get_alert_msg(self, status_code, can_team):
 
@@ -644,161 +737,49 @@ class MT_RawAndTM_View(views.APIView):
         else:
             return "Team subscription inactive"
 
-    def get_segment_MT_params(self, segment_id):
+    def get_task_assign_data(self, segment_id):
         task_assign_obj = TaskAssign.objects.filter(
             Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
             Q(step_id=1)
         ).first()
         return TaskAssignSerializer(task_assign_obj).data
 
-    def get(self, request, segment_id):
-        mt_params = self.get_segment_MT_params(segment_id)
-        data, status_code, can_team = self.get_data(request, segment_id, mt_params)
-        mt_alert = True if status_code == 424 else False
-        alert_msg = self.get_alert_msg(status_code, can_team)
-        tm_data = self.get_tm_data(request, segment_id)
-        return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
-            "alert_msg":alert_msg}, status=status_code)
+    def get_segment_MT_params(self, segment_id):
 
-# class MT_RawAndTM_View(views.APIView):############merge and split options included view
-#
-#     @staticmethod
-#     def can_translate(request, debit_user):
-#         hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
-#
-#         # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
-#         if get_plan_name(debit_user) != "Business":
-#             return {}, 424, "cannot_translate"
-#
-#         elif (request.user.is_internal_member or request.user.id in hired_editors) and \
-#             (get_plan_name(debit_user)=="Business") and \
-#             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
-#                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
-#             print("For internal & hired editors only")
-#             return {}, 424, "cannot_translate"
-#         else:
-#             return None
-#
-#     @staticmethod
-#     def get_consumable_credits(doc, segment,seg):
-#         # segment_source = Segment.objects.get(id=segment_id).source
-#         segment_source = segment.source if segment != None else seg
-#         seg_data = { "segment_source" : segment_source,
-#                      "source_language" : doc.source_language_code,
-#                      "target_language" : doc.target_language_code,
-#                      "processor_name" : "plain-text-processor",
-#                      "extension":".txt"
-#                      }
-#         res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-#             data={"segmentWordCountdata":json.dumps(seg_data)})
-#
-#         if res.status_code == 200:
-#             print("Word count --->", res.json())
-#             return res.json()
-#         else:
-#             logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
-#             raise  ValueError("Sorry! Something went wrong with word count calculation.")
-#
-#     @staticmethod
-#     def get_data(request, segment, mt_params):
-#
-#         print("MT params ---> ", mt_params)
-#
-#         # get already stored MT done for first time
-#         mt_raw = segment.mt_raw_translation
-#         if mt_raw:
-#             print("MT Raw available ---> ", mt_raw)
-#             return MT_RawSerializer(mt_raw).data, 200, "available"
-#
-#         # If MT disabled for the task
-#         if mt_params.get("mt_enable", True) != True:
-#             print("MT not enabled")
-#             return {}, 200, "MT disabled"
-#
-#         # finding the user to debit Credit
-#         text_unit_id = segment.text_unit_id
-#         doc = TextUnit.objects.get(id=text_unit_id).document
-#         user = doc.doc_credit_debit_user
-#
-#         # Checking if the request user is account owner or not
-#         if (doc.job.project.team) and (request.user != AiUser.objects.get
-#                 (project__project_jobs_set__file_job_set=doc)):
-#             can_translate = MT_RawAndTM_View.can_translate(request, user)
-#             if can_translate == None:
-#                 pass
-#             else:
-#                 return MT_RawAndTM_View.can_translate(request, user)
-#
-#         # credit balance of debit user
-#         initial_credit = user.credit_balance.get("total_left")
-#
-#         # getting word count
-#         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment,None)
-#
-#         if initial_credit > consumable_credits:
-#
-#             # Applying Machine Translation
-#             mt_engine_id = mt_params.get("mt_engine", 1)  # Google MT selected if MT selection fails
-#
-#             reverse_string_for_segment = "ai_workspace_okapi.segment" if \
-#                             isinstance(segment, Segment) else ("ai_workspace_okapi.mergesegment"
-#                         if isinstance(segment, MergeSegment) else None)
-#
-#             mt_raw_serlzr = MT_RawSerializer(data = { "mt_engine": mt_engine_id,
-#                                                       "reverse_string_for_segment": reverse_string_for_segment,
-#                                                      }, context={"request": request})
-#
-#             if mt_raw_serlzr.is_valid(raise_exception=True):
-#                 mt_raw_serlzr.save(segment=segment)
-#                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-#                 return mt_raw_serlzr.data, 201, "available"
-#
-#         else:
-#             return {}, 424, "unavailable"
-#
-#     @staticmethod
-#     def get_tm_data(request, segment):
-#         # segment = Segment.objects.filter(id=segment_id).first()
-#         if segment:
-#             tm_ser = TM_FetchSerializer(segment)
-#             res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-#                     data = {'pentmsearchparams': json.dumps(tm_ser.data)})
-#             if res.status_code == 200:
-#                 return res.json()
-#             else:
-#                 return []
-#         return []
-#
-#     def get_segment_MT_params(self, segment_id):
-#         task_assign_obj = TaskAssign.objects.filter(
-#             Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
-#             Q(step_id=1)
-#         ).first()
-#         return TaskAssignSerializer(task_assign_obj).data
-#
-#     def get_alert_msg(self, status_code, can_team):
-#         if (status_code == 424 and can_team == "unavailable"):
-#             return "MT doesn't work as the credits are insufficient. Please buy more or upgrade"
-#         else:
-#             return "Team subscription inactive"
-#
-#     def get(self, request, segment_id):
-#
-#         segment = get_object_or_404(Segment.objects.all(), id=segment_id)\
-#             .get_active_object()
-#
-#         mt_params = self.get_segment_MT_params(segment_id)
-#
-#         # data, status_code, can_team = self.get_data(request, segment_id, mt_params)
-#
-#         data, status_code, can_team = self.get_data(request, segment, mt_params)
-#
-#         mt_alert = True if status_code == 424 else False
-#         alert_msg = self.get_alert_msg(status_code, can_team)
-#         tm_data = self.get_tm_data(request, segment)
-#         print("MT Data ---> ", data)
-#         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
-#             "alert_msg":alert_msg}, status=status_code)
+        if (Segment.objects.filter(id=segment_id).first() and \
+                Segment.objects.filter(id=segment_id).first().is_split == False):
+            return self.get_task_assign_data(segment_id)
+
+        else:
+            split_seg = SplitSegment.objects.filter(id=segment_id).first()
+            if split_seg:
+                return self.get_task_assign_data(split_seg.segment_id)
+
+    def get(self, request, segment_id):
+
+        # Getting MT params
+        mt_params = self.get_segment_MT_params(segment_id)
+
+        # For normal and merged segments
+        if (Segment.objects.filter(id=segment_id).first() and \
+                Segment.objects.filter(id=segment_id).first().is_split == False):
+
+            data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+            mt_alert = True if status_code == 424 else False
+            alert_msg = self.get_alert_msg(status_code, can_team)
+            tm_data = self.get_tm_data(request, segment_id)
+            return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
+                "alert_msg":alert_msg}, status=status_code)
+
+        # For split segment
+        else:
+            data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
+            mt_alert = True if status_code == 424 else False
+            alert_msg = self.get_alert_msg(status_code, can_team)
+            tm_data = self.get_tm_data(request, segment_id)
+            return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
+                             "alert_msg": alert_msg}, status=status_code)
+
 
 class ConcordanceSearchView(views.APIView):
 
