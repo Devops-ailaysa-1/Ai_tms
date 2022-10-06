@@ -796,6 +796,7 @@ class DocumentToFile(views.APIView):
             response['X-Suggested-Filename'] = encoded_filename
             response["Access-Control-Allow-Origin"] = "*"
             response["Access-Control-Allow-Headers"] = "*"
+            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
             # print("cont-disp--->", response.get("Content-Disposition"))
             return response
 
@@ -842,7 +843,7 @@ class DocumentToFile(views.APIView):
         initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
         if initial_credit > consumable_credits:
             if len(data)>5000:
-                return Response({'msg':'Conversion is going on.Please wait'})
+                #return Response({'msg':'Conversion is going on.Please wait'})
                 #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
                 res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
             else:
@@ -928,20 +929,20 @@ class DocumentToFile(views.APIView):
         # print("Request auth type ----> ", type(request.auth))
 
         #token = str(request.auth)
-        token = request.GET.get("token")
+        #token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
         voice_name = request.GET.get("voice_name",None)
         language_locale = request.GET.get("locale", None)
-        payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
-        user_id_payload = payload.get("user_id", 0)
-        request_user = AiUser.objects.get(id=user_id_payload)
+        #payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
+        #user_id_payload = payload.get("user_id", 0)
+        #request_user = AiUser.objects.get(id=user_id_payload)
         # team_members = doc_user.get_team_members if doc_user.get_team_members else []
         document_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
         try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
         except:managers = []
 
-        if (request_user ==  document_user) or (request_user in managers):
+        if (request.user ==  document_user) or (request.user in managers):
 
 
             # FOR DOWNLOADING SOURCE FILE
