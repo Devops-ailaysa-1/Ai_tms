@@ -40,13 +40,14 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 from ai_workspace.models import File,Project
 from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment,\
+    SplitSegment, MtRawSplitSegment
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
 from .serializers import PentmUpdateSerializer,SegmentHistorySerializer
 from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
-                          TM_FetchSerializer, MergeSegmentSerializer)
+                          TM_FetchSerializer, MergeSegmentSerializer, SplitSegmentSerializer)
 from django.urls import reverse
 from json import JSONDecodeError
 from .utils import SpacesService
@@ -363,13 +364,32 @@ class SegmentsView(views.APIView, PageNumberPagination):
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
         segments = document.segments_for_workspace
-        len_segments = segments.count()
+        split_segment_count = document.split_segment_count()
+        len_segments = segments.count() + split_segment_count
         page_len = self.paginate_queryset(range(1, len_segments + 1), request)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
 
-        data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
-                if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
+        data = []
+
+        for i in segments_ser.data:
+
+            # If the segment is merged
+            if (i.get("is_merged") == True and i.get("is_merge_start")):
+                data.append(SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data)
+
+            # If the segment is split
+            elif i.get("is_split") == True:
+                split_segs = SplitSegment.objects.filter(segment_id=i.get("segment_id")).order_by("id")
+                for split_seg in split_segs:
+                    data.append(SegmentSerializer(split_seg).data)
+
+            # Normal segment
+            else:
+                data.append(i)
+
+        # data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
+        #         if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
 
         [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
 
@@ -385,7 +405,35 @@ class MergeSegmentView(viewsets.ModelViewSet):
             obj =  serlzr.instance
             obj.update_segments(serlzr.validated_data.get("segments"))
             return Response(MergeSegmentSerializer(obj).data)
+class SplitSegmentView(viewsets.ModelViewSet):
+    serializer_class = SplitSegmentSerializer
+    def create(self, request, *args, **kwargs):
 
+        seg_first = request.data["seg_first"]
+        seg_second = request.data["seg_second"]
+        segment = request.data["segment"]
+
+        serializer_first = self.serializer_class(data = request.data)
+        serializer_second = self.serializer_class(data=request.data)
+
+        if serializer_first.is_valid(raise_exception=True) & \
+                serializer_second.is_valid(raise_exception=True):
+
+            serializer_first.save()
+            serializer_second.save()
+
+            first_seg = serializer_first.instance
+            second_seg = serializer_second.instance
+
+            first_seg.update_segments(seg_first, is_first=True)
+            second_seg.update_segments(seg_second)
+
+            # Setting the original segment as split
+            seg = Segment.objects.filter(id=segment).first()
+            seg.is_split = True
+            seg.save()
+
+            return Response(SplitSegmentSerializer(first_seg).data)
 def get_supported_file_extensions(request):
     return JsonResponse(CURRENT_SUPPORT_FILE_EXTENSIONS_LIST, safe=False)
 
@@ -402,13 +450,16 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def get_object(self, segment_id):
         # segment_id = self.kwargs["pk"]
         qs = Segment.objects.all()
-        segment = get_object_or_404(qs, id = segment_id)
-        return segment.get_active_object()
+        try:
+            segment = get_object_or_404(qs, id=segment_id)
+            return segment.get_active_object()
+        except:
+            return SplitSegment.objects.filter(id=segment_id).first()
 
     @staticmethod
     def get_update(segment, data, request):
-        segment_serlzr = SegmentSerializerV2(segment, data=data, partial=True,\
-            context={"request": request})
+        segment_serlzr = SegmentSerializerV2(segment, data=data, partial=True, \
+                                             context={"request": request})
         if segment_serlzr.is_valid(raise_exception=True):
             segment_serlzr.save()
             return segment_serlzr
@@ -416,17 +467,18 @@ class SegmentsUpdateView(viewsets.ViewSet):
             logger.info(">>>>>>>> Error in Segment update <<<<<<<<<")
             return segment_serlzr.errors
 
-    def edit_allowed_check(self,instance):
-        from ai_workspace.models import Task,TaskAssignInfo
+    def edit_allowed_check(self, instance):
+        from ai_workspace.models import Task, TaskAssignInfo
         user = self.request.user
-        task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
-        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task = task_obj)
+        task_obj = Task.objects.get(document_id=instance.text_unit.document.id)
+        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
         if user not in assigners:
             edit_allowed = True
         else:
             try:
-                task_assign_status = task_assigned_info.filter(~Q(task_assign__assign_to = user)).first().task_assign.status
+                task_assign_status = task_assigned_info.filter(
+                    ~Q(task_assign__assign_to=user)).first().task_assign.status
                 edit_allowed = False if task_assign_status == 2 else True
             except:
                 edit_allowed = True
@@ -440,34 +492,30 @@ class SegmentsUpdateView(viewsets.ViewSet):
         else:
             print("not successfully update")
 
+    def split_update(self, request_data, segment):
+
+        status_obj = TranslationStatus.objects.filter(status_id=request_data["status"]).first()
+
+        segment.status = status_obj
+
+        if request_data.get("target", None) != None:
+            segment.target = request_data["target"]
+            segment.temp_target = request_data["temp_target"]
+        else:
+            segment.temp_target = request_data["temp_target"]
+        segment.save()
+        return Response(SegmentSerializer(segment).data, status=201)
+
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
-        # segment = self.get_object()
         edit_allow = self.edit_allowed_check(segment)
         if edit_allow == False:
-            return Response({"msg":"Someone is working already.."},status = 400)
+            return Response({"msg": "Someone is working already.."}, status=400)
+        if segment.is_split == True:
+            return self.split_update(request.data, segment)
         segment_serlzr = self.get_update(segment, request.data, request)
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         return Response(segment_serlzr.data, status=201)
-
-# class SegmentsUpdateView(viewsets.ModelViewSet):
-#
-#     serializer_class = SegmentSerializerV2
-#
-#     # def get_object(self):
-#     #     segment_id = self.kwargs["pk"]
-#     #     qs = Segment.objects.all()
-#     #     segment = get_object_or_404(qs, id = segment_id)
-#     #     if segment.is_merged == True:
-#     #         return MergeSegment.objects.get(id=segment_id)
-#     #     return segment
-#
-#     def get_object(self):
-#         segment_id = self.kwargs["pk"]
-#         qs = Segment.objects.all()
-#         segment = get_object_or_404(qs, id = segment_id)
-#         return segment.get_active_object()
-
 
 class MergeSegmentDeleteView(viewsets.ModelViewSet):
     def get_queryset(self):
@@ -490,7 +538,6 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "cannot_translate"
         else:
             return None
-
 
     @staticmethod
     def get_consumable_credits(doc, segment_id, seg):

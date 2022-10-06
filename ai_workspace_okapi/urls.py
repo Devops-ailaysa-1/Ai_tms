@@ -16,13 +16,18 @@ urlpatterns+=[
     path("document_by_doc_id/<int:document_id>", api_views.DocumentViewByDocumentId.as_view(),\
          name="document-by-document-id"),
     path("file_extensions/", api_views.get_supported_file_extensions, name="get-file-extensions"),
+
+    # Segment related endpoints
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
     path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put": "update"}), \
          name="segment-update"),
     path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment'),
     path("segment/restore/<int:pk>", api_views.MergeSegmentDeleteView.as_view({"delete": "destroy"}), \
          name="segment-update"),
+    path('split/segment/', api_views.SplitSegmentView.as_view({"post": "create"}), name='split-segment'),
     path("mt_raw_and_tm/<int:segment_id>", api_views.MT_RawAndTM_View.as_view(), name="mt-raw"),
+
+
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(),\
          name="document-convert-to-file"),
     path("outputtypes", api_views.output_types, name="output-types"),
