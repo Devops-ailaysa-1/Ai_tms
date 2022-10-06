@@ -1218,7 +1218,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
                         Q(status__status_id__in=status_list)).all()
             else:
                 segments = segments.filter(status__status_id__in=status_list).all()
-
+        print("seg------->",segments)
         search_word = data.get("search_word", None)
 
         if search_word not in [None, '']:
@@ -1231,7 +1231,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
                     f'__regex':f'(?<!\w){search_word}(?!\w)'})
             elif not(match_case or exact_word):
                 segments = segments.filter(**{f'{lookup_field}'
-                    f'__contains':f'{search_word}'})
+                    f'__icontains':f'{search_word}'})
             elif match_case:
                 segments = segments.filter(**{f'{lookup_field}'
                     f'__regex':f'{search_word}'})
