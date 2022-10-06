@@ -678,7 +678,6 @@ class MT_RawAndTM_View(views.APIView):
                 return MT_RawAndTM_View.can_translate(request, user)
 
         initial_credit = user.credit_balance.get("total_left")
-        print("Document object ----> ", doc)
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
@@ -865,11 +864,10 @@ class DocumentToFile(views.APIView):
         text_file = open(temp_name, "r")
         data = text_file.read()
         text_file.close()
-        print("Length of file------------------------>",len(data))
         consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
         initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
         if initial_credit > consumable_credits:
-            if len(data)>5000:
+            if len(data) > 5000:
                 return Response({'msg':'Conversion is going on.Please wait'})
                 #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
                 res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
@@ -953,9 +951,6 @@ class DocumentToFile(views.APIView):
             return JsonResponse({"msg": "File under process. Please wait a little while. \
                     Hit refresh and try again"}, status=401)
 
-        # print("Request auth type ----> ", type(request.auth))
-
-        #token = str(request.auth)
         token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")

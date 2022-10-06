@@ -108,8 +108,7 @@ class BaseSegment(models.Model):
     @property
     def coded_target(self):
         return  set_runs_to_ref_tags( self.coded_source, self.target, get_runs_and_ref_ids(\
-            self.coded_brace_pattern, self.coded_ids_aslist ) )
-
+                self.coded_brace_pattern, self.coded_ids_aslist ) )
 
     def save(self, *args, **kwargs):
         return super(BaseSegment, self).save(*args, **kwargs)
@@ -124,8 +123,15 @@ class Segment(BaseSegment):
 
     @property
     def get_merge_target_if_have(self):
-        return self.get_active_object().coded_target
-
+        if self.is_split == False:
+            return self.get_active_object().coded_target
+        else:
+            split_segs = SplitSegment.objects.filter(segment_id = self.id)
+            target_joined = ""
+            for split_seg in split_segs:
+                target_joined += split_seg.target
+            return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
     @property
     def get_merge_segment_count(self):
         count = 0
