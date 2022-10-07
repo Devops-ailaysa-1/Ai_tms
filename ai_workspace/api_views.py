@@ -73,7 +73,7 @@ from google.cloud import speech
 from google.cloud import speech_v1p1beta1 as speech
 import io
 from google.cloud import storage
-from ai_auth.tasks import mt_only, write_doc_json_file, text_to_speech_celery
+from ai_auth.tasks import mt_only, write_doc_json_file, text_to_speech_celery, transcribe_long_file_cel
 from docx import Document
 from htmldocx import HtmlToDocx
 from delta import html
@@ -1922,13 +1922,16 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def transcribe_file(request):
+    from ai_workspace.models import MTonlytaskCeleryStatus
     task_id = request.POST.get('task')
     user = request.user
     print("User---------->",user)
     target_language = request.POST.getlist('target_languages')
     queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
     print("QS--->",queryset)
-    if queryset:
+    # cel_task = MTonlytaskCeleryStatus.objects.filter(task_id = task_id).last()
+    # state = transcribe_long_file_cel.AsyncResult(cel_task.celery_task_id).state if cel_task else None
+    if queryset:#or state == 'SUCCESS':
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
     else:
@@ -1954,7 +1957,9 @@ def transcribe_file(request):
             if length and length<60:
                 res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
             else:
-                res = transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
+                res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
+                MTonlytaskCeleryStatus.objects.create(task_name = "transcribe_long_file_cel",task_id = obj.id,celery_task_id=res.id)
+                return Response({'msg':'Transcription is ongoing. Pls Wait'})
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             print("RES----->",res)
             return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})

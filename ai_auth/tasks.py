@@ -389,3 +389,10 @@ def google_long_text_file_process_cel(consumable_credits,document_user_id,file_p
             # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
             # res = requests.request("GET", url, headers=headers)
             # print("doc--->",res.text)
+@task
+def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,user_id,hertz):
+    from ai_workspace.api_views import transcribe_long_file
+    obj = Task.objects.get(id = task_id)
+    user = AiUser.objects.get(id = user_id)
+    transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
+    logger.info("Transcribe called")
