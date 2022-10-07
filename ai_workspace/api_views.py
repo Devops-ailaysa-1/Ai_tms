@@ -2098,6 +2098,8 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
         text_file.close()
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
     initial_credit = account_debit_user.credit_balance.get("total_left")
+    print("Consumable Credits--------------->",consumable_credits)
+    print("Initial Credits---------------->",initial_credit)
     if initial_credit > consumable_credits:
         if len(data)>4500:
             print(name)
@@ -2151,10 +2153,10 @@ def convert_text_to_speech_source(request):
     if task:
         obj = Task.objects.get(id = task)
         if obj.task_transcript_details.exists()==False:
-            #text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
-            tt = text_to_speech_task(obj,language,gender,user,voice_name)
-            return Response(tt.data)
-            #return Response({'msg':'Text to Speech conversion ongoing. Please wait'})
+            text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
+            # tt = text_to_speech_task(obj,language,gender,user,voice_name)
+            # return Response(tt.data)
+            return Response({'msg':'Text to Speech conversion ongoing. Please wait'})
         else:
             ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
             return Response(ser.data)
