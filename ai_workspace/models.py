@@ -929,6 +929,7 @@ class MTonlytaskCeleryStatus(models.Model):
             related_name="mt_only_task_status")
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
     celery_task_id = models.CharField(max_length=255, blank=True, null=True)
+    task_name = models.TextField(blank=True, null=True)
 
 
 

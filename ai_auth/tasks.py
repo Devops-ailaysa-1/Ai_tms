@@ -362,14 +362,19 @@ def text_to_speech_celery(task_id,language,gender,user_id,voice_name):
     from ai_workspace.api_views import text_to_speech_task
     obj = Task.objects.get(id=task_id)
     user = AiUser.objects.get(id=user_id)
-    text_to_speech_task(obj,language,gender,user,voice_name)
+    tt = text_to_speech_task(obj,language,gender,user,voice_name)
+    print("TT-------------------->",tt)
     logger.info("Text to speech called")
 
 
 
-# @task
-# def google_long_text_file_process_cel()
-#
+@task
+def google_long_text_file_process_cel(consumable_credits,document_user_id,file_path,task_id,target_language,voice_gender,voice_name):
+    from ai_workspace_okapi.api_views import long_text_process
+    document_user = AiUser.objects.get(id = document_user_id)
+    obj = Task.objects.get(id=task_id)
+    tr = long_text_process(consumable_credits,document_user,file_path,obj,target_language,voice_gender,voice_name)
+    logger.info("Text to speech document called")
 
 
 
@@ -384,3 +389,10 @@ def text_to_speech_celery(task_id,language,gender,user_id,voice_name):
             # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
             # res = requests.request("GET", url, headers=headers)
             # print("doc--->",res.text)
+@task
+def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,user_id,hertz):
+    from ai_workspace.api_views import transcribe_long_file
+    obj = Task.objects.get(id = task_id)
+    user = AiUser.objects.get(id = user_id)
+    transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
+    logger.info("Transcribe called")

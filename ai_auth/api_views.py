@@ -1,7 +1,7 @@
 from logging import INFO
 from langdetect import detect
 import logging
-import re , requests
+import re , requests, os
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
 from ai_auth.soc_auth import GoogleLogin
@@ -1327,12 +1327,15 @@ def account_delete(request):
     user = AiUser.objects.get(id =request.user.id)
     match_check = check_password(password_entered,user.password)
     if match_check:
-        present = datetime.now()
-        three_mon_rel = relativedelta(months=3)
-        user.is_active = False
-        user.deactivation_date = present.date()+three_mon_rel
-        user.save()
+        # present = datetime.now()
+        # three_mon_rel = relativedelta(months=3)
+        # user.is_active = False
+        # user.deactivation_date = present.date()+three_mon_rel
+        # user.save()
         cancel_subscription(user)
+        dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
+        os.system("rm -r " +dir)
+        user.delete()
     else:
         return Response({"msg":"password didn't match"},status = 400)
     return JsonResponse({"msg":"user account deleted"},safe = False)
