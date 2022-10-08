@@ -185,8 +185,8 @@ class SplitSegmentSerializer(serializers.ModelSerializer):
                   )
         def validate(self, data):
             segment = data['segment']
-            if segment.is_merged == True:
-                raise serializers.ValidationError("Segment is already merged")
+            if segment.is_merged == True or segment.is_split == True:
+                raise serializers.ValidationError("The segment is already merged or split")
             return super().validate(data)
 
 class TextUnitSerializer(serializers.ModelSerializer):

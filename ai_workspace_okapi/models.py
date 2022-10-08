@@ -123,7 +123,7 @@ class Segment(BaseSegment):
 
     @property
     def get_merge_target_if_have(self):
-        if self.is_split == False:
+        if self.is_split == False or self.is_split == None:
             return self.get_active_object().coded_target
         else:
             split_segs = SplitSegment.objects.filter(segment_id = self.id)
@@ -142,8 +142,8 @@ class Segment(BaseSegment):
     def get_active_object(self):
         if self.is_merged and self.is_merge_start:
             return MergeSegment.objects.get(id=self.id)
-        elif self.is_split:
-            return SplitSegment.objects.filter(segment_id=self.id)
+        # elif self.is_split:
+        #     return SplitSegment.objects.filter(segment_id=self.id)
 
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
@@ -155,6 +155,7 @@ class MergeSegment(BaseSegment):
         "segments_merge_segments_set")
     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE,
         related_name="text_unit_merge_segment_set")
+    is_split = models.BooleanField(default=False, null=True, blank=True)
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
