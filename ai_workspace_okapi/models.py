@@ -129,7 +129,8 @@ class Segment(BaseSegment):
             split_segs = SplitSegment.objects.filter(segment_id = self.id)
             target_joined = ""
             for split_seg in split_segs:
-                target_joined += split_seg.target
+                if split_seg.target != None:
+                    target_joined += split_seg.target
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
     @property

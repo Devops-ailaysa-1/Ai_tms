@@ -6,7 +6,7 @@ from django.contrib.auth import settings
 from xlwt import Workbook
 from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
-from .models import Segment
+
 
 client = translate.Client()
 
@@ -380,5 +380,6 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
                 print('Audio content written to file',filename)
 
 def split_check(segment_id):
+    from .models import Segment
     return bool(Segment.objects.filter(id=segment_id).first() and \
-            Segment.objects.filter(id=segment_id).first().is_split == False)
+            Segment.objects.filter(id=segment_id).first().is_split in [None, False])

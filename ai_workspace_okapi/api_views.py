@@ -408,7 +408,7 @@ class MergeSegmentView(viewsets.ModelViewSet):
                 is_regular.append(False)
 
         if all(is_regular): return True
-        elif True in is_regular or len(is_regular) > 2:
+        elif True in is_regular:
             return "Mixed"
         else: return False
 
@@ -421,10 +421,10 @@ class MergeSegmentView(viewsets.ModelViewSet):
 
         if status == "Mixed":
             # return Reponse({"msg" : "Only one of the segment is split"}, status=400)
-            raise Exception("Not all or only one of the selected segments is split")
+            raise Exception("Only one of the selected segments is a split segment")
 
         # For normal segment merge
-        if status:
+        if status == True:
             serlzr = self.serializer_class(data=request.data)
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save(id=serlzr.validated_data.get("segments")[0].id)
@@ -488,12 +488,12 @@ class SourceTMXFilesCreate(views.APIView):
 
 class SegmentsUpdateView(viewsets.ViewSet):
     def get_object(self, segment_id):
-        # segment_id = self.kwargs["pk"]
         qs = Segment.objects.all()
-        try:
+
+        if split_check(segment_id):
             segment = get_object_or_404(qs, id=segment_id)
             return segment.get_active_object()
-        except:
+        else:
             return SplitSegment.objects.filter(id=segment_id).first()
 
     @staticmethod
@@ -535,12 +535,11 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def split_update(self, request_data, segment):
 
         status_obj = TranslationStatus.objects.filter(status_id=request_data["status"]).first()
-
         segment.status = status_obj
 
         if request_data.get("target", None) != None:
             segment.target = request_data["target"]
-            segment.temp_target = request_data["temp_target"]
+            segment.temp_target = request_data["target"]
         else:
             segment.temp_target = request_data["temp_target"]
         segment.save()
@@ -1036,10 +1035,12 @@ class DocumentToFile(views.APIView):
                 # If the segment is split
                 if segment.is_split:
                     split_segs = SplitSegment.objects.filter(segment_id=segment.id)
+                    target = ""
                     for split_seg in split_segs:
-                        worksheet.write(row, 0, split_seg.source.strip(), cell_format)
-                        worksheet.write(row, 1, self.remove_tags(split_seg.target), cell_format)
-                        row += 1
+                        target += self.remove_tags(split_seg.target)
+                    worksheet.write(row, 0, segment.source.strip(), cell_format)
+                    worksheet.write(row, 1, target, cell_format)
+                    row += 1
         workbook.close()
 
         return download_file(bilingual_file_path)
