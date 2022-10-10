@@ -2033,7 +2033,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     lang_list = ['hi','bn','or','ne','pa']
     #final_audio = final_name + '.mp3'
     final_audio = final_name + "_" + obj.job.source_language_code  + ".mp3"#+ "_" + obj.ai_taskid
-    dir_1 = os.path.join('/ai_home/',"Output_"+str(project_id))
+    dir_1 = os.path.join('/ai_home/',"Output_"+str(obj.id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
         count=0
@@ -2057,7 +2057,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
         if file.endswith('.txt') :
             print("File--------------->",file)
             name,ext = os.path.splitext(file)
-            dir = os.path.join('/ai_home/',"OutputAudio_"+str(project_id))
+            dir = os.path.join('/ai_home/',"OutputAudio_"+str(obj.id))
             if not os.path.exists(dir):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
