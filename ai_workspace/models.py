@@ -225,15 +225,26 @@ class Project(models.Model):
                     confirm_list = [102, 104, 106, 110, 107]
 
                     segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+
                     for seg in segs:
 
-                        if seg.is_merged == True and seg.is_merge_start is None:
+                        if (seg.is_merged == True and seg.is_merge_start != True):
                             continue
+
+                        elif seg.is_split == True:
+                            total_seg_count += 2
+
                         else:
                             total_seg_count += 1
 
                         seg_new = seg.get_active_object()
-                        if seg_new.status_id in confirm_list:
+
+                        if seg_new.is_split == True:
+                            for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+                                if split_seg.status_id in confirm_list:
+                                    confirm_count += 1
+
+                        elif seg_new.status_id in confirm_list:
                             confirm_count += 1
 
                 else:
@@ -874,15 +885,26 @@ class Task(models.Model):
         doc = self.document
 
         segs = Segment.objects.filter(text_unit__document=doc)
+
         for seg in segs:
 
-            if seg.is_merged == True and seg.is_merge_start is None:
+            if (seg.is_merged == True and seg.is_merge_start != True):
                 continue
+
+            elif seg.is_split == True:
+                total_seg_count += 2
+
             else:
                 total_seg_count += 1
 
             seg_new = seg.get_active_object()
-            if seg_new.status_id in confirm_list:
+
+            if seg_new.is_split == True:
+                for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+                    if split_seg.status_id in confirm_list:
+                        confirm_count += 1
+
+            elif seg_new.status_id in confirm_list:
                 confirm_count += 1
 
         return total_seg_count, confirm_count
