@@ -7,7 +7,7 @@ from ai_auth import models as auth_model
 from ai_staff import models as staff_model
 import os
 import random
-from djstripe.models import Customer
+from djstripe.models import Customer,Account
 import stripe
 from allauth.account.signals import email_confirmed, password_changed,user_signed_up
 from ai_auth import forms as auth_forms
@@ -15,7 +15,10 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.models import Group
 from django.db.models import Q
 
-
+try:
+    default_djstripe_owner=Account.get_default_account()
+except BaseException as e:
+    print(f"Error : {str(e)}")
 
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
@@ -149,7 +152,7 @@ def update_user_tax_id(taxid):
     else:
         api_key = settings.STRIPE_TEST_SECRET_KEY
 
-    customer = Customer.objects.get(subscriber=taxid.user)
+    customer = Customer.objects.get(subscriber=taxid.user,djstripe_owner_account=default_djstripe_owner)
     stripe.api_key = api_key
     try:
         response= stripe.Customer.create_tax_id(
@@ -184,9 +187,9 @@ def password_changed_handler(request, user,instance, **kwargs):
     else:
         api_key = settings.STRIPE_TEST_SECRET_KEY
     try:
-        customer = Customer.objects.get(subscriber=user)
+        customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
-        cust = Customer.get_or_create(subscriber=user)
+        cust = Customer.get_or_create(subscriber=user,djstripe_owner_account=default_djstripe_owner)
         customer = cust[0]
     stripe.api_key = api_key
     # addr=auth_model.BillingAddress.filter(user=customer.subscriber)
