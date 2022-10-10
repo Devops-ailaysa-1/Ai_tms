@@ -2017,7 +2017,8 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
 def long_text_source_process(consumable_credits,user,file_path,task,language,voice_gender,voice_name):
     from ai_workspace.api_views import google_long_text_file_process
     res1,f2 = google_long_text_source_file_process(file_path,task,language,voice_gender,voice_name)
-    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    print("Consumable------------>",consumable_credits)
+    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
     ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res1,"task":task.id,"user":user.id})
     if ser.is_valid():
         ser.save()
@@ -2131,6 +2132,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
             #res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
             #debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
