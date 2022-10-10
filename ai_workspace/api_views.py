@@ -2149,6 +2149,8 @@ def get_media_link(request,task_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
+    from django_celery_results.models import TaskResult
+    from ai_workspace.models import MTonlytaskCeleryStatus
     task = request.GET.get('task')
     project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)
@@ -2157,11 +2159,13 @@ def convert_text_to_speech_source(request):
     user = request.user
     if task:
         obj = Task.objects.get(id = task)
-        if obj.task_transcript_details.exists()==False:
-            text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
-            # tt = text_to_speech_task(obj,language,gender,user,voice_name)
-            # return Response(tt.data)
-            return Response({'msg':'Text to Speech conversion ongoing. Please wait'})
+        ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+        state = text_to_speech_celery.AsyncResult(ins.celery_task_id).state if ins else None
+        if state == 'PENDING':
+            return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
+        elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+            tt = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
+            return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':tt.id})
         else:
             ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
             return Response(ser.data)
@@ -2174,8 +2178,13 @@ def convert_text_to_speech_source(request):
                 tasks.append(_task)
         if tasks:
             for obj in tasks:
-                conversion = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name),)
-            return Response({'msg':'Text to Speech conversion ongoing. Please wait'})
+                ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+                state = text_to_speech_celery.AsyncResult(ins.celery_task_id).state if ins else None
+                if state == 'PENDING':
+                    return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
+                elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+                    conversion = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name),)
+            return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':conversion.id })
                 # conversion = text_to_speech_task(obj,language,gender,user,voice_name)
                 # if conversion.status_code == 200:
                 #     task_list.append(obj.id)
