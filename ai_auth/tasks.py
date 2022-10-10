@@ -366,7 +366,9 @@ def text_to_speech_celery(task_id,language,gender,user_id,voice_name):
     tt = text_to_speech_task(obj,language,gender,user,voice_name)
     MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=2,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
     print("TT-------------------->",tt)
+    print("Status--------------->",tt.status_code)
     logger.info("Text to speech called")
+    return tt.status_code
 
 
 

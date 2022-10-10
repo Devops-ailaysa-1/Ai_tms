@@ -2165,7 +2165,11 @@ def convert_text_to_speech_source(request):
             return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
         elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
             tt = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
-            return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':tt.id})
+            print("TT in viewss------------->",tt.get())
+            if tt.get() == 400:
+                return Response({'msg':'Insufficient Credits'},status=400)
+            else:
+                return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':tt.id})
         else:
             ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
             return Response(ser.data)
@@ -2184,6 +2188,10 @@ def convert_text_to_speech_source(request):
                     return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
                 elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
                     conversion = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name),)
+                    if conversion.get() == 200:
+                        task_list.append(obj.id)
+                    elif conversion.get() == 400:
+                        return Response({'msg':'Insufficient Credits'},status=400)
             return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':conversion.id })
                 # conversion = text_to_speech_task(obj,language,gender,user,voice_name)
                 # if conversion.status_code == 200:
