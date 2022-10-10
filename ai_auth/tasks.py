@@ -358,17 +358,18 @@ def write_doc_json_file(doc_data, task_id):
 
 
 @task
-def text_to_speech_celery(task_id,language,gender,user_id,voice_name):
-    from ai_workspace.api_views import text_to_speech_task
+def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,language,voice_gender,voice_name):
+    from ai_workspace.api_views import text_to_speech_task,long_text_source_process
     obj = Task.objects.get(id=task_id)
     user = AiUser.objects.get(id=user_id)
-    MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=1,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
-    tt = text_to_speech_task(obj,language,gender,user,voice_name)
+    MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=1,celery_task_id=text_to_speech_long_celery.request.id,task_name = "text_to_speech_long_celery")
+    #tt = text_to_speech_task(obj,language,gender,user,voice_name)
+    tt = long_text_source_process(consumable_credits,user,file_path,obj,language,voice_gender,voice_name)
     #MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=2,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
     print("TT-------------------->",tt)
-    print("Status--------------->",tt.status_code)
     logger.info("Text to speech called")
-    return tt.status_code
+    # if tt.status_code == 400:
+    #     return tt.status_code
 
 
 

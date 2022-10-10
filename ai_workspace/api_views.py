@@ -73,7 +73,7 @@ from google.cloud import speech
 from google.cloud import speech_v1p1beta1 as speech
 import io
 from google.cloud import storage
-from ai_auth.tasks import mt_only, write_doc_json_file, text_to_speech_celery, transcribe_long_file_cel
+from ai_auth.tasks import mt_only, write_doc_json_file, text_to_speech_long_celery, transcribe_long_file_cel
 from docx import Document
 from htmldocx import HtmlToDocx
 from delta import html
@@ -2014,6 +2014,16 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     return file_obj,f2
 
 
+def long_text_source_process(consumable_credits,user,file_path,task,language,voice_gender,voice_name):
+    from ai_workspace.api_views import google_long_text_file_process
+    res1,f2 = google_long_text_source_file_process(file_path,task,language,voice_gender,voice_name)
+    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res1,"task":task.id,"user":user.id})
+    if ser.is_valid():
+        ser.save()
+    print(ser.errors)
+    f2.close()
+
 #####################Need to work###########################################
 
 def google_long_text_source_file_process(file,obj,language,gender,voice_name):
@@ -2091,6 +2101,7 @@ def convert_and_download_text_to_speech_source(request):#########working########
 
 def text_to_speech_task(obj,language,gender,user,voice_name):
     #obj = Task.objects.get(id=task_id)
+    from ai_workspace.models import MTonlytaskCeleryStatus
     project = obj.job.project
     print("Gender------------------->",gender)
     account_debit_user = project.team.owner if project.team else project.ai_user
@@ -2113,8 +2124,16 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     if initial_credit > consumable_credits:
         if len(data)>4500:
             print(name)
-            res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+            ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+            state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
+            print("State--------------->",state)
+            if state == 'PENDING':
+                return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
+            elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+                celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )
+                return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
+            #res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
         else:
             seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
                          "processor_name":"plain-text-processor", "extension":".txt"}
@@ -2125,16 +2144,16 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             os.remove(audio_file)
-        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
-        if ext == '.docx':
-            os.remove(name)
-        if ser.is_valid():
-            ser.save()
+            ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
+            if ext == '.docx':
+                os.remove(name)
+            if ser.is_valid():
+                ser.save()
+                f2.close()
+                return Response(ser.data)
             f2.close()
-            return Response(ser.data)
-        f2.close()
-        #os.remove(name)
-        return Response(ser.errors)
+            #os.remove(name)
+            return Response(ser.errors)
     else:
         return Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2164,17 +2183,23 @@ def convert_text_to_speech_source(request):
     user = request.user
     if task:
         obj = Task.objects.get(id = task)
-        ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
-        state = text_to_speech_celery.AsyncResult(ins.celery_task_id).state if ins else None
-        if state == 'PENDING':
-            return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
-        elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
-            tt = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
-            print("TT in viewss------------->",tt.get())
-            if tt.get() == 400:
-                return Response({'msg':'Insufficient Credits'},status=400)
-            else:
-                return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':tt.id})
+        tt = text_to_speech_task(obj,language,gender,user,voice_name)
+        if tt!=None and tt.status_code == 400:
+            return tt
+        # print("func----->",tt)
+        # if tt.status_code == 400:
+        #     return Response({'msg':'Insufficient Credits'},status=400)
+        # ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+        # state = text_to_speech_celery.AsyncResult(ins.celery_task_id).state if ins else None
+        # if state == 'PENDING':
+        #     return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
+        # elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+        #     tt = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
+        #     print("TT in viewss------------->",tt.get())
+        #     if tt.get() == 400:
+        #         return Response({'msg':'Insufficient Credits'},status=400)
+        #     else:
+        #         return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':tt.id})
         else:
             ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
             return Response(ser.data)
@@ -2187,22 +2212,24 @@ def convert_text_to_speech_source(request):
                 tasks.append(_task)
         if tasks:
             for obj in tasks:
-                ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
-                state = text_to_speech_celery.AsyncResult(ins.celery_task_id).state if ins else None
-                if state == 'PENDING':
-                    return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
-                elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
-                    conversion = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name),)
-                    if conversion.get() == 200:
-                        task_list.append(obj.id)
-                    elif conversion.get() == 400:
-                        return Response({'msg':'Insufficient Credits'},status=400)
-            return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':conversion.id })
-                # conversion = text_to_speech_task(obj,language,gender,user,voice_name)
-                # if conversion.status_code == 200:
-                #     task_list.append(obj.id)
-                # elif conversion.status_code == 400:
-                #     return Response({'msg':'Insufficient Credits'},status=400)
+                print("Obj-------------->",obj)
+            #     ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+            #     state = text_to_speech_celery.AsyncResult(ins.celery_task_id).state if ins else None
+            #     if state == 'PENDING':
+            #         return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
+            #     elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+            #         conversion = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name),)
+            #         if conversion.get() == 200:
+            #             task_list.append(obj.id)
+            #         elif conversion.get() == 400:
+            #             return Response({'msg':'Insufficient Credits'},status=400)
+            # return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':conversion.id })
+                conversion = text_to_speech_task(obj,language,gender,user,voice_name)
+                print("Conv----------->",conversion)
+                if conversion.status_code == 200:
+                    task_list.append(obj.id)
+                elif conversion.status_code == 400:
+                    return conversion#Response({'msg':'Insufficient Credits'},status=400)
         queryset = TaskTranscriptDetails.objects.filter(task__in = pr.get_source_only_tasks)
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
