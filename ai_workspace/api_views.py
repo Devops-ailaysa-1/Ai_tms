@@ -1957,9 +1957,14 @@ def transcribe_file(request):
             if length and length<60:
                 res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
             else:
-                res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
-                MTonlytaskCeleryStatus.objects.create(task_name = "transcribe_long_file_cel",task_id = obj.id,celery_task_id=res.id)
-                return Response({'msg':'Transcription is ongoing. Pls Wait'})
+                ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+                state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
+                if state == 'PENDING':
+                    return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id})
+                elif (not ins) or state == 'FAILURE':
+                    res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
+                #MTonlytaskCeleryStatus.objects.create(task_name = "transcribe_long_file_cel",task_id = obj.id,celery_task_id=res.id)
+                    return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':res.id})
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             print("RES----->",res)
             return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})

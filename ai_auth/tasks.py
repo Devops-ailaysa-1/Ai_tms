@@ -364,7 +364,7 @@ def text_to_speech_celery(task_id,language,gender,user_id,voice_name):
     user = AiUser.objects.get(id=user_id)
     MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=1,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
     tt = text_to_speech_task(obj,language,gender,user,voice_name)
-    MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=2,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
+    #MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=2,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
     print("TT-------------------->",tt)
     print("Status--------------->",tt.status_code)
     logger.info("Text to speech called")
@@ -377,9 +377,9 @@ def google_long_text_file_process_cel(consumable_credits,document_user_id,file_p
     from ai_workspace_okapi.api_views import long_text_process
     document_user = AiUser.objects.get(id = document_user_id)
     obj = Task.objects.get(id=task_id)
-    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=1,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=1,task_name='google_long_text_file_process_cel',celery_task_id=google_long_text_file_process_cel.request.id)
     tr = long_text_process(consumable_credits,document_user,file_path,obj,target_language,voice_gender,voice_name)
-    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
+    #MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2,task_name='google_long_text_file_process_cel',celery_task_id=google_long_text_file_process_cel.request.id)
     logger.info("Text to speech document called")
 
 
@@ -400,5 +400,6 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
     from ai_workspace.api_views import transcribe_long_file
     obj = Task.objects.get(id = task_id)
     user = AiUser.objects.get(id = user_id)
+    MTonlytaskCeleryStatus.objects.create(task_id=obj.id,status=1,task_name='transcribe_long_file_cel',celery_task_id=transcribe_long_file_cel.request.id)
     transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     logger.info("Transcribe called")
