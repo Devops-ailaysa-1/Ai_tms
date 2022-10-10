@@ -673,7 +673,7 @@ def get_previous_accepted_rate(request):
 
     rates =[]
     for i in query_final:
-        out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
+        out = [{'currency':i.currency.id,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
         rates.append(out)
     rates_given=[]
     query_1 = VendorLanguagePair.objects.filter((Q(source_lang_id=job_obj.source_language_id) & Q(target_lang_id=job_obj.target_language_id) & Q(user=vendor) & Q(deleted_at=None)))\
