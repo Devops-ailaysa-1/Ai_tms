@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.db.models import Q,F
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
 import datetime,os,json, collections
-from djstripe.models import Subscription
+from djstripe.models import Subscription,Invoice
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
@@ -21,10 +21,14 @@ from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
 from ai_workspace.models import Task
+from ai_auth.api_views import _resync_instances
 import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
+from datetime import datetime, timedelta
+from django.db.models import DurationField, F, ExpressionWrapper
+
 
 
 extend_mail_sent= 0
@@ -69,7 +73,7 @@ def striphtml(data):
 # def add(x, y):
 #     return x + y
 
-from datetime import datetime, timedelta
+
 # subs =Subscription.objects.filter(billing_cycle_anchor__year='2021', billing_cycle_anchor__month='12',billing_cycle_anchor__month='10')
 
 # for sub in subs:
@@ -82,7 +86,12 @@ from datetime import datetime, timedelta
 #     for r in range(0,10):
 #         tomorrow = datetime.utcnow() + timedelta(minutes=1+r)
 #         add.apply_async((r, r+2), eta=tomorrow)
-
+@task
+def sync_invoices_and_charges(days):
+    queryset = Invoice.objects.annotate(
+            diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
+            ).filter(diff__gt=timedelta(days))
+    _resync_instances(queryset)
 
 @task
 def renewal_list():
