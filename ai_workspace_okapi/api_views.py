@@ -780,7 +780,7 @@ class ConcordanceSearchView(views.APIView):
 def long_text_process(consumable_credits,document_user,file_path,task,target_language,voice_gender,voice_name):
     from ai_workspace.api_views import google_long_text_file_process
     res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
-    debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
+    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
     if task.task_transcript_details.first()==None:
         ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
     else:

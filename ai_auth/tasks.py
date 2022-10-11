@@ -367,13 +367,18 @@ def write_doc_json_file(doc_data, task_id):
 
 
 @task
-def text_to_speech_celery(task_id,language,gender,user_id,voice_name):
-    from ai_workspace.api_views import text_to_speech_task
+def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,language,voice_gender,voice_name):
+    from ai_workspace.api_views import text_to_speech_task,long_text_source_process
     obj = Task.objects.get(id=task_id)
     user = AiUser.objects.get(id=user_id)
-    tt = text_to_speech_task(obj,language,gender,user,voice_name)
+    MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=1,celery_task_id=text_to_speech_long_celery.request.id,task_name = "text_to_speech_long_celery")
+    #tt = text_to_speech_task(obj,language,gender,user,voice_name)
+    tt = long_text_source_process(consumable_credits,user,file_path,obj,language,voice_gender,voice_name)
+    #MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=2,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
     print("TT-------------------->",tt)
     logger.info("Text to speech called")
+    # if tt.status_code == 400:
+    #     return tt.status_code
 
 
 
@@ -382,7 +387,9 @@ def google_long_text_file_process_cel(consumable_credits,document_user_id,file_p
     from ai_workspace_okapi.api_views import long_text_process
     document_user = AiUser.objects.get(id = document_user_id)
     obj = Task.objects.get(id=task_id)
+    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=1,task_name='google_long_text_file_process_cel',celery_task_id=google_long_text_file_process_cel.request.id)
     tr = long_text_process(consumable_credits,document_user,file_path,obj,target_language,voice_gender,voice_name)
+    #MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2,task_name='google_long_text_file_process_cel',celery_task_id=google_long_text_file_process_cel.request.id)
     logger.info("Text to speech document called")
 
 
@@ -403,5 +410,6 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
     from ai_workspace.api_views import transcribe_long_file
     obj = Task.objects.get(id = task_id)
     user = AiUser.objects.get(id = user_id)
+    MTonlytaskCeleryStatus.objects.create(task_id=obj.id,status=1,task_name='transcribe_long_file_cel',celery_task_id=transcribe_long_file_cel.request.id)
     transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     logger.info("Transcribe called")
