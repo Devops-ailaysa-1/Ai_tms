@@ -79,6 +79,8 @@ from django.http import HttpResponseRedirect
 from urllib.parse import parse_qs, urlencode,  urlsplit
 from django.shortcuts import redirect
 import json
+from django.contrib import messages
+
 
 
 try:
@@ -401,6 +403,7 @@ def get_payment_details(request):
     try:
         user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         user_invoice_details=Invoice.objects.filter(customer_id = user).all()
+        invo
         print(user_invoice_details)
     except Exception as error:
         print(error)
@@ -2153,3 +2156,24 @@ def lang_detect(request):
     lang = detect(text)
     lang_obj = Languages.objects.filter(locale__locale_code = lang).first()
     return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
+
+
+
+def resync_instances(queryset):
+## cloned from djstripe.admin.views
+    for instance in queryset:
+        api_key = instance.default_api_key
+        try:
+            if instance.djstripe_owner_account:
+                stripe_data = instance.api_retrieve(
+                    stripe_account=instance.djstripe_owner_account.id,
+                    api_key=api_key,
+                )
+            else:
+                stripe_data = instance.api_retrieve()
+            instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
+            print(f"Successfully Synced: {instance}")
+        except stripe.error.PermissionError as error:
+            print(error)
+        except stripe.error.InvalidRequestError:
+            raise
