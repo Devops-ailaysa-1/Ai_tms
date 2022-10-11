@@ -21,7 +21,7 @@ from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
 from ai_workspace.models import Task
-from ai_auth.api_views import _resync_instances
+from ai_auth.api_views import resync_instances
 import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from ai_workspace.models import Task,MTonlytaskCeleryStatus
@@ -91,7 +91,7 @@ def sync_invoices_and_charges(days):
     queryset = Invoice.objects.annotate(
             diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
             ).filter(diff__gt=timedelta(days))
-    _resync_instances(queryset)
+    resync_instances(queryset)
 
 @task
 def renewal_list():
