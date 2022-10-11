@@ -2210,6 +2210,6 @@ def download_audio_output_file(request):
     if state == 'SUCCESS':
         return download_file(task.task_transcript_details.last().translated_audio_file.path)
     elif state == 'FAILURE':
-        return Response({'msg':'Failure'})
+        return Response({'msg':'Failure'},status=400)
     else:
-        return Response({'msg':'Pending'})
+        return Response({'msg':'Pending'},status=400)
