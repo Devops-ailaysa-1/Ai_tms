@@ -1953,19 +1953,26 @@ def transcribe_file(request):
             return Response({'msg':'something wrong in input file'},status=400)
         initial_credit = account_debit_user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_speech_to_text(length)
+        print("Initial----------------->",initial_credit)
+        print("Consumable------------------>",consumable_credits)
         if initial_credit > consumable_credits:
             if length and length<60:
                 res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             else:
                 ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
                 state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
+                print("State----------------------->",state)
                 if state == 'PENDING':
-                    return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id})
+                    return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
                 elif (not ins) or state == 'FAILURE':
                     res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
-                #MTonlytaskCeleryStatus.objects.create(task_name = "transcribe_long_file_cel",task_id = obj.id,celery_task_id=res.id)
-                    return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':res.id})
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+                    return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':res.id},status=400)
+                elif state == 'SUCCESS':
+                    ser = TaskTranscriptDetailSerializer(queryset,many=True)
+                    return Response(ser.data)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             print("RES----->",res)
             return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})
         else:

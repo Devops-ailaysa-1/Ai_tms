@@ -681,7 +681,7 @@ def get_previous_accepted_rate(request):
     for i in query_1:
         currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
         out = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
-                    'hourly_rate':i.get('service__mtpe_hourly_rate'),'count_unit':i.get('service__mtpe_count_unit')}]
+                    'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
         rates_given.extend(out)
     return JsonResponse({"Previously Agreed Rates":rates,"Given Rates":rates_given})
 
