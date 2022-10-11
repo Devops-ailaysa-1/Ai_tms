@@ -860,7 +860,7 @@ class DocumentToFile(views.APIView):
             if len(data)>5000:
                 celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
                 MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
-                return Response({'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id})
+                return Response({'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id},status=400)
                 #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
                 #res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
             else:
