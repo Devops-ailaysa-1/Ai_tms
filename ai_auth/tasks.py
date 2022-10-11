@@ -413,3 +413,57 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
     MTonlytaskCeleryStatus.objects.create(task_id=obj.id,status=1,task_name='transcribe_long_file_cel',celery_task_id=transcribe_long_file_cel.request.id)
     transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     logger.info("Transcribe called")
+
+
+
+
+@task
+def pre_translate_update(task_id):
+    from ai_workspace.models import Task, TaskAssign
+    from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation
+    from ai_workspace.api_views import UpdateTaskCreditStatus
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View
+
+    task = Task.objects.get(id=task_id)
+    MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=1,celery_task_id=pre_translate_update.request.id)
+    user = task.job.project.ai_user
+    mt_engine = task.job.project.mt_engine_id
+    task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    segments = Segment.objects.filter(text_unit__document=task.document)
+    update_list = []
+    mt_segments = []
+
+    for seg in segments:###############Need to revise####################
+        i = seg.get_active_object()
+        if i.target == '':
+            initial_credit = user.credit_balance.get("total_left")
+            consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, i)
+            if initial_credit > consumable_credits:
+                i.target = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
+                i.temp_target = i.target
+                i.status_id = TranslationStatus.objects.get(status_id=104).id
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                mt_segments.append(i)
+            else:
+                break
+    #             i.target= ""
+    #             i.temp_target = ''
+    #             i.status_id = None
+            update_list.append(i)
+    #
+    Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+
+
+    instances = [
+            MT_RawTranslation(
+                mt_raw= i.target,
+                mt_engine_id = mt_engine,
+                task_mt_engine_id = task_mt_engine_id,
+                segment_id= i.id,
+            )
+            for i in mt_segments
+        ]
+
+    MT_RawTranslation.objects.bulk_create(instances)
+    MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
+    logger.info("pre_translate_update")

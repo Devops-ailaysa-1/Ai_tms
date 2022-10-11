@@ -11,7 +11,7 @@ import json,jwt,logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
 import requests
-from ai_auth.tasks import write_segments_to_db,google_long_text_file_process_cel
+from ai_auth.tasks import write_segments_to_db,google_long_text_file_process_cel,pre_translate_update
 from django.contrib.auth import settings
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
@@ -193,6 +193,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
+                #pre_translate_update.apply_async((task.id,),)
+                #return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again"}, status=401)
                 user = task.job.project.ai_user
                 mt_engine = task.job.project.mt_engine_id
                 task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
@@ -316,8 +318,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
                     return Response(doc, status=201)
                 else:
-                    return Response({"msg": "File under process. Please wait a little while. \
-                            Hit refresh and try again"}, status=401)
+                    return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again"}, status=401)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
                 doc = DocumentSerializerV2(document).data
