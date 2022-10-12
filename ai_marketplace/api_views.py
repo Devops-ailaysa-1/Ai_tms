@@ -435,7 +435,7 @@ def get_incomplete_projects_list(request):
     projects = [i.project_id for i in query] if query else []
     queryset=[x for x in Project.objects.filter(Q(ai_user=request.user)\
                 |Q(team__owner = request.user)|Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).\
-                filter(~Q(id__in = projects)).order_by('-id').distinct() if x.progress != "completed" ]#.filter(voice_proj_detail__isnull=True)
+                filter(~Q(id__in = projects)).order_by('-id').distinct() if x.progress != "completed" and x.get_assignable_tasks != []]#.filter(voice_proj_detail__isnull=True)
     ser = SimpleProjectSerializer(queryset,many=True)
     return Response(ser.data)
 

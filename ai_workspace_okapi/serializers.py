@@ -351,7 +351,7 @@ class DocumentSerializerV2(DocumentSerializer):
                   "source_language", "target_language", "source_language_id",
                   "target_language_id", "source_language_code", "target_language_code", "doc_credit_check_open_alert",
                   'assign_detail','show_mt','project_type_sub_category',
-                  "target_language_script",'download_audio_output_file',
+                  "target_language_script",'download_audio_output_file','converted_audio_file_exists',
                   )
 
 class DocumentSerializerV3(DocumentSerializerV2):
