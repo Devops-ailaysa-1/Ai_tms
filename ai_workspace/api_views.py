@@ -1929,11 +1929,14 @@ def transcribe_file(request):
     target_language = request.POST.getlist('target_languages')
     queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
     print("QS--->",queryset)
-    # cel_task = MTonlytaskCeleryStatus.objects.filter(task_id = task_id).last()
-    # state = transcribe_long_file_cel.AsyncResult(cel_task.celery_task_id).state if cel_task else None
     if queryset:#or state == 'SUCCESS':
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
+    ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+    state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
+    print("State----------------------->",state)
+    if state == 'PENDING':
+        return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
     else:
         obj = Task.objects.get(id = task_id)
         project = obj.job.project
