@@ -445,6 +445,7 @@ def pre_translate_update(task_id):
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 mt_segments.append(i)
             else:
+                MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
                 break
     #             i.target= ""
     #             i.temp_target = ''
@@ -465,5 +466,5 @@ def pre_translate_update(task_id):
         ]
 
     MT_RawTranslation.objects.bulk_create(instances)
-    MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
+    #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
     logger.info("pre_translate_update")

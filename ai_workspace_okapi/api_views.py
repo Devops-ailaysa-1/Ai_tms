@@ -189,51 +189,68 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def create_document_for_task_if_not_exists(task):
         from .utils import get_translation
-        # If document already exists for a task
+        from ai_workspace.models import MTonlytaskCeleryStatus
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
-                #pre_translate_update.apply_async((task.id,),)
-                #return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again"}, status=401)
-                user = task.job.project.ai_user
-                mt_engine = task.job.project.mt_engine_id
-                task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
-                segments = Segment.objects.filter(text_unit__document=task.document)
-                update_list = []
-                mt_segments = []
-
-                for seg in segments:###############Need to revise####################
-                    i = seg.get_active_object()
-                    if i.target == '':
-                        initial_credit = user.credit_balance.get("total_left")
-                        consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, i)
-                        if initial_credit > consumable_credits:
-                            i.target = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
-                            i.temp_target = i.target
-                            i.status_id = TranslationStatus.objects.get(status_id=104).id
-                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                            mt_segments.append(i)
-                        else:
-                            break
-                #             i.target= ""
-                #             i.temp_target = ''
-                #             i.status_id = None
-                        update_list.append(i)
-                #
-                Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
-
-
-                instances = [
-                        MT_RawTranslation(
-                            mt_raw= i.target,
-                            mt_engine_id = mt_engine,
-                            task_mt_engine_id = task_mt_engine_id,
-                            segment_id= i.id,
-                        )
-                        for i in mt_segments
-                    ]
-
-                MT_RawTranslation.objects.bulk_create(instances)
+                ins = MTonlytaskCeleryStatus.objects.filter(task_id=task.id).last()
+                state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins else None
+                print("State----------------------->",state)
+                if state == 'PENDING':
+                    return {'msg':'Pre Translation Ongoing. Pls Wait','celery_id':ins.celery_task_id}
+                elif (not ins) or state == 'FAILURE':
+                    cel_task = pre_translate_update.apply_async((task.id,),)
+                    return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
+                elif state == "SUCCESS":
+                    if ins.error_type == "Insufficient Credits":
+                        cel_task = pre_translate_update.apply_async((task.id,),)
+                        return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
+                    else:return task.document
+        # If document already exists for a task
+        # if task.document != None:
+        #     print("<--------------------------Document Exists--------------------->")
+        #     if task.job.project.pre_translate == True:
+        #         #pre_translate_update.apply_async((task.id,),)
+        #         #return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again"}, status=401)
+        #         user = task.job.project.ai_user
+        #         mt_engine = task.job.project.mt_engine_id
+        #         task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+        #         segments = Segment.objects.filter(text_unit__document=task.document)
+        #         update_list = []
+        #         mt_segments = []
+        #
+        #         for seg in segments:###############Need to revise####################
+        #             i = seg.get_active_object()
+        #             if i.target == '':
+        #                 initial_credit = user.credit_balance.get("total_left")
+        #                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, i)
+        #                 if initial_credit > consumable_credits:
+        #                     i.target = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
+        #                     i.temp_target = i.target
+        #                     i.status_id = TranslationStatus.objects.get(status_id=104).id
+        #                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+        #                     mt_segments.append(i)
+        #                 else:
+        #                     break
+        #         #             i.target= ""
+        #         #             i.temp_target = ''
+        #         #             i.status_id = None
+        #                 update_list.append(i)
+        #         #
+        #         Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+        #
+        #
+        #         instances = [
+        #                 MT_RawTranslation(
+        #                     mt_raw= i.target,
+        #                     mt_engine_id = mt_engine,
+        #                     task_mt_engine_id = task_mt_engine_id,
+        #                     segment_id= i.id,
+        #                 )
+        #                 for i in mt_segments
+        #             ]
+        #
+        #         MT_RawTranslation.objects.bulk_create(instances)
 
             return task.document
 
@@ -329,8 +346,16 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 return Response(doc, status=201)
         else:
             document = self.create_document_for_task_if_not_exists(task)
-            doc = DocumentSerializerV2(document).data
-            return Response(doc, status=201)
+            print("Doc--------->",document)
+            try:
+                doc = DocumentSerializerV2(document).data
+                return Response(doc, status=201)
+            except:
+                if document.get('doc')!=None:
+                    doc = DocumentSerializerV2(document.get('doc')).data
+                    return Response({'msg':document.get('msg'),'doc_data':doc}, status=201)
+                else:
+                    return Response(document,status=400)
 
 
 class DocumentViewByDocumentId(views.APIView):
