@@ -298,35 +298,40 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
 
     def get(self, request, task_id, format=None):
-        from ai_workspace.models import MTonlytaskCeleryStatus
-        from django_celery_results.models import TaskResult
         task = self.get_object(task_id=task_id)
-        if task.job.project.pre_translate == True and task.document == None:
-            ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
-            if not ins:
-                Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
-                document = self.create_document_for_task_if_not_exists(task)
-                doc = DocumentSerializerV2(document).data
-                MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
-                return Response(doc, status=201)
-            if ins.status == 1:
-                obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
-                if obj !=None and obj.status == "FAILURE":
-                    Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
-                    document = self.create_document_for_task_if_not_exists(task)
-                    doc = DocumentSerializerV2(document).data
-                    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
-                    return Response(doc, status=201)
-                else:
-                    return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again"}, status=401)
-            else:
-                document = self.create_document_for_task_if_not_exists(task)
-                doc = DocumentSerializerV2(document).data
-                return Response(doc, status=201)
-        else:
-            document = self.create_document_for_task_if_not_exists(task)
-            doc = DocumentSerializerV2(document).data
-            return Response(doc, status=201)
+        document = self.create_document_for_task_if_not_exists(task)
+        doc = DocumentSerializerV2(document).data
+        return Response(doc, status=201)
+        # from ai_workspace.models import MTonlytaskCeleryStatus
+        # from django_celery_results.models import TaskResult
+        # task = self.get_object(task_id=task_id)
+        # if task.job.project.pre_translate == True and task.document == None:
+        #     ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+        #     if not ins:
+        #         Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+        #         document = self.create_document_for_task_if_not_exists(task)
+        #         doc = DocumentSerializerV2(document).data
+        #         MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
+        #         return Response(doc, status=201)
+        #     if ins.status == 1:
+        #         obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
+        #         if obj !=None and obj.status == "FAILURE":
+        #             Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+        #             document = self.create_document_for_task_if_not_exists(task)
+        #             doc = DocumentSerializerV2(document).data
+        #             MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
+        #             return Response(doc, status=201)
+        #         else:
+        #             return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again"}, status=401)
+        #     else:
+        #         document = self.create_document_for_task_if_not_exists(task)
+        #         doc = DocumentSerializerV2(document).data
+        #         return Response(doc, status=201)
+        # else:
+            # document = self.create_document_for_task_if_not_exists(task)
+            # doc = DocumentSerializerV2(document).data
+            # return Response(doc, status=201)
+
 
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
