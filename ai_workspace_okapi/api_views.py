@@ -837,10 +837,10 @@ class DocumentToFile(views.APIView):
                 "application/vnd.ms-excel")
             encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
                                                   encoding='utf-8')
-            # response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
-            #     .format(encoded_filename)
-            filename = os.path.basename(file_path)
-            response['Content-Disposition'] = "attachment; filename=%s" % filename
+            response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+                .format(encoded_filename)
+            # filename = os.path.basename(file_path)
+            # response['Content-Disposition'] = "attachment; filename=%s" % filename
             response['X-Suggested-Filename'] = encoded_filename
             response["Access-Control-Allow-Origin"] = "*"
             response["Access-Control-Allow-Headers"] = "*"
