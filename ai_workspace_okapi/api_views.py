@@ -194,7 +194,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
                 ins = MTonlytaskCeleryStatus.objects.filter(task_id=task.id).last()
-                state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins else None
+                print("Ins------------>",ins)
+                state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 print("State----------------------->",state)
                 if state == 'PENDING':
                     return {'msg':'Pre Translation Ongoing. Pls Wait','celery_id':ins.celery_task_id}
