@@ -65,7 +65,7 @@ from .utils import download_file, bl_title_format, bl_cell_format,get_res_path
 from os.path import exists
 from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
-
+from rest_framework.decorators import permission_classes
 from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
 from os.path import exists
@@ -2000,11 +2000,19 @@ def spellcheck(request):
     import hunspell
     tar = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
-    doc = Document.objects.get(id=doc_id)
+    task_id = request.POST.get('task_id')
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        lang_code = doc.target_language_code
+        lang_id = doc.target_language_id
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        lang_code = task.job.target_language_code
+        lang_id = task.job.target_language_id
     out,res = [],[]
     try:
-        if doc.target_language_code == 'en':
-            lang = doc.target_language_code
+        if lang_code == 'en':
+            lang = lang_code
             dic = r'/ai_home/dictionaries/{lang}.dic'.format(lang = lang)
             aff = r'/ai_home/dictionaries/{lang}.aff'.format(lang = lang)
             hobj = hunspell.HunSpell(dic,aff )
@@ -2021,9 +2029,9 @@ def spellcheck(request):
                      res.extend(out)
             return JsonResponse({"result":res},safe=False)
         else:
-            spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
+            spellchecker=SpellcheckerLanguages.objects.get(language_id=lang_id).spellchecker.spellchecker_name
             if spellchecker=="pyspellchecker":
-                code = doc.target_language_code
+                code = lang_code
                 spell = SpellChecker(code)
                 words=spell.split_words(tar)#list
                 misspelled=spell.unknown(words)#set
@@ -2229,6 +2237,7 @@ def get_word_api(request):
 #             res = requests.request("GET", url, headers=headers)
 #     print("doc--->",res.text)
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def download_audio_output_file(request):
     from ai_workspace.models import MTonlytaskCeleryStatus
     celery_id = request.GET.get('celery_id')
@@ -2243,3 +2252,12 @@ def download_audio_output_file(request):
         return Response({'msg':'Failure'},status=400)
     else:
         return Response({'msg':'Pending'},status=400)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_converted_audio_file(request):
+    document_id = request.GET.get('document_id')
+    doc = Document.objects.get(id=document_id)
+    task = doc.task_set.first()
+    return download_file(task.task_transcript_details.last().translated_audio_file.path)
