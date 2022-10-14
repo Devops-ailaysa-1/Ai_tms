@@ -1754,6 +1754,7 @@ def project_download(request,project_id):
             express_obj = ExpressProjectDetail.objects.filter(task=i).first()
             print("Saved Target------------>",express_obj.target_text)
             if express_obj.target_text:
+                print("###########")
                 file_name,ext = os.path.splitext(i.file.filename)
                 target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
                 # already_written_file = file_name + "_out" +  "[" + i.job.source_language_code + "-" + i.job.target_language_code + "]" + ext
@@ -1761,6 +1762,7 @@ def project_download(request,project_id):
                 #     os.remove(os.path.join(pr.project_dir_path,'source',already_written_file))
                 with open(os.path.join(pr.project_dir_path,'source',target_filename),'w') as f:
                     f.write(express_obj.target_text)
+                    print("File Written--------------->",target_filename)
             else:
                 pass
 
