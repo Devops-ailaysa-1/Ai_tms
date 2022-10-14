@@ -1752,6 +1752,7 @@ def project_download(request,project_id):
     if pr.project_type_id == 5:
         for i in pr.get_tasks:
             express_obj = ExpressProjectDetail.objects.filter(task=i).first()
+            print("Saved Target------------>",express_obj.target_text)
             if express_obj.target_text:
                 file_name,ext = os.path.splitext(i.file.filename)
                 target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
@@ -2492,9 +2493,11 @@ def task_get_segments(request):
     obj = Task.objects.get(id=task_id)
     with open(obj.file.file.path, "r") as file:
         content = file.read()
-    if express_obj.mt_raw == None:
+    if express_obj.mt_raw == None and express_obj.target_text == None:
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_text(content,obj.job.source_language_code,obj.job.target_language_code)
+        print("InitialCredits---------------->",initial_credit)
+        print("ConsumableCredits---------------->",consumable_credits)
         if initial_credit > consumable_credits:
             trans = get_translation(obj.job.project.mt_engine.id, content , obj.job.source_language_code, obj.job.target_language_code)
             express_obj.target_text = trans
