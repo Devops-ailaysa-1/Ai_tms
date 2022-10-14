@@ -285,11 +285,12 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
 def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     from ai_staff.models import MTLanguageLocaleVoiceSupport
     from google.cloud import texttospeech
-    print("@#@#@#@#@#",voice_gender,voice_name,target_language)
+    print("@#@#@#@#@#",target_language,voice_gender,voice_name)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
     voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
+    print("%%%%%%%%%%%%%%%%%",gender,voice_name)
     client = texttospeech.TextToSpeechClient()
     with open(ssml_file, "r") as f:
         ssml = f.read()

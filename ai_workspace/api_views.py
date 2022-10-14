@@ -679,7 +679,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 pr = Project.objects.get(id=serializer.data.get('id'))
                 print("TASks--------->",pr.get_mtpe_tasks)
                 if pr.pre_translate == True:
-                    mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                    mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
@@ -1987,6 +1987,7 @@ def transcribe_file_get(request):
     return Response(ser.data)
 
 def google_long_text_file_process(file,obj,language,gender,voice_name):
+    print("Main func Voice Name---------->",voice_name)
     final_name,ext =  os.path.splitext(file)
     #final_audio = final_name + '.mp3'
     #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
@@ -2005,7 +2006,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
-            text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',None)
+            text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
     list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'))]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
