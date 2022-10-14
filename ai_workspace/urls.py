@@ -70,7 +70,7 @@ urlpatterns += [
 	path("instruction_file_download/<int:instruction_file_id>", api_views.instruction_file_download, name="instruction-file-download"),
 	#path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"})),
 	path("listdownload/",api_views.project_list_download),
-	path("download/<int:project_id>/",api_views.project_download),
+	#path("download/<int:project_id>/",api_views.project_download),
 	#path("update_after_transcription/<int:id>/",api_views.update_project_from_writer),
 	path("mt_samples/",api_views.ShowMTChoices.as_view(), name='mt-samples'),
 	path('transcribe_file/',api_views.transcribe_file),

@@ -1758,34 +1758,25 @@ def project_download(request,project_id):
                 file_name,ext = os.path.splitext(i.file.filename)
                 target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
                 target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
-                # already_written_file = file_name + "_out" +  "[" + i.job.source_language_code + "-" + i.job.target_language_code + "]" + ext
-                # if os.path.exists(os.path.join(pr.project_dir_path,'source',already_written_file)) == False:
-                #     os.remove(os.path.join(pr.project_dir_path,'source',already_written_file))
                 with open(target_filepath,'w') as f:
                     f.write(express_obj.target_text)
                     print("File Written--------------->",target_filepath)
             else:
                 pass
 
-    if pr.project_type_id not in [3,4]:
+    if pr.project_type_id not in [3,4,5]:
         print("Inside Normal Loop")
         for i in pr.get_tasks:
             if i.document:
-                # path,filename = os.path.split(i.file.file.path)
-                # name,ext =os.path.splitext(filename)
-                # print('path----------->',path +'/'+ name +'_out' +"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext)
-                # if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
-                #     print("True")
-                # else:
                 from ai_workspace_okapi.api_views import DocumentToFile
                 res_1 = DocumentToFile.document_data_to_file(request,i.document.id)
-        if os.path.exists(os.path.join(pr.project_dir_path,'source')):
-            shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-            res = download_file(pr.project_name+'.zip')
-            os.remove(pr.project_name+'.zip')
-            return res
-        else:
-            return Response({'msg':'something went wrong'},status=400)
+    if os.path.exists(os.path.join(pr.project_dir_path,'source')):
+        shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+        res = download_file(pr.project_name+'.zip')
+        os.remove(pr.project_name+'.zip')
+        return res
+    else:
+        return Response({'msg':'something went wrong'},status=400)
     # else:
     #     return Response({'msg':'project download not available'},status=400)
 
@@ -2693,3 +2684,10 @@ def express_project_detail(request,project_id):
             #         elif conversion.get() == 400:
             #             return Response({'msg':'Insufficient Credits'},status=400)
             # return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':conversion.id })
+############project Download##################33
+# path,filename = os.path.split(i.file.file.path)
+                # name,ext =os.path.splitext(filename)
+                # print('path----------->',path +'/'+ name +'_out' +"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext)
+                # if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
+                #     print("True")
+                # else:
