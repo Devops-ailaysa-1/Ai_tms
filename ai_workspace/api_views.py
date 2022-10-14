@@ -1752,9 +1752,7 @@ def project_download(request,project_id):
     if pr.project_type_id == 5:
         for i in pr.get_tasks:
             express_obj = ExpressProjectDetail.objects.filter(task=i).first()
-            print("Saved Target------------>",express_obj.target_text)
             if express_obj.target_text:
-                print("###########")
                 file_name,ext = os.path.splitext(i.file.filename)
                 target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
                 target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
@@ -1765,7 +1763,6 @@ def project_download(request,project_id):
                 pass
 
     if pr.project_type_id not in [3,4,5]:
-        print("Inside Normal Loop")
         for i in pr.get_tasks:
             if i.document:
                 from ai_workspace_okapi.api_views import DocumentToFile
@@ -2537,7 +2534,9 @@ def express_task_download(request,task_id):###############permission need to be 
 @permission_classes([IsAuthenticated])
 def express_project_detail(request,project_id):
     obj = Project.objects.get(id=project_id)
-    target_languages = [job.target_language_id for job in obj.project_jobs_set.all() if job.target_language_id != None]
+    jobs = obj.project_jobs_set.all()
+    jobs_data = JobSerializer(jobs, many=True)
+    #target_languages = [job.target_language_id for job in obj.project_jobs_set.all() if job.target_language_id != None]
     source_lang_id =  obj.project_jobs_set.first().source_language_id
     mt_engine_id = obj.mt_engine_id
     project_name = obj.project_name
@@ -2545,7 +2544,7 @@ def express_project_detail(request,project_id):
     project_file = obj.project_files_set.all().first()
     with open(project_file.file.path, "r") as file:
         content = file.read()
-    return JsonResponse({'target_lang':target_languages,'source_lang':source_lang_id,\
+    return JsonResponse({'jobs':jobs_data.data,'source_lang':source_lang_id,\
                         'mt_engine':mt_engine_id,'project_name':project_name,'team':team,\
                         'source_text':content})
 
