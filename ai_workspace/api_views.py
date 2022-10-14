@@ -1757,12 +1757,13 @@ def project_download(request,project_id):
                 print("###########")
                 file_name,ext = os.path.splitext(i.file.filename)
                 target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
+                target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
                 # already_written_file = file_name + "_out" +  "[" + i.job.source_language_code + "-" + i.job.target_language_code + "]" + ext
                 # if os.path.exists(os.path.join(pr.project_dir_path,'source',already_written_file)) == False:
                 #     os.remove(os.path.join(pr.project_dir_path,'source',already_written_file))
-                with open(os.path.join(pr.project_dir_path,'source',target_filename),'w') as f:
+                with open(target_filepath,'w') as f:
                     f.write(express_obj.target_text)
-                    print("File Written--------------->",target_filename)
+                    print("File Written--------------->",target_filepath)
             else:
                 pass
 
