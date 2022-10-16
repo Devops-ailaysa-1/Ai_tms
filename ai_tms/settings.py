@@ -141,7 +141,7 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     "ai_pay",
-    "ai_tm_management",
+    #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
 ]
@@ -565,3 +565,5 @@ sentry_sdk.init(
 
 
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
+
+AI_CAMPAIGN = os.getenv("CAMPAIGN")

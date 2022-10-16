@@ -1,3 +1,4 @@
+from random import choices
 from django.db import models
 from django.contrib.auth.models import User
 from ai_auth.managers import CustomUserManager
@@ -504,14 +505,25 @@ class HiredEditors(models.Model):
     class Meta:
         unique_together = ['user', 'hired_editor','role']
 
-
-
 class ReferredUsers(models.Model):
     email = models.EmailField()
 
+class AilaysaCampaigns(models.Model):
+    DURATION =(
+    ("month","month"),
+    ("year", "year"),
+    )  
+    campaign_name = models.CharField(max_length=100,unique=True)
+    subscription_name = models.CharField(max_length=100, blank=True, null=True)
+    subscription_duration = models.CharField(choices=DURATION, max_length=100,blank=True, null=True)
+    subscription_intervals = models.IntegerField(default=1)
+    Addon_name = models.CharField(max_length=100, blank=True, null=True)
+    Addon_quantity =models.IntegerField(default=1)
+
 class CampaignUsers(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
-    campaign_name = models.CharField(max_length=255, blank=True, null=True)
+    campaign_name =  models.ForeignKey(AilaysaCampaigns,on_delete=models.CASCADE,related_name='ai_campaigns')
+    subscribed = models.BooleanField(default=False)
 
 class ExistingVendorOnboardingCheck(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='existing_vendor_info')

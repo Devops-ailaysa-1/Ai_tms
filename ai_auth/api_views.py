@@ -29,7 +29,7 @@ from django.shortcuts import get_object_or_404
 from ai_auth.vendor_onboard_list import users_list
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
+from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
                             Team,InternalMember,HiredEditors,VendorOnboarding,SocStates)
@@ -51,7 +51,8 @@ from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime,date,timedelta
-from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate,Account
+from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,\
+                            Customer,Invoice,Product,TaxRate,Account,Coupon
 import stripe
 from django.conf import settings
 from ai_staff.models import Countries, CurrencyBasedOnCountry, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
@@ -80,7 +81,7 @@ from urllib.parse import parse_qs, urlencode,  urlsplit
 from django.shortcuts import redirect
 import json
 from django.contrib import messages
-
+from ai_auth.Aiwebhooks import update_user_credits
 
 
 try:
@@ -88,6 +89,12 @@ try:
 except BaseException as e:
     print(f"Error : {str(e)}")
 
+def get_stripe_api_key():
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+    return api_key
 
 def striphtml(data):
     p = re.compile(r'<.*?>')
@@ -403,7 +410,6 @@ def get_payment_details(request):
     try:
         user = Customer.objects.get(subscriber_id = request.user.id,djstripe_owner_account=default_djstripe_owner).id
         user_invoice_details=Invoice.objects.filter(customer_id = user).all()
-        invo
         print(user_invoice_details)
     except Exception as error:
         print(error)
@@ -606,6 +612,25 @@ def subscribe(price,customer=None):
 
     return subscription
 
+def create_addon_paymentintent(customer,currency):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+    
+    stripe.api_key = api_key
+
+    pay_intent = stripe.PaymentIntent.create(
+    customer=customer.id,
+    amount=0,
+    currency=currency,
+    payment_method_types=["card"],
+    metadata= {
+    "price": "price_1Jlt0nSHaXADggwo3di76YBt",
+    "quantity": "1",
+    "type": "Addon"
+    }
+    )
 
 
 def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
@@ -644,7 +669,7 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
     return checkout_session
 
 
-def create_invoice_one_time(price_id,Aicustomer,tax_rate,quantity=1):
+def create_invoice_one_time(price_id,Aicustomer,tax_rate,coupon,quantity=1):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -652,14 +677,15 @@ def create_invoice_one_time(price_id,Aicustomer,tax_rate,quantity=1):
     print(tax_rate)
     stripe.api_key = api_key
     data1=stripe.InvoiceItem.create(
-    customer=Aicustomer.id,
-    price=price_id.id,
-    quantity=quantity,
-    tax_rates=tax_rate
-    )
+                customer=Aicustomer.id,
+                price=price_id.id,
+                quantity=quantity,
+                tax_rates=tax_rate
+                )
 
     data2=stripe.Invoice.create(
     customer=Aicustomer.id,
+    discounts =[{'coupon':coupon}],
     auto_advance=True # auto-finalize this draft after ~1 hour
     )
     response = stripe.Invoice.finalize_invoice(
@@ -892,6 +918,62 @@ def buy_subscription(request):
 
 
 
+def campaign_subscribe(user,camp):
+    plan = None
+    livemode = settings.STRIPE_LIVE_MODE
+    api_key = get_stripe_api_key()
+    try:
+        cust = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
+    except Customer.DoesNotExist:
+        customer,created = Customer.get_or_create(subscriber=user)
+        cust=customer
+        if created:
+            plan = 'new'
+    if cust.currency=='':
+        if user.country.id == 101 :
+            currency = 'inr'
+        else:
+            currency ='usd'
+    else:
+        currency =cust.currency
+    ## Base Subscription
+    price = Plan.objects.get(product__name=camp.campaign_name.subscription_name,
+                        interval=camp.campaign_name.subscription_duration,currency=currency,
+                        djstripe_owner_account=default_djstripe_owner,livemode=livemode)
+    
+    #if plan == 'new':
+    sub=subscribe(price=price,customer=cust)
+    if sub:
+         sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
+    else:
+        print("error in creating subscription ",user.uid)
+
+    price_addon = Price.objects.get(product__name=camp.campaign_name.Addon_name,
+                        currency=currency,
+                        djstripe_owner_account=default_djstripe_owner,livemode=livemode)
+    print(price_addon)
+    coupon = Coupon.objects.get(name='PAY-G-PAT')
+    #invo = create_invoice_one_time(price_addon,cust,None,coupon.id)
+    # plan = get_plan_name(user)
+    # if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
+    #     sub=subscribe(price=price,customer=cust)
+    #     return sub
+    cp = CreditPack.objects.get(product=price_addon.product)
+    update_user_credits(user=user,cust=cust,price=price,
+                quants=camp.campaign_name.Addon_quantity,invoice=None,payment=None,pack=cp)
+    return sub
+def check_campaign(user):
+    camp = CampaignUsers.objects.filter(user=user)
+    if camp.count() > 0:
+        if camp.last().subscribed == False:
+            # camp.name.subscription_name
+            return campaign_subscribe(user,camp.last()) 
+        else:
+            logging.warning(f"user already registed in campaign :{user.uid}")
+            return None
+    else:
+        return None
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -945,6 +1027,10 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 else:
                     currency ='usd'
 
+                camp = check_campaign(user)
+                if camp:
+                    print(camp)
+                    return Response({'msg':'User Successfully created'}, status=201)
                 if price_id:
                     price = Plan.objects.get(id=price_id)
                     if (price.currency != currency) or (price.interval != 'month'):
@@ -953,6 +1039,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
                 print('price>>',price)
+
                 response=subscribe_trial(price,customer)
                 print(response)
                 #customer.subscribe(price=price)
@@ -1686,7 +1773,6 @@ def referral_users(request):
     try:
         user = AiUser.objects.get(email =ref_email)
         return Response({"msg":"User Already Exists"},status = 400)
-
     except AiUser.DoesNotExist:
         ref =ReferredUsers.objects.create(email=ref_email)
     return Response({"msg":"Successfully Added"},status = 201)
@@ -2175,5 +2261,7 @@ def resync_instances(queryset):
             print(f"Successfully Synced: {instance}")
         except stripe.error.PermissionError as error:
             print(error)
-        except stripe.error.InvalidRequestError:
-            raise
+        except stripe.error.InvalidRequestError as error:
+            print(f"Sync failed: {instance} error :{error}")
+        except stripe.error.StripeErrorWithParamCode:
+            print(f"Sync failed: {instance}")
