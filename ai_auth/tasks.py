@@ -7,7 +7,6 @@ logger = get_task_logger(__name__)
 from celery.decorators import task
 from datetime import date
 from django.utils import timezone
-from django.db.models import Q,F
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
 import datetime,os,json, collections
 from djstripe.models import Subscription,Invoice
@@ -19,7 +18,6 @@ import requests
 from contextlib import closing
 from django.db import connection
 from django.db.models import Q
-from django.utils import timezone
 from ai_workspace.models import Task
 from ai_auth.api_views import resync_instances
 import os, json
@@ -27,7 +25,7 @@ from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids,
 from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
 from datetime import datetime, timedelta
-from django.db.models import DurationField, F, ExpressionWrapper
+from django.db.models import DurationField, F, ExpressionWrapper,Q
 
 
 
