@@ -292,7 +292,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
-                cel_task = mt_only.apply_async((task.job.project.id,),)
+                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth)),)
                 return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
