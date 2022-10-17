@@ -329,7 +329,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         from django_celery_results.models import TaskResult
         task = self.get_object(task_id=task_id)
         if task.job.project.pre_translate == True and task.document == None:
-            ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             if not ins:
                 Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
                 document = self.create_document_for_task_if_not_exists(task)

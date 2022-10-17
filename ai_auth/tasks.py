@@ -337,12 +337,12 @@ def mt_only(project_id,token):
     if pr.pre_translate == True:
         tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)
-        [MTonlytaskCeleryStatus.objects.create(task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
+        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
         for i in pr.get_mtpe_tasks:
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             doc = DocumentSerializerV2(document).data
             print(doc)
-            MTonlytaskCeleryStatus.objects.create(task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+            MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
 
 @task
 def write_doc_json_file(doc_data, task_id):
