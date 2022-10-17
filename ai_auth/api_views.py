@@ -618,7 +618,7 @@ def create_addon_paymentintent(customer,currency):
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
         api_key = settings.STRIPE_TEST_SECRET_KEY
-    
+
     stripe.api_key = api_key
 
     pay_intent = stripe.PaymentIntent.create(
@@ -941,11 +941,11 @@ def campaign_subscribe(user,camp):
     price = Plan.objects.get(product__name=camp.campaign_name.subscription_name,
                         interval=camp.campaign_name.subscription_duration,currency=currency,
                         djstripe_owner_account=default_djstripe_owner,livemode=livemode)
-    
+
     #if plan == 'new':
     if user.is_vendor:
         sub = Subscription.objects.filter(customer=customer,djstripe_owner_account=default_djstripe_owner).last()
-    else:   
+    else:
         sub=subscribe(price=price,customer=cust)
         if sub:
             camp.subscribed =True
@@ -978,7 +978,7 @@ def check_campaign(user):
     if camp.count() > 0:
         if camp.last().subscribed == False:
             # camp.name.subscription_name
-            return campaign_subscribe(user,camp.last()) 
+            return campaign_subscribe(user,camp.last())
         else:
             logging.warning(f"user already registed in campaign :{user.uid}")
             return None
@@ -1852,6 +1852,8 @@ def vendor_form_filling_status(request):
         if user.is_vendor == True:
             res = vendor_onboard_check(email,user)
             return res
+        else:
+            return Response(status=204)
     except:
         res = vendor_onboard_check(email,None)
         return res
