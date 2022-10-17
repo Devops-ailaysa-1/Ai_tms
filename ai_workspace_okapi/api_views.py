@@ -196,7 +196,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 mt_only_check =  MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'mt_only')).last()
                 if mt_only_check:
                     segments = Segment.objects.filter(text_unit__document=task.document).last()
-                    if segments != '':
+                    if segments.target != '':
                         return task.document
                 #     return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
