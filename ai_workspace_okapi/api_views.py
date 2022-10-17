@@ -345,7 +345,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
                     return Response(doc, status=201)
                 else:
-                    return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again"}, status=401)
+                    return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again",'celery_id':ins.celery_task_id}, status=401)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
                 doc = DocumentSerializerV2(document).data
