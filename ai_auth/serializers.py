@@ -68,7 +68,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def save(self, request):
         from ai_vendor.models import VendorLanguagePair,VendorOnboardingInfo,VendorsInfo
-        from ai_auth.api_views import subscribe_vendor
+        from ai_auth.api_views import subscribe_vendor,check_campaign
         user = AiUser(
             email=self.validated_data['email'],
             fullname=self.validated_data['fullname'],
@@ -106,7 +106,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             #AilaysaCampaigns.objects.get(campaign_name=campaign)
             print("campaign",campaign)
             ai_camp = AilaysaCampaigns.objects.get(campaign_name=campaign)
-            CampaignUsers.objects.create(user=user,campaign_name=ai_camp)  
+            CampaignUsers.objects.create(user=user,campaign_name=ai_camp)
+            if user.is_vendor:
+                if check_campaign(user):
+                    pass
+                else:
+                    logging.error("campaign updation failed",user.uid)
         return user
 
 

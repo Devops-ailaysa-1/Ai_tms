@@ -566,4 +566,4 @@ sentry_sdk.init(
 
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 
-AI_CAMPAIGN = os.getenv("CAMPAIGN")
+CAMPAIGN = os.getenv("CAMPAIGN")

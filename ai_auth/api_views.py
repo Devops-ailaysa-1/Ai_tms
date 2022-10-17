@@ -944,14 +944,9 @@ def campaign_subscribe(user,camp):
     #if plan == 'new':
     if user.is_vendor:
         sub = Subscription.objects.filter(customer=customer,djstripe_owner_account=default_djstripe_owner).last()
-        if sub:
-            camp.subscribed =True
-            camp.save()
     else:   
         sub=subscribe(price=price,customer=cust)
         if sub:
-            camp.subscribed =True
-            camp.save()
             sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
         else:
             print("error in creating subscription ",user.uid)
@@ -963,6 +958,7 @@ def campaign_subscribe(user,camp):
     try:
         coupon = Coupon.objects.get(name=settings.CAMPAIGN)
     except:
+        print("coupon not found")
         return None
     #invo = create_invoice_one_time(price_addon,cust,None,coupon.id)
     # plan = get_plan_name(user)
@@ -972,6 +968,9 @@ def campaign_subscribe(user,camp):
     cp = CreditPack.objects.get(product=price_addon.product)
     update_user_credits(user=user,cust=cust,price=price,
                 quants=camp.campaign_name.Addon_quantity,invoice=None,payment=None,pack=cp)
+    if sub:
+        camp.subscribed =True
+        camp.save()
     return sub
 
 def check_campaign(user):
@@ -1041,7 +1040,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
 
                 camp = check_campaign(user)
                 if camp:
-                    print(camp)
+                    print("campaign",camp)
                     return Response({'msg':'User Successfully created'}, status=201)
                 if price_id:
                     price = Plan.objects.get(id=price_id)
