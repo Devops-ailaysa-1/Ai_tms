@@ -197,6 +197,7 @@ class Project(models.Model):
                     return "Completed"
                 else:
                     return "In Progress"
+                    
         if self.project_type_id == 5:
             count=0
             for i in self.get_tasks:

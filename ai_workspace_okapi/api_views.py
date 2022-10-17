@@ -11,7 +11,7 @@ import json,jwt,logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
 import requests
-from ai_auth.tasks import write_segments_to_db,google_long_text_file_process_cel,pre_translate_update
+from ai_auth.tasks import write_segments_to_db,google_long_text_file_process_cel,pre_translate_update,mt_only
 from django.contrib.auth import settings
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
@@ -213,51 +213,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
                     else:
                         return task.document
-        # If document already exists for a task
-        # if task.document != None:
-        #     print("<--------------------------Document Exists--------------------->")
-        #     if task.job.project.pre_translate == True:
-        #         #pre_translate_update.apply_async((task.id,),)
-        #         #return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again"}, status=401)
-        #         user = task.job.project.ai_user
-        #         mt_engine = task.job.project.mt_engine_id
-        #         task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
-        #         segments = Segment.objects.filter(text_unit__document=task.document)
-        #         update_list = []
-        #         mt_segments = []
-        #
-        #         for seg in segments:###############Need to revise####################
-        #             i = seg.get_active_object()
-        #             if i.target == '':
-        #                 initial_credit = user.credit_balance.get("total_left")
-        #                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, i)
-        #                 if initial_credit > consumable_credits:
-        #                     i.target = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
-        #                     i.temp_target = i.target
-        #                     i.status_id = TranslationStatus.objects.get(status_id=104).id
-        #                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-        #                     mt_segments.append(i)
-        #                 else:
-        #                     break
-        #         #             i.target= ""
-        #         #             i.temp_target = ''
-        #         #             i.status_id = None
-        #                 update_list.append(i)
-        #         #
-        #         Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
-        #
-        #
-        #         instances = [
-        #                 MT_RawTranslation(
-        #                     mt_raw= i.target,
-        #                     mt_engine_id = mt_engine,
-        #                     task_mt_engine_id = task_mt_engine_id,
-        #                     segment_id= i.id,
-        #                 )
-        #                 for i in mt_segments
-        #             ]
-        #
-        #         MT_RawTranslation.objects.bulk_create(instances)
 
             return task.document
 
@@ -322,31 +277,43 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
 
     def get(self, request, task_id, format=None):
-        # task = self.get_object(task_id=task_id)
-        # document = self.create_document_for_task_if_not_exists(task)
-        # doc = DocumentSerializerV2(document).data
-        # return Response(doc, status=201)
         from ai_workspace.models import MTonlytaskCeleryStatus
         from django_celery_results.models import TaskResult
         task = self.get_object(task_id=task_id)
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
-            if not ins:
-                Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
-                document = self.create_document_for_task_if_not_exists(task)
-                doc = DocumentSerializerV2(document).data
-                MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
-                return Response(doc, status=201)
-            if ins.status == 1:
-                obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
-                if obj !=None and obj.status == "FAILURE":
-                    Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+            print("Ins--------->",ins,ins.status)
+            state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
+            if state == 'PENDING':
+                if ins.status == 1:
+                    return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
+                else:
                     document = self.create_document_for_task_if_not_exists(task)
                     doc = DocumentSerializerV2(document).data
-                    MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
                     return Response(doc, status=201)
-                else:
-                    return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again",'celery_id':ins.celery_task_id}, status=401)
+            elif (not ins) or state == 'FAILURE':
+                cel_task = mt_only.apply_async((task.job.project.id,),)
+                return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
+            elif state == "SUCCESS":
+                document = self.create_document_for_task_if_not_exists(task)
+                doc = DocumentSerializerV2(document).data
+                return Response(doc, status=201)
+            # if not ins:
+            #     Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+            #     document = self.create_document_for_task_if_not_exists(task)
+            #     doc = DocumentSerializerV2(document).data
+            #     MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
+            #     return Response(doc, status=201)
+            # if ins.status == 1:
+            #     obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
+            #     if obj !=None and obj.status == "FAILURE":
+            #         Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+            #         document = self.create_document_for_task_if_not_exists(task)
+            #         doc = DocumentSerializerV2(document).data
+            #         MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
+            #         return Response(doc, status=201)
+            #     else:
+            #         return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again",'celery_id':ins.celery_task_id}, status=401)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
                 doc = DocumentSerializerV2(document).data
