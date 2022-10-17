@@ -942,17 +942,28 @@ def campaign_subscribe(user,camp):
                         djstripe_owner_account=default_djstripe_owner,livemode=livemode)
     
     #if plan == 'new':
-    sub=subscribe(price=price,customer=cust)
-    if sub:
-         sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
-    else:
-        print("error in creating subscription ",user.uid)
+    if user.is_vendor:
+        sub = Subscription.objects.filter(customer=customer,djstripe_owner_account=default_djstripe_owner).last()
+        if sub:
+            camp.subscribed =True
+            camp.save()
+    else:   
+        sub=subscribe(price=price,customer=cust)
+        if sub:
+            camp.subscribed =True
+            camp.save()
+            sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
+        else:
+            print("error in creating subscription ",user.uid)
 
     price_addon = Price.objects.get(product__name=camp.campaign_name.Addon_name,
                         currency=currency,
                         djstripe_owner_account=default_djstripe_owner,livemode=livemode)
     print(price_addon)
-    coupon = Coupon.objects.get(name='PAY-G-PAT')
+    try:
+        coupon = Coupon.objects.get(name=settings.CAMPAIGN)
+    except:
+        return None
     #invo = create_invoice_one_time(price_addon,cust,None,coupon.id)
     # plan = get_plan_name(user)
     # if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
@@ -962,6 +973,7 @@ def campaign_subscribe(user,camp):
     update_user_credits(user=user,cust=cust,price=price,
                 quants=camp.campaign_name.Addon_quantity,invoice=None,payment=None,pack=cp)
     return sub
+
 def check_campaign(user):
     camp = CampaignUsers.objects.filter(user=user)
     if camp.count() > 0:
