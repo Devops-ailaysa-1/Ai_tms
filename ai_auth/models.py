@@ -517,6 +517,7 @@ class AilaysaCampaigns(models.Model):
     subscription_name = models.CharField(max_length=100, blank=True, null=True)
     subscription_duration = models.CharField(choices=DURATION, max_length=100,blank=True, null=True)
     subscription_intervals = models.IntegerField(default=1)
+    subscription_credits=models.IntegerField()
     Addon_name = models.CharField(max_length=100, blank=True, null=True)
     Addon_quantity =models.IntegerField(default=1)
 
