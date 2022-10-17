@@ -26,6 +26,17 @@ def check_referred(user):
         ref_cred =0
     return ref_cred
 
+def check_campaign(user):
+    camp = models.CampaignUsers.objects.filter(user=user,subscribed=False)
+    if camp.count() == 1:
+        camp = camp.last()
+        camp.subscribed =True
+        camp.save()
+        return camp.campaign_name.subscription_credits
+    elif camp.count() > 1:
+        logging.error("more than one campaign found open")
+    else:
+        return None
 
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
     carry = 0
@@ -56,13 +67,19 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
 
     if pack.type=="Addon":
         expiry = None
-   
+
+    camp_credits= check_campaign(user)
+    if camp_credits:
+        buyed_credits = camp_credits
+    else:
+        buyed_credits = ((pack.credits*quants)+referral_credits)
+    
     kwarg = {
     'user':user,
     'stripe_cust_id':cust,
     'price_id':price.id,
-    'buyed_credits':(pack.credits*quants)+referral_credits,
-    'credits_left':(pack.credits*quants)+carry+referral_credits,
+    'buyed_credits':buyed_credits,
+    'credits_left':buyed_credits+carry,
     'expiry': expiry,
     'paymentintent':payment.id if payment else None,
     'invoice':invoice.id if invoice else None,
