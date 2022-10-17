@@ -195,21 +195,20 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             if task.job.project.pre_translate == True:
                 mt_only_check =  MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'mt_only')).last()
                 if mt_only_check:
-                    return task.document
+                    segments = Segment.objects.filter(text_unit__document=task.document)
+                    for seg in segments:
+                        if seg.target != '':
+                            return task.document
+                #     return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
-                print("Ins------------>",ins)
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 print("State----------------------->",state)
                 if state == 'PENDING':
-                    print("Inside Pending")
                     return {'msg':'Pre Translation Ongoing. Pls Wait','celery_id':ins.celery_task_id}
                 elif (not ins) or state == 'FAILURE':
-                    print("New or Failure")
                     cel_task = pre_translate_update.apply_async((task.id,),)
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
-                    print("success")
-                    print("Error-------->",ins.error_type)
                     if ins.error_type == "Insufficient Credits":
                         cel_task = pre_translate_update.apply_async((task.id,),)
                         return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
@@ -337,7 +336,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
                 document = self.create_document_for_task_if_not_exists(task)
                 doc = DocumentSerializerV2(document).data
-                MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
+                MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
                 return Response(doc, status=201)
             if ins.status == 1:
                 obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
@@ -345,7 +344,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
                     document = self.create_document_for_task_if_not_exists(task)
                     doc = DocumentSerializerV2(document).data
-                    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
+                    MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
                     return Response(doc, status=201)
                 else:
                     return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again",'celery_id':ins.celery_task_id}, status=401)
