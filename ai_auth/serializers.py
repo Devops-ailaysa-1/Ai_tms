@@ -6,7 +6,7 @@ from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-from ai_auth.models import (AiUser, BillingAddress,UserAttribute,
+from ai_auth.models import (AiUser, AilaysaCampaigns, BillingAddress,UserAttribute,
                             Professionalidentity,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference, UserTaxInfo,AiUserProfile,CarrierSupport,
                             VendorOnboarding,GeneralSupport,Team,HiredEditors,InternalMember,CampaignUsers)
@@ -18,6 +18,8 @@ from django.conf import settings
 from allauth.account.signals import password_changed
 UserModel = get_user_model()
 from .validators import file_size
+import logging
+from rest_framework.validators import UniqueValidator
 
 try:
     from django.utils.translation import gettext_lazy as _
@@ -27,11 +29,21 @@ import django.contrib.auth.password_validation as validators
 from django.core import exceptions
 from ai_auth.signals import update_billing_address2
 
+def is_campaign_exist(value):
+    try:
+        AilaysaCampaigns.objects.get(campaign_name=value)
+    except AilaysaCampaigns.DoesNotExist:
+        raise serializers.ValidationError('Invalid Input')
+
+# def subscribe_campaign_users(campaign,user):
+#     CampaignUsers.objects.create(user=user,campaign_name=campaign)
+#     pass
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     # email=serializers.EmailField()
     # fullname= serializers.CharField(required=True)
     # password = serializers.CharField(style={'input_type':'password'}, write_only=True,required= True)
-    campaign = serializers.CharField(required=False)
+    campaign = serializers.CharField(required=False,validators=[is_campaign_exist])
     source_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     target_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),many=False,required=False)
     cv_file = serializers.FileField(required=False,validators=[file_size,FileExtensionValidator(allowed_extensions=['txt','pdf','docx'])])
@@ -90,7 +102,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             VendorOnboardingInfo.objects.create(user=user,onboarded_as_vendor=True)
             VendorOnboarding.objects.create(name=user.fullname,email=user.email,cv_file=cv_file,status=1)
         if campaign:
-            CampaignUsers.objects.create(user=user,campaign_name=campaign)
+            ## users from campaign pages
+            #AilaysaCampaigns.objects.get(campaign_name=campaign)
+            print("campaign",campaign)
+            ai_camp = AilaysaCampaigns.objects.get(campaign_name=campaign)
+            CampaignUsers.objects.create(user=user,campaign_name=ai_camp)  
         return user
 
 

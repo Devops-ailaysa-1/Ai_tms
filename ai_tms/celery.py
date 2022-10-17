@@ -29,7 +29,7 @@ app.conf.beat_schedule = {
     'renew-test': {
         'task': 'ai_auth.tasks.sync_invoices_and_charges',
         'schedule': crontab(hour=12, minute=00),
-        'args': (25,),
+        'args': (30,),
     },
     # 'renew-test': {
     #     'task': 'ai_auth.tasks.renewal_list',
