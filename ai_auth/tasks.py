@@ -425,7 +425,7 @@ def pre_translate_update(task_id):
     from ai_workspace_okapi.api_views import MT_RawAndTM_View
 
     task = Task.objects.get(id=task_id)
-    MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=1,celery_task_id=pre_translate_update.request.id)
+    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id)
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
@@ -445,7 +445,7 @@ def pre_translate_update(task_id):
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 mt_segments.append(i)
             else:
-                MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
+                MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
                 break
     #             i.target= ""
     #             i.temp_target = ''

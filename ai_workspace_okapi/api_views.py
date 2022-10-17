@@ -193,20 +193,25 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
-                ins = MTonlytaskCeleryStatus.objects.filter(task_id=task.id).last()
+                ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 print("Ins------------>",ins)
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 print("State----------------------->",state)
                 if state == 'PENDING':
+                    print("Inside Pending")
                     return {'msg':'Pre Translation Ongoing. Pls Wait','celery_id':ins.celery_task_id}
                 elif (not ins) or state == 'FAILURE':
+                    print("New or Failure")
                     cel_task = pre_translate_update.apply_async((task.id,),)
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
+                    print("success")
+                    print("Error-------->",ins.error_type)
                     if ins.error_type == "Insufficient Credits":
                         cel_task = pre_translate_update.apply_async((task.id,),)
                         return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
-                    else:return task.document
+                    else:
+                        return task.document
         # If document already exists for a task
         # if task.document != None:
         #     print("<--------------------------Document Exists--------------------->")
