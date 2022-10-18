@@ -2549,6 +2549,7 @@ def express_project_detail(request,project_id):
 
 
 def voice_project_progress(pr):
+    from ai_workspace_okapi.models import Document, Segment
     count=0
     source_tasks = pr.get_source_only_tasks
     if source_tasks:
