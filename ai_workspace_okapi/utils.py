@@ -171,7 +171,8 @@ def download_file(file_path):
     response = HttpResponse(fl, content_type=mime_type)
     encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
                                           encoding='utf-8')
-    response['Content-Disposition'] = 'attachment;filename=%s' % encoded_filename
+    response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+        .format(encoded_filename)
     response['X-Suggested-Filename'] = encoded_filename
     #response['Content-Disposition'] = "attachment; filename=%s" % filename
     response['Access-Control-Expose-Headers'] = 'Content-Disposition'
