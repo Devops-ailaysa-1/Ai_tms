@@ -48,6 +48,7 @@ class SegmentSerializer(serializers.ModelSerializer):
     source = serializers.CharField(trim_whitespace=False, allow_blank=True)
     random_tag_ids = serializers.CharField(allow_blank=True, required=False)
 
+
     class Meta:
         model = Segment
         fields = (
@@ -81,6 +82,7 @@ class SegmentSerializer(serializers.ModelSerializer):
             "is_merge_start": {"read_only": True},
             # "id",
         }
+
 
     def to_internal_value(self, data):
         # print(self)
@@ -291,8 +293,12 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     if initial_credit > consumable_credits:
                         try:
                             mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
-                            seg['temp_target'] = mt
-                            seg['target'] = mt
+                            if str(target_tags) !='':
+                                seg['temp_target'] = mt + str(target_tags)
+                                seg['target'] = mt + str(target_tags)
+                            else:
+                                seg['temp_target'] = mt
+                                seg['target'] = mt
                             status_id = TranslationStatus.objects.get(status_id=104).id
                             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                         except:

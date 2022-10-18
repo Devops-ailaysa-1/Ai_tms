@@ -274,7 +274,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
             )
             #target = "" if seg["target"] is None else seg["target"]
             if target_get == False:
-                target = ""
+                seg['target'] = ""
                 seg['temp_target'] = ""
                 status_id = None
             else:
@@ -282,15 +282,19 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
                 if initial_credit > consumable_credits:
                     mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
-                    seg['temp_target'] = mt
-                    seg['target'] = mt
+                    if str(target_tags) != '':
+                        seg['temp_target'] = mt + str(target_tags)
+                        seg['target'] = mt + str(target)
+                    else:
+                        seg['temp_target'] = mt
+                        seg['target'] = mt
                     status_id = TranslationStatus.objects.get(status_id=104).id
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 else:
-                    target=""
+                    seg['target']=""
                     seg['temp_target']=""
                     status_id=None
-            seg_params.extend([str(seg["source"]), target, seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
+            seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                                str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
                                str(text_unit["okapi_ref_translation_unit_id"]), \
                                timezone.now(), status_id, text_unit_id, str(seg["random_tag_ids"])])
@@ -437,8 +441,13 @@ def pre_translate_update(task_id):
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, i)
             if initial_credit > consumable_credits:
-                i.target = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
-                i.temp_target = i.target
+                mt = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
+                if i.target_tags != '':
+                    i.target = mt + i.target_tags
+                    i.temp_target = mt + i.target_tags
+                else:
+                    i.target = mt
+                    i.temp_target = mt
                 i.status_id = TranslationStatus.objects.get(status_id=104).id
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 mt_segments.append(i)

@@ -197,6 +197,7 @@ class Project(models.Model):
                     return "Completed"
                 else:
                     return "In Progress"
+
         if self.project_type_id == 5:
             count=0
             for i in self.get_tasks:
@@ -275,8 +276,10 @@ class Project(models.Model):
 
     @property
     def get_tasks(self):
-        return [task for job in self.project_jobs_set.all() for task \
+        task_list =  [task for job in self.project_jobs_set.all() for task \
             in job.job_tasks_set.all()]
+        return sorted(task_list, key=lambda x: x.id)
+
     @property
     def get_source_only_tasks(self):
         tasks=[]

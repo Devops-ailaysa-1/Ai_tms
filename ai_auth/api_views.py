@@ -65,7 +65,7 @@ from ai_auth.utils import get_plan_name
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
 from ai_vendor.models import VendorsInfo,VendorLanguagePair
 from django.db import transaction
-
+from django.contrib.sites.shortcuts import get_current_site
 #for soc
 from django.test.client import RequestFactory
 from django.test import Client
@@ -82,6 +82,7 @@ from django.shortcuts import redirect
 import json
 from django.contrib import messages
 from ai_auth.Aiwebhooks import update_user_credits
+from allauth.account.signals import email_confirmed
 
 
 try:
@@ -617,7 +618,7 @@ def create_addon_paymentintent(customer,currency):
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
         api_key = settings.STRIPE_TEST_SECRET_KEY
-    
+
     stripe.api_key = api_key
 
     pay_intent = stripe.PaymentIntent.create(
@@ -940,13 +941,15 @@ def campaign_subscribe(user,camp):
     price = Plan.objects.get(product__name=camp.campaign_name.subscription_name,
                         interval=camp.campaign_name.subscription_duration,currency=currency,
                         djstripe_owner_account=default_djstripe_owner,livemode=livemode)
-    
+
     #if plan == 'new':
     if user.is_vendor:
         sub = Subscription.objects.filter(customer=customer,djstripe_owner_account=default_djstripe_owner).last()
-    else:   
+    else:
         sub=subscribe(price=price,customer=cust)
         if sub:
+            camp.subscribed =True
+            camp.save()
             sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
         else:
             print("error in creating subscription ",user.uid)
@@ -968,9 +971,6 @@ def campaign_subscribe(user,camp):
     cp = CreditPack.objects.get(product=price_addon.product)
     update_user_credits(user=user,cust=cust,price=price,
                 quants=camp.campaign_name.Addon_quantity,invoice=None,payment=None,pack=cp)
-    if sub:
-        camp.subscribed =True
-        camp.save()
     return sub
 
 def check_campaign(user):
@@ -978,7 +978,7 @@ def check_campaign(user):
     if camp.count() > 0:
         if camp.last().subscribed == False:
             # camp.name.subscription_name
-            return campaign_subscribe(user,camp.last()) 
+            return campaign_subscribe(user,camp.last())
         else:
             logging.warning(f"user already registed in campaign :{user.uid}")
             return None
@@ -1852,6 +1852,8 @@ def vendor_form_filling_status(request):
         if user.is_vendor == True:
             res = vendor_onboard_check(email,user)
             return res
+        else:
+            return Response(status=204)
     except:
         res = vendor_onboard_check(email,None)
         return res
@@ -2225,6 +2227,14 @@ class UserDetailView(viewsets.ViewSet):
                         if queryset:
                             user_obj.currency_based_on_country_id = queryset.first().currency_id
                         user_obj.save()
+                        current_site = get_current_site(request)
+                        auth_forms.send_welcome_mail(current_site,user_obj)
+                        email_confirmed.send(
+                        sender=user_obj.__class__,
+                        request=request,
+                        email_address=user_obj.email,
+                        user=user_obj,
+                        )
                     else:
                         logging.error(f"user_country_already_updated : {user_obj.uid}")
                         raise ValueError
