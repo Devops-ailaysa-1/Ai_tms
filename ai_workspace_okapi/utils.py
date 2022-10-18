@@ -1,6 +1,6 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
 from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap
-import os, mimetypes, requests, uuid, json, xlwt, boto3
+import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
