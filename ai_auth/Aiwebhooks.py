@@ -13,6 +13,7 @@ from django.db import transaction
 import logging
 import calendar
 
+logger = logging.getLogger('django')
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
@@ -34,7 +35,7 @@ def check_campaign(user):
         camp.save()
         return camp.campaign_name.subscription_credits
     elif camp.count() > 1:
-        logging.error("more than one campaign found open")
+        logger.error("more than one campaign found open")
     else:
         return None
 
@@ -557,4 +558,4 @@ def renew_user_credits_yearly(subscription):
             }
             us = models.UserCredits.objects.create(**kwarg)
     except Exception as e:
-        logging.error('Failed to do something: ' + str(e))
+        logger.error('Failed to do something: ' + str(e))

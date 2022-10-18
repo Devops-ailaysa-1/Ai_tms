@@ -83,7 +83,7 @@ import json
 from django.contrib import messages
 from ai_auth.Aiwebhooks import update_user_credits
 from allauth.account.signals import email_confirmed
-
+logger = logging.getLogger('django')
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -980,7 +980,7 @@ def check_campaign(user):
             # camp.name.subscription_name
             return campaign_subscribe(user,camp.last()) 
         else:
-            logging.warning(f"user already registed in campaign :{user.uid}")
+            logger.warning(f"user already registed in campaign :{user.uid}")
             return None
     else:
         return None
@@ -2003,7 +2003,7 @@ def ai_social_login(request):
 
     soc_state = SocStates.objects.create(state=state,data=json.dumps(state_data))
     if soc_state == None:
-        logging.warning(f"state not created {state}")
+        logger.warning(f"state not created {state}")
 
     # VendorOnboardingInfo.objects.get_or_create(user=user,onboarded_as_vendor=True)
     # req.close()
@@ -2028,10 +2028,10 @@ def load_state(state_id,key=None):
         soc_state=SocStates.objects.get(state=state_id)
         user_state = json.loads(soc_state.data)
     except SocStates.DoesNotExist:
-        logging.error(f"invalid_state : {state_id}")
+        logger.error(f"invalid_state : {state_id}")
         return None
     except AttributeError:
-        logging.error(f"key error user_state_not_found : {state_id}")
+        logger.error(f"key error user_state_not_found : {state_id}")
         return None
     return user_state
 
@@ -2042,7 +2042,7 @@ def ai_social_callback(request):
     #     ses_id= request.COOKIES.get('sessionid')
     #     session=Session.objects.get(session_key=ses_id)
     # except BaseException as e:
-    #     logging.warning("session not found ",str(e))
+    #     logger.warning("session not found ",str(e))
     #     return JsonResponse({"msg": "session expired or not found"},status=440)
     # #session=Session.objects.get(session_key="9helhig4y4izzshs93wtzj7ow9yjydi5")
 
@@ -2106,7 +2106,7 @@ def ai_social_callback(request):
     try:
         response = GoogleLogin.as_view()(request=request._request).data
     except BaseException as e:
-        logging.error("on social login",str(e))
+        logger.error("on social login",str(e))
         return JsonResponse({"error":str(e)},status=400)
 
     required=[]
@@ -2114,19 +2114,19 @@ def ai_social_callback(request):
         response.get('access_token')
         resp_data =response
     except ValueError as e:
-        logging.info("on social login",str(e))
+        logger.info("on social login",str(e))
         return JsonResponse({"error":f"{str(e)}"},status=400)
 
     process = user_state.get('socialaccount_process',None)
 
     try:
         if response.get('user').get('country')!=None:
-            logging.info(f"user-{response.get('user').get('pk')} already registerd")
+            logger.info(f"user-{response.get('user').get('pk')} already registerd")
             process='login'
         else:
             process='signup'
     except AttributeError as e:
-        logging.warning(f"user key not found in response {str(e)}")
+        logger.warning(f"user key not found in response {str(e)}")
         return JsonResponse({"error":"user_already_exist"},status=409)
 
     if process == 'signup':
@@ -2152,7 +2152,7 @@ def ai_social_callback(request):
             temp_price=TempPricingPreference.objects.create(product_id=user_product,
                                             price_id=user_price,email=user_email)
         except BaseException as e:
-            logging.error(f"unable to create temp pricing data for {user_email} :  {str(e)}")
+            logger.error(f"unable to create temp pricing data for {user_email} :  {str(e)}")
 
 
 
@@ -2234,7 +2234,7 @@ class UserDetailView(viewsets.ViewSet):
                         user=user_obj,
                         )
                     else:
-                        logging.error(f"user_country_already_updated : {user_obj.uid}")
+                        logger.error(f"user_country_already_updated : {user_obj.uid}")
                         raise ValueError
 
                 if source_lang and target_lang:

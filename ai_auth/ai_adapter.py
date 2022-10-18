@@ -8,6 +8,7 @@ from django.utils.encoding import force_str
 from allauth.account import app_settings
 import logging
 from ai_auth.models import AiUser
+logger = logging.getLogger('django')
 
 class MyAccountAdapter(DefaultAccountAdapter):
 
@@ -66,6 +67,6 @@ class SocialAdapter(DefaultSocialAccountAdapter):
             user.fullname=name
             user.save()
         except AiUser.DoesNotExist:
-            logging.warning("User not found:",user.email)
+            logger.warning("User not found:",user.email)
         except AttributeError:
-            logging.warning("User fullname not found:",user.email)
+            logger.warning("User fullname not found:",user.email)
