@@ -109,7 +109,7 @@ def task_assign_detail_mail(Receiver,assignment_id):
             out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
         file_detail.extend(out)
     context = {'name':Receiver.fullname,'project':ins.task_assign.task.job.project,'job':ins.task_assign.task.job.source_target_pair_names, 'rate':str(unit_price_float_format(ins.mtpe_rate))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
-    'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y')}
+    'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y') if ins.deadline else None}
     msg_html = render_to_string("assign_detail_mail.html", context)
     send_mail(
         "Regarding Assigned Task Detail Info",None,

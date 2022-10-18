@@ -2547,6 +2547,54 @@ def express_project_detail(request,project_id):
                         'mt_engine':mt_engine_id,'project_name':project_name,'team':team,\
                         'source_text':content})
 
+
+def voice_project_progress(pr):
+    count=0
+    source_tasks = pr.get_source_only_tasks
+    if source_tasks:
+        if pr.voice_proj_detail.project_type_sub_category_id==1:
+            for i in source_tasks:
+                if TaskTranscriptDetails.objects.filter(task_id = i).exists():
+                    if TaskTranscriptDetails.objects.filter(task_id = i).last().transcripted_text !=None:
+                        count+=1
+        elif pr.voice_proj_detail.project_type_sub_category_id==2:
+            for i in source_tasks:
+                if TaskTranscriptDetails.objects.filter(task_id = i).exists():
+                    if TaskTranscriptDetails.objects.filter(task_id = i).last().source_audio_file !=None:
+                        count+=1
+    if pr.get_mtpe_tasks:
+        docs = Document.objects.filter(job__project_id=pr.id).all()
+        print(docs)
+        if not docs:
+            count+=0
+        if docs.count() == len(pr.get_mtpe_tasks):
+            total_seg_count = 0
+            confirm_count  = 0
+            confirm_list = [102, 104, 106, 110, 107]
+
+            segs = Segment.objects.filter(text_unit__document__job__project_id=pr.id)
+            for seg in segs:
+                if seg.is_merged == True and seg.is_merge_start is None:
+                    continue
+                else:
+                     total_seg_count += 1
+
+                     seg_new = seg.get_active_object()
+                     if seg_new.status_id in confirm_list:
+                        confirm_count += 1
+
+            if total_seg_count == confirm_count:
+                count+=len(pr.get_mtpe_tasks)
+
+    #print("count------------>",count)
+    if count == 0:
+        return "Yet to Start"
+    elif count == len(pr.get_tasks):
+        return "Completed"
+    elif count != len(pr.get_tasks):
+        return "In Progress"
+
+
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 # def get_vendor_rates(request):

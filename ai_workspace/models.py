@@ -186,6 +186,7 @@ class Project(models.Model):
 
     @property
     def progress(self):
+        from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
             if len(terms) == 0:
@@ -198,7 +199,7 @@ class Project(models.Model):
                 else:
                     return "In Progress"
 
-        if self.project_type_id == 5:
+        elif self.project_type_id == 5:
             count=0
             for i in self.get_tasks:
                 obj = ExpressProjectDetail.objects.filter(task=i)
@@ -211,6 +212,10 @@ class Project(models.Model):
                 return "Completed"
             else:
                 return "In Progress"
+
+        elif self.project_type_id == 4:
+            rr = voice_project_progress(self)
+            return rr
 
         else:
             docs = Document.objects.filter(job__project_id=self.id).all()
