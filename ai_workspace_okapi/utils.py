@@ -169,7 +169,11 @@ def download_file(file_path):
     fl = open(file_path, 'rb')
     mime_type, _ = mimetypes.guess_type(file_path)
     response = HttpResponse(fl, content_type=mime_type)
-    response['Content-Disposition'] = "attachment; filename=%s" % filename
+    encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
+                                          encoding='utf-8')
+    response['Content-Disposition'] = 'attachment;filename=%s' % encoded_filename
+    response['X-Suggested-Filename'] = encoded_filename
+    #response['Content-Disposition'] = "attachment; filename=%s" % filename
     response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
 
