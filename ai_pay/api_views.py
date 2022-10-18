@@ -2,7 +2,7 @@ from asyncio.log import logger
 import decimal
 from locale import currency
 from ai_auth.models import AiUser, BillingAddress
-from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment
+from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment, StripeSupportedCountries
 from ai_pay.signals import update_po_status
 from ai_staff.models import IndianStates
 from ai_workspace.models import TaskAssignInfo
@@ -77,6 +77,12 @@ def conn_account_create(user):
         #     link_type = "account_update"
         pass
     else:
+        try:
+            StripeSupportedCountries.objects.get(country=user.country)
+        except StripeSupportedCountries.DoesNotExist:
+            logging.warning("user connect country not found",user.uid)
+            raise ValueError("user_country_not_supported")
+        
         acc=stripe.Account.create(
             type="standard",
             country=user.country.sortname,
@@ -104,7 +110,10 @@ def conn_account_create(user):
 class AiConnectOnboarding(viewsets.ViewSet):
     #permission_classes = [IsAuthenticated]
     def create(self,request):
-        acc_link = conn_account_create(request.user)[1]
+        try:
+            acc_link = conn_account_create(request.user)[1]
+        except ValueError as e:
+            return Response({'msg':str(e)},status=400)
         if acc_link:
             return Response({'msg':'Connect Account Link Generated','url':acc_link.url,'expiry':acc_link.expires_at},status=200)
         else:
@@ -413,7 +422,7 @@ def generate_client_po(task_assign_info):
             else:
                 tsk_accepted = False
 
-            if instance.task_assign.task.job.target_language == None and instance.task_assign.task.job.project.project_type.id==3:
+            if instance.task_assign.task.job.target_language == None and instance.task_assign.task.job.project.project_type.id==4:
                 task_tar_lang = instance.task_assign.task.job.source_language
             else:
                 task_tar_lang = instance.task_assign.task.job.target_language
