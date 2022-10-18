@@ -29,7 +29,7 @@ from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.db import transaction
 from notifications.signals import notify
 
-
+logger = logging.getLogger('django')
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -1372,7 +1372,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 					if not po:
 						raise ValueError("new po not generated")
 				except BaseException as e:
-					logging.error(f"po creation failed with for task_assign->{instance.id} ,error :{str(e)}")
+					logger.error(f"po creation failed with for task_assign->{instance.id} ,error :{str(e)}")
 
 		if 'files' in data:
 			[Instructionfiles.objects.create(**instruction_file,task_assign_info = instance.task_assign_info) for instruction_file in data['files']]

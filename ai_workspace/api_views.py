@@ -80,7 +80,7 @@ from delta import html
 from glob import glob
 from pydub import AudioSegment
 from filesplit.split import Split
-
+logger = logging.getLogger('django')
 
 from ai_auth.tasks import write_doc_json_file
 
@@ -1235,7 +1235,7 @@ class ProjectAnalysisProperty(APIView):
                         else:
                             print("error-->", task_detail_serializer.errors)
                     else:
-                        logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                        logger.debug(msg=f"error raised while process the document, the task id is {task.id}")
                         raise  ValueError("Sorry! Something went wrong with file processing.")
                 except:
                     print("No entry")
@@ -1444,7 +1444,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             try:
                 po_modify(obj.id,['unassigned',])
             except BaseException as e:
-                logging.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
+                logger.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user
