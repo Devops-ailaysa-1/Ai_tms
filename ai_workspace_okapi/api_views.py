@@ -1,19 +1,14 @@
-from datetime import datetime
-from .serializers import (DocumentSerializer, SegmentSerializer, DocumentSerializerV2,
-                          SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
-                          TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
-                          TM_FetchSerializer,VerbSerializer)
-from ai_workspace.serializers import TaskCreditStatusSerializer, TaskSerializer,TaskTranscriptDetailSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment
-from rest_framework import viewsets, authentication
+from .serializers import (DocumentSerializer, DocumentSerializerV3,
+                          TranslationStatusSerializer, CommentSerializer,
+                          TM_FetchSerializer, VerbSerializer)
+from ai_workspace.serializers import TaskCreditStatusSerializer, TaskTranscriptDetailSerializer
 from rest_framework import views
-import json,jwt,logging,os,re,urllib.parse,xlsxwriter
+import json, logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
 import requests
-from ai_auth.tasks import write_segments_to_db,google_long_text_file_process_cel,pre_translate_update
+from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
 from django.contrib.auth import settings
-from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
@@ -24,20 +19,17 @@ from rest_framework.decorators import api_view
 from rest_framework.exceptions import APIException
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import JSONParser
 from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
-import nltk,docx2txt
-from .serializers import PentmUpdateSerializer
 from wiktionaryparser import WiktionaryParser
 from ai_workspace.utils import get_consumable_credits_for_text_to_speech
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.utils import get_plan_name
 from ai_staff.models import SpellcheckerLanguages
 from ai_workspace.api_views import UpdateTaskCreditStatus
-from ai_workspace.models import File,Project
+from ai_workspace.models import Project
 from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment
@@ -47,13 +39,10 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer)
-from django.urls import reverse
 from json import JSONDecodeError
 from .utils import SpacesService
-from .utils import download_file, bl_title_format, bl_cell_format
 from google.cloud import translate_v2 as translate
-from rest_framework import serializers
-import os, io, zipfile, requests, time
+import os, io, requests, time
 from django.http import HttpResponse
 from rest_framework.response import Response
 # from controller.models import DownloadController
@@ -62,9 +51,6 @@ from .utils import SpacesService,text_to_speech
 from django.contrib.auth import settings
 from ai_auth.utils import get_plan_name
 from .utils import download_file, bl_title_format, bl_cell_format,get_res_path
-from os.path import exists
-from ai_auth.tasks import write_segments_to_db
-from django.db import transaction
 from rest_framework.decorators import permission_classes
 from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
@@ -188,7 +174,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
-        from .utils import get_translation
         from ai_workspace.models import MTonlytaskCeleryStatus
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
@@ -867,7 +852,6 @@ class DocumentToFile(views.APIView):
 
     #For Downloading Audio File################only for voice project###########Need to work
     def download_audio_file(self,res,document_user,document_id,voice_gender,language_locale,voice_name):
-        from ai_workspace.api_views import google_long_text_file_process
         from ai_workspace.models import MTonlytaskCeleryStatus
         filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
         temp_name = filename + '.txt'

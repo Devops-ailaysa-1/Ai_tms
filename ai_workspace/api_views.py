@@ -1,6 +1,6 @@
 from ai_pay.api_views import po_modify
 import django_filters, mutagen
-import shutil,docx2txt,regex,zipfile
+import docx2txt, zipfile
 from ai_workspace import forms as ws_forms
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -12,10 +12,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from ai_vendor.models import VendorLanguagePair
 from ai_workspace_okapi.utils import download_file, get_translation
-from ai_auth.authentication import IsCustomer
-from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_glex.serializers import GlossarySetupSerializer,GlossaryFileSerializer,GlossarySerializer
-from ai_auth.models import AiUser, UserCredits, Team, InternalMember
+from ai_auth.models import AiUser, UserCredits
 from rest_framework import viewsets, status
 from .utils import DjRestUtils
 from ai_auth.models import HiredEditors
@@ -25,31 +23,27 @@ from indicnlp.tokenize.sentence_tokenize import sentence_split
 from indicnlp.tokenize.indic_tokenize import trivial_tokenize
 from ai_workspace_okapi.utils import download_file,text_to_speech,text_to_speech_long
 from .utils import get_consumable_credits_for_text_to_speech,get_consumable_credits_for_speech_to_text
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
-    ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
-    ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
-    TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
-    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer,TaskTranscriptDetailSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
-                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,ExpressProjectDetailSerializer)
-import copy, os, mimetypes, logging
+from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+                          ProjectSerializer, JobSerializer, FileSerializer, \
+                          ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
+                          TaskSerializer, FileSerializerv2, TmxFileSerializer, \
+                          PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
+                          VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer, \
+                          TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
+                          GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer, ExpressProjectDetailSerializer)
+import copy, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
+from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
     TaskAssignInfo,TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, ExpressProjectDetail
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Task, TbxFile, Instructionfiles
-from django.http import JsonResponse
+from .models import TbxFile, Instructionfiles
 from .models import Task,Tbxfiles
-from lxml import etree as ET
 from django.db import transaction
 from ai_marketplace.models import ChatMessage
-from django.http import JsonResponse,HttpResponse
 import requests, json, os,mimetypes
 from ai_workspace_okapi.models import Document
 from rest_framework.decorators import api_view
@@ -58,7 +52,6 @@ from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from django.core.files import File as DJFile
 from django.http import JsonResponse
-from tablib import Dataset
 import shutil,nltk
 from datetime import datetime
 from django.db.models import Q, Sum
@@ -496,34 +489,34 @@ class TmxFilesOfProject(APIView):
             data.append(res.text)
         return JsonResponse({"results":data}, safe=False)
 
-class ProjectReportAnalysis(APIView):
-    def get_queryset(self, project_id):
-        project_qs = Project.objects.all()
-        project = get_object_or_404(project_qs, id=project_id, ai_user=self.request.user)
-        files = project.project_files_set.all()
-        return files
-
-    def post(self, request, project_id):
-        data = dict(
-            pentm_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/.pentm/",
-            report_output_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/tt/report.html",
-            srx_file_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/okapi_resources/okapi_default_icu4j.srx"
-        )
-        files = self.get_queryset(project_id)
-        batches_data =  FileSerializerv3(files, many=True).data
-        data = {
-            **data,
-            **dict(batches=batches_data)
-        }
-        print("data---->", data)
-        res = requests.post(
-            f"http://{spring_host}:8080/project/report-analysis",
-            data = {"report_params": json.dumps(data)}
-        )
-        if res.status_code in [200, 201]:
-            return JsonResponse({"msg": res.text}, safe=False)
-        else:
-            return JsonResponse({"msg": "something went to wrong"}, safe=False)
+# class ProjectReportAnalysis(APIView):
+#     def get_queryset(self, project_id):
+#         project_qs = Project.objects.all()
+#         project = get_object_or_404(project_qs, id=project_id, ai_user=self.request.user)
+#         files = project.project_files_set.all()
+#         return files
+#
+#     def post(self, request, project_id):
+#         data = dict(
+#             pentm_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/.pentm/",
+#             report_output_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/tt/report.html",
+#             srx_file_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/okapi_resources/okapi_default_icu4j.srx"
+#         )
+#         files = self.get_queryset(project_id)
+#         batches_data =  FileSerializerv3(files, many=True).data
+#         data = {
+#             **data,
+#             **dict(batches=batches_data)
+#         }
+#         print("data---->", data)
+#         res = requests.post(
+#             f"http://{spring_host}:8080/project/report-analysis",
+#             data = {"report_params": json.dumps(data)}
+#         )
+#         if res.status_code in [200, 201]:
+#             return JsonResponse({"msg": res.text}, safe=False)
+#         else:
+#             return JsonResponse({"msg": "something went to wrong"}, safe=False)
 
 class TmxFileView(viewsets.ViewSet):
 
@@ -2185,7 +2178,6 @@ def get_media_link(request,task_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
-    from django_celery_results.models import TaskResult
     from ai_workspace.models import MTonlytaskCeleryStatus
     task = request.GET.get('task')
     project  = request.GET.get('project')

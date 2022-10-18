@@ -1,7 +1,8 @@
-from django.urls import path, include
-from . import api_views, views
-from rest_framework.urlpatterns import format_suffix_patterns
+from django.urls import path
 from rest_framework import routers
+
+from . import api_views, views
+
 app_name = "ws_okapi"
 
 router = routers.DefaultRouter()
