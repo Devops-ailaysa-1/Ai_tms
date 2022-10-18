@@ -33,7 +33,7 @@ from django.db.models import Q
 from django.conf import settings
 import time
 from django.http import Http404
-
+from ai_auth.api_views import resync_instances
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -85,6 +85,7 @@ def conn_account_create(user):
             #business_type = 'individual',
             #settings={"payouts": {"schedule": {"delay_days": 31}}},
             )
+        Account.sync_from_stripe_data(acc, api_key=get_stripe_key())
     
     # print(acc_create)
     if acc:
@@ -214,7 +215,8 @@ def webhook_wait(invo_id):
     return True
 
 def create_invoice_conn_direct(cust,vendor,currency):  
-    stripe.api_key=get_stripe_key()
+    api_key = get_stripe_key()
+    stripe.api_key=api_key
     #percent=3
     #app_fee_amount=percent/100*amount
     # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
@@ -226,15 +228,16 @@ def create_invoice_conn_direct(cust,vendor,currency):
         stripe_account=vendor.id,
         currency=currency,
         pending_invoice_items_behavior='exclude')
-
-    # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
-    #         customer=cust.id,amount =amount,currency=currency)
-
-    if webhook_wait(invo.id):
+    if invo:
+        Invoice.sync_from_stripe_data(invo, api_key=api_key)
         logging.info(f"invoice created : {invo.id}")
     else:
         logging.error(f"invoice creation failed: {invo.id}")  
         return None
+
+    # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
+    #         customer=cust.id,amount =amount,currency=currency)
+
     return invo.id
 
 def stripe_invoice_finalize(invoice_id,vendor) -> bool:
@@ -363,7 +366,8 @@ def generate_invoice_offline(po_li,gst=None,user=None):
         except:
             logging.error("Invoice Generration Failed")
             return None
-     
+
+
 
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
@@ -401,7 +405,7 @@ def generate_client_po(task_assign_info):
                     tot_amount = 0
             else:
                 # rasie error on invalid price should be rised
-                logging.error("Invlaid unit type for Po Assignment:{0}".format(instance.assignment_id))
+                logging.error("Invalid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
             
             if instance.task_ven_status == 'task_accepted':
@@ -409,9 +413,15 @@ def generate_client_po(task_assign_info):
             else:
                 tsk_accepted = False
 
+            if instance.task_assign.task.job.target_language == None and instance.task_assign.task.job.project.project_type.id==3:
+                task_tar_lang = instance.task_assign.task.job.source_language
+            else:
+                task_tar_lang = instance.task_assign.task.job.target_language
+
+
             insert={'task_id':instance.task_assign.task.id,'po':po,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
                     'word_count':instance.total_word_count,'char_count':instance.task_assign.task.task_char_count,'unit_price':instance.mtpe_rate,'tsk_accepted':tsk_accepted,
-                    'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':instance.task_assign.task.job.target_language,'total_amount':tot_amount}
+                    'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':task_tar_lang,'total_amount':tot_amount}
             # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
             # print("po_task",po_task)
@@ -539,7 +549,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
             try:
                 cust =Customer.objects.get(id=cust_id,djstripe_owner_account=vendor)
             except Customer.DoesNotExist:
-                time.sleep(1)
+                resync_instances(user.djstripe_customers.all())
                 cust =Customer.objects.get(id=cust_id,djstripe_owner_account=vendor)
         invo_id = create_invoice_conn_direct(cust,vendor,currency)
         for po in pos:

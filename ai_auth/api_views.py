@@ -2284,3 +2284,23 @@ def resync_instances(queryset):
             print(f"Sync failed: {instance} error :{error}")
         except stripe.error.StripeErrorWithParamCode:
             print(f"Sync failed: {instance}")
+
+def stripe_resync_instance(instance):
+## cloned from djstripe.admin.views removed queryset
+    api_key = instance.default_api_key
+    try:
+        if instance.djstripe_owner_account:
+            stripe_data = instance.api_retrieve(
+                stripe_account=instance.djstripe_owner_account.id,
+                api_key=api_key,
+            )
+        else:
+            stripe_data = instance.api_retrieve()
+        instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
+        print(f"Successfully Synced: {instance}")
+    except stripe.error.PermissionError as error:
+        print(error)
+    except stripe.error.InvalidRequestError as error:
+        print(f"Sync failed: {instance} error :{error}")
+    except stripe.error.StripeErrorWithParamCode:
+        print(f"Sync failed: {instance}")
