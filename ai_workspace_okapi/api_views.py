@@ -201,7 +201,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 #     return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-                print("State----------------------->",state)
                 if state == 'PENDING':
                     return {'msg':'Pre Translation Ongoing. Pls Wait','celery_id':ins.celery_task_id}
                 elif (not ins) or state == 'FAILURE':
@@ -282,7 +281,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         task = self.get_object(task_id=task_id)
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
-            print("Ins--------->",ins,ins.status)
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
             if state == 'PENDING':
                 if ins.status == 1:
@@ -320,7 +318,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 return Response(doc, status=201)
         else:
             document = self.create_document_for_task_if_not_exists(task)
-            print("Doc--------->",document)
             try:
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
@@ -860,7 +857,6 @@ class DocumentToFile(views.APIView):
         text_file = open(temp_name, "r")
         data = text_file.read()
         text_file.close()
-        print("Length of file------------------------>",len(data))
         consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
         initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
         if initial_credit > consumable_credits:
@@ -948,20 +944,13 @@ class DocumentToFile(views.APIView):
         segment_count = Segment.objects.filter(text_unit__document=document_id).count()
         if Document.objects.get(id=document_id).total_segment_count != segment_count:
             return JsonResponse({"msg": "File under process. Please wait a little while. \
-                    Hit refresh and try again"}, status=401)
+                    Hit refresh and try again"}, status=400)
 
-        # print("Request auth type ----> ", type(request.auth))
-
-        #token = str(request.auth)
-        #token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
         voice_name = request.GET.get("voice_name",None)
         language_locale = request.GET.get("locale", None)
-        #payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
-        #user_id_payload = payload.get("user_id", 0)
-        #request_user = AiUser.objects.get(id=user_id_payload)
-        # team_members = doc_user.get_team_members if doc_user.get_team_members else []
+
         document_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
         try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
         except:managers = []
