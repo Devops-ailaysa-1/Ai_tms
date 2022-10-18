@@ -1,4 +1,3 @@
-from asyncio.log import logger
 import decimal
 from locale import currency
 from ai_auth.models import AiUser, BillingAddress
@@ -34,6 +33,7 @@ from django.conf import settings
 import time
 from django.http import Http404
 from ai_auth.api_views import resync_instances
+logger = logging.getLogger('django')
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -80,7 +80,7 @@ def conn_account_create(user):
         try:
             StripeSupportedCountries.objects.get(country=user.country)
         except StripeSupportedCountries.DoesNotExist:
-            logging.warning("user connect country not found",user.uid)
+            logger.warning("user connect country not found",user.uid)
             raise ValueError("user_country_not_supported")
         
         acc=stripe.Account.create(
@@ -103,7 +103,7 @@ def conn_account_create(user):
             )
         return True,acc_link
     else:
-        logging.error("Account_creation_failed for uid:",user.uid)
+        logger.error("Account_creation_failed for uid:",user.uid)
         return False,None
 
 
@@ -178,7 +178,7 @@ def void_stripe_invoice(vendor,id):
         sid=id,
         )   
     except BaseException as e:
-        logging.error(f"invoice voiding failed: {id}")
+        logger.error(f"invoice voiding failed: {id}")
         return False
     return True
 
@@ -239,9 +239,9 @@ def create_invoice_conn_direct(cust,vendor,currency):
         pending_invoice_items_behavior='exclude')
     if invo:
         Invoice.sync_from_stripe_data(invo, api_key=api_key)
-        logging.info(f"invoice created : {invo.id}")
+        logger.info(f"invoice created : {invo.id}")
     else:
-        logging.error(f"invoice creation failed: {invo.id}")  
+        logger.error(f"invoice creation failed: {invo.id}")  
         return None
 
     # invoice_it= stripe.InvoiceItem.create( # You can create an invoice item after the invoice
@@ -254,7 +254,7 @@ def stripe_invoice_finalize(invoice_id,vendor) -> bool:
         try:
             res=stripe.Invoice.finalize_invoice(invoice_id,stripe_account=vendor.id)
         except BaseException as e:
-            logging.error(f"invoice finalize failed - {invoice_id} :{str(e)}")
+            logger.error(f"invoice finalize failed - {invoice_id} :{str(e)}")
             return False
         return True
 
@@ -352,7 +352,7 @@ def generate_invoice_offline(po_li,gst=None,user=None):
     res2 = pos.values('seller_id').annotate(dcount=Count('seller_id')).order_by().count()
     res3 = pos.values('client_id').annotate(dcount=Count('client_id')).order_by().count()
     if res&res2&res3 >1:
-        logging.error("Invoice creation Failed More Than on currency or users")
+        logger.error("Invoice creation Failed More Than on currency or users")
         return None
     else:
         try:
@@ -373,7 +373,7 @@ def generate_invoice_offline(po_li,gst=None,user=None):
                     AiInvoicePO.objects.create(invoice=invo,po=po)
                 return invo
         except:
-            logging.error("Invoice Generration Failed")
+            logger.error("Invoice Generration Failed")
             return None
 
 
@@ -414,7 +414,7 @@ def generate_client_po(task_assign_info):
                     tot_amount = 0
             else:
                 # rasie error on invalid price should be rised
-                logging.error("Invalid unit type for Po Assignment:{0}".format(instance.assignment_id))
+                logger.error("Invalid unit type for Po Assignment:{0}".format(instance.assignment_id))
                 tot_amount=0
             
             if instance.task_ven_status == 'task_accepted':
@@ -453,7 +453,7 @@ def po_modify(task_assign_info_id,po_update):
             po_task_obj.save()
             return True
         except BaseException as e:
-            logging.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
+            logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
 
     po_new =None
     with transaction.atomic():
@@ -541,7 +541,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
     if user.id != pos.last().seller.id: # validate seller
         print("given user is not po owner")
     elif res&res2&res3 >1:
-        logging.error("Invoice creation Failed More Than on currency or clients")
+        logger.error("Invoice creation Failed More Than on currency or clients")
         return None
     else:
         seller  = pos.last().seller
@@ -551,7 +551,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
             vendor = Account.objects.get(email=seller.email)
             cust =Customer.objects.get(subscriber=client,djstripe_owner_account=vendor)
         except Account.DoesNotExist:
-            logging.error("{user.uid} has no stripe connect account")
+            logger.error("{user.uid} has no stripe connect account")
             return False
         except Customer.DoesNotExist:
             cust_id = customer_create_conn_account(client,seller)
@@ -566,7 +566,7 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
                 po_amount=converttocent(po.po_total_amount,po.currency.currency_code)
                 update_invoice_items_stripe(cust,vendor,po_amount,po.currency.currency_code,invo_id,po.poid)
             except BaseException as e:
-                logging.error(f"invoice item error {po.poid} : {str(e)}")
+                logger.error(f"invoice item error {po.poid} : {str(e)}")
                 return False
 
         return stripe_invoice_finalize(invo_id,vendor)
@@ -629,7 +629,7 @@ def po_pdf_get(request):
             else:
                 raise ValueError('multiple po reurned for assignment')
         except ValueError as e:
-            logging.error(f"for assignmentid: {assignmentid} {str(e)}")
+            logger.error(f"for assignmentid: {assignmentid} {str(e)}")
     else:
         return JsonResponse({'error':'poid_or_assignmenid_field_is_required'},status=400)
     if not po.po_file:
