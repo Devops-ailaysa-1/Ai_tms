@@ -127,7 +127,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         for key, value in text.items():
             needed_keys.append(key)
             count += len(value)
-            if count >= 40:
+            if count >= 100:
                 break
 
         for key in text.copy():
