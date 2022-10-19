@@ -11,7 +11,7 @@ import json,jwt,logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
 import requests
-from ai_auth.tasks import write_segments_to_db
+from ai_auth.tasks import write_segments_to_db,google_long_text_file_process_cel,pre_translate_update,mt_only
 from django.contrib.auth import settings
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
@@ -65,7 +65,7 @@ from .utils import download_file, bl_title_format, bl_cell_format,get_res_path
 from os.path import exists
 from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
-
+from rest_framework.decorators import permission_classes
 from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
 from os.path import exists
@@ -127,7 +127,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         for key, value in text.items():
             needed_keys.append(key)
             count += len(value)
-            if count >= 40:
+            if count >= 100:
                 break
 
         for key in text.copy():
@@ -189,49 +189,29 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def create_document_for_task_if_not_exists(task):
         from .utils import get_translation
-        # If document already exists for a task
+        from ai_workspace.models import MTonlytaskCeleryStatus
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
-                user = task.job.project.ai_user
-                mt_engine = task.job.project.mt_engine_id
-                task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
-                segments = Segment.objects.filter(text_unit__document=task.document)
-                update_list = []
-                mt_segments = []
-
-                for seg in segments:###############Need to revise####################
-                    i = seg.get_active_object()
-                    if i.target == '':
-                        initial_credit = user.credit_balance.get("total_left")
-                        consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, i)
-                        if initial_credit > consumable_credits:
-                            i.target = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
-                            i.temp_target = i.target
-                            i.status_id = TranslationStatus.objects.get(status_id=104).id
-                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                            mt_segments.append(i)
-                        else:
-                            break
-                #             i.target= ""
-                #             i.temp_target = ''
-                #             i.status_id = None
-                        update_list.append(i)
-                #
-                Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
-
-
-                instances = [
-                        MT_RawTranslation(
-                            mt_raw= i.target,
-                            mt_engine_id = mt_engine,
-                            task_mt_engine_id = task_mt_engine_id,
-                            segment_id= i.id,
-                        )
-                        for i in mt_segments
-                    ]
-
-                MT_RawTranslation.objects.bulk_create(instances)
+                mt_only_check =  MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'mt_only')).last()
+                if mt_only_check:
+                    segments = Segment.objects.filter(text_unit__document=task.document).last()
+                    if segments.target != '':
+                        return task.document
+                #     return task.document
+                ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
+                state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
+                if state == 'PENDING':
+                    return {'msg':'Pre Translation Ongoing. Pls Wait','celery_id':ins.celery_task_id}
+                elif (not ins) or state == 'FAILURE':
+                    cel_task = pre_translate_update.apply_async((task.id,),)
+                    return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
+                elif state == "SUCCESS":
+                    if ins.error_type == "Insufficient Credits":
+                        cel_task = pre_translate_update.apply_async((task.id,),)
+                        return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
+                    else:
+                        return task.document
 
             return task.document
 
@@ -300,32 +280,54 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         from django_celery_results.models import TaskResult
         task = self.get_object(task_id=task_id)
         if task.job.project.pre_translate == True and task.document == None:
-            ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
-            if not ins:
-                Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
-                document = self.create_document_for_task_if_not_exists(task)
-                doc = DocumentSerializerV2(document).data
-                MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
-                return Response(doc, status=201)
-            if ins.status == 1:
-                obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
-                if obj !=None and obj.status == "FAILURE":
-                    Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
+            state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
+            if state == 'PENDING':
+                if ins.status == 1:
+                    return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
+                else:
                     document = self.create_document_for_task_if_not_exists(task)
                     doc = DocumentSerializerV2(document).data
-                    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
                     return Response(doc, status=201)
-                else:
-                    return Response({"msg": "File under process. Please wait a little while. \
-                            Hit refresh and try again"}, status=401)
+            elif (not ins) or state == 'FAILURE':
+                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth)),)
+                return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
+            elif state == "SUCCESS":
+                document = self.create_document_for_task_if_not_exists(task)
+                doc = DocumentSerializerV2(document).data
+                return Response(doc, status=201)
+            # if not ins:
+            #     Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+            #     document = self.create_document_for_task_if_not_exists(task)
+            #     doc = DocumentSerializerV2(document).data
+            #     MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
+            #     return Response(doc, status=201)
+            # if ins.status == 1:
+            #     obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
+            #     if obj !=None and obj.status == "FAILURE":
+            #         Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+            #         document = self.create_document_for_task_if_not_exists(task)
+            #         doc = DocumentSerializerV2(document).data
+            #         MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
+            #         return Response(doc, status=201)
+            #     else:
+            #         return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again",'celery_id':ins.celery_task_id}, status=401)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
             document = self.create_document_for_task_if_not_exists(task)
-            doc = DocumentSerializerV2(document).data
-            return Response(doc, status=201)
+            try:
+                doc = DocumentSerializerV2(document).data
+                return Response(doc, status=201)
+            except:
+                if document.get('doc')!=None:
+                    doc = DocumentSerializerV2(document.get('doc')).data
+                    return Response({'msg':document.get('msg'),'doc_data':doc}, status=201)
+                else:
+                    return Response(document,status=400)
+
 
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
@@ -777,6 +779,20 @@ class ConcordanceSearchView(views.APIView):
             concordance = self.get_concordance_data(request, segment_id, search_string)
         return Response(concordance, status=200)
 
+def long_text_process(consumable_credits,document_user,file_path,task,target_language,voice_gender,voice_name):
+    from ai_workspace.api_views import google_long_text_file_process
+    res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
+    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
+    if task.task_transcript_details.first()==None:
+        ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
+    else:
+        t = task.task_transcript_details.first()
+        ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
+    if ser.is_valid():
+        ser.save()
+    print(ser.errors)
+    f2.close()
+
 class DocumentToFile(views.APIView):
 
     @staticmethod
@@ -793,9 +809,12 @@ class DocumentToFile(views.APIView):
                                                   encoding='utf-8')
             response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
                 .format(encoded_filename)
+            # filename = os.path.basename(file_path)
+            # response['Content-Disposition'] = "attachment; filename=%s" % filename
             response['X-Suggested-Filename'] = encoded_filename
             response["Access-Control-Allow-Origin"] = "*"
             response["Access-Control-Allow-Headers"] = "*"
+            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
             # print("cont-disp--->", response.get("Content-Disposition"))
             return response
 
@@ -813,6 +832,7 @@ class DocumentToFile(views.APIView):
     #For Downloading Audio File################only for voice project###########Need to work
     def download_audio_file(self,res,document_user,document_id,voice_gender,language_locale,voice_name):
         from ai_workspace.api_views import google_long_text_file_process
+        from ai_workspace.models import MTonlytaskCeleryStatus
         filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
         temp_name = filename + '.txt'
         text_units = TextUnit.objects.filter(document_id=document_id)
@@ -837,14 +857,15 @@ class DocumentToFile(views.APIView):
         text_file = open(temp_name, "r")
         data = text_file.read()
         text_file.close()
-        print("Length of file------------------------>",len(data))
         consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
         initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
         if initial_credit > consumable_credits:
             if len(data)>5000:
-                return Response({'msg':'Conversion is going on.Please wait'})
+                celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
+                MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
+                return Response({'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id},status=400)
                 #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
-                res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
+                #res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
             else:
                 filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
                 res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
@@ -923,25 +944,18 @@ class DocumentToFile(views.APIView):
         segment_count = Segment.objects.filter(text_unit__document=document_id).count()
         if Document.objects.get(id=document_id).total_segment_count != segment_count:
             return JsonResponse({"msg": "File under process. Please wait a little while. \
-                    Hit refresh and try again"}, status=401)
+                    Hit refresh and try again"}, status=400)
 
-        # print("Request auth type ----> ", type(request.auth))
-
-        #token = str(request.auth)
-        token = request.GET.get("token")
         output_type = request.GET.get("output_type", "")
         voice_gender = request.GET.get("voice_gender", "FEMALE")
         voice_name = request.GET.get("voice_name",None)
         language_locale = request.GET.get("locale", None)
-        payload = jwt.decode(token, settings.SECRET_KEY, ["HS256"])
-        user_id_payload = payload.get("user_id", 0)
-        request_user = AiUser.objects.get(id=user_id_payload)
-        # team_members = doc_user.get_team_members if doc_user.get_team_members else []
+
         document_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id)
         try:managers = document_user.team.get_project_manager if document_user.team.get_project_manager else []
         except:managers = []
 
-        if (request_user ==  document_user) or (request_user in managers):
+        if (request.user ==  document_user) or (request.user in managers):
 
 
             # FOR DOWNLOADING SOURCE FILE
@@ -1218,7 +1232,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
                         Q(status__status_id__in=status_list)).all()
             else:
                 segments = segments.filter(status__status_id__in=status_list).all()
-
+        print("seg------->",segments)
         search_word = data.get("search_word", None)
 
         if search_word not in [None, '']:
@@ -1231,7 +1245,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
                     f'__regex':f'(?<!\w){search_word}(?!\w)'})
             elif not(match_case or exact_word):
                 segments = segments.filter(**{f'{lookup_field}'
-                    f'__contains':f'{search_word}'})
+                    f'__icontains':f'{search_word}'})
             elif match_case:
                 segments = segments.filter(**{f'{lookup_field}'
                     f'__regex':f'{search_word}'})
@@ -1527,6 +1541,7 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
     def post(self, request, document_id):
         data = self.prepare_data(request.POST.dict())
         segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
+        print("seg------------>",segments)
         return self.paginate_response(segments, request, status)
 
     @staticmethod
@@ -1950,11 +1965,19 @@ def spellcheck(request):
     import hunspell
     tar = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
-    doc = Document.objects.get(id=doc_id)
+    task_id = request.POST.get('task_id')
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        lang_code = doc.target_language_code
+        lang_id = doc.target_language_id
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        lang_code = task.job.target_language_code
+        lang_id = task.job.target_language_id
     out,res = [],[]
     try:
-        if doc.target_language_code == 'en':
-            lang = doc.target_language_code
+        if lang_code == 'en':
+            lang = lang_code
             dic = r'/ai_home/dictionaries/{lang}.dic'.format(lang = lang)
             aff = r'/ai_home/dictionaries/{lang}.aff'.format(lang = lang)
             hobj = hunspell.HunSpell(dic,aff )
@@ -1971,9 +1994,9 @@ def spellcheck(request):
                      res.extend(out)
             return JsonResponse({"result":res},safe=False)
         else:
-            spellchecker=SpellcheckerLanguages.objects.get(language_id=doc.target_language_id).spellchecker.spellchecker_name
+            spellchecker=SpellcheckerLanguages.objects.get(language_id=lang_id).spellchecker.spellchecker_name
             if spellchecker=="pyspellchecker":
-                code = doc.target_language_code
+                code = lang_code
                 spell = SpellChecker(code)
                 words=spell.split_words(tar)#list
                 misspelled=spell.unknown(words)#set
@@ -2178,3 +2201,28 @@ def get_word_api(request):
 #             url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
 #             res = requests.request("GET", url, headers=headers)
 #     print("doc--->",res.text)
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_audio_output_file(request):
+    from ai_workspace.models import MTonlytaskCeleryStatus
+    celery_id = request.GET.get('celery_id')
+    document_id = request.GET.get('document_id')
+    doc = Document.objects.get(id=document_id)
+    task = doc.task_set.first()
+    cel_task = MTonlytaskCeleryStatus.objects.filter(task = doc.task_set.first()).last()
+    state = google_long_text_file_process_cel.AsyncResult(cel_task.celery_task_id).state
+    if state == 'SUCCESS':
+        return download_file(task.task_transcript_details.last().translated_audio_file.path)
+    elif state == 'FAILURE':
+        return Response({'msg':'Failure'},status=400)
+    else:
+        return Response({'msg':'Pending'},status=400)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_converted_audio_file(request):
+    document_id = request.GET.get('document_id')
+    doc = Document.objects.get(id=document_id)
+    task = doc.task_set.first()
+    return download_file(task.task_transcript_details.last().translated_audio_file.path)
