@@ -2375,7 +2375,10 @@ def writer_save(request):
     filename,ext = os.path.splitext(task_obj.file.filename)
     print("Filename---------------->",filename)
     name = filename + '.docx'
-    file_obj,name,f2 = docx_save(name,edited_data)
+    try:
+        file_obj,name,f2 = docx_save(name,edited_data)
+    except:
+        return Response({'msg':'something wrong with input file format'},status=400)
     if obj:
         ser1 = TaskTranscriptDetailSerializer(obj,data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     else:
