@@ -2385,6 +2385,7 @@ def writer_save(request):
         ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     if ser1.is_valid():
         ser1.save()
+        os.remove(name)
         return Response(ser1.data)
     return Response(ser1.errors)
 
