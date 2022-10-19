@@ -944,7 +944,7 @@ def campaign_subscribe(user,camp):
 
     #if plan == 'new':
     if user.is_vendor:
-        sub = Subscription.objects.filter(customer=customer,djstripe_owner_account=default_djstripe_owner).last()
+        sub = Subscription.objects.filter(customer=cust,djstripe_owner_account=default_djstripe_owner).last()
     else:
         sub=subscribe(price=price,customer=cust)
         if sub:

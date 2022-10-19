@@ -21,7 +21,7 @@ except BaseException as e:
 
 def check_referred(user):
     try:
-        ss = models.ReferredUsers.objects.get(email=user.email)
+        models.ReferredUsers.objects.get(email=user.email)
         ref_cred= 18000
     except models.ReferredUsers.DoesNotExist:
         ref_cred =0
@@ -30,12 +30,13 @@ def check_referred(user):
 def check_campaign(user):
     camp = models.CampaignUsers.objects.filter(user=user,subscribed=False)
     if camp.count() == 1:
+        logger.info(f"new campaign user {user.uid} ")
         camp = camp.last()
         camp.subscribed =True
         camp.save()
         return camp.campaign_name.subscription_credits
     elif camp.count() > 1:
-        logger.error("more than one campaign found open")
+        logger.error(f"more than one campaign found open {user.uid}")
     else:
         return None
 
