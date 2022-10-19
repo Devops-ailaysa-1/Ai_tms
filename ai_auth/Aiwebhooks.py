@@ -70,7 +70,11 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     if pack.type=="Addon":
         expiry = None
 
-    camp_credits= check_campaign(user)
+    if pack.product.name == 'Pro - V':
+        camp_credits= check_campaign(user)
+    else:
+        camp_credits = None
+        
     if camp_credits:
         buyed_credits = camp_credits
     else:
