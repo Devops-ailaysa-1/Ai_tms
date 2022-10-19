@@ -2551,6 +2551,7 @@ def express_project_detail(request,project_id):
 def voice_project_progress(pr):
     from ai_workspace_okapi.models import Document, Segment
     count=0
+    progress = 0
     source_tasks = pr.get_source_only_tasks
     if source_tasks:
         if pr.voice_proj_detail.project_type_sub_category_id==1:
@@ -2586,13 +2587,14 @@ def voice_project_progress(pr):
 
             if total_seg_count == confirm_count:
                 count+=len(pr.get_mtpe_tasks)
-
+            else:
+                progress+=1
     #print("count------------>",count)
-    if count == 0:
+    if count == 0 and progress == 0:
         return "Yet to Start"
     elif count == len(pr.get_tasks):
         return "Completed"
-    elif count != len(pr.get_tasks):
+    elif count != len(pr.get_tasks) or progress != 0:
         return "In Progress"
 
 
