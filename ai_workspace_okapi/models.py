@@ -384,14 +384,14 @@ class Document(models.Model):
         from ai_workspace.models import Task,TaskTranscriptDetails
         try:
             voice_pro = self.job.project.voice_proj_detail
-            if self.job.project.voice_proj_detail.project_type_sub_category_id != 1:
-                task = Task.objects.filter(document=self).first()
-                task_transcript = TaskTranscriptDetails.objects.filter(task=task).last()
-                if task_transcript and (task_transcript.translated_audio_file!='') and (task_transcript.translated_audio_file!=None):
-                    return True
-                else:
-                    return False
-            else:return None
+            #if self.job.project.voice_proj_detail.project_type_sub_category_id != 1:
+            task = Task.objects.filter(document=self).first()
+            task_transcript = TaskTranscriptDetails.objects.filter(task=task).last()
+            if task_transcript and (task_transcript.translated_audio_file!='') and (task_transcript.translated_audio_file!=None):
+                return True
+            else:
+                return False
+            #else:return None
         except:
             return None
     # @property
