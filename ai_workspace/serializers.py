@@ -984,17 +984,19 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				else:
 					self_assign = obj.task_info.filter(task_assign_info__isnull=True).first()
 					print("SA------------>",self_assign)
-					step = self_assign.step.id
-					mt_enable = self_assign.mt_enable
-					pre_translate = self_assign.pre_translate
-					copy_paste_enable = self_assign.copy_paste_enable
-					task_status = self_assign.get_status_display()
-					try:
-						if TaskAssign.objects.filter(task = self_assign.task).filter(step_id=2).first().status == 2:
-							can_open = False
-						else:can_open = True
-					except:can_open = True
-					return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
+					if self_assign:
+						step = self_assign.step.id
+						mt_enable = self_assign.mt_enable
+						pre_translate = self_assign.pre_translate
+						copy_paste_enable = self_assign.copy_paste_enable
+						task_status = self_assign.get_status_display()
+						try:
+							if TaskAssign.objects.filter(task = self_assign.task).filter(step_id=2).first().status == 2:
+								can_open = False
+							else:can_open = True
+						except:can_open = True
+						return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
+					else:return None
 		else:
 			return None
 

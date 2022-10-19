@@ -1624,6 +1624,7 @@ def msg_send(user,vendor):
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
+from ai_workspace.models import Project,TaskAssign,TaskAssignInfo
 class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
     page_size = 10
@@ -1693,8 +1694,15 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
     def delete(self,request,pk):
         queryset = HiredEditors.objects.all()
-        hired_editor = get_object_or_404(queryset, pk=pk)
-        hired_editor.delete()
+        hr = get_object_or_404(queryset, pk=pk)
+        pr = Project.objects.filter(ai_user = hr.user).filter(project_jobs_set__job_tasks_set__task_info__assign_to = hr.hired_editor)
+        for obj in pr:
+            rr = TaskAssign.objects.filter(task__job__project=obj).filter(assign_to = hr.hired_editor)
+            for i in rr:
+                TaskAssignInfo.objects.filter(task_assign=i).delete()
+                i.assign_to = hr.user
+                i.save()
+        hr.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
