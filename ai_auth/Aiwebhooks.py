@@ -74,12 +74,13 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
         camp_credits= check_campaign(user)
     else:
         camp_credits = None
-        
-    if camp_credits:
+
+    if camp_credits != None:
         buyed_credits = camp_credits
     else:
         buyed_credits = ((pack.credits*quants)+referral_credits)
     
+    logger.info(f"user:{user.uid}, buyed:{buyed_credits}, credits_pack:{pack.credits}, quantity :{quants}, carry:{carry}")
     kwarg = {
     'user':user,
     'stripe_cust_id':cust,
