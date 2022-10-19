@@ -45,8 +45,8 @@ def flatten_mapper(data):
 ALLOWED_FILE_EXTENSIONSFILTER_MAPPER_FLATTEN = flatten_mapper(ALLOWED_FILE_EXTENSIONSFILTER_MAPPER)
 
 CURRENT_SUPPORT_FILE_EXTENSIONS_LIST = [
-    ".txt", ".html", ".tsv", ".csv", ".odp", ".ods", ".odt", ".json",
-    ".properties", ".po", ".pot", ".docx", ".xlsx", ".pptx", ".xliff", ".xlf",
+    ".txt", ".html", ".xhtml", ".tsv", ".csv", ".odp", ".ods", ".odt", ".json",
+    ".properties", ".po", ".pot", ".docx", ".xlsx", ".xls", ".pptx", ".xliff", ".xlf",
     ".idml", ".srt", ".strings", ".md", ".xml", ".stringsdict", ".dtd",
     ".php", ".yaml", ".yml", ".epub",
 ]#".dotx" -> file processing pending

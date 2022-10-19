@@ -1,6 +1,6 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
 from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap
-import os, mimetypes, requests, uuid, json, xlwt, boto3
+import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
@@ -169,7 +169,13 @@ def download_file(file_path):
     fl = open(file_path, 'rb')
     mime_type, _ = mimetypes.guess_type(file_path)
     response = HttpResponse(fl, content_type=mime_type)
-    response['Content-Disposition'] = "attachment; filename=%s" % filename
+    encoded_filename = urllib.parse.quote(os.path.basename(file_path), \
+                                          encoding='utf-8')
+    response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+        .format(encoded_filename)
+    response['X-Suggested-Filename'] = encoded_filename
+    #response['Content-Disposition'] = "attachment; filename=%s" % filename
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
 
 bl_title_format = {
@@ -284,11 +290,12 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
 def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     from ai_staff.models import MTLanguageLocaleVoiceSupport
     from google.cloud import texttospeech
-    print("@#@#@#@#@#",voice_gender,voice_name,target_language)
+    print("@#@#@#@#@#",target_language,voice_gender,voice_name)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
     voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
+    print("%%%%%%%%%%%%%%%%%",gender,voice_name)
     client = texttospeech.TextToSpeechClient()
     with open(ssml_file, "r") as f:
         ssml = f.read()
@@ -361,7 +368,7 @@ def get_res_path(source_lang):
 def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_name):
     from ai_staff.models import MTLanguageLocaleVoiceSupport
     from google.cloud import texttospeech
-    print("@#@#@#@#@#",voice_gender,voice_name,target_language)
+    print("@#@#@#@#@#",ssml_file,target_language,filename,voice_gender,voice_name)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
     voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
     #filename = filename + "_out"+ ".mp3"
@@ -379,6 +386,7 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
     response = client.synthesize_speech(
         input=input_text, voice=voice, audio_config=audio_config
     )
+    #print("Response------------>",response)
     if len(response.audio_content) != 0:
         with open(filename,"wb") as out:
                 out.write(response.audio_content)
