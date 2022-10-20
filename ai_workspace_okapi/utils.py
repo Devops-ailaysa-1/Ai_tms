@@ -7,7 +7,6 @@ from xlwt import Workbook
 from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 
-client = translate.Client()
 
 client = translate.Client()
 
@@ -360,11 +359,6 @@ def get_res_path(source_lang):
     else:
         return res_paths
 
-
-
-
-
-
 def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_name):
     from ai_staff.models import MTLanguageLocaleVoiceSupport
     from google.cloud import texttospeech
@@ -391,3 +385,8 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
         with open(filename,"wb") as out:
                 out.write(response.audio_content)
                 print('Audio content written to file',filename)
+
+def split_check(segment_id):
+    from .models import Segment
+    return bool(Segment.objects.filter(id=segment_id).first() and \
+            Segment.objects.filter(id=segment_id).first().is_split in [None, False])
