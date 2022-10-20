@@ -797,17 +797,22 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         pre_translate = instance.task_assign.pre_translate
         copy_paste_enable = instance.task_assign.copy_paste_enable
         task_status = instance.task_assign.get_status_display()
-        if instance.task_assign.step_id == 1:
-            try:
-                #print("$$$$$$$$$",TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status)
-                if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status == 2:
-                    can_open = False
-                else:can_open = True
-            except:can_open = True
-        elif instance.task_assign.step_id == 2:
-            if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().status == 3:
-                can_open = True
-            else:can_open = False
+        count = TaskAssignInfo.objects.filter(task_assign__task= instance.task_assign.task).count()
+        print("Count-------------->",count)
+        if count == 1:
+            can_open = True
+        else:
+	        if instance.task_assign.step_id == 1:
+	            try:
+	                #print("$$$$$$$$$",TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status)
+	                if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status == 2:
+	                    can_open = False
+	                else:can_open = True
+	            except:can_open = True
+	        elif instance.task_assign.step_id == 2:
+	            if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().status == 3:
+	                can_open = True
+	            else:can_open = False
         return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
 
     def run_validation(self, data):
@@ -900,7 +905,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	progress = serializers.DictField(source="get_progress", read_only=True)
 	#task_assign_info = TaskAssignInfoSerializer(required=False)
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
-	task_self_assign_info = serializers.SerializerMethodField()
+	#task_self_assign_info = serializers.SerializerMethodField()
 	bid_job_detail_info = serializers.SerializerMethodField()
 	open_in =  serializers.SerializerMethodField()
 	transcribed = serializers.SerializerMethodField()
@@ -914,7 +919,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id", "filename", "download_audio_source_file", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open","task_self_assign_info",)
+			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open")
 
 
 	def get_transcribed(self,obj):
@@ -976,29 +981,30 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			return TaskAssignInfoSerializer(task_assign_info,many=True).data
 		else: return None
 
-	def get_task_self_assign_info(self,obj):
-		task_assign = obj.task_info.filter(task_assign_info__isnull=False)
-		if task_assign:
-			for i in task_assign:
-				if i.step_id == 1:return None
-				else:
-					self_assign = obj.task_info.filter(task_assign_info__isnull=True).first()
-					print("SA------------>",self_assign)
-					if self_assign:
-						step = self_assign.step.id
-						mt_enable = self_assign.mt_enable
-						pre_translate = self_assign.pre_translate
-						copy_paste_enable = self_assign.copy_paste_enable
-						task_status = self_assign.get_status_display()
-						try:
-							if TaskAssign.objects.filter(task = self_assign.task).filter(step_id=2).first().status == 2:
-								can_open = False
-							else:can_open = True
-						except:can_open = True
-						return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
-					else:return None
-		else:
-			return None
+	# def get_task_self_assign_info(self,obj):
+	# 	user = self.context.get("request").user
+	# 	task_assign = obj.task_info.filter(task_assign_info__isnull=False)
+	# 	if task_assign:
+	# 		for i in task_assign:
+	# 			if i.step_id == 1:return None
+	# 			else:
+	# 				self_assign = obj.task_info.filter(task_assign_info__isnull=True).first()
+	# 				print("SA------------>",self_assign)
+	# 				if self_assign:
+	# 					step = self_assign.step.id
+	# 					mt_enable = self_assign.mt_enable
+	# 					pre_translate = self_assign.pre_translate
+	# 					copy_paste_enable = self_assign.copy_paste_enable
+	# 					task_status = self_assign.get_status_display()
+	# 					try:
+	# 						if TaskAssign.objects.filter(task = self_assign.task).filter(step_id=2).first().status == 2:
+	# 							can_open = False
+	# 						else:can_open = True
+	# 					except:can_open = True
+	# 					return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
+	# 				else:return None
+	# 	else:
+	# 		return None
 
 	# def get_task_word_count(self,instance):
 	# 	if instance.document_id:

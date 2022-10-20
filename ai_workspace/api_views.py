@@ -2375,13 +2375,17 @@ def writer_save(request):
     filename,ext = os.path.splitext(task_obj.file.filename)
     print("Filename---------------->",filename)
     name = filename + '.docx'
-    file_obj,name,f2 = docx_save(name,edited_data)
+    try:
+        file_obj,name,f2 = docx_save(name,edited_data)
+    except:
+        return Response({'msg':'something wrong with input file format'},status=400)
     if obj:
         ser1 = TaskTranscriptDetailSerializer(obj,data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     else:
         ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     if ser1.is_valid():
         ser1.save()
+        os.remove(name)
         return Response(ser1.data)
     return Response(ser1.errors)
 
@@ -2551,6 +2555,7 @@ def express_project_detail(request,project_id):
 def voice_project_progress(pr):
     from ai_workspace_okapi.models import Document, Segment
     count=0
+    progress = 0
     source_tasks = pr.get_source_only_tasks
     if source_tasks:
         if pr.voice_proj_detail.project_type_sub_category_id==1:
@@ -2586,13 +2591,14 @@ def voice_project_progress(pr):
 
             if total_seg_count == confirm_count:
                 count+=len(pr.get_mtpe_tasks)
-
+            else:
+                progress+=1
     #print("count------------>",count)
-    if count == 0:
+    if count == 0 and progress == 0:
         return "Yet to Start"
     elif count == len(pr.get_tasks):
         return "Completed"
-    elif count != len(pr.get_tasks):
+    elif count != len(pr.get_tasks) or progress != 0:
         return "In Progress"
 
 
