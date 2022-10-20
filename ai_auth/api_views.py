@@ -83,6 +83,8 @@ import json
 from django.contrib import messages
 from ai_auth.Aiwebhooks import update_user_credits
 from allauth.account.signals import email_confirmed
+from ai_auth.signals import send_campaign_email
+
 logger = logging.getLogger('django')
 
 try:
@@ -950,6 +952,11 @@ def campaign_subscribe(user,camp):
         if sub:
             camp.subscribed =True
             camp.save()
+            send_campaign_email.send(
+            sender=camp.__class__,
+            instance = camp,
+            user=user,
+            )
             sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
         else:
             print("error in creating subscription ",user.uid)
