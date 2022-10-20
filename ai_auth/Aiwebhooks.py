@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.db import transaction
 import logging
 import calendar
+from ai_auth.signals import send_campaign_email
 
 logger = logging.getLogger('django')
 try:
@@ -34,6 +35,11 @@ def check_campaign(user):
         camp = camp.last()
         camp.subscribed =True
         camp.save()
+        send_campaign_email.send(
+        sender=camp.__class__,
+        instance = camp,
+        user=user,
+        )
         return camp.campaign_name.subscription_credits
     elif camp.count() > 1:
         logger.error(f"more than one campaign found open {user.uid}")

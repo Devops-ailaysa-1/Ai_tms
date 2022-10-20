@@ -262,3 +262,10 @@ def populate_user_details(user, sociallogin=None,**kwargs):
         user_attr = auth_model.UserAttribute.objects.create(user=user,user_type_id=1)
         if user_attr == None:
              raise ValueError('User Attribute Not updated'  )
+
+send_campaign_email= Signal()
+
+@receiver(send_campaign_email)
+def campaign_send_email(sender,instance,user, *args, **kwargs):
+    if instance.subscribed == True:
+        auth_forms.send_campaign_welcome_mail(user)
