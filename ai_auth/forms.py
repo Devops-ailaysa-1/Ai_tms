@@ -370,3 +370,21 @@ def existing_vendor_onboarding_mail(user,gen_password):
         return False
     else:
         return True
+
+def send_campaign_welcome_mail(user):
+    context = {
+        "user":user,
+    }
+    email =user.email
+    msg_html = render_to_string("account/email/welcome_campaign.html", context)
+    sent=send_mail(
+        "Translate your first book free",
+        None,
+         settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    if sent ==1:
+        logger.info(f"Campaign welcome mail sent for {user.uid}")
+    else:
+        logger.error(f"Campaign welocome mail sending failed for {user.uid}")

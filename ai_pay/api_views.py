@@ -627,7 +627,7 @@ def po_pdf_get(request):
             if pos.count()==1:
                 po = pos.last()
             else:
-                raise ValueError('multiple po reurned for assignment')
+                raise ValueError('multiple po returned for assignment')
         except ValueError as e:
             logger.error(f"for assignmentid: {assignmentid} {str(e)}")
     else:
