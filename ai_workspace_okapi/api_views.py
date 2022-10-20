@@ -607,9 +607,6 @@ class MT_RawAndTM_View(views.APIView):
     @staticmethod
     def get_consumable_credits(doc, segment_id, seg):
 
-        # Getting consumable credits for normal segment
-        # if (Segment.objects.filter(id=segment_id).first() and \
-        #         Segment.objects.filter(id=segment_id).first().is_split == False):
         if split_check(segment_id):
             segment = Segment.objects.filter(id=segment_id).first().get_active_object() if segment_id else None
             segment_source = segment.source if segment!= None else seg
@@ -647,10 +644,6 @@ class MT_RawAndTM_View(views.APIView):
     def get_data(request, segment_id, mt_params):
 
         mt_raw = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
-        # task_assign_mt_engine = TaskAssign.objects.filter(
-        #     Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
-        #     Q(step_id=1)
-        # ).first().mt_engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(segment_id)
 
         # If raw translation is already available and Proj & Task MT engines are same
@@ -675,13 +668,13 @@ class MT_RawAndTM_View(views.APIView):
         #         pass
         #     else:
         #         return MT_RawAndTM_View.can_translate(request, user)
-        MT_RawAndTM_View.is_account_holder(request, doc)
+        return MT_RawAndTM_View.is_account_holder(request, doc)
 
         initial_credit = user.credit_balance.get("total_left")
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
-        initial_credit = 1000000
+        # initial_credit = 1000000
 
         if initial_credit > consumable_credits :
             if mt_raw:
@@ -714,10 +707,6 @@ class MT_RawAndTM_View(views.APIView):
         split_seg = SplitSegment.objects.filter(id=segment_id).first()
 
         # Getting the task MT engine
-        # task_assign_mt_engine = TaskAssign.objects.filter(
-        #     Q(task__document__document_text_unit_set__text_unit_segment_set=split_seg.segment_id) &
-        #     Q(step_id=1)
-        # ).first().mt_engine
         task_assign_mt_engine = MT_RawAndTM_View.get_task_assign_mt_engine(split_seg.segment_id)
 
         # If raw translation is already available and Proj & Task MT engines are same
@@ -748,13 +737,13 @@ class MT_RawAndTM_View(views.APIView):
         #         pass
         #     else:
         #         return MT_RawAndTM_View.can_translate(request, user)
-        MT_RawAndTM_View.is_account_holder(request, doc)
+        return MT_RawAndTM_View.is_account_holder(request, doc)
 
         initial_credit = user.credit_balance.get("total_left")
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
-        initial_credit = 10000
+        # initial_credit = 10000
 
         if initial_credit > consumable_credits:
 
@@ -781,8 +770,6 @@ class MT_RawAndTM_View(views.APIView):
     def get_tm_data(request, segment_id):
 
         # For normal segment
-        # if (Segment.objects.filter(id=segment_id).first() and \
-        #         Segment.objects.filter(id=segment_id).first().is_split == False):
         if split_check(segment_id):
             segment = Segment.objects.filter(id=segment_id).first().get_active_object()
             if segment:
@@ -820,8 +807,9 @@ class MT_RawAndTM_View(views.APIView):
 
     def get_segment_MT_params(self, segment_id):
 
-        if (Segment.objects.filter(id=segment_id).first() and \
-                Segment.objects.filter(id=segment_id).first().is_split == False):
+        # if (Segment.objects.filter(id=segment_id).first() and \
+        #         Segment.objects.filter(id=segment_id).first().is_split == False):
+        if split_check(segment_id):
             return self.get_task_assign_data(segment_id)
 
         else:
@@ -835,11 +823,6 @@ class MT_RawAndTM_View(views.APIView):
         mt_params = self.get_segment_MT_params(segment_id)
 
         # For normal and merged segments
-        print("Split check --------> ", split_check(segment_id))
-
-        # if (Segment.objects.filter(id=segment_id).first() and \
-        #         Segment.objects.filter(id=segment_id).first().is_split == False):
-
         if split_check(segment_id):
 
             data, status_code, can_team = self.get_data(request, segment_id, mt_params)
@@ -1220,20 +1203,29 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         qs = Document.objects.all()
         document = get_object_or_404(qs, id=document_id)
 
+        # Getting different segment type querysets
         segments = document.segments_for_workspace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
+        split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
 
+        # Getting the search querysets for each type of segment
         segments = SourceSegmentsListView.do_search(data, segments, lookup_field)
         merge_segments = SourceSegmentsListView.do_search(data, merge_segments, lookup_field)
+        split_segments = SourceSegmentsListView.do_search(data, split_segments, lookup_field)
 
-        merge_segments_ids = []
+        merge_segments_ids = [merge_seg.id for merge_seg in merge_segments]
 
-        for merge_seg in merge_segments:
-            merge_segments_ids.append(merge_seg.id)
+        for split_segment in split_segments:
+            merge_segments_ids.append(split_segment.segment_id)
 
-        for seg in segments:
-            if seg.id not in merge_segments_ids:
-                segments.exclude(id=seg.id)
+        print("Merge split ids ----> ", list(set(merge_segments_ids)))
+
+        merge_segments_ids = list(set(merge_segments_ids))
+
+
+        # for seg in segments:
+        #     if seg.id not in merge_segments_ids:
+        #         segments.exclude(id=seg.id)
 
         return segments, 200
 
@@ -1285,7 +1277,6 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
     def post(self, request, document_id):
         data = self.prepare_data(request.POST.dict())
         segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
-        print("seg------------>",segments)
         return self.paginate_response(segments, request, status)
 
     @staticmethod
@@ -1333,43 +1324,43 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         segments, status = self.update_segments(request, data, segments, self=self)
         return self.paginate_response(segments, request, status)
 
-class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
-
-    @staticmethod
-    def get_object(segment_id):
-        segments = Segment.objects.all()
-        obj = get_object_or_404(segments, id=segment_id)
-        return  obj
-
-    def put(self, request, segment_id):
-        segment = self.get_object(segment_id)
-        data = self.prepare_data(request.POST.dict())
-        search_word = data.get('search_word', '')
-        replace_word = data.get('replace_word', '')
-        match_case = data.get('match_case', False)
-        exact_word = data.get('exact_word', False)
-        do_confirm = data.get("do_confirm", False)
-
-        if exact_word:
-            if match_case:
-                regex = re.compile(f'(?<!\w){search_word}(?!\w)')
-            else:
-                # regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
-                regex = re.compile(f'(?i)[^\w]{search_word}[^\w]')  # temp regex
-
-        else:
-            if match_case:
-                regex = re.compile(search_word)
-            else:
-                regex = re.compile(r'((?i)' + search_word + r')')
-
-        segment.temp_target = re.sub(regex, replace_word, segment.temp_target)
-        self.unconfirm_status(segment)
-        if do_confirm:
-            segment.target = segment.temp_target
-            self.confirm_status(segment)
-        segment.save()
-        return  Response(SegmentSerializer(segment).data, status=200)
+# class FindAndReplaceTargetBySegment(TargetSegmentsListAndUpdateView):
+#
+#     @staticmethod
+#     def get_object(segment_id):
+#         segments = Segment.objects.all()
+#         obj = get_object_or_404(segments, id=segment_id)
+#         return  obj
+#
+#     def put(self, request, segment_id):
+#         segment = self.get_object(segment_id)
+#         data = self.prepare_data(request.POST.dict())
+#         search_word = data.get('search_word', '')
+#         replace_word = data.get('replace_word', '')
+#         match_case = data.get('match_case', False)
+#         exact_word = data.get('exact_word', False)
+#         do_confirm = data.get("do_confirm", False)
+#
+#         if exact_word:
+#             if match_case:
+#                 regex = re.compile(f'(?<!\w){search_word}(?!\w)')
+#             else:
+#                 # regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
+#                 regex = re.compile(f'(?i)[^\w]{search_word}[^\w]')  # temp regex
+#
+#         else:
+#             if match_case:
+#                 regex = re.compile(search_word)
+#             else:
+#                 regex = re.compile(r'((?i)' + search_word + r')')
+#
+#         segment.temp_target = re.sub(regex, replace_word, segment.temp_target)
+#         self.unconfirm_status(segment)
+#         if do_confirm:
+#             segment.target = segment.temp_target
+#             self.confirm_status(segment)
+#         segment.save()
+#         return  Response(SegmentSerializer(segment).data, status=200)
 
 class ProgressView(views.APIView):
     @staticmethod
