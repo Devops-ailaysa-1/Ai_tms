@@ -186,6 +186,7 @@ class Project(models.Model):
 
     @property
     def progress(self):
+        from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
             if len(terms) == 0:
@@ -197,7 +198,8 @@ class Project(models.Model):
                     return "Completed"
                 else:
                     return "In Progress"
-        if self.project_type_id == 5:
+
+        elif self.project_type_id == 5:
             count=0
             for i in self.get_tasks:
                 obj = ExpressProjectDetail.objects.filter(task=i)
@@ -210,6 +212,10 @@ class Project(models.Model):
                 return "Completed"
             else:
                 return "In Progress"
+
+        elif self.project_type_id == 4:
+            rr = voice_project_progress(self)
+            return rr
 
         else:
             docs = Document.objects.filter(job__project_id=self.id).all()
@@ -286,8 +292,10 @@ class Project(models.Model):
 
     @property
     def get_tasks(self):
-        return [task for job in self.project_jobs_set.all() for task \
+        task_list =  [task for job in self.project_jobs_set.all() for task \
             in job.job_tasks_set.all()]
+        return sorted(task_list, key=lambda x: x.id)
+
     @property
     def get_source_only_tasks(self):
         tasks=[]
@@ -952,6 +960,7 @@ class MTonlytaskCeleryStatus(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
     celery_task_id = models.CharField(max_length=255, blank=True, null=True)
     task_name = models.TextField(blank=True, null=True)
+    error_type = models.TextField(blank=True, null=True)
 
 
 

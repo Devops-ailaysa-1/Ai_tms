@@ -1,7 +1,7 @@
 import random,string
 from django.db import models
 from ai_auth.models import AiUser
-from ai_staff.models import Billingunits, Currencies, Languages, ServiceTypeunits
+from ai_staff.models import Billingunits, Currencies, Languages, ServiceTypeunits,Countries
 from ai_workspace.models import Steps
 from ai_pay.signals import change_po_status
 from django.db.models.signals import post_save, pre_save
@@ -135,3 +135,6 @@ class AilaysaGeneratedInvoice(models.Model):
 class AiInvoicePO(models.Model):
     invoice=models.ForeignKey(AilaysaGeneratedInvoice,related_name='ai_invo_po',on_delete=models.CASCADE)
     po=models.ForeignKey(PurchaseOrder,related_name='ai_po',on_delete=models.CASCADE)
+
+class StripeSupportedCountries(models.Model):
+    country = models.ForeignKey(Countries,related_name='stripe_countries',on_delete=models.CASCADE)
