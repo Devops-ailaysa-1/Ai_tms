@@ -481,11 +481,11 @@ class MT_RawAndTM_View(views.APIView):
         hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
 
         # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
-        if get_plan_name(debit_user) != "Business":
+        if get_plan_name(debit_user) != "Business" or 'Business-PAYG':
             return {}, 424, "cannot_translate"
 
         elif (request.user.is_internal_member or request.user.id in hired_editors) and \
-            (get_plan_name(debit_user)=="Business") and \
+            (get_plan_name(debit_user)=="Business" or 'Business-PAYG') and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
             print("For internal & hired editors only")

@@ -64,7 +64,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             obj = InternalMember.objects.get(internal_member_id = self.id)
             # return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
             plan = get_plan_name(obj.team.owner)
-            if plan == "Business":
+            if plan == "Business" or 'Business-PAYG':
                 return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"team_active":"True"}
             else:
                 return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"team_active":"False"}
@@ -75,13 +75,13 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         if self.is_internal_member == True:
             obj = InternalMember.objects.get(internal_member_id = self.id)
             plan = get_plan_name(obj.team.owner)
-            return obj.team if plan == "Business" else None
+            return obj.team if plan == "Business" or 'Business-PAYG' else None
         else:
             try:
                 team = Team.objects.get(owner_id = self.id)
                 print("Team------>",team)
                 plan = get_plan_name(self)
-                return team if plan == "Business" else None
+                return team if plan == "Business" or 'Business-PAYG' else None
             except:
                 return None
 
@@ -119,13 +119,13 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
                 subscription += sub_credits.credits_left
 
                 sub_buyed_credits = sub_credits.buyed_credits
-                if sub_credits.carried_credits ==None:    
+                if sub_credits.carried_credits ==None:
                     carryed_credits = abs(sub_buyed_credits - subscription)
                     sub_credits.carried_credits=carryed_credits
                     sub_credits.save()
                 sub_carryed_credits = sub_credits.carried_credits
                 subscription_total = sub_buyed_credits + sub_carryed_credits
-            
+
 
             # carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
             #     Q(ended_at__isnull=False)).last()
@@ -512,7 +512,7 @@ class AilaysaCampaigns(models.Model):
     DURATION =(
     ("month","month"),
     ("year", "year"),
-    )  
+    )
     campaign_name = models.CharField(max_length=100,unique=True)
     subscription_name = models.CharField(max_length=100, blank=True, null=True)
     subscription_duration = models.CharField(choices=DURATION, max_length=100,blank=True, null=True)
