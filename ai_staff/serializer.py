@@ -1,7 +1,15 @@
+from django.db.models.fields import IntegerField
 from rest_framework import serializers
-from .models import ContentTypes, Countries, Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, SubjectFields, SupportFiles, Timezones,Billingunits,AiUserType
-
-
+from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, IndianStates,
+                    Languages, LanguagesLocale, MtpeEngines, ServiceTypes,Currencies, StripeTaxId,
+                    SubjectFields, SupportFiles, Timezones,Billingunits,
+                    AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
+                    SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
+                    CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
+                    ProjectTypeDetail,ProjectType)
+import json
+from itertools import groupby
+from drf_writable_nested import WritableNestedModelSerializer
 
 class ServiceTypesSerializer(serializers.ModelSerializer):
 
@@ -9,9 +17,9 @@ class ServiceTypesSerializer(serializers.ModelSerializer):
         model = ServiceTypes
         fields = ( 'id', 'name', 'is_active','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
-    
+
     def create(self, validated_data):
-        ServiceType = ServiceTypes.objects.create(**validated_data)      
+        ServiceType = ServiceTypes.objects.create(**validated_data)
         return ServiceType
 
 
@@ -26,9 +34,9 @@ class CurrenciesSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        Currency = Currencies.objects.create(**validated_data)      
+        Currency = Currencies.objects.create(**validated_data)
         return Currency
-        
+
 
 
 class CountriesSerializer(serializers.ModelSerializer):
@@ -41,7 +49,7 @@ class CountriesSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        Country = Countries.objects.create(**validated_data)      
+        Country = Countries.objects.create(**validated_data)
         return Country
 
     # def update(self, instance, validated_data):
@@ -50,9 +58,6 @@ class CountriesSerializer(serializers.ModelSerializer):
     #     instance.phonecode = validated_data.get('phonecode', instance.phonecode)
     #     instance.is_active = validated_data.get('is_active', instance.is_active)
     #     return instance
-
-
-
 
 class SubjectFieldsSerializer(serializers.ModelSerializer):
 
@@ -64,10 +69,8 @@ class SubjectFieldsSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        subject = SubjectFields.objects.create(**validated_data)      
+        subject = SubjectFields.objects.create(**validated_data)
         return subject
-
-
 
 class ContentTypesSerializer(serializers.ModelSerializer):
 
@@ -79,9 +82,8 @@ class ContentTypesSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        content = ContentTypes.objects.create(**validated_data)      
+        content = ContentTypes.objects.create(**validated_data)
         return content
-
 
 class MtpeEnginesSerializer(serializers.ModelSerializer):
 
@@ -93,7 +95,7 @@ class MtpeEnginesSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        engine = MtpeEngines.objects.create(**validated_data)      
+        engine = MtpeEngines.objects.create(**validated_data)
         return engine
 
 class SupportFilesSerializer(serializers.ModelSerializer):
@@ -106,9 +108,8 @@ class SupportFilesSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        extension = SupportFiles.objects.create(**validated_data)      
+        extension = SupportFiles.objects.create(**validated_data)
         return extension
-
 
 class TimezonesSerializer(serializers.ModelSerializer):
 
@@ -120,7 +121,7 @@ class TimezonesSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        t_zone = Timezones.objects.create(**validated_data)      
+        t_zone = Timezones.objects.create(**validated_data)
         return t_zone
 
 class LanguagesSerializer(serializers.ModelSerializer):
@@ -133,11 +134,8 @@ class LanguagesSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        lang = Languages.objects.create(**validated_data)      
+        lang = Languages.objects.create(**validated_data)
         return lang
-
-
-
 
 class LocaleSerializer(serializers.ModelSerializer):
     # language_detail=LanguagesSerializer(read_only=True)
@@ -156,7 +154,7 @@ class LocaleSerializer(serializers.ModelSerializer):
         request = self.context['request']
         print(request.data.get("language_id"))
         print("validated DAT>>>",validated_data)
-        lang = LanguagesLocale.objects.create(**validated_data,language_id=request.data.get("language_id"))      
+        lang = LanguagesLocale.objects.create(**validated_data,language_id=request.data.get("language_id"))
         return lang
 
 class BillingunitsSerializer(serializers.ModelSerializer):
@@ -169,10 +167,23 @@ class BillingunitsSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        unit = Billingunits.objects.create(**validated_data)      
+        unit = Billingunits.objects.create(**validated_data)
         return unit
 
+class ServiceTypeUnitsSerializer(serializers.ModelSerializer):
 
+    class Meta:
+        model = ServiceTypeunits
+
+        fields = ( 'id', 'unit','is_active','created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
+
+class SupportTypeSerializer(serializers.ModelSerializer):
+
+        class Meta:
+            model = SupportType
+            fields = ('id', 'support_type','created_at','updated_at')
+            read_only_fields = ('id','created_at','updated_at')
 
 class AiUserTypeSerializer(serializers.ModelSerializer):
 
@@ -182,3 +193,155 @@ class AiUserTypeSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ('id','created_at','updated_at')
 
+# class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
+#     project = serializers.IntegerField(required=False, source="project_id")
+#     class Meta:
+#         model = AilaysaSupportedMtpeEngines
+#         fields = ("id","name",'created_at','updated_at')
+#         read_only_fields = ('id','created_at','updated_at')
+
+class SubscriptionPricingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPricing
+        fields = ('id','stripe_product_id',)
+
+
+class SubscriptionPricingPriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPricingPrices
+        fields = ('id','subscriptionplan','monthly_price','montly_price_id','annual_price','annual_price_id','currency',)
+        extra_kwargs = {
+        "subscriptionplan": {"write_only": True}
+        }
+
+# class subscriptionPricingGroup(serializers.ModelSerializer):
+#     events = serializers.SerializerMethodField(method_name='get_events')
+#     class Meta:
+
+
+class SubscriptionFeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionFeatures
+        fields = ('id','features','subscriptionplan','description','set_id','sequence_id')
+        extra_kwargs = {
+		 	"subscriptionplan": {"write_only": True},
+            'set_id':{'write_only': True},
+            'sequence_id':{'write_only': True},
+
+            }
+
+    # def to_representation(self, value):
+    #     data = super().to_representation(value)
+    #     user_type_serializer = AiUserTypeSerializer(value.user_type)
+    #     data['user_type'] = user_type_serializer.data
+    #     return data
+
+
+class CreditAddonPriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CreditAddonPrice
+        fields = ('id','pack','price','currency','stripe_price_id',)
+
+class CreditsAddonSerializer(serializers.ModelSerializer):
+    addon_price = CreditAddonPriceSerializer(many=True,read_only=True,source='credit_addon_price')
+    class Meta:
+        model = CreditsAddons
+        fields = ('id','pack','credits','description','expiry','discount','stripe_product_id','addon_price')
+
+
+
+class  SubscriptionPricingPageSerializer(serializers.Serializer):
+    #subscriptionplan=SubscriptionPricingSerializer(read_only=True,many=True)
+    id = serializers.IntegerField()
+    plan = serializers.CharField(max_length=200)
+    stripe_product_id = serializers.CharField(max_length=200)
+    subscription_price=SubscriptionPricingPriceSerializer(many=True,read_only=True)
+    subscription_feature = serializers.SerializerMethodField()
+
+    def get_subscription_feature(self, obj):
+        features = obj.subscription_feature.all().order_by('sequence_id')
+        print('features',features)
+        features_grouped_by_set = groupby(features.iterator(), lambda m: m.set_id)
+        dict_val = {}
+        print("dict_value",dict_val)
+        for set_id, group_of_features in features_grouped_by_set:
+            dict_key = 'set_'+str(set_id)
+            print("dict_key",dict_key)
+            #dict_val[dict_key] = SubscriptionFeatureSerializer(group_of_features,many=True).data
+            dict_val.setdefault(dict_key,[]).extend(SubscriptionFeatureSerializer(group_of_features,many=True).data)
+        #print("final==",dict_val)
+        return dict_val
+
+
+
+class IndianStatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IndianStates
+        fields = ("id","state_name",'state_code','tin_num','created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
+
+
+
+class StripeTaxIdSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StripeTaxId
+        fields = ("id","tax_code",'name','country','created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
+
+
+class SupportTopicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupportTopics
+        fields = "__all__"
+
+class JobPositionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobPositions
+        fields = "__all__"
+
+class TeamRoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = "__all__"
+
+
+class MTLanguageSupportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MTLanguageSupport
+        fields = "__all__"
+
+
+class GetLanguagesSerializer(serializers.Serializer):
+    language = serializers.ReadOnlyField(source = 'language.language')
+    language_id = serializers.ReadOnlyField(source = 'language.id')
+
+
+class AiSupportedMtpeEnginesSerializer(serializers.ModelSerializer):
+    # project = serializers.IntegerField(required=False, source="project_id")Edited
+    class Meta:
+        model = AilaysaSupportedMtpeEngines
+        fields = ("id","name",'created_at','updated_at')
+        read_only_fields = ('id','created_at','updated_at')
+
+
+class ProjectTypeDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectTypeDetail
+        fields = "__all__"
+
+class ProjectTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectType
+        fields = "__all__"
+
+
+
+class LanguagesSerializerNew(serializers.ModelSerializer):
+    locale_code = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Languages
+        fields = ('id', 'language','locale_code')
+
+    def get_locale_code(self,obj):
+        return obj.locale.first().locale_code

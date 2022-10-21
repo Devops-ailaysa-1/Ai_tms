@@ -8,7 +8,17 @@ from rest_framework.authtoken.views import obtain_auth_token
 from django.urls import path,include
 
 router = routers.DefaultRouter()
-#router.register(r'servicetypes', api_views.ServiceTypesView,basename='servicetypes')
+router.register(r'subscriptionpricing', api_views.SubscriptionPricingCreateView,basename='subscription-pricing')
+router.register(r'subscriptionfeatures', api_views.SubscriptionFeaturesCreateView,basename='subscription-features')
+router.register(r'addon_details',api_views.CreditsAddonsCreateView,basename='addon-details')
+router.register(r'indian-states',api_views.IndianStatesView,basename='indian-states')
+router.register(r'stripe-tax-ids',api_views.StripeTaxIdView,basename='stripe-tax-ids')
+router.register(r'general-support-topics',api_views.SupportTopicsView,basename='general-support-topics')
+router.register(r'job-positions',api_views.JobPositionsView,basename='job-positions')
+router.register(r'roles',api_views.TeamRoleView,basename='team-role')
+
+router.register(r'mt-language-support',api_views.MTLanguageSupportView,basename='mt-language-support')
+router.register(r'voice-support-language',api_views.VoiceSupportLanguages,basename='voice-support-language')
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -29,14 +39,25 @@ urlpatterns += [
      path('timezones/', api_views.TimezonesView.as_view(), name='timezones'),
      path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      path('language/', api_views.LanguagesView.as_view(), name='language'),
-      path('language/<int:pk>', api_views.LanguagesView.as_view(), name='language_pk'),
+     path('language/<int:pk>', api_views.LanguagesView.as_view(), name='language_pk'),
      path('languagelocale/', api_views.LanguagesLocaleView.as_view(), name='languagelocale'),
-	path('languagelocale/<int:langid>', api_views.LanguagesLocaleView.as_view(), name='languagelocale_langid'),
+	 path('languagelocale/<int:langid>', api_views.LanguagesLocaleView.as_view(), name='languagelocale_langid'),
      path('languagelocale/<int:pk>', api_views.LanguagesLocaleView.as_view(), name='languagelocale_pk'),
      path('billunits/', api_views.BillingunitsView.as_view(), name='billunits'),
      path('billunits/<int:pk>', api_views.BillingunitsView.as_view(), name='billunits_pk'),
+     path('servicetypeunits/', api_views.ServiceTypeunitsView.as_view(), name='billunits'),
+     path('support_types/',api_views.SupportTypeView.as_view(),name = 'support-types'),
+     path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view({'get': 'list'}),name = 'mt-engines'),
+     path('get_plan_details/',api_views.get_plan_details),
+     path('get_price_details/',api_views.get_pricing_details),
+     path('get-addons-details/',api_views.get_addons_details),
+     #path('mt_engines/',api_views.AilaysaSupportedMtpeEnginesView.as_view(),name = 'mt-engines'),
+     path('project_types/',api_views.ProjectTypeView.as_view({'get': 'list'}),name = 'project-type'),
+     path('sub_category/',api_views.ProjectTypeDetailView.as_view({'get': 'list'}),name = 'project-type-detail'),
+     path('get_languages/',api_views.get_languages),
+     path('vendor_language_pair_currency/',api_views.vendor_language_pair_currency),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
-    path('insert',views.Bulk_insert)
+     #path('insert',views.Bulk_insert)
 
 
 ]

@@ -1,6 +1,6 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.utils.translation import ugettext_lazy as _
-
+from django.db.models import Manager
 
 class CustomUserManager(BaseUserManager):
     """
@@ -15,6 +15,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError(_('Email required'))
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
+        print("extra fields--->", extra_fields)
         user.set_password(password)
         user.save()
         return user
@@ -32,3 +33,9 @@ class CustomUserManager(BaseUserManager):
         if extra_fields.get('is_superuser') is not True:
             raise ValueError(_('Superuser must have is_superuser=True.'))
         return self.create_user(email, password, **extra_fields)
+
+class UserAttributeManager(Manager):
+    def migrate_user_attribute_allocated_dir(self):
+        for user_attribute in self.all():
+            # user_attribute.allocated_dir = user_attribute.
+            ''''''

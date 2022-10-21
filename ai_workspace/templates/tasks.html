@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    {% for d in data %}
+    <a href="{{d.document_url}}">document-link-{{d.filename}}</a><br>
+    {% endfor %}
+</body>
+</html>

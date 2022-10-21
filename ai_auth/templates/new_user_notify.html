@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+{%load static%}
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ailaysa</title>
+  </head>
+  <body>
+    Hello admin,
+    <p>A new user <b>{{user.email}}</b> has been added to Ailaysa successfully.Below are the details.</p>
+    <p>Fullname: {{user.fullname}}</p>
+    <p>Country : {{user.country.name}}</p>
+  </body>
+</html>

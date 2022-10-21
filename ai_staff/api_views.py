@@ -1,18 +1,27 @@
+import ai_staff,json
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status,viewsets
+from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,AllowAny
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
-from django.http import Http404
-from .models import ContentTypes, Countries, Currencies, Languages, LanguagesLocale, MtpeEngines, ServiceTypes, SubjectFields, SupportFiles, Timezones,Billingunits
-from .serializer import ContentTypesSerializer, LanguagesSerializer, LocaleSerializer, MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,CountriesSerializer, SubjectFieldsSerializer, SupportFilesSerializer, TimezonesSerializer,BillingunitsSerializer
-
-
-
-
-
+from django.http import Http404,JsonResponse
+from .models import (ContentTypes, Countries, Currencies, Languages,
+                    LanguagesLocale, MtpeEngines, ServiceTypes, StripeTaxId, SubjectFields, SubscriptionPricingPrices,
+                    SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
+                    SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
+                    IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
+                    ProjectType,ProjectTypeDetail)
+from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
+                         MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
+                         CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
+                         TimezonesSerializer,BillingunitsSerializer,ServiceTypeUnitsSerializer,
+                         SupportTypeSerializer,SubscriptionPricingSerializer,
+                         SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
+                         SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
+                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew)
 
 
 class ServiceTypesView(APIView):
@@ -39,7 +48,7 @@ class ServiceTypesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         service_t = self.get_object(pk)
         serializer = ServiceTypesSerializer(service_t,
@@ -55,15 +64,8 @@ class ServiceTypesView(APIView):
         service_t.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-
-
-
-
-
-
 class CountriesView(APIView):
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
@@ -79,7 +81,7 @@ class CountriesView(APIView):
             raise Http404
 
     def post(self, request):
-        data = request.data     
+        data = request.data
         data['user'] = self.request.user.id
         serializer = CountriesSerializer(data=data, context={'request':request})
         if serializer.is_valid():
@@ -87,7 +89,7 @@ class CountriesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         countrie = self.get_object(pk)
         serializer = CountriesSerializer(countrie,
@@ -132,7 +134,7 @@ class CurrenciesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         currency = self.get_object(pk)
         serializer = CurrenciesSerializer(currency,
@@ -151,7 +153,9 @@ class CurrenciesView(APIView):
 
 
 class SubjectFieldsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        # IsAuthenticated
+    ]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -178,7 +182,6 @@ class SubjectFieldsView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
     def patch(self, request, pk, format=None):
         subject = self.get_object(pk)
         serializer = SubjectFieldsSerializer(subject,
@@ -196,7 +199,9 @@ class SubjectFieldsView(APIView):
 
 
 class ContentTypesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        # IsAuthenticated
+    ]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -222,7 +227,7 @@ class ContentTypesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         content = self.get_object(pk)
         serializer = ContentTypesSerializer(content,
@@ -266,7 +271,7 @@ class MtpeEnginesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         engine = self.get_object(pk)
         serializer = MtpeEnginesSerializer(engine,
@@ -311,7 +316,7 @@ class SupportFilesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         format = self.get_object(pk)
         serializer = SupportFilesSerializer(format,
@@ -347,7 +352,7 @@ class TimezonesView(APIView):
 
     def post(self, request):
         data = request.data
-   
+
         #data['user'] = self.request.user.id
         #print(">>>>>>>AFTER",data)
         serializer = TimezonesSerializer(data=data, context={'request':request})
@@ -356,7 +361,7 @@ class TimezonesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         t_zone = self.get_object(pk)
         serializer = TimezonesSerializer(t_zone, data=request.data,partial=True)
@@ -372,7 +377,7 @@ class TimezonesView(APIView):
 
 
 class LanguagesView(APIView):
-    permission_classes = [IsAuthenticated]
+
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -383,7 +388,7 @@ class LanguagesView(APIView):
             raise Http404
 
     def get(self, request, format=None):
-        queryset = Languages.objects.all()
+        queryset = Languages.objects.all().order_by('language')
         serializer = LanguagesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -397,7 +402,7 @@ class LanguagesView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         lang = self.get_object(pk)
         serializer = LanguagesSerializer(lang, data=request.data,partial=True)
@@ -428,7 +433,7 @@ class LanguagesLocaleView(APIView):
         if langid :
             queryset = LanguagesLocale.objects.filter(language_id=langid)
         else:
-            queryset = LanguagesLocale.objects.all() 
+            queryset = LanguagesLocale.objects.all()
         serializer = LocaleSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -442,7 +447,7 @@ class LanguagesLocaleView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         locale = self.get_object(pk)
         serializer = LocaleSerializer(locale, data=request.data,partial=True)
@@ -482,7 +487,7 @@ class BillingunitsView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    
+
     def patch(self, request, pk, format=None):
         unit = self.get_object(pk)
         serializer = BillingunitsSerializer(unit, data=request.data,partial=True)
@@ -495,3 +500,342 @@ class BillingunitsView(APIView):
         unit = self.get_object(pk)
         unit.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ServiceTypeunitsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        queryset = ServiceTypeunits.objects.all()
+        serializer = ServiceTypeUnitsSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+# class AilaysaSupportedMtpeEnginesView(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def get(self, request, format=None):
+#         queryset = AilaysaSupportedMtpeEngines.objects.all().order_by('id')
+#         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+#         return Response(serializer.data)
+
+class SupportTypeView(APIView):
+    permission_classes = []
+
+    def get(self, request, format=None):
+        queryset = SupportType.objects.all()
+        serializer = SupportTypeSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+for klass in [LanguagesView]:
+    klass.permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class AilaysaSupportedMtpeEnginesView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = AilaysaSupportedMtpeEngines.objects.all().order_by('id')
+        serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+
+class SubscriptionPricingCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = SubscriptionPricing.objects.all()
+        serializer = SubscriptionPricingSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SubscriptionPricingSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = SubscriptionPricing.objects.all()
+        plan = get_object_or_404(queryset, pk=pk)
+        serializer= SubscriptionPricingSerializer(plan,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = SubscriptionPricing.objects.all()
+        plan = get_object_or_404(queryset, pk=pk)
+        plan.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class SubscriptionFeaturesCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = SubscriptionFeatures.objects.all()
+        serializer = SubscriptionFeatureSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SubscriptionFeatureSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = SubscriptionFeatures.objects.all()
+        feature = get_object_or_404(queryset, pk=pk)
+        serializer= SubscriptionFeatureSerializer(feature,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = SubscriptionFeatures.objects.all()
+        plan = get_object_or_404(queryset, pk=pk)
+        plan.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StripeTaxIdView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def list(self,request):
+        queryset = StripeTaxId.objects.all()
+        serializer = StripeTaxIdSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+@api_view(['GET',])
+def get_plan_details(request):
+    plans = SubscriptionPricing.objects.all()
+    out=[]
+    for plan in plans:
+         result={}
+         output=[]
+         serializer = SubscriptionPricingSerializer(plan)
+         result["subscription"]=serializer.data
+         features =  SubscriptionFeatures.objects.filter(subscriptionplan_id=plan.id).all()
+         for feature in features:
+             serializer2 = SubscriptionFeatureSerializer(feature)
+             feature = serializer2.data
+             output.append(feature)
+         result["features"]=output
+         out.append(result)
+    return JsonResponse({"plans":out},safe=False)
+
+
+@api_view(['GET',])
+def get_pricing_details(request):
+    plans = SubscriptionPricing.objects.all()
+    serializer = SubscriptionPricingPageSerializer(plans,many=True)
+    return JsonResponse({"plans":serializer.data},safe=False,status=200)
+
+@api_view(['GET',])
+def get_addons_details(request):
+    addons = CreditsAddons.objects.all()
+    serializer = CreditsAddonSerializer(addons,many=True)
+    return JsonResponse({"addons":serializer.data},safe=False,status=200)
+
+class CreditsAddonsCreateView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        queryset = CreditsAddons.objects.all()
+        serializer = CreditsAddonSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = CreditsAddonSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = CreditsAddons.objects.all()
+        pack = get_object_or_404(queryset, pk=pk)
+        serializer= CreditsAddonSerializer(pack,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = CreditsAddons.objects.all()
+        pack = get_object_or_404(queryset, pk=pk)
+        pack.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# class AilaysaSupportedMtpeEnginesView(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def get(self, request, format=None):
+#         queryset = AilaysaSupportedMtpeEngines.objects.all()
+#         serializer = AiSupportedMtpeEnginesSerializer(queryset, many=True)
+#         return Response(serializer.data)
+
+class IndianStatesView(viewsets.ViewSet):
+    def list(self,request):
+        queryset = IndianStates.objects.all()
+        serializer = IndianStatesSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class SupportTopicsView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = SupportTopics.objects.all()
+        serializer = SupportTopicSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = SupportTopicSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = SupportTopics.objects.all()
+        topic = get_object_or_404(queryset, pk=pk)
+        serializer= SupportTopicSerializer(topic,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = SupportTopics.objects.all()
+        topic = get_object_or_404(queryset, pk=pk)
+        topic.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class JobPositionsView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = JobPositions.objects.all()
+        serializer = JobPositionSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = JobPositionSerializer(data={**request.POST.dict()})
+        print(serializer.is_valid())
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = JobPositions.objects.all()
+        jobname = get_object_or_404(queryset, pk=pk)
+        serializer= JobPositionSerializer(jobname,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = JobPositions.objects.all()
+        jobname = get_object_or_404(queryset, pk=pk)
+        jobname.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class TeamRoleView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = Role.objects.all()
+        serializer = TeamRoleSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = TeamRoleSerializer(data={**request.POST.dict()})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        queryset = Role.objects.all()
+        role = get_object_or_404(queryset, pk=pk)
+        serializer= TeamRoleSerializer(role,data={**request.POST.dict()},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    def delete(self,request,pk):
+        queryset = Role.objects.all()
+        role = get_object_or_404(queryset, pk=pk)
+        role.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class MTLanguageSupportView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = MTLanguageSupport.objects.all()
+        serializer = MTLanguageSupportSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+class ProjectTypeView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = ProjectType.objects.all()
+        serializer = ProjectTypeSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+class ProjectTypeDetailView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        queryset = ProjectTypeDetail.objects.all()
+        serializer = ProjectTypeDetailSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+class VoiceSupportLanguages(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
+    def list(self,request):
+        sub_category = request.GET.get('sub_category')
+        project_type_detail = json.loads(sub_category)
+        if project_type_detail == 1:           #speech-to-text
+            queryset = MTLanguageSupport.objects.filter(speech_to_text = True)
+            serializer = GetLanguagesSerializer(queryset,many=True)
+            return Response({'source_lang_list':serializer.data})
+        if project_type_detail == 2:           #text-to-speech
+            queryset = MTLanguageSupport.objects.filter(text_to_speech = True)
+            serializer = GetLanguagesSerializer(queryset,many=True)
+            return Response({'target_lang_list':serializer.data})
+        if project_type_detail == 3:           #speech-to-speech
+            queryset = MTLanguageSupport.objects.filter(speech_to_text = True)
+            serializer1 = GetLanguagesSerializer(queryset,many=True)
+            queryset2 = MTLanguageSupport.objects.filter(text_to_speech = True)
+            serializer2 = GetLanguagesSerializer(queryset2,many=True)
+            return Response({'source_lang_list':serializer1.data,'target_lang_list':serializer2.data})
+        return Response({"msg":"something went wrong"})
+
+
+
+
+@api_view(['GET',])
+def get_languages(request):
+    queryset = Languages.objects.all().order_by('language')
+    serializer = LanguagesSerializerNew(queryset, many=True)
+    return Response(serializer.data)
+
+
+
+@api_view(['GET',])
+def vendor_language_pair_currency(request):
+    queryset = Currencies.objects.filter(id__in = [48,45,63,144])
+    serializer = CurrenciesSerializer(queryset, many=True)
+    return Response(serializer.data)

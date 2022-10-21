@@ -6,13 +6,19 @@ from allauth.account.forms import (
 )
 from allauth.account.utils import user_pk_to_url_str
 from django.conf import settings
-from django.contrib.auth import forms as admin_forms
-from django.contrib.auth import get_user_model
+#from django.contrib.auth import forms as admin_forms
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
-
+# from .tasks import email_send_task
 from django.contrib.sites.shortcuts import get_current_site
+from datetime import date
+
+from ai_auth import models as auth_models
+from django.core.mail import EmailMessage
+from django.utils.translation import ugettext_lazy as _
+import logging
+logger = logging.getLogger('django')
 
 
 
@@ -31,15 +37,16 @@ class SendInviteForm(ResetPasswordForm):
             "user":user,
             "current_site": current_site,
         }
-        msg_plain = render_to_string("email/password_reset_email.txt", context)
-        # msg_html = render_to_string("users/invite_with_password_reset.html", context)
+        msg_plain = render_to_string("account/email/password_reset_email.txt", context)
+        msg_html = render_to_string("account/email/password_reset_email.html", context)
         send_mail(
             "Password Reset",
             msg_plain,
-            None,
+           settings.DEFAULT_FROM_EMAIL,
             [email],
-            # html_message=msg_html,
+            html_message=msg_html,
         )
+
 
     def save(self, request, **kwargs):
         email = self.cleaned_data["email"]
@@ -49,7 +56,7 @@ class SendInviteForm(ResetPasswordForm):
             uri = path.join(settings.CLIENT_BASE_URL, settings.PASSWORD_RESET_URL)
             current_site = get_current_site(request)
             self.send_email_invite(email, uri, user_pk_to_url_str(user), temp_key,current_site,user)
-            
+
         return self.cleaned_data["email"]
 
 
@@ -100,3 +107,284 @@ class SendInviteForm(ResetPasswordForm):
 #                 'account/email/password_reset_key', email, context
 #             )
 #         return self.cleaned_data['email']
+
+
+def send_welcome_mail(current_site,user):
+    context = {
+        "user":user,
+        "current_site": current_site,
+    }
+    email =user.email
+    msg_plain = render_to_string("account/email/welcome.txt", context)
+    msg_html = render_to_string("account/email/welcome.html", context)
+    sent=send_mail(
+        "Welcome to Ailaysa!",
+        msg_plain,
+        settings.CEO_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    if sent ==1:
+        send_admin_new_user_notify(user)
+    else:
+        logger.error(f"welcome mail sending failed for {email}")
+
+def send_admin_new_user_notify(user):
+    context = {
+    "user":user
+    }
+    email =user.email
+    msg_html = render_to_string("new_user_notify.html", context)
+    sent=send_mail(
+        "New User Added",
+        None,
+       settings.DEFAULT_FROM_EMAIL,
+        ["admin@ailaysa.com"],
+        html_message=msg_html,
+    )
+
+
+
+
+def send_password_change_mail(current_site,user):
+    today = date.today()
+    d1 = today.strftime("%d/%m/%Y")
+    context = {
+        "user":user,
+        "current_site": current_site,
+        "date" : d1,
+    }
+    email =user.email
+    msg_plain = render_to_string("account/email/password_change.txt", context)
+    msg_html = render_to_string("account/email/password_change.html", context)
+    send_mail(
+        "Password change",
+        msg_plain,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+
+
+def user_trial_end(user,sub):
+    date1 = sub.trial_start.strftime("%B %d, %Y")
+    date2 = sub.trial_end.strftime("%B %d, %Y")
+    time1= sub.trial_start.strftime("%I:%M:%S %p")
+    time2= sub.trial_end.strftime("%I:%M:%S %p")
+    context = {
+        "user":user,
+        "start_date" : date1,
+        "start_time": time1,
+        "end_date" : date2,
+        "end_time":time2
+        }
+    print("inside trial form")
+    email =user.email
+   # msg_plain = render_to_string("account/email/password_change.txt", context)
+    msg_html = render_to_string("account/email/trial_ending.html", context)
+    try:
+        from .block_list import ven_blocklist
+        block_list=ven_blocklist
+    except Exception as e:
+        block_list=[]
+    if user.email not in block_list:
+        ms =send_mail(
+            " Your Trial Ends Soon",None,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=msg_html,
+        )
+        print("mailsent>>",ms)
+    else:
+        print("user in block list")
+
+
+
+def vendor_status_mail(email,status):
+    context = {
+        "user":email,
+        "status": status,
+    }
+    if status == "Accepted":
+        msg_html = render_to_string("account/email/vendor_status.html", context)
+    else:
+        msg_html = render_to_string("account/email/vendor_status_fail.html", context)
+    send_mail(
+        "Ailaysa Vendor profile application status",None,
+        # msg_plain,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def vendor_request_admin_mail(instance):
+    today = date.today()
+    context = {'email': instance.email,'name':instance.name,'date':today,'message':instance.message}
+    msg_html = render_to_string("vendor_onboarding_email.html", context)
+    send_mail(
+        "Regarding Vendor Onboarding",None,
+        settings.DEFAULT_FROM_EMAIL,
+        ['support@ailaysa.com'],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+def vendor_accepted_freelancer_mail(user):
+    # print("User----<>",user)
+    today = date.today()
+    context = {'email': user.email,'name':user.fullname,'date':today}
+    msg_html = render_to_string("vendor_accepted_freelancer_mail.html", context)
+    send_mail(
+        "Regarding Vendor Joining Freelancers Marketplace",None,
+        settings.DEFAULT_FROM_EMAIL,
+        ['support@ailaysa.com'],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+def vendor_renewal_mail(link,email):
+    context = {'link':link}
+    msg_html = render_to_string("vendor_renewal.html",context)
+    send_mail(
+        "Ailaysa has become a translators marketplace. Please update your account",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def internal_user_credential_mail(context):
+    context = context
+    email = context.get('email')
+    team = context.get('team')
+    msg_html = render_to_string("Internal_member_credential_email.html",context)
+    send_mail(
+        f"You have been added to {team}'s team in Ailaysa",None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+def vendor_notify_post_jobs(detail):
+    #pass
+    for i in detail:
+        context = detail.get(i)
+        email = context.get('user_email')
+        msg_html = render_to_string("job_alert_email.html",context)
+        tt = send_mail(
+            'Available jobs alert from ailaysa',None,
+            settings.DEFAULT_FROM_EMAIL,
+            #['thenmozhivijay20@gmail.com'],
+            [email],
+            html_message=msg_html,
+        )
+        print("available job alert mail sent>>")
+
+
+def vendor_notify_post_jobs(detail):
+    #pass
+    for i in detail:
+        context = detail.get(i)
+        email = context.get('user_email')
+        msg_html = render_to_string("job_alert_email.html",context)
+        send_mail(
+            'Available jobs alert from ailaysa',None,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=msg_html,
+        )
+        print("available job alert mail sent>>")
+
+
+
+def external_member_invite_mail(context,email):
+    context = context
+    msg_html = render_to_string("External_member_invite_email.html",context)
+    send_mail(
+        'Ailaysa MarketPlace Invite',None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("mailsent>>")
+
+
+def unread_notification_mail(email_list):
+    for i in email_list:
+        context = {'data':i.get('details')}
+        email = i.get('email')
+        msg_html = render_to_string("notification_email.html",context)
+        send_mail(
+            'Notification from ailaysa',None,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=msg_html,
+        )
+    print("notification mailsent>>")
+
+
+
+def user_trial_extend_mail(user):
+    context = {'user':user.fullname}
+    email = user.email
+    msg_html = render_to_string("user_trial_extend.html",context)
+    send_mail(
+        'Trial-Extension',None,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    print("trial_exten_mail_sent-->>>")
+
+
+
+def existing_vendor_onboarding_mail(user,gen_password):
+    context = {'user':user.fullname,'email':user.email,'gen_password':gen_password}
+    email = user.email
+    msg_html = render_to_string("existing_vendor_onboarding.html",context)
+    # sent =send_mail(
+    #     'Become a member of Ailaysa freelancer marketplace',None,
+    #     'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
+    #     [email],
+    #     html_message=msg_html,
+    # )
+
+    msg = EmailMessage(
+        'Become a member of Ailaysa freelancer marketplace',
+         msg_html,
+        'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
+        [email],
+        bcc=['vendormanager@ailaysa.com'],
+        reply_to=['vendormanager@ailaysa.com'],
+    )
+
+    msg.content_subtype = "html"
+
+    sent=msg.send()
+    print("existing_vendor_onboarding_mail-->>>")
+    if sent==0:
+        return False
+    else:
+        return True
+
+def send_campaign_welcome_mail(user):
+    context = {
+        "user":user,
+    }
+    email =user.email
+    msg_html = render_to_string("account/email/welcome_campaign.html", context)
+    sent=send_mail(
+        "Translate your first book free",
+        None,
+         settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    if sent ==1:
+        logger.info(f"Campaign welcome mail sent for {user.uid}")
+    else:
+        logger.error(f"Campaign welocome mail sending failed for {user.uid}")

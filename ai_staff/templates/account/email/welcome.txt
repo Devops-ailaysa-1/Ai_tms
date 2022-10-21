@@ -1,0 +1,7 @@
+Hi {{user.fullname}},
+I am delighted that you have joined us at Ailaysa, the AI translation and human editing platform. I know you will love it once you start using it to make your products, content, and communication more global.
+We built Ailaysa to help organizations easily translate and localize their products like apps, websites,  marketing stuff, customer communications, even a document or a social media message in over 100 languages.
+To accomplish this, we use cutting-edge machine translation tools to instantaneously translate your content. To make it truly useful, we added 1000s of human professional editors to refine the automatic output to meet your specific requirements.
+And, using Ailaysa is as easy as 1-2-3.
+I hope you will allow us to send a few more emails in the coming weeks to assist you in getting the most out of Ailaysa. You are always welcome to speak with us. You can assist us in improving the app by sharing fresh ideas, requesting new features, and so on. After all, the platform has been developed for you!
+Start your global journey now. All the best!

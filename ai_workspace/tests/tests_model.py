@@ -2,78 +2,66 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from base_test import BaseTestCase
-from management.models import AilzaUser, Project
-from management.utils import print_key_value
+from ai_auth.models import AiUser
 from django.db import models, IntegrityError
 import time
+import requests
 from faker import Faker
+from django.db import connections
+
+
 
 fake = Faker()
 
 class DataProvider:
+    email = fake.email()
+    password = fake.password()
+    container = {}
 
-	def get_data_ailzauser_model(self):
-		return {"username": fake.name(), "email": fake.email()}
+    def is_key_exist(func):
+        def decorator(self, key):
+            if key not in self.container:
+                return func(self, key)
+            else:
+                return self.container[key]
+        return decorator
 
-	def user(self):
-		return AilzaUser.objects.create(**self.get_data_ailzauser_model())
+    @is_key_exist
+    def ai_user(self, key):
+        ai_user = AiUser()
+        ai_user.email = self.email
+        ai_user.set_password(self.password)
+        ai_user.save()
+        self.container[key] = ai_user
+        return self.container[key]
+    # def login()
 
-data_provider = DataProvider()
+
+
+
 
 class UnitTest(BaseTestCase):
 	#////////////////// AilaysaUser Model \\\\\\\\\\\\\\\\\\\\\
 
-	def test_user_create(self):
-		data = data_provider.get_data_ailzauser_model()
-		count = AilzaUser.objects.count()
-		user = AilzaUser.objects.create(**data)
-		self.assertEqual(AilzaUser.objects.count(), count+1)
-		return user
 
-	def test_unique_email_create(self):
-		raise_error = True
-		data = data_provider.get_data_ailzauser_model()
-		count = AilzaUser.objects.count()
-		try:
-			AilzaUser.objects.create(**data)
-			AilzaUser.objects.create(**data)
-		except IntegrityError as e:
-			raise_error = False
-		if raise_error:
-			raise ValueError("IntegrityError not raised")
+    def test_project_setup(self):
+        data_provider = DataProvider()
+        print(data_provider.ai_user("user1"))
+        print("connections---->", [ conn.alias for conn in connections.all()] )
+        url = "http://localhost:8000/workspace/project_setup/"
 
-	def test_delete_object_not_fetched_normally(self):
-		data = data_provider.get_data_ailzauser_model()
-		user = AilzaUser.objects.create(**data)
-		email = user.email
-		self.assertEqual(AilzaUser.objects.filter(email=email).count(), 1)
-		user.delete() 
-		self.assertEqual(AilzaUser.objects.filter(email=email).count(), 0)
-		self.assertEqual(AilzaUser.objects.dead().filter(email=email).count(), 1)
-		
-	def test_user_dir_not_clashes(self):
-		data = data_provider.get_data_ailzauser_model()
-		email_data_user1 = { "email" : 'williamskirsten@hotmail.com'}
-		email_data_user2 = { "email" : 'williamskirsten@gmail.com'}
-		user1 = AilzaUser.objects.create( **{**data, **email_data_user1})
-		user2 = AilzaUser.objects.create( **{**data, **email_data_user2})
-		self.assertNotEqual(user1.allocated_dir, user2.allocated_dir)
+        payload = {'project_name': fake.name(),
+        'jobs': '[{"source_language":2, "target_language":1}]'}
+        files = [
+          ('files', open('TestFiles/test2.txt','rb')),
+          ('files', open('TestFiles/test1.txt','rb'))
+        ]
+        headers = {
+          'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjI2OTcyODgzLCJqdGkiOiJkNTE3MTVmM2ZlNTQ0MzE2OTI2MzZjZDgzZjM2YTRkMSIsInVzZXJfaWQiOjE0Nn0.YvP9nyFCqAfUgtlPlXOZCKbur2JFwo2Yri0rzkSsgsI',
+          'Cookie': 'sessionid=54qxoqd8zpwn340zlym6tmzdzqq6njh8; csrftoken=WME3OBUPxLWqnFZkFCbivcVk3yB3SGWFfx5ThvIijAgNKQjQ74O2XMRDDQc0m79m'
+        }
 
-	# //////////////////// Project Model \\\\\\\\\\\\\\\\\\\\\\\\\\\
-	def test_user_project_create(self):
-		user = data_provider.user()
-		count = Project.objects.count()
-		project = Project.objects.create(**dict(ailza_user=user, project_name=fake.name()))
-		self.assertEqual(Project.objects.count(), count+1)
+        response = requests.request("POST", url, headers=headers, data = payload, files = files)
 
-	def test_project_dir_not_same_for_two_projects(self):
-		user = data_provider.user()
-		project_name = fake.name()
-		project1 = Project.objects.create(**dict(ailza_user=user, project_name=project_name))
-		project2 = Project.objects.create(**dict(ailza_user=user, project_name=project_name))
-		self.assertNotEqual(project1.project_dir_path, project2.project_dir_path)
-		print_key_value(['project1.project_dir_path', 'project2.project_dir_path'],[project1.project_dir_path, project2.project_dir_path])
-	# def 
-
-	# def tearDown(self):
-
+        time.sleep(10)
+        self.assertEqual(201, response.status_code)

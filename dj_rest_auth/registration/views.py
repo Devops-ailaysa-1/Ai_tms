@@ -1,7 +1,8 @@
 from allauth.account import app_settings as allauth_settings
 from allauth.account.adapter import get_adapter
-from allauth.account.utils import complete_signup
+from allauth.account.utils import complete_signup, send_email_confirmation
 from allauth.account.views import ConfirmEmailView
+from allauth.account.models import EmailAddress
 from allauth.socialaccount import signals
 from allauth.socialaccount.adapter import get_adapter as get_social_adapter
 from allauth.socialaccount.models import SocialAccount
@@ -10,11 +11,12 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters
 from rest_framework import status
-from rest_framework.exceptions import MethodNotAllowed, NotFound
+from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
 from rest_framework.generics import CreateAPIView, GenericAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core import signing
 
 from dj_rest_auth.app_settings import (
     JWTSerializer, TokenSerializer, create_token,
@@ -22,7 +24,7 @@ from dj_rest_auth.app_settings import (
 from dj_rest_auth.models import TokenModel
 from dj_rest_auth.registration.serializers import (
     SocialAccountSerializer, SocialConnectSerializer, SocialLoginSerializer,
-    VerifyEmailSerializer,
+    VerifyEmailSerializer, ResendEmailVerificationSerializer
 )
 from dj_rest_auth.utils import jwt_encode
 from dj_rest_auth.views import LoginView
@@ -56,6 +58,7 @@ class RegisterView(CreateAPIView):
                 'access_token': self.access_token,
                 'refresh_token': self.refresh_token,
             }
+            print("context--->", self.get_serializer_context())
             return JWTSerializer(data, context=self.get_serializer_context()).data
         else:
             return TokenSerializer(user.auth_token, context=self.get_serializer_context()).data
@@ -103,8 +106,41 @@ class VerifyEmailView(APIView, ConfirmEmailView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.kwargs['key'] = serializer.validated_data['key']
+        # Added EmailConfirmationHMAC_allauth related functions to find expiry of token
+        key = serializer.validated_data['key']
+        try:
+            max_age = 60 * 60 * 24 * settings.ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS
+            signing.loads(key, max_age=max_age, salt='account')            
+        except signing.SignatureExpired :
+            return Response({'detail': _('Link Expired')}, status=401)
+        except signing.BadSignature :
+            return Response({'detail': _('Invalid')}, status=400)
         confirmation = self.get_object()
-        confirmation.confirm(self.request)
+        email = confirmation.confirm(self.request)
+        if not email:
+            return Response({'detail': _('Already Verified')}, status=400)
+        return Response({'detail': _('ok')}, status=status.HTTP_200_OK)
+
+
+class ResendEmailVerificationView(CreateAPIView):
+    permission_classes = (AllowAny,)
+    serializer_class = ResendEmailVerificationSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        key = serializer.validated_data['key']
+        try:
+            pk=signing.loads(key, max_age=None, salt='account') 
+            email = EmailAddress.objects.get(id=pk) 
+        except (EmailAddress.DoesNotExist,signing.BadSignature): 
+            return Response({'detail': _('Account does not exist')}, status=400)
+
+        if email.verified:
+            return Response({'detail': _('Account is already verified')}, status=400)
+        #    raise ValidationError("Account is already verified")
+
+        email.send_confirmation()
         return Response({'detail': _('ok')}, status=status.HTTP_200_OK)
 
 
