@@ -55,6 +55,7 @@ urlpatterns = [
     path("nlp/", include("ai_nlp.urls")),
 
     path("aipay/", include("ai_pay.urls")),
+    path("qa/", include("ai_qa.urls")),
    # path('__debug__/', include('debug_toolbar.urls')),
 ]
 
