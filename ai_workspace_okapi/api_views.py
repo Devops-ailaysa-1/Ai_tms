@@ -658,19 +658,9 @@ class MT_RawAndTM_View(views.APIView):
         if mt_params.get("mt_enable", True) != True:
             return {}, 200, "MT disabled"
 
-        # text_unit_id = Segment.objects.get(id=segment_id).text_unit_id
-        # doc = TextUnit.objects.get(id=text_unit_id).document
-        # user = doc.doc_credit_debit_user
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
 
-        # Checking if the request user allowed to translate or not
-        # if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
-        #     can_translate = MT_RawAndTM_View.can_translate(request, user)
-        #     if can_translate == None:
-        #         pass
-        #     else:
-        #         return MT_RawAndTM_View.can_translate(request, user)
-        return MT_RawAndTM_View.is_account_holder(request, doc)
+        MT_RawAndTM_View.is_account_holder(request, doc)
 
         initial_credit = user.credit_balance.get("total_left")
 
@@ -727,19 +717,9 @@ class MT_RawAndTM_View(views.APIView):
             print("MT not enabled")
             return {}, 200, "MT disabled"
 
-        # text_unit_id = Segment.objects.get(id=split_seg.segment_id).text_unit_id
-        # doc = TextUnit.objects.get(id=text_unit_id).document
-        # user = doc.doc_credit_debit_user
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
-        # Checking if the request user is account owner or not
-        # if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
-        #     can_translate = MT_RawAndTM_View.can_translate(request, user)
-        #     if can_translate == None:
-        #         pass
-        #     else:
-        #         return MT_RawAndTM_View.can_translate(request, user)
-        return MT_RawAndTM_View.is_account_holder(request, doc)
+        MT_RawAndTM_View.is_account_holder(request, doc)
 
         initial_credit = user.credit_balance.get("total_left")
 
@@ -809,8 +789,6 @@ class MT_RawAndTM_View(views.APIView):
 
     def get_segment_MT_params(self, segment_id):
 
-        # if (Segment.objects.filter(id=segment_id).first() and \
-        #         Segment.objects.filter(id=segment_id).first().is_split == False):
         if split_check(segment_id):
             return self.get_task_assign_data(segment_id)
 
