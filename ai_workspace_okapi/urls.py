@@ -16,13 +16,18 @@ urlpatterns+=[
     path("document_by_doc_id/<int:document_id>", api_views.DocumentViewByDocumentId.as_view(),\
          name="document-by-document-id"),
     path("file_extensions/", api_views.get_supported_file_extensions, name="get-file-extensions"),
+
+    # Segment related endpoints
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
     path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put": "update"}), \
          name="segment-update"),
     path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment'),
     path("segment/restore/<int:pk>", api_views.MergeSegmentDeleteView.as_view({"delete": "destroy"}), \
          name="segment-update"),
+    path('split/segment/', api_views.SplitSegmentView.as_view({"post": "create"}), name='split-segment'),
     path("mt_raw_and_tm/<int:segment_id>", api_views.MT_RawAndTM_View.as_view(), name="mt-raw"),
+
+
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(),\
          name="document-convert-to-file"),
     path("outputtypes", api_views.output_types, name="output-types"),
@@ -32,8 +37,8 @@ urlpatterns+=[
          name="seg-filter"),
     path("target/segments/filter/<int:document_id>", api_views.TargetSegmentsListAndUpdateView.as_view(\
         {"post": "post", "put":"update"}), name="seg-filter"),
-    path("target/segment/filter/update/<int:segment_id>", api_views.FindAndReplaceTargetBySegment.as_view(\
-        {"put":"put"}), name="seg-find-&-replace"),
+    # path("target/segment/filter/update/<int:segment_id>", api_views.FindAndReplaceTargetBySegment.as_view(\
+    #     {"put":"put"}), name="seg-find-&-replace"),
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),

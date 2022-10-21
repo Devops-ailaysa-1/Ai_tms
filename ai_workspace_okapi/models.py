@@ -3,7 +3,7 @@ from django.db import models
 # Create your models here.
 from django.db.models.signals import post_save, pre_save
 from .signals import set_segment_tags_in_source_and_target, create_segment_controller,translate_segments
-import json
+import json, re
 from ai_auth.models import AiUser
 from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines,MTLanguageSupport
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
@@ -108,8 +108,7 @@ class BaseSegment(models.Model):
     @property
     def coded_target(self):
         return  set_runs_to_ref_tags( self.coded_source, self.target, get_runs_and_ref_ids(\
-            self.coded_brace_pattern, self.coded_ids_aslist ) )
-
+                self.coded_brace_pattern, self.coded_ids_aslist ) )
 
     def save(self, *args, **kwargs):
         return super(BaseSegment, self).save(*args, **kwargs)
@@ -120,11 +119,20 @@ class BaseSegment(models.Model):
 class Segment(BaseSegment):
     is_merged = models.BooleanField(default=False, null=True)
     is_merge_start = models.BooleanField(default=False, null=True)
+    is_split = models.BooleanField(default=False, null=True)
 
     @property
     def get_merge_target_if_have(self):
-        return self.get_active_object().coded_target
-
+        if self.is_split in [False, None]:
+            return self.get_active_object().coded_target
+        else:
+            split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
+            target_joined = ""
+            for split_seg in split_segs:
+                if split_seg.target != None:
+                    target_joined += split_seg.target
+            return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
     @property
     def get_merge_segment_count(self):
         count = 0
@@ -134,7 +142,7 @@ class Segment(BaseSegment):
 
     def get_active_object(self):
         if self.is_merged and self.is_merge_start:
-            self = MergeSegment.objects.get(id=self.id)
+            return MergeSegment.objects.get(id=self.id)
         return self
 
 
@@ -147,6 +155,7 @@ class MergeSegment(BaseSegment):
         "segments_merge_segments_set")
     text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE,
         related_name="text_unit_merge_segment_set")
+    is_split = models.BooleanField(default=False, null=True, blank=True)
 
     def update_segments(self, segs):
         self.source = "".join([seg.source for seg in segs])
@@ -209,31 +218,45 @@ class MergeSegment(BaseSegment):
         return all([segment.text_unit.id==self.text_unit.id for segment
             in self.segments.all()])
 
-class MT_RawTranslation(models.Model):
+class SplitSegment(BaseSegment):
 
-    # SegmentStringChoices = (
-    #     ("ai_workspace_okapi.segment", "Segment"),
-    #     ("ai_workspace_okapi.mergesegment", "MergeSegment")
-    # )
+    segment = models.ForeignKey(Segment, related_name = "split_segment_set", \
+                                on_delete=models.CASCADE, null=True)
+    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE,
+                                  related_name="text_unit_split_segment_set")
+    is_first = models.BooleanField(default=False, null=True)
+    is_split = models.BooleanField(default=True, null=True)
+
+    def remove_tags(self, tagged_source):
+
+        tgt_tags = re.findall(f'</?\d+>', str(tagged_source))
+        target_tags = ""
+        for tag in tgt_tags:
+            target_tags = target_tags + tag
+
+        string = re.sub(f'</?\d+>', "", str(tagged_source))
+        return str(string), str(target_tags)
+    def update_segments(self, tagged_source, is_first=None):
+        self.tagged_source = str(tagged_source)
+        self.source, self.target_tags = self.remove_tags(tagged_source)
+        self.is_first = True if is_first != None else False
+        self.random_tag_ids = "[]"
+        self.save()
+
+class MT_RawTranslation(models.Model):
 
     segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="segment_mt_engine")
     mt_raw = models.TextField()
-    # segment_controller = models.OneToOneField(SegmentController, null=True, blank=True,
-    #             on_delete=models.SET_NULL)
-    # reverse_string_for_segment = models.TextField(choices=SegmentStringChoices,
-    #             default="ai_workspace_okapi.segment")
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="mt_engine_task")
 
     @property
     def target_language(self):
         return self.get_segment.text_unit.document.job.target_language_code
-
-    # @property
-    # def get_segment(self):
-    #     return apps.get_model(self.reverse_string_for_segment).objects\
-    #         .filter(mt_raw_translation=self).first()
-
+class MtRawSplitSegment(models.Model):
+    split_segment = models.ForeignKey(SplitSegment, related_name = "mt_raw_split_segment", \
+                                      on_delete = models.CASCADE, null=True)
+    mt_raw = models.TextField(null=True, blank=True)
 class Comment(models.Model):
     comment = models.TextField()
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name=\
@@ -279,6 +302,9 @@ class Document(models.Model):
     @property
     def segments_with_blank(self):
         return self.get_segments().filter(source__exact='').order_by("id")
+
+    def split_segment_count(self):
+        return self.get_segments().filter(is_split=True).count()
 
     @property
     def segments(self):
