@@ -50,9 +50,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
 
     def save(self, *args, **kwargs):
 
-        print("args---->", args)
-        print("kwargs---->", kwargs)
-
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
@@ -79,7 +76,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         else:
             try:
                 team = Team.objects.get(owner_id = self.id)
-                print("Team------>",team)
                 plan = get_plan_name(self)
                 return team if plan == "Business" or 'Business-PAYG' else None
             except:
@@ -185,26 +181,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
 
         return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
-    # @property
-    # def buyed_credits(self):
-    #     total_buyed_credits = 0
-    #     present = datetime.now()
-    #     try:
-    #         addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
-    #         for addon in addon_credits:
-    #             total_buyed_credits += addon.buyed_credits
-    #     except Exception as e:
-    #         print("NO ADD-ONS AVAILABLE")
-    #     try:
-    #         sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-    #         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-    #             total_buyed_credits += sub_credits.buyed_credits
-    #     except:
-    #         print("No active subscription")
-    #         return total_buyed_credits
-
-        # return total_buyed_credits
-
     @property
     def username(self):
         print("username field not available.so it is returning fullname")
@@ -237,10 +213,6 @@ class UserAttribute(models.Model):
         permissions = (
                 ("user-attribute-exist", "user attribute exist"),
             )
-    #
-    # @property
-    # def allocated_dir(self):
-    #     return
 
     def save(self, *args, **kwargs):
         content_type = ContentType.objects.get_for_model(UserAttribute)
