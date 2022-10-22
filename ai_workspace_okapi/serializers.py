@@ -47,8 +47,8 @@ class SegmentSerializer(serializers.ModelSerializer):
     status = serializers.IntegerField(read_only=True, source="status.status_id")
     source = serializers.CharField(trim_whitespace=False, allow_blank=True)
     random_tag_ids = serializers.CharField(allow_blank=True, required=False)
-
-
+    parent_segment = serializers.IntegerField(read_only=True, \
+                        source="get_parent_seg_id", allow_null=True,)
     class Meta:
         model = Segment
         fields = (
@@ -68,6 +68,7 @@ class SegmentSerializer(serializers.ModelSerializer):
             "text_unit",
             "is_merge_start",
             "random_tag_ids",
+            "parent_segment",
         )
 
         extra_kwargs = {
@@ -83,6 +84,7 @@ class SegmentSerializer(serializers.ModelSerializer):
             "is_merge_start": {"read_only": True},
             "is_split": {"read_only": True},
             # "id",
+            "parent_segment": {"read_only": True},
         }
 
 
