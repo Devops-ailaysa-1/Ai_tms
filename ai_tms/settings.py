@@ -145,6 +145,8 @@ INSTALLED_APPS = [
     #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
+    # 'coreapi', # Coreapi for coreapi documentation
+    # 'drf_yasg', # drf_yasg fro Swagger documentation
 ]
 
 MANAGEMENT = False
