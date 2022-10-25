@@ -40,8 +40,7 @@ from django.db.models.fields import Field
 # from integerations.github_.models import ContentFile
 # from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
-
-
+from ai_workspace_okapi.models import SplitSegment
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
