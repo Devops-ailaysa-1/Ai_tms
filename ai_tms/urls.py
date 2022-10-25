@@ -26,6 +26,24 @@ from ai_auth.admin import staff_admin_site
 
 from django.views.generic import TemplateView
 from allauth.socialaccount.providers.github import views
+# from rest_framework import permissions
+# from drf_yasg.views import get_schema_view
+# from drf_yasg import openapi
+
+# # Swagger documentation setup
+# schema_view = get_schema_view(
+#     openapi.Info(
+#         title="Ailaysa",
+#         default_version='v1.1.2',
+#         description="Ailayas Api",
+#         terms_of_service="https://ailaysa.com/terms-of-service",
+#         contact=openapi.Contact(email="admin@ailaysa.com"),
+#         #license=openapi.License(name="MIT License"),
+#     ),
+#     public=True,
+#     permission_classes=[permissions.AllowAny],
+# )
+
 
 def trigger_error(request):
     division_by_zero = 1 / 0
@@ -57,6 +75,9 @@ urlpatterns = [
     path("aipay/", include("ai_pay.urls")),
     path("qa/", include("ai_qa.urls")),
    # path('__debug__/', include('debug_toolbar.urls')),
+#     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+#    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+#    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
 
 if settings.MANAGEMENT:
