@@ -1269,7 +1269,6 @@ class ProjectAnalysisProperty(APIView):
 class ProjectAnalysis(APIView):
 
     permission_classes = [IsAuthenticated]
-
     def get(self, request, project_id):
         return Response(ProjectAnalysisProperty.get(project_id))
 
