@@ -1247,10 +1247,10 @@ class ProjectAnalysisProperty(APIView):
 
                         # match_data = ProjectAnalysisProperty.get_tm_analysis(doc_data, project_id)
 
-                        if doc_data["total_word_count"] >= 50000:
+                        # if doc_data["total_word_count"] >= 50000:
 
-                            task_write_data = json.dumps(doc_data, default=str)
-                            write_doc_json_file.apply_async((task_write_data, task.id))
+                        task_write_data = json.dumps(doc_data, default=str)
+                        write_doc_json_file.apply_async((task_write_data, task.id))
 
                         task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
                                                                 "task_char_count":doc_data.get('total_char_count', 0),
@@ -1359,9 +1359,6 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         # except:
             # return Response({'msg':'Task Assign details not found'},status=status.HTTP_400_BAD_REQUEST)
         return Response(task, status=status.HTTP_200_OK)
-
-
-
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]

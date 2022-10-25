@@ -22,3 +22,22 @@ class TmxFile(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.tmx_file.file.name)
+
+
+class ProjectAnalysis(models.Model):
+    project = models.ForeignKey(Project, related_name="project_analysis", null=False, blank=False, \
+                                on_delete=models.CASCADE)
+    new_words = models.IntegerField(null=True, blank=True)
+    repetition = models.IntegerField(null=True, blank=True)
+    cross_file_rep = models.IntegerField(null=True, blank=True)
+    tm_100 = models.IntegerField(null=True, blank=True)
+    tm_95_99 = models.IntegerField(null=True, blank=True)
+    tm_85_94 = models.IntegerField(null=True, blank=True)
+    tm_75_84 = models.IntegerField(null=True, blank=True)
+    tm_50_74 = models.IntegerField(null=True, blank=True)
+    tm_102 = models.IntegerField(null=True, blank=True)
+    tm_101 = models.IntegerField(null=True, blank=True)
+    raw_total = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return self.project.project_name + "_wwc"
