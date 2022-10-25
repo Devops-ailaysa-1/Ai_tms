@@ -74,8 +74,6 @@ class BaseSegment(models.Model):
         "text_unit_segment_set")
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
-    # mt_raw_translation = models.OneToOneField("ai_workspace_okapi.MT_RawTranslation",
-    #                                           related_name="mt_raw_%(class)s", on_delete=models.CASCADE, null=True)
 
     class Meta:
         ordering = ['id',]
@@ -220,6 +218,10 @@ class MergeSegment(BaseSegment):
     def validate_record(self):
         return all([segment.text_unit.id==self.text_unit.id for segment
             in self.segments.all()])
+
+    @property
+    def get_parent_seg_id(self):
+        return self.id
 
 class SplitSegment(BaseSegment):
 

@@ -414,7 +414,6 @@ class MergeSegmentView(viewsets.ModelViewSet):
             return "Mixed"
         else: return False
 
-
     def create(self, request, *args, **kwargs):
 
         segments = request.POST.getlist("segments")
@@ -461,6 +460,16 @@ class SplitSegmentView(viewsets.ModelViewSet):
         seg_second = request.data["seg_second"]
         segment = request.data["segment"]
 
+        segment_id = int(request.POST.get("segment"))
+
+        # Checking for a already split or merged segment
+        split_seg = SplitSegment.objects.filter(id=segment_id)
+        if split_seg:
+            return Response({"msg": "Segment is already split"}, status = 400)
+        elif Segment.objects.filter(id=segment_id).first().is_merged == True:
+            return Response({"msg": "Segment is already merged. You can only restore the segment"}, \
+                            status=400)
+
         serializer_first = self.serializer_class(data = request.data)
         serializer_second = self.serializer_class(data = request.data)
 
@@ -481,7 +490,7 @@ class SplitSegmentView(viewsets.ModelViewSet):
             seg.is_split = True
             seg.save()
 
-            return Response(SplitSegmentSerializer(first_seg).data)
+            return Response(SegmentSerializer(first_seg).data)
 def get_supported_file_extensions(request):
     return JsonResponse(CURRENT_SUPPORT_FILE_EXTENSIONS_LIST, safe=False)
 

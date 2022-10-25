@@ -1,4 +1,3 @@
-from rest_framework.views import APIView
 from django.http import JsonResponse
 from rest_framework.response import Response
 import requests
@@ -8,7 +7,6 @@ from rest_framework.decorators import api_view, parser_classes
 #                                 forbidden_file_model, LetterCase
 #                             )
 #from .serializers import Forbidden_File_Serializer, UntranslatableSerializer, LetterCaseSerializer
-from rest_framework.parsers import FileUploadParser, FormParser, MultiPartParser
 from rest_framework.viewsets import ModelViewSet
 from ai_workspace_okapi.models import Document
 import nltk
@@ -85,11 +83,11 @@ def CapitalLetter(user_input,target):
     res=[i.istitle() for i in m1]
     res1=[i.istitle() for i in m2]
     if res==res1:
-        data.append("No Error")
+        data.append("No error")
     else:
         src_word=user_input.split()[0]
         tar_word=target.split()[0]
-        data.append("Letter case mismatch")
+        data.append("Mismatch in letter case")
         return {'src_word':src_word,'tar_word':tar_word,'message':data}
     return{'message':data}
 
@@ -169,7 +167,7 @@ def inconsistent_url(source,target):
     ErrorNote=[]
     url_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_url_list) != len(tar_url_list):
-        ErrorNote.append('URL Count Mismatch')
+        ErrorNote.append('URL count mismatch')
     for i in tar_url_list:
         if i not in src_url_list:
             tar_missing.append(i)
@@ -179,7 +177,7 @@ def inconsistent_url(source,target):
     if src_missing==[] and tar_missing ==[]:
         ErrorNote=ErrorNote
     else:
-        ErrorNote.append('URL format inconsistency')
+        ErrorNote.append('Inconsistent URL formats')
     url_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if url_out.get('source')==[] and url_out.get('target')==[] and url_out.get('ErrorNote')==[]:
         return None
@@ -195,7 +193,7 @@ def inconsistent_email(source,target):
     ErrorNote=[]
     email_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_email_list) != len(tar_email_list):
-        ErrorNote.append('Email Count Mismatch')
+        ErrorNote.append('Mismatch in URL count')
     for i in tar_email_list:
         if i not in src_email_list:
             tar_missing.append(i)
@@ -205,7 +203,7 @@ def inconsistent_email(source,target):
     if src_missing==[] and tar_missing ==[]:
         ErrorNote=ErrorNote
     else:
-        ErrorNote.append('Email format inconsistency')
+        ErrorNote.append('Inconsistency in URL format')
     email_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if email_out.get('source')==[] and email_out.get('target')==[] and email_out.get('ErrorNote')==[]:
         return None
@@ -242,9 +240,10 @@ def punc_space_view(src,tgt):
         if bool(openbracket.findall(content)) or bool(closebracket.findall(content)):
             list.append("{seg} contains one or more unclosed brackets".format(seg=seg))
         if bool(space.findall(content)):
-            list.append("{seg} segment contains multiple spaces or spaces at start or end".format(seg=seg))
+            list.append("{seg} segment contains multiple spaces or spaces at start / end".format(seg=seg))
         if punc.findall(content):
             list.append("Double fullstops found in {seg}".format(seg=seg))
+
         ### BRACKET MISMATCH ##
         if bool(brac1.findall(content)):
             for i in brac1.finditer(content):
@@ -265,7 +264,7 @@ def punc_space_view(src,tgt):
             list.append("Quotes mismatch in {seg}".format(seg=seg))
 
     if endpunc.findall(src) !=  endpunc.findall(tgt):
-        list.append("End punctuation or End tag mismatch")
+        list.append("Mismatch in end punctuation or end tag")
 
     # close = closebracket.finditer(src)
     # for i in close:
@@ -349,7 +348,7 @@ def numbers_view(source, target):
     if src_list==[] and tar_list==[]:
         return None
     elif src_list==[] and tar_list!=[]:
-        num_out['source'] = ["No numbers in Source"]
+        num_out['source'] = ["No numbers in source"]
         num_out['target'] = tar_list
         num_out['ErrorNote'] = ["Numbers mismatch or missing"]
         return num_out
@@ -466,7 +465,7 @@ def tags_check(source,target):
     for j in src_tags_list:
         if j not in tar_tags_list:
             src_missing.append(j)
-    tags_out={'source':src_missing,'target':tar_missing,'ErrorNote':['Tag(s) inconsistency']}
+    tags_out={'source':src_missing,'target':tar_missing,'ErrorNote':['Inconsistency in tag(s)']}
     if tags_out.get('source')==[] and tags_out.get('target')==[]:
         return None
     else:
@@ -491,9 +490,9 @@ def QA_Check(request):
     if not target:
         return JsonResponse({"data":"Target segment is empty"},safe=False)
     elif source==target:
-        return JsonResponse({"data":"Both source and target are same"},safe=False)
+        return JsonResponse({"data":"Source and target segments are identical"},safe=False)
     elif len(target.split()) < src_limit:
-        return JsonResponse({"data":"Translation length seems shortened"},safe=False)
+        return JsonResponse({"data":"Length of translation length seems shortened"},safe=False)
 
     ###############Untranslatables######################
     # data_alnum=Letters_Numbers(source)
@@ -546,7 +545,6 @@ def QA_Check(request):
 
     ###############MEASUREMENTS#######################
     data_temp=Temperature_and_degree_signs(source,target)
-    print("data_temp-------------->",data_temp)
     print(data_temp.get('ErrorNote'))
     if data_temp.get('ErrorNote')!=[]:
         out.append({'Measurement Check':data_temp})
@@ -578,4 +576,4 @@ def QA_Check(request):
 
     if out:
         return JsonResponse({'data':out},safe=False)
-    return JsonResponse({'data':'No Errors Found'},safe=False)
+    return JsonResponse({'data':'No errors found'},safe=False)
