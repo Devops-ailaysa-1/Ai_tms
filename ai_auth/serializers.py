@@ -21,6 +21,7 @@ from .validators import file_size
 import logging
 from rest_framework.validators import UniqueValidator
 
+logger = logging.getLogger('django')
 try:
     from django.utils.translation import gettext_lazy as _
 except ImportError:
@@ -111,7 +112,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 if check_campaign(user):
                     pass
                 else:
-                    logging.error("campaign updation failed",user.uid)
+                    logger.error("campaign updation failed",user.uid)
         return user
 
 

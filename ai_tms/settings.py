@@ -141,6 +141,7 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     "ai_pay",
+    "ai_qa",
     #"ai_tm_management",
     "ai_tm",
     # 'dbbackup',

@@ -42,7 +42,7 @@ def get_plan_name(user):
 	try:
 		customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
 	except Customer.DoesNotExist:
-		time.sleep(1)
+		resync_instances(user.djstripe_customers.all())
 		customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
 	#subscriptions = Subscription.objects.filter(customer=customer).last()
 	sub = customer.subscriptions.filter(Q(status='active')|Q(status='trialing')|Q(status='past_due')).last()

@@ -12,7 +12,9 @@ from django.utils import timezone
 from django.db import transaction
 import logging
 import calendar
+from ai_auth.signals import send_campaign_email
 
+logger = logging.getLogger('django')
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
@@ -20,7 +22,7 @@ except BaseException as e:
 
 def check_referred(user):
     try:
-        ss = models.ReferredUsers.objects.get(email=user.email)
+        models.ReferredUsers.objects.get(email=user.email)
         ref_cred= 18000
     except models.ReferredUsers.DoesNotExist:
         ref_cred =0
@@ -29,12 +31,18 @@ def check_referred(user):
 def check_campaign(user):
     camp = models.CampaignUsers.objects.filter(user=user,subscribed=False)
     if camp.count() == 1:
+        logger.info(f"new campaign user {user.uid} ")
         camp = camp.last()
         camp.subscribed =True
         camp.save()
+        send_campaign_email.send(
+        sender=camp.__class__,
+        instance = camp,
+        user=user,
+        )
         return camp.campaign_name.subscription_credits
     elif camp.count() > 1:
-        logging.error("more than one campaign found open")
+        logger.error(f"more than one campaign found open {user.uid}")
     else:
         return None
 
@@ -68,12 +76,17 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     if pack.type=="Addon":
         expiry = None
 
-    camp_credits= check_campaign(user)
-    if camp_credits:
+    if pack.product.name == 'Pro - V':
+        camp_credits= check_campaign(user)
+    else:
+        camp_credits = None
+
+    if camp_credits != None:
         buyed_credits = camp_credits
     else:
         buyed_credits = ((pack.credits*quants)+referral_credits)
     
+    logger.info(f"user:{user.uid}, buyed:{buyed_credits}, credits_pack:{pack.credits}, quantity :{quants}, carry:{carry}")
     kwarg = {
     'user':user,
     'stripe_cust_id':cust,
@@ -557,4 +570,4 @@ def renew_user_credits_yearly(subscription):
             }
             us = models.UserCredits.objects.create(**kwarg)
     except Exception as e:
-        logging.error('Failed to do something: ' + str(e))
+        logger.error('Failed to do something: ' + str(e))

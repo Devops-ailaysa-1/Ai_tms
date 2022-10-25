@@ -13,7 +13,7 @@ from django.db import connection
 from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
-from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment
+from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 
@@ -47,8 +47,8 @@ class SegmentSerializer(serializers.ModelSerializer):
     status = serializers.IntegerField(read_only=True, source="status.status_id")
     source = serializers.CharField(trim_whitespace=False, allow_blank=True)
     random_tag_ids = serializers.CharField(allow_blank=True, required=False)
-
-
+    parent_segment = serializers.IntegerField(read_only=True, \
+                        source="get_parent_seg_id", allow_null=True,)
     class Meta:
         model = Segment
         fields = (
@@ -64,9 +64,11 @@ class SegmentSerializer(serializers.ModelSerializer):
             "status",
             "has_comment",
             "is_merged",
+            "is_split",
             "text_unit",
             "is_merge_start",
             "random_tag_ids",
+            "parent_segment",
         )
 
         extra_kwargs = {
@@ -80,7 +82,9 @@ class SegmentSerializer(serializers.ModelSerializer):
             "is_merged": {"required": False, "default": False},
             "text_unit": {"read_only": True},
             "is_merge_start": {"read_only": True},
+            "is_split": {"read_only": True},
             # "id",
+            "parent_segment": {"read_only": True},
         }
 
 
@@ -176,6 +180,18 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
         if not all( [seg.text_unit.id==text_unit.id for seg  in segments]):
             raise serializers.ValidationError("Segments for merging should have same text_unit_id")
         return super().validate(data)
+
+class SplitSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SplitSegment
+        fields = ("segment",
+                  "text_unit",
+                  )
+        def validate(self, data):
+            segment = data['segment']
+            if segment.is_merged == True or segment.is_split == True:
+                raise serializers.ValidationError("The segment is already merged or split")
+            return super().validate(data)
 
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)

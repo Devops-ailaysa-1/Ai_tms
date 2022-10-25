@@ -43,6 +43,8 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from filesplit.split import Split
+logger = logging.getLogger('django')
 
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
@@ -1261,7 +1263,7 @@ class ProjectAnalysisProperty(APIView):
                         else:
                             print("error-->", task_detail_serializer.errors)
                     else:
-                        logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                        logger.debug(msg=f"error raised while process the document, the task id is {task.id}")
                         raise  ValueError("Sorry! Something went wrong with file processing.")
                 except:
                     print("No entry")
@@ -1481,7 +1483,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             try:
                 po_modify(obj.id,['unassigned',])
             except BaseException as e:
-                logging.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
+                logger.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user
@@ -2410,13 +2412,17 @@ def writer_save(request):
     filename,ext = os.path.splitext(task_obj.file.filename)
     print("Filename---------------->",filename)
     name = filename + '.docx'
-    file_obj,name,f2 = docx_save(name,edited_data)
+    try:
+        file_obj,name,f2 = docx_save(name,edited_data)
+    except:
+        return Response({'msg':'something wrong with input file format'},status=400)
     if obj:
         ser1 = TaskTranscriptDetailSerializer(obj,data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     else:
         ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     if ser1.is_valid():
         ser1.save()
+        os.remove(name)
         return Response(ser1.data)
     return Response(ser1.errors)
 
@@ -2581,6 +2587,57 @@ def express_project_detail(request,project_id):
     return JsonResponse({'jobs':jobs_data.data,'source_lang':source_lang_id,\
                         'mt_engine':mt_engine_id,'project_name':project_name,'team':team,\
                         'source_text':content})
+
+
+def voice_project_progress(pr):
+    from ai_workspace_okapi.models import Document, Segment
+    count=0
+    progress = 0
+    source_tasks = pr.get_source_only_tasks
+    if source_tasks:
+        if pr.voice_proj_detail.project_type_sub_category_id==1:
+            for i in source_tasks:
+                if TaskTranscriptDetails.objects.filter(task_id = i).exists():
+                    if TaskTranscriptDetails.objects.filter(task_id = i).last().transcripted_text !=None:
+                        count+=1
+        elif pr.voice_proj_detail.project_type_sub_category_id==2:
+            for i in source_tasks:
+                if TaskTranscriptDetails.objects.filter(task_id = i).exists():
+                    if TaskTranscriptDetails.objects.filter(task_id = i).last().source_audio_file !=None:
+                        count+=1
+    if pr.get_mtpe_tasks:
+        docs = Document.objects.filter(job__project_id=pr.id).all()
+        print(docs)
+        if not docs:
+            count+=0
+        if docs.count() == len(pr.get_mtpe_tasks):
+            total_seg_count = 0
+            confirm_count  = 0
+            confirm_list = [102, 104, 106, 110, 107]
+
+            segs = Segment.objects.filter(text_unit__document__job__project_id=pr.id)
+            for seg in segs:
+                if seg.is_merged == True and seg.is_merge_start is None:
+                    continue
+                else:
+                     total_seg_count += 1
+
+                     seg_new = seg.get_active_object()
+                     if seg_new.status_id in confirm_list:
+                        confirm_count += 1
+
+            if total_seg_count == confirm_count:
+                count+=len(pr.get_mtpe_tasks)
+            else:
+                progress+=1
+    #print("count------------>",count)
+    if count == 0 and progress == 0:
+        return "Yet to Start"
+    elif count == len(pr.get_tasks):
+        return "Completed"
+    elif count != len(pr.get_tasks) or progress != 0:
+        return "In Progress"
+
 
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
