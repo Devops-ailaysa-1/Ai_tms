@@ -258,6 +258,34 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         return super().to_internal_value(data=data)
 
 
+    def pre_flow(self,user,source,document,mt_engine,target_tags):
+        from .api_views import MT_RawAndTM_View
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source)
+        if initial_credit > consumable_credits:
+            try:
+                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)
+                if target_tags !='':
+                    temp_target = mt + str(target_tags)
+                    target = mt + str(target_tags)
+                else:
+                    temp_target = mt
+                    target = mt
+                status_id = TranslationStatus.objects.get(status_id=104).id
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                return target,temp_target,status_id
+            except:
+                target=""
+                temp_target=""
+                status_id=None
+                return target,temp_target,status_id
+        else:
+            target=""
+            temp_target=""
+            status_id=None
+            return target,temp_target,status_id
+
+
     def create(self, validated_data, **kwargs):
         from .api_views import MT_RawAndTM_View
 
@@ -298,33 +326,14 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
-                # target = "" if seg["target"] is None else seg["target"]
+                    
                 if target_get == False:
                     seg['target'] = ""
                     seg['temp_target'] = ""
                     status_id = None
                 else:
-                    initial_credit = user.credit_balance.get("total_left")
-                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
-                    if initial_credit > consumable_credits:
-                        try:
-                            mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
-                            if str(target_tags) !='':
-                                seg['temp_target'] = mt + str(target_tags)
-                                seg['target'] = mt + str(target_tags)
-                            else:
-                                seg['temp_target'] = mt
-                                seg['target'] = mt
-                            status_id = TranslationStatus.objects.get(status_id=104).id
-                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                        except:
-                            seg['target']=""
-                            seg['temp_target']=""
-                            status_id=None
-                    else:
-                        seg['target']=""
-                        seg['temp_target']=""
-                        status_id=None
+                    seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,str(target_tags))
+
 
                 seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \

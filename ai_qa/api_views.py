@@ -407,7 +407,7 @@ def repeated_words_view(source,target):
         repeat_out = {}
         repeat_out['source'] = output[0]
         repeat_out['target'] = output[1]
-        repeat_out['ErronNote'] = ["Repeated words"]
+        repeat_out['ErrorNote'] = ["Repeated words"]
         return repeat_out
     else:
         return None
@@ -557,12 +557,12 @@ def QA_Check(request):
     ##### FOR NUMBERS  #######
     numbers = numbers_view(source,target)
     if numbers:
-        out.append({'numbers':numbers})
+        out.append({'Numbers':numbers})
 
     #### REPEATED WORDS ######
     repeated_words = repeated_words_view(source, target)
     if repeated_words:
-        out.append({'repeated_words':repeated_words})
+        out.append({'Repeated_words':repeated_words})
 
     #####  EMAIL  #####
     email = inconsistent_email(source,target)
