@@ -609,15 +609,21 @@ class MT_RawAndTM_View(views.APIView):
     @staticmethod
     def get_consumable_credits(doc, segment_id, seg):
 
-        if split_check(segment_id):
-            segment = Segment.objects.filter(id=segment_id).first().get_active_object() if segment_id else None
-            segment_source = segment.source if segment!= None else seg
+        if seg:
+            segment_source = seg
             return MT_RawAndTM_View.get_word_count(segment_source, doc)
 
-        # For split segment
-        else:
-            split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
-            return MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+
+        elif segment_id:
+            if split_check(segment_id):
+                segment = Segment.objects.filter(id=segment_id).first().get_active_object() #if segment_id else None
+                segment_source = segment.source #if segment!= None else seg
+                return MT_RawAndTM_View.get_word_count(segment_source, doc)
+
+            # For split segment
+            else:
+                split_seg_source = SplitSegment.objects.filter(id=segment_id).first().source
+                return MT_RawAndTM_View.get_word_count(split_seg_source, doc)
 
     @staticmethod
     def get_task_assign_mt_engine(segment_id):
