@@ -1,16 +1,16 @@
+import json
+import re
+
 from django.db import models
-# from ai_workspace.models import File, Job
-# Create your models here.
-from django.db.models.signals import post_save, pre_save
-from .signals import set_segment_tags_in_source_and_target, create_segment_controller,translate_segments
-import json, re
-from ai_auth.models import AiUser
-from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines,MTLanguageSupport
-from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
+from django.db.models import Q
+from django.db.models.signals import post_save
 from django.utils.functional import cached_property
-from django.db.models import Q, UniqueConstraint, CheckConstraint, F
-from .managers import MergeSegmentManager
-from django.apps import apps
+
+from ai_auth.models import AiUser
+from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines, \
+    MTLanguageSupport
+from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
+from .signals import set_segment_tags_in_source_and_target, translate_segments
 
 
 class TaskStatus(models.Model):
@@ -74,8 +74,6 @@ class BaseSegment(models.Model):
         "text_unit_segment_set")
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
-    # mt_raw_translation = models.OneToOneField("ai_workspace_okapi.MT_RawTranslation",
-    #                                           related_name="mt_raw_%(class)s", on_delete=models.CASCADE, null=True)
 
     class Meta:
         ordering = ['id',]
@@ -145,6 +143,9 @@ class Segment(BaseSegment):
             return MergeSegment.objects.get(id=self.id)
         return self
 
+    @property
+    def get_parent_seg_id(self):
+        return self.id
 
 post_save.connect(set_segment_tags_in_source_and_target, sender=Segment)
 post_save.connect(translate_segments,sender=Segment)
@@ -218,6 +219,10 @@ class MergeSegment(BaseSegment):
         return all([segment.text_unit.id==self.text_unit.id for segment
             in self.segments.all()])
 
+    @property
+    def get_parent_seg_id(self):
+        return self.id
+
 class SplitSegment(BaseSegment):
 
     segment = models.ForeignKey(Segment, related_name = "split_segment_set", \
@@ -226,6 +231,10 @@ class SplitSegment(BaseSegment):
                                   related_name="text_unit_split_segment_set")
     is_first = models.BooleanField(default=False, null=True)
     is_split = models.BooleanField(default=True, null=True)
+
+    @property
+    def get_parent_seg_id(self):
+        return self.segment_id
 
     def remove_tags(self, tagged_source):
 
@@ -462,7 +471,7 @@ class Document(models.Model):
 
     @property
     def show_mt(self):
-        from ai_workspace.models import Task,TaskAssign
+        from ai_workspace.models import Task
         mt_enable = Task.objects.filter(document=self).first().task_info.filter(step_id=1).first().mt_enable
         if mt_enable:return True
         else:return False
