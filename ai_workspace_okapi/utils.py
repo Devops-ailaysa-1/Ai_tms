@@ -362,9 +362,9 @@ def get_res_path(source_lang):
 def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_name):
     from ai_staff.models import MTLanguageLocaleVoiceSupport
     from google.cloud import texttospeech
-    print("@#@#@#@#@#",ssml_file,target_language,filename,voice_gender,voice_name)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
-    voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
+    voice_name = voice_name if voice_name else \
+        MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
     client = texttospeech.TextToSpeechClient()
@@ -388,5 +388,5 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
 
 def split_check(segment_id):
     from .models import Segment
-    return bool(Segment.objects.filter(id=segment_id).first() and \
-            Segment.objects.filter(id=segment_id).first().is_split in [None, False])
+    return bool((Segment.objects.filter(id=segment_id).first() != None) and \
+                (Segment.objects.filter(id=segment_id).first().is_split in [None, False]))
