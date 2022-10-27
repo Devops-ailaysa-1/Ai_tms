@@ -498,11 +498,11 @@ def tags_check(source,target):
 def general_check_view(source,target):
     src_limit = round( ( 0.4 * len(source.split()) ), 2 )
     if not target:
-        return {"data":"Target segment is empty"}
+        return {"ErrorNote":["Target segment is empty"]}
     elif source.strip()==target.strip():
-        return {"data":"Source and target segments are identical"}
+        return {"ErrorNote":["Source and target segments are identical"]}
     elif len(target.split()) < src_limit:
-        return {"data":"Length of translation length seems shortened"}
+        return {"ErrorNote":["Length of translation length seems shortened"]}
 
 
 TAG_RE = re.compile(r'<[^>]+>')
@@ -582,9 +582,9 @@ def QA_Check(request):
     #     out.append({'LetterCase':out1})
 
     ############PUNCTUATION AND Brackets######################
-    source = remove_tags(source)
-    target = remove_tags(target)
-    data_punc = punc_space_view(source,target)
+    source_ = remove_tags(source)
+    target_ = remove_tags(target)
+    data_punc = punc_space_view(source_,target_)
     if data_punc:
         out.append({'Punctuation':data_punc})
 
