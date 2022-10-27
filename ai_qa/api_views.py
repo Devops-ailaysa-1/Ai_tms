@@ -264,7 +264,7 @@ def punc_space_view(src,tgt):
             list.append("Quotes mismatch in {seg}".format(seg=seg))
 
     if endpunc.findall(src) !=  endpunc.findall(tgt):
-        list.append("Mismatch in end punctuation or end tag")
+        list.append("Mismatch in end punctuation")
 
     # close = closebracket.finditer(src)
     # for i in close:
@@ -471,6 +471,12 @@ def tags_check(source,target):
     else:
         return tags_out
 
+
+TAG_RE = re.compile(r'<[^>]+>')
+
+def remove_tags(text):
+    return TAG_RE.sub('', text)
+
 ######## MAIN FUNCTION  ########
 
 @api_view(['GET','POST',])
@@ -489,7 +495,7 @@ def QA_Check(request):
     src_limit = round( ( 0.4 * len(source.split()) ), 2 )
     if not target:
         return JsonResponse({"data":"Target segment is empty"},safe=False)
-    elif source==target:
+    elif source.strip()==target.strip():
         return JsonResponse({"data":"Source and target segments are identical"},safe=False)
     elif len(target.split()) < src_limit:
         return JsonResponse({"data":"Length of translation length seems shortened"},safe=False)
@@ -539,6 +545,8 @@ def QA_Check(request):
     #     out.append({'LetterCase':out1})
 
     ############PUNCTUATION AND Brackets######################
+    source = remove_tags(source)
+    target = remove_tags(target)
     data_punc = punc_space_view(source,target)
     if data_punc:
         out.append({'Punctuation':data_punc})
