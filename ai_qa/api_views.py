@@ -498,11 +498,11 @@ def tags_check(source,target):
 def general_check_view(source,target):
     src_limit = round( ( 0.4 * len(source.split()) ), 2 )
     if not target:
-        return {"ErrorNote":["Target segment is empty"]}
+        return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source.strip()==target.strip():
-        return {"ErrorNote":["Source and target segments are identical"]}
+        return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
     elif len(target.split()) < src_limit:
-        return {"ErrorNote":["Length of translation length seems shortened"]}
+        return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
 
 
 TAG_RE = re.compile(r'<[^>]+>')
