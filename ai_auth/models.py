@@ -1,3 +1,4 @@
+from random import choices
 from django.db import models
 from django.contrib.auth.models import User
 from ai_auth.managers import CustomUserManager
@@ -49,9 +50,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
 
     def save(self, *args, **kwargs):
 
-        print("args---->", args)
-        print("kwargs---->", kwargs)
-
         if not self.uid:
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
@@ -63,7 +61,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             obj = InternalMember.objects.get(internal_member_id = self.id)
             # return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
             plan = get_plan_name(obj.team.owner)
-            if plan == "Business":
+            if plan == "Business" or 'Business-PAYG':
                 return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"team_active":"True"}
             else:
                 return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"team_active":"False"}
@@ -74,13 +72,12 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         if self.is_internal_member == True:
             obj = InternalMember.objects.get(internal_member_id = self.id)
             plan = get_plan_name(obj.team.owner)
-            return obj.team if plan == "Business" else None
+            return obj.team if plan == "Business" or 'Business-PAYG' else None
         else:
             try:
                 team = Team.objects.get(owner_id = self.id)
-                print("Team------>",team)
                 plan = get_plan_name(self)
-                return team if plan == "Business" else None
+                return team if plan == "Business" or 'Business-PAYG' else None
             except:
                 return None
 
@@ -118,13 +115,13 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
                 subscription += sub_credits.credits_left
 
                 sub_buyed_credits = sub_credits.buyed_credits
-                if sub_credits.carried_credits ==None:    
+                if sub_credits.carried_credits ==None:
                     carryed_credits = abs(sub_buyed_credits - subscription)
                     sub_credits.carried_credits=carryed_credits
                     sub_credits.save()
                 sub_carryed_credits = sub_credits.carried_credits
                 subscription_total = sub_buyed_credits + sub_carryed_credits
-            
+
 
             # carry_on_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & \
             #     Q(ended_at__isnull=False)).last()
@@ -184,26 +181,6 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
 
         return {"addon":addons, "subscription":avai_cp, "total": addons + avai_cp}
 
-    # @property
-    # def buyed_credits(self):
-    #     total_buyed_credits = 0
-    #     present = datetime.now()
-    #     try:
-    #         addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
-    #         for addon in addon_credits:
-    #             total_buyed_credits += addon.buyed_credits
-    #     except Exception as e:
-    #         print("NO ADD-ONS AVAILABLE")
-    #     try:
-    #         sub_credits = UserCredits.objects.get(Q(user=self) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-    #         if present.strftime('%Y-%m-%d %H:%M:%S') <= sub_credits.expiry.strftime('%Y-%m-%d %H:%M:%S'):
-    #             total_buyed_credits += sub_credits.buyed_credits
-    #     except:
-    #         print("No active subscription")
-    #         return total_buyed_credits
-
-        # return total_buyed_credits
-
     @property
     def username(self):
         print("username field not available.so it is returning fullname")
@@ -236,10 +213,6 @@ class UserAttribute(models.Model):
         permissions = (
                 ("user-attribute-exist", "user attribute exist"),
             )
-    #
-    # @property
-    # def allocated_dir(self):
-    #     return
 
     def save(self, *args, **kwargs):
         content_type = ContentType.objects.get_for_model(UserAttribute)
@@ -504,14 +477,26 @@ class HiredEditors(models.Model):
     class Meta:
         unique_together = ['user', 'hired_editor','role']
 
-
-
 class ReferredUsers(models.Model):
     email = models.EmailField()
 
+class AilaysaCampaigns(models.Model):
+    DURATION =(
+    ("month","month"),
+    ("year", "year"),
+    )
+    campaign_name = models.CharField(max_length=100,unique=True)
+    subscription_name = models.CharField(max_length=100, blank=True, null=True)
+    subscription_duration = models.CharField(choices=DURATION, max_length=100,blank=True, null=True)
+    subscription_intervals = models.IntegerField(default=1)
+    subscription_credits=models.IntegerField()
+    Addon_name = models.CharField(max_length=100, blank=True, null=True)
+    Addon_quantity =models.IntegerField(default=1)
+
 class CampaignUsers(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
-    campaign_name = models.CharField(max_length=255, blank=True, null=True)
+    campaign_name =  models.ForeignKey(AilaysaCampaigns,on_delete=models.CASCADE,related_name='ai_campaigns')
+    subscribed = models.BooleanField(default=False)
 
 class ExistingVendorOnboardingCheck(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='existing_vendor_info')

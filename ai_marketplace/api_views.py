@@ -435,7 +435,7 @@ def get_incomplete_projects_list(request):
     projects = [i.project_id for i in query] if query else []
     queryset=[x for x in Project.objects.filter(Q(ai_user=request.user)\
                 |Q(team__owner = request.user)|Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).\
-                filter(~Q(id__in = projects)).order_by('-id').distinct() if x.progress != "completed" ]#.filter(voice_proj_detail__isnull=True)
+                filter(~Q(id__in = projects)).order_by('-id').distinct() if x.progress != "completed" and x.get_assignable_tasks != []]#.filter(voice_proj_detail__isnull=True)
     ser = SimpleProjectSerializer(queryset,many=True)
     return Response(ser.data)
 
@@ -673,9 +673,17 @@ def get_previous_accepted_rate(request):
 
     rates =[]
     for i in query_final:
-        out = [{'currency':i.currency.currency_code,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
+        out = [{'currency':i.currency.id,'mtpe_rate':i.mtpe_rate,'mtpe_count_unit':i.mtpe_count_unit_id,'step':i.task_assign.step.id}]
         rates.append(out)
-    return JsonResponse({"Previously Agreed Rates":rates})
+    rates_given=[]
+    query_1 = VendorLanguagePair.objects.filter((Q(source_lang_id=job_obj.source_language_id) & Q(target_lang_id=job_obj.target_language_id) & Q(user=vendor) & Q(deleted_at=None)))\
+             .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+    for i in query_1:
+        currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
+        out = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
+                    'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
+        rates_given.extend(out)
+    return JsonResponse({"Previously Agreed Rates":rates,"Given Rates":rates_given})
 
 
 

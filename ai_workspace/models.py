@@ -8,7 +8,7 @@ from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import User
 from django.db.models.base import Model
 from django.utils.text import slugify
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save, post_delete
@@ -40,8 +40,7 @@ from django.db.models.fields import Field
 # from integerations.github_.models import ContentFile
 # from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
-
-
+from ai_workspace_okapi.models import SplitSegment
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -157,8 +156,9 @@ class Project(models.Model):
         #     objects.filter(ai_user=self.ai_user).count()+1)
 
         if not self.project_name:
+
             #self.project_name = self.ai_project_id
-            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
+            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
         # print("Project_name---->",self.project_name)
         if self.id:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \
@@ -186,6 +186,7 @@ class Project(models.Model):
 
     @property
     def progress(self):
+        from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
             if len(terms) == 0:
@@ -197,6 +198,25 @@ class Project(models.Model):
                     return "Completed"
                 else:
                     return "In Progress"
+
+        elif self.project_type_id == 5:
+            count=0
+            for i in self.get_tasks:
+                obj = ExpressProjectDetail.objects.filter(task=i)
+                if obj.exists():
+                    if obj.first().target_text!=None:
+                        count+=1
+                else:
+                    return "Yet to start"
+            if len(self.get_tasks) == count:
+                return "Completed"
+            else:
+                return "In Progress"
+
+        elif self.project_type_id == 4:
+            rr = voice_project_progress(self)
+            return rr
+
         else:
             docs = Document.objects.filter(job__project_id=self.id).all()
             tasks = len(self.get_tasks)
@@ -208,18 +228,29 @@ class Project(models.Model):
 
                     total_seg_count = 0
                     confirm_count  = 0
-                    confirm_list = [102, 104, 106, 110]
+                    confirm_list = [102, 104, 106, 110, 107]
 
                     segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+
                     for seg in segs:
 
-                        if seg.is_merged == True and seg.is_merge_start is None:
+                        if (seg.is_merged == True and seg.is_merge_start != True):
                             continue
+
+                        elif seg.is_split == True:
+                            total_seg_count += 2
+
                         else:
                             total_seg_count += 1
 
                         seg_new = seg.get_active_object()
-                        if seg_new.status_id in confirm_list:
+
+                        if seg_new.is_split == True:
+                            for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+                                if split_seg.status_id in confirm_list:
+                                    confirm_count += 1
+
+                        elif seg_new.status_id in confirm_list:
                             confirm_count += 1
 
                 else:
@@ -261,8 +292,10 @@ class Project(models.Model):
 
     @property
     def get_tasks(self):
-        return [task for job in self.project_jobs_set.all() for task \
+        task_list =  [task for job in self.project_jobs_set.all() for task \
             in job.job_tasks_set.all()]
+        return sorted(task_list, key=lambda x: x.id)
+
     @property
     def get_source_only_tasks(self):
         tasks=[]
@@ -478,14 +511,6 @@ class VoiceProjectDetail(models.Model):
     # has_female = models.BooleanField(blank=True,null=True)
 
 
-# class VoiceProjectFile(models.Model):
-#     voice_project = models.ForeignKey(VoiceProjectDetail, null=True, blank=True, on_delete=models.CASCADE,related_name='voice_proj')
-#     audio_file =  models.FileField (upload_to=get_audio_file_upload_path,blank=True, null=True)
-#
-#     @property
-#     def filename(self):
-#         if self.audio_file:
-#             return  os.path.basename(self.audio_file.file.name)
 
 class ProjectContentType(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -862,21 +887,32 @@ class Task(models.Model):
 
     @property
     def corrected_segment_count(self):
-        confirm_list = [102, 104, 106, 110]
+        confirm_list = [102, 104, 106, 110, 107]
         total_seg_count = 0
         confirm_count = 0
         doc = self.document
 
         segs = Segment.objects.filter(text_unit__document=doc)
+
         for seg in segs:
 
-            if seg.is_merged == True and seg.is_merge_start is None:
+            if (seg.is_merged == True and seg.is_merge_start != True):
                 continue
+
+            elif seg.is_split == True:
+                total_seg_count += 2
+
             else:
                 total_seg_count += 1
 
             seg_new = seg.get_active_object()
-            if seg_new.status_id in confirm_list:
+
+            if seg_new.is_split == True:
+                for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+                    if split_seg.status_id in confirm_list:
+                        confirm_count += 1
+
+            elif seg_new.status_id in confirm_list:
                 confirm_count += 1
 
         return total_seg_count, confirm_count
@@ -904,6 +940,13 @@ def ref_file_upload_path(instance, filename):
             "references", filename)
     return file_path
 
+class ExpressProjectDetail(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_task_detail")
+    target_text = models.TextField(null=True,blank=True)
+    mt_raw =models.TextField(null=True,blank=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_detail")
+
+
 
 class MTonlytaskCeleryStatus(models.Model):
     IN_PROGRESS = 1
@@ -916,6 +959,8 @@ class MTonlytaskCeleryStatus(models.Model):
             related_name="mt_only_task_status")
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
     celery_task_id = models.CharField(max_length=255, blank=True, null=True)
+    task_name = models.TextField(blank=True, null=True)
+    error_type = models.TextField(blank=True, null=True)
 
 
 
@@ -1035,6 +1080,7 @@ def edited_file_path(instance, filename):
 class TaskTranscriptDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_transcript_details")
     transcripted_text = models.TextField(null=True,blank=True)
+    #source_lang_locale = models.TextField(null=True,blank=True)#for reference
     source_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)

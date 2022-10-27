@@ -141,11 +141,17 @@ INSTALLED_APPS = [
     "guardian",
     'django_celery_results',
     "ai_pay",
-    "ai_tm_management",
+    "ai_qa",
+    #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
+<<<<<<< HEAD
     'ai_writer',
     'ai_exportpdf'
+=======
+    # 'coreapi', # Coreapi for coreapi documentation
+    # 'drf_yasg', # drf_yasg fro Swagger documentation
+>>>>>>> origin/v4-merged-production
 ]
 
 MANAGEMENT = False
@@ -575,3 +581,5 @@ NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
 GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
 CONVERTIO_API = os.getenv("convertio_api")
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
+
+CAMPAIGN = os.getenv("CAMPAIGN")

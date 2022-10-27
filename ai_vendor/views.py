@@ -230,10 +230,19 @@ class VendorsBankInfoCreateView(APIView):
 
 @api_view(['GET','POST',])
 def feature_availability(request):
+    from ai_workspace.models import Task
     doc_id= request.POST.get("doc_id")
-    doc = Document.objects.get(id=doc_id)
-    target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
-    source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
+    task_id = request.POST.get("task_id")
+    if doc_id:
+        doc = Document.objects.get(id=doc_id)
+        lang_code = doc.target_language_code
+        target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
+        source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
+    if task_id:
+        task = Task.objects.get(id=task_id)
+        lang_code = task.job.target_language_code
+        target_lang_id = task.job.target_language_id
+        source_lang_id = task.job.source_language_id
 
     # CHECK FOR SPELLCHECKER AVAILABILITY
     try:
@@ -248,7 +257,7 @@ def feature_availability(request):
     show_ime = True if LanguageMetaDetails.objects.get(language_id=target_lang_id).ime == True else False
 
     #Check for paraphrase and grammercheck
-    show_paraphrase_and_grammercheck = True if doc.target_language_code == 'en' else False
+    show_paraphrase_and_grammercheck = True if lang_code == 'en' else False
     # CHECK FOR NER AVAILABILITY
     # show_ner = True if LanguageMetaDetails.objects.get(language_id=source_lang_id).ner != None else False
 

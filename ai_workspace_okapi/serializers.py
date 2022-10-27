@@ -13,7 +13,7 @@ from django.db import connection
 from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
-from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment
+from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 
@@ -47,7 +47,8 @@ class SegmentSerializer(serializers.ModelSerializer):
     status = serializers.IntegerField(read_only=True, source="status.status_id")
     source = serializers.CharField(trim_whitespace=False, allow_blank=True)
     random_tag_ids = serializers.CharField(allow_blank=True, required=False)
-
+    parent_segment = serializers.IntegerField(read_only=True, \
+                        source="get_parent_seg_id", allow_null=True,)
     class Meta:
         model = Segment
         fields = (
@@ -63,9 +64,11 @@ class SegmentSerializer(serializers.ModelSerializer):
             "status",
             "has_comment",
             "is_merged",
+            "is_split",
             "text_unit",
             "is_merge_start",
             "random_tag_ids",
+            "parent_segment",
         )
 
         extra_kwargs = {
@@ -79,8 +82,11 @@ class SegmentSerializer(serializers.ModelSerializer):
             "is_merged": {"required": False, "default": False},
             "text_unit": {"read_only": True},
             "is_merge_start": {"read_only": True},
+            "is_split": {"read_only": True},
             # "id",
+            "parent_segment": {"read_only": True},
         }
+
 
     def to_internal_value(self, data):
         # print(self)
@@ -175,6 +181,18 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Segments for merging should have same text_unit_id")
         return super().validate(data)
 
+class SplitSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SplitSegment
+        fields = ("segment",
+                  "text_unit",
+                  )
+        def validate(self, data):
+            segment = data['segment']
+            if segment.is_merged == True or segment.is_split == True:
+                raise serializers.ValidationError("The segment is already merged or split")
+            return super().validate(data)
+
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)
 
@@ -240,6 +258,34 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         return super().to_internal_value(data=data)
 
 
+    def pre_flow(self,user,source,document,mt_engine,target_tags):
+        from .api_views import MT_RawAndTM_View
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source)
+        if initial_credit > consumable_credits:
+            try:
+                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)
+                if target_tags !='':
+                    temp_target = mt + str(target_tags)
+                    target = mt + str(target_tags)
+                else:
+                    temp_target = mt
+                    target = mt
+                status_id = TranslationStatus.objects.get(status_id=104).id
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                return target,temp_target,status_id
+            except:
+                target=""
+                temp_target=""
+                status_id=None
+                return target,temp_target,status_id
+        else:
+            target=""
+            temp_target=""
+            status_id=None
+            return target,temp_target,status_id
+
+
     def create(self, validated_data, **kwargs):
         from .api_views import MT_RawAndTM_View
 
@@ -280,29 +326,14 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
-                # target = "" if seg["target"] is None else seg["target"]
+                    
                 if target_get == False:
                     seg['target'] = ""
                     seg['temp_target'] = ""
                     status_id = None
                 else:
-                    initial_credit = user.credit_balance.get("total_left")
-                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
-                    if initial_credit > consumable_credits:
-                        try:
-                            mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
-                            seg['temp_target'] = mt
-                            seg['target'] = mt
-                            status_id = TranslationStatus.objects.get(status_id=104).id
-                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                        except:
-                            seg['target']=""
-                            seg['temp_target']=""
-                            status_id=None
-                    else:
-                        seg['target']=""
-                        seg['temp_target']=""
-                        status_id=None
+                    seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,str(target_tags))
+
 
                 seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
@@ -351,7 +382,7 @@ class DocumentSerializerV2(DocumentSerializer):
                   "source_language", "target_language", "source_language_id",
                   "target_language_id", "source_language_code", "target_language_code", "doc_credit_check_open_alert",
                   'assign_detail','show_mt','project_type_sub_category',
-                  "target_language_script",'download_audio_output_file',
+                  "target_language_script",'download_audio_output_file','converted_audio_file_exists',
                   )
 
 class DocumentSerializerV3(DocumentSerializerV2):

@@ -57,7 +57,7 @@ urlpatterns += [
      path('get_languages/',api_views.get_languages),
      path('vendor_language_pair_currency/',api_views.vendor_language_pair_currency),
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
-     path('insert',views.Bulk_insert)
+     #path('insert',views.Bulk_insert)
 
 
 ]

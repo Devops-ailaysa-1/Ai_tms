@@ -7,10 +7,9 @@ logger = get_task_logger(__name__)
 from celery.decorators import task
 from datetime import date
 from django.utils import timezone
-from django.db.models import Q,F
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
 import datetime,os,json, collections
-from djstripe.models import Subscription
+from djstripe.models import Subscription,Invoice
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
@@ -19,12 +18,15 @@ import requests
 from contextlib import closing
 from django.db import connection
 from django.db.models import Q
-from django.utils import timezone
 from ai_workspace.models import Task
+from ai_auth.api_views import resync_instances
 import os, json
 from ai_workspace_okapi.utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
+from datetime import datetime, timedelta
+from django.db.models import DurationField, F, ExpressionWrapper,Q
+
 
 
 extend_mail_sent= 0
@@ -69,7 +71,7 @@ def striphtml(data):
 # def add(x, y):
 #     return x + y
 
-from datetime import datetime, timedelta
+
 # subs =Subscription.objects.filter(billing_cycle_anchor__year='2021', billing_cycle_anchor__month='12',billing_cycle_anchor__month='10')
 
 # for sub in subs:
@@ -82,14 +84,19 @@ from datetime import datetime, timedelta
 #     for r in range(0,10):
 #         tomorrow = datetime.utcnow() + timedelta(minutes=1+r)
 #         add.apply_async((r, r+2), eta=tomorrow)
-
+@task
+def sync_invoices_and_charges(days):
+    queryset = Invoice.objects.annotate(
+            diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
+            ).filter(diff__gt=timedelta(days))
+    resync_instances(queryset)
 
 @task
 def renewal_list():
     cycle_date = timezone.now()
     subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
-                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active').filter(~Q(billing_cycle_anchor__year=F('current_period_start__year'),
-                        billing_cycle_anchor__month=F('current_period_start__month'),billing_cycle_anchor__day=F('current_period_start__day')))
+                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=cycle_date.month)).filter(~Q(current_period_end__year=cycle_date.year ,
+                        current_period_end__month=cycle_date.month,current_period_end__day=cycle_date.day))
     print(subs)
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
@@ -267,7 +274,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
             )
             #target = "" if seg["target"] is None else seg["target"]
             if target_get == False:
-                target = ""
+                seg['target'] = ""
                 seg['temp_target'] = ""
                 status_id = None
             else:
@@ -275,15 +282,19 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
                 if initial_credit > consumable_credits:
                     mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
-                    seg['temp_target'] = mt
-                    seg['target'] = mt
+                    if str(target_tags) != '':
+                        seg['temp_target'] = mt + str(target_tags)
+                        seg['target'] = mt + str(target)
+                    else:
+                        seg['temp_target'] = mt
+                        seg['target'] = mt
                     status_id = TranslationStatus.objects.get(status_id=104).id
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 else:
-                    target=""
+                    seg['target']=""
                     seg['temp_target']=""
                     status_id=None
-            seg_params.extend([str(seg["source"]), target, seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
+            seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                                str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags),
                                str(text_unit["okapi_ref_translation_unit_id"]), \
                                timezone.now(), status_id, text_unit_id, str(seg["random_tag_ids"])])
@@ -302,17 +313,18 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
     logger.info("segments wrriting completed")
 
+
     if target_get == True:
         mt_params = []
         count = 0
-        segments = Segment.objects.filter(text_unit__document=document)
+        segments = Segment.objects.filter(text_unit__document=document) #####Need to check this##########
         for i in segments:
             if i.target != "":
                 count += 1
-                mt_params.extend([i.target,mt_engine,None,"ai_workspace_okapi.segment",i.id])
-        print("MT-------------->",mt_params)
-        mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id, reverse_string_for_segment,segment_id)\
-        VALUES {}".format(','.join(['(%s, %s, %s, %s, %s)'] * count))
+                mt_params.extend([i.target,mt_engine,None,i.id])
+
+        mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
+        VALUES {}".format(','.join(['(%s, %s, %s, %s)'] * count))
         if mt_params:
             with closing(connection.cursor()) as cursor:
                 cursor.execute(mt_raw_sql, mt_params)
@@ -330,12 +342,12 @@ def mt_only(project_id,token):
     if pr.pre_translate == True:
         tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)
-        [MTonlytaskCeleryStatus.objects.create(task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
+        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
         for i in pr.get_mtpe_tasks:
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             doc = DocumentSerializerV2(document).data
             print(doc)
-            MTonlytaskCeleryStatus.objects.create(task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+            MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
 
 @task
 def write_doc_json_file(doc_data, task_id):
@@ -358,16 +370,30 @@ def write_doc_json_file(doc_data, task_id):
 
 
 @task
-def text_to_speech(task_id):
+def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,language,voice_gender,voice_name):
+    from ai_workspace.api_views import text_to_speech_task,long_text_source_process
     obj = Task.objects.get(id=task_id)
-    text_to_speech(obj)
+    user = AiUser.objects.get(id=user_id)
+    MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=1,celery_task_id=text_to_speech_long_celery.request.id,task_name = "text_to_speech_long_celery")
+    #tt = text_to_speech_task(obj,language,gender,user,voice_name)
+    tt = long_text_source_process(consumable_credits,user,file_path,obj,language,voice_gender,voice_name)
+    #MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=2,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
+    print("TT-------------------->",tt)
     logger.info("Text to speech called")
+    # if tt.status_code == 400:
+    #     return tt.status_code
 
 
 
-
-
-
+@task
+def google_long_text_file_process_cel(consumable_credits,document_user_id,file_path,task_id,target_language,voice_gender,voice_name):
+    from ai_workspace_okapi.api_views import long_text_process
+    document_user = AiUser.objects.get(id = document_user_id)
+    obj = Task.objects.get(id=task_id)
+    MTonlytaskCeleryStatus.objects.create(task_id=obj.id,status=1,task_name='google_long_text_file_process_cel',celery_task_id=google_long_text_file_process_cel.request.id)
+    tr = long_text_process(consumable_credits,document_user,file_path,obj,target_language,voice_gender,voice_name)
+    #MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2,task_name='google_long_text_file_process_cel',celery_task_id=google_long_text_file_process_cel.request.id)
+    logger.info("Text to speech document called")
 
 
 
@@ -382,3 +408,71 @@ def text_to_speech(task_id):
             # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
             # res = requests.request("GET", url, headers=headers)
             # print("doc--->",res.text)
+@task
+def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,user_id,hertz):
+    from ai_workspace.api_views import transcribe_long_file
+    obj = Task.objects.get(id = task_id)
+    user = AiUser.objects.get(id = user_id)
+    MTonlytaskCeleryStatus.objects.create(task_id=obj.id,status=1,task_name='transcribe_long_file_cel',celery_task_id=transcribe_long_file_cel.request.id)
+    transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
+    logger.info("Transcribe called")
+
+
+
+
+@task
+def pre_translate_update(task_id):
+    from ai_workspace.models import Task, TaskAssign
+    from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation
+    from ai_workspace.api_views import UpdateTaskCreditStatus
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View
+
+    task = Task.objects.get(id=task_id)
+    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id)
+    user = task.job.project.ai_user
+    mt_engine = task.job.project.mt_engine_id
+    task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    segments = Segment.objects.filter(text_unit__document=task.document)
+    update_list = []
+    mt_segments = []
+
+    for seg in segments:###############Need to revise####################
+        i = seg.get_active_object()
+        if i.target == '':
+            initial_credit = user.credit_balance.get("total_left")
+            consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, i)
+            if initial_credit > consumable_credits:
+                mt = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
+                if i.target_tags != '':
+                    i.target = mt + i.target_tags
+                    i.temp_target = mt + i.target_tags
+                else:
+                    i.target = mt
+                    i.temp_target = mt
+                i.status_id = TranslationStatus.objects.get(status_id=104).id
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                mt_segments.append(i)
+            else:
+                MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
+                break
+    #             i.target= ""
+    #             i.temp_target = ''
+    #             i.status_id = None
+            update_list.append(i)
+    #
+    Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+
+
+    instances = [
+            MT_RawTranslation(
+                mt_raw= i.target,
+                mt_engine_id = mt_engine,
+                task_mt_engine_id = task_mt_engine_id,
+                segment_id= i.id,
+            )
+            for i in mt_segments
+        ]
+
+    MT_RawTranslation.objects.bulk_create(instances)
+    #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
+    logger.info("pre_translate_update")

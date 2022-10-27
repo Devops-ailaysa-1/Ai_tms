@@ -18,7 +18,7 @@ from ai_auth import models as auth_models
 from django.core.mail import EmailMessage
 from django.utils.translation import ugettext_lazy as _
 import logging
-
+logger = logging.getLogger('django')
 
 
 
@@ -127,7 +127,7 @@ def send_welcome_mail(current_site,user):
     if sent ==1:
         send_admin_new_user_notify(user)
     else:
-        logging.error(f"welcome mail sending failed for {email}")
+        logger.error(f"welcome mail sending failed for {email}")
 
 def send_admin_new_user_notify(user):
     context = {
@@ -370,3 +370,21 @@ def existing_vendor_onboarding_mail(user,gen_password):
         return False
     else:
         return True
+
+def send_campaign_welcome_mail(user):
+    context = {
+        "user":user,
+    }
+    email =user.email
+    msg_html = render_to_string("account/email/welcome_campaign.html", context)
+    sent=send_mail(
+        "Translate your first book free",
+        None,
+         settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=msg_html,
+    )
+    if sent ==1:
+        logger.info(f"Campaign welcome mail sent for {user.uid}")
+    else:
+        logger.error(f"Campaign welocome mail sending failed for {user.uid}")

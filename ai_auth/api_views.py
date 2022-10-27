@@ -1,7 +1,7 @@
 from logging import INFO
 from langdetect import detect
 import logging
-import re , requests
+import re , requests, os
 from django.core.mail import send_mail
 from ai_auth import forms as auth_forms
 from ai_auth.soc_auth import GoogleLogin
@@ -29,7 +29,7 @@ from django.shortcuts import get_object_or_404
 from ai_auth.vendor_onboard_list import users_list
 #from ai_auth.serializers import RegisterSerializer,UserAttributeSerializer
 from rest_framework import generics , viewsets
-from ai_auth.models import (AiUser, BillingAddress, Professionalidentity, ReferredUsers,
+from ai_auth.models import (AiUser, BillingAddress, CampaignUsers, Professionalidentity, ReferredUsers,
                             UserAttribute,UserProfile,CustomerSupport,ContactPricing,
                             TempPricingPreference,CreditPack, UserTaxInfo,AiUserProfile,
                             Team,InternalMember,HiredEditors,VendorOnboarding,SocStates)
@@ -51,7 +51,8 @@ from django.template import Context
 from django.template.loader import get_template
 from django.template.loader import render_to_string
 from datetime import datetime,date,timedelta
-from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,Customer,Invoice,Product,TaxRate,Account
+from djstripe.models import Price,Subscription,InvoiceItem,PaymentIntent,Charge,\
+                            Customer,Invoice,Product,TaxRate,Account,Coupon
 import stripe
 from django.conf import settings
 from ai_staff.models import Countries, CurrencyBasedOnCountry, IndianStates, SupportType,JobPositions,SupportTopics,Role, OldVendorPasswords
@@ -64,7 +65,7 @@ from ai_auth.utils import get_plan_name
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
 from ai_vendor.models import VendorsInfo,VendorLanguagePair
 from django.db import transaction
-
+from django.contrib.sites.shortcuts import get_current_site
 #for soc
 from django.test.client import RequestFactory
 from django.test import Client
@@ -79,13 +80,24 @@ from django.http import HttpResponseRedirect
 from urllib.parse import parse_qs, urlencode,  urlsplit
 from django.shortcuts import redirect
 import json
+from django.contrib import messages
+from ai_auth.Aiwebhooks import update_user_credits
+from allauth.account.signals import email_confirmed
+from ai_auth.signals import send_campaign_email
 
+logger = logging.getLogger('django')
 
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
     print(f"Error : {str(e)}")
 
+def get_stripe_api_key():
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+    return api_key
 
 def striphtml(data):
     p = re.compile(r'<.*?>')
@@ -554,11 +566,14 @@ def subscribe_trial(price,customer=None):
     return subscription
 
 def subscribe_vendor(user):
+    plan = None
     try:
         cust = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
     except Customer.DoesNotExist:
-        customer = Customer.get_or_create(subscriber=user)
-        cust=customer[0]
+        customer,created = Customer.get_or_create(subscriber=user)
+        cust=customer
+        if created:
+            plan = 'new'
     if cust.currency=='':
         if user.country.id == 101 :
             currency = 'inr'
@@ -567,6 +582,9 @@ def subscribe_vendor(user):
     else:
         currency =cust.currency
     price = Price.objects.get(product__name="Pro - V",currency=currency,djstripe_owner_account=default_djstripe_owner)
+    if plan == 'new':
+        sub=subscribe(price=price,customer=cust)
+        return sub
     plan = get_plan_name(user)
     if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
         sub=subscribe(price=price,customer=cust)
@@ -597,6 +615,25 @@ def subscribe(price,customer=None):
 
     return subscription
 
+def create_addon_paymentintent(customer,currency):
+    if settings.STRIPE_LIVE_MODE == True :
+        api_key = settings.STRIPE_LIVE_SECRET_KEY
+    else:
+        api_key = settings.STRIPE_TEST_SECRET_KEY
+
+    stripe.api_key = api_key
+
+    pay_intent = stripe.PaymentIntent.create(
+    customer=customer.id,
+    amount=0,
+    currency=currency,
+    payment_method_types=["card"],
+    metadata= {
+    "price": "price_1Jlt0nSHaXADggwo3di76YBt",
+    "quantity": "1",
+    "type": "Addon"
+    }
+    )
 
 
 def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
@@ -635,7 +672,7 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
     return checkout_session
 
 
-def create_invoice_one_time(price_id,Aicustomer,tax_rate,quantity=1):
+def create_invoice_one_time(price_id,Aicustomer,tax_rate,coupon,quantity=1):
     if settings.STRIPE_LIVE_MODE == True :
         api_key = settings.STRIPE_LIVE_SECRET_KEY
     else:
@@ -643,14 +680,15 @@ def create_invoice_one_time(price_id,Aicustomer,tax_rate,quantity=1):
     print(tax_rate)
     stripe.api_key = api_key
     data1=stripe.InvoiceItem.create(
-    customer=Aicustomer.id,
-    price=price_id.id,
-    quantity=quantity,
-    tax_rates=tax_rate
-    )
+                customer=Aicustomer.id,
+                price=price_id.id,
+                quantity=quantity,
+                tax_rates=tax_rate
+                )
 
     data2=stripe.Invoice.create(
     customer=Aicustomer.id,
+    discounts =[{'coupon':coupon}],
     auto_advance=True # auto-finalize this draft after ~1 hour
     )
     response = stripe.Invoice.finalize_invoice(
@@ -883,6 +921,77 @@ def buy_subscription(request):
 
 
 
+def campaign_subscribe(user,camp):
+    plan = None
+    livemode = settings.STRIPE_LIVE_MODE
+    api_key = get_stripe_api_key()
+    try:
+        cust = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
+    except Customer.DoesNotExist:
+        customer,created = Customer.get_or_create(subscriber=user)
+        cust=customer
+        if created:
+            plan = 'new'
+    if cust.currency=='':
+        if user.country.id == 101 :
+            currency = 'inr'
+        else:
+            currency ='usd'
+    else:
+        currency =cust.currency
+    ## Base Subscription
+    price = Plan.objects.get(product__name=camp.campaign_name.subscription_name,
+                        interval=camp.campaign_name.subscription_duration,currency=currency,
+                        djstripe_owner_account=default_djstripe_owner,livemode=livemode)
+
+    #if plan == 'new':
+    if user.is_vendor:
+        sub = Subscription.objects.filter(customer=cust,djstripe_owner_account=default_djstripe_owner).last()
+    else:
+        sub=subscribe(price=price,customer=cust)
+        if sub:
+            camp.subscribed =True
+            camp.save()
+            send_campaign_email.send(
+            sender=camp.__class__,
+            instance = camp,
+            user=user,
+            )
+            sync_sub = Subscription.sync_from_stripe_data(sub, api_key=api_key)
+        else:
+            print("error in creating subscription ",user.uid)
+
+    price_addon = Price.objects.get(product__name=camp.campaign_name.Addon_name,
+                        currency=currency,
+                        djstripe_owner_account=default_djstripe_owner,livemode=livemode)
+    print(price_addon)
+    try:
+        coupon = Coupon.objects.get(name=settings.CAMPAIGN)
+    except:
+        print("coupon not found")
+        return None
+    #invo = create_invoice_one_time(price_addon,cust,None,coupon.id)
+    # plan = get_plan_name(user)
+    # if plan== None or(plan != "Pro - V" and plan.startswith('Pro')):
+    #     sub=subscribe(price=price,customer=cust)
+    #     return sub
+    cp = CreditPack.objects.get(product=price_addon.product)
+    update_user_credits(user=user,cust=cust,price=price,
+                quants=camp.campaign_name.Addon_quantity,invoice=None,payment=None,pack=cp)
+    return sub
+
+def check_campaign(user):
+    camp = CampaignUsers.objects.filter(user=user)
+    if camp.count() > 0:
+        if camp.last().subscribed == False:
+            # camp.name.subscription_name
+            return campaign_subscribe(user,camp.last())
+        else:
+            logger.warning(f"user already registed in campaign :{user.uid}")
+            return None
+    else:
+        return None
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -936,6 +1045,10 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 else:
                     currency ='usd'
 
+                camp = check_campaign(user)
+                if camp:
+                    print("campaign",camp)
+                    return Response({'msg':'User Successfully created'}, status=201)
                 if price_id:
                     price = Plan.objects.get(id=price_id)
                     if (price.currency != currency) or (price.interval != 'month'):
@@ -944,6 +1057,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
                 print('price>>',price)
+
                 response=subscribe_trial(price,customer)
                 print(response)
                 #customer.subscribe(price=price)
@@ -1327,12 +1441,15 @@ def account_delete(request):
     user = AiUser.objects.get(id =request.user.id)
     match_check = check_password(password_entered,user.password)
     if match_check:
-        present = datetime.now()
-        three_mon_rel = relativedelta(months=3)
-        user.is_active = False
-        user.deactivation_date = present.date()+three_mon_rel
-        user.save()
+        # present = datetime.now()
+        # three_mon_rel = relativedelta(months=3)
+        # user.is_active = False
+        # user.deactivation_date = present.date()+three_mon_rel
+        # user.save()
         cancel_subscription(user)
+        dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
+        os.system("rm -r " +dir)
+        user.delete()
     else:
         return Response({"msg":"password didn't match"},status = 400)
     return JsonResponse({"msg":"user account deleted"},safe = False)
@@ -1514,6 +1631,7 @@ def msg_send(user,vendor):
     msg = ChatMessage.objects.create(message=message,user=user,thread_id=thread_id)
     notify.send(user, recipient=vendor, verb='Message', description=message,thread_id=int(thread_id))
 
+from ai_workspace.models import Project,TaskAssign,TaskAssignInfo
 class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated]
     page_size = 10
@@ -1583,8 +1701,15 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
     def delete(self,request,pk):
         queryset = HiredEditors.objects.all()
-        hired_editor = get_object_or_404(queryset, pk=pk)
-        hired_editor.delete()
+        hr = get_object_or_404(queryset, pk=pk)
+        pr = Project.objects.filter(ai_user = hr.user).filter(project_jobs_set__job_tasks_set__task_info__assign_to = hr.hired_editor)
+        for obj in pr:
+            rr = TaskAssign.objects.filter(task__job__project=obj).filter(assign_to = hr.hired_editor)
+            for i in rr:
+                TaskAssignInfo.objects.filter(task_assign=i).delete()
+                i.assign_to = hr.user
+                i.save()
+        hr.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -1674,7 +1799,6 @@ def referral_users(request):
     try:
         user = AiUser.objects.get(email =ref_email)
         return Response({"msg":"User Already Exists"},status = 400)
-
     except AiUser.DoesNotExist:
         ref =ReferredUsers.objects.create(email=ref_email)
     return Response({"msg":"Successfully Added"},status = 201)
@@ -1728,7 +1852,6 @@ def vendor_onboard_check(email,user):
         return JsonResponse({'id':obj.id,'email':email,'status':current})
     except:
         try:
-            obj1 = VendorsInfo.objects.get(user = user)
             obj1 = VendorOnboardingInfo.objects.get(user = user)
             if obj1.onboarded_as_vendor == True:
                 return JsonResponse({'msg':'onboarded_as_vendor and profile incomplete'})
@@ -1744,6 +1867,8 @@ def vendor_form_filling_status(request):
         if user.is_vendor == True:
             res = vendor_onboard_check(email,user)
             return res
+        else:
+            return Response(status=204)
     except:
         res = vendor_onboard_check(email,None)
         return res
@@ -1895,7 +2020,7 @@ def ai_social_login(request):
 
     soc_state = SocStates.objects.create(state=state,data=json.dumps(state_data))
     if soc_state == None:
-        logging.warning(f"state not created {state}")
+        logger.warning(f"state not created {state}")
 
     # VendorOnboardingInfo.objects.get_or_create(user=user,onboarded_as_vendor=True)
     # req.close()
@@ -1920,10 +2045,10 @@ def load_state(state_id,key=None):
         soc_state=SocStates.objects.get(state=state_id)
         user_state = json.loads(soc_state.data)
     except SocStates.DoesNotExist:
-        logging.error(f"invalid_state : {state_id}")
+        logger.error(f"invalid_state : {state_id}")
         return None
     except AttributeError:
-        logging.error(f"key error user_state_not_found : {state_id}")
+        logger.error(f"key error user_state_not_found : {state_id}")
         return None
     return user_state
 
@@ -1934,7 +2059,7 @@ def ai_social_callback(request):
     #     ses_id= request.COOKIES.get('sessionid')
     #     session=Session.objects.get(session_key=ses_id)
     # except BaseException as e:
-    #     logging.warning("session not found ",str(e))
+    #     logger.warning("session not found ",str(e))
     #     return JsonResponse({"msg": "session expired or not found"},status=440)
     # #session=Session.objects.get(session_key="9helhig4y4izzshs93wtzj7ow9yjydi5")
 
@@ -1998,7 +2123,7 @@ def ai_social_callback(request):
     try:
         response = GoogleLogin.as_view()(request=request._request).data
     except BaseException as e:
-        logging.error("on social login",str(e))
+        logger.error("on social login",str(e))
         return JsonResponse({"error":str(e)},status=400)
 
     required=[]
@@ -2006,19 +2131,19 @@ def ai_social_callback(request):
         response.get('access_token')
         resp_data =response
     except ValueError as e:
-        logging.info("on social login",str(e))
+        logger.info("on social login",str(e))
         return JsonResponse({"error":f"{str(e)}"},status=400)
 
     process = user_state.get('socialaccount_process',None)
 
     try:
         if response.get('user').get('country')!=None:
-            logging.info(f"user-{response.get('user').get('pk')} already registerd")
+            logger.info(f"user-{response.get('user').get('pk')} already registerd")
             process='login'
         else:
             process='signup'
     except AttributeError as e:
-        logging.warning(f"user key not found in response {str(e)}")
+        logger.warning(f"user key not found in response {str(e)}")
         return JsonResponse({"error":"user_already_exist"},status=409)
 
     if process == 'signup':
@@ -2044,7 +2169,7 @@ def ai_social_callback(request):
             temp_price=TempPricingPreference.objects.create(product_id=user_product,
                                             price_id=user_price,email=user_email)
         except BaseException as e:
-            logging.error(f"unable to create temp pricing data for {user_email} :  {str(e)}")
+            logger.error(f"unable to create temp pricing data for {user_email} :  {str(e)}")
 
 
 
@@ -2117,8 +2242,16 @@ class UserDetailView(viewsets.ViewSet):
                         if queryset:
                             user_obj.currency_based_on_country_id = queryset.first().currency_id
                         user_obj.save()
+                        current_site = get_current_site(request)
+                        auth_forms.send_welcome_mail(current_site,user_obj)
+                        email_confirmed.send(
+                        sender=user_obj.__class__,
+                        request=request,
+                        email_address=user_obj.email,
+                        user=user_obj,
+                        )
                     else:
-                        logging.error(f"user_country_already_updated : {user_obj.uid}")
+                        logger.error(f"user_country_already_updated : {user_obj.uid}")
                         raise ValueError
 
                 if source_lang and target_lang:
@@ -2145,3 +2278,46 @@ def lang_detect(request):
     lang = detect(text)
     lang_obj = Languages.objects.filter(locale__locale_code = lang).first()
     return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
+
+
+
+def resync_instances(queryset):
+## cloned from djstripe.admin.views
+    for instance in queryset:
+        api_key = instance.default_api_key
+        try:
+            if instance.djstripe_owner_account:
+                stripe_data = instance.api_retrieve(
+                    stripe_account=instance.djstripe_owner_account.id,
+                    api_key=api_key,
+                )
+            else:
+                stripe_data = instance.api_retrieve()
+            instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
+            print(f"Successfully Synced: {instance}")
+        except stripe.error.PermissionError as error:
+            print(error)
+        except stripe.error.InvalidRequestError as error:
+            print(f"Sync failed: {instance} error :{error}")
+        except stripe.error.StripeErrorWithParamCode:
+            print(f"Sync failed: {instance}")
+
+def stripe_resync_instance(instance):
+## cloned from djstripe.admin.views removed queryset
+    api_key = instance.default_api_key
+    try:
+        if instance.djstripe_owner_account:
+            stripe_data = instance.api_retrieve(
+                stripe_account=instance.djstripe_owner_account.id,
+                api_key=api_key,
+            )
+        else:
+            stripe_data = instance.api_retrieve()
+        instance.__class__.sync_from_stripe_data(stripe_data, api_key=api_key)
+        print(f"Successfully Synced: {instance}")
+    except stripe.error.PermissionError as error:
+        print(error)
+    except stripe.error.InvalidRequestError as error:
+        print(f"Sync failed: {instance} error :{error}")
+    except stripe.error.StripeErrorWithParamCode:
+        print(f"Sync failed: {instance}")

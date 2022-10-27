@@ -72,8 +72,15 @@ def create_ai_project_id_if_not_exists(user):
 # random.choice([1,2,3])  ---> 2
 # random.choice([1,2,3])  ---> 2
 # random.choices([1,2,3])  ---> [2]
+import math
+
+def roundup(x):
+    return int(math.ceil(x / 15.0)) * 15
+
+
+
 def get_consumable_credits_for_text_to_speech(total_chars):
     return round(total_chars/20)
 
 def get_consumable_credits_for_speech_to_text(total_seconds):#######Minimum billable 15 seconds Need to update##########
-    return round(total_seconds/3)
+    return round(roundup(total_seconds)/3)

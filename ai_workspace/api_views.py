@@ -33,12 +33,12 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
     VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
     TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
     GetAssignToSerializer,TaskTranscriptDetailSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
-                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer)
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,ExpressProjectDetailSerializer)
 import copy, os, mimetypes, logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
     TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
-    TaskAssignInfo,TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory
+    TaskAssignInfo,TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, ExpressProjectDetail
 from rest_framework import permissions
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.db import IntegrityError
@@ -73,15 +73,14 @@ from google.cloud import speech
 from google.cloud import speech_v1p1beta1 as speech
 import io
 from google.cloud import storage
-from ai_auth.tasks import mt_only
-from ai_auth.tasks import write_doc_json_file
+from ai_auth.tasks import mt_only, write_doc_json_file, text_to_speech_long_celery, transcribe_long_file_cel
 from docx import Document
 from htmldocx import HtmlToDocx
 from delta import html
 from glob import glob
 from pydub import AudioSegment
 from filesplit.split import Split
-
+logger = logging.getLogger('django')
 
 from ai_auth.tasks import write_doc_json_file
 
@@ -467,7 +466,7 @@ class Files_Jobs_List(APIView):
         steps = ProjectStepsSerializer(steps,many=True)
         return Response({"files":files.data,"glossary_files":glossary_files.data,"glossary":glossary,"jobs": jobs.data, "subjects":subjects.data,\
                         "contents":contents.data, "steps":steps.data, "project_name": project.project_name, "team":project.get_team,\
-                         "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,\
+                         "team_edit":team_edit,"project_type_id":project.project_type.id,"mt_engine_id":project.mt_engine_id,'pre_translate':project.pre_translate,\
                          "project_deadline":project.project_deadline, "mt_enable": project.mt_enable, "revision_step_edit":project.PR_step_edit}, status=200)
 
 class TmxFilesOfProject(APIView):
@@ -599,10 +598,13 @@ class ProjectFilter(django_filters.FilterSet):
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
             return queryset
         if value == "files":
-            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
+            queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_file_create_type__file_create_type="From insta text").exclude(project_type_id = 5)
             return queryset
         if value == "text":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
+            return queryset
+        if value == "express":
+            queryset = queryset.filter(project_type_id=5)
             return queryset
             #queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
         # if value == "glossary":
@@ -675,9 +677,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 pr = Project.objects.get(id=serializer.data.get('id'))
-                print("TASks--------->",pr.get_mtpe_tasks)
                 if pr.pre_translate == True:
-                    mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                    mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
@@ -687,7 +688,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             if serlzr.is_valid(raise_exception=True):
                 serlzr.save()
                 pr = Project.objects.get(id=serlzr.data.get('id'))
-                print("TASks--------->",pr.get_mtpe_tasks)
                 if pr.pre_translate == True:
                     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
                 #check_dict.apply_async(serlzr.data,)
@@ -1235,7 +1235,7 @@ class ProjectAnalysisProperty(APIView):
                         else:
                             print("error-->", task_detail_serializer.errors)
                     else:
-                        logging.debug(msg=f"error raised while process the document, the task id is {task.id}")
+                        logger.debug(msg=f"error raised while process the document, the task id is {task.id}")
                         raise  ValueError("Sorry! Something went wrong with file processing.")
                 except:
                     print("No entry")
@@ -1269,7 +1269,6 @@ class ProjectAnalysisProperty(APIView):
 class ProjectAnalysis(APIView):
 
     permission_classes = [IsAuthenticated]
-
     def get(self, request, project_id):
         return Response(ProjectAnalysisProperty.get(project_id))
 
@@ -1444,7 +1443,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             try:
                 po_modify(obj.id,['unassigned',])
             except BaseException as e:
-                logging.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
+                logger.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user
@@ -1536,7 +1535,7 @@ class ProjectListView(viewsets.ModelViewSet):
         serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
         data = serializer.data
         for i in data:
-            if i.get('assign_enable')==True:
+            if i.get('assign_enable')==True and i.get('assignable')==True:
                 proj_list.append(i)
         return Response(proj_list)
         # return  Response(serializer.data)
@@ -1549,7 +1548,14 @@ def tasks_list(request):
     job_id = request.GET.get("job")
     try:
         job = Job.objects.get(id = job_id)
-        tasks = job.job_tasks_set.all()
+        #tasks = job.job_tasks_set.all()
+        tasks=[]
+        for task in job.job_tasks_set.all():
+            if (task.job.target_language == None):
+                if (task.file.get_file_extension == '.mp3'):
+                    tasks.append(task)
+                else:pass
+            else:tasks.append(task)
         ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request})
         return Response(ser.data)
     except:
@@ -1740,26 +1746,33 @@ def previously_created_steps(request):
 @api_view(["GET"])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
-    if pr.project_type_id not in [3,4]:
+    if pr.project_type_id == 5:
+        for i in pr.get_tasks:
+            express_obj = ExpressProjectDetail.objects.filter(task=i).first()
+            if express_obj.target_text:
+                file_name,ext = os.path.splitext(i.file.filename)
+                target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
+                target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
+                with open(target_filepath,'w') as f:
+                    f.write(express_obj.target_text)
+                    print("File Written--------------->",target_filepath)
+            else:
+                pass
+
+    if pr.project_type_id not in [3,4,5]:
         for i in pr.get_tasks:
             if i.document:
-                # path,filename = os.path.split(i.file.file.path)
-                # name,ext =os.path.splitext(filename)
-                # print('path----------->',path +'/'+ name +'_out' +"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext)
-                # if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
-                #     print("True")
-                # else:
                 from ai_workspace_okapi.api_views import DocumentToFile
-                res = DocumentToFile.document_data_to_file(request,i.document.id)
-        if os.path.exists(os.path.join(pr.project_dir_path,'source')):
-            shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
-            res = download_file(pr.project_name+'.zip')
-            os.remove(pr.project_name+'.zip')
-            return res
-        else:
-            return Response({'msg':'something went wrong'},status=400)
+                res_1 = DocumentToFile.document_data_to_file(request,i.document.id)
+    if os.path.exists(os.path.join(pr.project_dir_path,'source')):
+        shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+        res = download_file(pr.project_name+'.zip')
+        os.remove(pr.project_name+'.zip')
+        return res
     else:
-        return Response({'msg':'project download not available'},status=400)
+        return Response({'msg':'something went wrong'},status=400)
+    # else:
+    #     return Response({'msg':'project download not available'},status=400)
 
 
 class ShowMTChoices(APIView):
@@ -1814,7 +1827,7 @@ class ShowMTChoices(APIView):
 
 ###########################Transcribe Short File############################## #######
 
-def transcribe_short_file(speech_file,source_code,obj,length,user):
+def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
     client = speech.SpeechClient()
 
     with io.open(speech_file, "rb") as audio_file:
@@ -1822,7 +1835,9 @@ def transcribe_short_file(speech_file,source_code,obj,length,user):
 
     audio = speech.RecognitionAudio(content=content)
 
-    config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=8000,language_code=source_code, enable_automatic_punctuation=True,)
+    sample_hertz = hertz if hertz >= 48000 else 8000
+
+    config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=sample_hertz,language_code=source_code, enable_automatic_punctuation=True,)
     try:
         response = client.recognize(config=config, audio=audio)
         transcript=''
@@ -1860,7 +1875,7 @@ def delete_blob(bucket_name, blob_name):
 
 
 
-def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
+def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz):
     print("User Long-------->",user.id)
     bucket_name = os.getenv("BUCKET")
     source_file_name = speech_file
@@ -1870,11 +1885,11 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
 
     gcs_uri = os.getenv("BUCKET_URL") + filename
     transcript = ''
-
+    sample_hertz = hertz if hertz >= 48000 else 8000
     client = speech.SpeechClient()
     audio = speech.RecognitionAudio(uri=gcs_uri)
 
-    config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=8000,language_code=source_code, enable_automatic_punctuation=True,)
+    config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=sample_hertz,language_code=source_code, enable_automatic_punctuation=True,)
 
 
     # Detects speech in the audio file
@@ -1900,15 +1915,21 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def transcribe_file(request):
+    from ai_workspace.models import MTonlytaskCeleryStatus
     task_id = request.POST.get('task')
     user = request.user
     print("User---------->",user)
     target_language = request.POST.getlist('target_languages')
     queryset = TaskTranscriptDetails.objects.filter(task_id = task_id)
     print("QS--->",queryset)
-    if queryset:
+    if queryset:#or state == 'SUCCESS':
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
+    ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+    state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
+    print("State----------------------->",state)
+    if state == 'PENDING':
+        return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
     else:
         obj = Task.objects.get(id = task_id)
         project = obj.job.project
@@ -1920,6 +1941,7 @@ def transcribe_file(request):
         try:
             audio = AudioSegment.from_file(speech_file)
             length = int(audio.duration_seconds)###seconds####
+            hertz = audio.frame_rate
         except:
             length=None
         print("Length----->",length)
@@ -1927,12 +1949,26 @@ def transcribe_file(request):
             return Response({'msg':'something wrong in input file'},status=400)
         initial_credit = account_debit_user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_speech_to_text(length)
+        print("Initial----------------->",initial_credit)
+        print("Consumable------------------>",consumable_credits)
         if initial_credit > consumable_credits:
             if length and length<60:
-                res = transcribe_short_file(speech_file,source_code,obj,length,user)
+                res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             else:
-                res = transcribe_long_file(speech_file,source_code,filename,obj,length,user)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+                ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+                state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
+                print("State----------------------->",state)
+                if state == 'PENDING':
+                    return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
+                elif (not ins) or state == 'FAILURE':
+                    res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+                    return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':res.id},status=400)
+                elif state == 'SUCCESS':
+                    ser = TaskTranscriptDetailSerializer(queryset,many=True)
+                    return Response(ser.data)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             print("RES----->",res)
             return JsonResponse(res,safe=False,json_dumps_params={'ensure_ascii':False})
         else:
@@ -1948,9 +1984,11 @@ def transcribe_file_get(request):
     return Response(ser.data)
 
 def google_long_text_file_process(file,obj,language,gender,voice_name):
+    print("Main func Voice Name---------->",voice_name)
     final_name,ext =  os.path.splitext(file)
-    final_audio = final_name + '.mp3'
-    #final_audio = final_name +'_' + obj.task.ai_taskid +'('+ obj.job.source_language_code + '-' +obj.job.target_language_code + ')' + '.mp3'
+    #final_audio = final_name + '.mp3'
+    #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
+    final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
     dir_1 = os.path.join('/ai_home/',"output")
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
@@ -1965,7 +2003,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
-            text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',None)
+            text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
     list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'))]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
@@ -1980,15 +2018,26 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     return file_obj,f2
 
 
+def long_text_source_process(consumable_credits,user,file_path,task,language,voice_gender,voice_name):
+
+    res1,f2 = google_long_text_source_file_process(file_path,task,language,voice_gender,voice_name)
+    print("Consumable------------>",consumable_credits)
+    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+    ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res1,"task":task.id,"user":user.id})
+    if ser.is_valid():
+        ser.save()
+    print(ser.errors)
+    f2.close()
+
 #####################Need to work###########################################
 
 def google_long_text_source_file_process(file,obj,language,gender,voice_name):
     project_id  = obj.job.project.id
     final_name,ext =  os.path.splitext(file)
     lang_list = ['hi','bn','or','ne','pa']
-    final_audio = final_name + '.mp3'
-    #final_audio = final_name +'_' + obj.ai_taskid + '(' + obj.job.source_language_code + ')' + '.mp3'
-    dir_1 = os.path.join('/ai_home/',"Output_"+str(project_id))
+    #final_audio = final_name + '.mp3'
+    final_audio = final_name + "_" + obj.job.source_language_code  + ".mp3"#+ "_" + obj.ai_taskid
+    dir_1 = os.path.join('/ai_home/',"Output_"+str(obj.id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
         count=0
@@ -2001,7 +2050,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
               for i in sents:
                   outfile.write(i)
                   count = count+len(i)
-                  print("<--------------------count-------------------------->",count)
+                 # print("<--------------------count-------------------------->",count)
                   if count > 3500:
                     outfile.write('\n')
                     count=0
@@ -2012,12 +2061,14 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
         if file.endswith('.txt') :
             print("File--------------->",file)
             name,ext = os.path.splitext(file)
-            dir = os.path.join('/ai_home/',"OutputAudio_"+str(project_id))
+            dir = os.path.join('/ai_home/',"OutputAudio_"+str(obj.id))
             if not os.path.exists(dir):
                 os.mkdir(dir)
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
-            text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
+            print("ARGS--------->",filepath,language,obj.job.source_language_code,audiofile,gender,voice_name)
+            rr = text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
+            #print("RR------------------------>",rr.status_code)
     list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3')) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
@@ -2057,7 +2108,9 @@ def convert_and_download_text_to_speech_source(request):#########working########
 
 def text_to_speech_task(obj,language,gender,user,voice_name):
     #obj = Task.objects.get(id=task_id)
+    from ai_workspace.models import MTonlytaskCeleryStatus
     project = obj.job.project
+    print("Gender------------------->",gender)
     account_debit_user = project.team.owner if project.team else project.ai_user
     file,ext = os.path.splitext(obj.file.file.path)
     dir,name_ = os.path.split(os.path.abspath(file))
@@ -2073,31 +2126,43 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
         text_file.close()
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
     initial_credit = account_debit_user.credit_balance.get("total_left")
+    seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
+                 "processor_name":"plain-text-processor", "extension":".txt"}
+    res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
+    wc = res1.json() if res1.status_code == 200 else None
+    TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc,"task_char_count":len(data)})
+    print("Consumable Credits--------------->",consumable_credits)
+    print("Initial Credits---------------->",initial_credit)
     if initial_credit > consumable_credits:
         if len(data)>4500:
             print(name)
-            res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+            ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+            state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
+            print("State--------------->",state)
+            if state == 'PENDING':
+                return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
+            elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+                celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
+            #res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
         else:
-            seg_data = {"segment_source":data, "source_language":obj.job.source_language_code, "target_language":obj.job.source_language_code,\
-                         "processor_name":"plain-text-processor", "extension":".txt"}
-            res1 = requests.post(url=f"http://{spring_host}:8080/segment/word_count", data={"segmentWordCountdata":json.dumps(seg_data)})
-            wc = res1.json() if res1.status_code == 200 else None
-            TaskDetails.objects.get_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc})
-            audio_file = name_ +'_'+ obj.ai_taskid + '_source'+ '(' + obj.job.source_language_code + ')' + '.mp3'
+            audio_file = name_ + "_source" + "_" + obj.job.source_language_code + ".mp3"#+ "_" + obj.ai_taskid
+            print("Args short------->",name,language,obj.job.source_language_code,audio_file,gender,voice_name)
             res2,f2 = text_to_speech(name,language if language else obj.job.source_language_code ,audio_file,gender if gender else 'FEMALE',voice_name)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             os.remove(audio_file)
-        ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
-        if ext == '.docx':
-            os.remove(name)
-        if ser.is_valid():
-            ser.save()
+            ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res2,"task":obj.id,"user":user.id})
+            if ext == '.docx':
+                os.remove(name)
+            if ser.is_valid():
+                ser.save()
+                f2.close()
+                return Response(ser.data)
             f2.close()
-            return Response(ser.data)
-        f2.close()
-        #os.remove(name)
-        return Response(ser.errors)
+            #os.remove(name)
+            return Response(ser.errors)
     else:
         return Response({'msg':'Insufficient Credits'},status=400)
 
@@ -2117,6 +2182,8 @@ def get_media_link(request,task_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
+    from django_celery_results.models import TaskResult
+    from ai_workspace.models import MTonlytaskCeleryStatus
     task = request.GET.get('task')
     project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)
@@ -2125,10 +2192,9 @@ def convert_text_to_speech_source(request):
     user = request.user
     if task:
         obj = Task.objects.get(id = task)
-        if obj.task_transcript_details.exists()==False:
-            #text_to_speech.apply_async((obj.id,), ) ###need to check####
-            tt = text_to_speech_task(obj,language,gender,user,voice_name)
-            return Response(tt.data)
+        tt = text_to_speech_task(obj,language,gender,user,voice_name)
+        if tt!=None and tt.status_code == 400:
+            return tt
         else:
             ser = TaskTranscriptDetailSerializer(obj.task_transcript_details.first())
             return Response(ser.data)
@@ -2139,12 +2205,15 @@ def convert_text_to_speech_source(request):
         for _task in pr.get_source_only_tasks:
             if _task.task_transcript_details.first() == None:
                 tasks.append(_task)
-        for obj in tasks:
-            conversion = text_to_speech_task(obj,language,gender,user,voice_name)
-            if conversion.status_code == 200:
-                task_list.append(obj.id)
-            elif conversion.status_code == 400:
-                return Response({'msg':'Insufficient Credits'},status=400)
+        if tasks:
+            for obj in tasks:
+                print("Obj-------------->",obj)
+                conversion = text_to_speech_task(obj,language,gender,user,voice_name)
+                print("Conv----------->",conversion)
+                if conversion.status_code == 200:
+                    task_list.append(obj.id)
+                elif conversion.status_code == 400:
+                    return conversion#Response({'msg':'Insufficient Credits'},status=400)
         queryset = TaskTranscriptDetails.objects.filter(task__in = pr.get_source_only_tasks)
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
@@ -2305,37 +2374,249 @@ def writer_save(request):
     filename,ext = os.path.splitext(task_obj.file.filename)
     print("Filename---------------->",filename)
     name = filename + '.docx'
-    file_obj,name,f2 = docx_save(name,edited_data)
+    try:
+        file_obj,name,f2 = docx_save(name,edited_data)
+    except:
+        return Response({'msg':'something wrong with input file format'},status=400)
     if obj:
         ser1 = TaskTranscriptDetailSerializer(obj,data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     else:
         ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
     if ser1.is_valid():
         ser1.save()
+        os.remove(name)
         return Response(ser1.data)
     return Response(ser1.errors)
 
 
+# class ExpressProjectSetupView(viewsets.ModelViewSet):
+#     permission_classes = [IsAuthenticated]
+#
+#     def create(self, request):
+#         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+#         text_data=request.POST.get('text_data')
+#         name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
+#         im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+#         serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['2']},context={"request": request})
+#         if serializer.is_valid(raise_exception=True):
+#             serializer.save()
+#             pr = Project.objects.get(id=serializer.data.get('id'))
+#             mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
+#             res=[{'task_id':i.id,'target_lang_name':i.job.target_language.language,"target_lang_id":i.job.target_language.id} for i in pr.get_mtpe_tasks]
+#             return Response({'Res':res})
+#         return Response(serializer.errors)
+
+
+
+# @api_view(['GET',])
+# @permission_classes([IsAuthenticated])
+# def task_get_segments(request):
+#     from ai_workspace_okapi.api_views import DocumentViewByTask
+#     from ai_workspace.models import MTonlytaskCeleryStatus
+#     from django_celery_results.models import TaskResult
+#     user = request.user.team.owner  if request.user.team  else request.user
+#     task_id = request.GET.get('task_id')
+#     obj = Task.objects.get(id=task_id)
+#     ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+#     if ins.status == 1:
+#         obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
+#         if obj !=None and obj.status == "FAILURE":
+#             Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
+#             document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
+#             MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=2)
+#         else:
+#             return Response({"msg": "File under process. Please wait a little while. \
+#                     Hit refresh and try again"}, status=401)
+#     else:
+#         document = DocumentViewByTask.create_document_for_task_if_not_exists(obj)
+#     seg_out = ''
+#     seg_status = None
+#     for j in document.segments:
+#         if j.target=='':
+#             if UserCredits.objects.filter(user_id=user.id).filter(ended_at__isnull=True).last().credits_left < len(j.source):
+#                 seg_status = 'some segments may not be translated due to insufficient credits.please subscribe and try again'
+#                 break
+#         seg_out+=j.target
+#     out =[{'task_id':obj.id,"seg_status":seg_status,"target":seg_out,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id}]
+#     return Response({'Res':out})
 
 
 
 
+class ExpressProjectSetupView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request):
+        punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+        text_data=request.POST.get('text_data')
+        name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
+        im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
+        serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['5']},context={"request": request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            pr = Project.objects.get(id=serializer.data.get('id'))
+            res=[{'task_id':i.id,'target_lang_name':i.job.target_language.language,"target_lang_id":i.job.target_language.id} for i in pr.get_mtpe_tasks]
+            return Response({'Res':res})
+        return Response(serializer.errors)
 
 
+def get_consumable_credits_for_text(source,target_lang,source_lang):
+    seg_data = { "segment_source" : source,
+                 "source_language" : source_lang,
+                 "target_language" : target_lang,
+                 "processor_name" : "plain-text-processor",
+                 "extension":".txt"
+                 }
+    res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
+        data={"segmentWordCountdata":json.dumps(seg_data)})
+
+    if res.status_code == 200:
+        print("Word count of the segment--->", res.json())
+        return res.json()
+    else:
+        logger.info(">>>>>>>> Error in segment word count calculation <<<<<<<<<")
+        raise  ValueError("Sorry! Something went wrong with word count calculation.")
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def task_get_segments(request):
+    from ai_workspace.models import ExpressProjectDetail
+    user = request.user.team.owner  if request.user.team  else request.user
+    task_id = request.GET.get('task_id')
+    express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+    obj = Task.objects.get(id=task_id)
+    with open(obj.file.file.path, "r") as file:
+        content = file.read()
+    if express_obj.mt_raw == None and express_obj.target_text == None:
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits = get_consumable_credits_for_text(content,obj.job.source_language_code,obj.job.target_language_code)
+        print("InitialCredits---------------->",initial_credit)
+        print("ConsumableCredits---------------->",consumable_credits)
+        if initial_credit > consumable_credits:
+            trans = get_translation(obj.job.project.mt_engine.id, content , obj.job.source_language_code, obj.job.target_language_code)
+            express_obj.target_text = trans
+            express_obj.mt_engine = obj.job.project.mt_engine
+            express_obj.mt_raw = trans
+            express_obj.save()
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+            out =[{'task_id':obj.id,"source":content,"mt_raw":express_obj.mt_raw,"target":express_obj.target_text,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id}]
+            return Response({'Res':out})
+        else:
+            out =[{'task_id':obj.id,"source":content,"mt_raw":None,"target":'','project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":obj.job.project.mt_engine.id}]
+            return Response({'msg':'Insufficient Credits','Res':out})
+            #return Response({'msg':'Insufficient Credits'},status=400)
+    else:
+        out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id if express_obj.mt_engine else obj.job.project.mt_engine.id}]
+        return Response({'Res':out})
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def task_segments_save(request):
+    task_id = request.POST.get('task_id')
+    target_text = request.POST.get('target_text')
+    express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+    express_obj.target_text = target_text
+    express_obj.save()
+    ser = ExpressProjectDetailSerializer(express_obj)
+    return Response(ser.data)
+
+@api_view(['GET'])
+#@permission_classes([IsAuthenticated])
+def express_task_download(request,task_id):###############permission need to be added and checked##########################
+    obj = Task.objects.get(id = task_id)
+    express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+    file_name,ext = os.path.splitext(obj.file.filename)
+    target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
+    with open(target_filename,'w') as f:
+        f.write(express_obj.target_text)
+    res = download_file(target_filename)
+    os.remove(target_filename)
+    return res
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def express_project_detail(request,project_id):
+    obj = Project.objects.get(id=project_id)
+    jobs = obj.project_jobs_set.all()
+    jobs_data = JobSerializer(jobs, many=True)
+    #target_languages = [job.target_language_id for job in obj.project_jobs_set.all() if job.target_language_id != None]
+    source_lang_id =  obj.project_jobs_set.first().source_language_id
+    mt_engine_id = obj.mt_engine_id
+    project_name = obj.project_name
+    team = obj.get_team
+    project_file = obj.project_files_set.all().first()
+    with open(project_file.file.path, "r") as file:
+        content = file.read()
+    return JsonResponse({'jobs':jobs_data.data,'source_lang':source_lang_id,\
+                        'mt_engine':mt_engine_id,'project_name':project_name,'team':team,\
+                        'source_text':content})
 
 
+def voice_project_progress(pr):
+    from ai_workspace_okapi.models import Document, Segment
+    count=0
+    progress = 0
+    source_tasks = pr.get_source_only_tasks
+    if source_tasks:
+        if pr.voice_proj_detail.project_type_sub_category_id==1:
+            for i in source_tasks:
+                if TaskTranscriptDetails.objects.filter(task_id = i).exists():
+                    if TaskTranscriptDetails.objects.filter(task_id = i).last().transcripted_text !=None:
+                        count+=1
+        elif pr.voice_proj_detail.project_type_sub_category_id==2:
+            for i in source_tasks:
+                if TaskTranscriptDetails.objects.filter(task_id = i).exists():
+                    if TaskTranscriptDetails.objects.filter(task_id = i).last().source_audio_file !=None:
+                        count+=1
+    if pr.get_mtpe_tasks:
+        docs = Document.objects.filter(job__project_id=pr.id).all()
+        print(docs)
+        if not docs:
+            count+=0
+        if docs.count() == len(pr.get_mtpe_tasks):
+            total_seg_count = 0
+            confirm_count  = 0
+            confirm_list = [102, 104, 106, 110, 107]
+
+            segs = Segment.objects.filter(text_unit__document__job__project_id=pr.id)
+            for seg in segs:
+                if seg.is_merged == True and seg.is_merge_start is None:
+                    continue
+                else:
+                     total_seg_count += 1
+
+                     seg_new = seg.get_active_object()
+                     if seg_new.status_id in confirm_list:
+                        confirm_count += 1
+
+            if total_seg_count == confirm_count:
+                count+=len(pr.get_mtpe_tasks)
+            else:
+                progress+=1
+    #print("count------------>",count)
+    if count == 0 and progress == 0:
+        return "Yet to Start"
+    elif count == len(pr.get_tasks):
+        return "Completed"
+    elif count != len(pr.get_tasks) or progress != 0:
+        return "In Progress"
 
 
-
-
-
-
-
-
-
-
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_vendor_rates(request):
+#     task_id = request.GET.get('task_id')
+#     vendor_id = request.GET.get('vendor_id')
+#     obj = Task.objects.get(id = task_id)
+#     vendor = AiUser.objects.get(id=vendor_id)
+#     query = VendorLanguagePair.objects.filter((Q(source_lang_id=obj.job.src_lang_id) & Q(target_lang_id=obj.job.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+#              .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+#     if query:
+#         return JsonResponse({'currency':query[0].get('currency'),'mtpe_rate':query[0].get('service__mtpe_rate'),\
+#                         'hourly_rate':query[0].get('service__mtpe_hourly_rate'),'count_unit':query[0].get('service__mtpe_count_unit')})
+#     else:
+#         return JsonResponse({'msg':'Not available'})
 
 # ##################################Need to revise#######################################
 # # @api_view(['PUT',])
@@ -2424,3 +2705,43 @@ def writer_save(request):
         # dir = os.path.dirname(obj.file.file.path)
         # loc = os.path.join(dir,"Audio",name)
         # return download_file(loc)
+# query = VendorLanguagePair.objects.filter((Q(source_lang_id=i.src_lang_id) & Q(target_lang_id=i.tar_lang_id) & Q(user=vendor) & Q(deleted_at=None)))\
+#         .select_related('service').values('currency','service__mtpe_rate','service__mtpe_hourly_rate','service__mtpe_count_unit')
+
+
+
+#convert_text_to_speech_source
+        # print("func----->",tt)
+        # if tt.status_code == 400:
+        #     return Response({'msg':'Insufficient Credits'},status=400)
+        # ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+        # state = text_to_speech_celery.AsyncResult(ins.celery_task_id).state if ins else None
+        # if state == 'PENDING':
+        #     return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
+        # elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+        #     tt = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name), ) ###need to check####
+        #     print("TT in viewss------------->",tt.get())
+        #     if tt.get() == 400:
+        #         return Response({'msg':'Insufficient Credits'},status=400)
+        #     else:
+        #         return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':tt.id})
+
+
+            #     ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+            #     state = text_to_speech_celery.AsyncResult(ins.celery_task_id).state if ins else None
+            #     if state == 'PENDING':
+            #         return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id})
+            #     elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+            #         conversion = text_to_speech_celery.apply_async((obj.id,language,gender,user.id,voice_name),)
+            #         if conversion.get() == 200:
+            #             task_list.append(obj.id)
+            #         elif conversion.get() == 400:
+            #             return Response({'msg':'Insufficient Credits'},status=400)
+            # return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':conversion.id })
+############project Download##################33
+# path,filename = os.path.split(i.file.file.path)
+                # name,ext =os.path.splitext(filename)
+                # print('path----------->',path +'/'+ name +'_out' +"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext)
+                # if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
+                #     print("True")
+                # else:
