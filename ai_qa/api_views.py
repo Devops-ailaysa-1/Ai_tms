@@ -210,20 +210,39 @@ def inconsistent_email(source,target):
     else:
         return email_out
 
+def is_matched(expr):
+    expr = re.sub("[^][}{)(]+", "", expr)
+    while expr:
+        expr1 = re.sub(r"\(\)|\[\]|\{\}", "", expr)
+        if expr1 == expr:
+            return not expr1
+        expr = expr1
+    return True
+
+def is_quote_matched(expr):
+    expr = re.sub("[^\'\'\"\"\'''\''']+", "", expr)
+    while expr:
+        expr1 = re.sub(r"\'\'|\"\"|\'''\'''", "", expr)
+        if expr1 == expr:
+            return not expr1
+        expr = expr1
+    return True
+
+
 ##########  PUNC & SPACING  ##########
 def punc_space_view(src,tgt):
-    openbracket     = re.compile(r'(\w+|\s)?(\(|\[|\{)(\w+|\s)?[^\]})](\\|\s|\.)')
-    closebracket     = re.compile(r'\([^()]*\)|\[[^][]*]|\{[^{}]*}|(\w+[])}]|[([{]\w+)')
+    #openbracket     = re.compile(r'(\w+|\s)?(\(|\[|\{)(\w+|\s)?[^\]})](\\|\s|\.)')
+    #closebracket     = re.compile(r'\([^()]*\)|\[[^][]*]|\{[^{}]*}|(\w+[])}]|[([{]\w+)')
     #space           = re.compile(r'(\s\s+|^(\s\s)|\s$|\s\.)')
     multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
     #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
     punc             = re.compile(r'(\.\.+)[^\.+$]')
     endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
     quotes           = re.compile(r'(\w+\s(\'|\")\w+(\s|\,))|(\w+(\'|\")\s\w(\s|\,))')
-    quotesmismatch   = re.compile(r'(\'\s?\w+\")|(\"\s?\w+\')')
-    brac1            = re.compile(r'\(\w+[.-/]?\w+?(\}|\])')
-    brac2            = re.compile(r'\{\w+[.-/]?\w+?(\)|\])')
-    brac3            = re.compile(r'\[\w+[.-/]?\w+?(\)|\})')
+    #quotesmismatch   = re.compile(r'(\'\s?\w+\")|(\"\s?\w+\')')
+    #brac1            = re.compile(r'\(\w+[.-/]?\w+?(\}|\])')
+    #brac2            = re.compile(r'\{\w+[.-/]?\w+?(\)|\])')
+    #brac3            = re.compile(r'\[\w+[.-/]?\w+?(\)|\})')
     list = []
     src_values = []
     tgt_values = []
@@ -232,37 +251,40 @@ def punc_space_view(src,tgt):
         content = src if seg=="Source" else tgt
         values = src_values if seg=="Source" else tgt_values
 
-        if bool(openbracket.findall(content)):
-            for i in openbracket.finditer(content):
-                values.append(i.group(0))
-        if bool(closebracket.findall(content)):
-            for i in closebracket.finditer(content):
-                if i.group(1):
-                    values.append(i.group(1))
-        if bool(openbracket.findall(content)) or bool(closebracket.findall(content)):
-            list.append("{seg} contains one or more unclosed brackets".format(seg=seg))
+        # if bool(openbracket.findall(content)):
+        #     for i in openbracket.finditer(content):
+        #         values.append(i.group(0))
+        # if bool(closebracket.findall(content)):
+        #     for i in closebracket.finditer(content):
+        #         if i.group(1):
+        #             values.append(i.group(1))
+        # if bool(openbracket.findall(content)) or bool(closebracket.findall(content)):
+        #     list.append("{seg} contains one or more unclosed brackets".format(seg=seg))
         if bool(multispace.findall(content)):
             list.append("{seg} segment contains multiple spaces or spaces at start / end".format(seg=seg))
         if punc.findall(content):
             list.append("More than one fullstops found in {seg}".format(seg=seg))
 
         ### BRACKET MISMATCH ##
-        if bool(brac1.findall(content)):
-            for i in brac1.finditer(content):
-                values.append(i.group(0))
-        if bool(brac2.findall(content)):
-            for i in brac2.finditer(content):
-                values.append(i.group(0))
-        if bool(brac3.findall(content)):
-            for i in brac3.finditer(content):
-                values.append(i.group(0))
-        if bool(brac1.findall(content)) or bool(brac2.findall(content)) or bool(brac3.findall(content)):
+        if not bool(is_matched(content)):
             list.append("{seg} contains mismatched bracket(s)".format(seg=seg))
+        # if bool(brac1.findall(content)):
+        #     for i in brac1.finditer(content):
+        #         values.append(i.group(0))
+        # if bool(brac2.findall(content)):
+        #     for i in brac2.finditer(content):
+        #         values.append(i.group(0))
+        # if bool(brac3.findall(content)):
+        #     for i in brac3.finditer(content):
+        #         values.append(i.group(0))
+        # if bool(brac1.findall(content)) or bool(brac2.findall(content)) or bool(brac3.findall(content)):
+        #     list.append("{seg} contains mismatched bracket(s)".format(seg=seg))
         if bool(quotes.findall(content)):
             list.append("{seg} contains space before or after apostrophe".format(seg=seg))
-        if bool(quotesmismatch.findall(content)):
-            for i in quotesmismatch.finditer(content):
-                values.append(i.group(0))
+        # if bool(quotesmismatch.findall(content)):
+        #     for i in quotesmismatch.finditer(content):
+        #         values.append(i.group(0))
+        if not bool(is_quote_matched(content)):
             list.append("Quotes mismatch in {seg}".format(seg=seg))
 
     if endpunc.findall(src.strip()) !=  endpunc.findall(tgt.strip()):
@@ -473,6 +495,15 @@ def tags_check(source,target):
     else:
         return tags_out
 
+def general_check_view(source,target):
+    src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+    if not target:
+        return {"data":"Target segment is empty"}
+    elif source.strip()==target.strip():
+        return {"data":"Source and target segments are identical"}
+    elif len(target.split()) < src_limit:
+        return {"data":"Length of translation length seems shortened"}
+
 
 TAG_RE = re.compile(r'<[^>]+>')
 
@@ -494,13 +525,17 @@ def QA_Check(request):
     doc = Document.objects.get(id=doc_id)
     sourceLanguage = doc.source_language
     targetLanguage = doc.target_language
-    src_limit = round( ( 0.4 * len(source.split()) ), 2 )
-    if not target:
-        return JsonResponse({"data":"Target segment is empty"},safe=False)
-    elif source.strip()==target.strip():
-        return JsonResponse({"data":"Source and target segments are identical"},safe=False)
-    elif len(target.split()) < src_limit:
-        return JsonResponse({"data":"Length of translation length seems shortened"},safe=False)
+    general_check = general_check_view(source,target)
+    if general_check:
+        out.append({'General Check':general_check})
+        return JsonResponse({'data':out},safe=False)
+    # src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+    # if not target:
+    #     return JsonResponse({"data":"Target segment is empty"},safe=False)
+    # elif source.strip()==target.strip():
+    #     return JsonResponse({"data":"Source and target segments are identical"},safe=False)
+    # elif len(target.split()) < src_limit:
+    #     return JsonResponse({"data":"Length of translation length seems shortened"},safe=False)
 
     ###############Untranslatables######################
     # data_alnum=Letters_Numbers(source)
