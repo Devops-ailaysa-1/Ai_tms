@@ -258,6 +258,11 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         return super().to_internal_value(data=data)
 
 
+    def remove_tags(self,text):
+        TAG_RE = re.compile(r'<[^>]+>')
+        return TAG_RE.sub('', text)
+
+
     def pre_flow(self,user,source,document,mt_engine,target_tags):
         from .api_views import MT_RawAndTM_View
         initial_credit = user.credit_balance.get("total_left")
@@ -326,7 +331,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
-                    
+
                 if target_get == False:
                     seg['target'] = ""
                     seg['temp_target'] = ""
@@ -353,7 +358,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             for i in segments:
                 if i.target != "":
                     count += 1
-                    mt_params.extend([i.target,mt_engine,None,i.id])
+                    mt_params.extend([self.remove_tags(i.target),mt_engine,mt_engine,i.id])
 
             mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
             VALUES {}".format(','.join(['(%s, %s, %s, %s)'] * count))

@@ -14,7 +14,7 @@ from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
 from ai_marketplace.models import ProjectboardDetails
-import requests
+import requests, re
 from contextlib import closing
 from django.db import connection
 from django.db.models import Q
@@ -321,7 +321,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
         for i in segments:
             if i.target != "":
                 count += 1
-                mt_params.extend([i.target,mt_engine,None,i.id])
+                mt_params.extend([re.sub(r'<[^>]+>', "", i.target),mt_engine,mt_engine,i.id])
 
         mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
         VALUES {}".format(','.join(['(%s, %s, %s, %s)'] * count))
@@ -440,7 +440,7 @@ def pre_translate_update(task_id):
         i = seg.get_active_object()
         if i.target == '':
             initial_credit = user.credit_balance.get("total_left")
-            consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, i)
+            consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, None)
             if initial_credit > consumable_credits:
                 mt = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
                 if i.target_tags != '':
@@ -465,9 +465,9 @@ def pre_translate_update(task_id):
 
     instances = [
             MT_RawTranslation(
-                mt_raw= i.target,
+                mt_raw= re.sub(r'<[^>]+>', "", i.target),
                 mt_engine_id = mt_engine,
-                task_mt_engine_id = task_mt_engine_id,
+                task_mt_engine_id = mt_engine,
                 segment_id= i.id,
             )
             for i in mt_segments
