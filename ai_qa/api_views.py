@@ -214,8 +214,10 @@ def inconsistent_email(source,target):
 def punc_space_view(src,tgt):
     openbracket     = re.compile(r'(\w+|\s)?(\(|\[|\{)(\w+|\s)?[^\]})](\\|\s|\.)')
     closebracket     = re.compile(r'\([^()]*\)|\[[^][]*]|\{[^{}]*}|(\w+[])}]|[([{]\w+)')
-    space           = re.compile(r'(\s\s+|^(\s\s)|\s$|\s\.)')
-    punc            = re.compile(r'(\.\.+$)|(\.\.+)')
+    #space           = re.compile(r'(\s\s+|^(\s\s)|\s$|\s\.)')
+    multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
+    #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
+    punc             = re.compile(r'(\.\.+)[^\.+$]')
     endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
     quotes           = re.compile(r'(\w+\s(\'|\")\w+(\s|\,))|(\w+(\'|\")\s\w(\s|\,))')
     quotesmismatch   = re.compile(r'(\'\s?\w+\")|(\"\s?\w+\')')
@@ -239,10 +241,10 @@ def punc_space_view(src,tgt):
                     values.append(i.group(1))
         if bool(openbracket.findall(content)) or bool(closebracket.findall(content)):
             list.append("{seg} contains one or more unclosed brackets".format(seg=seg))
-        if bool(space.findall(content)):
+        if bool(multispace.findall(content)):
             list.append("{seg} segment contains multiple spaces or spaces at start / end".format(seg=seg))
         if punc.findall(content):
-            list.append("Double fullstops found in {seg}".format(seg=seg))
+            list.append("More than one fullstops found in {seg}".format(seg=seg))
 
         ### BRACKET MISMATCH ##
         if bool(brac1.findall(content)):
@@ -263,7 +265,7 @@ def punc_space_view(src,tgt):
                 values.append(i.group(0))
             list.append("Quotes mismatch in {seg}".format(seg=seg))
 
-    if endpunc.findall(src) !=  endpunc.findall(tgt):
+    if endpunc.findall(src.strip()) !=  endpunc.findall(tgt.strip()):
         list.append("Mismatch in end punctuation")
 
     # close = closebracket.finditer(src)
