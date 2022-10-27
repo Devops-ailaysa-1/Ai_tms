@@ -7,25 +7,18 @@ import os ,logging ,requests ,json,time
 from io import BytesIO 
 from google.cloud import vision_v1 , vision
 from google.oauth2 import service_account
-from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR ,CONVERTIO_API ,CONVERTIO_IP
+from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR ,CONVERTIO_API 
 from PyPDF2 import PdfFileReader
 from tqdm import tqdm
+import time
+import base64
+from ai_exportpdf.convertio_ocr_lang import lang_code
 from pdf2image import convert_from_path
 from celery import shared_task
-from django.core.files.base import ContentFile
+from django.contrib.auth import settings 
 logger = logging.getLogger('django')
-
-output_docx_path = os.getcwd()+"/output_docx/"
-print(output_docx_path)
-if not os.path.exists(output_docx_path):
-    os.makedirs(output_docx_path)
-
-
 with open('tesseract_language.json') as fp:
     tesseract_language_pair = json.load(fp)
-
-with open('convertio.json') as fp:
-    convertio_ocr_lang_pair = json.load(fp)
 
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -64,8 +57,6 @@ def image_ocr_google_cloud_vision(image , inpaint):
         response = client.text_detection(image = image)
         texts = response.full_text_annotation
         return texts
-
-
     else:
         buffer = BytesIO()
         image.save(buffer, format="PNG")
@@ -74,40 +65,61 @@ def image_ocr_google_cloud_vision(image , inpaint):
         texts = response.full_text_annotation
         if texts:
             texts = para_creation_from_ocr(texts)
-            # return texts[0].description  
             return texts
         else:
-            #####empty page
             return ""
 
-
-def convertiopdf2docx(pdf_file_name ,pdf_file_name_with_extension ,ocr , language):
-    pdf_file_url = "{}/exportpdf/media/{}".format(CONVERTIO_IP, pdf_file_name_with_extension)
-    # callback_url = "{}/exportpdf/checkstatuspdf".format(CONVERTIO_IP)
-    data = {
-                'apikey': CONVERTIO_API,
-                'input': 'url',
-                'file': pdf_file_url,
-                'filename':  pdf_file_name +'.docx',
-                'outputformat': 'docx' ,
-                   }
-    if ocr:
-        language_convertio = convertio_ocr_lang_pair[language]
-        ocr_option =  {"options": {"ocr_enabled": True, "ocr_settings": {"langs": [language_convertio]}}}
-        data = {**data , **ocr_option}
-    response_status = requests.post(url='https://api.convertio.co/convert' , data = json.dumps(data) ).json()
-    logger.info("convertiopdf2docx"+str(pdf_file_name) )
+@shared_task(serializer='json')
+def convertiopdf2docx(serve_path ,language,ocr = None ):
+    '''
+    Args
+    serve_path : pdf path
+    language : pdf language
+    ocr : bool
+    '''
+    fp  =str(settings.MEDIA_ROOT+"/"+ serve_path)
+    txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = serve_path)
+    pdf_file_name = serve_path.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
+    txt_field_obj.pdf_api_use = "convertio"
+    with open(fp, "rb") as pdf_path:
+        encoded_string = base64.b64encode(pdf_path.read())           ##pdf file convert to base64 
+    
+    data = {'apikey': CONVERTIO_API ,                          # CONVERTIO_API,           #convertio crediential
+                'input': 'base64',  #['url ,raw,base64]
+                'file': encoded_string.decode('utf-8'),
+                'filename':   pdf_file_name,
+                'outputformat': 'docx' }
+    if ocr == "ocr":
+        language = language.split(",")                    #if ocr is True and selecting multiple language 
+        language_convertio = [lang_code(i) for i in language]
+        ocr_option =  { "options": { "ocr_enabled": True, "ocr_settings": { "langs": [language_convertio]}}}
+        data = {**data , **ocr_option}     #merge dict 
+    response_status = requests.post(url='https://api.convertio.co/convert' , data=json.dumps(data)).json() ###   posting for conversion to convert io 
     if response_status['status'] == 'error': 
-        return  "Error during input file fetching: couldn't connect to host"  
+        txt_field_obj.status = "ERROR"
+        txt_field_obj.save()
+        return  {"result":"Error during input file fetching: couldn't connect to host"} 
     else:
-        return  str(response_status['data']['id'])
+        print("no error found")
+        get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
+        while requests.get(url = get_url).json()['data']['step'] != 'finish':  #####checking status of posted pdf file
+            txt_field_obj.status = "PENDING"
+            txt_field_obj.save()
+            print("converting")
+            time.sleep(2)
+        print("finished-conversion")
+        file_link = requests.get(url = get_url).json()['data']['output']['url']  ##after finished get converted file from convertio 
+        direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ serve_path).split(".pdf")[0] +".docx" )  #download it from convertio to out server
+        txt_field_obj.status = "DONE"
+        txt_field_obj.docx_url_field = str(settings.MEDIA_URL+ serve_path).split(".pdf")[0] +".docx" ##save path to database
+        txt_field_obj.save()
+        return {"result":"finished_task" }
 
-
-from django.contrib.auth import settings
-
+##   pdf file url (pdf_path ) ---> get it from serve_path
+### create data[dict] to send to convertio api 
 #########ocr ######
 @shared_task(serializer='json')
-def ai_export_pdf(serve_path , file_language , file_name , file_path):
+def ai_export_pdf(serve_path): # , file_language , file_name , file_path
     pdf_path  = settings.MEDIA_ROOT+"/"+ serve_path
     txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = serve_path)
     start = time.time()
@@ -136,8 +148,7 @@ def ai_export_pdf(serve_path , file_language , file_name , file_path):
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2)) 
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.save()
-        return {"result":"finished_task" , "time":end}
-        
+        return {"result":"finished_task"}
     except BaseException as e:
         end = time.time()
         logger.error(str(e))

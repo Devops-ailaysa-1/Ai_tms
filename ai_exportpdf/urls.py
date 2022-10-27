@@ -4,7 +4,7 @@ from django.contrib.auth import settings
 from rest_framework.routers import DefaultRouter
  
 router = DefaultRouter()
-router.register(r'convertpdftodocx',views.PDFTODOCX,basename='pdf')
+router.register(r'convertpdftodocx',views.Pdf2Docx,basename='pdf')
 # urlpatterns = [
 #     # path('convertpdftodocx' , views.exportpdf_to_docx_main),
 #     # path('getconverteddocx' , views.get_finished_convertio_pdf),

@@ -233,3 +233,4 @@ django-redis
 eventlet
 numpy
 docx2txt
+pdftotext

@@ -566,8 +566,6 @@ sentry_sdk.init(
 )
 
 
-
-
 OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
 MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
 NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
@@ -576,5 +574,4 @@ NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
 # DOCX_URL = '/output_docx/'
 GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
 CONVERTIO_API = os.getenv("convertio_api")
-CONVERTIO_IP = "http://127.0.0.1:8018"
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
