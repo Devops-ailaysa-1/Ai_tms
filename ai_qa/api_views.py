@@ -527,7 +527,7 @@ def QA_Check(request):
     targetLanguage = doc.target_language
     general_check = general_check_view(source,target)
     if general_check:
-        out.append({'General Check':general_check})
+        out.append({'General_Check':general_check})
         return JsonResponse({'data':out},safe=False)
     # src_limit = round( ( 0.4 * len(source.split()) ), 2 )
     # if not target:
