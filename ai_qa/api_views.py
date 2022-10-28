@@ -496,10 +496,10 @@ def tags_check(source,target):
     else:
         return tags_out
 
-def general_check_view(source,target,doc):
-    doc = Document.objects.get(id=doc_id)
-    sourceLanguage = doc.source_language
-    targetLanguage = doc.target_language
+def general_check_view(source,target):
+    # doc = Document.objects.get(id=doc_id)
+    # sourceLanguage = doc.source_language
+    # targetLanguage = doc.target_language
     #src_limit = round( ( 0.4 * len(source.split()) ), 2 )
     src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
     if not target:
@@ -507,8 +507,8 @@ def general_check_view(source,target,doc):
     elif source.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
     elif len(target.strip()) < src_limit:
-        if targetLanguage not in lang_list:
-            return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
+        #if targetLanguage not in lang_list:
+        return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
 
 
 TAG_RE = re.compile(r'<[^>]+>')
@@ -531,7 +531,7 @@ def QA_Check(request):
     # doc = Document.objects.get(id=doc_id)
     # sourceLanguage = doc.source_language
     # targetLanguage = doc.target_language
-    general_check = general_check_view(source,target,doc)
+    general_check = general_check_view(source,target)
     if general_check:
         out.append({'General_check':general_check})
         return JsonResponse({'data':out},safe=False)
