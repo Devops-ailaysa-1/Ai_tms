@@ -369,21 +369,21 @@ def numbers_view(source, target):
     elif src_list==[] and tar_list!=[]:
         num_out['source'] = ["No numbers in source"]
         num_out['target'] = tar_list
-        num_out['ErrorNote'] = ["Numbers mismatch. No numbers in source "]
+        num_out['ErrorNote'] = ["Number(s) mismatch. Number(s) present in target, but no number(s) in source "]
         return num_out
     elif tar_list==[] and src_list!=[]:
         num_out['source'] = src_list
         num_out['target'] = ['No numbers in target']
-        num_out['ErrorNote'] = ["Numbers mismatch. No numbers in target"]
+        num_out['ErrorNote'] = ["Number(s) mismatch. Number(s) present in source, but no number(s) in target"]
         return num_out
     else:
         if len(src_list)!=len(tar_list):
-            msg = ["Numbers count mismatch in source and target segments"]
+            msg = ["Number(s) count mismatch in source and target segments"]
         else:
             if functools.reduce(lambda x, y : x and y, map(lambda p, q: p == q,src_list,tar_list), True):
                 msg = []
             else:
-                msg = ["numbers in source and target are not same"]
+                msg = ["Number(s) in source and target are not same or Ordering of number(s) are not same"]
 
         num_out['source'] = []
         num_out['target'] = []
