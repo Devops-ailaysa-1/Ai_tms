@@ -220,7 +220,8 @@ def is_matched(expr):
     return True
 
 def is_quote_matched(expr):
-    expr = re.sub("[^\'\'\"\"\'''\''']+", "", expr)
+    sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
+    expr = re.sub("[^\'\'\"\"\'''\''']+", "", sent)
     while expr:
         expr1 = re.sub(r"\'\'|\"\"|\'''\'''", "", expr)
         if expr1 == expr:
@@ -279,8 +280,8 @@ def punc_space_view(src,tgt):
         #         values.append(i.group(0))
         # if bool(brac1.findall(content)) or bool(brac2.findall(content)) or bool(brac3.findall(content)):
         #     list.append("{seg} contains mismatched bracket(s)".format(seg=seg))
-        if bool(quotes.findall(content)):
-            list.append("{seg} contains space before or after apostrophe".format(seg=seg))
+        # if bool(quotes.findall(content)):
+        #     list.append("{seg} contains space before or after apostrophe".format(seg=seg))
         # if bool(quotesmismatch.findall(content)):
         #     for i in quotesmismatch.finditer(content):
         #         values.append(i.group(0))
