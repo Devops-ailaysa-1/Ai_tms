@@ -516,13 +516,13 @@ LOGGING = {
             'format' : '{levelname} {asctime} {pathname} {message}',
             'style' : '{',
         },
-        'fluent_fmt':{
-        '()': 'fluent.handler.FluentRecordFormatter',
-        'format':{
-          'level': '%(levelname)s',
-          'hostname': '%(hostname)s',
-          'where': '%(module)s.%(funcName)s',
-        }}
+        # 'fluent_fmt':{
+        # '()': 'fluent.handler.FluentRecordFormatter',
+        # 'format':{
+        #   'level': '%(levelname)s',
+        #   'hostname': '%(hostname)s',
+        #   'where': '%(module)s.%(funcName)s',
+        # }}
     },
 
     'loggers' : {
