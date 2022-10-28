@@ -495,7 +495,8 @@ def generate_invoice_pdf(invo):
     # for po in pos:
     #     tasks = po.assignment.assignment_po.all()
     #     qs=tasks.union(tasks)
-    tasks =  POTaskDetails.objects.filter(assignment__po_assign__in=pos_ls)
+    # tasks =  POTaskDetails.objects.filter(assignment__po_assign__in=pos_ls)
+    tasks =   POTaskDetails.objects.filter(po__in=pos_ls)
     # print("tasks invo",tasks)
     context= {'client': invo.client,'seller':invo.seller,'pos_ids':pos_ls,'invo':invo,'tasks':tasks}
     html_string = render_to_string('invoice_pdf.html',context)
@@ -590,11 +591,15 @@ def po_request_payment(request):
         return JsonResponse({"msg":"invoice with po already open"},safe=False,status=409)
     if stripe_con == 'True':
         # invo = generat_invoice_by_stripe(poids,gst,user=request.user)
-        print('user>>',user)
+        logger.info('user requested invoice creation by stripe - UID :{user.uid}')
         acc = get_connect_account(user)
-        print('acc>',acc)
         if acc == None:
-            acc_created,acc_link=conn_account_create(user)
+            try:
+                acc_created,acc_link=conn_account_create(user)
+            except ValueError as e:
+                    logger.warning(f"user Connect account creation failed. {user.uid}- error:{str(e)}")
+                    return Response({'msg':str(e)},status=404)
+                
             if acc_created:
                 #return JsonResponse({"msg":"redirecting to stripe dashboard","url":f"{settings.STRIPE_DASHBOARD_URL}/invoices/create"},status=302)
                 invo = generate_invoice_by_stripe(poids,user=user,gst=gst)
