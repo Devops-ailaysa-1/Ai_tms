@@ -217,7 +217,8 @@ def is_matched(expr):
     return True
 
 def is_quote_matched(expr):
-    sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
+    #sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
+    sent = re.sub("(?<=p{Ll})'(?=p{Ll})", "", expr)###############to remove apostrophe
     expr = re.sub("[^\'\'\"\"\'''\''']+", "", sent)
     while expr:
         expr1 = re.sub(r"\'\'|\"\"|\'''\'''", "", expr)
@@ -350,14 +351,6 @@ def punc_space_view(src,tgt):
 #         return None
 
 ###### NUMBERS VIEW  ##########
-def stripNum(num):
-    num_str = str(num)
-    punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~'''
-    for ele in num_str:
-        if ele in punc:
-            num_str = num_str.replace(ele, "")
-    return num_str
-
 
 def numbers_view(source, target):
 
@@ -390,7 +383,13 @@ def numbers_view(source, target):
         num_out['ErrorNote'] = msg
         return num_out if msg!=[] else None
 
-
+# def stripNum(num):
+#     num_str = str(num)
+#     punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~'''
+#     for ele in num_str:
+#         if ele in punc:
+#             num_str = num_str.replace(ele, "")
+#     return num_str
 
 # def numbers_view(source, target):
 #     #number = re.findall('[0-9]+', str)
