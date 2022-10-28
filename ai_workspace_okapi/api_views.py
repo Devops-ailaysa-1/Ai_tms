@@ -634,7 +634,7 @@ class MT_RawAndTM_View(views.APIView):
         return user, doc
 
     @staticmethod
-    def is_account_holder(request, doc):
+    def is_account_holder(request, doc, user):
         if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
             can_translate = MT_RawAndTM_View.can_translate(request, user)
             if can_translate == None:
@@ -659,7 +659,7 @@ class MT_RawAndTM_View(views.APIView):
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
 
-        MT_RawAndTM_View.is_account_holder(request, doc)
+        MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
 
