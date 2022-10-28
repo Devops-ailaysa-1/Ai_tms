@@ -11,7 +11,6 @@ from django.http import QueryDict
 from rest_framework.decorators import api_view
 import nltk
 import json
-nltk.download('punkt')
 from nltk import word_tokenize
 from nltk.util import ngrams
 from django.db.models import F, Q

@@ -9,9 +9,6 @@ from rest_framework.decorators import api_view, parser_classes
 #from .serializers import Forbidden_File_Serializer, UntranslatableSerializer, LetterCaseSerializer
 from rest_framework.viewsets import ModelViewSet
 from ai_workspace_okapi.models import Document
-import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
 from nltk import word_tokenize
 from nltk.util import ngrams
 from nltk.corpus import stopwords

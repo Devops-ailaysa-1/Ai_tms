@@ -20,6 +20,14 @@ from pathlib import Path
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
+# from fluent import sender
+# from fluent import event
+# sender.setup('django', host='fluentd', port=24224)
+# event.Event('follow', {
+#   'from': 'userA',
+#   'to':   'userB'
+# })
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
@@ -507,7 +515,14 @@ LOGGING = {
         'dev_formatter' : {
             'format' : '{levelname} {asctime} {pathname} {message}',
             'style' : '{',
-        }
+        },
+        # 'fluent_fmt':{
+        # '()': 'fluent.handler.FluentRecordFormatter',
+        # 'format':{
+        #   'level': '%(levelname)s',
+        #   'hostname': '%(hostname)s',
+        #   'where': '%(module)s.%(funcName)s',
+        # }}
     },
 
     'loggers' : {
@@ -522,10 +537,35 @@ LOGGING = {
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'propogate' : True,
         },
+        # 'app.debug': {
+        #     'handlers': ['fluentdebug'],
+        #     'level': 'DEBUG',
+        #     'propagate': True,
+        # },
+        # 'app.info': {
+        #     'handlers': ['fluentinfo'],
+        #     'level': 'INFO',
+        #     'propagate': True,
+        # },
+        # '': {
+        #     'handlers': ['console','fluentinfo'],
+        #     'level': 'INFO',
+        #     'propagate': False,
+        # },
+        # 'django.request': {
+        #     'handlers': ['fluentdebug'],
+        #     'level': 'DEBUG',
+        #     'propagate': True,
+        # },
     },
 
     'handlers' : {
-
+        # 'console':{
+        #     'class' : 'logging.StreamHandler',
+        #     'level': 'INFO',
+        #     'formatter': 'dev_formatter',
+        #     'stream': 'ext://sys.stdout',
+        # },
         'file' : {
             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
             'class' : 'logging.FileHandler',
@@ -539,6 +579,26 @@ LOGGING = {
             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
             'formatter' : 'dev_formatter',
         },
+    #     'fluentinfo':{
+    #         'level':'INFO',
+    #         'class':'fluent.handler.FluentHandler',
+    #         'formatter': 'fluent_fmt',
+    #         'tag':'django.info',
+    #         'host':'fluentd',
+    #         'port':24224,
+    #         # 'timeout':3.0,
+    #         # 'verbose': False
+    #         },
+    #    'fluentdebug':{
+    #         'level':'DEBUG',
+    #         'class':'fluent.handler.FluentHandler',
+    #         'formatter': 'fluent_fmt',
+    #         'tag':'django.debug',
+    #         'host':'fluentd',
+    #         'port':24224,
+    #         # 'timeout':3.0,
+    #         # 'verbose': True
+    #     },
 
         # 'mail_admins' : {
         #     'level' : 'ERROR',
