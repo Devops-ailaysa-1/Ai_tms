@@ -496,14 +496,19 @@ def tags_check(source,target):
     else:
         return tags_out
 
-def general_check_view(source,target):
-    src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+def general_check_view(source,target,doc):
+    doc = Document.objects.get(id=doc_id)
+    sourceLanguage = doc.source_language
+    targetLanguage = doc.target_language
+    #src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+    src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
     if not target:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
-    elif len(target.split()) < src_limit:
-        return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
+    elif len(target.strip()) < src_limit:
+        if targetLanguage not in lang_list:
+            return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
 
 
 TAG_RE = re.compile(r'<[^>]+>')
@@ -523,12 +528,12 @@ def QA_Check(request):
     source = request.POST.get('source')
     target = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
-    doc = Document.objects.get(id=doc_id)
-    sourceLanguage = doc.source_language
-    targetLanguage = doc.target_language
-    general_check = general_check_view(source,target)
+    # doc = Document.objects.get(id=doc_id)
+    # sourceLanguage = doc.source_language
+    # targetLanguage = doc.target_language
+    general_check = general_check_view(source,target,doc)
     if general_check:
-        out.append({'General_Check':general_check})
+        out.append({'General_check':general_check})
         return JsonResponse({'data':out},safe=False)
     # src_limit = round( ( 0.4 * len(source.split()) ), 2 )
     # if not target:
@@ -593,7 +598,7 @@ def QA_Check(request):
     data_temp=Temperature_and_degree_signs(source,target)
     print(data_temp.get('ErrorNote'))
     if data_temp.get('ErrorNote')!=[]:
-        out.append({'Measurement Check':data_temp})
+        out.append({'Measurement_check':data_temp})
 
     ##########TAGS CHECK##########################
     tags = tags_check(source,target)
