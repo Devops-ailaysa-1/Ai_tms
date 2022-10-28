@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from rest_framework.response import Response
-import requests
+import requests, functools
 import regex as re
 from rest_framework.decorators import api_view, parser_classes
 # from checkApp.models import (LetterCase,Untranslatable, Untranslatables,
@@ -358,50 +358,85 @@ def stripNum(num):
             num_str = num_str.replace(ele, "")
     return num_str
 
+
 def numbers_view(source, target):
-    number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]') # Better regex needs to be added
-    src_list = number.findall(source)
-    tar_list = number.findall(target)
-    src_numbers = []
-    tar_numbers = []
-    src_missing = []
-    tar_missing = []
+
+    src_list = re.findall('[0-9]+', source)
+    tar_list = re.findall('[0-9]+', target)
     num_out = {}
     if src_list==[] and tar_list==[]:
         return None
     elif src_list==[] and tar_list!=[]:
         num_out['source'] = ["No numbers in source"]
         num_out['target'] = tar_list
-        num_out['ErrorNote'] = ["Numbers mismatch or missing"]
+        num_out['ErrorNote'] = ["Numbers mismatch. No numbers in source "]
+        return num_out
+    elif tar_list==[] and src_list!=[]:
+        num_out['source'] = src_list
+        num_out['target'] = ['No numbers in target']
+        num_out['ErrorNote'] = ["Numbers mismatch. No numbers in target"]
         return num_out
     else:
-        if tar_list:
-            for i in src_list:
-                src_numbers.append(stripNum(i))
-            for i in tar_list:
-                tar_numbers.append(stripNum(i))
-
-            for tar in tar_list:
-                tar_str = stripNum(tar)
-                if tar_str not in src_numbers:
-                    tar_missing.append(tar)
-            for src in src_list:
-                src_str = stripNum(src)
-                if src_str not in tar_numbers:
-                    src_missing.append(src)
-            msg = ["Numbers mismatch or missing"] if len(src_list)==len(tar_list) else ["Numbers mismatch or missing", "Numbers count mismatch"]
-            num_out['source'] = src_missing
-            num_out['target'] = tar_missing
-            num_out['ErrorNote'] = msg
-            if num_out['source']==[] and num_out['target']==[]:
-                return None
-            else:
-                return num_out
+        if len(src_list)!=len(tar_list):
+            msg = ["Numbers count mismatch in source and target segments"]
         else:
-            num_out['source'] = src_list
-            num_out['target'] = ['No numbers in target']
-            num_out['ErrorNote'] = ["Numbers mismatch or missing"]
-            return num_out
+            if functools.reduce(lambda x, y : x and y, map(lambda p, q: p == q,src_list,tar_list), True):
+                msg = []
+            else:
+                msg = ["numbers in source and target are not same"]
+
+        num_out['source'] = []
+        num_out['target'] = []
+        num_out['ErrorNote'] = msg
+        return num_out if msg!=[] else None
+
+
+
+# def numbers_view(source, target):
+#     #number = re.findall('[0-9]+', str)
+#     number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]') # Better regex needs to be added
+#     src_list = number.findall(source)
+#     tar_list = number.findall(target)
+#     src_numbers = []
+#     tar_numbers = []
+#     src_missing = []
+#     tar_missing = []
+#     num_out = {}
+#     if src_list==[] and tar_list==[]:
+#         return None
+#     elif src_list==[] and tar_list!=[]:
+#         num_out['source'] = ["No numbers in source"]
+#         num_out['target'] = tar_list
+#         num_out['ErrorNote'] = ["Numbers mismatch or missing"]
+#         return num_out
+#     else:
+#         if tar_list:
+#             for i in src_list:
+#                 src_numbers.append(stripNum(i))
+#             for i in tar_list:
+#                 tar_numbers.append(stripNum(i))
+#
+#             for tar in tar_list:
+#                 tar_str = stripNum(tar)
+#                 if tar_str not in src_numbers:
+#                     tar_missing.append(tar)
+#             for src in src_list:
+#                 src_str = stripNum(src)
+#                 if src_str not in tar_numbers:
+#                     src_missing.append(src)
+#             msg = ["Numbers mismatch or missing"] if len(src_list)==len(tar_list) else ["Numbers mismatch or missing", "Numbers count mismatch"]
+#             num_out['source'] = src_missing
+#             num_out['target'] = tar_missing
+#             num_out['ErrorNote'] = msg
+#             if num_out['source']==[] and num_out['target']==[]:
+#                 return None
+#             else:
+#                 return num_out
+#         else:
+#             num_out['source'] = src_list
+#             num_out['target'] = ['No numbers in target']
+#             num_out['ErrorNote'] = ["Numbers mismatch or missing"]
+#             return num_out
 
 
 #########  REPEATED WORDS  #######################
@@ -603,7 +638,7 @@ def QA_Check(request):
         out.append({'Tags':tags})
 
     ##### FOR NUMBERS  #######
-    numbers = numbers_view(source,target)
+    numbers = numbers_view(source_,target_)
     if numbers:
         out.append({'Numbers':numbers})
 
