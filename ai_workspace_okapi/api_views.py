@@ -566,6 +566,7 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def can_translate(request, debit_user):
+
         hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
 
         # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
@@ -573,11 +574,12 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "cannot_translate"
 
         elif (request.user.is_internal_member or request.user.id in hired_editors) and \
-            (get_plan_name(debit_user)=="Business" or 'Business-PAYG') and \
+            (get_plan_name(debit_user) == "Business" or 'Business-PAYG') and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
             print("For internal & hired editors only")
             return {}, 424, "cannot_translate"
+
         else:
             return None
 
@@ -603,9 +605,7 @@ class MT_RawAndTM_View(views.APIView):
     def get_consumable_credits(doc, segment_id, seg):
 
         if seg:
-            segment_source = seg
-            return MT_RawAndTM_View.get_word_count(segment_source, doc)
-
+            return MT_RawAndTM_View.get_word_count(seg, doc)
 
         elif segment_id:
             if split_check(segment_id):
@@ -671,7 +671,8 @@ class MT_RawAndTM_View(views.APIView):
             if mt_raw:
 
                 #############   Update   ############
-                translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, doc.source_language_code, doc.target_language_code)
+                translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
+                                              doc.source_language_code, doc.target_language_code)
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
@@ -713,12 +714,11 @@ class MT_RawAndTM_View(views.APIView):
 
         # If MT disabled for the task
         if mt_params.get("mt_enable", True) != True:
-            print("MT not enabled")
             return {}, 200, "MT disabled"
 
         user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
 
-        MT_RawAndTM_View.is_account_holder(request, doc)
+        MT_RawAndTM_View.is_account_holder(request, doc, user)
 
         initial_credit = user.credit_balance.get("total_left")
 
