@@ -217,8 +217,8 @@ def is_matched(expr):
     return True
 
 def is_quote_matched(expr):
-    #sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
-    sent = re.sub("(?<=p{Ll})'(?=p{Ll})", "", expr)###############to remove apostrophe
+    sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
+    #sent = re.sub("(?<=p{Ll})'(?=p{Ll})", "", expr)###############to remove apostrophe
     expr = re.sub("[^\'\'\"\"\'''\''']+", "", sent)
     while expr:
         expr1 = re.sub(r"\'\'|\"\"|\'''\'''", "", expr)
@@ -528,6 +528,7 @@ def tags_check(source,target):
         return tags_out
 
 def general_check_view(source,target):
+    source_1 = source.replace('\xa0', ' ')
     # doc = Document.objects.get(id=doc_id)
     # sourceLanguage = doc.source_language
     # targetLanguage = doc.target_language
@@ -535,7 +536,7 @@ def general_check_view(source,target):
     src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
     if not target:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
-    elif source.strip()==target.strip():
+    elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
     elif len(target.strip()) < src_limit:
         #if targetLanguage not in lang_list:
