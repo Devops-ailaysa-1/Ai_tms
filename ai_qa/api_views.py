@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from rest_framework.response import Response
-import requests
+import requests, functools, string
 import regex as re
 from rest_framework.decorators import api_view, parser_classes
 # from checkApp.models import (LetterCase,Untranslatable, Untranslatables,
@@ -9,9 +9,6 @@ from rest_framework.decorators import api_view, parser_classes
 #from .serializers import Forbidden_File_Serializer, UntranslatableSerializer, LetterCaseSerializer
 from rest_framework.viewsets import ModelViewSet
 from ai_workspace_okapi.models import Document
-import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
 from nltk import word_tokenize
 from nltk.util import ngrams
 from nltk.corpus import stopwords
@@ -220,7 +217,11 @@ def is_matched(expr):
     return True
 
 def is_quote_matched(expr):
-    expr = re.sub("[^\'\'\"\"\'''\''']+", "", expr)
+    import regex as re
+    # sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
+    sent = re.sub("(?<=\p{Ll})'(?=\p{Ll})", "", expr)###############to remove apostrophe
+    print("Sent------------->",sent)
+    expr = re.sub("[^\'\'\"\"\'''\''']+", "", sent)
     while expr:
         expr1 = re.sub(r"\'\'|\"\"|\'''\'''", "", expr)
         if expr1 == expr:
@@ -237,7 +238,8 @@ def punc_space_view(src,tgt):
     multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
     #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
     punc             = re.compile(r'(\.\.+)[^\.+$]')
-    endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
+    endpunc             = re.compile("[" + re.escape(string.punctuation) + "]$")
+    #endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
     quotes           = re.compile(r'(\w+\s(\'|\")\w+(\s|\,))|(\w+(\'|\")\s\w(\s|\,))')
     #quotesmismatch   = re.compile(r'(\'\s?\w+\")|(\"\s?\w+\')')
     #brac1            = re.compile(r'\(\w+[.-/]?\w+?(\}|\])')
@@ -279,8 +281,8 @@ def punc_space_view(src,tgt):
         #         values.append(i.group(0))
         # if bool(brac1.findall(content)) or bool(brac2.findall(content)) or bool(brac3.findall(content)):
         #     list.append("{seg} contains mismatched bracket(s)".format(seg=seg))
-        if bool(quotes.findall(content)):
-            list.append("{seg} contains space before or after apostrophe".format(seg=seg))
+        # if bool(quotes.findall(content)):
+        #     list.append("{seg} contains space before or after apostrophe".format(seg=seg))
         # if bool(quotesmismatch.findall(content)):
         #     for i in quotesmismatch.finditer(content):
         #         values.append(i.group(0))
@@ -361,49 +363,90 @@ def stripNum(num):
     return num_str
 
 def numbers_view(source, target):
-    number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]') # Better regex needs to be added
-    src_list = number.findall(source)
-    tar_list = number.findall(target)
-    src_numbers = []
-    tar_numbers = []
-    src_missing = []
-    tar_missing = []
+    #number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]')
+    src_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', source)
+    tar_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', target)
     num_out = {}
     if src_list==[] and tar_list==[]:
         return None
     elif src_list==[] and tar_list!=[]:
         num_out['source'] = ["No numbers in source"]
         num_out['target'] = tar_list
-        num_out['ErrorNote'] = ["Numbers mismatch or missing"]
+        num_out['ErrorNote'] = ["Number(s) mismatch. Number(s) present in target, but no number(s) in source "]
+        return num_out
+    elif tar_list==[] and src_list!=[]:
+        num_out['source'] = src_list
+        num_out['target'] = ['No numbers in target']
+        num_out['ErrorNote'] = ["Number(s) mismatch. Number(s) present in source, but no number(s) in target"]
         return num_out
     else:
-        if tar_list:
-            for i in src_list:
-                src_numbers.append(stripNum(i))
-            for i in tar_list:
-                tar_numbers.append(stripNum(i))
-
-            for tar in tar_list:
-                tar_str = stripNum(tar)
-                if tar_str not in src_numbers:
-                    tar_missing.append(tar)
-            for src in src_list:
-                src_str = stripNum(src)
-                if src_str not in tar_numbers:
-                    src_missing.append(src)
-            msg = ["Numbers mismatch or missing"] if len(src_list)==len(tar_list) else ["Numbers mismatch or missing", "Numbers count mismatch"]
-            num_out['source'] = src_missing
-            num_out['target'] = tar_missing
-            num_out['ErrorNote'] = msg
-            if num_out['source']==[] and num_out['target']==[]:
-                return None
-            else:
-                return num_out
+        if len(src_list)!=len(tar_list):
+            msg = ["Number(s) count mismatch in source and target segments"]
         else:
-            num_out['source'] = src_list
-            num_out['target'] = ['No numbers in target']
-            num_out['ErrorNote'] = ["Numbers mismatch or missing"]
-            return num_out
+            #if functools.reduce(lambda x, y : x and y, map(lambda p, q: p == q,src_list,tar_list), True):
+            if set(stripNum(src_list)) == set(stripNum(tar_list)):
+                msg = []
+            else:
+                msg = ["Number(s) in source and target are not same"]
+
+        num_out['source'] = []
+        num_out['target'] = []
+        num_out['ErrorNote'] = msg
+        return num_out if msg!=[] else None
+
+# def stripNum(num):
+#     num_str = str(num)
+#     punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~'''
+#     for ele in num_str:
+#         if ele in punc:
+#             num_str = num_str.replace(ele, "")
+#     return num_str
+
+# def numbers_view(source, target):
+#     #number = re.findall('[0-9]+', str)
+#     number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]') # Better regex needs to be added
+#     src_list = number.findall(source)
+#     tar_list = number.findall(target)
+#     src_numbers = []
+#     tar_numbers = []
+#     src_missing = []
+#     tar_missing = []
+#     num_out = {}
+#     if src_list==[] and tar_list==[]:
+#         return None
+#     elif src_list==[] and tar_list!=[]:
+#         num_out['source'] = ["No numbers in source"]
+#         num_out['target'] = tar_list
+#         num_out['ErrorNote'] = ["Numbers mismatch or missing"]
+#         return num_out
+#     else:
+#         if tar_list:
+#             for i in src_list:
+#                 src_numbers.append(stripNum(i))
+#             for i in tar_list:
+#                 tar_numbers.append(stripNum(i))
+#
+#             for tar in tar_list:
+#                 tar_str = stripNum(tar)
+#                 if tar_str not in src_numbers:
+#                     tar_missing.append(tar)
+#             for src in src_list:
+#                 src_str = stripNum(src)
+#                 if src_str not in tar_numbers:
+#                     src_missing.append(src)
+#             msg = ["Numbers mismatch or missing"] if len(src_list)==len(tar_list) else ["Numbers mismatch or missing", "Numbers count mismatch"]
+#             num_out['source'] = src_missing
+#             num_out['target'] = tar_missing
+#             num_out['ErrorNote'] = msg
+#             if num_out['source']==[] and num_out['target']==[]:
+#                 return None
+#             else:
+#                 return num_out
+#         else:
+#             num_out['source'] = src_list
+#             num_out['target'] = ['No numbers in target']
+#             num_out['ErrorNote'] = ["Numbers mismatch or missing"]
+#             return num_out
 
 
 #########  REPEATED WORDS  #######################
@@ -496,12 +539,18 @@ def tags_check(source,target):
         return tags_out
 
 def general_check_view(source,target):
-    src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+    source_1 = source.replace('\xa0', ' ')
+    # doc = Document.objects.get(id=doc_id)
+    # sourceLanguage = doc.source_language
+    # targetLanguage = doc.target_language
+    #src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+    src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
     if not target:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
-    elif source.strip()==target.strip():
+    elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
-    elif len(target.split()) < src_limit:
+    elif len(target.strip()) < src_limit:
+        #if targetLanguage not in lang_list:
         return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
 
 
@@ -522,12 +571,12 @@ def QA_Check(request):
     source = request.POST.get('source')
     target = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
-    doc = Document.objects.get(id=doc_id)
-    sourceLanguage = doc.source_language
-    targetLanguage = doc.target_language
+    # doc = Document.objects.get(id=doc_id)
+    # sourceLanguage = doc.source_language
+    # targetLanguage = doc.target_language
     general_check = general_check_view(source,target)
     if general_check:
-        out.append({'General_Check':general_check})
+        out.append({'General_check':general_check})
         return JsonResponse({'data':out},safe=False)
     # src_limit = round( ( 0.4 * len(source.split()) ), 2 )
     # if not target:
@@ -592,7 +641,7 @@ def QA_Check(request):
     data_temp=Temperature_and_degree_signs(source,target)
     print(data_temp.get('ErrorNote'))
     if data_temp.get('ErrorNote')!=[]:
-        out.append({'Measurement Check':data_temp})
+        out.append({'Measurement_check':data_temp})
 
     ##########TAGS CHECK##########################
     tags = tags_check(source,target)
@@ -600,7 +649,7 @@ def QA_Check(request):
         out.append({'Tags':tags})
 
     ##### FOR NUMBERS  #######
-    numbers = numbers_view(source,target)
+    numbers = numbers_view(source_,target_)
     if numbers:
         out.append({'Numbers':numbers})
 
