@@ -174,7 +174,7 @@ def inconsistent_url(source,target):
     if src_missing==[] and tar_missing ==[]:
         ErrorNote=ErrorNote
     else:
-        ErrorNote.append('Inconsistent URL formats')
+        ErrorNote.append('URL in source and target are not same')
     url_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if url_out.get('source')==[] and url_out.get('target')==[] and url_out.get('ErrorNote')==[]:
         return None
@@ -190,7 +190,7 @@ def inconsistent_email(source,target):
     ErrorNote=[]
     email_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_email_list) != len(tar_email_list):
-        ErrorNote.append('Mismatch in URL count')
+        ErrorNote.append('Mismatch in Email count')
     for i in tar_email_list:
         if i not in src_email_list:
             tar_missing.append(i)
@@ -200,7 +200,7 @@ def inconsistent_email(source,target):
     if src_missing==[] and tar_missing ==[]:
         ErrorNote=ErrorNote
     else:
-        ErrorNote.append('Inconsistency in URL format')
+        ErrorNote.append('Email in source and target are not same')
     email_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if email_out.get('source')==[] and email_out.get('target')==[] and email_out.get('ErrorNote')==[]:
         return None
@@ -543,15 +543,15 @@ def general_check_view(source,target):
     # doc = Document.objects.get(id=doc_id)
     # sourceLanguage = doc.source_language
     # targetLanguage = doc.target_language
-    #src_limit = round( ( 0.4 * len(source.split()) ), 2 )
-    src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
+    src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+    #src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
     if not target:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
-    elif len(target.strip()) < src_limit:
+    elif len(target.split()) < src_limit:
         #if targetLanguage not in lang_list:
-        return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
+        return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
 
 
 TAG_RE = re.compile(r'<[^>]+>')
