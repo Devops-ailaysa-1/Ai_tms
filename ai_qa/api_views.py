@@ -164,17 +164,18 @@ def inconsistent_url(source,target):
     ErrorNote=[]
     url_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_url_list) != len(tar_url_list):
-        ErrorNote.append('URL count mismatch')
-    for i in tar_url_list:
-        if i not in src_url_list:
-            tar_missing.append(i)
-    for j in src_url_list:
-        if j not in tar_url_list:
-            src_missing.append(j)
-    if src_missing==[] and tar_missing ==[]:
-        ErrorNote=ErrorNote
+        ErrorNote.append('Mismatch in URL count. Some URL(s) may be missed either in source or target')
     else:
-        ErrorNote.append('URL in source and target are not same')
+        for i in tar_url_list:
+            if i not in src_url_list:
+                tar_missing.append(i)
+        for j in src_url_list:
+            if j not in tar_url_list:
+                src_missing.append(j)
+        if src_missing==[] and tar_missing ==[]:
+            ErrorNote=ErrorNote
+        else:
+            ErrorNote.append('URL in source and target are not same')
     url_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if url_out.get('source')==[] and url_out.get('target')==[] and url_out.get('ErrorNote')==[]:
         return None
@@ -190,7 +191,7 @@ def inconsistent_email(source,target):
     ErrorNote=[]
     email_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_email_list) != len(tar_email_list):
-        ErrorNote.append('Mismatch in Email count. Some Email(s) may be missed in target')
+        ErrorNote.append('Mismatch in Email count. Some Email(s) may be missed either in source or target')
     else:
         for i in tar_email_list:
             if i not in src_email_list:
