@@ -150,6 +150,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     "ai_pay",
     "ai_qa",
+    'django_oso'
     #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
@@ -324,6 +325,9 @@ REST_FRAMEWORK = {
         'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
 
 }
 
@@ -630,3 +634,6 @@ sentry_sdk.init(
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 
 CAMPAIGN = os.getenv("CAMPAIGN")
+
+
+RUST_BACKTRACE=1

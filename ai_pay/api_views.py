@@ -572,6 +572,14 @@ def generate_invoice_by_stripe(po_li,user,gst=None):
 
         return stripe_invoice_finalize(invo_id,vendor)
 
+def check_po_invoice_generated(poids):
+    invo_po=AiInvoicePO.objects.filter(po__poid__in=poids)
+    if invo_po.filter(invoice__invo_status='open').count() > 0:
+        logger.warning("Invoice already generated")
+    seller = invo_po.last().po.seller
+    acc = get_connect_account(seller)
+    #seller
+    pass
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
