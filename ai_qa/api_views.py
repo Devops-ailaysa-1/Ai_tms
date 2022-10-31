@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from rest_framework.response import Response
-import requests, functools
+import requests, functools, string
 import regex as re
 from rest_framework.decorators import api_view, parser_classes
 # from checkApp.models import (LetterCase,Untranslatable, Untranslatables,
@@ -238,7 +238,8 @@ def punc_space_view(src,tgt):
     multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
     #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
     punc             = re.compile(r'(\.\.+)[^\.+$]')
-    endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
+    endpunc             = re.compile("[" + re.escape(string.punctuation) + "]$")
+    #endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
     quotes           = re.compile(r'(\w+\s(\'|\")\w+(\s|\,))|(\w+(\'|\")\s\w(\s|\,))')
     #quotesmismatch   = re.compile(r'(\'\s?\w+\")|(\"\s?\w+\')')
     #brac1            = re.compile(r'\(\w+[.-/]?\w+?(\}|\])')
