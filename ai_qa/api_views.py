@@ -190,17 +190,18 @@ def inconsistent_email(source,target):
     ErrorNote=[]
     email_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_email_list) != len(tar_email_list):
-        ErrorNote.append('Mismatch in Email count')
-    for i in tar_email_list:
-        if i not in src_email_list:
-            tar_missing.append(i)
-    for j in src_email_list:
-        if j not in tar_email_list:
-            src_missing.append(j)
-    if src_missing==[] and tar_missing ==[]:
-        ErrorNote=ErrorNote
+        ErrorNote.append('Mismatch in Email count. Some Email(s) may be missed in target')
     else:
-        ErrorNote.append('Email in source and target are not same')
+        for i in tar_email_list:
+            if i not in src_email_list:
+                tar_missing.append(i)
+        for j in src_email_list:
+            if j not in tar_email_list:
+                src_missing.append(j)
+        if src_missing==[] and tar_missing ==[]:
+            ErrorNote=ErrorNote
+        else:
+            ErrorNote.append('Email in source and target are not same')
     email_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if email_out.get('source')==[] and email_out.get('target')==[] and email_out.get('ErrorNote')==[]:
         return None
@@ -363,9 +364,12 @@ def stripNum(num):
     return num_str
 
 def numbers_view(source, target):
+    URLEmailRegex = re.compile(r'(https?://(www\.)?(\w+)(\.\w+))|((https?://)?(www\.)(\w+)(\.\w+))|[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
+    source_ = re.sub(URLEmailRegex,'',source)
+    target_ = re.sub(URLEmailRegex,'',target)
     #number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]')
-    src_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', source)
-    tar_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', target)
+    src_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', source_)
+    tar_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', target_)
     num_out = {}
     if src_list==[] and tar_list==[]:
         return None
