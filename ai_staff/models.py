@@ -473,3 +473,29 @@ class TranscribeSupportedPunctuation(models.Model):
 #     has_male = models.BooleanField(default=False)
 #     voice_name = models.CharField(max_length=300, null=True, blank=True)
 #     voice_type = models.CharField(max_length=100, null=True, blank=True)#wavenet,standard,neural
+
+
+class AiRoles(models.Model):
+    name = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class TaskRoleLevel(models.Model):
+    role = models.ForeignKey(AiRoles,related_name='task_roles',
+        on_delete=models.CASCADE,blank=True, null=True)
+
+class ProjectRoleLevel(models.Model):
+    role = models.ForeignKey(AiRoles,related_name='project_roles',
+        on_delete=models.CASCADE,blank=True, null=True)
+
+class TeamRoleLevel(models.Model):
+    role = models.ForeignKey(AiRoles,related_name='team_roles',
+        on_delete=models.CASCADE,blank=True, null=True)
+
+
+class OrganizationRoleLevel(models.Model):
+    role = models.ForeignKey(AiRoles,related_name='org_roles',
+        on_delete=models.CASCADE,blank=True, null=True)
