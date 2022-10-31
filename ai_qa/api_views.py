@@ -217,8 +217,10 @@ def is_matched(expr):
     return True
 
 def is_quote_matched(expr):
-    sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
-    #sent = re.sub("(?<=p{Ll})'(?=p{Ll})", "", expr)###############to remove apostrophe
+    import regex as re
+    # sent = re.sub("(?<=[a-z])'(?=[a-z])", "", expr)###############to remove apostrophe
+    sent = re.sub("(?<=\p{Ll})'(?=\p{Ll})", "", expr)###############to remove apostrophe
+    print("Sent------------->",sent)
     expr = re.sub("[^\'\'\"\"\'''\''']+", "", sent)
     while expr:
         expr1 = re.sub(r"\'\'|\"\"|\'''\'''", "", expr)
@@ -351,11 +353,18 @@ def punc_space_view(src,tgt):
 #         return None
 
 ###### NUMBERS VIEW  ##########
+def stripNum(num):
+    num_str = str(num)
+    punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~'''
+    for ele in num_str:
+        if ele in punc:
+            num_str = num_str.replace(ele, "")
+    return num_str
 
 def numbers_view(source, target):
-
-    src_list = re.findall('[0-9]+', source)
-    tar_list = re.findall('[0-9]+', target)
+    #number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]')
+    src_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', source)
+    tar_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', target)
     num_out = {}
     if src_list==[] and tar_list==[]:
         return None
@@ -373,10 +382,11 @@ def numbers_view(source, target):
         if len(src_list)!=len(tar_list):
             msg = ["Number(s) count mismatch in source and target segments"]
         else:
-            if functools.reduce(lambda x, y : x and y, map(lambda p, q: p == q,src_list,tar_list), True):
+            #if functools.reduce(lambda x, y : x and y, map(lambda p, q: p == q,src_list,tar_list), True):
+            if set(stripNum(src_list)) == set(stripNum(tar_list)):
                 msg = []
             else:
-                msg = ["Number(s) in source and target are not same or Ordering of number(s) are not same"]
+                msg = ["Number(s) in source and target are not same"]
 
         num_out['source'] = []
         num_out['target'] = []
