@@ -84,7 +84,7 @@ from django.contrib import messages
 from ai_auth.Aiwebhooks import update_user_credits
 from allauth.account.signals import email_confirmed
 from ai_auth.signals import send_campaign_email
-from django_oso.decorators import authorize_request
+#from django_oso.decorators import authorize_request
 
 logger = logging.getLogger('django')
 
@@ -2325,6 +2325,6 @@ def stripe_resync_instance(instance):
 
 
 @api_view(['GET'])
-@authorize_request
+#@authorize_request
 def oso_test(request):
     return JsonResponse({"msg":"sucess"},status=200)
