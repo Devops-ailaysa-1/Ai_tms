@@ -172,7 +172,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
+
         from ai_workspace.models import MTonlytaskCeleryStatus
+
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -200,7 +202,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
-            print("-------------------------Document Already Processed-------------------------")
+            print("-------------------------File Already Processed-------------------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -253,14 +255,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                     raise ValueError("Sorry! Something went wrong with file processing.")
 
-
         return document
 
-
-
     def get(self, request, task_id, format=None):
+
         from ai_workspace.models import MTonlytaskCeleryStatus
         from django_celery_results.models import TaskResult
+
         task = self.get_object(task_id=task_id)
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
@@ -305,12 +306,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
             except:
-                if document.get('doc')!=None:
+                if document.get('doc')!= None:
                     doc = DocumentSerializerV2(document.get('doc')).data
                     return Response({'msg':document.get('msg'),'doc_data':doc}, status=201)
                 else:
                     return Response(document,status=400)
-
 
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
@@ -577,7 +577,6 @@ class MT_RawAndTM_View(views.APIView):
             (get_plan_name(debit_user) == "Business" or 'Business-PAYG') and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
-            print("For internal & hired editors only")
             return {}, 424, "cannot_translate"
 
         else:

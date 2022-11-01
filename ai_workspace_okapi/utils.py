@@ -389,4 +389,5 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
 def split_check(segment_id):
     from .models import Segment
     return bool((Segment.objects.filter(id=segment_id).first() != None) and \
-                (Segment.objects.filter(id=segment_id).first().is_split in [None, False]))
+                bool((Segment.objects.filter(id=segment_id).first().is_split in [None, False]))
+                )
