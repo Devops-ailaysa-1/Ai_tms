@@ -543,20 +543,35 @@ def tags_check(source,target):
     else:
         return tags_out
 
-def general_check_view(source,target):
-    source_1 = source.replace('\xa0', ' ')
-    # doc = Document.objects.get(id=doc_id)
-    # sourceLanguage = doc.source_language
-    # targetLanguage = doc.target_language
+def word_check(source,target):
     src_limit = round( ( 0.4 * len(source.split()) ), 2 )
-    #src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
+    if len(target.split()) < src_limit:
+        return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
+
+def character_check(source,target):
+    src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
+    if len(target.strip()) < src_limit:
+        return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
+
+def general_check_view(source,target,doc):
+    source_1 = source.replace('\xa0', ' ')
+    lang_list = ['Chinese (Traditional)', 'Chinese (Simplified)', 'Japanese','Thai', 'Korean', 'Khmer']
+    targetLanguage = doc.target_language
     if not target:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
-    elif len(target.split()) < src_limit:
-        #if targetLanguage not in lang_list:
-        return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
+    else:
+        if targetLanguage not in lang_list:
+            res = word_check(source,target)
+            return res
+        else:
+            res = character_check(source,target)
+            return res
+
+    # elif len(target.split()) < src_limit:
+    #     #if targetLanguage not in lang_list:
+    #     return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
 
 
 TAG_RE = re.compile(r'<[^>]+>')
@@ -573,13 +588,14 @@ def QA_Check(request):
     out = []
     Indian_lang=['Bengali', 'Marathi', 'Telugu', 'Tamil', 'Urdu', 'Gujarati',
                  'Kannada', 'Malayalam', 'Odia', 'Punjabi', 'Assamese', 'Hindi', 'Arabic', 'Urdu', 'Korean']
+
     source = request.POST.get('source')
     target = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
-    # doc = Document.objects.get(id=doc_id)
+    doc = Document.objects.get(id=doc_id)
     # sourceLanguage = doc.source_language
     # targetLanguage = doc.target_language
-    general_check = general_check_view(source,target)
+    general_check = general_check_view(source,target,doc)
     if general_check:
         out.append({'General_check':general_check})
         return JsonResponse({'data':out},safe=False)
