@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from rest_framework.response import Response
-import requests, functools
+import requests, functools, string
 import regex as re
 from rest_framework.decorators import api_view, parser_classes
 # from checkApp.models import (LetterCase,Untranslatable, Untranslatables,
@@ -164,17 +164,18 @@ def inconsistent_url(source,target):
     ErrorNote=[]
     url_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_url_list) != len(tar_url_list):
-        ErrorNote.append('URL count mismatch')
-    for i in tar_url_list:
-        if i not in src_url_list:
-            tar_missing.append(i)
-    for j in src_url_list:
-        if j not in tar_url_list:
-            src_missing.append(j)
-    if src_missing==[] and tar_missing ==[]:
-        ErrorNote=ErrorNote
+        ErrorNote.append('Mismatch in URL count. Some URL(s) may be missed either in source or target')
     else:
-        ErrorNote.append('Inconsistent URL formats')
+        for i in tar_url_list:
+            if i not in src_url_list:
+                tar_missing.append(i)
+        for j in src_url_list:
+            if j not in tar_url_list:
+                src_missing.append(j)
+        if src_missing==[] and tar_missing ==[]:
+            ErrorNote=ErrorNote
+        else:
+            ErrorNote.append('URL in source and target are not same')
     url_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if url_out.get('source')==[] and url_out.get('target')==[] and url_out.get('ErrorNote')==[]:
         return None
@@ -190,17 +191,18 @@ def inconsistent_email(source,target):
     ErrorNote=[]
     email_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_email_list) != len(tar_email_list):
-        ErrorNote.append('Mismatch in URL count')
-    for i in tar_email_list:
-        if i not in src_email_list:
-            tar_missing.append(i)
-    for j in src_email_list:
-        if j not in tar_email_list:
-            src_missing.append(j)
-    if src_missing==[] and tar_missing ==[]:
-        ErrorNote=ErrorNote
+        ErrorNote.append('Mismatch in Email count. Some Email(s) may be missed either in source or target')
     else:
-        ErrorNote.append('Inconsistency in URL format')
+        for i in tar_email_list:
+            if i not in src_email_list:
+                tar_missing.append(i)
+        for j in src_email_list:
+            if j not in tar_email_list:
+                src_missing.append(j)
+        if src_missing==[] and tar_missing ==[]:
+            ErrorNote=ErrorNote
+        else:
+            ErrorNote.append('Email in source and target are not same')
     email_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if email_out.get('source')==[] and email_out.get('target')==[] and email_out.get('ErrorNote')==[]:
         return None
@@ -238,7 +240,8 @@ def punc_space_view(src,tgt):
     multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
     #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
     punc             = re.compile(r'(\.\.+)[^\.+$]')
-    endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
+    endpunc             = re.compile("[" + re.escape(string.punctuation) + "]$")
+    #endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
     quotes           = re.compile(r'(\w+\s(\'|\")\w+(\s|\,))|(\w+(\'|\")\s\w(\s|\,))')
     #quotesmismatch   = re.compile(r'(\'\s?\w+\")|(\"\s?\w+\')')
     #brac1            = re.compile(r'\(\w+[.-/]?\w+?(\}|\])')
@@ -362,9 +365,12 @@ def stripNum(num):
     return num_str
 
 def numbers_view(source, target):
+    URLEmailRegex = re.compile(r'(https?://(www\.)?(\w+)(\.\w+))|((https?://)?(www\.)(\w+)(\.\w+))|[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
+    source_ = re.sub(URLEmailRegex,'',source)
+    target_ = re.sub(URLEmailRegex,'',target)
     #number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]')
-    src_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', source)
-    tar_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', target)
+    src_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', source_)
+    tar_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', target_)
     num_out = {}
     if src_list==[] and tar_list==[]:
         return None
@@ -542,15 +548,15 @@ def general_check_view(source,target):
     # doc = Document.objects.get(id=doc_id)
     # sourceLanguage = doc.source_language
     # targetLanguage = doc.target_language
-    #src_limit = round( ( 0.4 * len(source.split()) ), 2 )
-    src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
+    src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+    #src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
     if not target:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
-    elif len(target.strip()) < src_limit:
+    elif len(target.split()) < src_limit:
         #if targetLanguage not in lang_list:
-        return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
+        return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
 
 
 TAG_RE = re.compile(r'<[^>]+>')
