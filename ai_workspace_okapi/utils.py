@@ -386,7 +386,20 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
                 out.write(response.audio_content)
                 print('Audio content written to file',filename)
 
+# def split_check(segment_id):
+#     from .models import Segment
+#     return bool((Segment.objects.filter(id=segment_id).first() != None) and \
+#                 (Segment.objects.filter(id=segment_id).first().is_split in [None, False]))
+
+
 def split_check(segment_id):
-    from .models import Segment
-    return bool((Segment.objects.filter(id=segment_id).first() != None) and \
-                (Segment.objects.filter(id=segment_id).first().is_split in [None, False]))
+    from ai_workspace_okapi.models import SplitSegment
+
+    split_seg = SplitSegment.objects.filter(id=segment_id).first()
+    if split_seg:
+        if split_seg.segment.is_split == True:
+            return False
+        else:
+            return True
+    else:
+        return True
