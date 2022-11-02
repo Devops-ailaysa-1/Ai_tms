@@ -519,9 +519,10 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
     projectpost_steps = ProjectPostStepsSerializer(many=True,required=False)
     service_info = serializers.SerializerMethodField()
     post_jobs = serializers.SerializerMethodField()
+    post_deadline = serializers.ReadOnlyField(source='proj_deadline')
 
     class Meta:
-        fields = ('post_jobs','projectpost_steps','bid_applied','service_info',)
+        fields = ('post_jobs','post_deadline','projectpost_steps','bid_applied','service_info',)
 
     def get_bid_applied(self,obj):
         applied =[]
