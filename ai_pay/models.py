@@ -42,7 +42,8 @@ class PurchaseOrder(models.Model):
     ("issued", "issued"),
     ("open","open"),
     ("closed","closed"),
-    ("void","void")
+    ("void","void"),
+    ("generated","generated")
     )
 
 

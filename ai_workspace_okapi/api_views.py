@@ -174,7 +174,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
+
         from ai_workspace.models import MTonlytaskCeleryStatus
+
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -202,7 +204,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
-            print("-------------------------Document Already Processed-------------------------")
+            print("-------------------------File Already Processed-------------------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -255,14 +257,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
                     raise ValueError("Sorry! Something went wrong with file processing.")
 
-
         return document
 
-
-
     def get(self, request, task_id, format=None):
+
         from ai_workspace.models import MTonlytaskCeleryStatus
         from django_celery_results.models import TaskResult
+
         task = self.get_object(task_id=task_id)
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
@@ -307,12 +308,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
             except:
-                if document.get('doc')!=None:
+                if document.get('doc')!= None:
                     doc = DocumentSerializerV2(document.get('doc')).data
                     return Response({'msg':document.get('msg'),'doc_data':doc}, status=201)
                 else:
                     return Response(document,status=400)
-
 
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
@@ -407,8 +407,8 @@ class MergeSegmentView(viewsets.ModelViewSet):
         status = MergeSegmentView.is_regular_segments(segments)
 
         if status == "Mixed":
-            # return Reponse({"msg" : "Only one of the segment is split"}, status=400)
-            raise Exception("Only one of the selected segments is a split segment")
+            return Reponse({"msg" : "Cannot be merged. One of the segment is already split"}, status=400)
+            # raise Exception("Only one of the selected segments is a split segment")
 
         # For normal segment merge
         if status == True:
@@ -546,7 +546,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         else:
             segment.temp_target = request_data["temp_target"]
         segment.save()
-        return Response(SegmentSerializer(segment).data, status=201)
+        return Response(SegmentSerializerV2(segment).data, status=201)
 
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
@@ -579,7 +579,6 @@ class MT_RawAndTM_View(views.APIView):
             (get_plan_name(debit_user) == "Business" or 'Business-PAYG') and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
-            print("For internal & hired editors only")
             return {}, 424, "cannot_translate"
 
         else:
@@ -1188,19 +1187,17 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         merge_segments = SourceSegmentsListView.do_search(data, merge_segments, lookup_field)
         split_segments = SourceSegmentsListView.do_search(data, split_segments, lookup_field)
 
-        merge_segments_ids = [merge_seg.id for merge_seg in merge_segments]
-
-        for split_segment in split_segments:
-            merge_segments_ids.append(split_segment.segment_id)
-
-        print("Merge split ids ----> ", list(set(merge_segments_ids)))
-
-        merge_segments_ids = list(set(merge_segments_ids))
-
-
-        # for seg in segments:
-        #     if seg.id not in merge_segments_ids:
-        #         segments.exclude(id=seg.id)
+        # segment_ids = [seg.id for seg in segments]
+        #
+        # merge_segments_ids = [merge_seg.id for merge_seg in merge_segments]
+        #
+        # split_segments_ids = [split_seg.id for split_seg in split_segments]
+        #
+        # split_parent_seg_ids = list(set([split_seg.segment_id for split_seg in split_segments]))
+        #
+        # if segment_ids != [] and merge_segments_ids != []:
+        #     seg_union_id = list(set(segment_ids.extend(merge_segments_ids).extend(split_parent_seg_ids)))
+        # print("seg union ids --> ", seg_union_id)
 
         return segments, 200
 

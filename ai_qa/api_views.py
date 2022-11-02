@@ -102,7 +102,8 @@ def Temperature_and_degree_signs(user_input,target):
     print(src,tar)
     if src==[] and tar==[]:
         return {'source':src, 'target':tar , 'ErrorNote':message}
-    message.append("Degree sign placed improperly")
+    # This needs to be checked. As degree sign can also be used for angles
+    message.append("Missing C(Celsius) or F(Fahrenheit) after degree sign")
     return {'source':src, 'target':tar , 'ErrorNote':message}
 
 
@@ -164,17 +165,18 @@ def inconsistent_url(source,target):
     ErrorNote=[]
     url_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_url_list) != len(tar_url_list):
-        ErrorNote.append('URL count mismatch')
-    for i in tar_url_list:
-        if i not in src_url_list:
-            tar_missing.append(i)
-    for j in src_url_list:
-        if j not in tar_url_list:
-            src_missing.append(j)
-    if src_missing==[] and tar_missing ==[]:
-        ErrorNote=ErrorNote
+        ErrorNote.append('Number of URL(s) in source or target segment are unequal')
     else:
-        ErrorNote.append('Inconsistent URL formats')
+        for i in tar_url_list:
+            if i not in src_url_list:
+                tar_missing.append(i)
+        for j in src_url_list:
+            if j not in tar_url_list:
+                src_missing.append(j)
+        if src_missing==[] and tar_missing ==[]:
+            ErrorNote=ErrorNote
+        else:
+            ErrorNote.append('URL(s) in source and target segment are different')
     url_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if url_out.get('source')==[] and url_out.get('target')==[] and url_out.get('ErrorNote')==[]:
         return None
@@ -190,17 +192,18 @@ def inconsistent_email(source,target):
     ErrorNote=[]
     email_out = {'source':[],'target':[],'ErrorNote':[]}
     if len(src_email_list) != len(tar_email_list):
-        ErrorNote.append('Mismatch in URL count')
-    for i in tar_email_list:
-        if i not in src_email_list:
-            tar_missing.append(i)
-    for j in src_email_list:
-        if j not in tar_email_list:
-            src_missing.append(j)
-    if src_missing==[] and tar_missing ==[]:
-        ErrorNote=ErrorNote
+        ErrorNote.append('Number of email id(s) in source or target segment are unequal')
     else:
-        ErrorNote.append('Inconsistency in URL format')
+        for i in tar_email_list:
+            if i not in src_email_list:
+                tar_missing.append(i)
+        for j in src_email_list:
+            if j not in tar_email_list:
+                src_missing.append(j)
+        if src_missing==[] and tar_missing ==[]:
+            ErrorNote=ErrorNote
+        else:
+            ErrorNote.append('Email id(s) in source and target segment are different')
     email_out={'source':src_missing,'target':tar_missing,'ErrorNote':ErrorNote}
     if email_out.get('source')==[] and email_out.get('target')==[] and email_out.get('ErrorNote')==[]:
         return None
@@ -249,9 +252,9 @@ def punc_space_view(src,tgt):
     src_values = []
     tgt_values = []
     for i in range(2):
-        seg = "Source" if i == 0 else "Target"
-        content = src if seg=="Source" else tgt
-        values = src_values if seg=="Source" else tgt_values
+        seg = "source" if i == 0 else "target"
+        content = src if seg == "source" else tgt
+        values = src_values if seg == "source" else tgt_values
 
         # if bool(openbracket.findall(content)):
         #     for i in openbracket.finditer(content):
@@ -263,13 +266,14 @@ def punc_space_view(src,tgt):
         # if bool(openbracket.findall(content)) or bool(closebracket.findall(content)):
         #     list.append("{seg} contains one or more unclosed brackets".format(seg=seg))
         if bool(multispace.findall(content)):
-            list.append("{seg} segment contains multiple spaces or spaces at start / end".format(seg=seg))
+            # Error note needs to be customised
+            list.append("Multiple spaces or spaces at start / end {seg} segment".format(seg=seg))
         if punc.findall(content):
-            list.append("More than one fullstops found in {seg}".format(seg=seg))
+            list.append("Duplicate punctuations in {seg} segment".format(seg=seg))
 
         ### BRACKET MISMATCH ##
         if not bool(is_matched(content)):
-            list.append("{seg} contains mismatched bracket(s)".format(seg=seg))
+            list.append("Mismatched bracket(s) in {seg} segment".format(seg=seg))
         # if bool(brac1.findall(content)):
         #     for i in brac1.finditer(content):
         #         values.append(i.group(0))
@@ -287,10 +291,10 @@ def punc_space_view(src,tgt):
         #     for i in quotesmismatch.finditer(content):
         #         values.append(i.group(0))
         if not bool(is_quote_matched(content)):
-            list.append("Quotes mismatch in {seg}".format(seg=seg))
+            list.append("Mismatched quotes in {seg} segment".format(seg=seg))
 
     if endpunc.findall(src.strip()) !=  endpunc.findall(tgt.strip()):
-        list.append("Mismatch in end punctuation")
+        list.append("Source and target segments end with different punctuations")
 
     # close = closebracket.finditer(src)
     # for i in close:
@@ -363,31 +367,35 @@ def stripNum(num):
     return num_str
 
 def numbers_view(source, target):
+    URLEmailRegex = re.compile(r'(https?://(www\.)?(\w+)(\.\w+))|((https?://)?(www\.)(\w+)(\.\w+))|[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
+    source_ = re.sub(URLEmailRegex,'',source)
+    target_ = re.sub(URLEmailRegex,'',target)
     #number  = re.compile(r'[^</>][0-9]+[-,./]*[0-9]*[-,./]*[0-9]*[^<>]')
-    src_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', source)
-    tar_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', target)
+    src_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', source_)
+    tar_list = re.findall('[0-9]+[-,./]*[0-9]*[-,./]*[0-9]*', target_)
     num_out = {}
     if src_list==[] and tar_list==[]:
         return None
     elif src_list==[] and tar_list!=[]:
         num_out['source'] = ["No numbers in source"]
         num_out['target'] = tar_list
-        num_out['ErrorNote'] = ["Number(s) mismatch. Number(s) present in target, but no number(s) in source "]
+        num_out['ErrorNote'] = ["Target segment contains number(s); No number(s) found in source segment"]
         return num_out
     elif tar_list==[] and src_list!=[]:
         num_out['source'] = src_list
         num_out['target'] = ['No numbers in target']
-        num_out['ErrorNote'] = ["Number(s) mismatch. Number(s) present in source, but no number(s) in target"]
+        num_out['ErrorNote'] = ["Source segment contains number(s); No number(s) found in target segment"]
         return num_out
     else:
         if len(src_list)!=len(tar_list):
-            msg = ["Number(s) count mismatch in source and target segments"]
+            msg = ["Mismatch in number count between source and target segment"]
+
         else:
             #if functools.reduce(lambda x, y : x and y, map(lambda p, q: p == q,src_list,tar_list), True):
             if set(stripNum(src_list)) == set(stripNum(tar_list)):
                 msg = []
             else:
-                msg = ["Number(s) in source and target are not same"]
+                msg = ["Number(s) in source and target segment are different"]
 
         num_out['source'] = []
         num_out['target'] = []
@@ -474,7 +482,7 @@ def repeated_words_view(source,target):
         repeat_out = {}
         repeat_out['source'] = output[0]
         repeat_out['target'] = output[1]
-        repeat_out['ErrorNote'] = ["Repeated words"]
+        repeat_out['ErrorNote'] = ["Target segment contains repeated words"]
         return repeat_out
     else:
         return None
@@ -532,26 +540,41 @@ def tags_check(source,target):
     for j in src_tags_list:
         if j not in tar_tags_list:
             src_missing.append(j)
-    tags_out={'source':src_missing,'target':tar_missing,'ErrorNote':['Inconsistency in tag(s)']}
+    tags_out={'source':src_missing,'target':tar_missing,'ErrorNote':['Tag(s) missing in target segment']}
     if tags_out.get('source')==[] and tags_out.get('target')==[]:
         return None
     else:
         return tags_out
 
-def general_check_view(source,target):
-    source_1 = source.replace('\xa0', ' ')
-    # doc = Document.objects.get(id=doc_id)
-    # sourceLanguage = doc.source_language
-    # targetLanguage = doc.target_language
-    #src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+def word_check(source,target):
+    src_limit = round( ( 0.4 * len(source.split()) ), 2 )
+    if len(target.split()) < src_limit:
+        return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
+
+def character_check(source,target):
     src_limit = round( ( 0.4 * len(source.strip()) ), 2 )
+    if len(target.strip()) < src_limit:
+        return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
+
+def general_check_view(source,target,doc):
+    source_1 = source.replace('\xa0', ' ')
+    lang_list = ['Chinese (Traditional)', 'Chinese (Simplified)', 'Japanese','Thai', 'Korean', 'Khmer']
+    targetLanguage = doc.target_language
     if not target:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
-    elif len(target.strip()) < src_limit:
-        #if targetLanguage not in lang_list:
-        return {'source':[],'target':[],"ErrorNote":["Length of translation length seems shortened"]}
+    else:
+        if targetLanguage not in lang_list:
+            res = word_check(source,target)
+            return res
+        else:
+            res = character_check(source,target)
+            return res
+
+    # elif len(target.split()) < src_limit:
+    #     #if targetLanguage not in lang_list:
+    #     return {'source':[],'target':[],"ErrorNote":["Length of translation seems shortened"]}
 
 
 TAG_RE = re.compile(r'<[^>]+>')
@@ -568,13 +591,14 @@ def QA_Check(request):
     out = []
     Indian_lang=['Bengali', 'Marathi', 'Telugu', 'Tamil', 'Urdu', 'Gujarati',
                  'Kannada', 'Malayalam', 'Odia', 'Punjabi', 'Assamese', 'Hindi', 'Arabic', 'Urdu', 'Korean']
+
     source = request.POST.get('source')
     target = request.POST.get('target')
     doc_id = request.POST.get('doc_id')
-    # doc = Document.objects.get(id=doc_id)
+    doc = Document.objects.get(id=doc_id)
     # sourceLanguage = doc.source_language
     # targetLanguage = doc.target_language
-    general_check = general_check_view(source,target)
+    general_check = general_check_view(source,target,doc)
     if general_check:
         out.append({'General_check':general_check})
         return JsonResponse({'data':out},safe=False)
