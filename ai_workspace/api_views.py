@@ -1776,7 +1776,7 @@ def project_download(request,project_id):
 
 
 class ShowMTChoices(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @staticmethod
     def get_lang_code(lang_id):
