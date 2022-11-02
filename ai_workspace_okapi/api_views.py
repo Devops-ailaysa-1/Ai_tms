@@ -405,8 +405,8 @@ class MergeSegmentView(viewsets.ModelViewSet):
         status = MergeSegmentView.is_regular_segments(segments)
 
         if status == "Mixed":
-            # return Reponse({"msg" : "Only one of the segment is split"}, status=400)
-            raise Exception("Only one of the selected segments is a split segment")
+            return Reponse({"msg" : "Cannot be merged. One of the segment is already split"}, status=400)
+            # raise Exception("Only one of the selected segments is a split segment")
 
         # For normal segment merge
         if status == True:
@@ -544,7 +544,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         else:
             segment.temp_target = request_data["temp_target"]
         segment.save()
-        return Response(SegmentSerializer(segment).data, status=201)
+        return Response(SegmentSerializerV2(segment).data, status=201)
 
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
@@ -1185,19 +1185,17 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         merge_segments = SourceSegmentsListView.do_search(data, merge_segments, lookup_field)
         split_segments = SourceSegmentsListView.do_search(data, split_segments, lookup_field)
 
-        merge_segments_ids = [merge_seg.id for merge_seg in merge_segments]
-
-        for split_segment in split_segments:
-            merge_segments_ids.append(split_segment.segment_id)
-
-        print("Merge split ids ----> ", list(set(merge_segments_ids)))
-
-        merge_segments_ids = list(set(merge_segments_ids))
-
-
-        # for seg in segments:
-        #     if seg.id not in merge_segments_ids:
-        #         segments.exclude(id=seg.id)
+        # segment_ids = [seg.id for seg in segments]
+        #
+        # merge_segments_ids = [merge_seg.id for merge_seg in merge_segments]
+        #
+        # split_segments_ids = [split_seg.id for split_seg in split_segments]
+        #
+        # split_parent_seg_ids = list(set([split_seg.segment_id for split_seg in split_segments]))
+        #
+        # if segment_ids != [] and merge_segments_ids != []:
+        #     seg_union_id = list(set(segment_ids.extend(merge_segments_ids).extend(split_parent_seg_ids)))
+        # print("seg union ids --> ", seg_union_id)
 
         return segments, 200
 
