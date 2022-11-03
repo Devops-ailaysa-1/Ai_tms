@@ -423,7 +423,7 @@ class MergeSegmentView(viewsets.ModelViewSet):
             # Checking if split segments are of the same parent segment or not
             segment_ids = [SplitSegment.objects.get(id=int(seg)).segment_id for seg in segments]
             if (len(set(segment_ids)) > 1):
-                raise Exception("Split segments should be of the same parent segment")
+                return Response({"msg": "Split segments should be of the same parent segment"}, status = 400)
 
             # Setting the is_split flag to False
             segment_id = SplitSegment.objects.filter(id=int(segments[0])).first().segment_id
