@@ -242,8 +242,8 @@ def punc_space_view(src,tgt):
     #space           = re.compile(r'(\s\s+|^(\s\s)|\s$|\s\.)')
     multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
     #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
-    punc             = re.compile(r'(\.\.+)[^\.+$]')
-    endpunc             = re.compile("[" + re.escape(string.punctuation) + "]$")
+    punc             = re.compile(r'(\.\.+|\?\?+|\!\!+|\,\,+)[^\.?!,+$]')#re.compile(r'(\.\.+)[^\.+$]')
+    endpunc          = re.compile("[" + re.escape(string.punctuation) + "]$")
     #endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
     quotes           = re.compile(r'(\w+\s(\'|\")\w+(\s|\,))|(\w+(\'|\")\s\w(\s|\,))')
     #quotesmismatch   = re.compile(r'(\'\s?\w+\")|(\"\s?\w+\')')
@@ -629,7 +629,7 @@ def general_check_view(source,target,doc):
     source_1 = source.replace('\xa0', ' ')
     lang_list = ['Chinese (Traditional)', 'Chinese (Simplified)', 'Japanese','Thai', 'Korean', 'Khmer']
     targetLanguage = doc.target_language
-    if not target:
+    if not target or target.isspace():
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
@@ -738,10 +738,10 @@ def QA_Check(request):
         out.append({'Punctuation':data_punc})
 
     ###############MEASUREMENTS#######################
-    data_temp=Temperature_and_degree_signs(source,target)
-    print(data_temp.get('ErrorNote'))
-    if data_temp.get('ErrorNote')!=[]:
-        out.append({'Measurement_check':data_temp})
+    # data_temp=Temperature_and_degree_signs(source,target)
+    # print(data_temp.get('ErrorNote'))
+    # if data_temp.get('ErrorNote')!=[]:
+    #     out.append({'Measurement_check':data_temp})
 
     ##########TAGS CHECK##########################
     tags = tags_check(source,target)
