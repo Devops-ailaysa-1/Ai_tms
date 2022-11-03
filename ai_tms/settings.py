@@ -153,13 +153,9 @@ INSTALLED_APPS = [
     #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
-<<<<<<< HEAD
-    'ai_writer',
-    'ai_exportpdf'
-=======
+    'ai_exportpdf',
     # 'coreapi', # Coreapi for coreapi documentation
     # 'drf_yasg', # drf_yasg fro Swagger documentation
->>>>>>> origin/v4-merged-production
 ]
 
 MANAGEMENT = False

@@ -28,11 +28,8 @@ def file_pdf_check(file_path):
         text+=pdf[page]
     return "text" if len(text)>=700 else "ocr"
 
-
-
 class Pdf2Docx(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-
     def create(self, request):
         pdf_request_file = request.FILES.get('pdf_request_file')
         file_language = request.POST.get('file_language')
@@ -43,7 +40,6 @@ class Pdf2Docx(viewsets.ViewSet):
         response_result = {}
         if pdf_request_file.name.endswith('.pdf') and file_language and format: 
             Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_request_file , 
-                                        pdf_format_option = format ,
                                         pdf_file_name = str(pdf_request_file) , 
                                         pdf_language =file_language.lower()).save()  
             serve_path = str(Ai_PdfUpload.objects.all().filter(user_id = user).last().pdf_file)
@@ -71,11 +67,10 @@ class Pdf2Docx(viewsets.ViewSet):
         pdf_status_id = request.query_params.get('pdf_status_id', None)
         user = request.user.id
         if pdf_status_id:
-            pdf_status = Ai_PdfUpload.objects.filter(pdf_task_id = pdf_status_id,user_id = user)
-            print(pdf_status.status)
-            JsonResponse({'status':pdf_status.status} , safe=False)
+            pdf_status = Ai_PdfUpload.objects.filter(pdf_task_id = pdf_status_id,user_id = user).first()
+            serializer = PdfFileSerializer(pdf_status,many=True)
+            JsonResponse(serializer.data , safe=False)
         if not pk:
-            
             files = Ai_PdfUpload.objects.filter(user_id = user)
             serializer = PdfFileSerializer(files,many=True)
             return Response(serializer.data)
@@ -83,7 +78,7 @@ class Pdf2Docx(viewsets.ViewSet):
             files = Ai_PdfUpload.objects.get(id = pk)
             serializer = PdfFileSerializer(files,many=True)
             print(serializer.data)
-            return Response({'data':'data'})
+            return Response(serializer.data)
 
     def retrieve(self, request, pk=None):
         queryset = Ai_PdfUpload.objects.all()

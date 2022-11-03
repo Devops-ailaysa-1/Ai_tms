@@ -73,12 +73,8 @@ urlpatterns = [
     path("nlp/", include("ai_nlp.urls")),
 
     path("aipay/", include("ai_pay.urls")),
-<<<<<<< HEAD
-    path('aiwriter/' , include('ai_writer.urls')),
     path('exportpdf/',include("ai_exportpdf.urls")),
-=======
     path("qa/", include("ai_qa.urls")),
->>>>>>> origin/v4-merged-production
    # path('__debug__/', include('debug_toolbar.urls')),
 #     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
 #    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

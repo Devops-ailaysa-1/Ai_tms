@@ -1,24 +1,31 @@
-from cgitb import text
-import os ,mimetypes
-from django.http import HttpResponse  
-from ai_exportpdf.models import Ai_PdfUpload
-import urllib.request ,docx ,re ,io
-import os ,logging ,requests ,json,time 
-from io import BytesIO 
-from google.cloud import vision_v1 , vision
-from google.oauth2 import service_account
-from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR ,CONVERTIO_API 
-from PyPDF2 import PdfFileReader
-from tqdm import tqdm
-import time
 import base64
-from ai_exportpdf.convertio_ocr_lang import lang_code
-from pdf2image import convert_from_path
+import docx
+import json
+import logging
+import mimetypes
+import os
+import re
+import requests
+import time
+import urllib.request
+from io import BytesIO
+
+from PyPDF2 import PdfFileReader
 from celery import shared_task
-from django.contrib.auth import settings 
+from django.contrib.auth import settings
+from django.http import HttpResponse
+from google.cloud import vision_v1, vision
+from google.oauth2 import service_account
+from pdf2image import convert_from_path
+from tqdm import tqdm
+
+from ai_exportpdf.convertio_ocr_lang import lang_code
+from ai_exportpdf.models import Ai_PdfUpload
+from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API
+
 logger = logging.getLogger('django')
-with open('tesseract_language.json') as fp:
-    tesseract_language_pair = json.load(fp)
+# with open('tesseract_language.json') as fp:
+#     tesseract_language_pair = json.load(fp)
 
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -80,10 +87,8 @@ def convertiopdf2docx(serve_path ,language,ocr = None ):
     fp  =str(settings.MEDIA_ROOT+"/"+ serve_path)
     txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = serve_path)
     pdf_file_name = serve_path.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
-    txt_field_obj.pdf_api_use = "convertio"
     with open(fp, "rb") as pdf_path:
         encoded_string = base64.b64encode(pdf_path.read())           ##pdf file convert to base64 
-    
     data = {'apikey': CONVERTIO_API ,                          # CONVERTIO_API,           #convertio crediential
                 'input': 'base64',  #['url ,raw,base64]
                 'file': encoded_string.decode('utf-8'),
@@ -94,6 +99,9 @@ def convertiopdf2docx(serve_path ,language,ocr = None ):
         language_convertio = [lang_code(i) for i in language]
         ocr_option =  { "options": { "ocr_enabled": True, "ocr_settings": { "langs": [language_convertio]}}}
         data = {**data , **ocr_option}     #merge dict 
+        txt_field_obj.pdf_api_use = "convertio-ocr"
+    else:
+        txt_field_obj.pdf_api_use = "convertio"
     response_status = requests.post(url='https://api.convertio.co/convert' , data=json.dumps(data)).json() ###   posting for conversion to convert io 
     if response_status['status'] == 'error': 
         txt_field_obj.status = "ERROR"
