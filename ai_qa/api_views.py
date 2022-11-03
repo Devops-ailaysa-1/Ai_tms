@@ -3,15 +3,17 @@ from rest_framework.response import Response
 import requests, functools, string
 import regex as re
 from rest_framework.decorators import api_view, parser_classes
-# from checkApp.models import (LetterCase,Untranslatable, Untranslatables,
-#                                 forbidden_file_model, LetterCase
-#                             )
-#from .serializers import Forbidden_File_Serializer, UntranslatableSerializer, LetterCaseSerializer
+from .models import Forbidden,ForbiddenWords,Untranslatable,UntranslatableWords
+from .serializers import ForbiddenSerializer, UntranslatableSerializer#, LetterCaseSerializer
 from rest_framework.viewsets import ModelViewSet
 from ai_workspace_okapi.models import Document
 from nltk import word_tokenize
 from nltk.util import ngrams
 from nltk.corpus import stopwords
+from rest_framework.views import APIView
+from rest_framework import viewsets, status
+from ai_workspace.models import Job
+from django.db.models import Q
 #from host_details.host_details import doclang
 
 def Letters_Numbers(user_input):
@@ -127,19 +129,19 @@ def find_userlist(wordlist,userlist):
 #         text_tokens = word_tokenize(source)
 #         stop_words=stopwords.words('english')
 #         tokens_new = [word for word in text_tokens if word not in punctuation and word not in stop_words]
-#         unigram=ngrams(tokens_new,1)
-#         single_words=list(" ".join(i) for i in unigram)
-#         bigrams = ngrams(tokens_new,2)
-#         double_words=list(" ".join(i) for i in bigrams)
-#         trigrams = ngrams(tokens_new,3)
-#         triple_words=list(" ".join(i) for i in trigrams)
-#         fourgrams = ngrams(tokens_new,4)
-#         four_words=list(" ".join(i) for i in fourgrams)
-#         data=find_userlist(single_words,userlist)
-#         data.extend(find_userlist(double_words,userlist))
-#         data.extend(find_userlist(triple_words,userlist))
-#         data.extend(find_userlist(four_words,userlist))
-#         return data
+        # unigram=ngrams(tokens_new,1)
+        # single_words=list(" ".join(i) for i in unigram)
+        # bigrams = ngrams(tokens_new,2)
+        # double_words=list(" ".join(i) for i in bigrams)
+        # trigrams = ngrams(tokens_new,3)
+        # triple_words=list(" ".join(i) for i in trigrams)
+        # fourgrams = ngrams(tokens_new,4)
+        # four_words=list(" ".join(i) for i in fourgrams)
+        # data=find_userlist(single_words,userlist)
+        # data.extend(find_userlist(double_words,userlist))
+        # data.extend(find_userlist(triple_words,userlist))
+        # data.extend(find_userlist(four_words,userlist))
+        # return data
 #     except:
 #         return None
 
@@ -240,8 +242,8 @@ def punc_space_view(src,tgt):
     #space           = re.compile(r'(\s\s+|^(\s\s)|\s$|\s\.)')
     multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
     #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
-    punc             = re.compile(r'(\.\.+)[^\.+$]')
-    endpunc             = re.compile("[" + re.escape(string.punctuation) + "]$")
+    punc             = re.compile(r'(\.\.+|\?\?+|\!\!+|\,\,+)[^\.?!,+$]')#re.compile(r'(\.\.+)[^\.+$]')
+    endpunc          = re.compile("[" + re.escape(string.punctuation) + "]$")
     #endpunc          = re.compile(r'((\.+|\!+|\?+)(</\d>)?)$')
     quotes           = re.compile(r'(\w+\s(\'|\")\w+(\s|\,))|(\w+(\'|\")\s\w(\s|\,))')
     #quotesmismatch   = re.compile(r'(\'\s?\w+\")|(\"\s?\w+\')')
@@ -256,15 +258,6 @@ def punc_space_view(src,tgt):
         content = src if seg == "source" else tgt
         values = src_values if seg == "source" else tgt_values
 
-        # if bool(openbracket.findall(content)):
-        #     for i in openbracket.finditer(content):
-        #         values.append(i.group(0))
-        # if bool(closebracket.findall(content)):
-        #     for i in closebracket.finditer(content):
-        #         if i.group(1):
-        #             values.append(i.group(1))
-        # if bool(openbracket.findall(content)) or bool(closebracket.findall(content)):
-        #     list.append("{seg} contains one or more unclosed brackets".format(seg=seg))
         if bool(multispace.findall(content)):
             # Error note needs to be customised
             list.append("Multiple spaces or spaces at start / end {seg} segment".format(seg=seg))
@@ -274,31 +267,13 @@ def punc_space_view(src,tgt):
         ### BRACKET MISMATCH ##
         if not bool(is_matched(content)):
             list.append("Mismatched bracket(s) in {seg} segment".format(seg=seg))
-        # if bool(brac1.findall(content)):
-        #     for i in brac1.finditer(content):
-        #         values.append(i.group(0))
-        # if bool(brac2.findall(content)):
-        #     for i in brac2.finditer(content):
-        #         values.append(i.group(0))
-        # if bool(brac3.findall(content)):
-        #     for i in brac3.finditer(content):
-        #         values.append(i.group(0))
-        # if bool(brac1.findall(content)) or bool(brac2.findall(content)) or bool(brac3.findall(content)):
-        #     list.append("{seg} contains mismatched bracket(s)".format(seg=seg))
-        # if bool(quotes.findall(content)):
-        #     list.append("{seg} contains space before or after apostrophe".format(seg=seg))
-        # if bool(quotesmismatch.findall(content)):
-        #     for i in quotesmismatch.finditer(content):
-        #         values.append(i.group(0))
+
         if not bool(is_quote_matched(content)):
             list.append("Mismatched quotes in {seg} segment".format(seg=seg))
 
     if endpunc.findall(src.strip()) !=  endpunc.findall(tgt.strip()):
         list.append("Source and target segments end with different punctuations")
 
-    # close = closebracket.finditer(src)
-    # for i in close:
-    #     print("CLOSE BRAC---->", i.group(0))
 
     if list != []:
         punc_out = {}
@@ -309,11 +284,75 @@ def punc_space_view(src,tgt):
     else:
         return None
 
-# class ForbiddenFileUploadViewSet(ModelViewSet):
-#     queryset = forbidden_file_model.objects.all()
-#     serializer_class = Forbidden_File_Serializer
-#     parser_classes = (MultiPartParser, FormParser,)
-#
+
+
+class ForbiddenFileView(viewsets.ViewSet):
+
+    def get(self, request):
+        project_id = request.GET.get("project", None)
+        job_id = request.GET.get('job',None)
+        if project_id:
+            files = Forbidden.objects.filter(project_id=project_id).all()
+        else:
+            files = Forbidden.objects.filter(job_id=job_id).all()
+        serializer = ForbiddenSerializer(files, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        files = request.FILES.getlist('forbidden_files')
+        project_id = request.POST.get("project", None)
+        job_id = request.POST.get('job',None)
+        if job_id:
+            obj = Job.objects.get(id=job_id)
+            project_id = obj.project.id
+        data = [{"project": project_id,"job":job_id, "forbidden_file": file} for file in files]
+        ser = ForbiddenSerializer(data=data, many=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=201)
+
+    def update(self, request, pk):
+        pass
+
+    def delete(self, request, pk):
+        file_obj = Forbidden.objects.get(id=pk)
+        file_obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class UntranslatableFileView(viewsets.ViewSet):
+
+    def get(self, request):
+        project_id = request.GET.get("project", None)
+        job_id = request.GET.get('job',None)
+        if project_id:
+            files = Untranslatable.objects.filter(project_id=project_id).all()
+        else:
+            files = Untranslatable.objects.filter(job_id=job_id).all()
+        serializer = UntranslatableSerializer(files, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        files = request.FILES.getlist('untranslatable_files')
+        project_id = request.POST.get("project", None)
+        job_id = request.POST.get('job',None)
+        if job_id:
+            obj = Job.objects.get(id=job_id)
+            project_id = obj.project.id
+        data = [{"project": project_id,"job":job_id, "untranslatable_file": file} for file in files]
+        ser = UntranslatableSerializer(data=data, many=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=201)
+
+    def update(self, request, pk):
+        pass
+
+    def delete(self, request, pk):
+        file_obj = Untranslatable.objects.get(id=pk)
+        file_obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 # class UntranslatableFileUploadViewSet(ModelViewSet):
 #     queryset = Untranslatable.objects.all()
 #     serializer_class = UntranslatableSerializer
@@ -325,37 +364,67 @@ def punc_space_view(src,tgt):
 #     parser_classes = (MultiPartParser, FormParser,)
 
 
-# def forbidden_words_view(source, target, doc_id):
-#     try:
-#         uploadfile = forbidden_file_model.objects.filter(doc_id=doc_id).last().file
-#         list = uploadfile.readlines()
-#         j = 0
-#         for j in range(len(list)):
-#             list[j] = str(list[j].strip(), 'utf-8')
-#         forbidden_out = {}
-#         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-#         stop_words=stopwords.words('english')
-#         src_list = word_tokenize(source)
-#         source_new = [word for word in src_list if word not in punctuation and word not in stop_words]
-#         src_forbidden = []
-#         for i in source_new:
-#             if i in list:
-#                 src_forbidden.append(i)
-#         tgt_forbidden = []
-#         tgt_list = word_tokenize(target)
-#         tgt_new = [word for word in tgt_list if word not in punctuation and word not in stop_words]
-#         for i in tgt_new:
-#             if i in list and (i not in src_forbidden):
-#                 tgt_forbidden.append(i)
-#         if tgt_forbidden:
-#             forbidden_out['source'] = []
-#             forbidden_out['target'] = tgt_forbidden
-#             forbidden_out['ErrorNote'] = ["Forbidden word(s) are used"]
-#             return forbidden_out
-#         else:
-#             return None
-#     except:
-#         return None
+def forbidden_words_view(source, target, doc_id):
+    forbidden_out = {}
+    punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+    stop_words=stopwords.words('english')
+    tgt_list = word_tokenize(target)
+    search_words=[]
+    tokens_new = [word for word in tgt_list if word not in punctuation and word not in stop_words]
+    unigram=ngrams(tokens_new,1)
+    search_words.extend(list(" ".join(i) for i in unigram))
+    bigrams = ngrams(tokens_new,2)
+    search_words.extend(list(" ".join(i) for i in bigrams))
+    trigrams = ngrams(tokens_new,3)
+    search_words.extend(list(" ".join(i) for i in trigrams))
+    fourgrams = ngrams(tokens_new,4)
+    search_words.extend(list(" ".join(i) for i in fourgrams))
+    query = Q()
+    for entry in search_words:
+        query = query | Q(words__iexact=entry)
+
+    queryset = ForbiddenWords.objects.filter(query).distinct('words')
+    #queryset = ForbiddenWords.objects.filter(words__in = search_words)
+    if queryset:
+        forbidden_words = [i.words for i in queryset]
+        forbidden_out['source'] = []
+        forbidden_out['target'] = forbidden_words
+        forbidden_out['ErrorNote'] = ["Forbidden word(s) are used"]
+        return forbidden_out
+    else:
+        return None
+
+
+def untranslatable_words_view(source, target, doc_id):
+    untranslatable_out = {}
+    punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
+    stop_words=stopwords.words('english')
+    src_list = word_tokenize(source)
+    search_words=[]
+    tokens_new = [word for word in src_list if word not in punctuation and word not in stop_words]
+    unigram=ngrams(tokens_new,1)
+    search_words.extend(list(" ".join(i) for i in unigram))
+    bigrams = ngrams(tokens_new,2)
+    search_words.extend(list(" ".join(i) for i in bigrams))
+    trigrams = ngrams(tokens_new,3)
+    search_words.extend(list(" ".join(i) for i in trigrams))
+    fourgrams = ngrams(tokens_new,4)
+    search_words.extend(list(" ".join(i) for i in fourgrams))
+    query = Q()
+    for entry in search_words:
+        query = query | Q(words__iexact=entry)
+
+    queryset = UntranslatableWords.objects.filter(query).distinct('words')
+    #queryset = UntranslatableWords.objects.filter(words__in = search_words)
+    if queryset:
+        untranslatable_words = [i.words for i in queryset]
+        untranslatable_out['source'] = untranslatable_words
+        untranslatable_out['target'] = []
+        untranslatable_out['ErrorNote'] = ["Untranslatable word(s) are present"]
+        return untranslatable_out
+    else:
+        return None
+
 
 ###### NUMBERS VIEW  ##########
 def stripNum(num):
@@ -560,7 +629,7 @@ def general_check_view(source,target,doc):
     source_1 = source.replace('\xa0', ' ')
     lang_list = ['Chinese (Traditional)', 'Chinese (Simplified)', 'Japanese','Thai', 'Korean', 'Khmer']
     targetLanguage = doc.target_language
-    if not target:
+    if not target or target.isspace():
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
@@ -633,10 +702,17 @@ def QA_Check(request):
     #     ut['ErrorNote'] = ["Untranslable term(s) present in Source"]
     #     out.append({'Untranslatables':ut})
 
-    ####  FOR FORBIDDEN FILE  ###
-    # forbidden_words = forbidden_words_view(source, target, doc_id)
-    # if forbidden_words:
-    #     out.append({'forbidden_words': forbidden_words })
+
+    ###  FOR UNTRANSLATABLE FILE  ###
+    untranslatable_words = untranslatable_words_view(source, target, doc_id)
+    if untranslatable_words:
+        out.append({'untranslatable_words': untranslatable_words })
+
+    ###  FOR FORBIDDEN FILE  ###
+    forbidden_words = forbidden_words_view(source, target, doc_id)
+    print("Forbidden------------>",forbidden_words)
+    if forbidden_words:
+        out.append({'forbidden_words': forbidden_words })
 
     #### USER LETTER CASE  ###
     # letter_case,message = letter_case_view(source, target, doc_id)
@@ -662,10 +738,10 @@ def QA_Check(request):
         out.append({'Punctuation':data_punc})
 
     ###############MEASUREMENTS#######################
-    data_temp=Temperature_and_degree_signs(source,target)
-    print(data_temp.get('ErrorNote'))
-    if data_temp.get('ErrorNote')!=[]:
-        out.append({'Measurement_check':data_temp})
+    # data_temp=Temperature_and_degree_signs(source,target)
+    # print(data_temp.get('ErrorNote'))
+    # if data_temp.get('ErrorNote')!=[]:
+    #     out.append({'Measurement_check':data_temp})
 
     ##########TAGS CHECK##########################
     tags = tags_check(source,target)
