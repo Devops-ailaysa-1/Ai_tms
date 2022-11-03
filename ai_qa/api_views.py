@@ -639,7 +639,8 @@ def general_check_view(source,target,doc):
     source_1 = source.replace('\xa0', ' ')
     lang_list = ['Chinese (Traditional)', 'Chinese (Simplified)', 'Japanese','Thai', 'Korean', 'Khmer']
     targetLanguage = doc.target_language
-    if not target or target.isspace():
+    target_1 = remove_tags(target)
+    if not target or target.isspace() or not target_1:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
