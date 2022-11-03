@@ -240,7 +240,7 @@ def punc_space_view(src,tgt):
     #openbracket     = re.compile(r'(\w+|\s)?(\(|\[|\{)(\w+|\s)?[^\]})](\\|\s|\.)')
     #closebracket     = re.compile(r'\([^()]*\)|\[[^][]*]|\{[^{}]*}|(\w+[])}]|[([{]\w+)')
     #space           = re.compile(r'(\s\s+|^(\s\s)|\s$|\s\.)')
-    multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
+    multispace       = re.compile(r'(\s\s+|^(\s\s+)|\s\s+$|\s\.)')
     #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
     punc             = re.compile(r'(\.\.+|\?\?+|\!\!+|\,\,+)[^\.?!,+$]')#re.compile(r'(\.\.+)[^\.+$]')
     endpunc          = re.compile("[" + re.escape(string.punctuation) + "]$")
@@ -259,8 +259,18 @@ def punc_space_view(src,tgt):
         values = src_values if seg == "source" else tgt_values
 
         if bool(multispace.findall(content)):
-            # Error note needs to be customised
-            list.append("Multiple spaces or spaces at start / end {seg} segment".format(seg=seg))
+            content1 = content.strip()
+            if not bool(multispace.findall(content1)):
+                list.append("Multiple spaces at start / end {seg} segment".format(seg=seg))
+            elif content == content1 and bool(multispace.findall(content1)):
+                list.append("Multiple spaces in segment".format(seg=seg))
+            elif bool(multispace.findall(content)) and bool(multispace.findall(content1)):
+                list.append("Multiple spaces in segment".format(seg=seg))
+                list.append("Multiple spaces at start / end segment".format(seg=seg))
+
+        # if bool(multispace.findall(content)):
+        #     # Error note needs to be customised
+        #     list.append("Multiple spaces or spaces at start / end {seg} segment".format(seg=seg))
         if punc.findall(content):
             list.append("Duplicate punctuations in {seg} segment".format(seg=seg))
 
