@@ -405,7 +405,7 @@ class MergeSegmentView(viewsets.ModelViewSet):
         status = MergeSegmentView.is_regular_segments(segments)
 
         if status == "Mixed":
-            return Reponse({"msg" : "Cannot be merged. One of the segment is already split"}, status=400)
+            return Response({"msg" : "Cannot be merged. One of the segment is already split"}, status=400)
             # raise Exception("Only one of the selected segments is a split segment")
 
         # For normal segment merge
