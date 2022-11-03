@@ -65,7 +65,7 @@ class ServiceTypesView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CountriesView(APIView):
-    #permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
@@ -290,7 +290,7 @@ class MtpeEnginesView(APIView):
 
 
 class SupportFilesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -377,7 +377,7 @@ class TimezonesView(APIView):
 
 
 class LanguagesView(APIView):
-
+    permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
