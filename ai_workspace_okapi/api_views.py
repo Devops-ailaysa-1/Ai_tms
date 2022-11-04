@@ -492,6 +492,8 @@ class SplitSegmentView(viewsets.ModelViewSet):
             seg.save()
 
             return Response(SegmentSerializer(first_seg).data)
+
+@permission_classes([AllowAny,])
 def get_supported_file_extensions(request):
     return JsonResponse(CURRENT_SUPPORT_FILE_EXTENSIONS_LIST, safe=False)
 

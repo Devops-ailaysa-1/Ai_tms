@@ -240,7 +240,7 @@ def punc_space_view(src,tgt):
     #openbracket     = re.compile(r'(\w+|\s)?(\(|\[|\{)(\w+|\s)?[^\]})](\\|\s|\.)')
     #closebracket     = re.compile(r'\([^()]*\)|\[[^][]*]|\{[^{}]*}|(\w+[])}]|[([{]\w+)')
     #space           = re.compile(r'(\s\s+|^(\s\s)|\s$|\s\.)')
-    multispace       = re.compile(r'(\s{3}+|^(\s{3})|\s{3}$|\s\.)')
+    multispace       = re.compile(r'(\s\s+|^(\s\s+)|\s\s+$|\s\.)')
     #punc            = re.compile(r'(\.\.+$)|(\.\.+)')
     punc             = re.compile(r'(\.\.+|\?\?+|\!\!+|\,\,+)[^\.?!,+$]')#re.compile(r'(\.\.+)[^\.+$]')
     endpunc          = re.compile("[" + re.escape(string.punctuation) + "]$")
@@ -259,8 +259,18 @@ def punc_space_view(src,tgt):
         values = src_values if seg == "source" else tgt_values
 
         if bool(multispace.findall(content)):
-            # Error note needs to be customised
-            list.append("Multiple spaces or spaces at start / end {seg} segment".format(seg=seg))
+            content1 = content.strip()
+            if not bool(multispace.findall(content1)):
+                list.append("Multiple leading or trailing spaces in {seg} segment".format(seg=seg))
+            elif content == content1 and bool(multispace.findall(content1)):
+                list.append("Multiple spaces in {seg} segment".format(seg=seg))
+            elif bool(multispace.findall(content)) and bool(multispace.findall(content1)):
+                list.append("Multiple spaces in {seg} segment".format(seg=seg))
+                list.append("Multiple leading or trailing spaces in {seg} segment".format(seg=seg))
+
+        # if bool(multispace.findall(content)):
+        #     # Error note needs to be customised
+        #     list.append("Multiple spaces or spaces at start / end {seg} segment".format(seg=seg))
         if punc.findall(content):
             list.append("Duplicate punctuations in {seg} segment".format(seg=seg))
 
@@ -379,17 +389,19 @@ def forbidden_words_view(source, target, doc_id):
     search_words.extend(list(" ".join(i) for i in trigrams))
     fourgrams = ngrams(tokens_new,4)
     search_words.extend(list(" ".join(i) for i in fourgrams))
+
     query = Q()
     for entry in search_words:
         query = query | Q(words__iexact=entry)
 
     queryset = ForbiddenWords.objects.filter(query).distinct('words')
     #queryset = ForbiddenWords.objects.filter(words__in = search_words)
+
     if queryset:
         forbidden_words = [i.words for i in queryset]
         forbidden_out['source'] = []
         forbidden_out['target'] = forbidden_words
-        forbidden_out['ErrorNote'] = ["Forbidden word(s) are used"]
+        forbidden_out['ErrorNote'] = ["Forbidden word(s) found in target segment"]
         return forbidden_out
     else:
         return None
@@ -420,7 +432,7 @@ def untranslatable_words_view(source, target, doc_id):
         untranslatable_words = [i.words for i in queryset]
         untranslatable_out['source'] = untranslatable_words
         untranslatable_out['target'] = []
-        untranslatable_out['ErrorNote'] = ["Untranslatable word(s) are present"]
+        untranslatable_out['ErrorNote'] = ["Untranslatable word(s) present in source segment"]
         return untranslatable_out
     else:
         return None
@@ -629,7 +641,8 @@ def general_check_view(source,target,doc):
     source_1 = source.replace('\xa0', ' ')
     lang_list = ['Chinese (Traditional)', 'Chinese (Simplified)', 'Japanese','Thai', 'Korean', 'Khmer']
     targetLanguage = doc.target_language
-    if not target or target.isspace():
+    target_1 = remove_tags(target)
+    if not target or target.isspace() or not target_1:
         return {'source':[],'target':[],"ErrorNote":["Target segment is empty"]}
     elif source_1.strip()==target.strip():
         return {'source':[],'target':[],"ErrorNote":["Source and target segments are identical"]}
