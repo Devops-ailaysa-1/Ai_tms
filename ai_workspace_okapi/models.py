@@ -308,6 +308,11 @@ class Document(models.Model):
         return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
                     & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False)))).order_by("id")
 
+
+    @property
+    def segments_for_find_and_replace(self):
+        return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
+
     @property
     def segments_with_blank(self):
         return self.get_segments().filter(source__exact='').order_by("id")

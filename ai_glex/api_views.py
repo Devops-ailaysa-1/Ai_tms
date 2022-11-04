@@ -334,6 +334,7 @@ def glossaries_list(request,project_id):
     target_languages = project.get_target_languages
     user = request.user.team.owner if request.user.team else request.user
     queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                .filter(project_jobs_set__source_language_id = pr.project_jobs_set.first().source_language.id)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
                 .exclude(id=project.id).distinct()
