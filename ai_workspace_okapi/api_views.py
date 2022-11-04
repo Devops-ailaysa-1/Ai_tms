@@ -6,6 +6,7 @@ from rest_framework import views
 import json, logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 import requests
+from itertools import chain
 from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_only
 from django.db.models import Q
 from django.http import JsonResponse
@@ -634,6 +635,7 @@ class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
     def is_account_holder(request, doc, user):
+
         if (doc.job.project.team) and (request.user != AiUser.objects.get(project__project_jobs_set__file_job_set=doc)):
             can_translate = MT_RawAndTM_View.can_translate(request, user)
             if can_translate == None:
@@ -802,7 +804,6 @@ class MT_RawAndTM_View(views.APIView):
 
         # For normal and merged segments
         if split_check(segment_id):
-
             data, status_code, can_team = self.get_data(request, segment_id, mt_params)
             mt_alert = True if status_code == 424 else False
             alert_msg = self.get_alert_msg(status_code, can_team)
@@ -1176,14 +1177,15 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         document = get_object_or_404(qs, id=document_id)
 
         # Getting different segment type querysets
-        segments = document.segments_for_workspace
+        segments = document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
         split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
-
         # Getting the search querysets for each type of segment
         segments = SourceSegmentsListView.do_search(data, segments, lookup_field)
         merge_segments = SourceSegmentsListView.do_search(data, merge_segments, lookup_field)
         split_segments = SourceSegmentsListView.do_search(data, split_segments, lookup_field)
+        final_segments = list(chain(segments, merge_segments, split_segments))
+        print("Final----------->",final_segments)
 
         # segment_ids = [seg.id for seg in segments]
         #
@@ -1197,22 +1199,22 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         #     seg_union_id = list(set(segment_ids.extend(merge_segments_ids).extend(split_parent_seg_ids)))
         # print("seg union ids --> ", seg_union_id)
 
-        return segments, 200
+        return final_segments, 200
 
     def post(self, request, document_id):
         data = self.prepare_data(request.POST.dict())
         segments, status = self.get_queryset(request, data, document_id, self.lookup_field)
-        page_len = self.paginate_queryset(range(1, segments.count() + 1), request)
+        page_len = self.paginate_queryset(range(1, len(segments) + 1), request)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
 
-        data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
-                if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
+        # data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
+        #         if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
+        #
+        # [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
 
-        [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
-
-        res = self.get_paginated_response(data)
-
+        res = self.get_paginated_response(segments_ser.data)
+        #res = segments_ser.data
         res.status_code = status
         return res
 
@@ -1230,16 +1232,16 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
             segment.status_id, segment.status_id)
 
     def paginate_response(self, segments, request, status):
-        page_len = self.paginate_queryset(range(1, segments.count() + 1), request)
+        page_len = self.paginate_queryset(range(1, len(segments) + 1), request)
         page_segments = self.paginate_queryset(segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
 
-        data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
-                if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
+        # data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
+        #         if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
+        #
+        # [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
 
-        [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
-
-        res = self.get_paginated_response(data)
+        res = self.get_paginated_response(segments_ser.data)
 
         res.status_code = status
         return res
@@ -1270,7 +1272,13 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
                 regex = re.compile(r'((?i)' + search_word + r')')
 
         for instance in segments:
-            instance = instance.get_active_object()
+            # if type(instance) is MergeSegment:
+            #     instance = instance
+            # elif type(instance) is SplitSegment:
+            #     instance = instance
+            # else:
+            #     instance = instance.get_active_object()
+            print("Instance-------------------->",instance)
             self.unconfirm_status(instance)
             if do_confirm:
                 self.confirm_status(instance)
