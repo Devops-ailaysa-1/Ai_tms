@@ -261,12 +261,12 @@ def punc_space_view(src,tgt):
         if bool(multispace.findall(content)):
             content1 = content.strip()
             if not bool(multispace.findall(content1)):
-                list.append("Multiple spaces at start / end {seg} segment".format(seg=seg))
+                list.append("Multiple leading or trailing spaces in {seg} segment".format(seg=seg))
             elif content == content1 and bool(multispace.findall(content1)):
-                list.append("Multiple spaces in segment".format(seg=seg))
+                list.append("Multiple spaces in {seg} segment".format(seg=seg))
             elif bool(multispace.findall(content)) and bool(multispace.findall(content1)):
-                list.append("Multiple spaces in segment".format(seg=seg))
-                list.append("Multiple spaces at start / end segment".format(seg=seg))
+                list.append("Multiple spaces in {seg} segment".format(seg=seg))
+                list.append("Multiple leading or trailing spaces in {seg} segment".format(seg=seg))
 
         # if bool(multispace.findall(content)):
         #     # Error note needs to be customised
@@ -389,17 +389,19 @@ def forbidden_words_view(source, target, doc_id):
     search_words.extend(list(" ".join(i) for i in trigrams))
     fourgrams = ngrams(tokens_new,4)
     search_words.extend(list(" ".join(i) for i in fourgrams))
+
     query = Q()
     for entry in search_words:
         query = query | Q(words__iexact=entry)
 
     queryset = ForbiddenWords.objects.filter(query).distinct('words')
     #queryset = ForbiddenWords.objects.filter(words__in = search_words)
+
     if queryset:
         forbidden_words = [i.words for i in queryset]
         forbidden_out['source'] = []
         forbidden_out['target'] = forbidden_words
-        forbidden_out['ErrorNote'] = ["Forbidden word(s) are used"]
+        forbidden_out['ErrorNote'] = ["Forbidden word(s) found in target segment"]
         return forbidden_out
     else:
         return None
@@ -430,7 +432,7 @@ def untranslatable_words_view(source, target, doc_id):
         untranslatable_words = [i.words for i in queryset]
         untranslatable_out['source'] = untranslatable_words
         untranslatable_out['target'] = []
-        untranslatable_out['ErrorNote'] = ["Untranslatable word(s) are present"]
+        untranslatable_out['ErrorNote'] = ["Untranslatable word(s) present in source segment"]
         return untranslatable_out
     else:
         return None
