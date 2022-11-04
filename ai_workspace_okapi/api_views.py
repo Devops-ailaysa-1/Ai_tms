@@ -1,60 +1,58 @@
-from .serializers import (DocumentSerializerV3,
-                          FontSizeSerializer, CommentSerializer,
-                          TM_FetchSerializer, VerbSerializer)
-from ai_workspace.serializers import TaskTranscriptDetailSerializer
-from rest_framework import views
-import json, logging,os,re,urllib.parse,xlsxwriter
-from json import JSONDecodeError
+import json
+import logging
+import os
+import re
 import requests
+import urllib.parse
+import urllib.parse
+import xlsxwriter
+from json import JSONDecodeError
+from os.path import exists
+
+from django.contrib.auth import settings
 from itertools import chain
 from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_only
 from django.db.models import Q
+from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from nltk.tokenize import TweetTokenizer
 from rest_framework import permissions
 from rest_framework import views
-from nltk.tokenize import TweetTokenizer
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
+from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import APIException
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import JSONParser
-from django.db.models import Q
-import urllib.parse
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
 from wiktionaryparser import WiktionaryParser
-from ai_workspace.utils import get_consumable_credits_for_text_to_speech
+
 from ai_auth.models import AiUser, UserCredits
+from ai_auth.tasks import google_long_text_file_process_cel, pre_translate_update, mt_only
+from ai_auth.tasks import write_segments_to_db
 from ai_auth.utils import get_plan_name
 from ai_staff.models import SpellcheckerLanguages
 from ai_workspace.api_views import UpdateTaskCreditStatus
-from ai_workspace.models import File,Project
+# from controller.models import DownloadController
+from ai_workspace.models import File
+from ai_workspace.models import Project
 from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
-from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment,\
-    SplitSegment, MtRawSplitSegment
+from ai_workspace.serializers import TaskTranscriptDetailSerializer
+from ai_workspace.utils import get_consumable_credits_for_text_to_speech
+from ai_workspace_okapi.models import SplitSegment
+from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment, \
+    MtRawSplitSegment
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
-from .serializers import PentmUpdateSerializer,SegmentHistorySerializer
+from .serializers import PentmUpdateSerializer, SegmentHistorySerializer
 from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer, SplitSegmentSerializer)
-from json import JSONDecodeError
-from .utils import SpacesService
-from google.cloud import translate_v2 as translate
-import os, io, zipfile, requests
-from django.http import HttpResponse
-from rest_framework.response import Response
-# from controller.models import DownloadController
-from ai_workspace.models import File
-from .utils import SpacesService,text_to_speech
-from django.contrib.auth import settings
-from ai_auth.utils import get_plan_name
-from .utils import download_file, bl_title_format, bl_cell_format,get_res_path, get_translation, split_check
-from rest_framework.decorators import permission_classes
-from ai_auth.tasks import write_segments_to_db
-from os.path import exists
-from ai_workspace_okapi.models import SplitSegment
+from .serializers import (VerbSerializer)
+from .utils import SpacesService, text_to_speech
+from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -143,7 +141,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     @staticmethod
     def write_from_json_file(task, json_file_path):
 
-        # Writing first 20 segments in DB
+        # Writing first 100 segments in DB
 
         doc_data = json.load(open(json_file_path))
         doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
@@ -261,7 +259,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
     def get(self, request, task_id, format=None):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
-        from django_celery_results.models import TaskResult
 
         task = self.get_object(task_id=task_id)
         if task.job.project.pre_translate == True and task.document == None:
@@ -439,16 +436,37 @@ class MergeSegmentView(viewsets.ModelViewSet):
 
 class SplitSegmentView(viewsets.ModelViewSet):
     serializer_class = SplitSegmentSerializer
+    @staticmethod
+    def is_only_tags(string):
+        tags = re.findall(r"</?\d+>", string)
+        tag_string = ""
+        for tag in tags:
+            tag_string += tag
+        if tag_string == string:
+            return True
+        else: False
+    @staticmethod
+    def empty_or_tags(seg1, seg2):
+        if seg1 == "" or seg2 == "":
+            return True
+        if SplitSegmentView.is_only_tags(seg1) or SplitSegmentView.is_only_tags(seg2):
+            return True
+        return False
     def create(self, request, *args, **kwargs):
 
         seg_first = request.data["seg_first"]
         seg_second = request.data["seg_second"]
+
+        if SplitSegmentView.empty_or_tags(seg_first, seg_second):
+            return Response({"msg": "No text content found. Segment cannot be split"}, status = 400)
+
         segment = request.data["segment"]
 
         segment_id = int(request.POST.get("segment"))
 
         # Checking for a already split or merged segment
         split_seg = SplitSegment.objects.filter(id=segment_id)
+
         if split_seg:
             return Response({"msg": "Segment is already split"}, status = 400)
         elif Segment.objects.filter(id=segment_id).first().is_merged == True:
@@ -476,6 +494,8 @@ class SplitSegmentView(viewsets.ModelViewSet):
             seg.save()
 
             return Response(SegmentSerializer(first_seg).data)
+
+@permission_classes([AllowAny,])
 def get_supported_file_extensions(request):
     return JsonResponse(CURRENT_SUPPORT_FILE_EXTENSIONS_LIST, safe=False)
 

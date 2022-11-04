@@ -1962,6 +1962,7 @@ def vendor_onboard_complete(request):#######while using social signups##########
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def get_user(request):
     email = request.POST.get('email')
     try:
