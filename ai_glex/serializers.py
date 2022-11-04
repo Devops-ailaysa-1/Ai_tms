@@ -87,10 +87,18 @@ class GlossarySetupSerializer(ProjectQuickSetupSerializer):
 class GlossaryListSerializer(serializers.ModelSerializer):
     glossary_name = serializers.CharField(source = 'project_name')
     glossary_id = serializers.CharField(source = 'glossary_project.id')
+    source_lang = serializers.SerializerMethodField()
+    target_lang = serializers.SerializerMethodField()
+    #source_lang = serializers.CharField(source = 'project_jobs_set.first().source_language.language')
     class Meta:
         model = Glossary
-        fields = ("glossary_id", "glossary_name", )
+        fields = ("glossary_id", "glossary_name","source_lang", "target_lang",)
 
+    def get_source_lang(self,obj):
+        return obj.project_jobs_set.first().source_language.language
+
+    def get_target_lang(self,obj):
+         return [job.target_language.language for job in obj.project_jobs_set.all()]
 
 class WholeGlossaryTermSerializer(serializers.ModelSerializer):
     term_id = serializers.ReadOnlyField(source = 'id')
