@@ -445,8 +445,8 @@ class SplitSegmentView(viewsets.ModelViewSet):
         else: False
     @staticmethod
     def empty_or_tags(seg1, seg2):
-        if seg1 or seg2 == "":
-           return True
+        if seg1 == "" or seg2 == "":
+            return True
         if SplitSegmentView.is_only_tags(seg1) or SplitSegmentView.is_only_tags(seg2):
             return True
         return False
