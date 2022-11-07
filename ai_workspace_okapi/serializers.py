@@ -16,7 +16,7 @@ from django.http import HttpResponse, JsonResponse
 from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
-
+from .utils import split_check
 import collections
 import csv
 import io,time
@@ -129,6 +129,8 @@ class SegmentSerializerV2(SegmentSerializer):
         except:pass
 
     def update(self, instance, validated_data):
+        if split_check(instance.id):seg_id = instance.id
+        else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
@@ -137,9 +139,9 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.temp_target = instance.target
             instance.save()
             self.update_task_assign(task_obj,user)
-            SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
-        SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+        SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
         self.update_task_assign(task_obj,user)
         return super().update(instance, validated_data)
 
