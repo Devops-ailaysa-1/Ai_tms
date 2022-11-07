@@ -1458,15 +1458,32 @@ class CommentView(viewsets.ViewSet):
         except:id=0
 
         if by=="segment":
-            segment = get_object_or_404(Segment.objects.all(), id=id)
-            return segment.segment_comments_set.all()
+            if split_check(id):
+                print("normal")
+                segment = get_object_or_404(Segment.objects.all(), id=id)
+                return segment.segment_comments_set.all()
+            else:
+                print("split")
+                split_segment = SplitSegment.objects.get(id=id)
+                return split_segment.split_segment_comments_set.all()
+
 
         if by=="document":
             document = get_object_or_404(Document.objects.all(), id=id)
-            return [ comment
-                for segment in document.segments.all()
-                for comment in segment.segment_comments_set.all()
-            ]
+            comments_list=[]
+            for segment in document.segments.all():
+                if segment.is_split!=True:
+                    comments_list.extend(segment.segment_comments_set.all())
+                else:
+                    split_seg = SplitSegment.objects.filter(segment_id=segment.id)
+                    for i in  split_seg:
+                        comments_list.extend(i.split_segment_comments_set.all())
+            return comments_list
+
+            # return [ comment
+            #     for segment in document.segments.all()
+            #     for comment in segment.segment_comments_set.all()
+            # ]
         return Comment.objects.none()
 
     def list(self, request):
@@ -1475,7 +1492,13 @@ class CommentView(viewsets.ViewSet):
         return Response(ser.data, status=200)
 
     def create(self, request):
-        ser = CommentSerializer(data=request.POST.dict(), )
+        seg = request.POST.get('segment')
+        comment = request.POST.get('comment')
+        if split_check(seg):
+            ser = CommentSerializer(data=request.POST.dict(), )
+        else:
+            segment = SplitSegment.objects.filter(id=seg).first().segment_id
+            ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg})
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=201)
