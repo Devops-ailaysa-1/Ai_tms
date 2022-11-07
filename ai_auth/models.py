@@ -224,6 +224,10 @@ class UserAttribute(models.Model):
             print(e)
         return super().save(*args, **kwargs)
 
+    @property
+    def owner(self):
+        return self.user
+
 pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
 # class PersonalInformation(models.Model):
@@ -284,11 +288,19 @@ class Professionalidentity(models.Model):
         if self.avatar and hasattr(self.avatar, 'url'):
             return self.avatar.url
 
+    @property
+    def owner(self):
+        return self.user
+
 class UserProfile(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
     description = models.TextField(max_length=1000, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    @property
+    def owner(self):
+        return self.user
 
 class CustomerSupport(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
@@ -325,6 +337,10 @@ class UserCredits(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     ended_at = models.DateTimeField(null=True, blank=True)
 
+    @property
+    def owner(self):
+        return self.user
+
 class CreditPack(models.Model):
     name = models.CharField(max_length=200)
     #product = models.OneToOneField(Product, on_delete=models.CASCADE)
@@ -338,12 +354,20 @@ class BillingAddress(BaseAddress):
     name = models.CharField(max_length=255, blank=True, null=True)
     country= models.ForeignKey(Countries,related_name='billing_country', on_delete=models.CASCADE,blank=True, null=True)
 
+    @property
+    def owner(self):
+        return self.user
+
 
 class UserTaxInfo(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='tax_info_user')
     stripe_tax_id = models.ForeignKey(StripeTaxId,on_delete=models.CASCADE,related_name='stripe_taxid_user')
     tax_id = models.CharField(max_length=250)
     #tax_uid= models.CharField(max_length=250)
+
+    @property
+    def owner(self):
+        return self.user
 
 pre_save.connect(updated_user_taxid, sender=UserTaxInfo)
 
@@ -364,6 +388,10 @@ class AiUserProfile(models.Model):
     # updated_at = models.CharField(max_length=200,blank=True, null=True)
     class Meta:
         db_table = 'ai_user_profile'
+
+    @property
+    def owner(self):
+        return self.user
 
 def file_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.email,"cv_file",filename)
@@ -436,6 +464,10 @@ class Team(models.Model):
     def get_team_members(self):
         return [i.internal_member for i in self.internal_member_team_info.all()]
 
+    @property
+    def owner(self):
+        return self.owner
+
 
 class InternalMember(models.Model):
     CRDENTIALS_SENT = 1
@@ -450,6 +482,10 @@ class InternalMember(models.Model):
     functional_identity = models.CharField(max_length=255, blank=True, null=True)
     added_by = models.ForeignKey(AiUser,on_delete=models.SET_NULL,related_name='internal_team_manager',blank=True, null=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
+
+    @property
+    def owner(self):
+        return self.team.owner
 
     def __str__(self):
         return self.internal_member.email
@@ -477,6 +513,10 @@ class HiredEditors(models.Model):
     class Meta:
         unique_together = ['user', 'hired_editor','role']
 
+    @property
+    def owner(self):
+        return self.user
+
 class ReferredUsers(models.Model):
     email = models.EmailField()
 
@@ -493,16 +533,28 @@ class AilaysaCampaigns(models.Model):
     Addon_name = models.CharField(max_length=100, blank=True, null=True)
     Addon_quantity =models.IntegerField(default=1)
 
+    @property
+    def owner(self):
+        return self.user
+
 class CampaignUsers(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
     campaign_name =  models.ForeignKey(AilaysaCampaigns,on_delete=models.CASCADE,related_name='ai_campaigns')
     subscribed = models.BooleanField(default=False)
+
+    @property
+    def owner(self):
+        return self.user
 
 class ExistingVendorOnboardingCheck(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='existing_vendor_info')
     gen_password = models.CharField(max_length=255)
     mail_sent = models.BooleanField(default=False)
     mail_sent_time = models.DateTimeField(blank=True, null=True)
+
+    @property
+    def owner(self):
+        return self.user
 
 class SocStates(models.Model):
     state = models.CharField(max_length=150,unique=True)
