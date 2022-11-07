@@ -11,4 +11,6 @@ urlpatterns = router.urls
 
 urlpatterns += [
     path('qa_check/',api_views.QA_Check),
+    path('download_forbidden_file/<int:id>/',api_views.download_forbidden_file),
+    path('download_untranslatable_file/<int:id>/',api_views.download_untranslatable_file),
 ]

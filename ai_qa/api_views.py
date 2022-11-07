@@ -14,6 +14,9 @@ from rest_framework.views import APIView
 from rest_framework import viewsets, status
 from ai_workspace.models import Job
 from django.db.models import Q
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view,permission_classes
+from ai_workspace_okapi.utils import download_file
 #from host_details.host_details import doclang
 
 def Letters_Numbers(user_input):
@@ -297,7 +300,7 @@ def punc_space_view(src,tgt):
 
 
 class ForbiddenFileView(viewsets.ViewSet):
-
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         project_id = request.GET.get("project", None)
         job_id = request.GET.get('job',None)
@@ -332,7 +335,7 @@ class ForbiddenFileView(viewsets.ViewSet):
 
 
 class UntranslatableFileView(viewsets.ViewSet):
-
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         project_id = request.GET.get("project", None)
         job_id = request.GET.get('job',None)
@@ -389,12 +392,13 @@ def forbidden_words_view(source, target, doc_id):
     search_words.extend(list(" ".join(i) for i in trigrams))
     fourgrams = ngrams(tokens_new,4)
     search_words.extend(list(" ".join(i) for i in fourgrams))
-
+    doc = Document.objects.get(id=doc_id)
     query = Q()
     for entry in search_words:
         query = query | Q(words__iexact=entry)
-
-    queryset = ForbiddenWords.objects.filter(query).distinct('words')
+    query_set_1 = ForbiddenWords.objects.filter(job=doc.job)
+    if not query_set_1:query_set_1 = ForbiddenWords.objects.filter(project=doc.job.project)
+    queryset = query_set_1.filter(query).distinct('words')
     #queryset = ForbiddenWords.objects.filter(words__in = search_words)
 
     if queryset:
@@ -422,11 +426,14 @@ def untranslatable_words_view(source, target, doc_id):
     search_words.extend(list(" ".join(i) for i in trigrams))
     fourgrams = ngrams(tokens_new,4)
     search_words.extend(list(" ".join(i) for i in fourgrams))
+    doc = Document.objects.get(id=doc_id)
     query = Q()
     for entry in search_words:
         query = query | Q(words__iexact=entry)
-
-    queryset = UntranslatableWords.objects.filter(query).distinct('words')
+    query_set_1 = UntranslatableWords.objects.filter(job=doc.job)
+    if not query_set_1:query_set_1 = UntranslatableWords.objects.filter(project=doc.job.project)
+    queryset = query_set_1.filter(query).distinct('words')
+    #queryset = UntranslatableWords.objects.filter(Q(job=doc.job)|Q(project=doc.job.project)).filter(query).distinct('words')
     #queryset = UntranslatableWords.objects.filter(words__in = search_words)
     if queryset:
         untranslatable_words = [i.words for i in queryset]
@@ -667,6 +674,7 @@ def remove_tags(text):
 ######## MAIN FUNCTION  ########
 
 @api_view(['GET','POST',])
+@permission_classes([IsAuthenticated])
 def QA_Check(request):
     data = []
     output = []
@@ -784,3 +792,18 @@ def QA_Check(request):
     if out:
         return JsonResponse({'data':out},safe=False)
     return JsonResponse({'data':'No errors found'},safe=False)
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_forbidden_file(request,id):
+    file = Forbidden.objects.get(id=id).forbidden_file
+    return download_file(file.path)
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_untranslatable_file(request,id):
+    file = Untranslatable.objects.get(id=id).untranslatable_file
+    return download_file(file.path)
