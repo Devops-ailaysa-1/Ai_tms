@@ -273,8 +273,8 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             try:
                 mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)
                 if target_tags !='':
-                    temp_target = mt + str(target_tags)
-                    target = mt + str(target_tags)
+                    temp_target = mt + target_tags
+                    target = mt + target_tags
                 else:
                     temp_target = mt
                     target = mt
@@ -297,6 +297,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         from .api_views import MT_RawAndTM_View
 
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
+        #print("Text Unit Data----------------->",text_unit_ser_data)
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
         document = Document.objects.create(**validated_data)
@@ -339,6 +340,9 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     seg['temp_target'] = ""
                     status_id = None
                 else:
+                    #print("################################################################################")
+                    #print("Target Tags------------------------------->",str(target_tags))
+                    #print("Tagged Source----------------------------->",str(tagged_source))
                     seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,str(target_tags))
 
 
