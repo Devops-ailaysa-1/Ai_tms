@@ -150,7 +150,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     "ai_pay",
     "ai_qa",
-    #'django_oso'
+    'django_oso'
     #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
