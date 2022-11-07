@@ -1972,7 +1972,6 @@ def get_user(request):
         return Response({'user_exist':False})
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
 def ai_social_login(request):
     provider = request.POST.get('provider')
     is_vendor = request.POST.get('is_vendor',None)
@@ -2056,7 +2055,6 @@ def load_state(state_id,key=None):
     return user_state
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
 def ai_social_callback(request):
     state = request.POST.get('state')
     # try:
