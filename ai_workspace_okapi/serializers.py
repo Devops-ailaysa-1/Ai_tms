@@ -325,9 +325,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     seg['temp_target'] = ""
                     status_id = None
                 else:
-                    #print("################################################################################")
-                    #print("Target Tags------------------------------->",str(target_tags))
-                    #print("Tagged Source----------------------------->",str(tagged_source))
+
                     seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,str(target_tags))
 
 
