@@ -891,13 +891,13 @@ class TbxFileListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request, project_id):
-        data = {**request.POST.dict(), "tbx_file" : request.FILES.get('tbx_file')}
+        data = {**request.POST.dict(), "tbx_file" : request.FILES.getlist('tbx_file'),'project_id':project_id}
         # data["project_id"] = project_id
-        data.update({'project_id': project_id})
+        #data.update({'project_id': project_id})
         #print("########", data)
         ser_data = TbxFileSerializer.prepare_data(data)
         #print("$$$$$$", ser_data)
-        serializer = TbxFileSerializer(data=ser_data)
+        serializer = TbxFileSerializer(data=ser_data,many=True)
         #print("%%%%%%%%%%", serializer.is_valid())
         if serializer.is_valid(raise_exception=True):
             #print("***VALID***")
@@ -974,7 +974,7 @@ class TbxTemplateUploadView(APIView):
                 os.remove(os.path.abspath(tbx_file))
                 return Response({'msg':"Template File uploaded and TBX created & uploaded","data":serializer.data})#,"tbx_file":tbx_file})
             else:
-                return Response({'msg':"Something wrong in TBX conversion. Use glossary template to upload terms", "data":{}},
+                return Response({'msg':"Template file seems empty or partially empty. Fill up terms and try again", "data":{}},
                         status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(serializer.errors)
@@ -1569,14 +1569,15 @@ def tasks_list(request):
 def instruction_file_download(request,instruction_file_id):
     instruction_file = Instructionfiles.objects.get(id=instruction_file_id).instruction_file
     if instruction_file:
-        fl_path = instruction_file.path
-        filename = os.path.basename(fl_path)
-        # print(os.path.dirname(fl_path))
-        fl = open(fl_path, 'rb')
-        mime_type, _ = mimetypes.guess_type(fl_path)
-        response = HttpResponse(fl, content_type=mime_type)
-        response['Content-Disposition'] = "attachment; filename=%s" % filename
-        return response
+        return download_file(instruction_file.path)
+        # fl_path = instruction_file.path
+        # filename = os.path.basename(fl_path)
+        # # print(os.path.dirname(fl_path))
+        # fl = open(fl_path, 'rb')
+        # mime_type, _ = mimetypes.guess_type(fl_path)
+        # response = HttpResponse(fl, content_type=mime_type)
+        # response['Content-Disposition'] = "attachment; filename=%s" % filename
+        # return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
 

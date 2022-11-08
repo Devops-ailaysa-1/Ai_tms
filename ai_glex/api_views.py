@@ -367,9 +367,10 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
     def update(self,request,pk):
         pass
 
-    def delete(self,request,pk):
-        obj = GlossarySelected.objects.get(id = pk)
-        obj.delete()
+    def delete(self,request):
+        glossary_selected_delete_ids = request.query_params.get('to_remove_ids')
+        ids = glossary_selected_delete_ids.split(',')
+        GlossarySelected.objects.filter(id__in = ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['POST',])

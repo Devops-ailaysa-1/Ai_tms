@@ -1022,13 +1022,18 @@ class DocumentToFile(views.APIView):
                         worksheet.write(row, 1, self.remove_tags(segment_new.target), cell_format)
                         row += 1
                 # If the segment is split
-                if segment.is_split:
+                elif segment.is_split:
                     split_segs = SplitSegment.objects.filter(segment_id=segment.id)
                     target = ""
                     for split_seg in split_segs:
                         target += self.remove_tags(split_seg.target)
                     worksheet.write(row, 0, segment.source.strip(), cell_format)
                     worksheet.write(row, 1, target, cell_format)
+                    row += 1
+                # For normal segments
+                else:
+                    worksheet.write(row, 0, segment.source.strip(), cell_format)
+                    worksheet.write(row, 1, self.remove_tags(segment.target), cell_format)
                     row += 1
         workbook.close()
 
