@@ -249,6 +249,12 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         TAG_RE = re.compile(r'<[^>]+>')
         return TAG_RE.sub('', text)
 
+    def remove_random_tags(self, string, random_tag_list):
+        if not random_tag_list:
+            return string
+        for id in random_tag_list:
+            string = re.sub(fr'</?{id}>', "", string)
+        return string
 
     def pre_flow(self,user,source,document,mt_engine,target_tags):
         from .api_views import MT_RawAndTM_View
@@ -325,8 +331,9 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     seg['temp_target'] = ""
                     status_id = None
                 else:
-
-                    seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,str(target_tags))
+                    if seg["random_tag_ids"] == []:tags = str(target_tags)
+                    else:tags = self.remove_random_tags(str(target_tags),json.loads(seg["random_tag_ids"]))
+                    seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,tags)
 
 
                 seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
