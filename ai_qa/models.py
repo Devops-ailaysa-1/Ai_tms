@@ -15,6 +15,10 @@ class Forbidden(models.Model):
     job     = models.ForeignKey(Job, on_delete=models.CASCADE,related_name='job_forbidden_file',null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
+    @property
+    def name(self):
+        return  os.path.basename(self.forbidden_file.file.name)
+
 post_save.connect(update_words_from_forbidden_file, sender=Forbidden)
 post_delete.connect(delete_words_from_ForbiddenWords, sender=Forbidden)
 
@@ -36,6 +40,10 @@ class Untranslatable(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,related_name="proj_untranslatable_file",null=True,blank=True)
     job     = models.ForeignKey(Job, on_delete=models.CASCADE,related_name='job_untranslatable_file',null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
+    @property
+    def name(self):
+        return  os.path.basename(self.untranslatable_file.file.name)
 
 post_save.connect(update_words_from_untranslatable_file, sender=Untranslatable)
 post_delete.connect(delete_words_from_Untranslatable, sender=Untranslatable)

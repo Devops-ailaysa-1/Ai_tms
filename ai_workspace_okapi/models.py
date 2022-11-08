@@ -9,7 +9,7 @@ from django.utils.functional import cached_property
 from ai_auth.models import AiUser
 from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines, \
     MTLanguageSupport
-from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
+from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
 
 
@@ -81,7 +81,16 @@ class BaseSegment(models.Model):
 
     @property
     def has_comment(self):
-        return self.segment_comments_set.all().count()>0
+        if split_check(self.id):
+            merge_seg = MergeSegment.objects.filter(id=self.id).first()
+            if merge_seg:
+                return merge_seg.segments.first().segment_comments_set.all().count()>0
+            else:
+                return self.segment_comments_set.all().count()>0
+        else:
+            seg = SplitSegment.objects.filter(id=self.id).first()
+            return seg.split_segment_comments_set.all().count()>0
+
 
     @property
     def get_id(self):
@@ -222,6 +231,7 @@ class MergeSegment(BaseSegment):
     @property
     def get_parent_seg_id(self):
         return self.id
+
 
 class SplitSegment(BaseSegment):
 

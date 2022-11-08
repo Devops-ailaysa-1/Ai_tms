@@ -974,7 +974,7 @@ class TbxTemplateUploadView(APIView):
                 os.remove(os.path.abspath(tbx_file))
                 return Response({'msg':"Template File uploaded and TBX created & uploaded","data":serializer.data})#,"tbx_file":tbx_file})
             else:
-                return Response({'msg':"Something wrong in TBX conversion. Use glossary template to upload terms", "data":{}},
+                return Response({'msg':"Template file seems empty or partially empty. Fill up terms and try again", "data":{}},
                         status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(serializer.errors)
