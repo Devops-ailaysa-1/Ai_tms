@@ -70,7 +70,7 @@ urlpatterns = [
     # path("integerations/", include("integerations.github_.urls")),
     # path("integerations/", include("integerations.gitlab_.urls")),
     #path("tm/", include("ai_tm_management.urls")),
-    path("nlp/", include("ai_nlp.urls")),
+    # path("nlp/", include("ai_nlp.urls")),
 
     path("aipay/", include("ai_pay.urls")),
     path("qa/", include("ai_qa.urls")),

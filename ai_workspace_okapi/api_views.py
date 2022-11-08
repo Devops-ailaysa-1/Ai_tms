@@ -686,7 +686,7 @@ class MT_RawAndTM_View(views.APIView):
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
-        # initial_credit = 1000000
+        initial_credit = 1000000
 
         if initial_credit > consumable_credits :
             if mt_raw:
