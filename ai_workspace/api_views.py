@@ -1569,14 +1569,15 @@ def tasks_list(request):
 def instruction_file_download(request,instruction_file_id):
     instruction_file = Instructionfiles.objects.get(id=instruction_file_id).instruction_file
     if instruction_file:
-        fl_path = instruction_file.path
-        filename = os.path.basename(fl_path)
-        # print(os.path.dirname(fl_path))
-        fl = open(fl_path, 'rb')
-        mime_type, _ = mimetypes.guess_type(fl_path)
-        response = HttpResponse(fl, content_type=mime_type)
-        response['Content-Disposition'] = "attachment; filename=%s" % filename
-        return response
+        return download_file(instruction_file.path)
+        # fl_path = instruction_file.path
+        # filename = os.path.basename(fl_path)
+        # # print(os.path.dirname(fl_path))
+        # fl = open(fl_path, 'rb')
+        # mime_type, _ = mimetypes.guess_type(fl_path)
+        # response = HttpResponse(fl, content_type=mime_type)
+        # response['Content-Disposition'] = "attachment; filename=%s" % filename
+        # return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
 
