@@ -982,14 +982,15 @@ class TbxTemplateUploadView(APIView):
 @api_view(['GET',])
 def tbx_download(request,tbx_file_id):
     tbx_asset = TbxFile.objects.get(id=tbx_file_id).tbx_file
-    fl_path = tbx_asset.path
-    filename = os.path.basename(fl_path)
-    print(os.path.dirname(fl_path))
-    fl = open(fl_path, 'rb')
-    mime_type, _ = mimetypes.guess_type(fl_path)
-    response = HttpResponse(fl, content_type=mime_type)
-    response['Content-Disposition'] = "attachment; filename=%s" % filename
-    return response
+    return download_file(tbx_asset.path)
+    # fl_path = tbx_asset.path
+    # filename = os.path.basename(fl_path)
+    # print(os.path.dirname(fl_path))
+    # fl = open(fl_path, 'rb')
+    # mime_type, _ = mimetypes.guess_type(fl_path)
+    # response = HttpResponse(fl, content_type=mime_type)
+    # response['Content-Disposition'] = "attachment; filename=%s" % filename
+    # return response
 
 class UpdateTaskCreditStatus(APIView):
 
