@@ -270,6 +270,8 @@ class Comment(models.Model):
     comment = models.TextField()
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name=\
         "segment_comments_set")
+    split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, \
+                    related_name="split_segment_comments_set")
     #user = models.ForeignKey(AiUser, on_delete=models.SET_NULL, related_name = 'comment_user')
 
 class Document(models.Model):
@@ -307,6 +309,11 @@ class Document(models.Model):
     def segments_for_workspace(self):
         return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
                     & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False)))).order_by("id")
+
+
+    @property
+    def segments_for_find_and_replace(self):
+        return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
 
     @property
     def segments_with_blank(self):

@@ -16,7 +16,7 @@ from django.http import HttpResponse, JsonResponse
 from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
-
+from .utils import split_check
 import collections
 import csv
 import io,time
@@ -129,6 +129,8 @@ class SegmentSerializerV2(SegmentSerializer):
         except:pass
 
     def update(self, instance, validated_data):
+        if split_check(instance.id):seg_id = instance.id
+        else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
@@ -137,9 +139,9 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.temp_target = instance.target
             instance.save()
             self.update_task_assign(task_obj,user)
-            SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
-        SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+        SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
         self.update_task_assign(task_obj,user)
         return super().update(instance, validated_data)
 
@@ -271,8 +273,8 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             try:
                 mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)
                 if target_tags !='':
-                    temp_target = mt + str(target_tags)
-                    target = mt + str(target_tags)
+                    temp_target = mt + target_tags
+                    target = mt + target_tags
                 else:
                     temp_target = mt
                     target = mt
@@ -295,6 +297,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         from .api_views import MT_RawAndTM_View
 
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
+        #print("Text Unit Data----------------->",text_unit_ser_data)
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
         document = Document.objects.create(**validated_data)
@@ -337,6 +340,9 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     seg['temp_target'] = ""
                     status_id = None
                 else:
+                    #print("################################################################################")
+                    #print("Target Tags------------------------------->",str(target_tags))
+                    #print("Tagged Source----------------------------->",str(tagged_source))
                     seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,str(target_tags))
 
 
