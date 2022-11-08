@@ -7,10 +7,12 @@ from rest_framework import serializers
 class ForbiddenSerializer(serializers.ModelSerializer):
     class Meta:
         model = Forbidden
-        fields = "__all__"
+        fields = ('id','forbidden_file','project','job','name','created_at',)
+        #fields = "__all__"
 
 
 class UntranslatableSerializer(serializers.ModelSerializer):
     class Meta:
         model = Untranslatable
-        fields = "__all__"
+        fields = ('id','untranslatable_file','project','job','name','created_at',)
+        #fields = "__all__"

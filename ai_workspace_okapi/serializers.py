@@ -52,24 +52,9 @@ class SegmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Segment
         fields = (
-            "source",
-            "target",
-            "coded_source",
-            "coded_brace_pattern",
-            "coded_ids_sequence",
-            "tagged_source",
-            "target_tags",
-            "segment_id",
-            "temp_target",
-            "status",
-            "has_comment",
-            "is_merged",
-            "is_split",
-            "text_unit",
-            "is_merge_start",
-            "random_tag_ids",
-            "parent_segment",
-        )
+            "source","target","coded_source","coded_brace_pattern","coded_ids_sequence","tagged_source",\
+            "target_tags","segment_id","temp_target","status","has_comment","is_merged","is_split",\
+            "text_unit","is_merge_start","random_tag_ids","parent_segment",)
 
         extra_kwargs = {
             "source": {"write_only": True},
