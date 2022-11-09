@@ -178,6 +178,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
                 mt_only_check =  MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'mt_only')).last()
+                print('tt------------>',mt_only_check)
                 if mt_only_check:
                     segments = Segment.objects.filter(text_unit__document=task.document).last()
                     if segments.target != '':
@@ -186,8 +187,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 if state == 'PENDING':
-                    return {'msg':'Pre Translation Ongoing. Pls Wait','celery_id':ins.celery_task_id}
+                    return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
                 elif (not ins) or state == 'FAILURE':
+                    print("Inside Pre celery")
                     cel_task = pre_translate_update.apply_async((task.id,),)
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
@@ -197,7 +199,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     else:
                         return task.document
 
-            return task.document
+            else:return task.document
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
@@ -278,22 +280,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 document = self.create_document_for_task_if_not_exists(task)
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
-            # if not ins:
-            #     Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
-            #     document = self.create_document_for_task_if_not_exists(task)
-            #     doc = DocumentSerializerV2(document).data
-            #     MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
-            #     return Response(doc, status=201)
-            # if ins.status == 1:
-            #     obj = TaskResult.objects.filter(Q(task_id = ins.celery_task_id)).first()# & Q(task_name = 'ai_auth.tasks.mt_only').first()
-            #     if obj !=None and obj.status == "FAILURE":
-            #         Document.objects.filter(Q(file = task.file) &Q(job=task.job)).delete()
-            #         document = self.create_document_for_task_if_not_exists(task)
-            #         doc = DocumentSerializerV2(document).data
-            #         MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name = 'mt_only',status=2)
-            #         return Response(doc, status=201)
-            #     else:
-            #         return Response({"msg": "File under process. Please wait a little while.Hit refresh and try again",'celery_id':ins.celery_task_id}, status=401)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
                 doc = DocumentSerializerV2(document).data
@@ -343,39 +329,19 @@ class SegmentsView(views.APIView, PageNumberPagination):
             Document.objects.all(), id=document_id)
         return document
 
+
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
-        segments = document.segments_for_workspace
-        split_segment_count = document.split_segment_count()
-        len_segments = segments.count() + split_segment_count
-        page_len = self.paginate_queryset(range(1, len_segments + 1), request)
-        page_segments = self.paginate_queryset(segments, request, view=self)
+        segments = document.segments_for_find_and_replace
+        merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
+        split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
+        final_segments = list(chain(segments, merge_segments, split_segments))
+        page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
+        page_segments = self.paginate_queryset(final_segments, request, view=self)
         segments_ser = SegmentSerializer(page_segments, many=True)
+        [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
 
-        data = []
-
-        for i in segments_ser.data:
-
-            # If the segment is merged
-            if (i.get("is_merged") == True and i.get("is_merge_start")):
-                data.append(SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data)
-
-            # If the segment is split
-            elif i.get("is_split") == True:
-                split_segs = SplitSegment.objects.filter(segment_id=i.get("segment_id")).order_by("id")
-                for split_seg in split_segs:
-                    data.append(SegmentSerializer(split_seg).data)
-
-            # Normal segment
-            else:
-                data.append(i)
-
-        # data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
-        #         if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
-
-        [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
-
-        res = self.get_paginated_response(data)
+        res = self.get_paginated_response(segments_ser.data)
         return res
 
 class MergeSegmentView(viewsets.ModelViewSet):
@@ -916,61 +882,14 @@ class DocumentToFile(views.APIView):
 
 
     #For Downloading Audio File################only for voice project###########Need to work
-    def download_audio_file(self,res,document_user,document_id,voice_gender,language_locale,voice_name):
-        from ai_workspace.models import MTonlytaskCeleryStatus
-        filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
-        temp_name = filename + '.txt'
-        text_units = TextUnit.objects.filter(document_id=document_id)
-        counter = 0
-        with open(temp_name, "w") as out:
-            for text_unit in text_units:
-                segments = Segment.objects.filter(text_unit_id=text_unit.id)
-                for segment in segments:
-                    if segment.target!=None:
-                        counter = counter + len(segment.target)
-                        out.write(segment.target)
-                        if counter>3500:
-                            out.write('\n')
-                            counter = 0
-        file_path = temp_name
-        doc = DocumentToFile.get_object(document_id)
-        task = doc.task_set.first()
-        ser = TaskSerializer(task)
-        task_data = ser.data
-        target_language = language_locale if language_locale else task_data["target_language"]
-        source_lang = task_data['source_language']
-        text_file = open(temp_name, "r")
-        data = text_file.read()
-        text_file.close()
-        consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
-        initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
-        if initial_credit > consumable_credits:
-            if len(data)>5000:
-                celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
-                MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
-                return Response({'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id},status=400)
-                #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
-                #res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
-            else:
-                filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
-                res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
-                os.remove(filename_)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
-            if task.task_transcript_details.first()==None:
-                ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
-            else:
-                t = task.task_transcript_details.first()
-                ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
-            if ser.is_valid():
-                ser.save()
-            print(ser.errors)
-            f2.close()
-            #os.remove(filename_)
-            #os.remove(file_path)
-            return download_file(task.task_transcript_details.last().translated_audio_file.path)
+    def download_audio_file(self,document_user,document_id,voice_gender,language_locale,voice_name):
+        res_1 = process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
+        if res_1:
+            return Response(res_1,status=401)
         else:
-            return Response({"msg":"Insufficient credits to convert text file to audio file"},status=400)
-
+            doc = DocumentToFile.get_object(document_id)
+            task = doc.task_set.first()
+            return download_file(task.task_transcript_details.last().translated_audio_file.path)
 
 
     # FOR DOWNLOADING BILINGUAL FILE
@@ -1070,8 +989,8 @@ class DocumentToFile(views.APIView):
 
             # For Downloading Audio File
             if output_type == "AUDIO":
-                res = self.document_data_to_file(request, document_id)
-                return self.download_audio_file(res,document_user,document_id,voice_gender,language_locale,voice_name)
+                #res = self.document_data_to_file(request, document_id)
+                return self.download_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
 
             res = self.document_data_to_file(request, document_id)
             if res.status_code in [200, 201]:
@@ -1138,7 +1057,7 @@ OUTPUT_TYPES = dict(
     TMX = "TMX",
     SOURCE = "SOURCE",
     BILINGUAL = "BILINGUAL",
-    # AUDIO = "AUDIO",
+    AUDIO = "AUDIO",
 )
 
 def output_types(request):
@@ -1211,19 +1130,6 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         split_segments = SourceSegmentsListView.do_search(data, split_segments, lookup_field)
         final_segments = list(chain(segments, merge_segments, split_segments))
         print("Final----------->",final_segments)
-
-        # segment_ids = [seg.id for seg in segments]
-        #
-        # merge_segments_ids = [merge_seg.id for merge_seg in merge_segments]
-        #
-        # split_segments_ids = [split_seg.id for split_seg in split_segments]
-        #
-        # split_parent_seg_ids = list(set([split_seg.segment_id for split_seg in split_segments]))
-        #
-        # if segment_ids != [] and merge_segments_ids != []:
-        #     seg_union_id = list(set(segment_ids.extend(merge_segments_ids).extend(split_parent_seg_ids)))
-        # print("seg union ids --> ", seg_union_id)
-
         return final_segments, 200
 
     def post(self, request, document_id):
@@ -1236,7 +1142,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         # data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
         #         if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
         #
-        # [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
+        [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
 
         res = self.get_paginated_response(segments_ser.data)
         #res = segments_ser.data
@@ -1264,7 +1170,7 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
         # data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
         #         if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
         #
-        # [i.update({"segment_count": j}) for i, j in zip(data, page_len)]
+        [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
 
         res = self.get_paginated_response(segments_ser.data)
 
@@ -1997,3 +1903,114 @@ def download_converted_audio_file(request):
     doc = Document.objects.get(id=document_id)
     task = doc.task_set.first()
     return download_file(task.task_transcript_details.last().translated_audio_file.path)
+
+
+
+def process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name):
+    from ai_workspace.models import MTonlytaskCeleryStatus
+    temp_name = segments_with_target(document_id)
+    doc = Document.objects.get(id = document_id)
+    source_file_path = File.objects.get(file_document_set=doc).get_source_file_path
+    filename, ext = os.path.splitext(source_file_path.split('source/')[1])
+    file_path = temp_name
+    task = doc.task_set.first()
+    ser = TaskSerializer(task)
+    task_data = ser.data
+    target_language = language_locale if language_locale else task_data["target_language"]
+    source_lang = task_data['source_language']
+    text_file = open(temp_name, "r")
+    data = text_file.read()
+    text_file.close()
+    print(len(data))
+    consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
+    initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
+    if initial_credit > consumable_credits:
+        if len(data)>5000:
+            celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
+            MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
+            return {'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id}
+            #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
+            #res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
+        else:
+            filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
+            res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
+            os.remove(filename_)
+            os.remove(temp_name)
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
+        if task.task_transcript_details.first()==None:
+            ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
+        else:
+            t = task.task_transcript_details.first()
+            ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
+        if ser.is_valid():
+            ser.save()
+        print(ser.errors)
+        f2.close()
+        print("Done")
+    else:
+        return {"msg":"Insufficient credits to convert text file to audio file"}
+
+
+def remove_tags(string):
+    return re.sub(rf'</?\d+>', "", string)
+
+def segments_with_target(document_id):
+
+    document = Document.objects.get(id=document_id)
+    segments = document.segments_for_workspace
+    segments_ser = SegmentSerializer(segments, many=True)
+    source_file_path = File.objects.get(file_document_set=document).get_source_file_path
+    filename, ext = os.path.splitext(source_file_path.split('source/')[1])
+    temp_name = filename + '.txt'
+    counter = 0
+    data = []
+
+    for i in segments_ser.data:
+        # If the segment is merged
+        if (i.get("is_merged") == True and i.get("is_merge_start")):
+            merge_obj = MergeSegment.objects.get(id=i.get("segment_id"))
+            if merge_obj.target!=None:
+                #print("Merge obj",merge_obj.target)
+                data.append(remove_tags(merge_obj.target))
+
+        # If the segment is split
+        elif i.get("is_split") == True:
+            split_segs = SplitSegment.objects.filter(segment_id=i.get("segment_id")).order_by("id")
+            for split_seg in split_segs:
+                if split_seg.target!=None:
+                    #print("Split obj",split_seg.target)
+                    data.append(remove_tags(split_seg.target))
+
+        # Normal segment
+        else:
+            if i.get('target')!=None:
+                data.append(remove_tags(i.get('target')))
+
+    #print("############",data)
+
+    with open(temp_name, "w") as out:
+        for i in data:
+            counter = counter + len(i)
+            out.write(' '+i)
+            if counter>3500:
+                out.write('\n')
+                counter = 0
+
+    return temp_name
+
+
+def remove_random_tags(string, random_tag_list):
+    if not random_tag_list:
+        return string
+    for id in random_tag_list:
+        string = re.sub(fr'</?{id}>', "", string)
+    return string
+
+
+def get_tags(seg):
+    random_tags = json.loads(seg.random_tag_ids)
+    if random_tags == []:
+        tags = seg.target_tags
+    else:
+        tags = remove_random_tags(seg.target_tags,random_tags)
+    return tags
