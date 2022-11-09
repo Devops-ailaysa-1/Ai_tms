@@ -130,11 +130,14 @@ def is_tbx_template_file_empty(file_id, job_id):
     template_file =TbxTemplateFiles.objects.get(id=file_id).tbx_template_file
     import pandas as pd
     df = pd.read_excel(template_file)
-    df = df[['Source language term' , 'Target language term']]
-    df=df.replace('\\*','',regex=True)
-    df=df.replace(r'\n','', regex=True)
-    df = df.dropna()
-    return df.empty 
+    if 'Source language term' in df.columns and 'Target language term' in df.columns:
+        df = df[['Source language term' , 'Target language term']]
+        df=df.replace('\\*','',regex=True)
+        df=df.replace(r'\n','', regex=True)
+        df = df.dropna()
+        return df.empty 
+    else:
+        return True 
 
 def upload_template_data_to_db(file_id, job_id):
     template_file =TbxTemplateFiles.objects.get(id=file_id).tbx_template_file
