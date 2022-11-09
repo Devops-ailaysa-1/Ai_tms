@@ -1300,7 +1300,7 @@ class AiUserProfileView(viewsets.ViewSet):
 
 
 class CarrierSupportCreateView(viewsets.ViewSet):
-
+    permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
         job_position = request.POST.get("job_position")
