@@ -630,6 +630,7 @@ def get_plan_details(request):
 
 
 @api_view(['GET',])
+@permission_classes([AllowAny])
 def get_pricing_details(request):
     plans = SubscriptionPricing.objects.all()
     serializer = SubscriptionPricingPageSerializer(plans,many=True)
@@ -681,6 +682,7 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
 #         return Response(serializer.data)
 
 class IndianStatesView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
     def list(self,request):
         queryset = IndianStates.objects.all()
         serializer = IndianStatesSerializer(queryset,many=True)
