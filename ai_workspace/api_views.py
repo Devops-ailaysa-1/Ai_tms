@@ -1105,6 +1105,7 @@ class TaskView(APIView):
 
 
 @api_view(['POST',])
+@permission_classes([AllowAny])
 def create_project_from_temp_project_new(request):
     ai_user_id = request.POST.get("user_id")
     ai_user = AiUser.objects.get(id=ai_user_id)
