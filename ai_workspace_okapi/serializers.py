@@ -219,6 +219,7 @@ class TextUnitSerializerTest(serializers.ModelSerializer):
         model = TextUnit
         fields = "__all__"
 
+
 class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
     text_unit_ser = TextUnitSerializer(many=True,  write_only=True)
 
@@ -249,12 +250,6 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         TAG_RE = re.compile(r'<[^>]+>')
         return TAG_RE.sub('', text)
 
-    def remove_random_tags(self, string, random_tag_list):
-        if not random_tag_list:
-            return string
-        for id in random_tag_list:
-            string = re.sub(fr'</?{id}>', "", string)
-        return string
 
     def pre_flow(self,user,source,document,mt_engine,target_tags):
         from .api_views import MT_RawAndTM_View
@@ -285,7 +280,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
 
 
     def create(self, validated_data, **kwargs):
-        from .api_views import MT_RawAndTM_View
+        from .api_views import MT_RawAndTM_View,remove_random_tags
 
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
         #print("Text Unit Data----------------->",text_unit_ser_data)
@@ -332,7 +327,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     status_id = None
                 else:
                     if seg["random_tag_ids"] == []:tags = str(target_tags)
-                    else:tags = self.remove_random_tags(str(target_tags),json.loads(seg["random_tag_ids"]))
+                    else:tags = remove_random_tags(str(target_tags),json.loads(seg["random_tag_ids"]))
                     seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,tags)
 
 

@@ -745,7 +745,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
-            mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+            #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
     # def delete(self, request, pk):
@@ -2017,7 +2017,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     file_obj = DJFile(f2,name=os.path.basename(final_audio))
     shutil.rmtree(dir)
     shutil.rmtree(dir_1)
-    os.remove(final_audio)
+    #os.remove(final_audio)
     return file_obj,f2
 
 

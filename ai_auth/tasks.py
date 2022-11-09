@@ -423,45 +423,58 @@ def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,use
 @task
 def pre_translate_update(task_id):
     from ai_workspace.models import Task, TaskAssign
-    from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation
+    from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
     from ai_workspace.api_views import UpdateTaskCreditStatus
-    from ai_workspace_okapi.api_views import MT_RawAndTM_View
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View,get_tags
+    from ai_workspace_okapi.models import MergeSegment,SplitSegment
+    from itertools import chain
 
     task = Task.objects.get(id=task_id)
     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id)
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
-    segments = Segment.objects.filter(text_unit__document=task.document)
-    update_list = []
-    mt_segments = []
+    segments = task.document.segments_for_find_and_replace
+    merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
+    split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
 
-    for seg in segments:###############Need to revise####################
-        i = seg.get_active_object()
-        if i.target == '':
+    final_segments = list(chain(segments, merge_segments, split_segments))
+    print("FinalSegments-------------->",final_segments)
+    update_list, update_list_for_merged,update_list_for_split = [],[],[]
+    mt_segments, mt_split_segments = [],[]
+
+    for seg in final_segments:###############Need to revise####################
+
+        if seg.target == '' or seg.target==None:
             initial_credit = user.credit_balance.get("total_left")
-            consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, i.id, None)
+            consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
             if initial_credit > consumable_credits:
-                mt = get_translation(mt_engine, i.source, task.document.source_language_code, task.document.target_language_code)
-                if i.target_tags != '':
-                    i.target = mt + i.target_tags
-                    i.temp_target = mt + i.target_tags
+                mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code)
+                tags = get_tags(seg)
+                if tags:
+                    seg.target = mt + tags
+                    seg.temp_target = mt + tags
                 else:
-                    i.target = mt
-                    i.temp_target = mt
-                i.status_id = TranslationStatus.objects.get(status_id=104).id
+                    seg.target = mt
+                    seg.temp_target = mt
+                seg.status_id = TranslationStatus.objects.get(status_id=104).id
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                mt_segments.append(i)
+                if type(seg) is SplitSegment:
+                    mt_split_segments.append(seg)
+                else:mt_segments.append(seg)
             else:
                 MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
                 break
-    #             i.target= ""
-    #             i.temp_target = ''
-    #             i.status_id = None
-            update_list.append(i)
-    #
-    Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+            if type(seg) is Segment:
+                update_list.append(seg)
+            elif type(seg) is SplitSegment:
+                update_list_for_split.append(seg)
+            elif type(seg) is MergeSegment:
+                update_list_for_merged.append(seg)
 
+    Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+    MergeSegment.objects.bulk_update(update_list_for_merged,['target','temp_target','status_id'])
+    SplitSegment.objects.bulk_update(update_list_for_split,['target','temp_target','status_id'])
 
     instances = [
             MT_RawTranslation(
@@ -474,5 +487,14 @@ def pre_translate_update(task_id):
         ]
 
     MT_RawTranslation.objects.bulk_create(instances)
+
+    instances_1 = [
+            MtRawSplitSegment(
+                mt_raw= re.sub(r'<[^>]+>', "", i.target),
+                split_segment_id= i.id,
+            )
+            for i in mt_split_segments
+        ]
+    MtRawSplitSegment.objects.bulk_create(instances_1)
     #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
     logger.info("pre_translate_update")
