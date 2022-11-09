@@ -361,6 +361,7 @@ class CustomerSupportCreateView(viewsets.ViewSet):
 
 
 class ContactPricingCreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
     def list(self,request):
         user_id = request.user.id
         if user_id:
@@ -1326,7 +1327,7 @@ class CarrierSupportCreateView(viewsets.ViewSet):
 
 
 class GeneralSupportCreateView(viewsets.ViewSet):
-
+    permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
         topic = request.POST.get("topic")
