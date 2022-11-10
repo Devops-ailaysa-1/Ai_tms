@@ -17,6 +17,8 @@ from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view,permission_classes
 from ai_workspace_okapi.utils import download_file
+from ai_auth.tasks import update_untranslatable_words,update_forbidden_words
+
 #from host_details.host_details import doclang
 
 def Letters_Numbers(user_input):
@@ -325,7 +327,14 @@ class ForbiddenFileView(viewsets.ViewSet):
             return Response(ser.data, status=201)
 
     def update(self, request, pk):
-        pass
+        file_obj = Forbidden.objects.get(id=pk)
+        project_id = request.POST.get("project", None)
+        job_id = request.POST.get('job',None)
+        ser = ForbiddenSerializer(file_obj,data={'job':job_id},partial=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            update_forbidden_words.apply_async((file_obj.id,))
+            return Response(ser.data)
 
     def delete(self, request, pk):
         file_obj = Forbidden.objects.get(id=pk)
@@ -360,7 +369,15 @@ class UntranslatableFileView(viewsets.ViewSet):
             return Response(ser.data, status=201)
 
     def update(self, request, pk):
-        pass
+        file_obj = Untranslatable.objects.get(id=pk)
+        project_id = request.POST.get("project", None)
+        job_id = request.POST.get('job',None)
+        ser = UntranslatableSerializer(file_obj,data={'job':job_id},partial=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            update_untranslatable_words.apply_async((file_obj.id,))
+            return Response(ser.data)
+
 
     def delete(self, request, pk):
         file_obj = Untranslatable.objects.get(id=pk)
@@ -727,13 +744,13 @@ def QA_Check(request):
     ###  FOR UNTRANSLATABLE FILE  ###
     untranslatable_words = untranslatable_words_view(source, target, doc_id)
     if untranslatable_words:
-        out.append({'untranslatable_words': untranslatable_words })
+        out.append({'Untranslatables': untranslatable_words })
 
     ###  FOR FORBIDDEN FILE  ###
     forbidden_words = forbidden_words_view(source, target, doc_id)
     print("Forbidden------------>",forbidden_words)
     if forbidden_words:
-        out.append({'forbidden_words': forbidden_words })
+        out.append({'Forbidden_words': forbidden_words })
 
     #### USER LETTER CASE  ###
     # letter_case,message = letter_case_view(source, target, doc_id)

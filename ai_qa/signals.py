@@ -1,12 +1,13 @@
 from ai_qa import models as qa_model
 from tablib import Dataset
 
-def update_words_from_forbidden_file(sender, instance, *args, **kwargs):
-    s = open(instance.forbidden_file.path)
-    text = s.readlines()
-    for i in text:
-        qa_model.ForbiddenWords.objects.create(words=i.strip(),job=instance.job,project=instance.project,file=instance)
-    print("ForbiddenWords Added")
+def update_words_from_forbidden_file(sender, instance, created, *args, **kwargs):
+    if created:
+        s = open(instance.forbidden_file.path)
+        text = s.readlines()
+        for i in text:
+            qa_model.ForbiddenWords.objects.create(words=i.strip(),job=instance.job,project=instance.project,file=instance)
+        print("ForbiddenWords Added")
 
 
 def delete_words_from_ForbiddenWords(sender, instance, *args, **kwargs):
@@ -17,12 +18,13 @@ def delete_words_from_ForbiddenWords(sender, instance, *args, **kwargs):
         pass
     print("ForbiddenWords Deleted")
 
-def update_words_from_untranslatable_file(sender, instance, *args, **kwargs):
-    s = open(instance.untranslatable_file.path)
-    text = s.readlines()
-    for i in text:
-        qa_model.UntranslatableWords.objects.create(words=i.strip(),job=instance.job,project=instance.project,file=instance)
-    print("Untranslatables added")
+def update_words_from_untranslatable_file(sender, instance, created,*args, **kwargs):
+    if created:
+        s = open(instance.untranslatable_file.path)
+        text = s.readlines()
+        for i in text:
+            qa_model.UntranslatableWords.objects.create(words=i.strip(),job=instance.job,project=instance.project,file=instance)
+        print("Untranslatables added")
 
 def delete_words_from_Untranslatable(sender, instance, *args, **kwargs):
     try:

@@ -230,7 +230,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
     from ai_workspace_okapi.models import Document
     from ai_workspace.api_views import UpdateTaskCreditStatus
-    from ai_workspace_okapi.api_views import MT_RawAndTM_View
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View,remove_random_tags
     from ai_workspace_okapi.models import TranslationStatus
 
     document = Document.objects.get(id=document_id)
@@ -283,8 +283,11 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 if initial_credit > consumable_credits:
                     mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
                     if str(target_tags) != '':
-                        seg['temp_target'] = mt + str(target_tags)
-                        seg['target'] = mt + str(target)
+                        random_tags = json.loads(seg["random_tag_ids"])
+                        if random_tags == []:tags = str(target_tags)
+                        else:tags = remove_random_tags(str(target_tags),random_tags)
+                        seg['temp_target'] = mt + tags
+                        seg['target'] = mt + tags
                     else:
                         seg['temp_target'] = mt
                         seg['target'] = mt
@@ -498,3 +501,16 @@ def pre_translate_update(task_id):
     MtRawSplitSegment.objects.bulk_create(instances_1)
     #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
     logger.info("pre_translate_update")
+
+
+@task
+def update_untranslatable_words(untranslatable_file_id):
+    file = Untranslable.objects.get(id=untranslatable_file_id)
+    UntranslatableWords.objects.filter(file_id = untranslatable_file_id).update(job_id=file.job.id)
+    logger.info("untranslatable words updated")
+
+@task
+def update_forbidden_words(forbidden_file_id):
+    file = Forbidden.objetcs.get(id=forbidden_file_id)
+    ForbiddenWords.objects.filter(file_id = forbidden_file_id).update(job_id=file.job.id)
+    logger.info("forbidden words updated")
