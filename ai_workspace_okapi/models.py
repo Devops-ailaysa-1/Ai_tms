@@ -138,6 +138,8 @@ class Segment(BaseSegment):
             for split_seg in split_segs:
                 if split_seg.target != None:
                     target_joined += split_seg.target
+                else:
+                    target_joined += split_seg.source
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
     @property
