@@ -1129,7 +1129,6 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         merge_segments = SourceSegmentsListView.do_search(data, merge_segments, lookup_field)
         split_segments = SourceSegmentsListView.do_search(data, split_segments, lookup_field)
         final_segments = list(chain(segments, merge_segments, split_segments))
-        print("Final----------->",final_segments)
         return final_segments, 200
 
     def post(self, request, document_id):
@@ -1209,7 +1208,6 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
             #     instance = instance
             # else:
             #     instance = instance.get_active_object()
-            print("Instance-------------------->",instance)
             self.unconfirm_status(instance)
             if do_confirm:
                 self.confirm_status(instance)
