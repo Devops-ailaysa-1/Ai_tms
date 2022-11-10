@@ -307,7 +307,7 @@ class ForbiddenFileView(viewsets.ViewSet):
         project_id = request.GET.get("project", None)
         job_id = request.GET.get('job',None)
         if project_id:
-            files = Forbidden.objects.filter(project_id=project_id).all()
+            files = Forbidden.objects.filter(project_id=project_id).order_by('id').all()
         else:
             files = Forbidden.objects.filter(job_id=job_id).all()
         serializer = ForbiddenSerializer(files, many=True)
@@ -349,7 +349,7 @@ class UntranslatableFileView(viewsets.ViewSet):
         project_id = request.GET.get("project", None)
         job_id = request.GET.get('job',None)
         if project_id:
-            files = Untranslatable.objects.filter(project_id=project_id).all()
+            files = Untranslatable.objects.filter(project_id=project_id).order_by('id').all()
         else:
             files = Untranslatable.objects.filter(job_id=job_id).all()
         serializer = UntranslatableSerializer(files, many=True)
