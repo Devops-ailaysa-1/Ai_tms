@@ -315,16 +315,21 @@ class ForbiddenFileView(viewsets.ViewSet):
 
     def create(self, request):
         files = request.FILES.getlist('forbidden_files')
+        check = UntranslatableFileView.file_char_validation(files)
+        new_files = check.get('valid')
+        invalid = check.get('invalid')
         project_id = request.POST.get("project", None)
         job_id = request.POST.get('job',None)
         if job_id:
             obj = Job.objects.get(id=job_id)
             project_id = obj.project.id
-        data = [{"project": project_id,"job":job_id, "forbidden_file": file} for file in files]
+        data = [{"project": project_id,"job":job_id, "forbidden_file": file} for file in new_files]
         ser = ForbiddenSerializer(data=data, many=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
-            return Response(ser.data, status=201)
+            if invalid:data={'Invalid':invalid,'res':ser.data}
+            else:data={'Invalid':None,'res':ser.data}
+            return Response(data, status=201)
 
     def update(self, request, pk):
         file_obj = Forbidden.objects.get(id=pk)
@@ -355,18 +360,38 @@ class UntranslatableFileView(viewsets.ViewSet):
         serializer = UntranslatableSerializer(files, many=True)
         return Response(serializer.data)
 
+    @staticmethod
+    def file_char_validation(files):
+        invalid_files,valid_files = [],[]
+        for file in files:
+            count = 0
+            contents = file.readlines()
+            for j in contents:
+                if len(j.split())>4 or len(j)>500:
+                    file_name = file.name.split('.')[0]
+                    invalid_files.append(file_name+'.txt')
+                    count=count+1
+                    break
+            if count == 0: valid_files.append(file)
+        return {'invalid':invalid_files,'valid':valid_files}
+
     def create(self, request):
         files = request.FILES.getlist('untranslatable_files')
+        check = self.file_char_validation(files)
+        new_files = check.get('valid')
+        invalid = check.get('invalid')
         project_id = request.POST.get("project", None)
         job_id = request.POST.get('job',None)
         if job_id:
             obj = Job.objects.get(id=job_id)
             project_id = obj.project.id
-        data = [{"project": project_id,"job":job_id, "untranslatable_file": file} for file in files]
+        data = [{"project": project_id,"job":job_id, "untranslatable_file": file} for file in new_files]
         ser = UntranslatableSerializer(data=data, many=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
-            return Response(ser.data, status=201)
+            if invalid:data={'Invalid':invalid,'res':ser.data}
+            else:data={'Invalid':None,'res':ser.data}
+            return Response(data, status=201)
 
     def update(self, request, pk):
         file_obj = Untranslatable.objects.get(id=pk)
