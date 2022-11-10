@@ -180,10 +180,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 mt_only_check =  MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'mt_only')).last()
                 print('tt------------>',mt_only_check)
                 if mt_only_check:
-                    segments = Segment.objects.filter(text_unit__document=task.document).last()
-                    if segments.target != '':
+                    empty_segments = Segment.objects.filter(text_unit__document=task.document).filter(target__exact='')
+                    if not empty_segments:
                         return task.document
-                #     return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 if state == 'PENDING':
@@ -1968,7 +1967,6 @@ def segments_with_target(document_id):
         if (i.get("is_merged") == True and i.get("is_merge_start")):
             merge_obj = MergeSegment.objects.get(id=i.get("segment_id"))
             if merge_obj.target!=None:
-                #print("Merge obj",merge_obj.target)
                 data.append(remove_tags(merge_obj.target))
 
         # If the segment is split
@@ -1976,7 +1974,6 @@ def segments_with_target(document_id):
             split_segs = SplitSegment.objects.filter(segment_id=i.get("segment_id")).order_by("id")
             for split_seg in split_segs:
                 if split_seg.target!=None:
-                    #print("Split obj",split_seg.target)
                     data.append(remove_tags(split_seg.target))
 
         # Normal segment
