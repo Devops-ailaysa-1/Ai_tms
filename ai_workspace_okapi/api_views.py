@@ -70,6 +70,17 @@ class ServiceUnavailable(APIException):
     status_code = 503
     default_detail = 'Service temporarily unavailable, try again later.'
 
+
+def get_empty_segments(doc):
+    segments_1 = doc.segments_for_find_and_replace.filter(target__exact='')
+    merge_segments_1 =MergeSegment.objects.filter(text_unit__document=doc).filter(target__exact=None)
+    split_segments_1 = SplitSegment.objects.filter(text_unit__document=doc).filter(target__exact=None)
+    if (segments_1 or merge_segments_1 or split_segments_1):
+        return True
+    else:
+        return False
+
+
 class DocumentViewByTask(views.APIView, PageNumberPagination):
     permission_classes = [IsAuthenticated]
     PAGE_SIZE = page_size =  20
@@ -178,10 +189,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
                 mt_only_check =  MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'mt_only')).last()
-                print('tt------------>',mt_only_check)
                 if mt_only_check:
-                    empty_segments = Segment.objects.filter(text_unit__document=task.document).filter(target__exact='')
-                    if not empty_segments:
+                    if not get_empty_segments(task.document):
                         return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
