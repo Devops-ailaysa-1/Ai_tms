@@ -902,7 +902,9 @@ class DocumentToFile(views.APIView):
 
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
-        return re.sub(rf'</?\d+>', "", string)
+        if string!=None:
+            return re.sub(rf'</?\d+>', "", string)
+        else:return string
         # return string
 
     def get_bilingual_filename(self, document_id):
