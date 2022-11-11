@@ -431,7 +431,7 @@ class SplitSegmentView(viewsets.ModelViewSet):
         seg_first = request.data["seg_first"]
         seg_second = request.data["seg_second"]
 
-        if SplitSegmentView.empty_or_tags(seg_first, seg_second):
+        if SplitSegmentView.empty_or_tags(seg_first.strip(), seg_second.strip()):
             return Response({"msg": "No text content found. Segment cannot be split"}, status = 400)
 
         segment = request.data["segment"]
