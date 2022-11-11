@@ -422,10 +422,10 @@ class UntranslatableFileView(viewsets.ViewSet):
 def forbidden_words_view(source, target, doc_id):
     forbidden_out = {}
     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-    stop_words=stopwords.words('english')
+    #stop_words=stopwords.words('english')
     tgt_list = word_tokenize(target)
     search_words=[]
-    tokens_new = [word for word in tgt_list if word not in punctuation and word not in stop_words]
+    tokens_new = [word for word in tgt_list if word not in punctuation]# and word not in stop_words]
     unigram=ngrams(tokens_new,1)
     search_words.extend(list(" ".join(i) for i in unigram))
     bigrams = ngrams(tokens_new,2)
@@ -456,10 +456,10 @@ def forbidden_words_view(source, target, doc_id):
 def untranslatable_words_view(source, target, doc_id):
     untranslatable_out = {}
     punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-    stop_words=stopwords.words('english')
+    #stop_words=stopwords.words('english')
     src_list = word_tokenize(source)
     search_words=[]
-    tokens_new = [word for word in src_list if word not in punctuation and word not in stop_words]
+    tokens_new = [word for word in src_list if word not in punctuation]# and word not in stop_words]
     unigram=ngrams(tokens_new,1)
     search_words.extend(list(" ".join(i) for i in unigram))
     bigrams = ngrams(tokens_new,2)
