@@ -8,7 +8,7 @@ from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import User
 from django.db.models.base import Model
 from django.utils.text import slugify
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save, post_delete
@@ -40,8 +40,7 @@ from django.db.models.fields import Field
 # from integerations.github_.models import ContentFile
 # from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
-
-
+from ai_workspace_okapi.models import SplitSegment
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -157,8 +156,9 @@ class Project(models.Model):
         #     objects.filter(ai_user=self.ai_user).count()+1)
 
         if not self.project_name:
+
             #self.project_name = self.ai_project_id
-            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
+            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
         # print("Project_name---->",self.project_name)
         if self.id:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \
@@ -231,15 +231,26 @@ class Project(models.Model):
                     confirm_list = [102, 104, 106, 110, 107]
 
                     segs = Segment.objects.filter(text_unit__document__job__project_id=self.id)
+
                     for seg in segs:
 
-                        if seg.is_merged == True and seg.is_merge_start is None:
+                        if (seg.is_merged == True and seg.is_merge_start != True):
                             continue
+
+                        elif seg.is_split == True:
+                            total_seg_count += 2
+
                         else:
                             total_seg_count += 1
 
                         seg_new = seg.get_active_object()
-                        if seg_new.status_id in confirm_list:
+
+                        if seg_new.is_split == True:
+                            for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+                                if split_seg.status_id in confirm_list:
+                                    confirm_count += 1
+
+                        elif seg_new.status_id in confirm_list:
                             confirm_count += 1
 
                 else:
@@ -882,15 +893,26 @@ class Task(models.Model):
         doc = self.document
 
         segs = Segment.objects.filter(text_unit__document=doc)
+
         for seg in segs:
 
-            if seg.is_merged == True and seg.is_merge_start is None:
+            if (seg.is_merged == True and seg.is_merge_start != True):
                 continue
+
+            elif seg.is_split == True:
+                total_seg_count += 2
+
             else:
                 total_seg_count += 1
 
             seg_new = seg.get_active_object()
-            if seg_new.status_id in confirm_list:
+
+            if seg_new.is_split == True:
+                for split_seg in SplitSegment.objects.filter(segment_id=seg_new.id):
+                    if split_seg.status_id in confirm_list:
+                        confirm_count += 1
+
+            elif seg_new.status_id in confirm_list:
                 confirm_count += 1
 
         return total_seg_count, confirm_count

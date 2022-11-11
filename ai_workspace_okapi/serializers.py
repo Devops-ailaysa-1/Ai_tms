@@ -13,10 +13,10 @@ from django.db import connection
 from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
-from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment
+from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
-
+from .utils import split_check
 import collections
 import csv
 import io,time
@@ -47,27 +47,14 @@ class SegmentSerializer(serializers.ModelSerializer):
     status = serializers.IntegerField(read_only=True, source="status.status_id")
     source = serializers.CharField(trim_whitespace=False, allow_blank=True)
     random_tag_ids = serializers.CharField(allow_blank=True, required=False)
-
-
+    parent_segment = serializers.IntegerField(read_only=True, \
+                        source="get_parent_seg_id", allow_null=True,)
     class Meta:
         model = Segment
         fields = (
-            "source",
-            "target",
-            "coded_source",
-            "coded_brace_pattern",
-            "coded_ids_sequence",
-            "tagged_source",
-            "target_tags",
-            "segment_id",
-            "temp_target",
-            "status",
-            "has_comment",
-            "is_merged",
-            "text_unit",
-            "is_merge_start",
-            "random_tag_ids",
-        )
+            "source","target","coded_source","coded_brace_pattern","coded_ids_sequence","tagged_source",\
+            "target_tags","segment_id","temp_target","status","has_comment","is_merged","is_split",\
+            "text_unit","is_merge_start","random_tag_ids","parent_segment",)
 
         extra_kwargs = {
             "source": {"write_only": True},
@@ -80,7 +67,9 @@ class SegmentSerializer(serializers.ModelSerializer):
             "is_merged": {"required": False, "default": False},
             "text_unit": {"read_only": True},
             "is_merge_start": {"read_only": True},
+            "is_split": {"read_only": True},
             # "id",
+            "parent_segment": {"read_only": True},
         }
 
 
@@ -125,6 +114,8 @@ class SegmentSerializerV2(SegmentSerializer):
         except:pass
 
     def update(self, instance, validated_data):
+        if split_check(instance.id):seg_id = instance.id
+        else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
@@ -133,9 +124,9 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.temp_target = instance.target
             instance.save()
             self.update_task_assign(task_obj,user)
-            SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
-        SegmentHistory.objects.create(segment_id=instance.id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+        SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
         self.update_task_assign(task_obj,user)
         return super().update(instance, validated_data)
 
@@ -177,6 +168,18 @@ class MergeSegmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Segments for merging should have same text_unit_id")
         return super().validate(data)
 
+class SplitSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SplitSegment
+        fields = ("segment",
+                  "text_unit",
+                  )
+        def validate(self, data):
+            segment = data['segment']
+            if segment.is_merged == True or segment.is_split == True:
+                raise serializers.ValidationError("The segment is already merged or split")
+            return super().validate(data)
+
 class TextUnitSerializer(serializers.ModelSerializer):
     segment_ser = SegmentSerializer(many=True ,write_only=True)
 
@@ -216,6 +219,7 @@ class TextUnitSerializerTest(serializers.ModelSerializer):
         model = TextUnit
         fields = "__all__"
 
+
 class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
     text_unit_ser = TextUnitSerializer(many=True,  write_only=True)
 
@@ -242,10 +246,44 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         return super().to_internal_value(data=data)
 
 
-    def create(self, validated_data, **kwargs):
+    def remove_tags(self,text):
+        TAG_RE = re.compile(r'<[^>]+>')
+        return TAG_RE.sub('', text)
+
+
+    def pre_flow(self,user,source,document,mt_engine,target_tags):
         from .api_views import MT_RawAndTM_View
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source)
+        if initial_credit > consumable_credits:
+            try:
+                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)
+                if target_tags !='':
+                    temp_target = mt + target_tags
+                    target = mt + target_tags
+                else:
+                    temp_target = mt
+                    target = mt
+                status_id = TranslationStatus.objects.get(status_id=104).id
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                return target,temp_target,status_id
+            except:
+                target=""
+                temp_target=""
+                status_id=None
+                return target,temp_target,status_id
+        else:
+            target=""
+            temp_target=""
+            status_id=None
+            return target,temp_target,status_id
+
+
+    def create(self, validated_data, **kwargs):
+        from .api_views import MT_RawAndTM_View,remove_random_tags
 
         text_unit_ser_data  = validated_data.pop("text_unit_ser", [])
+        #print("Text Unit Data----------------->",text_unit_ser_data)
         text_unit_ser_data2 = copy.deepcopy(text_unit_ser_data)
 
         document = Document.objects.create(**validated_data)
@@ -282,33 +320,16 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                         get_runs_and_ref_ids(seg["coded_brace_pattern"],
                         json.loads(seg["coded_ids_sequence"])))
                     )
-                # target = "" if seg["target"] is None else seg["target"]
+
                 if target_get == False:
                     seg['target'] = ""
                     seg['temp_target'] = ""
                     status_id = None
                 else:
-                    initial_credit = user.credit_balance.get("total_left")
-                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
-                    if initial_credit > consumable_credits:
-                        try:
-                            mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
-                            if str(target_tags) !='':
-                                seg['temp_target'] = mt + str(target_tags)
-                                seg['target'] = mt + str(target_tags)
-                            else:
-                                seg['temp_target'] = mt
-                                seg['target'] = mt
-                            status_id = TranslationStatus.objects.get(status_id=104).id
-                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                        except:
-                            seg['target']=""
-                            seg['temp_target']=""
-                            status_id=None
-                    else:
-                        seg['target']=""
-                        seg['temp_target']=""
-                        status_id=None
+                    if seg["random_tag_ids"] == []:tags = str(target_tags)
+                    else:tags = remove_random_tags(str(target_tags),json.loads(seg["random_tag_ids"]))
+                    seg['target'],seg['temp_target'],status_id = self.pre_flow(user,seg['source'],document,mt_engine,tags)
+
 
                 seg_params.extend([str(seg["source"]), seg['target'], seg['temp_target'], str(seg["coded_source"]), str(tagged_source), \
                     str(seg["coded_brace_pattern"]), str(seg["coded_ids_sequence"]), str(target_tags), str(text_unit["okapi_ref_translation_unit_id"]), \
@@ -328,7 +349,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
             for i in segments:
                 if i.target != "":
                     count += 1
-                    mt_params.extend([i.target,mt_engine,None,i.id])
+                    mt_params.extend([self.remove_tags(i.target),mt_engine,mt_engine,i.id])
 
             mt_raw_sql = "INSERT INTO ai_workspace_okapi_mt_rawtranslation (mt_raw, mt_engine_id, task_mt_engine_id,segment_id)\
             VALUES {}".format(','.join(['(%s, %s, %s, %s)'] * count))

@@ -16,7 +16,7 @@ from ai_auth.signals import create_postjob_id
 # Create your models here.
 
 
-class ProjectboardDetails(models.Model):#stephen subburaj
+class ProjectboardDetails(models.Model):#stephen
     project=models.ForeignKey(Project, on_delete=models.CASCADE,related_name="proj_detail")
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
@@ -225,8 +225,8 @@ class BidPropasalDetails(models.Model):
     proposed_completion_date = models.DateTimeField(blank=True,null=True)
     description = models.TextField(blank=True,null=True)
     sample_file = models.FileField(upload_to=user_directory_path, blank=True, null=True)
-    mtpe_rate= models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
-    mtpe_hourly_rate=models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)#Deprecated
+    mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
+    mtpe_hourly_rate=models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)#Deprecated
     mtpe_count_unit=models.ForeignKey(Billingunits,on_delete=models.CASCADE,related_name='bid_job_mtpe_unit_type',blank=True,null=True)
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='bidding_currency_detail', on_delete=models.CASCADE)
     bid_step = models.ForeignKey(Steps, on_delete=models.CASCADE,related_name="bidpost_steps",blank=True, null=True,default= 1)
