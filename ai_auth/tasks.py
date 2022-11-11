@@ -513,6 +513,6 @@ def update_untranslatable_words(untranslatable_file_id):
 @task
 def update_forbidden_words(forbidden_file_id):
     from ai_qa.models import Forbidden,ForbiddenWords
-    file = Forbidden.objetcs.get(id=forbidden_file_id)
+    file = Forbidden.objects.get(id=forbidden_file_id)
     ForbiddenWords.objects.filter(file_id = forbidden_file_id).update(job=file.job)
     logger.info("forbidden words updated")

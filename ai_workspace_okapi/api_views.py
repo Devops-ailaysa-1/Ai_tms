@@ -70,6 +70,17 @@ class ServiceUnavailable(APIException):
     status_code = 503
     default_detail = 'Service temporarily unavailable, try again later.'
 
+
+def get_empty_segments(doc):
+    segments_1 = doc.segments_for_find_and_replace.filter(target__exact='')
+    merge_segments_1 =MergeSegment.objects.filter(text_unit__document=doc).filter(target__exact=None)
+    split_segments_1 = SplitSegment.objects.filter(text_unit__document=doc).filter(target__exact=None)
+    if (segments_1 or merge_segments_1 or split_segments_1):
+        return True
+    else:
+        return False
+
+
 class DocumentViewByTask(views.APIView, PageNumberPagination):
     permission_classes = [IsAuthenticated]
     PAGE_SIZE = page_size =  20
@@ -178,12 +189,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
                 mt_only_check =  MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'mt_only')).last()
-                print('tt------------>',mt_only_check)
                 if mt_only_check:
-                    segments = Segment.objects.filter(text_unit__document=task.document).last()
-                    if segments.target != '':
+                    if not get_empty_segments(task.document):
                         return task.document
-                #     return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 if state == 'PENDING':
@@ -1968,7 +1976,6 @@ def segments_with_target(document_id):
         if (i.get("is_merged") == True and i.get("is_merge_start")):
             merge_obj = MergeSegment.objects.get(id=i.get("segment_id"))
             if merge_obj.target!=None:
-                #print("Merge obj",merge_obj.target)
                 data.append(remove_tags(merge_obj.target))
 
         # If the segment is split
@@ -1976,7 +1983,6 @@ def segments_with_target(document_id):
             split_segs = SplitSegment.objects.filter(segment_id=i.get("segment_id")).order_by("id")
             for split_seg in split_segs:
                 if split_seg.target!=None:
-                    #print("Split obj",split_seg.target)
                     data.append(remove_tags(split_seg.target))
 
         # Normal segment
