@@ -442,7 +442,7 @@ def forbidden_words_view(source, target, doc_id):
     # if not query_set_1:query_set_1 = ForbiddenWords.objects.filter(project=doc.job.project)
     # queryset = query_set_1.filter(query).distinct('words')
     #queryset = ForbiddenWords.objects.filter(words__in = search_words)
-    queryset = ForbiddenWords.objects.filter(Q(job=doc.job)|Q(project=doc.job.project)).filter(query).distinct('words')
+    queryset = ForbiddenWords.objects.filter(job=doc.job).filter(Q(job=doc.job)|Q(project=doc.job.project)).filter(query).distinct('words')
     if queryset:
         forbidden_words = [i.words for i in queryset]
         forbidden_out['source'] = []
@@ -475,7 +475,7 @@ def untranslatable_words_view(source, target, doc_id):
     # query_set_1 = UntranslatableWords.objects.filter(job=doc.job)
     # if not query_set_1:query_set_1 = UntranslatableWords.objects.filter(project=doc.job.project)
     # queryset = query_set_1.filter(query).distinct('words')
-    queryset = UntranslatableWords.objects.filter(Q(job=doc.job)|Q(project=doc.job.project)).filter(query).distinct('words')
+    queryset = UntranslatableWords.objects.filter(job=doc.job).filter(Q(job=doc.job)|Q(project=doc.job.project)).filter(query).distinct('words')
     #queryset = UntranslatableWords.objects.filter(words__in = search_words)
     if queryset:
         untranslatable_words = [i.words for i in queryset]

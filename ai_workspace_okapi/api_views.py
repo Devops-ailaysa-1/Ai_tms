@@ -955,7 +955,8 @@ class DocumentToFile(views.APIView):
                     split_segs = SplitSegment.objects.filter(segment_id=segment.id)
                     target = ""
                     for split_seg in split_segs:
-                        target += self.remove_tags(split_seg.target)
+                        if not split_seg.target:
+                            target += self.remove_tags(split_seg.target)
                     worksheet.write(row, 0, segment.source.strip(), cell_format)
                     worksheet.write(row, 1, target, cell_format)
                     row += 1
