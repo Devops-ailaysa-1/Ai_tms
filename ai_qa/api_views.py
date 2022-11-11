@@ -699,9 +699,9 @@ def general_check_view(source,target,doc):
         if targetLanguage not in lang_list:
             res = word_check(source,target)
             return res
-        else:
-            res = character_check(source,target)
-            return res
+        # else:
+        #     res = character_check(source,target)
+        #     return res
 
     # elif len(target.split()) < src_limit:
     #     #if targetLanguage not in lang_list:
