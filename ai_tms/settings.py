@@ -628,9 +628,9 @@ sentry_sdk.init(
 )
 
 
-OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
-MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
-NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
+# OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
+# MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
+# NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
 
 # DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
 # DOCX_URL = '/output_docx/'
