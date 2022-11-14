@@ -88,10 +88,7 @@ def convertiopdf2docx(serve_path ,language,ocr = None ):
     txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = serve_path)
     print("txt_field--->",txt_field_obj , "status" , txt_field_obj.pdf_file)
     pdf_file_name = serve_path.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
-<<<<<<< HEAD
-=======
     
->>>>>>> 8fef218c22c33b9a7fcc4d9582c4d0410fe84719
     with open(fp, "rb") as pdf_path:
         encoded_string = base64.b64encode(pdf_path.read())           ##pdf file convert to base64 
     data = {'apikey': CONVERTIO_API ,                          # CONVERTIO_API,           #convertio crediential
@@ -104,11 +101,7 @@ def convertiopdf2docx(serve_path ,language,ocr = None ):
         language_convertio = [lang_code(i) for i in language]
         ocr_option =  { "options": { "ocr_enabled": True, "ocr_settings": { "langs": [language_convertio]}}}
         data = {**data , **ocr_option}     #merge dict 
-<<<<<<< HEAD
-        txt_field_obj.pdf_api_use = "convertio-ocr"
-=======
         txt_field_obj.pdf_api_use = "convertio_ocr"
->>>>>>> 8fef218c22c33b9a7fcc4d9582c4d0410fe84719
     else:
         txt_field_obj.pdf_api_use = "convertio"
     response_status = requests.post(url='https://api.convertio.co/convert' , data=json.dumps(data)).json() ###   posting for conversion to convert io 
