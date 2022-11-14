@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tmx version="1.4"><header creationtool="Ailaysa Transeditor" creationtoolversion="1.0.0" segtype="sentence" o-tmf="Ailaysa" adminlang="en" srclang="en" datatype="plaintext"></header><body>
+<tu tuid="0">
+<tuv xml:lang="en"><seg>Nupedia</seg></tuv>
+<tuv xml:lang="ta"><seg>நுபீடியா</seg></tuv>
+</tu>
+<tu tuid="0">
+<tuv xml:lang="en"><seg>Other collaborative online encyclopedias were attempted before Wikipedia, but none were as successful.</seg></tuv>
+<tuv xml:lang="ta"><seg>விக்கிப்பீடியாவிற்கு முன் மற்ற கூட்டு ஆன்லைன் என்சைக்ளோபீடியாக்கள் முயற்சிக்கப்பட்டன, ஆனால் எதுவும் வெற்றிபெறவில்லை.</seg></tuv>
+</tu>
+<tu tuid="1">
+<tuv xml:lang="en"><seg> <bpt i="1" type="x-bold;color:auto;">&lt;run1&gt;</bpt>Wikipedia<ept i="1">&lt;/run1&gt;</ept> began as a complementary project for Nupedia, <bpt i="2" type="x-color:FF0000;">&lt;run2&gt;</bpt>a free online English-language<ept i="2">&lt;/run2&gt;</ept> encyclopedia project whose articles were written by experts and reviewed under a formal process.</seg></tuv>
+<tuv xml:lang="ta"><seg> <bpt i="1" type="x-bold;color:auto;">&lt;run1&gt;</bpt>விக்கிபீடியாவானது நுபீடியாவிற்கான<ept i="1">&lt;/run1&gt;</ept> ஒரு நிரப்பு திட்டமாகத் தொடங்கியது, இது ஒரு இலவச ஆன்லைன் <bpt i="2" type="x-color:FF0000;">&lt;run2&gt;</bpt>ஆங்கில மொழி <ept i="2">&lt;/run2&gt;</ept>கலைக்களஞ்சிய திட்டமாகும், அதன் கட்டுரைகள் நிபுணர்களால் எழுதப்பட்டு முறையான செயல்முறையின் கீழ் மதிப்பாய்வு செய்யப்பட்டன.</seg></tuv>
+</tu>
+<tu tuid="2">
+<tuv xml:lang="en"><seg> <bpt i="3" type="x-color:auto;highlight:yellow;">&lt;run3&gt;</bpt>It was founded on March 9, 2000, under the ownership of Bomis, a web portal company. <ept i="3">&lt;/run3&gt;</ept></seg></tuv>
+<tuv xml:lang="ta"><seg><bpt i="3" type="x-color:auto;highlight:yellow;">&lt;run3&gt;</bpt> இது மார்ச் 9, 2000 அன்று போமிஸ் என்ற வலை போர்டல் நிறுவனத்தின் உரிமையின் கீழ் நிறுவப்பட்டது.<ept i="3">&lt;/run3&gt;</ept></seg></tuv>
+</tu>
+</body>
+</tmx>
