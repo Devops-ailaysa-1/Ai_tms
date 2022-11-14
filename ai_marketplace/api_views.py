@@ -71,6 +71,7 @@ from ai_workspace.serializers import TaskSerializer,\
             JobSerializer, ProjectSubjectSerializer,ProjectContentTypeSerializer
 import os,mimetypes
 from django.http import JsonResponse,HttpResponse
+from ai_workspace_okapi.utils import download_file
 # Create your views here.
 
 
@@ -804,14 +805,15 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 def sample_file_download(request,bid_propasal_id):
     sample_file = BidPropasalDetails.objects.get(id=bid_propasal_id).sample_file
     if sample_file:
-        fl_path = sample_file.path
-        filename = os.path.basename(fl_path)
-        # print(os.path.dirname(fl_path))
-        fl = open(fl_path, 'rb')
-        mime_type, _ = mimetypes.guess_type(fl_path)
-        response = HttpResponse(fl, content_type=mime_type)
-        response['Content-Disposition'] = "attachment; filename=%s" % filename
-        return response
+        return download_file(sample_file.path)
+        # fl_path = sample_file.path
+        # filename = os.path.basename(fl_path)
+        # # print(os.path.dirname(fl_path))
+        # fl = open(fl_path, 'rb')
+        # mime_type, _ = mimetypes.guess_type(fl_path)
+        # response = HttpResponse(fl, content_type=mime_type)
+        # response['Content-Disposition'] = "attachment; filename=%s" % filename
+        # return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
 

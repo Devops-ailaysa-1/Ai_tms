@@ -70,9 +70,10 @@ urlpatterns = [
     # path("integerations/", include("integerations.github_.urls")),
     # path("integerations/", include("integerations.gitlab_.urls")),
     #path("tm/", include("ai_tm_management.urls")),
-    path("nlp/", include("ai_nlp.urls")),
+    # path("nlp/", include("ai_nlp.urls")),
 
     path("aipay/", include("ai_pay.urls")),
+    path('exportpdf/',include("ai_exportpdf.urls")),
     path("qa/", include("ai_qa.urls")),
    # path('__debug__/', include('debug_toolbar.urls')),
 #     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),

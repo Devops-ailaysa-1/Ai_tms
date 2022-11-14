@@ -334,6 +334,7 @@ def glossaries_list(request,project_id):
     target_languages = project.get_target_languages
     user = request.user.team.owner if request.user.team else request.user
     queryset = Project.objects.filter(ai_user=user).filter(glossary_project__isnull=False)\
+                .filter(project_jobs_set__source_language_id = project.project_jobs_set.first().source_language.id)\
                 .filter(project_jobs_set__target_language__language__in = target_languages)\
                 .filter(glossary_project__term__isnull=False)\
                 .exclude(id=project.id).distinct()
@@ -366,9 +367,10 @@ class GlossarySelectedCreateView(viewsets.ViewSet):
     def update(self,request,pk):
         pass
 
-    def delete(self,request,pk):
-        obj = GlossarySelected.objects.get(id = pk)
-        obj.delete()
+    def delete(self,request):
+        glossary_selected_delete_ids = request.query_params.get('to_remove_ids')
+        ids = glossary_selected_delete_ids.split(',')
+        GlossarySelected.objects.filter(id__in = ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['POST',])

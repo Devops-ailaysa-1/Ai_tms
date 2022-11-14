@@ -9,7 +9,7 @@ from django.utils.functional import cached_property
 from ai_auth.models import AiUser
 from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoiceSupport, AilaysaSupportedMtpeEngines, \
     MTLanguageSupport
-from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags
+from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
 
 
@@ -81,7 +81,16 @@ class BaseSegment(models.Model):
 
     @property
     def has_comment(self):
-        return self.segment_comments_set.all().count()>0
+        if split_check(self.id):
+            merge_seg = MergeSegment.objects.filter(id=self.id).first()
+            if merge_seg:
+                return merge_seg.segments.first().segment_comments_set.all().count()>0
+            else:
+                return self.segment_comments_set.all().count()>0
+        else:
+            seg = SplitSegment.objects.filter(id=self.id).first()
+            return seg.split_segment_comments_set.all().count()>0
+
 
     @property
     def get_id(self):
@@ -129,6 +138,8 @@ class Segment(BaseSegment):
             for split_seg in split_segs:
                 if split_seg.target != None:
                     target_joined += split_seg.target
+                else:
+                    target_joined += split_seg.source
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
     @property
@@ -223,6 +234,7 @@ class MergeSegment(BaseSegment):
     def get_parent_seg_id(self):
         return self.id
 
+
 class SplitSegment(BaseSegment):
 
     segment = models.ForeignKey(Segment, related_name = "split_segment_set", \
@@ -270,6 +282,8 @@ class Comment(models.Model):
     comment = models.TextField()
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name=\
         "segment_comments_set")
+    split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, \
+                    related_name="split_segment_comments_set")
     #user = models.ForeignKey(AiUser, on_delete=models.SET_NULL, related_name = 'comment_user')
 
 class Document(models.Model):
@@ -307,6 +321,11 @@ class Document(models.Model):
     def segments_for_workspace(self):
         return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True)
                     & (Q(is_merge_start__isnull=True) | Q(is_merge_start=False)))).order_by("id")
+
+
+    @property
+    def segments_for_find_and_replace(self):
+        return self.get_segments().exclude(Q(source__exact='')|(Q(is_merged=True))|Q(is_split=True)).order_by("id")
 
     @property
     def segments_with_blank(self):

@@ -8,7 +8,7 @@ from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import User
 from django.db.models.base import Model
 from django.utils.text import slugify
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save, post_delete
@@ -40,8 +40,7 @@ from django.db.models.fields import Field
 # from integerations.github_.models import ContentFile
 # from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
-
-
+from ai_workspace_okapi.models import SplitSegment
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -164,8 +163,9 @@ class Project(models.Model):
         #     objects.filter(ai_user=self.ai_user).count()+1)
 
         if not self.project_name:
+
             #self.project_name = self.ai_project_id
-            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
+            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
         # print("Project_name---->",self.project_name)
         if self.id:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \

@@ -362,6 +362,7 @@ class CustomerSupportCreateView(viewsets.ViewSet):
 
 
 class ContactPricingCreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
     def list(self,request):
         user_id = request.user.id
         if user_id:
@@ -1300,7 +1301,7 @@ class AiUserProfileView(viewsets.ViewSet):
 
 
 class CarrierSupportCreateView(viewsets.ViewSet):
-
+    permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
         job_position = request.POST.get("job_position")
@@ -1327,7 +1328,7 @@ class CarrierSupportCreateView(viewsets.ViewSet):
 
 
 class GeneralSupportCreateView(viewsets.ViewSet):
-
+    permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
         topic = request.POST.get("topic")
@@ -1963,6 +1964,7 @@ def vendor_onboard_complete(request):#######while using social signups##########
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def get_user(request):
     email = request.POST.get('email')
     try:
@@ -1972,6 +1974,7 @@ def get_user(request):
         return Response({'user_exist':False})
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def ai_social_login(request):
     provider = request.POST.get('provider')
     is_vendor = request.POST.get('is_vendor',None)
@@ -2055,6 +2058,7 @@ def load_state(state_id,key=None):
     return user_state
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def ai_social_callback(request):
     state = request.POST.get('state')
     # try:

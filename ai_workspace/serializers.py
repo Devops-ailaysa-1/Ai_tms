@@ -1043,8 +1043,17 @@ class TbxFileSerializer(serializers.ModelSerializer):
 			raise serializers.ValidationError("Required fields missing!!!")
 		project = data["project_id"]
 		job = data.get("job_id", None)
-		tbx_file = data.get("tbx_file")
-		return {"project": project, "job": job, "tbx_file": tbx_file}
+		#tbx_file = data.get("tbx_file")
+		return [{"project": project, "job": job, "tbx_file": tbx_file} for tbx_file in data['tbx_file']]
+
+	# @staticmethod
+	# def prepare_data(data):
+	# 	if not (("project" in data) and ("tmx_files" in data)) :
+	# 		raise serializers.ValidationError("required fields missing!!!")
+	# 	project = data["project"]
+	# 	return [
+	# 		{"project": project, "tmx_file": tmx_file} for tmx_file in data["tmx_files"]
+	# 	]
 
 class TbxTemplateSerializer(serializers.ModelSerializer):
 

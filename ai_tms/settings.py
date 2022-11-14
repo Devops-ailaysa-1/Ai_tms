@@ -155,6 +155,7 @@ INSTALLED_APPS = [
     #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
+    'ai_exportpdf',
     # 'coreapi', # Coreapi for coreapi documentation
     # 'drf_yasg', # drf_yasg fro Swagger documentation
 ]
@@ -460,6 +461,7 @@ SIMPLE_JWT = {
 #     'AUTH_COOKIE_PATH': '/',        # The path of the auth cookie.
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
+# CELERY_BROKER_URL = "redis://:ainlp2022@redis:6379/0" 
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 
@@ -632,7 +634,14 @@ sentry_sdk.init(
 )
 
 
+# OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
+# MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
+# NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
 
+# DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
+# DOCX_URL = '/output_docx/'
+GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
+CONVERTIO_API = os.getenv("convertio_api")
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 
 CAMPAIGN = os.getenv("CAMPAIGN")
