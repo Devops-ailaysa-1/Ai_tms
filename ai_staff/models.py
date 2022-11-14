@@ -484,18 +484,17 @@ class AiRoles(models.Model):
         return self.name
 
 class TaskRoleLevel(models.Model):
-    role = models.ForeignKey(AiRoles,related_name='task_roles',
+    role = models.ForeignKey(AiRoles,related_name='task_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
 
 class ProjectRoleLevel(models.Model):
-    role = models.ForeignKey(AiRoles,related_name='project_roles',
+    role = models.ForeignKey(AiRoles,related_name='project_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
 
 class TeamRoleLevel(models.Model):
-    role = models.ForeignKey(AiRoles,related_name='team_roles',
+    role = models.ForeignKey(AiRoles,related_name='team_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
 
-
 class OrganizationRoleLevel(models.Model):
-    role = models.ForeignKey(AiRoles,related_name='org_roles',
+    role = models.ForeignKey(AiRoles,related_name='org_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)

@@ -476,6 +476,14 @@ class Document(models.Model):
         if mt_enable:return True
         else:return False
 
+    @property
+    def owner(self):
+        return self.job.project.owner
+
+    @property
+    def task_pk(self):
+        return self.task_set.last().id
+
 
 
 class FontSize(models.Model):

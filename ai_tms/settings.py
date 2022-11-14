@@ -150,7 +150,8 @@ INSTALLED_APPS = [
     'django_celery_results',
     "ai_pay",
     "ai_qa",
-    #'django_oso'
+    'silk',
+    'django_oso'
     #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
@@ -180,6 +181,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'silk.middleware.SilkyMiddleware',
     # "middlewares.error_middleware.error_middleware",
     # "middlewares.error_middleware.StackOverflowMiddleware"
 ]
@@ -551,11 +553,11 @@ LOGGING = {
         #     'level': 'INFO',
         #     'propagate': True,
         # },
-        # '': {
-        #     'handlers': ['console','fluentinfo'],
-        #     'level': 'INFO',
-        #     'propagate': False,
-        # },
+        '': {
+            'handlers': ['console' ],
+            'level': 'INFO',
+            'propagate': False,
+        },
         # 'django.request': {
         #     'handlers': ['fluentdebug'],
         #     'level': 'DEBUG',
@@ -564,12 +566,12 @@ LOGGING = {
     },
 
     'handlers' : {
-        # 'console':{
-        #     'class' : 'logging.StreamHandler',
-        #     'level': 'INFO',
-        #     'formatter': 'dev_formatter',
-        #     'stream': 'ext://sys.stdout',
-        # },
+        'console':{
+            'class' : 'logging.StreamHandler',
+            'level': 'INFO',
+            'formatter': 'dev_formatter',
+            'stream': 'ext://sys.stdout',
+        },
         'file' : {
             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
             'class' : 'logging.FileHandler',
@@ -636,4 +638,9 @@ STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 
+
 RUST_BACKTRACE=1
+
+
+SILKY_AUTHENTICATION = True  # User must login
+SILKY_AUTHORISATION = True  # User must have permissions
