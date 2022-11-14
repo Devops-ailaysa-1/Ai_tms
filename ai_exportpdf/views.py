@@ -14,6 +14,7 @@ from django.contrib.auth import settings
 from rest_framework.permissions  import IsAuthenticated
 from ai_exportpdf.utils import  convertiopdf2docx ,ai_export_pdf 
 from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
+from ai_staff.models import Languages
 
 logger = logging.getLogger('django')
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
@@ -34,20 +35,22 @@ class Pdf2Docx(viewsets.ViewSet):
         pdf_request_file = request.FILES.get('pdf_request_file')
         file_language = request.POST.get('file_language')
         # format = request.POST.get('format')  
+
+        file_language = Languages.objects.get(id=int(file_language)).language.lower()
+        print("lang ---> ", file_language)
         user = request.user.id
-        # pdf_text_ocr_check = True if format== 'ocr' else False
-        # print("pdf_text_ocr_check---->>" , pdf_text_ocr_check)
         response_result = {}
-        if pdf_request_file.name.endswith('.pdf') and file_language and format: 
+        if pdf_request_file.name.endswith('.pdf') and file_language: 
             Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_request_file , 
                                         pdf_file_name = str(pdf_request_file) , 
                                         pdf_language =file_language.lower()).save()  
             serve_path = str(Ai_PdfUpload.objects.all().filter(user_id = user).last().pdf_file)
             pdf_file_name = settings.MEDIA_ROOT+"/"+serve_path
             pdf_text_ocr_check = file_pdf_check(pdf_file_name)
+
             if file_language in google_ocr_indian_language:  ###this may throw false if multiple language
                 print("[OCR]")
-                response_result = ai_export_pdf.delay(serve_path )        #, file_language , pdf_file_name_only , instance_path
+                response_result = ai_export_pdf.delay(serve_path)        #, file_language , pdf_file_name_only , instance_path
                 Ai_PdfUpload.objects.filter(pdf_file = serve_path).update(pdf_task_id = response_result.id)                      
                 logger.info('assigned ocr ,file_name: google colud indian language'+str(pdf_file_name))
                 return JsonResponse({'result':response_result.id} , safe=False)
@@ -55,6 +58,7 @@ class Pdf2Docx(viewsets.ViewSet):
             elif file_language in list(lang_codes.keys()):  ###this may throw false if multiple language
                 print("[convertio]")
                 response_result = convertiopdf2docx.delay(serve_path = serve_path ,language = file_language , ocr = pdf_text_ocr_check )
+                Ai_PdfUpload.objects.filter(pdf_file = serve_path).update(pdf_task_id = response_result.id)
                 logger.info('assigned pdf text ,file_name: convertio'+str(pdf_file_name))      
                 return JsonResponse({'result':response_result.id} , safe=False)
             else :return JsonResponse({'result':'error'} , safe=False)
@@ -63,25 +67,42 @@ class Pdf2Docx(viewsets.ViewSet):
 
 
     def list(self, request):
-        pk = request.query_params.get('pk', None)
+        queryset = Ai_PdfUpload.objects.all()
+        id = request.query_params.get('id', None)
         pdf_status_id = request.query_params.get('pdf_status_id', None)
         user = request.user.id
+        print(user)
         if pdf_status_id:
+<<<<<<< HEAD
             pdf_status = Ai_PdfUpload.objects.filter(pdf_task_id = pdf_status_id,user_id = user).first()
             serializer = PdfFileSerializer(pdf_status,many=True)
             JsonResponse(serializer.data , safe=False)
         if not pk:
+=======
+            pdf_status = queryset.filter(pdf_task_id = pdf_status_id,user_id = user).first()
+            serializer = PdfFileSerializer(pdf_status)
+            return Response(serializer.data)
+
+        if not id:
+>>>>>>> 8fef218c22c33b9a7fcc4d9582c4d0410fe84719
             files = Ai_PdfUpload.objects.filter(user_id = user)
             serializer = PdfFileSerializer(files,many=True)
             return Response(serializer.data)
         else:
+<<<<<<< HEAD
             files = Ai_PdfUpload.objects.get(id = pk)
             serializer = PdfFileSerializer(files,many=True)
             print(serializer.data)
+=======
+            # files = Ai_PdfUpload.objects.get(id = id)
+            # print("check",files , type(files))
+            serializer = PdfFileSerializer(queryset,many=True)
+            print("serializer data--->",serializer.data) 
+>>>>>>> 8fef218c22c33b9a7fcc4d9582c4d0410fe84719
             return Response(serializer.data)
 
     def retrieve(self, request, pk=None):
-        queryset = Ai_PdfUpload.objects.all()
+        queryset = Ai_PdfUpload.objects.filter(id = pk)
         user = get_object_or_404(queryset, pk=pk)
         serializer = PdfFileSerializer(user)
         return Response(serializer.data)
