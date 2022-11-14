@@ -115,11 +115,7 @@ pickleshare==0.7.5
 preshed==3.0.6
 prometheus-client==0.11.0
 prompt-toolkit==3.0.18
-<<<<<<< HEAD
-proto-plus
-=======
 proto-plus==1.22.1
->>>>>>> 8fef218c22c33b9a7fcc4d9582c4d0410fe84719
 protobuf
 psycopg2-binary==2.8.6
 ptyprocess==0.7.0
