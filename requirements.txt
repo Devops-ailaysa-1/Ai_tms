@@ -66,8 +66,8 @@ google-cloud-texttospeech==2.11.0
 google-cloud-translate==3.2.0
 googleapis-common-protos==1.53.0
 graphviz==0.20
-grpcio==1.46.1
-grpcio-status==1.46.1
+# grpcio==1.46.1
+# grpcio-status==1.46.1
 gunicorn==20.1.0
 hiredis==2.0.0
 hyperlink==21.0.0
@@ -91,7 +91,7 @@ jupyterlab-pygments==0.1.2
 jupyterlab-widgets==1.0.0
 kombu==5.1.0
 langcodes==3.3.0
-lxml==4.6.3
+# lxml==4.6.3
 MarkupSafe==2.0.1
 matplotlib-inline==0.1.2
 mistune==0.8.4
@@ -112,12 +112,15 @@ parso==0.8.2
 pathy==0.6.1
 pexpect==4.8.0
 pickleshare==0.7.5
-Pillow==8.2.0
 preshed==3.0.6
 prometheus-client==0.11.0
 prompt-toolkit==3.0.18
-proto-plus==1.19.0
-protobuf==3.17.3
+<<<<<<< HEAD
+proto-plus
+=======
+proto-plus==1.22.1
+>>>>>>> 8fef218c22c33b9a7fcc4d9582c4d0410fe84719
+protobuf
 psycopg2-binary==2.8.6
 ptyprocess==0.7.0
 pyasn1==0.4.8
@@ -204,3 +207,8 @@ python-docx
 langdetect==1.0.9
 pydub
 filesplit==4.0.1
+pdftotext==2.2.2
+pdf2image==1.16.0
+PyPDF2==2.11.1
+google-cloud-vision==3.1.4
+google-cloud==0.34.0
