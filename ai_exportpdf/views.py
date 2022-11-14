@@ -73,32 +73,19 @@ class Pdf2Docx(viewsets.ViewSet):
         user = request.user.id
         print(user)
         if pdf_status_id:
-<<<<<<< HEAD
-            pdf_status = Ai_PdfUpload.objects.filter(pdf_task_id = pdf_status_id,user_id = user).first()
-            serializer = PdfFileSerializer(pdf_status,many=True)
-            JsonResponse(serializer.data , safe=False)
-        if not pk:
-=======
             pdf_status = queryset.filter(pdf_task_id = pdf_status_id,user_id = user).first()
             serializer = PdfFileSerializer(pdf_status)
             return Response(serializer.data)
 
         if not id:
->>>>>>> 8fef218c22c33b9a7fcc4d9582c4d0410fe84719
             files = Ai_PdfUpload.objects.filter(user_id = user)
             serializer = PdfFileSerializer(files,many=True)
             return Response(serializer.data)
         else:
-<<<<<<< HEAD
-            files = Ai_PdfUpload.objects.get(id = pk)
-            serializer = PdfFileSerializer(files,many=True)
-            print(serializer.data)
-=======
             # files = Ai_PdfUpload.objects.get(id = id)
             # print("check",files , type(files))
             serializer = PdfFileSerializer(queryset,many=True)
             print("serializer data--->",serializer.data) 
->>>>>>> 8fef218c22c33b9a7fcc4d9582c4d0410fe84719
             return Response(serializer.data)
 
     def retrieve(self, request, pk=None):
