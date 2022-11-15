@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from .serializers import (DocumentSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, CommentSerializer,
                           TM_FetchSerializer, VerbSerializer)
@@ -11,7 +10,6 @@ import requests
 from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
 from django.contrib.auth import settings
 from django.http import HttpResponse, JsonResponse
-=======
 import json
 import logging
 import os
@@ -29,7 +27,6 @@ from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http import JsonResponse
->>>>>>> origin/v4-merged-production
 from django.shortcuts import get_object_or_404
 from nltk.tokenize import TweetTokenizer
 from rest_framework import permissions
@@ -39,29 +36,22 @@ from rest_framework.decorators import api_view
 from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import APIException
 from rest_framework.pagination import PageNumberPagination
-<<<<<<< HEAD
 from rest_framework.permissions import IsAuthenticated
 from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q
 import urllib.parse
-=======
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
->>>>>>> origin/v4-merged-production
 from wiktionaryparser import WiktionaryParser
-
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.tasks import google_long_text_file_process_cel, pre_translate_update, mt_only
 from ai_auth.tasks import write_segments_to_db
 from ai_auth.utils import get_plan_name
 from ai_staff.models import SpellcheckerLanguages
 from ai_workspace.api_views import UpdateTaskCreditStatus
-<<<<<<< HEAD
-=======
 # from controller.models import DownloadController
 from ai_workspace.models import File
->>>>>>> origin/v4-merged-production
 from ai_workspace.models import Project
 from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
@@ -76,7 +66,6 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer, SplitSegmentSerializer)
-<<<<<<< HEAD
 from django.urls import reverse
 from json import JSONDecodeError
 from .utils import SpacesService
@@ -95,12 +84,10 @@ from rest_framework.decorators import permission_classes
 from ai_auth.tasks import write_segments_to_db
 from django.db import transaction
 from os.path import exists
-
-=======
 from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
->>>>>>> origin/v4-merged-production
+
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -940,65 +927,10 @@ class DocumentToFile(views.APIView):
 
 
     #For Downloading Audio File################only for voice project###########Need to work
-<<<<<<< HEAD
-    def download_audio_file(self,res,document_user,document_id,voice_gender,language_locale,voice_name):
-        from ai_workspace.models import MTonlytaskCeleryStatus
-        filename, ext = os.path.splitext(self.get_source_file_path(document_id).split('source/')[1])
-        temp_name = filename + '.txt'
-        text_units = TextUnit.objects.filter(document_id=document_id)
-        counter = 0
-        with open(temp_name, "w") as out:
-            for text_unit in text_units:
-                segments = Segment.objects.filter(text_unit_id=text_unit.id)
-                for segment in segments:
-                    if segment.target!=None:
-                        counter = counter + len(segment.target)
-                        out.write(segment.target)
-                        if counter>3500:
-                            out.write('\n')
-                            counter = 0
-        file_path = temp_name
-        doc = DocumentToFile.get_object(document_id)
-        task = doc.task_set.first()
-        ser = TaskSerializer(task)
-        task_data = ser.data
-        target_language = language_locale if language_locale else task_data["target_language"]
-        source_lang = task_data['source_language']
-        text_file = open(temp_name, "r")
-        data = text_file.read()
-        text_file.close()
-        consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
-        initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
-        if initial_credit > consumable_credits:
-            if len(data)>5000:
-                celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
-                MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
-                return Response({'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id},status=400)
-                #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
-                #res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
-            else:
-                filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
-                res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
-                os.remove(filename_)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
-            if task.task_transcript_details.first()==None:
-                ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
-            else:
-                t = task.task_transcript_details.first()
-                ser = TaskTranscriptDetailSerializer(t,data={"translated_audio_file":res1,"task":task.id},partial=True)
-            if ser.is_valid():
-                ser.save()
-            print(ser.errors)
-            f2.close()
-            #os.remove(filename_)
-            #os.remove(file_path)
-            return download_file(task.task_transcript_details.last().translated_audio_file.path)
-=======
     def download_audio_file(self,document_user,document_id,voice_gender,language_locale,voice_name):
         res_1 = process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
         if res_1:
             return Response(res_1,status=401)
->>>>>>> origin/v4-merged-production
         else:
             doc = DocumentToFile.get_object(document_id)
             task = doc.task_set.first()
