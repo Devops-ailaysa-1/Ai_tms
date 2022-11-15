@@ -57,7 +57,7 @@ from ai_pay.api_views import po_modify
 # from controller.serializer_mapper import serializer_map
 # from ai_workspace_okapi.api_views import DocumentViewByTask
 from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
-from ai_tm.models import TmxFile
+#from ai_tm.models import TmxFile
 from ai_workspace import forms as ws_forms
 from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write

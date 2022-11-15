@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import TmxFile
+from .models import TmxFileNew
 from .serializers import TmxFileSerializer
 
 from ai_workspace.models import Project, File, Task
@@ -10,7 +10,7 @@ from ai_workspace.models import Project, File, Task
 class TmxUploadView(APIView):
 
     def get(self, request, project_id):
-        files = TmxFile.objects.filter(project_id=project_id).all()
+        files = TmxFileNew.objects.filter(project_id=project_id).all()
         serializer = TmxFileSerializer(files, many=True)
         return Response(serializer.data)
 
@@ -40,7 +40,7 @@ class ProjectAnalysis(APIView):
         # tm_101 = models.IntegerField(null=True, blank=True)
         # raw_total = models.IntegerField(null=True, blank=True)
 
-        tmx_files = TmxFile.objects.filter(project_id=project_id).all()
+        tmx_files = TmxFileNew.objects.filter(project_id=project_id).all()
 
         project_files = File.objects.filter(project=project_id)
 
@@ -51,16 +51,3 @@ class ProjectAnalysis(APIView):
         proj_jobs = Job.objects.filter(project=project_id)
 
         # for tm_job in tm_jobs:
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
-from .models import TmxFile
+from .models import TmxFileNew
 
 
 class TmxFileSerializer(serializers.ModelSerializer):
 
 	class Meta:
-	    model = TmxFile
+	    model = TmxFileNew
 	    fields = ("id", "project", "tmx_file", "job", "filename")
 
 	def save_update(self):

@@ -9,7 +9,7 @@ from ai_workspace.models import Project, Job
 def tmx_file_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tmx", filename)
 
-class TmxFile(models.Model):
+class TmxFileNew(models.Model):
     project = models.ForeignKey(Project, null=False, blank=False, related_name="tmx_file_project",
                                 on_delete=models.CASCADE)
     job = models.ForeignKey(Job, null=True, blank=True, related_name="tmx_file_job", on_delete=models.CASCADE)
@@ -25,7 +25,7 @@ class TmxFile(models.Model):
 
 
 class ProjectAnalysis(models.Model):
-    project = models.ForeignKey(Project, related_name="project_analysis", null=False, blank=False, \
+    project = models.ForeignKey(Project, related_name="projectanalysis", null=False, blank=False, \
                                 on_delete=models.CASCADE)
     new_words = models.IntegerField(null=True, blank=True)
     repetition = models.IntegerField(null=True, blank=True)
