@@ -2,6 +2,15 @@ import os
 import random
 import re
 import string
+from django.db.models.expressions import F
+from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
+from ai_auth.utils import get_unique_pid
+from django.db import models, IntegrityError
+from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth.models import User
+from django.db.models.base import Model
+from django.utils.text import slugify
+from datetime import datetime, date
 from enum import Enum
 
 from django.contrib.auth import settings
@@ -22,6 +31,7 @@ from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 # from integerations.github_.models import ContentFile
 # from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
+<<<<<<< HEAD
 from ai_workspace_okapi.models import Document, Segment
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from .manager import ProjectManager, FileManager, JobManager, \
@@ -31,6 +41,9 @@ from .signals import (create_project_dir, \
                       check_job_file_version_has_same_project, )
 from .utils import create_dirs_if_not_exists, create_task_id
 
+=======
+from ai_workspace_okapi.models import SplitSegment
+>>>>>>> origin/v4-merged-production
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -146,8 +159,9 @@ class Project(models.Model):
         #     objects.filter(ai_user=self.ai_user).count()+1)
 
         if not self.project_name:
+
             #self.project_name = self.ai_project_id
-            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)
+            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
         # print("Project_name---->",self.project_name)
         if self.id:
             project_count = Project.objects.filter(project_name__icontains=self.project_name, \

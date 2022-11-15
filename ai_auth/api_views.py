@@ -84,6 +84,7 @@ from django.contrib import messages
 from ai_auth.Aiwebhooks import update_user_credits
 from allauth.account.signals import email_confirmed
 from ai_auth.signals import send_campaign_email
+#from django_oso.decorators import authorize_request
 
 logger = logging.getLogger('django')
 
@@ -360,6 +361,7 @@ class CustomerSupportCreateView(viewsets.ViewSet):
 
 
 class ContactPricingCreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
     def list(self,request):
         user_id = request.user.id
         if user_id:
@@ -1298,7 +1300,7 @@ class AiUserProfileView(viewsets.ViewSet):
 
 
 class CarrierSupportCreateView(viewsets.ViewSet):
-
+    permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
         job_position = request.POST.get("job_position")
@@ -1325,7 +1327,7 @@ class CarrierSupportCreateView(viewsets.ViewSet):
 
 
 class GeneralSupportCreateView(viewsets.ViewSet):
-
+    permission_classes = [AllowAny]
     def create(self,request):
         name = request.POST.get("name")
         topic = request.POST.get("topic")
@@ -1961,6 +1963,7 @@ def vendor_onboard_complete(request):#######while using social signups##########
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def get_user(request):
     email = request.POST.get('email')
     try:
@@ -1970,6 +1973,7 @@ def get_user(request):
         return Response({'user_exist':False})
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def ai_social_login(request):
     provider = request.POST.get('provider')
     is_vendor = request.POST.get('is_vendor',None)
@@ -2053,6 +2057,7 @@ def load_state(state_id,key=None):
     return user_state
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def ai_social_callback(request):
     state = request.POST.get('state')
     # try:
@@ -2321,3 +2326,9 @@ def stripe_resync_instance(instance):
         print(f"Sync failed: {instance} error :{error}")
     except stripe.error.StripeErrorWithParamCode:
         print(f"Sync failed: {instance}")
+
+
+@api_view(['GET'])
+#@authorize_request
+def oso_test(request):
+    return JsonResponse({"msg":"sucess"},status=200)

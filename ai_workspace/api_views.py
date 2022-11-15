@@ -747,7 +747,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
-            mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+            #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
     # def delete(self, request, pk):
@@ -893,13 +893,13 @@ class TbxFileListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request, project_id):
-        data = {**request.POST.dict(), "tbx_file" : request.FILES.get('tbx_file')}
+        data = {**request.POST.dict(), "tbx_file" : request.FILES.getlist('tbx_file'),'project_id':project_id}
         # data["project_id"] = project_id
-        data.update({'project_id': project_id})
+        #data.update({'project_id': project_id})
         #print("########", data)
         ser_data = TbxFileSerializer.prepare_data(data)
         #print("$$$$$$", ser_data)
-        serializer = TbxFileSerializer(data=ser_data)
+        serializer = TbxFileSerializer(data=ser_data,many=True)
         #print("%%%%%%%%%%", serializer.is_valid())
         if serializer.is_valid(raise_exception=True):
             #print("***VALID***")
@@ -917,7 +917,7 @@ class TbxFileDetail(APIView):
 
     def put(self, request, id):
         tbx_asset = self.get_object(id)
-        tbx_file = request.FILES.get('tbx_file')
+        #tbx_file = request.FILES.get('tbx_file')
         job_id = request.POST.get("job_id", None)
         serializer = TbxFileSerializer(tbx_asset, data={"job" : job_id}, partial=True)
         print("SER VALIDITY-->", serializer.is_valid())
@@ -976,7 +976,7 @@ class TbxTemplateUploadView(APIView):
                 os.remove(os.path.abspath(tbx_file))
                 return Response({'msg':"Template File uploaded and TBX created & uploaded","data":serializer.data})#,"tbx_file":tbx_file})
             else:
-                return Response({'msg':"Something wrong in TBX conversion. Use glossary template to upload terms", "data":{}},
+                return Response({'msg':"Template file seems empty or partially empty. Fill up terms and try again", "data":{}},
                         status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(serializer.errors)
@@ -984,14 +984,15 @@ class TbxTemplateUploadView(APIView):
 @api_view(['GET',])
 def tbx_download(request,tbx_file_id):
     tbx_asset = TbxFile.objects.get(id=tbx_file_id).tbx_file
-    fl_path = tbx_asset.path
-    filename = os.path.basename(fl_path)
-    print(os.path.dirname(fl_path))
-    fl = open(fl_path, 'rb')
-    mime_type, _ = mimetypes.guess_type(fl_path)
-    response = HttpResponse(fl, content_type=mime_type)
-    response['Content-Disposition'] = "attachment; filename=%s" % filename
-    return response
+    return download_file(tbx_asset.path)
+    # fl_path = tbx_asset.path
+    # filename = os.path.basename(fl_path)
+    # print(os.path.dirname(fl_path))
+    # fl = open(fl_path, 'rb')
+    # mime_type, _ = mimetypes.guess_type(fl_path)
+    # response = HttpResponse(fl, content_type=mime_type)
+    # response['Content-Disposition'] = "attachment; filename=%s" % filename
+    # return response
 
 class UpdateTaskCreditStatus(APIView):
 
@@ -1107,6 +1108,7 @@ class TaskView(APIView):
 
 
 @api_view(['POST',])
+@permission_classes([AllowAny])
 def create_project_from_temp_project_new(request):
     ai_user_id = request.POST.get("user_id")
     ai_user = AiUser.objects.get(id=ai_user_id)
@@ -1297,7 +1299,6 @@ class ProjectAnalysisProperty(APIView):
 class ProjectAnalysis(APIView):
 
     permission_classes = [IsAuthenticated]
-
     def get(self, request, project_id):
         return Response(ProjectAnalysisProperty.get(project_id))
 
@@ -1606,14 +1607,15 @@ def tasks_list(request):
 def instruction_file_download(request,instruction_file_id):
     instruction_file = Instructionfiles.objects.get(id=instruction_file_id).instruction_file
     if instruction_file:
-        fl_path = instruction_file.path
-        filename = os.path.basename(fl_path)
-        # print(os.path.dirname(fl_path))
-        fl = open(fl_path, 'rb')
-        mime_type, _ = mimetypes.guess_type(fl_path)
-        response = HttpResponse(fl, content_type=mime_type)
-        response['Content-Disposition'] = "attachment; filename=%s" % filename
-        return response
+        return download_file(instruction_file.path)
+        # fl_path = instruction_file.path
+        # filename = os.path.basename(fl_path)
+        # # print(os.path.dirname(fl_path))
+        # fl = open(fl_path, 'rb')
+        # mime_type, _ = mimetypes.guess_type(fl_path)
+        # response = HttpResponse(fl, content_type=mime_type)
+        # response['Content-Disposition'] = "attachment; filename=%s" % filename
+        # return response
     else:
         return JsonResponse({"msg":"no file associated with it"})
 
@@ -1813,7 +1815,7 @@ def project_download(request,project_id):
 
 
 class ShowMTChoices(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @staticmethod
     def get_lang_code(lang_id):
@@ -2051,7 +2053,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     file_obj = DJFile(f2,name=os.path.basename(final_audio))
     shutil.rmtree(dir)
     shutil.rmtree(dir_1)
-    os.remove(final_audio)
+    #os.remove(final_audio)
     return file_obj,f2
 
 
@@ -2537,9 +2539,11 @@ def task_get_segments(request):
             out =[{'task_id':obj.id,"source":content,"mt_raw":express_obj.mt_raw,"target":express_obj.target_text,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id}]
             return Response({'Res':out})
         else:
-            return Response({'msg':'Insufficient Credits'},status=400)
+            out =[{'task_id':obj.id,"source":content,"mt_raw":None,"target":'','project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":obj.job.project.mt_engine.id}]
+            return Response({'msg':'Insufficient Credits','Res':out})
+            #return Response({'msg':'Insufficient Credits'},status=400)
     else:
-        out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id}]
+        out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id if express_obj.mt_engine else obj.job.project.mt_engine.id}]
         return Response({'Res':out})
 
 

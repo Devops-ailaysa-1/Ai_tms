@@ -73,7 +73,8 @@ urlpatterns+= [
      # path('dj-rest-auth/google/', GoogleLogin.as_view(), name='google_login'),
      path('ai-soc/',api_views.ai_social_login,name='ai_soc'),
      path('ai-soc-callback/',api_views.ai_social_callback,name='ai_soc_callback'),
-     path('user-details/',api_views.UserDetailView.as_view({'post':'create'}),name='user-details')
+     path('user-details/',api_views.UserDetailView.as_view({'post':'create'}),name='user-details'),
+     path('oso-test/',api_views.oso_test,name='oso-test')
      
 
      #path('usersubscribe/<str:price_id>/',api_views.UserSubscriptionCreateView,name="user-subscribe")

@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status,viewsets
 from django.shortcuts import get_object_or_404
+from django.db.models.functions import Lower
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,AllowAny
@@ -65,7 +66,7 @@ class ServiceTypesView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CountriesView(APIView):
-    #permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
@@ -212,7 +213,7 @@ class ContentTypesView(APIView):
             raise Http404
 
     def get(self, request, format=None):
-        queryset = ContentTypes.objects.all()
+        queryset = ContentTypes.objects.all().order_by(Lower('name'))
         serializer = ContentTypesSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -290,7 +291,7 @@ class MtpeEnginesView(APIView):
 
 
 class SupportFilesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -377,7 +378,7 @@ class TimezonesView(APIView):
 
 
 class LanguagesView(APIView):
-
+    permission_classes = [AllowAny,]
     #authentication_classes = [TokenAuthentication]
     #permission_classes = [IsAuthenticated]
 
@@ -629,6 +630,7 @@ def get_plan_details(request):
 
 
 @api_view(['GET',])
+@permission_classes([AllowAny])
 def get_pricing_details(request):
     plans = SubscriptionPricing.objects.all()
     serializer = SubscriptionPricingPageSerializer(plans,many=True)
@@ -680,6 +682,7 @@ class CreditsAddonsCreateView(viewsets.ViewSet):
 #         return Response(serializer.data)
 
 class IndianStatesView(viewsets.ViewSet):
+    permission_classes = [AllowAny,]
     def list(self,request):
         queryset = IndianStates.objects.all()
         serializer = IndianStatesSerializer(queryset,many=True)
