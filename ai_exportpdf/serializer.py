@@ -20,6 +20,6 @@ class PdfFileSerializer(serializers.ModelSerializer):
 class PdfFileStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ai_PdfUpload
-        fields = ('id' ,'pdf_language','counter','pdf_no_of_page' ,'pdf_task_id' ,'docx_url_field','status')
+        fields = ('id' ,'pdf_language','counter','pdf_no_of_page' ,'pdf_task_id' ,'docx_url_field','status' ,'docx_file_name','file_name', 'pdf_file_name')
  
     
