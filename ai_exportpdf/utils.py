@@ -9,7 +9,7 @@ import requests
 import time
 import urllib.request
 from io import BytesIO
-
+import   pdftotext
 from PyPDF2 import PdfFileReader
 from celery import shared_task
 from django.contrib.auth import settings
@@ -22,6 +22,8 @@ from tqdm import tqdm
 from ai_exportpdf.convertio_ocr_lang import lang_code
 from ai_exportpdf.models import Ai_PdfUpload
 from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API
+from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
+from ai_staff.models import Languages
 
 logger = logging.getLogger('django')
 # with open('tesseract_language.json') as fp:
@@ -29,6 +31,7 @@ logger = logging.getLogger('django')
 
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
+google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
 
 def download_file(file_path):
     filename = os.path.basename(file_path)
@@ -77,18 +80,11 @@ def image_ocr_google_cloud_vision(image , inpaint):
             return ""
 
 @shared_task(serializer='json')
-def convertiopdf2docx(serve_path ,language,ocr = None ):
-    '''
-    Args
-    serve_path : pdf path
-    language : pdf language
-    ocr : bool
-    '''
-    fp  =str(settings.MEDIA_ROOT+"/"+ serve_path)
-    txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = serve_path)
-    print("txt_field--->",txt_field_obj , "status" , txt_field_obj.pdf_file)
-    pdf_file_name = serve_path.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
-    
+def convertiopdf2docx(id ,language,ocr = None ):
+    txt_field_obj = Ai_PdfUpload.objects.get(id = id)
+    fp  = txt_field_obj.pdf_file.path
+    # print("txt_field--->",txt_field_obj , "status" , txt_field_obj.pdf_file)
+    pdf_file_name = fp.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
     with open(fp, "rb") as pdf_path:
         encoded_string = base64.b64encode(pdf_path.read())           ##pdf file convert to base64 
     data = {'apikey': CONVERTIO_API ,                          # CONVERTIO_API,           #convertio crediential
@@ -110,28 +106,26 @@ def convertiopdf2docx(serve_path ,language,ocr = None ):
         txt_field_obj.save()
         return  {"result":"Error during input file fetching: couldn't connect to host"} 
     else:
-        print("no error found")
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
         while requests.get(url = get_url).json()['data']['step'] != 'finish':  #####checking status of posted pdf file
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
-            print("converting")
             time.sleep(2)
-        print("finished-conversion")
         file_link = requests.get(url = get_url).json()['data']['output']['url']  ##after finished get converted file from convertio 
-        direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ serve_path).split(".pdf")[0] +".docx" )  #download it from convertio to out server
+        direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" )  #download it from convertio to out server
         txt_field_obj.status = "DONE"
-        txt_field_obj.docx_url_field = str(settings.MEDIA_URL+"/"+serve_path).split(".pdf")[0] +".docx" ##save path to database
+        txt_field_obj.docx_url_field = str(settings.MEDIA_URL+str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" ##save path to database
         txt_field_obj.save()
+        txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         return {"result":"finished_task" }
 
 ##   pdf file url (pdf_path ) ---> get it from serve_path
 ### create data[dict] to send to convertio api 
 #########ocr ######
 @shared_task(serializer='json')
-def ai_export_pdf(serve_path): # , file_language , file_name , file_path
-    pdf_path  = settings.MEDIA_ROOT+"/"+ serve_path
-    txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = serve_path)
+def ai_export_pdf(id): # , file_language , file_name , file_path
+    txt_field_obj = Ai_PdfUpload.objects.get(id = id)
+    pdf_path = txt_field_obj.pdf_file.path
     start = time.time()
     try:
         pdf = PdfFileReader(open(pdf_path,'rb') ,strict=False)
@@ -152,11 +146,12 @@ def ai_export_pdf(serve_path): # , file_language , file_name , file_path
             txt_field_obj.save()
         logger.info('finished ocr and saved as docx ,file_name: ' )
         txt_field_obj.status = "DONE"
-        docx_file_path = str(settings.MEDIA_ROOT+"/"+ serve_path).split(".pdf")[0] +".docx"
+        docx_file_path = str(pdf_path).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
-        txt_field_obj.docx_url_field = str(settings.MEDIA_URL+ serve_path).split(".pdf")[0] +".docx"
+        txt_field_obj.docx_url_field = str(settings.MEDIA_URL+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx"
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2)) 
         txt_field_obj.pdf_api_use = "google-ocr"
+        txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
         return {"result":"finished_task"}
     except BaseException as e:
@@ -178,3 +173,37 @@ def para_creation_from_ocr(texts):
                         text_list.append(b.text)
             para_text.append("".join(text_list)) 
     return "\n".join(para_text)
+
+def file_pdf_check(file_path):
+    text = ""
+    with open(file_path ,"rb") as f:
+        pdf = pdftotext.PDF(f)
+    count = 5 if len(pdf)>=5 else len(pdf)
+    for page in range(count):
+        text+=pdf[page]
+    return "text" if len(text)>=700 else "ocr"
+
+
+def pdf_conversion(id):
+    file_details = Ai_PdfUpload.objects.get(id = id)
+    print("FileDetails------------>",file_details)
+    lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+    pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path)
+    if lang in google_ocr_indian_language:
+        response_result = ai_export_pdf.delay(id)
+        file_details.pdf_task_id = response_result.id
+        file_details.save()
+        logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
+        return response_result.id
+    elif lang in list(lang_codes.keys()):
+        response_result = convertiopdf2docx.delay(id ,\
+                                                  language = lang ,ocr = pdf_text_ocr_check)
+        file_details.pdf_task_id = response_result.id
+        file_details.save()
+        logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name)) 
+        return response_result.id
+    else:
+        return "error"
+    
+        
+ 
