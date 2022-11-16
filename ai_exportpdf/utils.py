@@ -86,7 +86,7 @@ def convertiopdf2docx(serve_path ,language,ocr = None ):
     '''
     fp  =str(settings.MEDIA_ROOT+"/"+ serve_path)
     txt_field_obj = Ai_PdfUpload.objects.get(pdf_file = serve_path)
-    print("txt_field--->",txt_field_obj , "status" , txt_field_obj.pdf_file)
+    # print("txt_field--->",txt_field_obj , "status" , txt_field_obj.pdf_file)
     pdf_file_name = serve_path.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
     
     with open(fp, "rb") as pdf_path:
@@ -110,14 +110,14 @@ def convertiopdf2docx(serve_path ,language,ocr = None ):
         txt_field_obj.save()
         return  {"result":"Error during input file fetching: couldn't connect to host"} 
     else:
-        print("no error found")
+        # print("no error found")
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
         while requests.get(url = get_url).json()['data']['step'] != 'finish':  #####checking status of posted pdf file
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
-            print("converting")
+            # print("converting")
             time.sleep(2)
-        print("finished-conversion")
+        # print("finished-conversion")
         file_link = requests.get(url = get_url).json()['data']['output']['url']  ##after finished get converted file from convertio 
         direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ serve_path).split(".pdf")[0] +".docx" )  #download it from convertio to out server
         txt_field_obj.status = "DONE"
