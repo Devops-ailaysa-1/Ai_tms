@@ -18,9 +18,9 @@ def extract(query, choices, match_type='trigram', score_cutoff=0, limit=5):
     """
     try:
         if match_type == 'trigram':
-            match_type = algorithims.trigram
+            match_type = algorithms.trigram
         elif match_type == 'levenshtein':
-            match_type = algorithims.levenshtein
+            match_type = algorithms.levenshtein
         # elif match_type == 'cosine':
         #     match_type = algorithims.cosine
         # elif match_type == 'jaro_winkler':
@@ -43,7 +43,6 @@ def extract(query, choices, match_type='trigram', score_cutoff=0, limit=5):
         return heapq.nlargest(limit, results, key=lambda i: i[1]) if limit is not None else \
             sorted(results, key=lambda i: i[1], reverse=True)
 
-        # return results
 
     except:
         return None
