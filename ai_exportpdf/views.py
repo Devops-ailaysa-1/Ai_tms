@@ -73,9 +73,8 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
                 file_id = serializer.data.get('id')
                 generate_conversion_id = pdf_conversion(file_id)
                 celery_status_id[file_id] = generate_conversion_id
-                return Response(celery_status_id)
-            else:
-                return Response(serializer.errors)
+        return Response(celery_status_id)
+ 
  
                 
     
