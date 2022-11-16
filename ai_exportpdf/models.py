@@ -29,5 +29,5 @@ class Ai_PdfUpload(models.Model):
             count = Ai_PdfUpload.objects.filter(pdf_file_name__contains=self.pdf_file_name).count()
         print(count)
         if count!=0:
-            self.pdf_file_name = str(self.pdf_file_name) + "(" + str(count) + ")"
+            self.pdf_file_name = str(self.pdf_file_name).split(".pdf")[0] + "(" + str(count) + ").pdf" 
         return super().save()
