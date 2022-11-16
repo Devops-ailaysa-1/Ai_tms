@@ -39,6 +39,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
     page_size = 20
     serializer_class = PdfFileSerializer
     search_fields = ['pdf_file_name' , 'status']
+    filterset_fields = ['status','pdf_language']
     #filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
     
     def list(self, request):
@@ -65,16 +66,16 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
     
     def create(self, request):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
-        file_language = request.POST.getlist('file_language')
+        file_language = request.POST.get('file_language')
         # format = request.POST.get('format')
         user = request.user.id
         response_result = {}
         celery_status_id = {}
-        for pdf_file_lis ,lang in zip(pdf_request_file , file_language):
+        for pdf_file_lis in  pdf_request_file :
             serve_path = str(Ai_PdfUpload.objects.all().filter(user_id = user).last().pdf_file)
             pdf_file_name = settings.MEDIA_ROOT+"/"+serve_path
             pdf_text_ocr_check = file_pdf_check(pdf_file_name)
-            lang = Languages.objects.get(id=int(lang)).language.lower()
+            lang = Languages.objects.get(id=int(file_language)).language.lower()
             if pdf_file_lis.name.endswith('.pdf') and lang: 
                 Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_file_lis , 
                                             pdf_file_name = str(pdf_file_lis) , 
