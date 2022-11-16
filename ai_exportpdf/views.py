@@ -72,14 +72,14 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         response_result = {}
         celery_status_id = {}
         for pdf_file_lis in  pdf_request_file :
-            serve_path = str(Ai_PdfUpload.objects.all().filter(user_id = user).last().pdf_file)
-            pdf_file_name = settings.MEDIA_ROOT+"/"+serve_path
-            pdf_text_ocr_check = file_pdf_check(pdf_file_name)
+
             lang = Languages.objects.get(id=int(file_language)).language.lower()
             if pdf_file_lis.name.endswith('.pdf') and lang: 
-                Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_file_lis , 
-                                            pdf_file_name = str(pdf_file_lis) , 
+                Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_file_lis , pdf_file_name = str(pdf_file_lis) , 
                                             pdf_language =lang.lower()).save() 
+                serve_path = str(Ai_PdfUpload.objects.all().filter(user_id = user).last().pdf_file)
+                pdf_file_name = settings.MEDIA_ROOT+"/"+serve_path
+                pdf_text_ocr_check = file_pdf_check(pdf_file_name)
                 if lang in google_ocr_indian_language:  ###this may throw false if multiple language
                     response_result = ai_export_pdf.delay(serve_path)        #, file_language , pdf_file_name_only , instance_path
                     file_upload = Ai_PdfUpload.objects.get(pdf_file = serve_path) 
