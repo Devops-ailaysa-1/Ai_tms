@@ -19,15 +19,17 @@ class Ai_PdfUpload(models.Model):
     counter = models.IntegerField(null=True, blank=True )
     status = models.CharField(max_length=200 , null=True, blank=True)
     slug = models.SlugField(default="", blank=True, null=True, db_index=True)
+    docx_file_name = models.CharField(max_length=200 , null=True, blank=True)
+    file_name = models.CharField(max_length=200 , null=True, blank=True)
 
 
 
     def save(self, *args, **kwargs):
         if self.id:
-            count = Ai_PdfUpload.objects.filter(pdf_file_name__contains=self.pdf_file_name).exclude(id=self.id).count()
+            count = Ai_PdfUpload.objects.filter(file_name__contains=self.file_name).exclude(id=self.id).count()
         else:
-            count = Ai_PdfUpload.objects.filter(pdf_file_name__contains=self.pdf_file_name).count()
+            count = Ai_PdfUpload.objects.filter(file_name__contains=self.file_name).count()
         print(count)
         if count!=0:
-            self.pdf_file_name = str(self.pdf_file_name).split(".pdf")[0] + "(" + str(count) + ").pdf" 
+            self.pdf_file_name = str(self.file_name).split(".pdf")[0] + "(" + str(count) + ").pdf" 
         return super().save()
