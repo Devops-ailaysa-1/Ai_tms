@@ -1,6 +1,6 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import re
+import re,json
 from .models import TmxFileNew
 from .serializers import TmxFileSerializer
 from ai_workspace.serializers import TaskSerializer
@@ -8,6 +8,8 @@ from ai_workspace.models import Project, File, Task
 from ai_tm import match
 from translate.storage.tmx import tmxfile
 from collections import Counter
+from rest_framework.decorators import api_view
+from .models import WordCountGeneral,WordCountTmxDetail,UserDefinedRate
 
 def get_json_file_path(task):
     source_file_path = TaskSerializer(task).data["source_file_path"]
@@ -39,6 +41,7 @@ class TmxUploadView(APIView):
 
 
 def get_tm_analysis(doc_data,job):
+        #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")
         sources = []
         tm_lists = []
@@ -50,7 +53,7 @@ def get_tm_analysis(doc_data,job):
         for para in text_data.values():
             for segment in para:
                 sources.append(segment["source"].strip())
-        #c = Counter(sources)
+        c = Counter(sources)
         files = TmxFileNew.objects.filter(job_id=job.id).all()
         print("Files---------->",files)
         if files:
@@ -62,27 +65,32 @@ def get_tm_analysis(doc_data,job):
                 for node in tm_file.unit_iter():
                     tm_lists.append(remove_tags(node.source))
             print("Tm_Lists--------->",tm_lists)
-            for i,j in enumerate(sources):
-                #repeat = True if c[j]>1 else False
+            unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
+            for i,j in enumerate(unrepeated):
+                repeat = c[j]-1 if c[j]>1 else 0
                 tt = match.extractOne(j,tm_lists)
-                final.append({'sent':j,'ratio':tt[1],'index':i,'word_count':len(j.split())})#,'repeat':repeat})
+                final.append({'sent':j,'ratio':tt[1],'index':i,'word_count':len(j.split()),'repeat':repeat})
             print(final)
             return final,files_list
         else:
             return None,files_list
 
-def get_word_count(tm_analysis):
-    tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repeatation =0,0,0,0,0,0,0,0,0
+def get_word_count(tm_analysis,project,task):
+    tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repetition =0,0,0,0,0,0,0,0,0
     for i,j in enumerate(tm_analysis):
         if i>0:
             previous = tm_analysis[i-1]
+            pre_ratio = previous.get('ratio')
+        else:pre_ratio = None
         if i<len(tm_analysis)-1:
             next_ = tm_analysis[i+1]
+            next_ratio = next_.get('ratio')
+        else:next_ratio = None
         ratio_ = j.get('ratio')*100
         if ratio_ == 100:
-            if ratio_ == previous.get('ratio') or ratio_ == next_.get('ratio'):
+            if ratio_ == pre_ratio  or ratio_ == next_ratio:########need to check index key too
                 tm_101+=j.get('word_count')
-            elif ratio_ == previous.get('ratio') and ratio_ == next_.get('ratio'):
+            elif ratio_ == pre_ratio and ratio_ == next_ratio:
                 tm_102+=j.get('word_count')
             else:
                 tm_100+=j.get('word_count')
@@ -96,47 +104,74 @@ def get_word_count(tm_analysis):
             tm_50_74+=j.get('word_count')
         else:
             new+=j.get('word_count')
-    wc = WordCountGeneral.objects.create(project=project,tasks=task,\
+        if j.get('repeat'):
+            repetition+=j.get('word_count')*j.get('repeat')
+    wc = WordCountGeneral.objects.create(project_id=project.id,tasks_id=task.id,\
         tm_100 = tm_100,tm_95_99 = tm_95_99,tm_85_94 = tm_85_94,tm_75_84 = tm_75_84,\
-        tm_50_74 = tm_50_74,tm_101 = tm_101,tm_102 = tm_102,new_words = new)
+        tm_50_74 = tm_50_74,tm_101 = tm_101,tm_102 = tm_102,new_words = new,repetition=repetition)
     return wc
-    # return {'tm_100':tm_100,'tm_95_99':tm_95_99,'tm_85_94':tm_85_94,\
-    #         'tm_75_84':tm_75_84,'tm_50_74':tm_50_74,'tm_101':tm_101,\
-    #         'tm_102':tm_102,'new':new}
+
 
 
 # class ProjectAnalysis(APIView):
 #
 #     def get(self, request, project_id):
+@api_view(['GET',])
+def get_project_analysis(request,project_id):
 
-def get_project_analysis(project_id):
+        tasks,res = [],[]
+
+        proj_wwc = 0
 
         proj = Project.objects.filter(id=project_id).first()
 
         user = proj.ai_user
 
-        proj_tasks = proj.get_tasks
+        rates = UserDefinedRate.objects.filter(user = user).last()
+        if not rates:
+            rates = UserDefinedRate.objects.filter(is_default = True).first()
 
-        for task in proj_tasks:
+        for _task in proj.get_mtpe_tasks:
+            if _task.task_wc_general.last() == None:
+                tasks.append(_task)
 
-            file_path = get_json_file_path(task)
+        #proj_tasks = proj.get_tasks
+        if tasks:
 
-            doc_data = json.load(open(file_path))
+            for task in tasks:
 
-            tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
+                file_path = get_json_file_path(task)
 
-            print("Tm-------------->",tm_analysis)
+                doc_data = json.load(open(file_path))
 
-            if tm_analysis:
-                word_count = get_word_count(tm_analysis,project,task)
-            else:
-                word_count = WordCountGeneral.objects.create(project=project,tasks=task,new_words=doc_data.get('total_word_count'))
-            [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file=i) for i in files_list]
+                print("DocData------->",doc_data)
+                doc_data = json.loads(doc_data)
 
-            rates = UserDefinedRate.objects.filter(user = user).first()
-            if not rates:
-                rates = UserDefinedRate.objects.filter(is_default = True).first()
-            
+                tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
+
+                print("Tm-------------->",tm_analysis)
+
+                if tm_analysis:
+                    word_count = get_word_count(tm_analysis,proj,task)
+                else:
+                    word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
+                                new_words=doc_data.get('total_word_count'))
+                [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i) for i in files_list]
+
+
+        for task in  proj.get_mtpe_tasks:
+            word_count = task.task_wc_general.last()
+
+            WWC = (word_count.new_words * 100 + word_count.tm_100 * rates.tm_100_percentage + \
+                  word_count.tm_95_99 * rates.tm_95_99_percentage + word_count.tm_85_94 * rates.tm_85_94_percentage +\
+                  word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
+                  word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage)/100
+            proj_wwc += WWC
+            print("WWC---------------->",WWC)
+            res.append({'task_id':task.id,'WWC':round(WWC),'total':round(WWC)*rates.base_rate})
+
+        return Response({'project_WeightedWordCount':round(proj_wwc),'base_rate':rates.base_rate,'total':round(proj_wwc)*rates.base_rate,'task_WeightedWordCount':res})
+
 
             #     for i,j in enumerate(tm_analysis):
             #         if i>0:
