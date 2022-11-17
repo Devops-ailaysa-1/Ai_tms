@@ -62,8 +62,9 @@ class UserDefinedRate(models.Model):
 class WordCountTmxDetail(models.Model):
     word_count = models.ForeignKey(WordCountGeneral, related_name="wc_general", null=False, blank=False, \
                                 on_delete=models.CASCADE)
-    tmx_file = models.ForeignKey(TmxFileNew, null=False, blank=False, related_name="tmx_file_included",
-                                on_delete=models.CASCADE)
+    tmx_file = models.ForeignKey(TmxFileNew, null=True, blank=True, related_name="tmx_file_included",
+                                on_delete=models.SET_NULL)
+    tmx_file_obj_id = models.IntegerField(null=True, blank=True)
 # class WordCountGeneral(models.Model):
 #     project = models.ForeignKey(Project, related_name="project_wc_general", null=False, blank=False, \
 #                                 on_delete=models.CASCADE)

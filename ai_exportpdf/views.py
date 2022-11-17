@@ -5,7 +5,7 @@ from tabnanny import check
 from ai_auth import serializers
 from ai_exportpdf.models import Ai_PdfUpload
 from django.http import   JsonResponse
-#import  os  ,logging , pdftotext
+import  os  ,logging , pdftotext
 from ai_auth.models import AiUser
 from rest_framework import viewsets
 from django.shortcuts import get_object_or_404
