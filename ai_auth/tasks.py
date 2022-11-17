@@ -5,6 +5,7 @@ import celery,re,pickle, copy
 import djstripe
 logger = get_task_logger(__name__)
 from celery.decorators import task
+from celery import shared_task
 from datetime import date
 from django.utils import timezone
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
@@ -26,7 +27,8 @@ from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
 from datetime import datetime, timedelta
 from django.db.models import DurationField, F, ExpressionWrapper,Q
-
+from celery_progress.backend import ProgressRecorder
+from time import sleep
 
 extend_mail_sent= 0
 
@@ -333,23 +335,36 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
     logger.info("mt_raw wrriting completed")
 
 
-@task
-def mt_only(project_id,token):
+# @task
+@shared_task(bind=True)
+def mt_only(self, project_id,token):
+# def mt_only(project_id, token):
     from ai_workspace.models import Project,Task
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
-    print("celerytask-------->",mt_only.request.id)
-    print("PRE TRANSLATE-------------->",pr.pre_translate)
+
+    progress_recorder = ProgressRecorder(self)
+    # progress_recorder = ProgressRecorder()
+
+
     if pr.pre_translate == True:
         tasks = pr.get_mtpe_tasks
-        print("TASKS Inside CELERY----->",tasks)
-        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
+
+        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,\
+                                               celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
+        j = 1
         for i in pr.get_mtpe_tasks:
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             doc = DocumentSerializerV2(document).data
-            print(doc)
+            sleep(20)
+
+            progress_recorder.set_progress(j, len(pr.get_mtpe_tasks), f'MT ongoing for {i}')
+            j += 1
+
             MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+
+    return "Finished Pre-translation"
 
 @task
 def write_doc_json_file(doc_data, task_id):
@@ -380,7 +395,7 @@ def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,lang
     #tt = text_to_speech_task(obj,language,gender,user,voice_name)
     tt = long_text_source_process(consumable_credits,user,file_path,obj,language,voice_gender,voice_name)
     #MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=2,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
-    print("TT-------------------->",tt)
+
     logger.info("Text to speech called")
     # if tt.status_code == 400:
     #     return tt.status_code
@@ -398,18 +413,6 @@ def google_long_text_file_process_cel(consumable_credits,document_user_id,file_p
     logger.info("Text to speech document called")
 
 
-
-    # host = os.environ.get("HOST")
-    # #Base_Url = "http://127.0.0.1:8089/"
-    # #DocumentViewByTask.as_view()(self.request)
-
-        # headers = {'Authorization':'Bearer '+token}
-        # print(headers)
-#task = DocumentViewByTask.get_object(task_id=i)
-            # print("Begin-------------->",i.id)
-            # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
-            # res = requests.request("GET", url, headers=headers)
-            # print("doc--->",res.text)
 @task
 def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,user_id,hertz):
     from ai_workspace.api_views import transcribe_long_file
@@ -441,7 +444,7 @@ def pre_translate_update(task_id):
     split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
 
     final_segments = list(chain(segments, merge_segments, split_segments))
-    print("FinalSegments-------------->",final_segments)
+
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
 

@@ -23,7 +23,8 @@ from ai_staff.models import Languages
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
-#logger = logging.getLogger('django')
+from django.conf import settings
+logger = logging.getLogger('django')
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
 
 class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
@@ -76,7 +77,28 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         return Response(celery_status_id)
 
 
+    def retrieve(self, request, pk):
+        queryset = Ai_PdfUpload.objects.get(id = pk)
+        serializer = PdfFileSerializer(queryset)
+        return Response(serializer.data)
 
+    def destroy(self,request,pk):
+        try:
+            obj = Ai_PdfUpload.objects.get(id=pk)
+            obj.delete()
+            return Response({'msg':'deleted successfully'},status=200)
+        except:
+            return Response({'msg':'deletion unsuccessfull'},status=400)
+
+
+@api_view(['GET',])
+def docx_file_download(request,id):
+    pdf_doc_file = Ai_PdfUpload.objects.get(id=id).pdf_file.path
+    if pdf_doc_file:
+        docx_file_path = str(pdf_doc_file).split(".pdf")[0] +".docx"
+        return download_file(docx_file_path)
+    else:
+        return JsonResponse({"msg":"no file associated with it"})
 
     # def create(self, request):
     #     pdf_request_file = request.FILES.getlist('pdf_request_file')
@@ -120,25 +142,3 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
     #         else:
     #             celery_status_id[serve_path] = "need_pdf_file"
     #     return JsonResponse({'result':celery_status_id} , safe=False)
-
-    def retrieve(self, request, pk):
-        queryset = Ai_PdfUpload.objects.get(id = pk)
-        serializer = PdfFileSerializer(queryset)
-        return Response(serializer.data)
-
-    def destroy(self,request,pk):
-        try:
-            obj = Ai_PdfUpload.objects.get(id=pk)
-            obj.delete()
-            return Response({'msg':'deleted successfully'},status=200)
-        except:
-            return Response({'msg':'deletion unsuccessfull'},status=400)
-
-
-@api_view(['GET',])
-def docx_file_download(request,id):
-    pdf_doc_file = Ai_PdfUpload.objects.get(id=id).pdf_file
-    if pdf_doc_file:
-        return download_file(pdf_doc_file.path)
-    else:
-        return JsonResponse({"msg":"no file associated with it"})
