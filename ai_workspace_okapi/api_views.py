@@ -59,6 +59,8 @@ logger = logging.getLogger('django')
 
 spring_host = os.environ.get("SPRING_HOST")
 
+END_POINT= settings.END_POINT
+
 class IsUserCompletedInitialSetup(permissions.BasePermission):
 
     def has_permission(self, request, view):

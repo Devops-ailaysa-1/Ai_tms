@@ -58,6 +58,7 @@ urlpatterns = [
     # path("nlp/", include("ai_nlp.urls")),
 
     path("aipay/", include("ai_pay.urls")),
+    path('exportpdf/',include("ai_exportpdf.urls")),
     path("qa/", include("ai_qa.urls")),
     path("celery-progress/", include("celery_progress.urls")),
    # path('__debug__/', include('debug_toolbar.urls')),
