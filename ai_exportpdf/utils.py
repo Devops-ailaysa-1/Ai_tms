@@ -83,15 +83,10 @@ def image_ocr_google_cloud_vision(image , inpaint):
 def convertiopdf2docx(id ,language,ocr = None ):
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     fp  = txt_field_obj.pdf_file.path
-    # print("txt_field--->",txt_field_obj , "status" , txt_field_obj.pdf_file)
     pdf_file_name = fp.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
     with open(fp, "rb") as pdf_path:
-        encoded_string = base64.b64encode(pdf_path.read())           ##pdf file convert to base64 
-    data = {'apikey': CONVERTIO_API ,                          # CONVERTIO_API,           #convertio crediential
-                'input': 'base64',  #['url ,raw,base64]
-                'file': encoded_string.decode('utf-8'),
-                'filename':   pdf_file_name,
-                'outputformat': 'docx' }
+        encoded_string = base64.b64encode(pdf_path.read())   
+    data = {'apikey': CONVERTIO_API ,'input': 'base64', 'file': encoded_string.decode('utf-8'),'filename':   pdf_file_name,'outputformat': 'docx' }
     if ocr == "ocr":
         language = language.split(",")                    #if ocr is True and selecting multiple language 
         language_convertio = [lang_code(i) for i in language]
@@ -107,20 +102,18 @@ def convertiopdf2docx(id ,language,ocr = None ):
         return  {"result":"Error during input file fetching: couldn't connect to host"} 
     else:
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
-        while requests.get(url = get_url).json()['data']['step'] != 'finish':  #####checking status of posted pdf file
+        while requests.get(url = get_url).json()['data']['step'] != 'finish':  
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
             time.sleep(2)
         file_link = requests.get(url = get_url).json()['data']['output']['url']  ##after finished get converted file from convertio 
-        direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" )  #download it from convertio to out server
+        direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" )  
         txt_field_obj.status = "DONE"
         txt_field_obj.docx_url_field = str(settings.MEDIA_URL+str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" ##save path to database
-        txt_field_obj.save()
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
+        txt_field_obj.save()
         return {"result":"finished_task" }
 
-##   pdf file url (pdf_path ) ---> get it from serve_path
-### create data[dict] to send to convertio api 
 #########ocr ######
 @shared_task(serializer='json')
 def ai_export_pdf(id): # , file_language , file_name , file_path
@@ -148,7 +141,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.status = "DONE"
         docx_file_path = str(pdf_path).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
-        txt_field_obj.docx_url_field = str(settings.MEDIA_URL+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx"
+        txt_field_obj.docx_url_field = docx_file_path
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2)) 
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
