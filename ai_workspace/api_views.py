@@ -679,6 +679,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 pr = Project.objects.get(id=serializer.data.get('id'))
                 if pr.pre_translate == True:
                     mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
+                    # mt_only.delay((serializer.data.get('id'), str(request.auth)), )
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
@@ -690,6 +691,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 pr = Project.objects.get(id=serlzr.data.get('id'))
                 if pr.pre_translate == True:
                     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                    # mt_only.delay((serlzr.data.get('id'), str(request.auth)), )
                 #check_dict.apply_async(serlzr.data,)
                 return Response(serlzr.data, status=201)
             return Response(serlzr.errors, status=409)
@@ -697,7 +699,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def update(self, request, pk, format=None):
         instance = self.get_object()
         ser = self.get_serializer_class()
-        print("ser----------->",ser)
         task_id=request.POST.get('task_id',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
