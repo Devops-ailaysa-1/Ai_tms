@@ -192,28 +192,42 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # Writing first 100 segments in DB
 
         doc_data = json.load(open(json_file_path))
-        doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-        serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                 "file": task.file.id, "job": task.job.id,
-                                                 }, ))
-        if serializer.is_valid(raise_exception=True):
-            document = serializer.save()
-            task.document = document
-            task.save()
 
-        # Writing remaining segment using task
-        doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
+        if doc_data['total_word_count'] >= 50000:
 
-        if doc_data_task["text"] != {}:
+            print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
 
-            # For celery task
-            serializer_task = DocumentSerializerV2(data={**doc_data_task, \
-                                                         "file": task.file.id, "job": task.job.id, }, )
+            doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
+            serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                     "file": task.file.id, "job": task.job.id,
+                                                     }, ))
+            if serializer.is_valid(raise_exception=True):
+                document = serializer.save()
+                task.document = document
+                task.save()
 
-            validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
-                                                                     "file": task.file.id, "job": task.job.id, })
-            task_write_data = json.dumps(validated_data, default=str)
-            write_segments_to_db.apply_async((task_write_data, document.id), )
+            # Writing remaining segment using task
+            doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
+
+            if doc_data_task["text"] != {}:
+
+                # For celery task
+                serializer_task = DocumentSerializerV2(data={**doc_data_task, \
+                                                             "file": task.file.id, "job": task.job.id, }, )
+
+                validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
+                                                                         "file": task.file.id, "job": task.job.id, })
+                task_write_data = json.dumps(validated_data, default=str)
+                write_segments_to_db.apply_async((task_write_data, document.id), )
+        else:
+            print("NOT USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
+            serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                     "file": task.file.id, "job": task.job.id,
+                                                     }, ))
+            if serializer.is_valid(raise_exception=True):
+                document = serializer.save()
+                task.document = document
+                task.save()
 
         return document
 
@@ -248,7 +262,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
-            print("-------------------------File Already Processed-------------------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -290,7 +303,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
                 if doc.status_code == 200:
                     doc_data = doc.json()
-                    print("DocData----------------->",doc_data)
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
 

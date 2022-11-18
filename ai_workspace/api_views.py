@@ -1195,27 +1195,6 @@ class ProjectAnalysisProperty(APIView):
         else:
             return ProjectAnalysisProperty.get_data_from_analysis(project)
 
-    # @staticmethod
-    # def get_tm_analysis(doc_data, project_id):
-    #
-    #     text_data = doc_data.get("text")
-    #     sources = []
-    #
-    #     for para in text_data.values():
-    #         for segment in para:
-    #             sources.append(segment["source"].strip())
-    #
-    #     _file = TmxFile.objects.filter(project_id=project_id).first()
-    #
-    #     with open(_file.tmx_file, 'rb') as fin:
-    #         tm_file = tmxfile(fin, 'en', 'ta')
-    #
-    #     for node in tm_file.unit_iter():
-    #         print("Source ---> ", node.source)
-    #         print("Source ---> ", node.target)
-    #
-    #     return sources
-
     @staticmethod
     def analyse_project(project_id):
         project = Project.objects.get(id=project_id)
@@ -1247,8 +1226,6 @@ class ProjectAnalysisProperty(APIView):
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
-
-                        # match_data = ProjectAnalysisProperty.get_tm_analysis(doc_data, project_id)
 
                         # if doc_data["total_word_count"] >= 50000:
 
