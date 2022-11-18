@@ -14,6 +14,8 @@ class TmxFileSerializer(serializers.ModelSerializer):
 
 	@staticmethod
 	def prepare_data(data):
+		if not ('job_id') in data:
+			raise serializers.ValidationError("Required fields missing!!!")
 		if not (("project_id" in data) and ("tmx_file" in data)) :
 			raise serializers.ValidationError("Required fields missing!!!")
 		project = data["project_id"]
@@ -33,9 +35,12 @@ class TmxFileSerializer(serializers.ModelSerializer):
 
 
 class WordCountGeneralSerializer(serializers.ModelSerializer):
+	#task_file = serializers.SerializerMethodField()
+	#task_lang_pair = serializers.SerializerMethodField()
 	class Meta:
 		model = WordCountGeneral
-		fields = "__all__"
+		fields = ('project','task','new_words','repetition','tm_100','tm_95_99',\
+					'tm_85_94','tm_75_84','tm_50_74','tm_101','tm_102','raw_total',)
 
 class UserDefinedRateSerializer(serializers.ModelSerializer):
 	class Meta:

@@ -50,14 +50,14 @@ class UserDefinedRate(models.Model):
                                      on_delete=models.CASCADE)
     base_rate = models.DecimalField(max_digits=5,decimal_places=2,blank=True, null=True)
     #currency
-    tm_100_percentage = models.IntegerField(null=True,blank=True,default=25)
-    tm_95_99_percentage = models.IntegerField(null=True,blank=True,default=35)
-    tm_85_94_percentage = models.IntegerField(null=True,blank=True,default=50)
-    tm_75_84_percentage = models.IntegerField(null=True,blank=True,default=65)
-    tm_50_74_percentage = models.IntegerField(null=True,blank=True,default=75)
-    tm_101_percentage = models.IntegerField(null=True,blank=True,default=25)#Need to confirm
-    tm_102_percentage = models.IntegerField(null=True,blank=True,default=25)#Need to confirm
-    tm_repetition_percentage = models.IntegerField(null=True,blank=True,default=25)
+    tm_100_percentage = models.IntegerField(null=True,blank=True,default=30)
+    tm_95_99_percentage = models.IntegerField(null=True,blank=True,default=60)
+    tm_85_94_percentage = models.IntegerField(null=True,blank=True,default=60)
+    tm_75_84_percentage = models.IntegerField(null=True,blank=True,default=60)
+    tm_50_74_percentage = models.IntegerField(null=True,blank=True,default=100)
+    tm_101_percentage = models.IntegerField(null=True,blank=True,default=30)#Need to confirm
+    tm_102_percentage = models.IntegerField(null=True,blank=True,default=30)#Need to confirm
+    tm_repetition_percentage = models.IntegerField(null=True,blank=True,default=30)
     is_default = models.BooleanField(default=False)
 
 class WordCountTmxDetail(models.Model):
