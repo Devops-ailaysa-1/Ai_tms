@@ -148,9 +148,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             raise ValueError("OKAPI request fields not setted correctly!!!")
 
     @staticmethod
-    def trim_segments(doc_json_data):
+    def trim_segments(doc_data):
 
-        doc_data = json.loads(doc_json_data)
+        #doc_data = json.loads(doc_json_data)
         text = doc_data["text"]
         count = 0
         needed_keys = []
@@ -193,9 +193,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         doc_data = json.load(open(json_file_path))
 
+        doc_data = json.loads(doc_data)
+
         if doc_data['total_word_count'] >= 50000:
 
-            print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
+            #print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
 
             doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
             serializer = (DocumentSerializerV2(data={**doc_data, \
@@ -220,7 +222,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task_write_data = json.dumps(validated_data, default=str)
                 write_segments_to_db.apply_async((task_write_data, document.id), )
         else:
-            print("NOT USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
+            #print("NOT USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
             serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
                                                      }, ))
