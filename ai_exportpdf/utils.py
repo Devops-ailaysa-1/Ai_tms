@@ -85,29 +85,29 @@ def convertiopdf2docx(id ,language,ocr = None ):
     fp  = txt_field_obj.pdf_file.path
     pdf_file_name = fp.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
     with open(fp, "rb") as pdf_path:
-        encoded_string = base64.b64encode(pdf_path.read())   
+        encoded_string = base64.b64encode(pdf_path.read())
     data = {'apikey': CONVERTIO_API ,'input': 'base64', 'file': encoded_string.decode('utf-8'),'filename':   pdf_file_name,'outputformat': 'docx' }
     if ocr == "ocr":
-        language = language.split(",")                    #if ocr is True and selecting multiple language 
+        language = language.split(",")                    #if ocr is True and selecting multiple language
         language_convertio = [lang_code(i) for i in language]
         ocr_option =  { "options": { "ocr_enabled": True, "ocr_settings": { "langs": [language_convertio]}}}
-        data = {**data , **ocr_option}     #merge dict 
+        data = {**data , **ocr_option}     #merge dict
         txt_field_obj.pdf_api_use = "convertio_ocr"
     else:
         txt_field_obj.pdf_api_use = "convertio"
-    response_status = requests.post(url='https://api.convertio.co/convert' , data=json.dumps(data)).json() ###   posting for conversion to convert io 
-    if response_status['status'] == 'error': 
+    response_status = requests.post(url='https://api.convertio.co/convert' , data=json.dumps(data)).json() ###   posting for conversion to convert io
+    if response_status['status'] == 'error':
         txt_field_obj.status = "ERROR"
         txt_field_obj.save()
-        return  {"result":"Error during input file fetching: couldn't connect to host"} 
+        return  {"result":"Error during input file fetching: couldn't connect to host"}
     else:
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
-        while requests.get(url = get_url).json()['data']['step'] != 'finish':  
+        while requests.get(url = get_url).json()['data']['step'] != 'finish':
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
             time.sleep(2)
-        file_link = requests.get(url = get_url).json()['data']['output']['url']  ##after finished get converted file from convertio 
-        direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" )  
+        file_link = requests.get(url = get_url).json()['data']['output']['url']  ##after finished get converted file from convertio
+        direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" )
         txt_field_obj.status = "DONE"
         txt_field_obj.docx_url_field = str(settings.MEDIA_URL+str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" ##save path to database
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
@@ -123,7 +123,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
     try:
         pdf = PdfFileReader(open(pdf_path,'rb') ,strict=False)
         pdf_len = pdf.getNumPages()
-        no_of_page_processed_counting = 0    
+        no_of_page_processed_counting = 0
         txt_field_obj.pdf_no_of_page = int(pdf_len)
         doc = docx.Document()
         for i in tqdm(range(1,pdf_len+1)):
@@ -131,7 +131,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
             text = image_ocr_google_cloud_vision(image , inpaint=False)
             text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
-            doc.add_paragraph(text) 
+            doc.add_paragraph(text)
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
@@ -142,7 +142,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         docx_file_path = str(pdf_path).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
         txt_field_obj.docx_url_field = docx_file_path
-        txt_field_obj.pdf_conversion_sec = int(round(end-start,2)) 
+        txt_field_obj.pdf_conversion_sec = int(round(end-start,2))
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
@@ -152,19 +152,19 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         logger.error(str(e))
         txt_field_obj.status = "ERROR"
         txt_field_obj.save()
-        return {'result':"something went wrong"}  
+        return {'result':"something went wrong"}
 
 def para_creation_from_ocr(texts):
     para_text = []
     for i in  texts.pages:
-        for j in i.blocks: 
+        for j in i.blocks:
             for k in j.paragraphs:
                 text_list = []
                 for a in  k.words:
                     text_list.append(" ")
                     for b in a.symbols:
                         text_list.append(b.text)
-            para_text.append("".join(text_list)) 
+            para_text.append("".join(text_list))
     return "\n".join(para_text)
 
 def file_pdf_check(file_path):
@@ -193,10 +193,7 @@ def pdf_conversion(id):
                                                   language = lang ,ocr = pdf_text_ocr_check)
         file_details.pdf_task_id = response_result.id
         file_details.save()
-        logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name)) 
+        logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name))
         return response_result.id
     else:
         return "error"
-    
-        
- 

@@ -27,6 +27,7 @@ from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
 from datetime import datetime, timedelta
 from django.db.models import DurationField, F, ExpressionWrapper,Q
+from translate.storage.tmx import tmxfile
 from celery_progress.backend import ProgressRecorder
 from time import sleep
 
