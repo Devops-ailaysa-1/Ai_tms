@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 from .models import TmxFileNew, WordCountGeneral, UserDefinedRate
 
-from  ai_workspace.models import Project
 
 class TmxFileSerializer(serializers.ModelSerializer):
 
@@ -15,15 +14,14 @@ class TmxFileSerializer(serializers.ModelSerializer):
 
 	@staticmethod
 	def prepare_data(data):
+		if not ('job_id') in data:
+			raise serializers.ValidationError("Required fields missing!!!")
 		if not (("project_id" in data) and ("tmx_file" in data)) :
 			raise serializers.ValidationError("Required fields missing!!!")
 		project = data["project_id"]
-		pr = Project.objects.get(id=project)
 		job = data.get("job_id", None)
-		if job == None:jobs = pr.get_jobs
-		else: jobs = [job]
 		#tmx_file = data.get("tmx_file")
-		return [{"project": project, "job": job, "tmx_file": tmx_file} for tmx_file in data['tmx_file'] for job in jobs]
+		return [{"project": project, "job": job, "tmx_file": tmx_file} for tmx_file in data['tmx_file']]
 
 
 	# @staticmethod
