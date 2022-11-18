@@ -13,4 +13,6 @@ urlpatterns = router.urls
 urlpatterns += [
     #path('tmx_list_create/<int:project_id>',api_views.TmxUploadView.as_view(), name='tmx-upload'),
     path('project_analysis/<int:project_id>',api_views.get_project_analysis),
+    path('get_report/', api_views.ReportDownloadView.as_view(), name='download-analysis-report'),
+
     ]

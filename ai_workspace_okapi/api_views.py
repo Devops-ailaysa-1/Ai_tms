@@ -802,8 +802,8 @@ class MT_RawAndTM_View(views.APIView):
     def find_tm_matches(seg_source, user, doc):
 
         proj = doc.job.project
-        sl = job.source_language_code
-        tl = job.target_language_code
+        sl = doc.job.source_language_code
+        tl = doc.job.target_language_code
         tmx_files = TmxFileNew.objects.filter(job=doc.job_id)
 
         tm_lists = []
@@ -815,13 +815,13 @@ class MT_RawAndTM_View(views.APIView):
 
                 for node in tm_file.unit_iter():
                     tm_lists.append(remove_tm_tags(node.source))
-
+        
         match_results = match.extract(seg_source,
                                       tm_lists,
                                       match_type='levenshtein',
                                       score_cutoff = round(proj.threshold / 100, 2),
                                       limit = proj.max_hits)
-        response_data = [mr[0] for mr in mat_rsts]
+        response_data = [mr[0] for mr in match_results] if match_results else []
         return response_data
 
     @staticmethod
