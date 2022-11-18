@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from .models import TmxFileNew, WordCountGeneral, UserDefinedRate
 
+from  ai_workspace.models import Project
 
 class TmxFileSerializer(serializers.ModelSerializer):
 
@@ -17,9 +18,12 @@ class TmxFileSerializer(serializers.ModelSerializer):
 		if not (("project_id" in data) and ("tmx_file" in data)) :
 			raise serializers.ValidationError("Required fields missing!!!")
 		project = data["project_id"]
+		pr = Project.objects.get(id=project)
 		job = data.get("job_id", None)
+		if job == None:jobs = pr.get_jobs
+		else: jobs = [job]
 		#tmx_file = data.get("tmx_file")
-		return [{"project": project, "job": job, "tmx_file": tmx_file} for tmx_file in data['tmx_file']]
+		return [{"project": project, "job": job, "tmx_file": tmx_file} for tmx_file in data['tmx_file'] for job in jobs]
 
 
 	# @staticmethod
@@ -33,9 +37,12 @@ class TmxFileSerializer(serializers.ModelSerializer):
 
 
 class WordCountGeneralSerializer(serializers.ModelSerializer):
+	#task_file = serializers.SerializerMethodField()
+	#task_lang_pair = serializers.SerializerMethodField()
 	class Meta:
 		model = WordCountGeneral
-		fields = "__all__"
+		fields = ('project','task','new_words','repetition','tm_100','tm_95_99',\
+					'tm_85_94','tm_75_84','tm_50_74','tm_101','tm_102','raw_total',)
 
 class UserDefinedRateSerializer(serializers.ModelSerializer):
 	class Meta:
