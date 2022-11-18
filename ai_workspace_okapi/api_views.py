@@ -87,6 +87,10 @@ from os.path import exists
 from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
+from ai_tm.models import TmxFileNew
+from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
+from translate.storage.tmx import tmxfile
+from ai_tm import match
 
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
@@ -795,23 +799,59 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "unavailable"
 
     @staticmethod
+    def find_tm_matches(seg_source, user, doc):
+
+        proj = doc.job.project
+        sl = job.source_language_code
+        tl = job.target_language_code
+        tmx_files = TmxFileNew.objects.filter(job=doc.job_id)
+
+        tm_lists = []
+
+        if tmx_files:
+            for tmx_file in tmx_files:
+                with open(tmx_file.tmx_file.path, 'rb') as fin:
+                    tm_file = tmxfile(fin, sl, tl)
+
+                for node in tm_file.unit_iter():
+                    tm_lists.append(remove_tm_tags(node.source))
+
+        match_results = match.extract(seg_source,
+                                      tm_lists,
+                                      match_type='levenshtein',
+                                      score_cutoff = round(proj.threshold / 100, 2),
+                                      limit = proj.max_hits)
+        response_data = [mr[0] for mr in mat_rsts]
+        return response_data
+
+    @staticmethod
     def get_tm_data(request, segment_id):
 
         # For normal segment
         if split_check(segment_id):
-            segment = Segment.objects.filter(id=segment_id).first().get_active_object()
-            if segment:
-                tm_ser = TM_FetchSerializer(segment)
-                res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                        data = {'pentmsearchparams': json.dumps(tm_ser.data)})
-                if res.status_code == 200:
-                    return res.json()
-                else:
-                    return []
-            return []
+            seg_source = Segment.objects.filter(id=segment_id).first().get_active_object().source
+            user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
+            return MT_RawAndTM_View.find_tm_matches(seg_source, user, doc)
+
+            # Old PenTM search logic
+
+            # if segment:
+            #     tm_ser = TM_FetchSerializer(segment)
+            #     res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+            #             data = {'pentmsearchparams': json.dumps(tm_ser.data)})
+            #     if res.status_code == 200:
+            #         return res.json()
+            #     else:
+            #         return []
+            # return []
+
 
         # TMX fetch for split segment
-        else: return []
+        else:
+            split_seg = SplitSegment.objects.filter(id=segment_id).first()
+            seg_source = split_seg.source
+            user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
+            return MT_RawAndTM_View.find_tm_matches(seg_source, user, doc)
 
     def get_alert_msg(self, status_code, can_team):
 

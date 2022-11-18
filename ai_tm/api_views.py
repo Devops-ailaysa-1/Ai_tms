@@ -71,7 +71,7 @@ class TmxUploadView(viewsets.ViewSet):
 
     def create(self, request):
 
-        data = {**request.POST.dict(), "tmx_file": request.FILES.getlist('tmx_file')}#,'project_id': project_id}
+        data = {**request.POST.dict(), "tmx_file": request.FILES.getlist('tmx_file')}
         ser_data = TmxFileSerializer.prepare_data(data)
         serializer = TmxFileSerializer(data=ser_data,many=True)
         if serializer.is_valid(raise_exception=True):
