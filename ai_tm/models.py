@@ -17,7 +17,8 @@ class TmxFileNew(models.Model):
                             validators=[FileExtensionValidator(allowed_extensions=["tmx"])])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    # threshold = models.IntegerField(null=True, blank=True, default=85)
+    # max_hits = models.IntegerField(null=True, blank=True, default=5)
 
     @property
     def filename(self):
