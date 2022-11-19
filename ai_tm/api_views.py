@@ -271,11 +271,11 @@ def get_project_analysis(request,project_id):
 
             res.append({'task_id':task.id,'task_file':task.file.filename,'task_lang_pair':task.job.source_target_pair_names,'weighted':round(WWC),'new':word_count.new_words,'repetition':word_count.repetition,\
             'tm_50_74':word_count.tm_50_74,'tm_75_84':word_count.tm_75_84,'tm_85_94':word_count.tm_85_94,'tm_95_99':word_count.tm_95_99,\
-            'tm_101':word_count.tm_101,'tm_102':word_count.tm_102,'raw_total':word_count.raw_total})
+            'tm_100':word_count.tm_100,'tm_101':word_count.tm_101,'tm_102':word_count.tm_102,'raw_total':word_count.raw_total})
 
         proj_detail =[{'project_id':proj.id,'project_name':proj.project_name,'weighted':round(proj_wwc),'new':proj_new,'repetition':proj_repetition,\
                     'tm_50_74':proj_tm_50_74,'tm_75_84':proj_tm_75_84,'tm_85_94':proj_tm_85_94,'tm_95_99':proj_tm_95_99,\
-                    'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
+                    'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
         ser = UserDefinedRateSerializer(rates)
         return Response({'payable_rate':ser.data,'project_wwc':proj_detail,'task_wwc':res})
 
