@@ -87,11 +87,26 @@ class TmxUploadView(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=200)
+        return Response(serializer.errors)
 
     def delete(self, request, pk):
         instance = TmxFileNew.objects.get(id=pk)
         instance.delete()
         return Response(status=204)
+
+
+# def check(uploaded_files,job):
+#     for file in uploaded_files:
+#         tree = ET.parse(file.tmx_file.path)
+#         root=tree.getroot()
+#         for j in root.iter('tu'):
+#             for i in j.iter('tuv'):
+#                 lang = i.get('{http://www.w3.org/XML/1998/namespace}lang')
+#                 print(lang.split('-')[0])
+#         break
+
+
+
 
 
 def get_tm_analysis(doc_data,job):
@@ -109,7 +124,7 @@ def get_tm_analysis(doc_data,job):
             for segment in para:
                 sources.append(segment["source"])
                 sources_.append(segment["source"].strip())
-        print("Source--------------->",sources)
+        #print("Source--------------->",sources)
         c = Counter(sources_)
         files = TmxFileNew.objects.filter(job_id=job.id).all()
 
@@ -256,18 +271,13 @@ def get_project_analysis(request,project_id):
 
             res.append({'task_id':task.id,'task_file':task.file.filename,'task_lang_pair':task.job.source_target_pair_names,'weighted':round(WWC),'new':word_count.new_words,'repetition':word_count.repetition,\
             'tm_50_74':word_count.tm_50_74,'tm_75_84':word_count.tm_75_84,'tm_85_94':word_count.tm_85_94,'tm_95_99':word_count.tm_95_99,\
-            'tm_101':word_count.tm_101,'tm_102':word_count.tm_102,'raw_total':word_count.raw_total})
-            
+            'tm_100':word_count.tm_100,'tm_101':word_count.tm_101,'tm_102':word_count.tm_102,'raw_total':word_count.raw_total})
+
         proj_detail =[{'project_id':proj.id,'project_name':proj.project_name,'weighted':round(proj_wwc),'new':proj_new,'repetition':proj_repetition,\
                     'tm_50_74':proj_tm_50_74,'tm_75_84':proj_tm_75_84,'tm_85_94':proj_tm_85_94,'tm_95_99':proj_tm_95_99,\
-                    'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
+                    'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
         ser = UserDefinedRateSerializer(rates)
         return Response({'payable_rate':ser.data,'project_wwc':proj_detail,'task_wwc':res})
-            proj_wwc += WWC
-
-            res.append({'task_id':task.id,'WWC':round(WWC),'total':round(WWC)*rates.base_rate})
-
-        return Response({'project_WeightedWordCount':round(proj_wwc),'base_rate':rates.base_rate,'total':round(proj_wwc)*rates.base_rate,'task_WeightedWordCount':res})
 
 
 class ReportDownloadView(APIView):
@@ -347,7 +357,12 @@ class ReportDownloadView(APIView):
 
             # Setting the file location for the report
             proj = Project.objects.get(id=project_id)
+
+            if not os.path.exists(os.path.join(proj.project_dir_path, "analysis_reports")):
+                os.mkdir(os.path.join(proj.project_dir_path, "analysis_reports"))
+
             report_path = os.path.join(proj.project_dir_path, "analysis_reports", proj.project_name + ".xlsx")
+
 
             # Initializing word count values
             pnew, prep, p100, p95_99, p85_94, p75_84, p50_74, p101, p102, praw = \
@@ -383,4 +398,3 @@ class ReportDownloadView(APIView):
 
             return ReportDownloadView.download_excel(report_path, twc.new_words, twc.repetition, twc.tm_100, twc.tm_95_99, twc.tm_85_94, \
                                                      twc.tm_75_84, twc.tm_50_74, twc.tm_101, twc.tm_102, praw, proj=proj, task=task)
-
