@@ -1,6 +1,6 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import re,json, xlsxwriter, os
+import re,json, xlsxwriter, os,requests
 from .models import TmxFileNew, WordCountGeneral
 from .serializers import TmxFileSerializer,UserDefinedRateSerializer
 from ai_workspace.serializers import TaskSerializer
@@ -14,13 +14,53 @@ from django.db.models import Q
 from .models import WordCountGeneral,WordCountTmxDetail,UserDefinedRate
 from ai_workspace_okapi.utils import download_file
 from ai_tm.utils import write_project_header, write_commons, write_data
-
+from ai_workspace.serializers import TaskSerializer
+from ai_workspace.api_views import ProjectAnalysisProperty
+from django.conf import settings
+spring_host = os.environ.get("SPRING_HOST")
 
 def get_json_file_path(task):
     source_file_path = TaskSerializer(task).data["source_file_path"]
     path_list = re.split("source/", source_file_path)
-    return path_list[0] + "doc_json/" + path_list[1] + ".json"
+    path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+    if not os.path.exists(path):
+        write_json_data(task)
+    return path
 
+
+def write_json_data(task):
+    ser = TaskSerializer(task)
+    data = ser.data
+    ProjectAnalysisProperty.correct_fields(data)
+    # DocumentViewByTask.correct_fields(data)
+    params_data = {**data, "output_type": None}
+    res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+             "fprm_file_path": None,
+             "use_spaces" : settings.USE_SPACES
+             }
+    doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+        "doc_req_params":json.dumps(params_data),
+        "doc_req_res_params": json.dumps(res_paths)
+    })
+
+    if doc.status_code == 200 :
+        doc_data = doc.json()
+        task_write_data = json.dumps(doc_data, default=str)
+        from ai_workspace_okapi.api_views import DocumentViewByTask
+        DocumentViewByTask.correct_fields(data)
+        params_data = {**data, "output_type": None}
+
+        source_file_path = params_data["source_file_path"]
+        path_list = re.split("source/", source_file_path)
+        os.mkdir(os.path.join(path_list[0], "doc_json"))
+        doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+
+        with open(doc_json_path, "w") as outfile:
+            json.dump(doc_data, outfile)
+        return doc_json_path
+
+    else:
+        return None
 
 TAG_RE = re.compile(r'<[^>]+>')
 
@@ -228,8 +268,9 @@ def get_project_analysis(request,project_id):
 
                 doc_data = json.load(open(file_path))
 
-
-                doc_data = json.loads(doc_data)
+                if type(doc_data) == str:
+                    
+                    doc_data = json.loads(doc_data)
 
                 raw_total = doc_data.get('total_word_count')
 
