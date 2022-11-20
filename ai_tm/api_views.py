@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view
 from django.db.models import Q
 from .models import WordCountGeneral,WordCountTmxDetail,UserDefinedRate
 from ai_workspace_okapi.utils import download_file
+from ai_tm.utils import write_project_header, write_commons, write_data
 
 
 def get_json_file_path(task):
@@ -124,7 +125,6 @@ def get_tm_analysis(doc_data,job):
             for segment in para:
                 sources.append(segment["source"])
                 sources_.append(segment["source"].strip())
-        #print("Source--------------->",sources)
         c = Counter(sources_)
         files = TmxFileNew.objects.filter(job_id=job.id).all()
 
@@ -192,11 +192,6 @@ def get_word_count(tm_analysis,project,task,raw_total):
             repetition=repetition,raw_total=raw_total)
     return wc
 
-
-
-# class ProjectAnalysis(APIView):
-#
-#     def get(self, request, project_id):
 @api_view(['GET',])
 def get_project_analysis(request,project_id):
 
@@ -280,76 +275,149 @@ def get_project_analysis(request,project_id):
         return Response({'payable_rate':ser.data,'project_wwc':proj_detail,'task_wwc':res})
 
 
+# class ReportDownloadView(APIView):
+#
+#     @staticmethod
+#     def download_excel(path, new, rep, c100, \
+#                        c95_99, c85_94, c75_84, c50_74, c101, c102, raw, proj=None, task=None):
+#
+#         if proj != None:
+#
+#             wwc = round(new + (0.3 * rep) + c50_74 + (0.6 * c75_84) + (0.6 * c85_94) + (0.6 * c95_99) + \
+#                   (0.3 * c100) + (0.3 * c101) + (0.3 * c102))
+#
+#             workbook = xlsxwriter.Workbook(path)
+#
+#             if task == None:
+#                 worksheet = workbook.add_worksheet(proj.project_name)
+#                 worksheet.write('A1', 'Project name')
+#                 worksheet.write('B1', proj.project_name)
+#             else:
+#                 worksheet = workbook.add_worksheet(proj.project_name)
+#                 worksheet.write('A1', 'Task')
+#                 worksheet.write('B1', os.path.splitext(task.file.filename[0]) + "(" + task.job.source_language.language + "-" \
+#                                        + task.job.source_language.language + ")")
+#
+#             # Row 2
+#             worksheet.write('B2', 'Total')
+#             worksheet.write('C2', 'Weighted')
+#             worksheet.write('D2', 'New')
+#             worksheet.write('E2', 'Repetition')
+#             worksheet.write('F2', '50-74%')
+#             worksheet.write('G2', '75-84%')
+#             worksheet.write('H2', '85-94%')
+#             worksheet.write('I2', '95-99%')
+#             worksheet.write('J2', '100%')
+#             worksheet.write('K2', '101%')
+#             worksheet.write('L2', '102%')
+#
+#             # Row 3
+#             worksheet.write('A3', 'Payable rate')
+#             worksheet.write('D3', '100%')
+#             worksheet.write('E3', '30%')
+#             worksheet.write('F3', '100%')
+#             worksheet.write('G3', '60%')
+#             worksheet.write('H3', '60%')
+#             worksheet.write('I3', '60%')
+#             worksheet.write('J3', '30%')
+#             worksheet.write('K3', '30%')
+#             worksheet.write('L3', '30%')
+#
+#             # Row 4
+#             worksheet.write('B4', raw)
+#             worksheet.write('C4', wwc)
+#             worksheet.write('D4', new)
+#             worksheet.write('E4', rep)
+#             worksheet.write('F4', c50_74)
+#             worksheet.write('G4', c75_84)
+#             worksheet.write('H4', c85_94)
+#             worksheet.write('I4', c95_99)
+#             worksheet.write('J4', c100)
+#             worksheet.write('K4', c101)
+#             worksheet.write('L4', c102)
+#
+#             workbook.close()
+#             return download_file(path)
+#
+#     def get(self, request):
+#         task_id = request.GET.get("task_id", None)
+#         project_id = request.GET.get("project_id", None)
+#         download_type = request.GET.get("download_type")
+#
+#         # # Checking for required fields
+#         if not (project_id or task_id):
+#             return Response({"error": "Required fields missings!"}, status=400)
+#
+#         if project_id:
+#
+#             # Setting the file location for the report
+#             proj = Project.objects.get(id=project_id)
+#
+#             if not os.path.exists(os.path.join(proj.project_dir_path, "analysis_reports")):
+#                 os.mkdir(os.path.join(proj.project_dir_path, "analysis_reports"))
+#
+#             report_path = os.path.join(proj.project_dir_path, "analysis_reports", proj.project_name + ".xlsx")
+#
+#
+#             # Initializing word count values
+#             pnew, prep, p100, p95_99, p85_94, p75_84, p50_74, p101, p102, praw = \
+#             0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+#
+#             # Adding word count from each task
+#             task_wcs = WordCountGeneral.objects.filter(project_id=project_id)
+#             for tk_wc in task_wcs:
+#                 pnew += tk_wc.new_words
+#                 prep += tk_wc.repetition
+#                 p100 += tk_wc.tm_100
+#                 p95_99 += tk_wc.tm_95_99
+#                 p85_94 += tk_wc.tm_85_94
+#                 p75_84 += tk_wc.tm_75_84
+#                 p50_74 += tk_wc.tm_50_74
+#                 p101 += tk_wc.tm_101
+#                 p102 += tk_wc.tm_102
+#                 praw += tk_wc.raw_total
+#
+#             return ReportDownloadView.download_excel(report_path, pnew, prep, p100, p95_99, p85_94, \
+#                                                      p75_84, p50_74, p101, p102, praw, proj=proj, task=None)
+#
+#         else:
+#
+#             # Setting the file location for the report
+#             proj = Task.objects.get(id=task_id).job.project
+#             task = Task.objects.get(id=task_id)
+#             report_path = os.path.join(proj.project_dir_path, "analysis_reports",
+#                     os.path.splitext(task.file.filename[0]) + "(" + task.job.source_language.language + "_" \
+#                                        + task.job.source_language.language + ")" + ".xlsx")
+#
+#             twc = WordCountGeneral.objects.filter(tasks_id=task_id).first()
+#
+#             return ReportDownloadView.download_excel(report_path, twc.new_words, twc.repetition, twc.tm_100, twc.tm_95_99, twc.tm_85_94, \
+#                                                      twc.tm_75_84, twc.tm_50_74, twc.tm_101, twc.tm_102, praw, proj=proj, task=task)
+
+
 class ReportDownloadView(APIView):
 
     @staticmethod
-    def download_excel(path, new, rep, c100, \
-                       c95_99, c85_94, c75_84, c50_74, c101, c102, raw, proj=None, task=None):
+    def download_excel(path, proj):
 
-        if proj != None:
+        workbook = xlsxwriter.Workbook(path)
+        worksheet = workbook.add_worksheet(proj.project_name)
 
-            wwc = round(new + (0.3 * rep) + c50_74 + (0.6 * c75_84) + (0.6 * c85_94) + (0.6 * c95_99) + \
-                  (0.3 * c100) + (0.3 * c101) + (0.3 * c102))
+        write_project_header(worksheet, proj)
 
-            workbook = xlsxwriter.Workbook(path)
+        write_commons(worksheet, proj)
 
-            if task == None:
-                worksheet = workbook.add_worksheet(proj.project_name)
-                worksheet.write('A1', 'Project name')
-                worksheet.write('B1', proj.project_name)
-            else:
-                worksheet = workbook.add_worksheet(proj.project_name)
-                worksheet.write('A1', 'Task')
-                worksheet.write('B1', os.path.splitext(task.file.filename[0]) + "(" + task.job.source_language.language + "-" \
-                                       + task.job.source_language.language + ")")
+        write_data(worksheet, proj)
 
-            # Row 2
-            worksheet.write('B2', 'Total')
-            worksheet.write('C2', 'Weighted')
-            worksheet.write('D2', 'New')
-            worksheet.write('E2', 'Repetition')
-            worksheet.write('F2', '50-74%')
-            worksheet.write('G2', '75-84%')
-            worksheet.write('H2', '85-94%')
-            worksheet.write('I2', '95-99%')
-            worksheet.write('J2', '100%')
-            worksheet.write('K2', '101%')
-            worksheet.write('L2', '102%')
-
-            # Row 3
-            worksheet.write('A3', 'Payable rate')
-            worksheet.write('D3', '100%')
-            worksheet.write('E3', '30%')
-            worksheet.write('F3', '100%')
-            worksheet.write('G3', '60%')
-            worksheet.write('H3', '60%')
-            worksheet.write('I3', '60%')
-            worksheet.write('J3', '30%')
-            worksheet.write('K3', '30%')
-            worksheet.write('L3', '30%')
-
-            # Row 4
-            worksheet.write('B4', raw)
-            worksheet.write('C4', wwc)
-            worksheet.write('D4', new)
-            worksheet.write('E4', rep)
-            worksheet.write('F4', c50_74)
-            worksheet.write('G4', c75_84)
-            worksheet.write('H4', c85_94)
-            worksheet.write('I4', c95_99)
-            worksheet.write('J4', c100)
-            worksheet.write('K4', c101)
-            worksheet.write('L4', c102)
-
-            workbook.close()
-            return download_file(path)
+        workbook.close()
+        return download_file(path)
 
     def get(self, request):
         task_id = request.GET.get("task_id", None)
         project_id = request.GET.get("project_id", None)
         download_type = request.GET.get("download_type")
 
-        # # Checking for required fields
+        # Checking for required fields
         if not (project_id or task_id):
             return Response({"error": "Required fields missings!"}, status=400)
 
@@ -357,44 +425,8 @@ class ReportDownloadView(APIView):
 
             # Setting the file location for the report
             proj = Project.objects.get(id=project_id)
-
             if not os.path.exists(os.path.join(proj.project_dir_path, "analysis_reports")):
                 os.mkdir(os.path.join(proj.project_dir_path, "analysis_reports"))
-
             report_path = os.path.join(proj.project_dir_path, "analysis_reports", proj.project_name + ".xlsx")
 
-
-            # Initializing word count values
-            pnew, prep, p100, p95_99, p85_94, p75_84, p50_74, p101, p102, praw = \
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
-            # Adding word count from each task
-            task_wcs = WordCountGeneral.objects.filter(project_id=project_id)
-            for tk_wc in task_wcs:
-                pnew += tk_wc.new_words
-                prep += tk_wc.repetition
-                p100 += tk_wc.tm_100
-                p95_99 += tk_wc.tm_95_99
-                p85_94 += tk_wc.tm_85_94
-                p75_84 += tk_wc.tm_75_84
-                p50_74 += tk_wc.tm_50_74
-                p101 += tk_wc.tm_101
-                p102 += tk_wc.tm_102
-                praw += tk_wc.raw_total
-
-            return ReportDownloadView.download_excel(report_path, pnew, prep, p100, p95_99, p85_94, \
-                                                     p75_84, p50_74, p101, p102, praw, proj=proj, task=None)
-
-        else:
-
-            # Setting the file location for the report
-            proj = Task.objects.get(id=task_id).job.project
-            task = Task.objects.get(id=task_id)
-            report_path = os.path.join(proj.project_dir_path, "analysis_reports",
-                    os.path.splitext(task.file.filename[0]) + "(" + task.job.source_language.language + "_" \
-                                       + task.job.source_language.language + ")" + ".xlsx")
-
-            twc = WordCountGeneral.objects.filter(tasks_id=task_id).first()
-
-            return ReportDownloadView.download_excel(report_path, twc.new_words, twc.repetition, twc.tm_100, twc.tm_95_99, twc.tm_85_94, \
-                                                     twc.tm_75_84, twc.tm_50_74, twc.tm_101, twc.tm_102, praw, proj=proj, task=task)
+            return ReportDownloadView.download_excel(report_path, proj)
