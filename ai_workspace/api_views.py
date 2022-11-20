@@ -1227,7 +1227,7 @@ class ProjectAnalysisProperty(APIView):
                     if doc.status_code == 200 :
                         doc_data = doc.json()
 
-                        # if doc_data["total_word_count"] >= 50000:
+                        #if doc_data["total_word_count"] >= 50000:
 
                         task_write_data = json.dumps(doc_data, default=str)
                         write_doc_json_file.apply_async((task_write_data, task.id))
