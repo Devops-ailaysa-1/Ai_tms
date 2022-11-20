@@ -513,108 +513,108 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
 
-LOGGING = {
-    'version' : 1,
-    'disable_existing_loggers' : False,
+# LOGGING = {
+#     'version' : 1,
+#     'disable_existing_loggers' : False,
 
-    'formatters' : {
-        'dev_formatter' : {
-            'format' : '{levelname} {asctime} {pathname} {message}',
-            'style' : '{',
-        },
-        # 'fluent_fmt':{
-        # '()': 'fluent.handler.FluentRecordFormatter',
-        # 'format':{
-        #   'level': '%(levelname)s',
-        #   'hostname': '%(hostname)s',
-        #   'where': '%(module)s.%(funcName)s',
-        # }}
-    },
+#     'formatters' : {
+#         'dev_formatter' : {
+#             'format' : '{levelname} {asctime} {pathname} {message}',
+#             'style' : '{',
+#         },
+#         # 'fluent_fmt':{
+#         # '()': 'fluent.handler.FluentRecordFormatter',
+#         # 'format':{
+#         #   'level': '%(levelname)s',
+#         #   'hostname': '%(hostname)s',
+#         #   'where': '%(module)s.%(funcName)s',
+#         # }}
+#     },
 
-    'loggers' : {
-        # 'django' : {
-        #     'handlers' : ['file',],
-        #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-        #     'propogate' : True,
-        # },
+#     'loggers' : {
+#         # 'django' : {
+#         #     'handlers' : ['file',],
+#         #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+#         #     'propogate' : True,
+#         # },
 
-        'django' : {
-            'handlers' : ['file_prod',],
-            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-            'propogate' : True,
-        },
-        # 'app.debug': {
-        #     'handlers': ['fluentdebug'],
-        #     'level': 'DEBUG',
-        #     'propagate': True,
-        # },
-        # 'app.info': {
-        #     'handlers': ['fluentinfo'],
-        #     'level': 'INFO',
-        #     'propagate': True,
-        # },
-        # '': {
-        #     'handlers': ['console','fluentinfo'],
-        #     'level': 'INFO',
-        #     'propagate': False,
-        # },
-        # 'django.request': {
-        #     'handlers': ['fluentdebug'],
-        #     'level': 'DEBUG',
-        #     'propagate': True,
-        # },
-    },
+#         'django' : {
+#             'handlers' : ['file_prod',],
+#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+#             'propogate' : True,
+#         },
+#         # 'app.debug': {
+#         #     'handlers': ['fluentdebug'],
+#         #     'level': 'DEBUG',
+#         #     'propagate': True,
+#         # },
+#         # 'app.info': {
+#         #     'handlers': ['fluentinfo'],
+#         #     'level': 'INFO',
+#         #     'propagate': True,
+#         # },
+#         # '': {
+#         #     'handlers': ['console','fluentinfo'],
+#         #     'level': 'INFO',
+#         #     'propagate': False,
+#         # },
+#         # 'django.request': {
+#         #     'handlers': ['fluentdebug'],
+#         #     'level': 'DEBUG',
+#         #     'propagate': True,
+#         # },
+#     },
 
-    'handlers' : {
-        # 'console':{
-        #     'class' : 'logging.StreamHandler',
-        #     'level': 'INFO',
-        #     'formatter': 'dev_formatter',
-        #     'stream': 'ext://sys.stdout',
-        # },
-        'file' : {
-            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-            'class' : 'logging.FileHandler',
-            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
-            'formatter' : 'dev_formatter',
-        },
+#     'handlers' : {
+#         # 'console':{
+#         #     'class' : 'logging.StreamHandler',
+#         #     'level': 'INFO',
+#         #     'formatter': 'dev_formatter',
+#         #     'stream': 'ext://sys.stdout',
+#         # },
+#         'file' : {
+#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+#             'class' : 'logging.FileHandler',
+#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
+#             'formatter' : 'dev_formatter',
+#         },
 
-       'file_prod' : {
-            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-            'class' : 'logging.FileHandler',
-            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
-            'formatter' : 'dev_formatter',
-        },
-    #     'fluentinfo':{
-    #         'level':'INFO',
-    #         'class':'fluent.handler.FluentHandler',
-    #         'formatter': 'fluent_fmt',
-    #         'tag':'django.info',
-    #         'host':'fluentd',
-    #         'port':24224,
-    #         # 'timeout':3.0,
-    #         # 'verbose': False
-    #         },
-    #    'fluentdebug':{
-    #         'level':'DEBUG',
-    #         'class':'fluent.handler.FluentHandler',
-    #         'formatter': 'fluent_fmt',
-    #         'tag':'django.debug',
-    #         'host':'fluentd',
-    #         'port':24224,
-    #         # 'timeout':3.0,
-    #         # 'verbose': True
-    #     },
+#        'file_prod' : {
+#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+#             'class' : 'logging.FileHandler',
+#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
+#             'formatter' : 'dev_formatter',
+#         },
+#     #     'fluentinfo':{
+#     #         'level':'INFO',
+#     #         'class':'fluent.handler.FluentHandler',
+#     #         'formatter': 'fluent_fmt',
+#     #         'tag':'django.info',
+#     #         'host':'fluentd',
+#     #         'port':24224,
+#     #         # 'timeout':3.0,
+#     #         # 'verbose': False
+#     #         },
+#     #    'fluentdebug':{
+#     #         'level':'DEBUG',
+#     #         'class':'fluent.handler.FluentHandler',
+#     #         'formatter': 'fluent_fmt',
+#     #         'tag':'django.debug',
+#     #         'host':'fluentd',
+#     #         'port':24224,
+#     #         # 'timeout':3.0,
+#     #         # 'verbose': True
+#     #     },
 
-        # 'mail_admins' : {
-        #     'level' : 'ERROR',
-        #     'class': 'django.utils.log.AdminEmailHandler',
-        #     'formatter' : 'dev_formatter',
-        # }
-    },
+#         # 'mail_admins' : {
+#         #     'level' : 'ERROR',
+#         #     'class': 'django.utils.log.AdminEmailHandler',
+#         #     'formatter' : 'dev_formatter',
+#         # }
+#     },
 
 
-}
+# }
 
 
 sentry_sdk.init(
