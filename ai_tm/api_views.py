@@ -278,8 +278,8 @@ class ReportDownloadView(APIView):
 
         if proj != None:
 
-            wwc = new + (0.3 * rep) + c50_74 + (0.6 * c75_84) + (0.6 * c85_94) + (0.6 * c95_99) + \
-                  (0.3 * c100) + (0.3 * c101) + (0.3 * c102)
+            wwc = round(new + (0.3 * rep) + c50_74 + (0.6 * c75_84) + (0.6 * c85_94) + (0.6 * c95_99) + \
+                  (0.3 * c100) + (0.3 * c101) + (0.3 * c102))
 
             workbook = xlsxwriter.Workbook(path)
 
