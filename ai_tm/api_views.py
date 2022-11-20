@@ -403,11 +403,11 @@ class ReportDownloadView(APIView):
         workbook = xlsxwriter.Workbook(path)
         worksheet = workbook.add_worksheet(proj.project_name)
 
-        write_project_header(worksheet, proj)
+        write_project_header(workbook, worksheet, proj)
 
-        write_commons(worksheet, proj)
+        write_commons(workbook, worksheet, proj)
 
-        write_data(worksheet, proj)
+        write_data(workbook, worksheet, proj)
 
         workbook.close()
         return download_file(path)
