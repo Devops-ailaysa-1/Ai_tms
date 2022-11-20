@@ -203,8 +203,10 @@ python-docx
 langdetect==1.0.9
 pydub
 filesplit==4.0.1
+celery-progress==0.1.3
 pdftotext==2.2.2
 pdf2image==1.16.0
 PyPDF2==2.11.1
 google-cloud-vision==3.1.4
 google-cloud==0.34.0
+translate-toolkit==3.7.3

@@ -1,3 +1,15 @@
+from .serializers import (DocumentSerializer, DocumentSerializerV3,
+                          TranslationStatusSerializer, CommentSerializer,
+                          TM_FetchSerializer, VerbSerializer)
+from ai_workspace.serializers import TaskCreditStatusSerializer, TaskTranscriptDetailSerializer
+from rest_framework import views
+import json, logging,os,re,urllib.parse,xlsxwriter
+from json import JSONDecodeError
+from django.urls import reverse
+import requests
+from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
+from django.contrib.auth import settings
+from django.http import HttpResponse, JsonResponse
 import json
 import logging
 import os
@@ -24,10 +36,14 @@ from rest_framework.decorators import api_view
 from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import APIException
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from django.http import  FileResponse
+from rest_framework.views import APIView
+from django.db.models import Q
+import urllib.parse
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from wiktionaryparser import WiktionaryParser
-
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.tasks import google_long_text_file_process_cel, pre_translate_update, mt_only
 from ai_auth.tasks import write_segments_to_db
@@ -50,9 +66,32 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer, SplitSegmentSerializer)
+from django.urls import reverse
+from json import JSONDecodeError
+from .utils import SpacesService
+from google.cloud import translate_v2 as translate
+import os, io, requests, time
+from django.http import HttpResponse
+from rest_framework.response import Response
+# from controller.models import DownloadController
+from ai_workspace.models import File
+from .utils import SpacesService,text_to_speech
+from django.contrib.auth import settings
+from ai_auth.utils import get_plan_name
+from .utils import download_file, bl_title_format, bl_cell_format,get_res_path, get_translation, split_check
+from django.db import transaction
+from rest_framework.decorators import permission_classes
+from ai_auth.tasks import write_segments_to_db
+from django.db import transaction
+from os.path import exists
 from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
+from ai_tm.models import TmxFileNew
+from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
+from translate.storage.tmx import tmxfile
+from ai_tm import match
+
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -113,9 +152,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             raise ValueError("OKAPI request fields not setted correctly!!!")
 
     @staticmethod
-    def trim_segments(doc_json_data):
+    def trim_segments(doc_data):
 
-        doc_data = json.loads(doc_json_data)
+        #doc_data = json.loads(doc_json_data)
         text = doc_data["text"]
         count = 0
         needed_keys = []
@@ -157,28 +196,44 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # Writing first 100 segments in DB
 
         doc_data = json.load(open(json_file_path))
-        doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-        serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                 "file": task.file.id, "job": task.job.id,
-                                                 }, ))
-        if serializer.is_valid(raise_exception=True):
-            document = serializer.save()
-            task.document = document
-            task.save()
 
-        # Writing remaining segment using task
-        doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
+        doc_data = json.loads(doc_data)
 
-        if doc_data_task["text"] != {}:
+        if doc_data['total_word_count'] >= 50000:
 
-            # For celery task
-            serializer_task = DocumentSerializerV2(data={**doc_data_task, \
-                                                         "file": task.file.id, "job": task.job.id, }, )
+            #print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
 
-            validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
-                                                                     "file": task.file.id, "job": task.job.id, })
-            task_write_data = json.dumps(validated_data, default=str)
-            write_segments_to_db.apply_async((task_write_data, document.id), )
+            doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
+            serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                     "file": task.file.id, "job": task.job.id,
+                                                     }, ))
+            if serializer.is_valid(raise_exception=True):
+                document = serializer.save()
+                task.document = document
+                task.save()
+
+            # Writing remaining segment using task
+            doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
+
+            if doc_data_task["text"] != {}:
+
+                # For celery task
+                serializer_task = DocumentSerializerV2(data={**doc_data_task, \
+                                                             "file": task.file.id, "job": task.job.id, }, )
+
+                validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
+                                                                         "file": task.file.id, "job": task.job.id, })
+                task_write_data = json.dumps(validated_data, default=str)
+                write_segments_to_db.apply_async((task_write_data, document.id), )
+        else:
+            #print("NOT USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
+            serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                     "file": task.file.id, "job": task.job.id,
+                                                     }, ))
+            if serializer.is_valid(raise_exception=True):
+                document = serializer.save()
+                task.document = document
+                task.save()
 
         return document
 
@@ -213,7 +268,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
-            print("-------------------------File Already Processed-------------------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -745,23 +799,59 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "unavailable"
 
     @staticmethod
+    def find_tm_matches(seg_source, user, doc):
+
+        proj = doc.job.project
+        sl = doc.job.source_language_code
+        tl = doc.job.target_language_code
+        tmx_files = TmxFileNew.objects.filter(job=doc.job_id)
+
+        tm_lists = []
+
+        if tmx_files:
+            for tmx_file in tmx_files:
+                with open(tmx_file.tmx_file.path, 'rb') as fin:
+                    tm_file = tmxfile(fin, sl, tl)
+
+                for node in tm_file.unit_iter():
+                    tm_lists.append(remove_tm_tags(node.source))
+        
+        match_results = match.extract(seg_source,
+                                      tm_lists,
+                                      match_type='levenshtein',
+                                      score_cutoff = round(proj.threshold / 100, 2),
+                                      limit = proj.max_hits)
+        response_data = [mr[0] for mr in match_results] if match_results else []
+        return response_data
+
+    @staticmethod
     def get_tm_data(request, segment_id):
 
         # For normal segment
         if split_check(segment_id):
-            segment = Segment.objects.filter(id=segment_id).first().get_active_object()
-            if segment:
-                tm_ser = TM_FetchSerializer(segment)
-                res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                        data = {'pentmsearchparams': json.dumps(tm_ser.data)})
-                if res.status_code == 200:
-                    return res.json()
-                else:
-                    return []
-            return []
+            seg_source = Segment.objects.filter(id=segment_id).first().get_active_object().source
+            user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
+            return MT_RawAndTM_View.find_tm_matches(seg_source, user, doc)
+
+            # Old PenTM search logic
+
+            # if segment:
+            #     tm_ser = TM_FetchSerializer(segment)
+            #     res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+            #             data = {'pentmsearchparams': json.dumps(tm_ser.data)})
+            #     if res.status_code == 200:
+            #         return res.json()
+            #     else:
+            #         return []
+            # return []
+
 
         # TMX fetch for split segment
-        else: return []
+        else:
+            split_seg = SplitSegment.objects.filter(id=segment_id).first()
+            seg_source = split_seg.source
+            user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
+            return MT_RawAndTM_View.find_tm_matches(seg_source, user, doc)
 
     def get_alert_msg(self, status_code, can_team):
 

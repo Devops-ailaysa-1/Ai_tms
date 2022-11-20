@@ -1,88 +1,90 @@
-from ai_pay.api_views import po_modify
-import django_filters, mutagen
-import shutil,docx2txt,regex,zipfile
-from ai_workspace import forms as ws_forms
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-from urllib.parse import urlparse
-from ai_workspace.utils import create_assignment_id
-from ai_workspace_okapi.models import Document
-from django.conf import settings
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.views import APIView
-from ai_vendor.models import VendorLanguagePair
-from ai_workspace_okapi.utils import download_file, get_translation
-from ai_auth.authentication import IsCustomer
-from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_glex.serializers import GlossarySetupSerializer,GlossaryFileSerializer,GlossarySerializer
-from ai_auth.models import AiUser, UserCredits, Team, InternalMember
-from rest_framework import viewsets, status
-from .utils import DjRestUtils
-from ai_auth.models import HiredEditors
-from rest_framework.response import Response
-from django.core.files.base import ContentFile
-from indicnlp.tokenize.sentence_tokenize import sentence_split
-from indicnlp.tokenize.indic_tokenize import trivial_tokenize
-from ai_workspace_okapi.utils import download_file,text_to_speech,text_to_speech_long
-from .utils import get_consumable_credits_for_text_to_speech,get_consumable_credits_for_speech_to_text
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
-    ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
-    ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
-    TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
-    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer,TaskTranscriptDetailSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
-                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,ExpressProjectDetailSerializer)
-import copy, os, mimetypes, logging
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
-    TaskAssignInfo,TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, ExpressProjectDetail
-from rest_framework import permissions
-from django.shortcuts import get_object_or_404, get_list_or_404
-from django.db import IntegrityError
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Task, TbxFile, Instructionfiles
-from django.http import JsonResponse
-from .models import Task,Tbxfiles
-from lxml import etree as ET
-from django.db import transaction
-from ai_marketplace.models import ChatMessage
-from django.http import JsonResponse,HttpResponse
-import requests, json, os,mimetypes
-from ai_workspace_okapi.models import Document
-from rest_framework.decorators import api_view
-from django.http import JsonResponse, Http404, HttpResponse
-from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
-from django.core.files import File as DJFile
-from django.http import JsonResponse
-from tablib import Dataset
-import shutil,nltk
-from datetime import datetime
-from django.db.models import Q, Sum
-from rest_framework.decorators import permission_classes
-from notifications.signals import notify
-from ai_marketplace.serializers import ThreadSerializer
-#from controller.serializer_mapper import serializer_map
-# from ai_workspace_okapi.api_views import DocumentViewByTask
-from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
-from mutagen.mp3 import MP3
-from google.cloud import speech
-from google.cloud import speech_v1p1beta1 as speech
+import copy
 import io
-from google.cloud import storage
-from ai_auth.tasks import mt_only, write_doc_json_file, text_to_speech_long_celery, transcribe_long_file_cel
-from docx import Document
-from htmldocx import HtmlToDocx
-from delta import html
+import json
+import logging
+import mimetypes
+import os
+import shutil
+import zipfile
+from datetime import datetime
 from glob import glob
+from urllib.parse import urlparse
+
+import django_filters
+import docx2txt
+import nltk
+import requests
+from delta import html
+from django.conf import settings
+from django.core.files import File as DJFile
+from django.core.files.base import ContentFile
+from django.db import IntegrityError
+from django.db import transaction
+from django.db.models import Q, Sum
+from django.http import Http404, HttpResponse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, get_list_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from docx import Document
+from filesplit.split import Split
+from google.cloud import speech_v1p1beta1 as speech
+from google.cloud import storage
+from htmldocx import HtmlToDocx
+from indicnlp.tokenize.sentence_tokenize import sentence_split
+from notifications.signals import notify
 from pydub import AudioSegment
+from rest_framework import permissions
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view
+from rest_framework.decorators import permission_classes
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from filesplit.split import Split
 logger = logging.getLogger('django')
 
+from ai_auth.models import AiUser, UserCredits
+from ai_auth.models import HiredEditors
+from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel
 from ai_auth.tasks import write_doc_json_file
+from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
+from ai_marketplace.models import ChatMessage
+from ai_marketplace.serializers import ThreadSerializer
+from ai_pay.api_views import po_modify
+# from controller.serializer_mapper import serializer_map
+# from ai_workspace_okapi.api_views import DocumentViewByTask
+from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
+#from ai_tm.models import TmxFile
+from ai_workspace import forms as ws_forms
+from ai_workspace.excel_utils import WriteToExcel_lite
+from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
+from ai_workspace.utils import create_assignment_id
+from ai_workspace_okapi.models import Document
+from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long
+from ai_workspace_okapi.utils import get_translation
+from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
+    Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
+    TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
+    ExpressProjectDetail
+from .models import Task
+from .models import TbxFile, Instructionfiles
+from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+                          ProjectSerializer, JobSerializer, FileSerializer, \
+                          ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
+                          TaskSerializer, FileSerializerv2, TmxFileSerializer, \
+                          PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
+                          VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer,
+                          TbxTemplateSerializer, \
+                          TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
+                          GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
+                          StepsSerializer, WorkflowsSerializer, \
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
+                          ExpressProjectDetailSerializer)
+from .utils import DjRestUtils
+from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -496,34 +498,34 @@ class TmxFilesOfProject(APIView):
             data.append(res.text)
         return JsonResponse({"results":data}, safe=False)
 
-class ProjectReportAnalysis(APIView):
-    def get_queryset(self, project_id):
-        project_qs = Project.objects.all()
-        project = get_object_or_404(project_qs, id=project_id, ai_user=self.request.user)
-        files = project.project_files_set.all()
-        return files
-
-    def post(self, request, project_id):
-        data = dict(
-            pentm_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/.pentm/",
-            report_output_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/tt/report.html",
-            srx_file_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/okapi_resources/okapi_default_icu4j.srx"
-        )
-        files = self.get_queryset(project_id)
-        batches_data =  FileSerializerv3(files, many=True).data
-        data = {
-            **data,
-            **dict(batches=batches_data)
-        }
-        print("data---->", data)
-        res = requests.post(
-            f"http://{spring_host}:8080/project/report-analysis",
-            data = {"report_params": json.dumps(data)}
-        )
-        if res.status_code in [200, 201]:
-            return JsonResponse({"msg": res.text}, safe=False)
-        else:
-            return JsonResponse({"msg": "something went to wrong"}, safe=False)
+# class ProjectReportAnalysis(APIView):
+#     def get_queryset(self, project_id):
+#         project_qs = Project.objects.all()
+#         project = get_object_or_404(project_qs, id=project_id, ai_user=self.request.user)
+#         files = project.project_files_set.all()
+#         return files
+#
+#     def post(self, request, project_id):
+#         data = dict(
+#             pentm_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/.pentm/",
+#             report_output_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/tt/report.html",
+#             srx_file_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/okapi_resources/okapi_default_icu4j.srx"
+#         )
+#         files = self.get_queryset(project_id)
+#         batches_data =  FileSerializerv3(files, many=True).data
+#         data = {
+#             **data,
+#             **dict(batches=batches_data)
+#         }
+#         print("data---->", data)
+#         res = requests.post(
+#             f"http://{spring_host}:8080/project/report-analysis",
+#             data = {"report_params": json.dumps(data)}
+#         )
+#         if res.status_code in [200, 201]:
+#             return JsonResponse({"msg": res.text}, safe=False)
+#         else:
+#             return JsonResponse({"msg": "something went to wrong"}, safe=False)
 
 class TmxFileView(viewsets.ViewSet):
 
@@ -679,6 +681,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 pr = Project.objects.get(id=serializer.data.get('id'))
                 if pr.pre_translate == True:
                     mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
+                    # mt_only.delay((serializer.data.get('id'), str(request.auth)), )
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
@@ -690,6 +693,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 pr = Project.objects.get(id=serlzr.data.get('id'))
                 if pr.pre_translate == True:
                     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                    # mt_only.delay((serlzr.data.get('id'), str(request.auth)), )
                 #check_dict.apply_async(serlzr.data,)
                 return Response(serlzr.data, status=201)
             return Response(serlzr.errors, status=409)
@@ -697,7 +701,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def update(self, request, pk, format=None):
         instance = self.get_object()
         ser = self.get_serializer_class()
-        print("ser----------->",ser)
         task_id=request.POST.get('task_id',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
@@ -1143,6 +1146,8 @@ class ProjectAnalysisProperty(APIView):
 
     erfogd = exact_required_fields_for_okapi_get_document
 
+    # erfogd = DocumentViewByTask.exact_required_fields_for_okapi_get_document()
+
     @staticmethod
     def correct_fields(data):
         check_fields = ProjectAnalysisProperty.erfogd()
@@ -1152,7 +1157,6 @@ class ProjectAnalysisProperty(APIView):
                 check_fields.remove(i)
             else:
                 remove_keys.append(i)
-        print("remove keys--->", remove_keys)
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("File processing fields not set properly !!!")
@@ -1208,6 +1212,7 @@ class ProjectAnalysisProperty(APIView):
                 ser = TaskSerializer(task)
                 data = ser.data
                 ProjectAnalysisProperty.correct_fields(data)
+                # DocumentViewByTask.correct_fields(data)
                 params_data = {**data, "output_type": None}
                 res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None,
@@ -1221,10 +1226,11 @@ class ProjectAnalysisProperty(APIView):
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
-                        if doc_data["total_word_count"] >= 50000:
 
-                            task_write_data = json.dumps(doc_data, default=str)
-                            write_doc_json_file.apply_async((task_write_data, task.id))
+                        #if doc_data["total_word_count"] >= 50000:
+
+                        task_write_data = json.dumps(doc_data, default=str)
+                        write_doc_json_file.apply_async((task_write_data, task.id))
 
                         task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
                                                                 "task_char_count":doc_data.get('total_char_count', 0),
@@ -1276,6 +1282,17 @@ class ProjectAnalysis(APIView):
 
 #########################################
 
+
+## PROJECT ANALYSIS FOR WEIGHTED WORD COUNT
+# class AnalyseProject(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def get(self, reqeust, project_id):
+
+
+
+
+
 def msg_send(sender,receiver,task):
     obj = Task.objects.get(id=task)
     proj = obj.job.project.project_name
@@ -1321,9 +1338,6 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         # except:
             # return Response({'msg':'Task Assign details not found'},status=status.HTTP_400_BAD_REQUEST)
         return Response(task, status=status.HTTP_200_OK)
-
-
-
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -2185,8 +2199,6 @@ def get_media_link(request,task_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
-    from django_celery_results.models import TaskResult
-    from ai_workspace.models import MTonlytaskCeleryStatus
     task = request.GET.get('task')
     project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)

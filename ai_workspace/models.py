@@ -1,4 +1,6 @@
+import os
 import random
+import re
 import string
 from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
@@ -10,37 +12,36 @@ from django.db.models.base import Model
 from django.utils.text import slugify
 from datetime import datetime, date
 from enum import Enum
-from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save, post_delete
-from django.contrib.auth import settings
-import os, re,time
-from ai_auth.models import AiUser,Team,HiredEditors
-from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
-    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,ProjectTypeDetail
-from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
-from ai_workspace_okapi.models import Document, Segment
-from ai_staff.models import ParanoidModel,Billingunits,MTLanguageLocaleVoiceSupport
-from django.shortcuts import reverse
-from django.core.validators import FileExtensionValidator
-from ai_workspace_okapi.utils import get_processor_name, get_file_extension
-from django.db.models import Q, Sum
-from django.utils.functional import cached_property
-from ai_workspace.utils import create_ai_project_id_if_not_exists
-from django.db.models.fields.files import FieldFile, FileField
 
-from .manager import AilzaManager
-from .utils import create_dirs_if_not_exists, create_task_id
-from ai_workspace_okapi.utils import SpacesService
-from .signals import (create_allocated_dirs, create_project_dir, \
-    create_pentm_dir_of_project,set_pentm_dir_of_project, \
-    check_job_file_version_has_same_project,)
-from .manager import ProjectManager, FileManager, JobManager,\
-    TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager,ProjectStepsManager
-from django.db.models.fields import Field
+from django.contrib.auth import settings
+from django.core.validators import FileExtensionValidator
+from django.db import models
+from django.db.models import Q, Sum
+from django.db.models.fields.files import FileField
+from django.db.models.signals import post_save, pre_save
+from django.shortcuts import reverse
+from django.utils.functional import cached_property
+
+from ai_auth.models import AiUser, Team
+from ai_auth.utils import get_unique_pid
+from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
+    Currencies, ProjectTypeDetail
+from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
+from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 # from integerations.github_.models import ContentFile
 # from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
+from ai_workspace_okapi.models import Document, Segment
+from ai_workspace_okapi.utils import get_processor_name, get_file_extension
+from .manager import ProjectManager, FileManager, JobManager, \
+    TaskManager, TaskAssignManager, ProjectSubjectFieldManager, ProjectContentTypeManager, ProjectStepsManager
+from .signals import (create_project_dir, \
+                      create_pentm_dir_of_project, set_pentm_dir_of_project, \
+                      check_job_file_version_has_same_project, )
+from .utils import create_dirs_if_not_exists, create_task_id
+
 from ai_workspace_okapi.models import SplitSegment
+
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -405,7 +406,6 @@ class Project(models.Model):
     @property
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
-            # print("Doc opened")
             return True
         if len(self.get_tasks) == self.task_project.count() and len(self.get_tasks) != 0:
             return True

@@ -68,7 +68,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
     print("print(total_credits.credits_left",total_credits.credits_left)
     
     with open(fp, "rb") as pdf_path:
-        encoded_string = base64.b64encode(pdf_path.read())   
+        encoded_string = base64.b64encode(pdf_path.read())
     data = {'apikey': CONVERTIO_API ,'input': 'base64', 'file': encoded_string.decode('utf-8'),'filename':   pdf_file_name,'outputformat': 'docx' }
     # if ocr == "ocr":
         # language = language.split(",")                    #if ocr is True and selecting multiple language 
@@ -91,7 +91,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
         return  {"result":"Error during input file fetching: couldn't connect to host"} 
     else:
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
-        while requests.get(url = get_url).json()['data']['step'] != 'finish':  
+        while requests.get(url = get_url).json()['data']['step'] != 'finish':
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
             time.sleep(2)
@@ -123,7 +123,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
             text = image_ocr_google_cloud_vision(image , inpaint=False)
             text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
-            doc.add_paragraph(text) 
+            doc.add_paragraph(text)
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
@@ -134,7 +134,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
         txt_field_obj.docx_url_field = docx_file_path
-        txt_field_obj.pdf_conversion_sec = int(round(end-start,2)) 
+        txt_field_obj.pdf_conversion_sec = int(round(end-start,2))
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
@@ -153,14 +153,14 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
 def para_creation_from_ocr(texts):
     para_text = []
     for i in  texts.pages:
-        for j in i.blocks: 
+        for j in i.blocks:
             for k in j.paragraphs:
                 text_list = []
                 for a in  k.words:
                     text_list.append(" ")
                     for b in a.symbols:
                         text_list.append(b.text)
-            para_text.append("".join(text_list)) 
+            para_text.append("".join(text_list))
     return "\n".join(para_text)
  
 
@@ -191,7 +191,7 @@ def pdf_conversion(id):
         response_result = convertiopdf2docx.delay(id,language = lang ,ocr = pdf_text_ocr_check)
         file_details.pdf_task_id = response_result.id
         file_details.save()
-        logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name)) 
+        logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name))
         return response_result.id
     else:
         return "error"
