@@ -23,7 +23,9 @@ def get_json_file_path(task):
     source_file_path = TaskSerializer(task).data["source_file_path"]
     path_list = re.split("source/", source_file_path)
     path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+    print("Exists")
     if not os.path.exists(path):
+        print("Not Exists")
         write_json_data(task)
     return path
 
@@ -177,7 +179,7 @@ def get_tm_analysis(doc_data,job):
 
                 for node in tm_file.unit_iter():
                     tm_lists.append(remove_tags(node.source))
-
+            print("TmLists----------->",tm_lists)
             unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
             for i,j in enumerate(unrepeated):
                 repeat = c[j]-1 if c[j]>1 else 0
@@ -276,7 +278,7 @@ def get_project_analysis(request,project_id):
                 raw_total = doc_data.get('total_word_count')
 
                 tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
-
+                print("Tm Analysis----------->",tm_analysis)
 
                 if tm_analysis:
                     word_count = get_word_count(tm_analysis,proj,task,raw_total)
