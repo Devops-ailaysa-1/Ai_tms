@@ -380,7 +380,8 @@ def write_doc_json_file(doc_data, task_id):
 
     source_file_path = params_data["source_file_path"]
     path_list = re.split("source/", source_file_path)
-    os.mkdir(os.path.join(path_list[0], "doc_json"))
+    if not os.path.exists(os.path.join(path_list[0], "doc_json")):
+        os.mkdir(os.path.join(path_list[0], "doc_json"))
     doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
 
     with open(doc_json_path, "w") as outfile:
@@ -520,3 +521,31 @@ def update_forbidden_words(forbidden_file_id):
     file = Forbidden.objects.get(id=forbidden_file_id)
     ForbiddenWords.objects.filter(file_id = forbidden_file_id).update(job=file.job)
     logger.info("forbidden words updated")
+
+
+
+
+@task
+def analysis(tasks,project_id):
+    from ai_workspace.models import Project,Task
+    from ai_tm.models import WordCountGeneral,WordCountTmxDetail
+    from ai_tm.api_views import get_json_file_path,get_tm_analysis,get_word_count
+    proj = Project.objects.get(id=project_id)
+    for task in tasks:
+        MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task,status=1,celery_task_id=analysis.request.id)
+        task = Task.objects.get(id=task)
+        file_path = get_json_file_path(task)
+        doc_data = json.load(open(file_path))
+        if type(doc_data) == str:
+            doc_data = json.loads(doc_data)
+        raw_total = doc_data.get('total_word_count')
+        tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
+        print("Tm Analysis----------->",tm_analysis)
+        if tm_analysis:
+            word_count = get_word_count(tm_analysis,proj,task,raw_total)
+            print("WordCount------------>",word_count)
+        else:
+            word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
+                        new_words=doc_data.get('total_word_count'),raw_total=raw_total)
+        [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
+    logger.info("Analysis completed")
