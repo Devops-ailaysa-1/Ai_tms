@@ -548,4 +548,14 @@ def analysis(tasks,project_id):
             word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
                         new_words=doc_data.get('total_word_count'),raw_total=raw_total)
         [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
+        MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task,status=2,celery_task_id=analysis.request.id)
     logger.info("Analysis completed")
+
+
+# @task
+# def get_word_count_cel(tm_analysis,proj,task,raw_total):
+#     from ai_tm.api_views import get_word_count
+#     MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task,status=1,celery_task_id=analysis.request.id)
+#     word_count = get_word_count(tm_analysis,proj,task,raw_total)
+#     print("WordCount------------>",word_count)
+#     logger.info("Analysis completed")
