@@ -18,6 +18,7 @@ from ai_workspace.serializers import TaskSerializer
 from ai_workspace.api_views import ProjectAnalysisProperty
 from django.conf import settings
 from ai_auth.tasks import analysis
+from ai_workspace.models import MTonlytaskCeleryStatus
 spring_host = os.environ.get("SPRING_HOST")
 
 def get_json_file_path(task):
@@ -116,12 +117,21 @@ class TmxUploadView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self, request):
-
+        job = request.POST.get('job_id')
         data = {**request.POST.dict(), "tmx_file": request.FILES.getlist('tmx_file')}
         ser_data = TmxFileSerializer.prepare_data(data)
         serializer = TmxFileSerializer(data=ser_data,many=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
+            task_obj = Task.objects.filter(job_id=job).last()
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
+            if ins:
+                print(ins)
+                MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
+                # print("In Create",ins)
+                # ins.status = 1
+                # ins.save()
+                print("In create Updated---------->",ins.status)
         return Response(serializer.data, status=201)
 
     def update(self, request, pk):
@@ -131,11 +141,23 @@ class TmxUploadView(viewsets.ViewSet):
 
         if serializer.is_valid():
             serializer.save()
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
+            if ins:
+                print("In Update",ins)
+                ins.status = 1
+                ins.save()
             return Response(serializer.data, status=200)
         return Response(serializer.errors)
 
     def delete(self, request, pk):
         instance = TmxFileNew.objects.get(id=pk)
+        task_obj = Task.objects.filter(job_id=instance.job.id).last()
+        print("TAskObj--------->",task_obj)
+        ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
+        if ins:
+            print(ins)
+            MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
+            print("In delete Updated---------->",ins.status)
         instance.delete()
         return Response(status=204)
 
@@ -180,13 +202,13 @@ def get_tm_analysis(doc_data,job):
 
                 for node in tm_file.unit_iter():
                     tm_lists.append(remove_tags(node.source))
-            print("TmLists----------->",tm_lists)
+            print("INside TmLists----------->")
             unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
             for i,j in enumerate(unrepeated):
                 repeat = c[j]-1 if c[j]>1 else 0
                 tt = match.extractOne(j,tm_lists,match_type='levenshtein')
                 final.append({'sent':j,'ratio':tt[1],'index':i,'word_count':len(j.split()),'repeat':repeat})
-
+            print("Final----------------->")
             return final,files_list
         else:
             return None,files_list
@@ -261,8 +283,11 @@ def get_project_analysis(request,project_id):
                 tasks.append(_task)
             else:
                 temp1 = [i.id for i in _task.job.tmx_file_job.all()]
+                print("Temp1---------->",temp1)
                 temp2 = [i.tmx_file_obj_id for i in _task.task_wc_general.last().wc_general.all()]
+                print("Temp2------------->",temp2)
                 temp3 = set(temp1) ^ set(temp2)
+                print("Temp3--------->",temp3)
                 if temp3:
                     tasks.append(_task)
                     _task.task_wc_general.last().wc_general.all().delete()
@@ -271,26 +296,32 @@ def get_project_analysis(request,project_id):
             print("TASks--------->",tasks)
             print("Inside Tasks if")
             task_ids = [i.id for i in tasks]
-            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=tasks[0].id) & Q(task_name = 'analysis')).last()
-            print("Ins-------------->",ins)
-            state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-            print("STate------------->",state)
-            if state == 'PENDING':
-                return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
-            elif (not ins) or state == 'FAILURE':
-                cel_task = analysis.apply_async((task_ids,proj.id,), )
-                return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
-            elif state == 'SUCCESS':
-                if ins.status == 1:
+            #n = len(tasks)-1
+            for i in tasks:
+                ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=i.id) & Q(task_name = 'analysis')).last()
+                print("Ins-------------->",ins)
+                state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
+                print("STate------------->",state)
+                if state == 'PENDING':
+                    print("stst",ins.status)
+                    return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
+                elif (not ins) or state == 'FAILURE':
                     cel_task = analysis.apply_async((task_ids,proj.id,), )
                     return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
-                else:
-                    pass
+                elif state == 'SUCCESS':
+                    print("Ins Status---------->",ins.status)
+                    if ins.status == 1:
+                        cel_task = analysis.apply_async((task_ids,proj.id,), )
+                        return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
+                    else:
+                        pass
         #else:
         print("Outside If")
         res=[]
         for task in  proj.get_mtpe_tasks:
             word_count = task.task_wc_general.last()
+
+            print("Word_count_obj---------->",word_count)
 
             WWC = (word_count.new_words * 100 + word_count.tm_100 * rates.tm_100_percentage + \
                   word_count.tm_95_99 * rates.tm_95_99_percentage + word_count.tm_85_94 * rates.tm_85_94_percentage +\
