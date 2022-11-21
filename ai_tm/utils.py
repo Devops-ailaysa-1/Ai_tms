@@ -21,6 +21,12 @@ def write_project_header(workbook, worksheet, proj):
     align_format = workbook.add_format({
         'text_wrap': True, 'align': 'left',
             })
+
+    align_left = workbook.add_format(
+        {
+            'align': 'left',
+        }
+    )
     worksheet.set_column('A:B', 20)
     worksheet.set_column('C:K', 15)
 
@@ -31,7 +37,7 @@ def write_project_header(workbook, worksheet, proj):
     worksheet.write('B2', proj.project_name, align_format)
 
     # Row 3
-    worksheet.write('A3', 'Languages', {'align': 'left'})
+    worksheet.write('A3', 'Languages', align_left)
     worksheet.write('B3', get_languages(proj), align_format)
 
     # Row 4
