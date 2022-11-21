@@ -1942,7 +1942,7 @@ def transcribe_file(request):
     if queryset:#or state == 'SUCCESS':
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
-    ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'transcribe_long_file_cel')).last()
+    ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'transcribe_long_file_cel')).last()
     state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
     print("State----------------------->",state)
     if state == 'PENDING':
