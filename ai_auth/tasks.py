@@ -531,9 +531,9 @@ def analysis(tasks,project_id):
     from ai_tm.models import WordCountGeneral,WordCountTmxDetail
     from ai_tm.api_views import get_json_file_path,get_tm_analysis,get_word_count
     proj = Project.objects.get(id=project_id)
-    for task in tasks:
-        MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task,status=1,celery_task_id=analysis.request.id)
-        task = Task.objects.get(id=task)
+    for task_id in tasks:
+        MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task_id,status=1,celery_task_id=analysis.request.id)
+        task = Task.objects.get(id=task_id)
         file_path = get_json_file_path(task)
         doc_data = json.load(open(file_path))
         if type(doc_data) == str:
@@ -548,7 +548,7 @@ def analysis(tasks,project_id):
             word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
                         new_words=doc_data.get('total_word_count'),raw_total=raw_total)
         [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
-        MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task,status=2,celery_task_id=analysis.request.id)
+        MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task.id,status=2,celery_task_id=analysis.request.id)
     logger.info("Analysis completed")
 
 
