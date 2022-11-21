@@ -197,7 +197,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         doc_data = json.load(open(json_file_path))
 
-        doc_data = json.loads(doc_data)
+        if type(doc_data) == str:
+
+            doc_data = json.loads(doc_data)
 
         if doc_data['total_word_count'] >= 50000:
 
@@ -815,7 +817,7 @@ class MT_RawAndTM_View(views.APIView):
 
                 for node in tm_file.unit_iter():
                     tm_lists.append(remove_tm_tags(node.source))
-        
+
         match_results = match.extract(seg_source,
                                       tm_lists,
                                       match_type='levenshtein',
