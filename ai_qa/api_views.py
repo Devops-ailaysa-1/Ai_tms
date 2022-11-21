@@ -446,7 +446,7 @@ def forbidden_words_view(source, target, doc_id):
         forbidden_words = [i.words for i in queryset]
         forbidden_out['source'] = []
         forbidden_out['target'] = forbidden_words
-        forbidden_out['ErrorNote'] = ["Forbidden word(s) found in target segment"]
+        forbidden_out['ErrorNote'] = ["Forbidden word(s) in target segment"]
         return forbidden_out
     else:
         return None
@@ -480,7 +480,7 @@ def untranslatable_words_view(source, target, doc_id):
         untranslatable_words = [i.words for i in queryset]
         untranslatable_out['source'] = untranslatable_words
         untranslatable_out['target'] = []
-        untranslatable_out['ErrorNote'] = ["Untranslatable word(s) present in source segment"]
+        untranslatable_out['ErrorNote'] = ["Untranslatable word(s) in source segment"]
         return untranslatable_out
     else:
         return None
@@ -517,14 +517,14 @@ def numbers_view(source, target):
         return num_out
     else:
         if len(src_list)!=len(tar_list):
-            msg = ["Mismatch in number count between source and target segment"]
+            msg = ["Mismatch in number count between source and target segments"]
 
         else:
             #if functools.reduce(lambda x, y : x and y, map(lambda p, q: p == q,src_list,tar_list), True):
             if set(stripNum(src_list)) == set(stripNum(tar_list)):
                 msg = []
             else:
-                msg = ["Number(s) in source and target segment are different"]
+                msg = ["Number(s) in source and target segments are different"]
 
         num_out['source'] = []
         num_out['target'] = []
@@ -772,7 +772,7 @@ def QA_Check(request):
 
     ###  FOR FORBIDDEN FILE  ###
     forbidden_words = forbidden_words_view(source, target, doc_id)
-    print("Forbidden------------>",forbidden_words)
+
     if forbidden_words:
         out.append({'Forbidden_words': forbidden_words })
 
