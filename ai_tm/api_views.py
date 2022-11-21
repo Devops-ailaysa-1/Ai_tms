@@ -52,7 +52,8 @@ def write_json_data(task):
 
         source_file_path = params_data["source_file_path"]
         path_list = re.split("source/", source_file_path)
-        os.mkdir(os.path.join(path_list[0], "doc_json"))
+        if not os.path.exists(os.path.join(path_list[0], "doc_json")):
+            os.mkdir(os.path.join(path_list[0], "doc_json"))
         doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
 
         with open(doc_json_path, "w") as outfile:
@@ -269,7 +270,7 @@ def get_project_analysis(request,project_id):
                 doc_data = json.load(open(file_path))
 
                 if type(doc_data) == str:
-                    
+
                     doc_data = json.loads(doc_data)
 
                 raw_total = doc_data.get('total_word_count')
