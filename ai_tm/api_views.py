@@ -272,7 +272,7 @@ def get_project_analysis(request,project_id):
             print("Inside Tasks if")
             task_ids = [i.id for i in tasks]
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=tasks[0].id) & Q(task_name = 'analysis')).last()
-            print("Ins-------------->",ins.status)
+            print("Ins-------------->",ins)
             state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
             print("STate------------->",state)
             if state == 'PENDING':
