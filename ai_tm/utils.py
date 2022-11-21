@@ -21,7 +21,8 @@ def write_project_header(workbook, worksheet, proj):
     align_format = workbook.add_format({
         'text_wrap': True, 'align': 'left',
             })
-    worksheet.set_column('A:K', 20)
+    worksheet.set_column('A:B', 20)
+    worksheet.set_column('C:K', 15)
 
     worksheet.write('A1', 'Project analysis report', align_format)
 
@@ -30,7 +31,7 @@ def write_project_header(workbook, worksheet, proj):
     worksheet.write('B2', proj.project_name, align_format)
 
     # Row 3
-    worksheet.write('A3', 'Languages', align_format)
+    worksheet.write('A3', 'Languages', {'align': 'left'})
     worksheet.write('B3', get_languages(proj), align_format)
 
     # Row 4
@@ -44,7 +45,7 @@ def write_common_rows(workbook, worksheet, row_no):
         {
             'text_wrap': True,
             'align': 'center',
-            'border': 2,
+            'border': 1,
         }
     )
 
@@ -92,7 +93,7 @@ def write_data_rows(workbook, worksheet, row_no, new, rep, c100, \
         {
             'text_wrap': True,
             'align': 'center',
-            'border': 2,
+            'border': 1,
         }
     )
 
@@ -101,7 +102,7 @@ def write_data_rows(workbook, worksheet, row_no, new, rep, c100, \
         {
             'text_wrap': True,
             'align': 'center',
-            'border': 2,
+            'border': 1,
             'bold': True,
         }
     )
@@ -125,7 +126,8 @@ def write_data_rows(workbook, worksheet, row_no, new, rep, c100, \
 def write_task_details(workbook, worksheet, proj, proj_row):
     # Setting format properties
     align_format = workbook.add_format({
-        'text_wrap': True, 'align': 'left',
+        # 'text_wrap': True,
+        'align': 'left',
     })
 
     tasks = proj.get_tasks
