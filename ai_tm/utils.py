@@ -37,12 +37,12 @@ def write_project_header(workbook, worksheet, proj):
     worksheet.write('B2', proj.project_name, align_format)
 
     # Row 3
-    worksheet.write('A3', 'Languages', align_left)
-    worksheet.write('B3', get_languages(proj), align_format)
+    worksheet.write('A3', 'Languages', align_format)
+    worksheet.write('B3', get_languages(proj), align_left)
 
     # Row 4
     worksheet.write('A4', 'Date:', align_format)
-    worksheet.write('B4', datetime.now().strftime("%d/%m/%Y %H:%M:%S"), align_format)
+    worksheet.write('B4', datetime.now().strftime("%d/%m/%Y"), align_format)
 
 def write_common_rows(workbook, worksheet, row_no):
 
