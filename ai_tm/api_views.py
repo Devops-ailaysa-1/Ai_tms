@@ -17,6 +17,7 @@ from ai_tm.utils import write_project_header, write_commons, write_data
 from ai_workspace.serializers import TaskSerializer
 from ai_workspace.api_views import ProjectAnalysisProperty
 from django.conf import settings
+from ai_auth.tasks import analysis
 spring_host = os.environ.get("SPRING_HOST")
 
 def get_json_file_path(task):
@@ -235,8 +236,11 @@ def get_word_count(tm_analysis,project,task,raw_total):
             repetition=repetition,raw_total=raw_total)
     return wc
 
+
 @api_view(['GET',])
 def get_project_analysis(request,project_id):
+
+        from ai_workspace.models import MTonlytaskCeleryStatus
 
         tasks= []
 
@@ -264,29 +268,26 @@ def get_project_analysis(request,project_id):
                     _task.task_wc_general.last().wc_general.all().delete()
 
         if tasks:
-
-            for task in tasks:
-
-                file_path = get_json_file_path(task)
-
-                doc_data = json.load(open(file_path))
-
-                if type(doc_data) == str:
-
-                    doc_data = json.loads(doc_data)
-
-                raw_total = doc_data.get('total_word_count')
-
-                tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
-                print("Tm Analysis----------->",tm_analysis)
-
-                if tm_analysis:
-                    word_count = get_word_count(tm_analysis,proj,task,raw_total)
+            print("TASks--------->",tasks)
+            print("Inside Tasks if")
+            task_ids = [i.id for i in tasks]
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=tasks[0].id) & Q(task_name = 'analysis')).last()
+            print("Ins-------------->",ins.status)
+            state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
+            print("STate------------->",state)
+            if state == 'PENDING':
+                return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
+            elif (not ins) or state == 'FAILURE':
+                cel_task = analysis.apply_async((task_ids,proj.id,), )
+                return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
+            elif state == 'SUCCESS':
+                if ins.status == 1:
+                    cel_task = analysis.apply_async((task_ids,proj.id,), )
+                    return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                 else:
-                    word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
-                                new_words=doc_data.get('total_word_count'),raw_total=raw_total)
-                [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
-
+                    pass
+        #else:
+        print("Outside If")
         res=[]
         for task in  proj.get_mtpe_tasks:
             word_count = task.task_wc_general.last()
@@ -317,6 +318,93 @@ def get_project_analysis(request,project_id):
                     'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
         ser = UserDefinedRateSerializer(rates)
         return Response({'payable_rate':ser.data,'project_wwc':proj_detail,'task_wwc':res})
+
+
+
+
+
+# @api_view(['GET',])
+# def get_project_analysis(request,project_id):
+#
+#         tasks= []
+#
+#         proj_wwc = 0
+#
+#         proj_raw_total,proj_tm_100,proj_tm_95_99,proj_tm_85_94,proj_tm_75_84,proj_tm_50_74,proj_tm_101,proj_tm_102,proj_new,proj_repetition = 0,0,0,0,0,0,0,0,0,0
+#
+#         proj = Project.objects.filter(id=project_id).first()
+#
+#         user = proj.ai_user
+#
+#         rates = UserDefinedRate.objects.filter(user = user).last()
+#         if not rates:
+#             rates = UserDefinedRate.objects.filter(is_default = True).first()
+#
+#         for _task in proj.get_mtpe_tasks:
+#             if _task.task_wc_general.last() == None:
+#                 tasks.append(_task)
+#             else:
+#                 temp1 = [i.id for i in _task.job.tmx_file_job.all()]
+#                 temp2 = [i.tmx_file_obj_id for i in _task.task_wc_general.last().wc_general.all()]
+#                 temp3 = set(temp1) ^ set(temp2)
+#                 if temp3:
+#                     tasks.append(_task)
+#                     _task.task_wc_general.last().wc_general.all().delete()
+#
+#         if tasks:
+#
+#             for task in tasks:
+#
+#                 file_path = get_json_file_path(task)
+#
+#                 doc_data = json.load(open(file_path))
+#
+#                 if type(doc_data) == str:
+#
+#                     doc_data = json.loads(doc_data)
+#
+#                 raw_total = doc_data.get('total_word_count')
+#
+#                 tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
+#                 print("Tm Analysis----------->",tm_analysis)
+#
+#                 if tm_analysis:
+#                     word_count = get_word_count(tm_analysis,proj,task,raw_total)
+#                 else:
+#                     word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
+#                                 new_words=doc_data.get('total_word_count'),raw_total=raw_total)
+#                 [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
+#
+#         res=[]
+#         for task in  proj.get_mtpe_tasks:
+#             word_count = task.task_wc_general.last()
+#
+#             WWC = (word_count.new_words * 100 + word_count.tm_100 * rates.tm_100_percentage + \
+#                   word_count.tm_95_99 * rates.tm_95_99_percentage + word_count.tm_85_94 * rates.tm_85_94_percentage +\
+#                   word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
+#                   word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage)/100
+#
+#             proj_wwc += WWC
+#             proj_tm_100 += word_count.tm_100
+#             proj_tm_101 += word_count.tm_101
+#             proj_tm_102 += word_count.tm_102
+#             proj_tm_95_99 += word_count.tm_95_99
+#             proj_tm_85_94 += word_count.tm_85_94
+#             proj_tm_75_84 += word_count.tm_75_84
+#             proj_tm_50_74 += word_count.tm_50_74
+#             proj_new += word_count.new_words
+#             proj_repetition += word_count.repetition
+#             proj_raw_total += word_count.raw_total
+#
+#             res.append({'task_id':task.id,'task_file':task.file.filename,'task_lang_pair':task.job.source_target_pair_names,'weighted':round(WWC),'new':word_count.new_words,'repetition':word_count.repetition,\
+#             'tm_50_74':word_count.tm_50_74,'tm_75_84':word_count.tm_75_84,'tm_85_94':word_count.tm_85_94,'tm_95_99':word_count.tm_95_99,\
+#             'tm_100':word_count.tm_100,'tm_101':word_count.tm_101,'tm_102':word_count.tm_102,'raw_total':word_count.raw_total})
+#
+#         proj_detail =[{'project_id':proj.id,'project_name':proj.project_name,'weighted':round(proj_wwc),'new':proj_new,'repetition':proj_repetition,\
+#                     'tm_50_74':proj_tm_50_74,'tm_75_84':proj_tm_75_84,'tm_85_94':proj_tm_85_94,'tm_95_99':proj_tm_95_99,\
+#                     'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
+#         ser = UserDefinedRateSerializer(rates)
+#         return Response({'payable_rate':ser.data,'project_wwc':proj_detail,'task_wwc':res})
 
 
 # class ReportDownloadView(APIView):
