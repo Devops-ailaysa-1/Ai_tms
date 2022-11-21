@@ -13,6 +13,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
 from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
 from ai_auth.models import UserCredits
+
 logger = logging.getLogger('django')
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
 
@@ -55,7 +56,6 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
             serializer.save()
-            print("serializer.data" , serializer.data)
             return Response(serializer.data)
         return Response(serializer.errors)
  
@@ -81,21 +81,18 @@ class ConversionPortableDoc(APIView):
         celery_task = {}
         ids = request.query_params.getlist('id', None)
         total_credits = UserCredits.objects.get(user_id =request.user )
-        print(total_credits.credits_left)
         for id in ids:
             pdf_path = Ai_PdfUpload.objects.get(id = int(id)).pdf_file.path
-            len_of_pdf = file_pdf_check(pdf_path)[1]
-            consum_cred = get_consumable_credits_for_pdf_to_docx(len_of_pdf)
+            formats , len_of_pdf = file_pdf_check(pdf_path)
+            print("formats---->" ,formats)
+            consum_cred = get_consumable_credits_for_pdf_to_docx(len_of_pdf,formats)
             if total_credits.credits_left > consum_cred:
                 task_id = pdf_conversion(int(id))
                 celery_task[int(id)] = task_id
                 total_credits.credits_left = total_credits.credits_left - consum_cred
                 total_credits.save()
-                print("consum_cred--->" ,consum_cred)
             else:
                 return Response({"status":"no credits"})
-        
-        print("total_credits.credits_left", total_credits.credits_left)
         return Response(celery_task)
 
 

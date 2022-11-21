@@ -64,9 +64,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
     fp  = txt_field_obj.pdf_file.path
     pdf_file_name = fp.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
-    total_credits = UserCredits.objects.get(user_id =txt_field_obj.user)
-    print("print(total_credits.credits_left",total_credits.credits_left)
-    
+    total_credits = UserCredits.objects.get(user_id =txt_field_obj.user)    
     with open(fp, "rb") as pdf_path:
         encoded_string = base64.b64encode(pdf_path.read())
     data = {'apikey': CONVERTIO_API ,'input': 'base64', 'file': encoded_string.decode('utf-8'),'filename':   pdf_file_name,'outputformat': 'docx' }
@@ -85,6 +83,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
     if response_status['status'] == 'error': 
         txt_field_obj.status = "ERROR"
         txt_field_obj.save()
+        ###retain cred if error
         consum_cred = get_consumable_credits_for_pdf_to_docx(file_pdf_check(fp)[1])
         total_credits.credits_left = total_credits.credits_left + consum_cred
         total_credits.save()
@@ -104,9 +103,9 @@ def convertiopdf2docx(id ,language,ocr = None ):
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
         return {"result":"finished_task" }
-
+import tempfile
 #########ocr ######
-@shared_task(serializer='json')
+@shared_task(serializer='json')  
 def ai_export_pdf(id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     total_credits = UserCredits.objects.get(user_id =txt_field_obj.user) 
@@ -119,11 +118,12 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.pdf_no_of_page = int(pdf_len)
         doc = docx.Document()
         for i in tqdm(range(1,pdf_len+1)):
-            image = convert_from_path(fp ,thread_count=1,fmt='png',grayscale=True ,first_page=i,last_page=i ,size=(700, 700) )[0]
-            # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
-            text = image_ocr_google_cloud_vision(image , inpaint=False)
-            text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
-            doc.add_paragraph(text)
+            with tempfile.TemporaryDirectory() as image:
+                image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=True ,first_page=i,last_page=i ,size=(500, 500) )[0]
+                # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
+                text = image_ocr_google_cloud_vision(image , inpaint=False)
+                text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
+                doc.add_paragraph(text)
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
@@ -144,6 +144,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         logger.error(str(e))
         txt_field_obj.status = "ERROR"
         txt_field_obj.save()
+        ###retain cred if error
         consum_cred = get_consumable_credits_for_pdf_to_docx(file_pdf_check(fp)[1])
         total_credits.credits_left = total_credits.credits_left + consum_cred
         print(file_pdf_check(fp)[1])
@@ -187,7 +188,6 @@ def pdf_conversion(id):
         return response_result.id
     # elif lang in list(lang_codes.keys()):
     elif pdf_text_ocr_check == 'text':
-        print("convertio text")
         response_result = convertiopdf2docx.delay(id,language = lang ,ocr = pdf_text_ocr_check)
         file_details.pdf_task_id = response_result.id
         file_details.save()
@@ -197,9 +197,17 @@ def pdf_conversion(id):
         return "error"
 
 
-def get_consumable_credits_for_pdf_to_docx(total_pages):
-    return int(total_pages)*5
+def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
+    if formats == 'text':
+        return int(total_pages)
+    else:
+        return int(total_pages)*5
 
 
-def  check_credit(pdf_request_file):
-    pass
+# def convertio_check_credit(total_pages):
+#     if total_pages <=50:
+#         credit = 75
+#     elif total_pages <=100:
+#         credit = 150
+#     else:
+        
