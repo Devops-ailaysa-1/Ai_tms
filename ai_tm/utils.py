@@ -10,7 +10,7 @@ def get_languages(proj):
     tl = ""
     for job in jobs:
         tl += job.target_language.language
-        if job != jobs.last():
+        if job != jobs[len(jobs) - 1]:
             tl += ", "
 
     return sl + " --> " + tl
@@ -130,7 +130,7 @@ def write_task_details(workbook, worksheet, proj, proj_row):
 
     tasks = proj.get_tasks
     for task in tasks:
-        if task == tasks.first():
+        if task == tasks[0]:
             proj_row += 2
         else:
             proj_row += 5
