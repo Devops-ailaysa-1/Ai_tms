@@ -128,9 +128,6 @@ class TmxUploadView(viewsets.ViewSet):
             if ins:
                 print(ins)
                 MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
-                # print("In Create",ins)
-                # ins.status = 1
-                # ins.save()
                 print("In create Updated---------->",ins.status)
         return Response(serializer.data, status=201)
 
@@ -138,14 +135,13 @@ class TmxUploadView(viewsets.ViewSet):
         tmx_file_ins = TmxFileNew.objects.get(id=pk)
         job_id = request.POST.get("job_id", None)
         serializer = TmxFileSerializer(tmx_file_ins, data={"job" : job_id}, partial=True)
-
+        task_obj = Task.objects.filter(job_id=tmx_file_ins.job.id).last()
         if serializer.is_valid():
             serializer.save()
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
             if ins:
                 print("In Update",ins)
-                ins.status = 1
-                ins.save()
+                MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
             return Response(serializer.data, status=200)
         return Response(serializer.errors)
 
