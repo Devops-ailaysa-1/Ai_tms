@@ -822,7 +822,7 @@ class MT_RawAndTM_View(views.APIView):
                                       match_type='levenshtein',
                                       score_cutoff = round(proj.threshold / 100, 2),
                                       limit = proj.max_hits)
-        response_data = [{'source':mr[0].get('source'),'target':mr[0].get('target'),'percentage':round(mr[1]*100)} for mr in match_results] if match_results else []
+        response_data = [{'source':mr[0].get('source'),'target':mr[0].get('target'),'percentage':round(mr[1]*100,2)} for mr in match_results] if match_results else []
         return response_data
 
     @staticmethod
