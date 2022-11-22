@@ -169,9 +169,6 @@ class TmxUploadView(viewsets.ViewSet):
 #         break
 
 
-
-
-
 def get_tm_analysis(doc_data,job):
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")
@@ -589,3 +586,13 @@ class ReportDownloadView(APIView):
             report_path = os.path.join(proj.project_dir_path, "analysis_reports", proj.project_name + ".xlsx")
 
             return ReportDownloadView.download_excel(report_path, proj)
+
+
+
+@api_view(['GET',])
+def download_tmx_file(request,file_id):
+    try:
+        instance = TmxFileNew.objects.get(id=file_id).tmx_file
+        return download_file(instance.path)
+    except:
+        return Response({'msg':'No file Exists'})
