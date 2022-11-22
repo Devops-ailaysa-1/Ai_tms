@@ -255,6 +255,7 @@ def glossary_template_lite(request):
     response['Content-Disposition'] = 'attachment; filename=Glossary_template_lite.xlsx'
     xlsx_data = WriteToExcel_lite()
     response.write(xlsx_data)
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
 
 
@@ -265,6 +266,7 @@ def glossary_template(request):
     response['Content-Disposition'] = 'attachment; filename=Glossary_template.xlsx'
     xlsx_data = WriteToExcel()
     response.write(xlsx_data)
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
 
 ######################################TBXWrite####################################
