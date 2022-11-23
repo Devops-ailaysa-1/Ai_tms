@@ -87,7 +87,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
         consum_cred = get_consumable_credits_for_pdf_to_docx(file_pdf_check(fp)[1])
         total_credits.credits_left = total_credits.credits_left + consum_cred
         total_credits.save()
-        return  {"result":"Error during input file fetching: couldn't connect to host"} 
+        print({"result":"Error during input file fetching: couldn't connect to host"}) 
     else:
         get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
         while requests.get(url = get_url).json()['data']['step'] != 'finish':
@@ -102,7 +102,8 @@ def convertiopdf2docx(id ,language,ocr = None ):
         txt_field_obj.docx_url_field = str(settings.MEDIA_URL+str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" ##save path to database
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
-        return {"result":"finished_task" }
+        print({"result":"finished_task" })
+        
 import tempfile
 #########ocr ######
 @shared_task(serializer='json')  
@@ -130,6 +131,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
         logger.info('finished ocr and saved as docx ,file_name: ' )
+        print('finished ocr and saved as docx ,file_name: ')
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
@@ -138,7 +140,8 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
-        return {"result":"finished_task"}
+        # print("pdf_conversion_done")
+        # return {"result":"finished_task"}
     except BaseException as e:
         end = time.time()
         logger.error(str(e))
@@ -147,9 +150,10 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         ###retain cred if error
         consum_cred = get_consumable_credits_for_pdf_to_docx(file_pdf_check(fp)[1])
         total_credits.credits_left = total_credits.credits_left + consum_cred
-        print(file_pdf_check(fp)[1])
+        # print(file_pdf_check(fp)[1])
         total_credits.save()
-        return {'result':"something went wrong"}  
+        print("pdf_conversion_something went wrong")
+        # return {'result':"something went wrong"}  
 
 def para_creation_from_ocr(texts):
     para_text = []
@@ -180,8 +184,9 @@ def pdf_conversion(id):
     # if lang in google_ocr_indian_language:
     if (pdf_text_ocr_check == 'ocr') or \
                 (lang in google_ocr_indian_language):
-        print("google ocr text",lang)
+        # print("google ocr text",lang)
         response_result = ai_export_pdf.delay(id)
+        # print("resp res--->",response_result)
         file_details.pdf_task_id = response_result.id
         file_details.save()
         logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
