@@ -13,6 +13,9 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
 from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
 from ai_auth.models import UserCredits
+from ai_workspace.api_views import UpdateTaskCreditStatus
+
+
 
 logger = logging.getLogger('django')
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
@@ -76,21 +79,20 @@ from rest_framework.views import APIView
 class ConversionPortableDoc(APIView):
     permission_classes = [IsAuthenticated]
     serializer = PdfFileSerializer
-    
     def get(self,request):
         celery_task = {}
+        user = request.user
         ids = request.query_params.getlist('id', None)
-        total_credits = UserCredits.objects.get(user_id =request.user )
+        initial_credit = user.credit_balance.get("total_left")
         for id in ids:
             pdf_path = Ai_PdfUpload.objects.get(id = int(id)).pdf_file.path
-            formats , len_of_pdf = file_pdf_check(pdf_path)
-            print("formats---->" ,formats)
-            consum_cred = get_consumable_credits_for_pdf_to_docx(len_of_pdf,formats)
-            if total_credits.credits_left > consum_cred:
+            file_format,page_length = file_pdf_check(pdf_path)
+            #pdf consuming credits
+            consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+            if initial_credit > consumable_credits:
                 task_id = pdf_conversion(int(id))
                 celery_task[int(id)] = task_id
-                total_credits.credits_left = total_credits.credits_left - consum_cred
-                total_credits.save()
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
             else:
                 return Response({"status":"no credits"})
         return Response(celery_task)
