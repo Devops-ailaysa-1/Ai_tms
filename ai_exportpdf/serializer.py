@@ -5,13 +5,17 @@ from .models import Ai_PdfUpload
 
 
 class PdfFileSerializer(serializers.ModelSerializer):
- 
     class Meta:
         model = Ai_PdfUpload
-        # fields = ('id','pdf_file_name' ,'counter','pdf_no_of_page' ,'pdf_task_id' ,'docx_file_urls' )
         fields = "__all__"
 
-
+    
+    def create(self,validated_data):
+        validated_data['pdf_file_name'] = str(validated_data['pdf_file'])
+        validated_data['file_name'] = str(validated_data['pdf_file'])
+        instance = Ai_PdfUpload.objects.create(**validated_data)
+        return instance
+            
 # class PdfFileDownloadLinkSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = Ai_PdfUpload
