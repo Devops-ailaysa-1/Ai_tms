@@ -1,29 +1,19 @@
-from asyncore import file_dispatcher
-import json
-from re import search
-from tabnanny import check
-from ai_auth import serializers
 from ai_exportpdf.models import Ai_PdfUpload
-from django.http import   JsonResponse
-import  os  ,logging , pdftotext
-from ai_auth.models import AiUser
+from django.http import   JsonResponse 
+import logging  
 from rest_framework import viewsets
-from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from ai_exportpdf.serializer import PdfFileSerializer ,PdfFileStatusSerializer
 from rest_framework.views import  Response
-from rest_framework.decorators import permission_classes
-from django.http import Http404
-from rest_framework.decorators import api_view
-from django.contrib.auth import settings
+from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
-from ai_exportpdf.utils import  convertiopdf2docx ,ai_export_pdf, pdf_conversion
-from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
-from ai_staff.models import Languages
+from ai_exportpdf.utils import pdf_conversion
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
-from django.conf import settings
+from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
+from ai_auth.models import UserCredits
+
 logger = logging.getLogger('django')
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
 
@@ -41,8 +31,8 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         user = request.user
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
-            user = request.user
             serializer = PdfFileStatusSerializer(queryset,many=True)
+            
             return Response(serializer.data)
         else:
             query_filter = Ai_PdfUpload.objects.filter(user = user).order_by('id')
@@ -57,26 +47,18 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         for backend in list(filter_backends):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
-
-
+    
     def create(self,request):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
         user = request.user.id
-        celery_status_id = {}
-        for pdf_file_list in pdf_request_file:
-            data = {**request.POST.dict() ,'pdf_file':pdf_file_list ,\
-                'pdf_language':file_language,'user':user,'pdf_file_name':str(pdf_file_list),\
-                     'file_name':str(pdf_file_list) }
-            serializer = PdfFileSerializer(data = data)
-            if serializer.is_valid():
-                serializer.save()
-                file_id = serializer.data.get('id')
-                generate_conversion_id = pdf_conversion(file_id)
-                celery_status_id[file_id] = generate_conversion_id
-        return Response(celery_status_id)
-
-
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user} for pdf_file_list in pdf_request_file]
+        serializer = PdfFileSerializer(data = data,many=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+ 
     def retrieve(self, request, pk):
         queryset = Ai_PdfUpload.objects.get(id = pk)
         serializer = PdfFileSerializer(queryset)
@@ -90,8 +72,32 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         except:
             return Response({'msg':'deletion unsuccessfull'},status=400)
 
+from rest_framework.views import APIView
+class ConversionPortableDoc(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer = PdfFileSerializer
+    
+    def get(self,request):
+        celery_task = {}
+        ids = request.query_params.getlist('id', None)
+        total_credits = UserCredits.objects.get(user_id =request.user )
+        for id in ids:
+            pdf_path = Ai_PdfUpload.objects.get(id = int(id)).pdf_file.path
+            formats , len_of_pdf = file_pdf_check(pdf_path)
+            print("formats---->" ,formats)
+            consum_cred = get_consumable_credits_for_pdf_to_docx(len_of_pdf,formats)
+            if total_credits.credits_left > consum_cred:
+                task_id = pdf_conversion(int(id))
+                celery_task[int(id)] = task_id
+                total_credits.credits_left = total_credits.credits_left - consum_cred
+                total_credits.save()
+            else:
+                return Response({"status":"no credits"})
+        return Response(celery_task)
+
 
 @api_view(['GET',])
+@permission_classes([IsAuthenticated])
 def docx_file_download(request,id):
     pdf_doc_file = Ai_PdfUpload.objects.get(id=id).pdf_file.path
     if pdf_doc_file:
