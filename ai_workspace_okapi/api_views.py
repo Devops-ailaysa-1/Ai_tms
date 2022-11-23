@@ -816,14 +816,13 @@ class MT_RawAndTM_View(views.APIView):
                     tm_file = tmxfile(fin, sl, tl)
 
                 for node in tm_file.unit_iter():
-                    tm_lists.append(remove_tm_tags(node.source))
-
-        match_results = match.extract(seg_source,
+                    tm_lists.append({'source':remove_tm_tags(node.source),'target':remove_tm_tags(node.target)})
+        match_results = match.tm_fetch_extract(seg_source,
                                       tm_lists,
                                       match_type='levenshtein',
                                       score_cutoff = round(proj.threshold / 100, 2),
                                       limit = proj.max_hits)
-        response_data = [mr[0] for mr in match_results] if match_results else []
+        response_data = [{'source':mr[0].get('source'),'target':mr[0].get('target'),'percentage':round(mr[1]*100,2)} for mr in match_results] if match_results else []
         return response_data
 
     @staticmethod

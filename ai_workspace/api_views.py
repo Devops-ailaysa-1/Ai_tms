@@ -1942,7 +1942,7 @@ def transcribe_file(request):
     if queryset:#or state == 'SUCCESS':
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
-    ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+    ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'transcribe_long_file_cel')).last()
     state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
     print("State----------------------->",state)
     if state == 'PENDING':
@@ -1973,7 +1973,7 @@ def transcribe_file(request):
                 res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             else:
-                ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+                ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name = 'transcribe_long_file_cel')).last()
                 state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
                 print("State----------------------->",state)
                 if state == 'PENDING':
@@ -2153,7 +2153,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     if initial_credit > consumable_credits:
         if len(data)>4500:
             print(name)
-            ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
             print("State--------------->",state)
             if state == 'PENDING':

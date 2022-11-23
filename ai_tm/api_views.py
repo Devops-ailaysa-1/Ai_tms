@@ -17,13 +17,17 @@ from ai_tm.utils import write_project_header, write_commons, write_data
 from ai_workspace.serializers import TaskSerializer
 from ai_workspace.api_views import ProjectAnalysisProperty
 from django.conf import settings
+from ai_auth.tasks import analysis
+from ai_workspace.models import MTonlytaskCeleryStatus
 spring_host = os.environ.get("SPRING_HOST")
 
 def get_json_file_path(task):
     source_file_path = TaskSerializer(task).data["source_file_path"]
     path_list = re.split("source/", source_file_path)
     path = path_list[0] + "doc_json/" + path_list[1] + ".json"
+    print("Exists")
     if not os.path.exists(path):
+        print("Not Exists")
         write_json_data(task)
     return path
 
@@ -113,26 +117,43 @@ class TmxUploadView(viewsets.ViewSet):
         return Response(serializer.data)
 
     def create(self, request):
-
+        job = request.POST.get('job_id')
         data = {**request.POST.dict(), "tmx_file": request.FILES.getlist('tmx_file')}
         ser_data = TmxFileSerializer.prepare_data(data)
         serializer = TmxFileSerializer(data=ser_data,many=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
+            task_obj = Task.objects.filter(job_id=job).last()
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
+            if ins:
+                print(ins)
+                MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
+                print("In create Updated---------->",ins.status)
         return Response(serializer.data, status=201)
 
     def update(self, request, pk):
         tmx_file_ins = TmxFileNew.objects.get(id=pk)
         job_id = request.POST.get("job_id", None)
         serializer = TmxFileSerializer(tmx_file_ins, data={"job" : job_id}, partial=True)
-
+        task_obj = Task.objects.filter(job_id=tmx_file_ins.job.id).last()
         if serializer.is_valid():
             serializer.save()
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
+            if ins:
+                print("In Update",ins)
+                MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
             return Response(serializer.data, status=200)
         return Response(serializer.errors)
 
     def delete(self, request, pk):
         instance = TmxFileNew.objects.get(id=pk)
+        task_obj = Task.objects.filter(job_id=instance.job.id).last()
+        print("TAskObj--------->",task_obj)
+        ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
+        if ins:
+            print(ins)
+            MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
+            print("In delete Updated---------->",ins.status)
         instance.delete()
         return Response(status=204)
 
@@ -146,9 +167,6 @@ class TmxUploadView(viewsets.ViewSet):
 #                 lang = i.get('{http://www.w3.org/XML/1998/namespace}lang')
 #                 print(lang.split('-')[0])
 #         break
-
-
-
 
 
 def get_tm_analysis(doc_data,job):
@@ -177,13 +195,13 @@ def get_tm_analysis(doc_data,job):
 
                 for node in tm_file.unit_iter():
                     tm_lists.append(remove_tags(node.source))
-
+            print("INside TmLists----------->")
             unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
             for i,j in enumerate(unrepeated):
                 repeat = c[j]-1 if c[j]>1 else 0
                 tt = match.extractOne(j,tm_lists,match_type='levenshtein')
                 final.append({'sent':j,'ratio':tt[1],'index':i,'word_count':len(j.split()),'repeat':repeat})
-
+            print("Final----------------->")
             return final,files_list
         else:
             return None,files_list
@@ -233,8 +251,11 @@ def get_word_count(tm_analysis,project,task,raw_total):
             repetition=repetition,raw_total=raw_total)
     return wc
 
+
 @api_view(['GET',])
 def get_project_analysis(request,project_id):
+
+        from ai_workspace.models import MTonlytaskCeleryStatus
 
         tasks= []
 
@@ -255,39 +276,45 @@ def get_project_analysis(request,project_id):
                 tasks.append(_task)
             else:
                 temp1 = [i.id for i in _task.job.tmx_file_job.all()]
+                print("Temp1---------->",temp1)
                 temp2 = [i.tmx_file_obj_id for i in _task.task_wc_general.last().wc_general.all()]
+                print("Temp2------------->",temp2)
                 temp3 = set(temp1) ^ set(temp2)
+                print("Temp3--------->",temp3)
                 if temp3:
                     tasks.append(_task)
                     _task.task_wc_general.last().wc_general.all().delete()
 
         if tasks:
-
-            for task in tasks:
-
-                file_path = get_json_file_path(task)
-
-                doc_data = json.load(open(file_path))
-
-                if type(doc_data) == str:
-
-                    doc_data = json.loads(doc_data)
-
-                raw_total = doc_data.get('total_word_count')
-
-                tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
-
-
-                if tm_analysis:
-                    word_count = get_word_count(tm_analysis,proj,task,raw_total)
-                else:
-                    word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
-                                new_words=doc_data.get('total_word_count'),raw_total=raw_total)
-                [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
-
+            print("TASks--------->",tasks)
+            print("Inside Tasks if")
+            task_ids = [i.id for i in tasks]
+            #n = len(tasks)-1
+            for i in tasks:
+                ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=i.id) & Q(task_name = 'analysis')).last()
+                print("Ins-------------->",ins)
+                state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
+                print("STate------------->",state)
+                if state == 'PENDING':
+                    print("stst",ins.status)
+                    return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
+                elif (not ins) or state == 'FAILURE':
+                    cel_task = analysis.apply_async((task_ids,proj.id,), )
+                    return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
+                elif state == 'SUCCESS':
+                    print("Ins Status---------->",ins.status)
+                    if ins.status == 1:
+                        cel_task = analysis.apply_async((task_ids,proj.id,), )
+                        return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
+                    else:
+                        pass
+        #else:
+        print("Outside If")
         res=[]
         for task in  proj.get_mtpe_tasks:
             word_count = task.task_wc_general.last()
+
+            print("Word_count_obj---------->",word_count)
 
             WWC = (word_count.new_words * 100 + word_count.tm_100 * rates.tm_100_percentage + \
                   word_count.tm_95_99 * rates.tm_95_99_percentage + word_count.tm_85_94 * rates.tm_85_94_percentage +\
@@ -315,6 +342,93 @@ def get_project_analysis(request,project_id):
                     'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
         ser = UserDefinedRateSerializer(rates)
         return Response({'payable_rate':ser.data,'project_wwc':proj_detail,'task_wwc':res})
+
+
+
+
+
+# @api_view(['GET',])
+# def get_project_analysis(request,project_id):
+#
+#         tasks= []
+#
+#         proj_wwc = 0
+#
+#         proj_raw_total,proj_tm_100,proj_tm_95_99,proj_tm_85_94,proj_tm_75_84,proj_tm_50_74,proj_tm_101,proj_tm_102,proj_new,proj_repetition = 0,0,0,0,0,0,0,0,0,0
+#
+#         proj = Project.objects.filter(id=project_id).first()
+#
+#         user = proj.ai_user
+#
+#         rates = UserDefinedRate.objects.filter(user = user).last()
+#         if not rates:
+#             rates = UserDefinedRate.objects.filter(is_default = True).first()
+#
+#         for _task in proj.get_mtpe_tasks:
+#             if _task.task_wc_general.last() == None:
+#                 tasks.append(_task)
+#             else:
+#                 temp1 = [i.id for i in _task.job.tmx_file_job.all()]
+#                 temp2 = [i.tmx_file_obj_id for i in _task.task_wc_general.last().wc_general.all()]
+#                 temp3 = set(temp1) ^ set(temp2)
+#                 if temp3:
+#                     tasks.append(_task)
+#                     _task.task_wc_general.last().wc_general.all().delete()
+#
+#         if tasks:
+#
+#             for task in tasks:
+#
+#                 file_path = get_json_file_path(task)
+#
+#                 doc_data = json.load(open(file_path))
+#
+#                 if type(doc_data) == str:
+#
+#                     doc_data = json.loads(doc_data)
+#
+#                 raw_total = doc_data.get('total_word_count')
+#
+#                 tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
+#                 print("Tm Analysis----------->",tm_analysis)
+#
+#                 if tm_analysis:
+#                     word_count = get_word_count(tm_analysis,proj,task,raw_total)
+#                 else:
+#                     word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
+#                                 new_words=doc_data.get('total_word_count'),raw_total=raw_total)
+#                 [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
+#
+#         res=[]
+#         for task in  proj.get_mtpe_tasks:
+#             word_count = task.task_wc_general.last()
+#
+#             WWC = (word_count.new_words * 100 + word_count.tm_100 * rates.tm_100_percentage + \
+#                   word_count.tm_95_99 * rates.tm_95_99_percentage + word_count.tm_85_94 * rates.tm_85_94_percentage +\
+#                   word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
+#                   word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage)/100
+#
+#             proj_wwc += WWC
+#             proj_tm_100 += word_count.tm_100
+#             proj_tm_101 += word_count.tm_101
+#             proj_tm_102 += word_count.tm_102
+#             proj_tm_95_99 += word_count.tm_95_99
+#             proj_tm_85_94 += word_count.tm_85_94
+#             proj_tm_75_84 += word_count.tm_75_84
+#             proj_tm_50_74 += word_count.tm_50_74
+#             proj_new += word_count.new_words
+#             proj_repetition += word_count.repetition
+#             proj_raw_total += word_count.raw_total
+#
+#             res.append({'task_id':task.id,'task_file':task.file.filename,'task_lang_pair':task.job.source_target_pair_names,'weighted':round(WWC),'new':word_count.new_words,'repetition':word_count.repetition,\
+#             'tm_50_74':word_count.tm_50_74,'tm_75_84':word_count.tm_75_84,'tm_85_94':word_count.tm_85_94,'tm_95_99':word_count.tm_95_99,\
+#             'tm_100':word_count.tm_100,'tm_101':word_count.tm_101,'tm_102':word_count.tm_102,'raw_total':word_count.raw_total})
+#
+#         proj_detail =[{'project_id':proj.id,'project_name':proj.project_name,'weighted':round(proj_wwc),'new':proj_new,'repetition':proj_repetition,\
+#                     'tm_50_74':proj_tm_50_74,'tm_75_84':proj_tm_75_84,'tm_85_94':proj_tm_85_94,'tm_95_99':proj_tm_95_99,\
+#                     'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
+#         ser = UserDefinedRateSerializer(rates)
+#         return Response({'payable_rate':ser.data,'project_wwc':proj_detail,'task_wwc':res})
 
 
 # class ReportDownloadView(APIView):
@@ -472,3 +586,13 @@ class ReportDownloadView(APIView):
             report_path = os.path.join(proj.project_dir_path, "analysis_reports", proj.project_name + ".xlsx")
 
             return ReportDownloadView.download_excel(report_path, proj)
+
+
+
+@api_view(['GET',])
+def download_tmx_file(request,file_id):
+    try:
+        instance = TmxFileNew.objects.get(id=file_id).tmx_file
+        return download_file(instance.path)
+    except:
+        return Response({'msg':'No file Exists'})
