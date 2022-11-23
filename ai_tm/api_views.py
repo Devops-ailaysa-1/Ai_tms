@@ -172,9 +172,9 @@ def check(uploaded_file,job):
             lang = node.get('{http://www.w3.org/XML/1998/namespace}lang')
             if lang != source:
                 target = lang.split('-')[0]
-                targets.append(target_tags)
+                targets.append(target)
         break
-    if job.source_language_code == source and job.target_language_code in target:
+    if job.source_language_code == source and job.target_language_code in targets:
         return True
     else:return False
 
@@ -199,6 +199,7 @@ def get_tm_analysis(doc_data,job):
         for file in files_:
             if check(file,job):
                 files.append(file)
+        print("Files---------------------->",files)
         if files:
             files_list = [i.id for i in files]
             for file in files:
