@@ -19,6 +19,7 @@ from ai_workspace.api_views import ProjectAnalysisProperty
 from django.conf import settings
 from ai_auth.tasks import analysis
 from ai_workspace.models import MTonlytaskCeleryStatus
+import xml.etree.ElementTree as ET
 spring_host = os.environ.get("SPRING_HOST")
 
 def get_json_file_path(task):
@@ -135,7 +136,7 @@ class TmxUploadView(viewsets.ViewSet):
         tmx_file_ins = TmxFileNew.objects.get(id=pk)
         job_id = request.POST.get("job_id", None)
         serializer = TmxFileSerializer(tmx_file_ins, data={"job" : job_id}, partial=True)
-        task_obj = Task.objects.filter(job_id=tmx_file_ins.job.id).last()
+        task_obj = Task.objects.filter(job_id=job_id).last()
         if serializer.is_valid():
             serializer.save()
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
@@ -158,16 +159,24 @@ class TmxUploadView(viewsets.ViewSet):
         return Response(status=204)
 
 
-# def check(uploaded_files,job):
-#     for file in uploaded_files:
-#         tree = ET.parse(file.tmx_file.path)
-#         root=tree.getroot()
-#         for j in root.iter('tu'):
-#             for i in j.iter('tuv'):
-#                 lang = i.get('{http://www.w3.org/XML/1998/namespace}lang')
-#                 print(lang.split('-')[0])
-#         break
-
+def check(uploaded_file,job):
+    #for file in uploaded_files:
+    tree = ET.parse(uploaded_file.tmx_file.path)
+    root=tree.getroot()
+    targets=[]
+    print(root.find('header'))
+    for i in root.iter('header'):
+        source = i.get('srclang')
+    for tag in root.iter('tu'):
+        for node in tag.iter('tuv'):
+            lang = node.get('{http://www.w3.org/XML/1998/namespace}lang')
+            if lang != source:
+                target = lang.split('-')[0]
+                targets.append(target_tags)
+        break
+    if job.source_language_code == source and job.target_language_code in target:
+        return True
+    else:return False
 
 def get_tm_analysis(doc_data,job):
         #doc_data = json.loads(doc_data)
@@ -185,8 +194,11 @@ def get_tm_analysis(doc_data,job):
                 sources.append(segment["source"])
                 sources_.append(segment["source"].strip())
         c = Counter(sources_)
-        files = TmxFileNew.objects.filter(job_id=job.id).all()
-
+        files=[]
+        files_ = TmxFileNew.objects.filter(job_id=job.id).all()
+        for file in files_:
+            if check(file,job):
+                files.append(file)
         if files:
             files_list = [i.id for i in files]
             for file in files:
@@ -276,40 +288,34 @@ def get_project_analysis(request,project_id):
                 tasks.append(_task)
             else:
                 temp1 = [i.id for i in _task.job.tmx_file_job.all()]
-                print("Temp1---------->",temp1)
                 temp2 = [i.tmx_file_obj_id for i in _task.task_wc_general.last().wc_general.all()]
-                print("Temp2------------->",temp2)
                 temp3 = set(temp1) ^ set(temp2)
-                print("Temp3--------->",temp3)
                 if temp3:
                     tasks.append(_task)
                     _task.task_wc_general.last().wc_general.all().delete()
 
         if tasks:
-            print("TASks--------->",tasks)
-            print("Inside Tasks if")
             task_ids = [i.id for i in tasks]
-            #n = len(tasks)-1
             for i in tasks:
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=i.id) & Q(task_name = 'analysis')).last()
-                print("Ins-------------->",ins)
+                #print("Ins-------------->",ins)
                 state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-                print("STate------------->",state)
+                #print("STate------------->",state)
                 if state == 'PENDING':
-                    print("stst",ins.status)
+                    #print("stst",ins.status)
                     return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
                 elif (not ins) or state == 'FAILURE':
                     cel_task = analysis.apply_async((task_ids,proj.id,), )
                     return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                 elif state == 'SUCCESS':
-                    print("Ins Status---------->",ins.status)
+                    #print("Ins Status---------->",ins.status)
                     if ins.status == 1:
                         cel_task = analysis.apply_async((task_ids,proj.id,), )
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                     else:
                         pass
         #else:
-        print("Outside If")
+        #print("Outside If")
         res=[]
         for task in  proj.get_mtpe_tasks:
             word_count = task.task_wc_general.last()
