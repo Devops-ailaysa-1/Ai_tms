@@ -13,7 +13,7 @@ from rest_framework.decorators import api_view
 from django.db.models import Q
 from .models import WordCountGeneral,WordCountTmxDetail,UserDefinedRate
 from ai_workspace_okapi.utils import download_file
-from ai_tm.utils import write_project_header, write_commons, write_data
+from ai_tm.utils import write_project_header, write_commons, write_data, tmx_read
 from ai_workspace.serializers import TaskSerializer
 from ai_workspace.api_views import ProjectAnalysisProperty
 from django.conf import settings
@@ -154,9 +154,11 @@ class TmxUploadView(viewsets.ViewSet):
         if ins:
             print(ins)
             MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
-            print("In delete Updated---------->",ins.status)
+            ins_new = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
+            print("In delete Updated---------->",ins_new.status)
         instance.delete()
         return Response(status=204)
+
 
 
 def check(uploaded_file,job):
@@ -164,9 +166,8 @@ def check(uploaded_file,job):
     tree = ET.parse(uploaded_file.tmx_file.path)
     root=tree.getroot()
     targets=[]
-    print(root.find('header'))
     for i in root.iter('header'):
-        source = i.get('srclang')
+        source = i.get('srclang').split('-')[0]
     for tag in root.iter('tu'):
         for node in tag.iter('tuv'):
             lang = node.get('{http://www.w3.org/XML/1998/namespace}lang')
@@ -196,19 +197,22 @@ def get_tm_analysis(doc_data,job):
         c = Counter(sources_)
         files=[]
         files_ = TmxFileNew.objects.filter(job_id=job.id).all()
+        print("Files_---------------->",files_)
         for file in files_:
+            print(check(file,job))
             if check(file,job):
                 files.append(file)
         print("Files---------------------->",files)
         if files:
+            tm_lists = tmx_read(files,job)
             files_list = [i.id for i in files]
-            for file in files:
-                with open(file.tmx_file.path, 'rb') as fin:
-                    tm_file = tmxfile(fin, sl, tl)
-
-                for node in tm_file.unit_iter():
-                    tm_lists.append(remove_tags(node.source))
-            print("INside TmLists----------->")
+            # for file in files:
+            #     with open(file.tmx_file.path, 'rb') as fin:
+            #         tm_file = tmxfile(fin, sl, tl)
+            #
+            #     for node in tm_file.unit_iter():
+            #         tm_lists.append(remove_tags(node.source))
+            print("INside TmLists----------->",tm_lists)
             unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
             for i,j in enumerate(unrepeated):
                 repeat = c[j]-1 if c[j]>1 else 0
