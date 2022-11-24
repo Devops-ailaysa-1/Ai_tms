@@ -1,7 +1,7 @@
 from ai_workspace.models import Job
 from datetime import datetime
 from ai_tm.models import WordCountGeneral
-
+import xml.etree.ElementTree as ET
 
 def get_languages(proj):
 
@@ -180,3 +180,50 @@ def write_data(workbook, worksheet, proj):
 
 
 
+def tmx_read(files,job):
+    sl = job.source_language_code
+    tl = job.target_language_code
+    source = []
+    for file in files:
+        tree = ET.parse(file.tmx_file.path)
+        root=tree.getroot()
+        for tag in root.iter('tu'):
+            tt = None
+            for node in tag.iter('tuv'):
+                lang = node.get('{http://www.w3.org/XML/1998/namespace}lang')
+                if lang.split('-')[0] == tl:
+                    tt = True
+            for node in tag.iter('tuv'):
+                lang = node.get('{http://www.w3.org/XML/1998/namespace}lang')
+                if tt:
+                    if lang.split('-')[0] == sl:
+                        for item in node.iter('seg'):
+                            text =  (''.join(item.itertext()))
+                            if text!=None:
+                                source.append(remove_tags(text))
+    return source
+
+
+
+# def tmx_read(files,job):
+#     sl = job.source_language_code
+#     tl = job.target_language_code
+#     source = []
+#     for file in files:
+#         tree = ET.parse(file.tmx_file.path)
+#         root=tree.getroot()
+#         for tag in root.iter('tu'):
+#             tt = None
+#             for node in tag.iter('tuv'):
+#                 lang = node.get('{http://www.w3.org/XML/1998/namespace}lang')
+#                 if lang.split('-')[0] == tl:
+#                     tt = True
+#             for node in tag.iter('tuv'):
+#                 lang = node.get('{http://www.w3.org/XML/1998/namespace}lang')
+#                 if tt:
+#                     if lang.split('-')[0] == sl:
+#                         for item in node.iter('seg'):
+#                             text =  (''.join(item.itertext()))
+#                             if text!=None:
+#                                 source.append(remove_tags(text))
+#     return source
