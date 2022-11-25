@@ -3,6 +3,7 @@ from datetime import datetime
 from ai_tm.models import WordCountGeneral
 import xml.etree.ElementTree as ET
 
+
 def get_languages(proj):
 
     jobs = Job.objects.filter(project=proj.id)
@@ -181,6 +182,7 @@ def write_data(workbook, worksheet, proj):
 
 
 def tmx_read(files,job):
+    from ai_tm.api_views import remove_tags
     sl = job.source_language_code
     tl = job.target_language_code
     source = []
