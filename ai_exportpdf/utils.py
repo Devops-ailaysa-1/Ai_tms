@@ -64,15 +64,15 @@ def convertiopdf2docx(id ,language,ocr = None ):
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     fp  = txt_field_obj.pdf_file.path
     pdf_file_name = fp.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
-    user_credit = UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))    
+    user_credit = UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     with open(fp, "rb") as pdf_path:
         encoded_string = base64.b64encode(pdf_path.read())
     data = {'apikey': CONVERTIO_API ,'input': 'base64', 'file': encoded_string.decode('utf-8'),'filename':   pdf_file_name,'outputformat': 'docx' }
     # if ocr == "ocr":
-        # language = language.split(",")                    #if ocr is True and selecting multiple language 
+        # language = language.split(",")                    #if ocr is True and selecting multiple language
         # language_convertio = [lang_code(i) for i in language]
         # ocr_option =  { "options": { "ocr_enabled": True, "ocr_settings": { "langs": [language_convertio]}}}
-        # data = {**data , **ocr_option}     #merge dict 
+        # data = {**data , **ocr_option}     #merge dict
         # txt_field_obj.pdf_api_use = "convertio_ocr"
     #     print("[convertio ocr]")
     # else:
@@ -80,7 +80,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
     #     print("[convertio text]")
     txt_field_obj.pdf_api_use = "convertio"
     response_status = requests.post(url='https://api.convertio.co/convert' , data=json.dumps(data)).json()
-    if response_status['status'] == 'error': 
+    if response_status['status'] == 'error':
         txt_field_obj.status = "ERROR"
         txt_field_obj.save()
         ###retain cred if error
@@ -88,7 +88,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
         consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
         user_credit.credits_left = user_credit.credits_left + consum_cred
         user_credit.save()
-        print({"result":"Error during input file fetching: couldn't connect to host"}) 
+        print({"result":"Error during input file fetching: couldn't connect to host"})
     else:
         try:
             get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
@@ -96,9 +96,9 @@ def convertiopdf2docx(id ,language,ocr = None ):
                 txt_field_obj.status = "PENDING"
                 txt_field_obj.save()
                 time.sleep(2)
-            convertio_response_link =  requests.get(url = get_url).json()  
-            file_link = convertio_response_link['data']['output']['url']  ##after finished get converted file from convertio 
-            direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" )  
+            convertio_response_link =  requests.get(url = get_url).json()
+            file_link = convertio_response_link['data']['output']['url']  ##after finished get converted file from convertio
+            direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" )
             txt_field_obj.status = "DONE"
             txt_field_obj.pdf_conversion_sec = int(convertio_response_link['data']['minutes'])*60
             txt_field_obj.docx_url_field = str(settings.MEDIA_URL+str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" ##save path to database
@@ -114,11 +114,11 @@ def convertiopdf2docx(id ,language,ocr = None ):
             user_credit.credits_left = user_credit.credits_left + consum_cred
             user_credit.save()
             print("pdf_conversion_something went wrong")
-            
-        
+
+
 import tempfile
 #########ocr ######
-@shared_task(serializer='json')  
+@shared_task(serializer='json')
 def ai_export_pdf(id ): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
@@ -127,7 +127,7 @@ def ai_export_pdf(id ): # , file_language , file_name , file_path
     pdf = PdfFileReader(open(fp,'rb') ,strict=False)
     pdf_len = pdf.getNumPages()
     try:
-        no_of_page_processed_counting = 0    
+        no_of_page_processed_counting = 0
         txt_field_obj.pdf_no_of_page = int(pdf_len)
         doc = docx.Document()
         for i in tqdm(range(1,pdf_len+1)):
@@ -164,7 +164,7 @@ def ai_export_pdf(id ): # , file_language , file_name , file_path
         user_credit.credits_left = user_credit.credits_left + consum_cred
         user_credit.save()
         print("pdf_conversion_something went wrong")
-        # return {'result':"something went wrong"}  
+        # return {'result':"something went wrong"}
 
 def para_creation_from_ocr(texts):
     para_text = []
@@ -178,7 +178,7 @@ def para_creation_from_ocr(texts):
                         text_list.append(b.text)
             para_text.append("".join(text_list))
     return "\n".join(para_text)
- 
+
 
 def file_pdf_check(file_path):
     text = ""
@@ -189,11 +189,11 @@ def file_pdf_check(file_path):
     return ["text" if len(text)>=700 else "ocr" , len(pdf)]
 
 
-   
+
 def pdf_conversion(id):
     # print("user-->" ,user)
     # user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-    
+
     file_details = Ai_PdfUpload.objects.get(id = id)
     lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
     pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path)[0]
@@ -231,4 +231,3 @@ def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
 #     elif total_pages <=100:
 #         credit = 150
 #     else:
-        
