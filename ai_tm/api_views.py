@@ -19,6 +19,8 @@ from ai_workspace.api_views import ProjectAnalysisProperty
 from django.conf import settings
 from ai_auth.tasks import analysis
 from ai_workspace.models import MTonlytaskCeleryStatus
+import rapidfuzz
+from rapidfuzz import process
 import xml.etree.ElementTree as ET
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -155,7 +157,7 @@ class TmxUploadView(viewsets.ViewSet):
             print(ins)
             MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
             ins_new = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
-            print("In delete Updated---------->",ins_new.status)
+            print("In delete Updated---------->",ins_new,ins_new.status)
         instance.delete()
         return Response(status=204)
 
@@ -216,7 +218,8 @@ def get_tm_analysis(doc_data,job):
             unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
             for i,j in enumerate(unrepeated):
                 repeat = c[j]-1 if c[j]>1 else 0
-                tt = match.extractOne(j,tm_lists,match_type='levenshtein')
+                tt = process.extractOne(j, tm_lists, scorer=rapidfuzz.distance.Levenshtein.normalized_similarity)
+                #tt = match.extractOne(j,tm_lists,match_type='levenshtein')
                 final.append({'sent':j,'ratio':tt[1],'index':i,'word_count':len(j.split()),'repeat':repeat})
             print("Final----------------->")
             return final,files_list
@@ -303,7 +306,7 @@ def get_project_analysis(request,project_id):
             task_ids = [i.id for i in tasks]
             for i in tasks:
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=i.id) & Q(task_name = 'analysis')).last()
-                #print("Ins-------------->",ins)
+                print("Ins-------------->",ins)
                 state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 #print("STate------------->",state)
                 if state == 'PENDING':
@@ -313,7 +316,7 @@ def get_project_analysis(request,project_id):
                     cel_task = analysis.apply_async((task_ids,proj.id,), )
                     return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                 elif state == 'SUCCESS':
-                    #print("Ins Status---------->",ins.status)
+                    print("Ins Status---------->",ins.status)
                     if ins.status == 1:
                         cel_task = analysis.apply_async((task_ids,proj.id,), )
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)

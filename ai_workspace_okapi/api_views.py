@@ -18,9 +18,10 @@ import requests
 import urllib.parse
 import urllib.parse
 import xlsxwriter
+import rapidfuzz
 from json import JSONDecodeError
 from os.path import exists
-
+from ai_tm.utils import tm_fetch_extract,tmx_read_with_target
 from django.contrib.auth import settings
 from itertools import chain
 from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_only
@@ -807,24 +808,18 @@ class MT_RawAndTM_View(views.APIView):
     def find_tm_matches(seg_source, user, doc):
 
         proj = doc.job.project
-        sl = doc.job.source_language_code
-        tl = doc.job.target_language_code
         tmx_files = TmxFileNew.objects.filter(job=doc.job_id)
 
         tm_lists = []
 
         if tmx_files:
-            for tmx_file in tmx_files:
-                with open(tmx_file.tmx_file.path, 'rb') as fin:
-                    tm_file = tmxfile(fin, sl, tl)
-
-                for node in tm_file.unit_iter():
-                    tm_lists.append({'source':remove_tm_tags(node.source),'target':remove_tm_tags(node.target)})
-        match_results = match.tm_fetch_extract(seg_source,
-                                      tm_lists,
-                                      match_type='levenshtein',
-                                      score_cutoff = round(proj.threshold / 100, 2),
-                                      limit = proj.max_hits)
+            tm_lists = tmx_read_with_target(tmx_files,doc.job)
+            #print("TmLists--------------->",tm_lists)
+        match_results = tm_fetch_extract(seg_source,
+                                        tm_lists,
+                                        scorer=rapidfuzz.distance.Levenshtein.normalized_similarity,
+                                        score_cutoff=round(proj.threshold / 100, 2),
+                                        score_hint=proj.max_hits)
         response_data = [{'source':mr[0].get('source'),'target':mr[0].get('target'),'percentage':round(mr[1]*100,2)} for mr in match_results] if match_results else []
         return response_data
 
