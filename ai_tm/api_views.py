@@ -196,7 +196,7 @@ def get_tm_analysis(doc_data,job):
         for para in text_data.values():
             for segment in para:
                 count = segment.get('seg_word_count') if segment.get('seg_word_count') else len(segment['source'].split())
-                sources.append({'source':segment["source"],'count':count})
+                sources.append({'source':segment["source"].strip(),'count':count})##RapidFuzz does not consider leading and trailing space so we used strip()
                 sources_.append(segment["source"].strip())
         c = Counter(sources_)
         files=[]
@@ -205,17 +205,23 @@ def get_tm_analysis(doc_data,job):
             print(check(file,job))
             if check(file,job):
                 files.append(file)
+        unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
         if files:
             tm_lists = tmx_read(files,job)
             files_list = [i.id for i in files]
-            unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
             for i,j in enumerate(unrepeated):
-                repeat = c[j.get('source').strip()]-1 if c[j.get('source').strip()]>1 else 0
+                repeat = c[j.get('source')]-1 if c[j.get('source')]>1 else 0
                 tt = process.extractOne(j.get('source'), tm_lists, scorer=rapidfuzz.distance.Levenshtein.normalized_similarity)
                 final.append({'sent':j.get('source'),'ratio':tt[1],'index':i,'word_count':j.get('count'),'repeat':repeat})
             return final,files_list
         else:
-            return None,files_list
+            if len(sources_) == len(set(sources_)):
+                return None,files_list
+            else:
+                for i,j in enumerate(unrepeated):
+                    repeat = c[j.get('source')]-1 if c[j.get('source')]>1 else 0
+                    final.append({'sent':j.get('source'),'ratio':0,'index':i,'word_count':j.get('count'),'repeat':repeat})
+                return final,files_list
 
 def get_word_count(tm_analysis,project,task,raw_total):
     tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repetition =0,0,0,0,0,0,0,0,0
