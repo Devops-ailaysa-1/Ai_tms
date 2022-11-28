@@ -10,7 +10,7 @@ from datetime import date
 from django.utils import timezone
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
 import datetime,os,json, collections
-from djstripe.models import Subscription,Invoice
+from djstripe.models import Subscription,Invoice,Charge
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
@@ -90,6 +90,10 @@ def striphtml(data):
 @task
 def sync_invoices_and_charges(days):
     queryset = Invoice.objects.annotate(
+            diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
+            ).filter(diff__gt=timedelta(days))
+    resync_instances(queryset)
+    queryset = Charge.objects.annotate(
             diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
             ).filter(diff__gt=timedelta(days))
     resync_instances(queryset)

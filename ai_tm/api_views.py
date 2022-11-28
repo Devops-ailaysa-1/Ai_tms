@@ -182,6 +182,7 @@ def check(uploaded_file,job):
     else:return False
 
 def get_tm_analysis(doc_data,job):
+        #print("DocData-------------->",doc_data)
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")
         sources = []
@@ -194,34 +195,24 @@ def get_tm_analysis(doc_data,job):
 
         for para in text_data.values():
             for segment in para:
-                sources.append(segment["source"])
+                count = segment.get('seg_word_count') if segment.get('seg_word_count') else len(segment['source'].split())
+                sources.append({'source':segment["source"],'count':count})
                 sources_.append(segment["source"].strip())
         c = Counter(sources_)
         files=[]
         files_ = TmxFileNew.objects.filter(job_id=job.id).all()
-        print("Files_---------------->",files_)
         for file in files_:
             print(check(file,job))
             if check(file,job):
                 files.append(file)
-        print("Files---------------------->",files)
         if files:
             tm_lists = tmx_read(files,job)
             files_list = [i.id for i in files]
-            # for file in files:
-            #     with open(file.tmx_file.path, 'rb') as fin:
-            #         tm_file = tmxfile(fin, sl, tl)
-            #
-            #     for node in tm_file.unit_iter():
-            #         tm_lists.append(remove_tags(node.source))
-            print("INside TmLists----------->",tm_lists)
             unrepeated = [i for n, i in enumerate(sources) if i not in sources[:n]]
             for i,j in enumerate(unrepeated):
-                repeat = c[j]-1 if c[j]>1 else 0
-                tt = process.extractOne(j, tm_lists, scorer=rapidfuzz.distance.Levenshtein.normalized_similarity)
-                #tt = match.extractOne(j,tm_lists,match_type='levenshtein')
-                final.append({'sent':j,'ratio':tt[1],'index':i,'word_count':len(j.split()),'repeat':repeat})
-            print("Final----------------->")
+                repeat = c[j.get('source').strip()]-1 if c[j.get('source').strip()]>1 else 0
+                tt = process.extractOne(j.get('source'), tm_lists, scorer=rapidfuzz.distance.Levenshtein.normalized_similarity)
+                final.append({'sent':j.get('source'),'ratio':tt[1],'index':i,'word_count':j.get('count'),'repeat':repeat})
             return final,files_list
         else:
             return None,files_list
@@ -257,6 +248,7 @@ def get_word_count(tm_analysis,project,task,raw_total):
             new+=j.get('word_count')
         if j.get('repeat'):
             repetition+=j.get('word_count')*j.get('repeat')
+            #print("Repetition-------------->",repetition)
 
     wc = WordCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
     if wc:

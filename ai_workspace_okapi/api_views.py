@@ -819,7 +819,7 @@ class MT_RawAndTM_View(views.APIView):
                                         tm_lists,
                                         scorer=rapidfuzz.distance.Levenshtein.normalized_similarity,
                                         score_cutoff=round(proj.threshold / 100, 2),
-                                        score_hint=proj.max_hits)
+                                        limit=proj.max_hits)
         response_data = [{'source':mr[0].get('source'),'target':mr[0].get('target'),'percentage':round(mr[1]*100,2)} for mr in match_results] if match_results else []
         return response_data
 
