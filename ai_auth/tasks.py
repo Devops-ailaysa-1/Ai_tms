@@ -544,10 +544,10 @@ def analysis(tasks,project_id):
             doc_data = json.loads(doc_data)
         raw_total = doc_data.get('total_word_count')
         tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
-        print("Tm Analysis----------->",tm_analysis)
+        #print("Tm Analysis----------->",tm_analysis)
         if tm_analysis:
-            word_count = get_word_count(tm_analysis,proj,task,raw_total)
-            print("WordCount------------>",word_count)
+            word_count = get_word_count(tm_analysis,proj,task)
+            #print("WordCount------------>",word_count)
         else:
             word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
                         new_words=doc_data.get('total_word_count'),raw_total=raw_total)
