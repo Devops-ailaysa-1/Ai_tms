@@ -333,7 +333,8 @@ def get_project_analysis(request,project_id):
             WWC = (word_count.new_words * 100 + word_count.tm_100 * rates.tm_100_percentage + \
                   word_count.tm_95_99 * rates.tm_95_99_percentage + word_count.tm_85_94 * rates.tm_85_94_percentage +\
                   word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
-                  word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage)/100
+                  word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage+\
+                  word_count.repetition * rates.tm_repetition_percentage)/100
 
             proj_wwc += WWC
             proj_tm_100 += word_count.tm_100
