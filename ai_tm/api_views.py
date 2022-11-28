@@ -185,6 +185,7 @@ def get_tm_analysis(doc_data,job):
         #print("DocData-------------->",doc_data)
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")
+        print("Total Word Count---------------->",doc_data.get('total_word_count'))
         sources = []
         sources_ = []
         tm_lists = []
@@ -223,8 +224,8 @@ def get_tm_analysis(doc_data,job):
                     final.append({'sent':j.get('source'),'ratio':0,'index':i,'word_count':j.get('count'),'repeat':repeat})
                 return final,files_list
 
-def get_word_count(tm_analysis,project,task,raw_total):
-    tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repetition =0,0,0,0,0,0,0,0,0
+def get_word_count(tm_analysis,project,task):
+    tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repetition,raw_total =0,0,0,0,0,0,0,0,0,0
     for i,j in enumerate(tm_analysis):
         if i>0:
             previous = tm_analysis[i-1]
@@ -255,18 +256,19 @@ def get_word_count(tm_analysis,project,task,raw_total):
         if j.get('repeat'):
             repetition+=j.get('word_count')*j.get('repeat')
             #print("Repetition-------------->",repetition)
-
+        raw_total+=j.get('word_count')
+    raw_total_final = raw_total + repetition
     wc = WordCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
     if wc:
         obj = WordCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id))
         obj.update(tm_100 = tm_100,tm_95_99 = tm_95_99,tm_85_94 = tm_85_94,tm_75_84 = tm_75_84,\
         tm_50_74 = tm_50_74,tm_101 = tm_101,tm_102 = tm_102,new_words = new,\
-        repetition=repetition,raw_total=raw_total)
+        repetition=repetition,raw_total=raw_total_final)
     else:
         wc = WordCountGeneral.objects.create(project_id=project.id,tasks_id=task.id,\
             tm_100 = tm_100,tm_95_99 = tm_95_99,tm_85_94 = tm_85_94,tm_75_84 = tm_75_84,\
             tm_50_74 = tm_50_74,tm_101 = tm_101,tm_102 = tm_102,new_words = new,\
-            repetition=repetition,raw_total=raw_total)
+            repetition=repetition,raw_total=raw_total_final)
     return wc
 
 
