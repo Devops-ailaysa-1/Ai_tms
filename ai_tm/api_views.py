@@ -158,6 +158,8 @@ class TmxUploadView(viewsets.ViewSet):
             MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
             ins_new = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
             print("In delete Updated---------->",ins_new,ins_new.status)
+        #print("path---------->",instance.tmx_file.path)
+        os.remove(instance.tmx_file.path)
         instance.delete()
         return Response(status=204)
 
