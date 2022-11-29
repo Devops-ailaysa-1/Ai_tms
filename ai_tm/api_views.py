@@ -185,7 +185,7 @@ def get_tm_analysis(doc_data,job):
         #print("DocData-------------->",doc_data)
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")
-        print("Total Word Count---------------->",doc_data.get('total_word_count'))
+        print("Doc data in Analysis---------------->",doc_data)
         sources = []
         sources_ = []
         tm_lists = []

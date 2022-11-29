@@ -906,29 +906,76 @@ class MT_RawAndTM_View(views.APIView):
                              "alert_msg": alert_msg}, status=status_code)
 
 
+# class ConcordanceSearchView(views.APIView):
+#
+#     @staticmethod
+#     def get_concordance_data(request, segment_id, search_string):
+#         segment = Segment.objects.filter(id=segment_id).first()
+#         if segment:
+#             tm_ser_data = TM_FetchSerializer(segment).data
+#             tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
+#                     "threshold": 10})
+#             res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+#                     data = {'pentmsearchparams': json.dumps( tm_ser_data), "isCncrdSrch":"true" })
+#             if res.status_code == 200:
+#                 return res.json()
+#             else:
+#                 return []
+#         return []
+#
+#     def get(self, request, segment_id):
+#         search_string = request.GET.get("string", None).strip('0123456789')
+#         concordance = []
+#         if search_string:
+#             concordance = self.get_concordance_data(request, segment_id, search_string)
+#         return Response(concordance, status=200)
+
+
 class ConcordanceSearchView(views.APIView):
 
     @staticmethod
     def get_concordance_data(request, segment_id, search_string):
-        segment = Segment.objects.filter(id=segment_id).first()
-        if segment:
-            tm_ser_data = TM_FetchSerializer(segment).data
-            tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
-                    "threshold": 10})
-            res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                    data = {'pentmsearchparams': json.dumps( tm_ser_data), "isCncrdSrch":"true" })
-            if res.status_code == 200:
-                return res.json()
-            else:
-                return []
+
+        seg = Segment.objects.filter(id=segment_id).first()
+        job = seg.text_unit.document.job
+
+        if seg:
+            tm_lists = []
+            tmx_files = TmxFileNew.objects.filter(job=job)
+            if tmx_files:
+                tm_lists = tmx_read_with_target(tmx_files,job)
+
+            match_results = tm_fetch_extract(search_string,
+                                        tm_lists,
+                                        scorer=rapidfuzz.distance.Levenshtein.normalized_similarity,
+                                        score_cutoff=0.85,
+                                        limit=10)
+            response_data = [{'source':mr[0].get('source'),'target':mr[0].get('target'),'percentage':round(mr[1]*100,2)} for mr in match_results] if match_results else []
+            return response_data
         return []
+        # if segment:
+        #     tm_ser_data = TM_FetchSerializer(segment).data
+        #     tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
+        #             "threshold": 10})
+        #     res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+        #             data = {'pentmsearchparams': json.dumps( tm_ser_data), "isCncrdSrch":"true" })
+        #     if res.status_code == 200:
+        #         return res.json()
+        #     else:
+        #         return []
+        # return []
 
     def get(self, request, segment_id):
         search_string = request.GET.get("string", None).strip('0123456789')
         concordance = []
         if search_string:
             concordance = self.get_concordance_data(request, segment_id, search_string)
+        #print("Concordance------------->",concordance)
         return Response(concordance, status=200)
+
+
+
+
 
 def long_text_process(consumable_credits,document_user,file_path,task,target_language,voice_gender,voice_name):
     from ai_workspace.api_views import google_long_text_file_process
