@@ -18,7 +18,7 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.db.models import Q, Sum
 from django.db.models.fields.files import FileField
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.shortcuts import reverse
 from django.utils.functional import cached_property
 
@@ -35,7 +35,7 @@ from ai_workspace_okapi.models import Document, Segment
 from ai_workspace_okapi.utils import get_processor_name, get_file_extension
 from .manager import ProjectManager, FileManager, JobManager, \
     TaskManager, TaskAssignManager, ProjectSubjectFieldManager, ProjectContentTypeManager, ProjectStepsManager
-from .signals import (create_project_dir, \
+from .signals import (create_project_dir, delete_project_dir,\
                       create_pentm_dir_of_project, set_pentm_dir_of_project, \
                       check_job_file_version_has_same_project, )
 from .utils import create_dirs_if_not_exists, create_task_id
@@ -473,6 +473,7 @@ class Project(models.Model):
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
+post_delete.connect(delete_project_dir, sender=Project)
 
 class ProjectFilesCreateType(models.Model):
     class FileType(models.TextChoices):
