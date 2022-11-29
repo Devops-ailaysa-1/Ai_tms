@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.contrib.auth import settings
 from django.utils.text import slugify
-import os
+import os,shutil
 import random
 from django.db import IntegrityError
 
@@ -29,6 +29,12 @@ def create_project_dir(sender, instance, *args, **kwargs):
     if instance.project_dir_path == None:
         instance.project_dir_path = os.path.join(instance.ai_user.userattribute.allocated_dir, slugify(instance.ai_project_id))
         instance.project_dir_path = create_dirs_if_not_exists(instance.project_dir_path)
+
+
+def delete_project_dir(sender, instance, *args, **kwargs):
+    print(instance.project_dir_path)
+    shutil.rmtree(instance.project_dir_path)
+    print("<-----------------Deleted------------------>")
 
 def create_pentm_dir_of_project(sender, instance, created, *args, **kwargs):
     if created:

@@ -55,7 +55,6 @@ from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
 from ai_pay.api_views import po_modify
 # from controller.serializer_mapper import serializer_map
-# from ai_workspace_okapi.api_views import DocumentViewByTask
 from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
 #from ai_tm.models import TmxFile
 from ai_workspace import forms as ws_forms
@@ -259,6 +258,7 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 class FileView(viewsets.ModelViewSet):
+    #from ai_workspace_okapi.api_views import DocumentViewByTask
     serializer_class = FileSerializer
     parser_classes = [MultiPartParser, FormParser]
 
@@ -295,9 +295,16 @@ class FileView(viewsets.ModelViewSet):
             return Response(serializer.data, status=201)
 
     def destroy(self, request, *args, **kwargs):
+        from ai_workspace_okapi.api_views import DocumentViewByTask
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
             for obj in objs:
+                tasks = obj.file_tasks_set.all()
+                for i in tasks:
+                    path = DocumentViewByTask.get_json_file_path(i)
+                    if os.path.exists(path):
+                        print("Exists",path)
+                        os.remove(path)
                 os.remove(obj.file.path)
                 obj.delete()
             return Response(status=204)
