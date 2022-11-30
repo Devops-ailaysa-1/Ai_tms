@@ -274,6 +274,24 @@ def get_word_count(tm_analysis,project,task):
     return wc
 
 
+
+def get_tasks_for_analysis(user,instance):
+    if instance.ai_user == user:
+        tasks = instance.get_mtpe_tasks
+    elif instance.team:
+        if ((instance.team.owner == user)|(user in instance.team.get_project_manager)):
+            tasks = instance.get_mtpe_tasks
+        else:
+            tasks = [task for job in instance.project_jobs_set.filter(~Q(target_language = None)) for task \
+                in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
+
+    else:
+        tasks = [task for job in instance.project_jobs_set.filter(~Q(target_language = None)) for task \
+            in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
+
+    return tasks
+
+
 @api_view(['GET',])
 def get_project_analysis(request,project_id):
 
@@ -327,7 +345,9 @@ def get_project_analysis(request,project_id):
         #else:
         #print("Outside If")
         res=[]
-        for task in  proj.get_mtpe_tasks:
+        analysis_tasks = get_tasks_for_analysis(request.user,proj)
+        
+        for task in  analysis_tasks:
             word_count = task.task_wc_general.last()
 
             print("Word_count_obj---------->",word_count)

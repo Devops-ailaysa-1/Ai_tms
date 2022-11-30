@@ -413,6 +413,15 @@ class Project(models.Model):
             return False
 
     @property
+    def show_analysis(self):
+        if self.project_type_id != 3:
+            if self.get_mtpe_tasks:
+                return True
+            else:return False
+        else:
+            return False
+
+    @property
     def assigned(self):
         if self.get_tasks:
             for task in self.get_tasks:
