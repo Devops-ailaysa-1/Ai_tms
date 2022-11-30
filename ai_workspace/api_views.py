@@ -25,7 +25,6 @@ from django.http import Http404, HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from docx import Document
 from filesplit.split import Split
 from google.cloud import speech_v1p1beta1 as speech
 from google.cloud import storage
@@ -2339,9 +2338,11 @@ def task_unassign(request):
 
 
 def docx_save(name,data):
+    from docx import Document
     document = Document()
     new_parser = HtmlToDocx()
     quill_data = data.get('ops')
+    print("quilldata------------>",quill_data)
     docx = html.render(quill_data)
     new_parser.add_html_to_document(docx, document)
     document.save(name)
