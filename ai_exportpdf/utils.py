@@ -63,6 +63,8 @@ def image_ocr_google_cloud_vision(image , inpaint):
 def convertiopdf2docx(id ,language,ocr = None ):
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     fp  = txt_field_obj.pdf_file.path
+    pdf = PdfFileReader(open(fp,'rb') ,strict=False)
+    pdf_len = pdf.getNumPages()
     pdf_file_name = fp.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
     user_credit = UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     with open(fp, "rb") as pdf_path:
@@ -79,6 +81,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
     #     txt_field_obj.pdf_api_use = "convertio"
     #     print("[convertio text]")
     txt_field_obj.pdf_api_use = "convertio"
+    txt_field_obj.pdf_no_of_page = int(pdf_len)
     response_status = requests.post(url='https://api.convertio.co/convert' , data=json.dumps(data)).json()
     if response_status['status'] == 'error':
         txt_field_obj.status = "ERROR"
@@ -92,7 +95,9 @@ def convertiopdf2docx(id ,language,ocr = None ):
     else:
         try:
             get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
-            while requests.get(url = get_url).json()['data']['step'] != 'finish':
+            while (requests.get(url = get_url).json()['data']['step'] != 'finish'): # \
+                # and  (requests.get(url = get_url).json()['status'] != 'ok') \
+                #     and (requests.get(url = get_url).json()['code'] != 200):
                 txt_field_obj.status = "PENDING"
                 txt_field_obj.save()
                 time.sleep(2)
