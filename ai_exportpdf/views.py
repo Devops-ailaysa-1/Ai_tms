@@ -46,7 +46,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
             return response
 
     def filter_queryset(self, queryset):
-        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter)
         for backend in list(filter_backends):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
@@ -55,7 +55,8 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
         user = request.user.id
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user} for pdf_file_list in pdf_request_file]
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,
+                 'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
             serializer.save()
@@ -94,7 +95,7 @@ class ConversionPortableDoc(APIView):
                 celery_task[int(id)] = task_id
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
             else:
-                return Response({"status":"no credits"})
+                return Response({'msg':'Insufficient Credits'},status=400)
         return Response(celery_task)
 
 
