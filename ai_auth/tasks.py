@@ -532,7 +532,7 @@ def update_forbidden_words(forbidden_file_id):
 @task
 def analysis(tasks,project_id):
     from ai_workspace.models import Project,Task
-    from ai_tm.models import WordCountGeneral,WordCountTmxDetail
+    from ai_tm.models import WordCountGeneral,WordCountTmxDetail,CharCountGeneral
     from ai_tm.api_views import get_json_file_path,get_tm_analysis,get_word_count
     proj = Project.objects.get(id=project_id)
     for task_id in tasks:
@@ -544,13 +544,15 @@ def analysis(tasks,project_id):
             doc_data = json.loads(doc_data)
         raw_total = doc_data.get('total_word_count')
         tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
-        #print("Tm Analysis----------->",tm_analysis)
+        print("Tm Analysis----------->",tm_analysis)
         if tm_analysis:
             word_count = get_word_count(tm_analysis,proj,task)
-            #print("WordCount------------>",word_count)
+            print("WordCount------------>",word_count)
         else:
             word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
                         new_words=doc_data.get('total_word_count'),raw_total=raw_total)
+            char_count = CharCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
+                        new_words=doc_data.get('total_char_count'),raw_total=doc_data.get('total_char_count'))
         [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
         MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task.id,status=2,celery_task_id=analysis.request.id)
     logger.info("Analysis completed")
