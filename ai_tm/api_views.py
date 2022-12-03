@@ -1,8 +1,8 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import re,json, xlsxwriter, os,requests
-from .models import TmxFileNew, WordCountGeneral
-from .serializers import TmxFileSerializer,UserDefinedRateSerializer
+from .models import TmxFileNew, WordCountGeneral, CharCountGeneral
+from .serializers import TmxFileSerializer,UserDefinedRateSerializer,CharCountGeneralSerializer, WordCountGeneralSerializer
 from ai_workspace.serializers import TaskSerializer
 from ai_workspace.models import Project, File, Task
 from ai_tm import match
@@ -25,7 +25,7 @@ import xml.etree.ElementTree as ET
 spring_host = os.environ.get("SPRING_HOST")
 
 def get_json_file_path(task):
-    source_file_path = TaskSerializer(task).data["source_file_path"]
+    source_file_path = TaskSerializer(task).data.get("source_file_path")
     path_list = re.split("source/", source_file_path)
     path = path_list[0] + "doc_json/" + path_list[1] + ".json"
     print("Exists")
@@ -228,7 +228,9 @@ def get_tm_analysis(doc_data,job):
 
 def get_word_count(tm_analysis,project,task):
     tm_100,tm_95_99,tm_85_94,tm_75_84,tm_50_74,tm_101,tm_102,new,repetition,raw_total =0,0,0,0,0,0,0,0,0,0
+    char_tm_100,char_tm_95_99,char_tm_85_94,char_tm_75_84,char_tm_50_74,char_tm_101,char_tm_102,char_new,char_repetition,char_raw_total =0,0,0,0,0,0,0,0,0,0
     for i,j in enumerate(tm_analysis):
+        print("J-------------->",j)
         if i>0:
             previous = tm_analysis[i-1]
             pre_ratio = previous.get('ratio')*100
@@ -241,26 +243,49 @@ def get_word_count(tm_analysis,project,task):
         if ratio_ == 100:
             if ratio_ == pre_ratio and ratio_ == next_ratio:
                 tm_102+=j.get('word_count')
+                char_tm_102+=len(j.get('sent'))
             elif ratio_ == pre_ratio  or ratio_ == next_ratio:########need to check incontext logic
                 tm_101+=j.get('word_count')
+                char_tm_101+=len(j.get('sent'))
             else:
                 tm_100+=j.get('word_count')
+                char_tm_101+=len(j.get('sent'))
         elif 95 <= ratio_ <= 99:
             tm_95_99 += j.get('word_count')
+            char_tm_95_99 +=len(j.get('sent'))
         elif 85 <= ratio_ <= 94:
             tm_85_94 += j.get('word_count')
+            char_tm_85_94 +=len(j.get('sent'))
         elif 75 <= ratio_ <= 84:
             tm_75_84 += j.get('word_count')
+            char_tm_75_84 += len(j.get('sent'))
         elif 74 <= ratio_ <= 50:
             tm_50_74 += j.get('word_count')
+            char_tm_50_74 += len(j.get('sent'))
         else:
             new+=j.get('word_count')
+            char_new+=len(j.get('sent'))
         if j.get('repeat'):
             repetition+=j.get('word_count')*j.get('repeat')
+            char_repetition+=len(j.get('sent'))*j.get('repeat')
             #print("Repetition-------------->",repetition)
         raw_total+=j.get('word_count')
+        char_raw_total+=len(j.get('sent'))
     raw_total_final = raw_total + repetition
+    char_raw_total_final = char_raw_total + char_repetition
     wc = WordCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
+    cc = CharCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id)).last()
+    print("CCCCC-------------------------->",cc)
+    if cc:
+        obj1 = CharCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id))
+        obj1.update(tm_100 = char_tm_100,tm_95_99 = char_tm_95_99,tm_85_94 = char_tm_85_94,tm_75_84 = char_tm_75_84,\
+        tm_50_74 = char_tm_50_74,tm_101 = char_tm_101,tm_102 = char_tm_102,new_words = char_new,\
+        repetition=char_repetition,raw_total=char_raw_total_final)
+    else:
+        cc = CharCountGeneral.objects.create(project_id=project.id,tasks_id=task.id,\
+            tm_100 = char_tm_100,tm_95_99 = char_tm_95_99,tm_85_94 = char_tm_85_94,tm_75_84 = char_tm_75_84,\
+            tm_50_74 = char_tm_50_74,tm_101 = char_tm_101,tm_102 = char_tm_102,new_words = char_new,\
+            repetition=char_repetition,raw_total=char_raw_total_final)
     if wc:
         obj = WordCountGeneral.objects.filter(Q(project_id=project.id) & Q(tasks_id=task.id))
         obj.update(tm_100 = tm_100,tm_95_99 = tm_95_99,tm_85_94 = tm_85_94,tm_75_84 = tm_75_84,\
@@ -299,9 +324,11 @@ def get_project_analysis(request,project_id):
 
         tasks= []
 
-        proj_wwc = 0
+        proj_wwc,proj_wcc = 0,0
 
         proj_raw_total,proj_tm_100,proj_tm_95_99,proj_tm_85_94,proj_tm_75_84,proj_tm_50_74,proj_tm_101,proj_tm_102,proj_new,proj_repetition = 0,0,0,0,0,0,0,0,0,0
+
+        proj_char_raw_total,proj_char_tm_100,proj_char_tm_95_99,proj_char_tm_85_94,proj_char_tm_75_84,proj_char_tm_50_74,proj_char_tm_101,proj_char_tm_102,proj_char_new,proj_char_repetition = 0,0,0,0,0,0,0,0,0,0
 
         proj = Project.objects.filter(id=project_id).first()
 
@@ -349,7 +376,7 @@ def get_project_analysis(request,project_id):
 
         for task in  analysis_tasks:
             word_count = task.task_wc_general.last()
-
+            char_count = task.task_cc_general.last()
             #print("Word_count_obj---------->",word_count)
 
             WWC = (word_count.new_words * 100 + word_count.tm_100 * rates.tm_100_percentage + \
@@ -359,6 +386,14 @@ def get_project_analysis(request,project_id):
                   word_count.repetition * rates.tm_repetition_percentage)/100
 
             #print("WWC---------------->",WWC)
+            if char_count:
+                WCC = (char_count.new_words * 100 + char_count.tm_100 * rates.tm_100_percentage + \
+                      char_count.tm_95_99 * rates.tm_95_99_percentage + char_count.tm_85_94 * rates.tm_85_94_percentage +\
+                      char_count.tm_75_84 * rates.tm_75_84_percentage + char_count.tm_50_74 * rates.tm_50_74_percentage +\
+                      char_count.tm_101 * rates.tm_101_percentage + char_count.tm_102 * rates.tm_102_percentage+\
+                      char_count.repetition * rates.tm_repetition_percentage)/100
+            else:
+                WCC = 0
 
             proj_wwc += round(WWC)
             proj_tm_100 += word_count.tm_100
@@ -372,18 +407,73 @@ def get_project_analysis(request,project_id):
             proj_repetition += word_count.repetition
             proj_raw_total += word_count.raw_total
 
-            res.append({'task_id':task.id,'task_file':task.file.filename,'task_lang_pair':task.job.source_target_pair_names,'weighted':round(WWC),'new':word_count.new_words,'repetition':word_count.repetition,\
-            'tm_50_74':word_count.tm_50_74,'tm_75_84':word_count.tm_75_84,'tm_85_94':word_count.tm_85_94,'tm_95_99':word_count.tm_95_99,\
-            'tm_100':word_count.tm_100,'tm_101':word_count.tm_101,'tm_102':word_count.tm_102,'raw_total':word_count.raw_total})
+            if char_count:
+
+                proj_wcc += round(WCC)
+                proj_char_tm_100 += char_count.tm_100
+                proj_char_tm_101 += char_count.tm_101
+                proj_char_tm_102 += char_count.tm_102
+                proj_char_tm_95_99 += char_count.tm_95_99
+                proj_char_tm_85_94 += char_count.tm_85_94
+                proj_char_tm_75_84 += char_count.tm_75_84
+                proj_char_tm_50_74 += char_count.tm_50_74
+                proj_char_new += char_count.new_words
+                proj_char_repetition += char_count.repetition
+                proj_char_raw_total += char_count.raw_total
+
+            ser = WordCountGeneralSerializer(word_count,context={'weighted':round(WWC),'char_weighted':round(WCC)})
+            print("WccC----------->",ser.data)
+
+            res.append(ser.data)
         print("project wwc------------>",proj_wwc)
         proj_detail =[{'project_id':proj.id,'project_name':proj.project_name,'weighted':proj_wwc,'new':proj_new,'repetition':proj_repetition,\
                     'tm_50_74':proj_tm_50_74,'tm_75_84':proj_tm_75_84,'tm_85_94':proj_tm_85_94,'tm_95_99':proj_tm_95_99,\
-                    'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total}]
+                    'tm_100':proj_tm_100,'tm_101':proj_tm_101,'tm_102':proj_tm_102,'raw_total':proj_raw_total,\
+                    'weighted_char':proj_wcc,'char_new':proj_char_new,'char_repetition':proj_char_repetition,\
+                    'char_tm_50_74':proj_char_tm_50_74,'char_tm_75_84':proj_char_tm_75_84,'char_tm_85_94':proj_char_tm_85_94,'char_tm_95_99':proj_char_tm_95_99,\
+                    'char_tm_100':proj_char_tm_100,'char_tm_101':proj_char_tm_101,'char_tm_102':proj_char_tm_102,'char_raw_total':proj_char_raw_total}]
         ser = UserDefinedRateSerializer(rates)
         return Response({'payable_rate':ser.data,'project_wwc':proj_detail,'task_wwc':res})
 
 
 
+def get_weighted_word_count(task):
+    rates = UserDefinedRate.objects.filter(user = task.job.project.ai_user).last()
+    if not rates:
+        rates = UserDefinedRate.objects.filter(is_default = True).first()
+
+    ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
+    print("status------------------>",ins.status)
+    if not ins or ins.status == 1:
+        analysis([task.id],task.job.project.id)
+
+    word_count = task.task_wc_general.last()
+    WWC = (word_count.new_words * 100 + word_count.tm_100 * rates.tm_100_percentage + \
+          word_count.tm_95_99 * rates.tm_95_99_percentage + word_count.tm_85_94 * rates.tm_85_94_percentage +\
+          word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
+          word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage+\
+          word_count.repetition * rates.tm_repetition_percentage)/100
+
+    return round(WWC)
+
+def get_weighted_char_count(task):
+    rates = UserDefinedRate.objects.filter(user = task.job.project.ai_user).last()
+    if not rates:
+        rates = UserDefinedRate.objects.filter(is_default = True).first()
+
+    ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
+    print("status------------------>",ins.status)
+    if not ins or ins.status == 1:
+        analysis([task.id],task.job.project.id)
+
+    char_count = task.task_cc_general.last()
+    WCC = (char_count.new_words * 100 + char_count.tm_100 * rates.tm_100_percentage + \
+          char_count.tm_95_99 * rates.tm_95_99_percentage + char_count.tm_85_94 * rates.tm_85_94_percentage +\
+          char_count.tm_75_84 * rates.tm_75_84_percentage + char_count.tm_50_74 * rates.tm_50_74_percentage +\
+          char_count.tm_101 * rates.tm_101_percentage + char_count.tm_102 * rates.tm_102_percentage+\
+          char_count.repetition * rates.tm_repetition_percentage)/100
+
+    return round(WCC)
 
 
 # @api_view(['GET',])

@@ -45,6 +45,26 @@ class WordCountGeneral(models.Model):
     def __str__(self):
         return self.project.project_name + "_wwc"
 
+class CharCountGeneral(models.Model):
+    project = models.ForeignKey(Project, related_name="project_cc_general", null=False, blank=False, \
+                                on_delete=models.CASCADE)
+    tasks =  models.ForeignKey(Task, related_name="task_cc_general", null=False, blank=False, \
+                                on_delete=models.CASCADE)
+    new_words = models.IntegerField(null=True, blank=True,default=0)
+    repetition = models.IntegerField(null=True, blank=True,default=0)
+    cross_file_rep = models.IntegerField(null=True, blank=True,default=0)
+    tm_100 = models.IntegerField(null=True, blank=True,default=0)
+    tm_95_99 = models.IntegerField(null=True, blank=True,default=0)
+    tm_85_94 = models.IntegerField(null=True, blank=True,default=0)
+    tm_75_84 = models.IntegerField(null=True, blank=True,default=0)
+    tm_50_74 = models.IntegerField(null=True, blank=True,default=0)
+    tm_101 = models.IntegerField(null=True,blank=True,default=0)
+    tm_102 = models.IntegerField(null=True,blank=True,default=0)
+    raw_total = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return self.project.project_name + "_wcc"
+
 class UserDefinedRate(models.Model):
     user = models.ForeignKey(AiUser, related_name="analysis_default", null=True, blank=True, \
                                      on_delete=models.CASCADE)
