@@ -467,7 +467,7 @@ class Project(models.Model):
             else:
                 out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
                 task_words = []
-                [task_words.append({i.id:i.task_details.first().task_word_count}) for i in tasks]
+                [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
 
                 return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                     "proj_seg_count":out.get('task_seg_count__sum'),
@@ -1024,13 +1024,20 @@ class TaskAssignInfo(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
+    # billable_char_count = models.IntegerField(blank=True,null=True)
+    # billable_word_count = models.IntegerField(blank=True,null=True)
+    # account_raw_count = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
         super().save()
 
-
+# class TaskAssignInfoWordDetail(models.Model):
+#     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,
+#                     related_name="task_assign_word_info")
+#     billable_char_count = models.IntegerField(blank=True,null=True)
+#     billable_word_count = models.IntegerField(blank=True,null=True)
 # class TaskAssignRateInfo(models.Model):
 #     task_assign_info = models.OneToOneField(TaskAssignInfo,on_delete=models.CASCADE, null=False, blank=False,
 #             related_name="task_assign_rate_info")
