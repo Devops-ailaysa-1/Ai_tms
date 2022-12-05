@@ -11,6 +11,7 @@ from collections import Counter
 from rest_framework import viewsets,status
 from rest_framework.decorators import api_view
 from django.db.models import Q
+from django_celery_results.models import TaskResult
 from .models import WordCountGeneral,WordCountTmxDetail,UserDefinedRate
 from ai_workspace_okapi.utils import download_file
 from ai_tm.utils import write_project_header, write_commons, write_data, tmx_read
@@ -150,14 +151,14 @@ class TmxUploadView(viewsets.ViewSet):
 
     def delete(self, request, pk):
         instance = TmxFileNew.objects.get(id=pk)
-        task_obj = Task.objects.filter(job_id=instance.job.id).last()
+        task_obj = Task.objects.filter(job_id=instance.job.id)
         print("TAskObj--------->",task_obj)
-        ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
+        ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis'))
         if ins:
             print(ins)
-            MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
-            ins_new = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
-            print("In delete Updated---------->",ins_new,ins_new.status)
+            MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis')).update(status=1)
+            ins_new = MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis'))
+            print("In delete Updated---------->",ins_new)
         #print("path---------->",instance.tmx_file.path)
         os.remove(instance.tmx_file.path)
         instance.delete()
@@ -357,8 +358,13 @@ def get_project_analysis(request,project_id):
                 state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 #print("STate------------->",state)
                 if state == 'PENDING':
+                    try:
+                        cel = TaskResult.objects.get(task_id=ins.celery_task_id)
+                        return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
+                    except TaskResult.DoesNotExist:
+                        cel_task = analysis.apply_async((task_ids,proj.id,), )
+                        return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
                     #print("stst",ins.status)
-                    return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
                 elif (not ins) or state == 'FAILURE':
                     cel_task = analysis.apply_async((task_ids,proj.id,), )
                     return Response({'msg':'Analysis is in progress. please wait','celery_id':cel_task.id},status=401)
