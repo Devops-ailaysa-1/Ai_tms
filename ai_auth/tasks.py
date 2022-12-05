@@ -557,7 +557,9 @@ def analysis(tasks,project_id):
         MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task.id,status=2,celery_task_id=analysis.request.id)
     logger.info("Analysis completed")
 
-
+@task
+def check_test():
+    sleep(1000)
 # @task
 # def get_word_count_cel(tm_analysis,proj,task,raw_total):
 #     from ai_tm.api_views import get_word_count
