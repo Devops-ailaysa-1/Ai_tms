@@ -28,6 +28,7 @@ from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http import JsonResponse
+from django_celery_results.models import TaskResult
 from django.shortcuts import get_object_or_404
 from nltk.tokenize import TweetTokenizer
 from rest_framework import permissions
@@ -255,9 +256,14 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 if state == 'PENDING':
-                    if get_empty_segments(task.document) == False:
-                        return task.document
-                    else:
+                    # if get_empty_segments(task.document) == False:
+                    #     return task.document
+                    # else:
+                    try:
+                        cel = TaskResult.objects.get(task_id=ins.celery_task_id)
+                        return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
+                    except TaskResult.DoesNotExist:
+                        cel_task = pre_translate_update.apply_async((task.id,),)
                         return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
                 elif (not ins) or state == 'FAILURE':
                     print("Inside Pre celery")
@@ -619,6 +625,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
 class MergeSegmentDeleteView(viewsets.ModelViewSet):
     def get_queryset(self):
         return  MergeSegment.objects.all()
+
 class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
@@ -882,28 +889,71 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
+
     def get(self, request, segment_id):
 
-        # Getting MT params
-        mt_params = self.get_segment_MT_params(segment_id)
+            tm_only = {
+                        "segment": segment_id,
+                        "mt_raw": "",
+                        "mt_alert": False,
+                        "alert_msg": None
+                       }
 
-        # For normal and merged segments
-        if split_check(segment_id):
-            data, status_code, can_team = self.get_data(request, segment_id, mt_params)
-            mt_alert = True if status_code == 424 else False
-            alert_msg = self.get_alert_msg(status_code, can_team)
-            tm_data = self.get_tm_data(request, segment_id)
-            return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
-                "alert_msg":alert_msg}, status=status_code)
+            mt_uc = request.GET.get("mt_uc", 'false')
 
-        # For split segment
-        else:
-            data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
-            mt_alert = True if status_code == 424 else False
-            alert_msg = self.get_alert_msg(status_code, can_team)
-            tm_data = self.get_tm_data(request, segment_id)
-            return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
-                             "alert_msg": alert_msg}, status=status_code)
+            # Getting MT params
+            mt_params = self.get_segment_MT_params(segment_id)
+
+            # For normal and merged segments
+            if split_check(segment_id):
+
+                tm_data = self.get_tm_data(request, segment_id)
+
+                if tm_data and (mt_uc == 'false'):
+                    return Response({**tm_only, "tm":tm_data}, status = 200 )
+                data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+                mt_alert = True if status_code == 424 else False
+                alert_msg = self.get_alert_msg(status_code, can_team)
+
+                return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
+                    "alert_msg":alert_msg}, status=status_code)
+
+            # For split segment
+            else:
+
+                tm_data = self.get_tm_data(request, segment_id)
+
+                if tm_data and (mt_uc == False):
+                    return Response({**tm_only, "tm": tm_data}, status=200)
+
+                data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
+                mt_alert = True if status_code == 424 else False
+                alert_msg = self.get_alert_msg(status_code, can_team)
+                # tm_data = self.get_tm_data(request, segment_id)
+                return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
+                                 "alert_msg": alert_msg}, status=status_code)
+    # def get(self, request, segment_id):
+    #
+    #     # Getting MT params
+    #     mt_params = self.get_segment_MT_params(segment_id)
+    #
+    #     # For normal and merged segments
+    #     if split_check(segment_id):
+    #         data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+    #         mt_alert = True if status_code == 424 else False
+    #         alert_msg = self.get_alert_msg(status_code, can_team)
+    #         tm_data = self.get_tm_data(request, segment_id)
+    #         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
+    #             "alert_msg":alert_msg}, status=status_code)
+    #
+    #     # For split segment
+    #     else:
+    #         data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
+    #         mt_alert = True if status_code == 424 else False
+    #         alert_msg = self.get_alert_msg(status_code, can_team)
+    #         tm_data = self.get_tm_data(request, segment_id)
+    #         return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
+    #                          "alert_msg": alert_msg}, status=status_code)
 
 
 # class ConcordanceSearchView(views.APIView):
