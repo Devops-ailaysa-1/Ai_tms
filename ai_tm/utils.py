@@ -251,7 +251,8 @@ def tmx_read_with_target(files,job):
                             text =  (''.join(item.itertext()))
                             target = remove_tags(text)
                         out = {'source':source,'target':target}
-            tm_lists.append(out)
+            if out:
+                tm_lists.append(out)
     return tm_lists
 
 
