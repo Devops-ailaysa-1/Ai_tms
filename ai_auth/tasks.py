@@ -369,7 +369,7 @@ def mt_only(project_id,token):
 #
 #     progress_recorder = ProgressRecorder(self)
 #     # progress_recorder = ProgressRecorder()
-# 
+#
 #
 #     if pr.pre_translate == True:
 #         tasks = pr.get_mtpe_tasks
@@ -595,7 +595,7 @@ def count_update(job_id):
                             if assigns.task_assign_info.total_word_count != word_count:
                                 notify_word_count(assigns,word_count,char_count)
                         else:
-                            if assigns.task.total_char_count != char_count:
+                            if assigns.task.task_char_count != char_count:
                                 notify_word_count(assigns,word_count,char_count)
                     #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
     logger.info('billable count updated')
