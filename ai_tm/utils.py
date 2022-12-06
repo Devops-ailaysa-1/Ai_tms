@@ -230,6 +230,7 @@ def tmx_read_with_target(files,job):
     sl = job.source_language_code
     tl = job.target_language_code
     tm_lists = []
+    out = None
     for file in files:
         tree = ET.parse(file.tmx_file.path)
         root=tree.getroot()
