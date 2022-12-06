@@ -367,7 +367,7 @@ def get_project_analysis(request,project_id):
                 print("Ins-------------->",ins)
                 state = analysis.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 #print("STate------------->",state)
-                if state == 'PENDING':
+                if state == 'PENDING' or state == 'STARTED':
                     try:
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
                         return Response({'msg':'Analysis is in progress. please wait','celery_id':ins.celery_task_id},status=401)
