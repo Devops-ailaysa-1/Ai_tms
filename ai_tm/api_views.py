@@ -449,7 +449,7 @@ def get_weighted_word_count(task):
         rates = UserDefinedRate.objects.filter(is_default = True).first()
 
     ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
-    print("status------------------>",ins.status)
+    print("status------------------>",ins)
     if not ins or ins.status == 1:
         analysis([task.id],task.job.project.id)
 
