@@ -1024,16 +1024,16 @@ class TaskAssignInfo(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
-    # billable_char_count = models.IntegerField(blank=True,null=True)
-    # billable_word_count = models.IntegerField(blank=True,null=True)
-    # account_raw_count = models.BooleanField(default=True)
+    billable_char_count = models.IntegerField(blank=True,null=True)
+    billable_word_count = models.IntegerField(blank=True,null=True)
+    account_raw_count = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
         super().save()
 
-# class TaskAssignInfoWordDetail(models.Model):
+# class TaskAssignBillDetail(models.Model):
 #     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,
 #                     related_name="task_assign_word_info")
 #     billable_char_count = models.IntegerField(blank=True,null=True)
