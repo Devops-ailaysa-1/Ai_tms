@@ -1951,7 +1951,7 @@ def transcribe_file(request):
     ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'transcribe_long_file_cel')).last()
     state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
     print("State----------------------->",state)
-    if state == 'PENDING':
+    if state == 'PENDING' or state == 'STARTED':
         return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
     else:
         obj = Task.objects.get(id = task_id)
@@ -1982,7 +1982,7 @@ def transcribe_file(request):
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name = 'transcribe_long_file_cel')).last()
                 state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
                 print("State----------------------->",state)
-                if state == 'PENDING':
+                if state == 'PENDING' or state == 'STARTED':
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
                 elif (not ins) or state == 'FAILURE':
                     res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
@@ -2162,7 +2162,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
             print("State--------------->",state)
-            if state == 'PENDING':
+            if state == 'PENDING' or state == 'STARTED':
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )

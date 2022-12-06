@@ -255,7 +255,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-                if state == 'PENDING':
+                if state == 'STARTED' or state == 'PENDING':
                     # if get_empty_segments(task.document) == False:
                     #     return task.document
                     # else:
@@ -342,7 +342,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-            if state == 'PENDING':
+            print("State------------------>",state)
+            if state == 'STARTED' or state == 'PENDING':
                 if ins.status == 1:
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
                 else:
