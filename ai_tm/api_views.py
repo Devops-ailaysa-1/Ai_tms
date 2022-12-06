@@ -18,11 +18,12 @@ from ai_tm.utils import write_project_header, write_commons, write_data, tmx_rea
 from ai_workspace.serializers import TaskSerializer
 from ai_workspace.api_views import ProjectAnalysisProperty
 from django.conf import settings
-from ai_auth.tasks import analysis
+from ai_auth.tasks import analysis,count_update
 from ai_workspace.models import MTonlytaskCeleryStatus
 import rapidfuzz
 from rapidfuzz import process
 import xml.etree.ElementTree as ET
+from notifications.signals import notify
 spring_host = os.environ.get("SPRING_HOST")
 
 def get_json_file_path(task):
@@ -110,6 +111,20 @@ class UserDefinedRateView(viewsets.ViewSet):
         return Response(status=204)
 
 
+# def update(job):
+#     task_obj = Task.objects.filter(job=job)
+#     for obj in task_obj:
+#     for assigns in obj.task_info.filter(task_assign_info__isnull = False):
+#         if assigns.account_raw_count == False:
+#             if assigns.status == 1:
+#                 word_count = get_weighted_word_count(obj)
+#                 char_count = get_weighted_char_count(obj)
+#                 assigns.task_assign_info.billable_word_count = word_count
+#                 assigns.task_assign_info.billable_char_count = char_count
+#                 assigns.task_assign_info.save()
+
+
+
 class TmxUploadView(viewsets.ViewSet):
 
     def list(self, request):
@@ -127,12 +142,11 @@ class TmxUploadView(viewsets.ViewSet):
         serializer = TmxFileSerializer(data=ser_data,many=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
+            count_update.apply_async((job,))
             task_obj = Task.objects.filter(job_id=job).last()
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
             if ins:
-                print(ins)
                 MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
-                print("In create Updated---------->",ins.status)
         return Response(serializer.data, status=201)
 
     def update(self, request, pk):
@@ -142,9 +156,9 @@ class TmxUploadView(viewsets.ViewSet):
         task_obj = Task.objects.filter(job_id=job_id).last()
         if serializer.is_valid():
             serializer.save()
+            count_update.apply_async((job_id,))
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).last()
             if ins:
-                print("In Update",ins)
                 MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_obj.id) & Q(task_name = 'analysis')).update(status=1)
             return Response(serializer.data, status=200)
         return Response(serializer.errors)
@@ -152,15 +166,11 @@ class TmxUploadView(viewsets.ViewSet):
     def delete(self, request, pk):
         instance = TmxFileNew.objects.get(id=pk)
         task_obj = Task.objects.filter(job_id=instance.job.id)
-        print("TAskObj--------->",task_obj)
         ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis'))
         if ins:
-            print(ins)
             MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis')).update(status=1)
-            ins_new = MTonlytaskCeleryStatus.objects.filter(Q(task_id__in=task_obj) & Q(task_name = 'analysis'))
-            print("In delete Updated---------->",ins_new)
-        #print("path---------->",instance.tmx_file.path)
         os.remove(instance.tmx_file.path)
+        count_update.apply_async((instance.job.id,))
         instance.delete()
         return Response(status=204)
 
@@ -731,3 +741,31 @@ def download_tmx_file(request,file_id):
         return download_file(instance.path)
     except:
         return Response({'msg':'No file Exists'})
+
+
+
+def notify_word_count(task_assign,word_count,char_count):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    print("$$$$$$$$$$$")
+    receiver = task_assign.assign_to
+    print("Rece",receiver)
+    sender =  task_assign.task_assign_info.assigned_by
+    print("send",sender)
+    unit = task_assign.task_assign_info.mtpe_count_unit.id
+    obj = task_assign.task
+    proj = obj.job.project.project_name
+    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    if unit == 1:
+        message = "Weighted Word Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted word count: "+ str(word_count)+"."
+    if unit == 2:
+        message = "Weighted Char Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted Char count: "+ str(char_count)+"."
+    print("MSG---------->",message)
+    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+    print("Chat--------->",msg)
+    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
