@@ -2522,14 +2522,14 @@ def task_get_segments(request):
             express_obj.mt_raw = trans
             express_obj.save()
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-            out =[{'task_id':obj.id,"source":content,"mt_raw":express_obj.mt_raw,"target":express_obj.target_text,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id}]
+            out =[{'task_id':obj.id,"source":content,"mt_raw":express_obj.mt_raw,"target":express_obj.target_text,'project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id}]
             return Response({'Res':out})
         else:
-            out =[{'task_id':obj.id,"source":content,"mt_raw":None,"target":'','project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":obj.job.project.mt_engine.id}]
+            out =[{'task_id':obj.id,"source":content,"mt_raw":None,"target":'','project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":obj.job.project.mt_engine.id}]
             return Response({'msg':'Insufficient Credits','Res':out})
             #return Response({'msg':'Insufficient Credits'},status=400)
     else:
-        out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id if express_obj.mt_engine else obj.job.project.mt_engine.id}]
+        out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id if express_obj.mt_engine else obj.job.project.mt_engine.id}]
         return Response({'Res':out})
 
 

@@ -340,37 +340,54 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 cursor.execute(mt_raw_sql, mt_params)
     logger.info("mt_raw wrriting completed")
 
-
-# @task
-@shared_task(bind=True)
-def mt_only(self, project_id,token):
-# def mt_only(project_id, token):
+@task
+def mt_only(project_id,token):
     from ai_workspace.models import Project,Task
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
-
-    progress_recorder = ProgressRecorder(self)
-    # progress_recorder = ProgressRecorder()
-
-
+    print("celerytask-------->",mt_only.request.id)
+    print("PRE TRANSLATE-------------->",pr.pre_translate)
     if pr.pre_translate == True:
         tasks = pr.get_mtpe_tasks
-
-        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,\
-                                               celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
-        j = 1
+        print("TASKS Inside CELERY----->",tasks)
+        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
         for i in pr.get_mtpe_tasks:
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             doc = DocumentSerializerV2(document).data
-            sleep(20)
-
-            progress_recorder.set_progress(j, len(pr.get_mtpe_tasks), f'MT ongoing for {i}')
-            j += 1
-
+            print(doc)
             MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
-
-    return "Finished Pre-translation"
+    logger.info('mt-only')
+# # @task
+# @shared_task(bind=True)
+# def mt_only(self, project_id,token):
+# # def mt_only(project_id, token):
+#     from ai_workspace.models import Project,Task
+#     from ai_workspace_okapi.api_views import DocumentViewByTask
+#     from ai_workspace_okapi.serializers import DocumentSerializerV2
+#     pr = Project.objects.get(id=project_id)
+#
+#     progress_recorder = ProgressRecorder(self)
+#     # progress_recorder = ProgressRecorder()
+# 
+#
+#     if pr.pre_translate == True:
+#         tasks = pr.get_mtpe_tasks
+#
+#         [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,\
+#                                                celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
+#         j = 1
+#         for i in pr.get_mtpe_tasks:
+#             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
+#             doc = DocumentSerializerV2(document).data
+#             sleep(20)
+#
+#             progress_recorder.set_progress(j, len(pr.get_mtpe_tasks), f'MT ongoing for {i}')
+#             j += 1
+#
+#             MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+#
+#     return "Finished Pre-translation"
 
 @task
 def write_doc_json_file(doc_data, task_id):
@@ -556,6 +573,32 @@ def analysis(tasks,project_id):
         [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
         MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task.id,status=2,celery_task_id=analysis.request.id)
     logger.info("Analysis completed")
+
+
+@task
+def count_update(job_id):
+    from ai_workspace.models import Task
+    from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
+    task_obj = Task.objects.filter(job_id=job_id)
+    for obj in task_obj:
+        for assigns in obj.task_info.filter(task_assign_info__isnull = False):
+            if assigns.task_assign_info.account_raw_count == False:
+                if assigns.status == 1:
+                    word_count = get_weighted_word_count(obj)
+                    assigns.task_assign_info.billable_word_count = word_count
+                    assigns.task_assign_info.save()
+                    char_count = get_weighted_char_count(obj)
+                    assigns.task_assign_info.billable_char_count = char_count
+                    assigns.task_assign_info.save()
+                    if assigns.task_assign_info.mtpe_count_unit_id != None:
+                        if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                            if assigns.task_assign_info.total_word_count != word_count:
+                                notify_word_count(assigns,word_count,char_count)
+                        else:
+                            if assigns.task.total_char_count != char_count:
+                                notify_word_count(assigns,word_count,char_count)
+                    #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
+    logger.info('billable count updated')
 
 @task
 def check_test():
