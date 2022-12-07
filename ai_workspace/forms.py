@@ -117,8 +117,8 @@ def task_assign_detail_mail(Receiver,assignment_id):
     send_mail(
         "Regarding Assigned Task Detail Info",None,
         settings.DEFAULT_FROM_EMAIL,
-        #[Receiver.email],
-        ['thenmozhivijay20@gmail.com',],
+        [Receiver.email],
+        #['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
     print("assign detail mailsent>>")
