@@ -582,6 +582,8 @@ def count_update(job_id):
     task_obj = Task.objects.filter(job_id=job_id)
     for obj in task_obj:
         for assigns in obj.task_info.filter(task_assign_info__isnull = False):
+            existing_wc = assigns.task_assign_info.billable_word_count
+            existing_cc = assigns.task_assign_info.billable_char_count
             if assigns.task_assign_info.account_raw_count == False:
                 if assigns.status == 1:
                     word_count = get_weighted_word_count(obj)
@@ -592,11 +594,10 @@ def count_update(job_id):
                     assigns.task_assign_info.save()
                     if assigns.task_assign_info.mtpe_count_unit_id != None:
                         if assigns.task_assign_info.mtpe_count_unit_id == 1:
-                            if assigns.task_assign_info.billable_word_count != word_count:
+                            if existing_wc != word_count:
                                 notify_word_count(assigns,word_count,char_count)
                         else:
-                            if assigns.task_assign_info.billable_char_count != char_count:
-                            #if assigns.task.task_char_count != char_count:
+                            if existing_cc != char_count:
                                 notify_word_count(assigns,word_count,char_count)
                     #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
     logger.info('billable count updated')
