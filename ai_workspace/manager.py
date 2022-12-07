@@ -110,7 +110,8 @@ class TaskManager(models.Manager):
 
 
         epub_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.epub']
-        files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.epub']
+        pdf_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.pdf']
+        files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.epub' and os.path.splitext(file.file.path)[1] != '.pdf']
 
 
         if hasattr(project, "ai_user"):
@@ -143,6 +144,10 @@ class TaskManager(models.Manager):
         shutil.rmtree('epub_1', ignore_errors=True)
         if epub_list:
             additional_tasks = [self.get_or_create(file=file, job=job) for file in html_files_list for job in jobs]
+        if pdf_list:
+            from ai_workspace.models import Job
+            job_obj = Job.objects.create(source_language=jobs[0].source_language,target_language=None,project=project)
+            additional_tasks = [self.get_or_create(file=file, job=job_obj) for file in pdf_list]
         return tasks
 
 
