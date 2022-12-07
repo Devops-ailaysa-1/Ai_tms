@@ -592,13 +592,54 @@ def count_update(job_id):
                     assigns.task_assign_info.save()
                     if assigns.task_assign_info.mtpe_count_unit_id != None:
                         if assigns.task_assign_info.mtpe_count_unit_id == 1:
-                            if assigns.task_assign_info.total_word_count != word_count:
+                            if assigns.task_assign_info.billable_word_count != word_count:
                                 notify_word_count(assigns,word_count,char_count)
                         else:
-                            if assigns.task.task_char_count != char_count:
+                            if assigns.task_assign_info.billable_char_count != char_count:
+                            #if assigns.task.task_char_count != char_count:
                                 notify_word_count(assigns,word_count,char_count)
                     #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
     logger.info('billable count updated')
+
+
+
+@task
+def weighted_count_update(receiver,sender,assignment_id):
+    from ai_workspace import forms as ws_forms
+    from ai_workspace.models import TaskAssignInfo
+    from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
+    task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
+    for obj in task_assgn_objs:
+        existing_wc = obj.task_assign.task_assign_info.billable_word_count
+        existing_cc = obj.task_assign.task_assign_info.billable_char_count
+        if obj.account_raw_count == False:
+            word_count = get_weighted_word_count(obj.task_assign.task)
+            char_count = get_weighted_char_count(obj.task_assign.task)
+        else:
+            word_count = obj.task_assign.task.task_word_count
+            char_count = obj.task_assign.task.task_char_count
+        obj.billable_char_count = char_count
+        obj.billable_word_count = word_count
+        obj.save()
+        if receiver !=None and sender!=None:
+            print("------------------POST-----------------------------------")
+            Receiver = AiUser.objects.get(id = receiver)
+            Sender = AiUser.objects.get(id = sender)
+            hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
+            if Receiver in hired_editors:
+                ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+        else:
+            print("------------------------PUT------------------------------")
+            assigns = task_assgn_objs[0].task_assign
+            if assigns.task_assign_info.mtpe_count_unit_id != None:
+                if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                    if existing_wc != word_count:
+                        notify_word_count(assigns,word_count,char_count)
+                else:
+                    if existing_cc != char_count:
+                        notify_word_count(assigns,word_count,char_count)
+    logger.info('billable count updated and mail sent')
+
 
 @task
 def check_test():

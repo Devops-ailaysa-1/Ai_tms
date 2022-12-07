@@ -101,21 +101,24 @@ def task_assign_detail_mail(Receiver,assignment_id):
     ins = TaskAssignInfo.objects.filter(assignment_id = assignment_id).first()
     file_detail = []
     for i in task_assgn_objs:
+        billable_word_count = i.billable_word_count if i.billable_word_count!=None else i.task_assign.task.task_word_count
+        billable_char_count = i.billable_char_count if i.billable_char_count!=None else i.task_assign.task.task_char_count
         if i.task_assign.task.job.project.project_type_id == 3:
             out = []
-        elif i.mtpe_count_unit.unit == 'Word' or 'Hour' or 'Total':
-            out = [{"file":i.task_assign.task.file.filename,"words":i.task_assign.task.task_word_count,"unit":i.mtpe_count_unit.unit}]
+        elif i.mtpe_count_unit.unit == 'Word' or i.mtpe_count_unit.unit == 'Hour' or i.mtpe_count_unit.unit == 'Total':
+            out = [{"file":i.task_assign.task.file.filename,"words":i.task_assign.task.task_word_count,"billable_word_count":billable_word_count,"unit":i.mtpe_count_unit.unit}]
         elif i.mtpe_count_unit.unit == 'Char':
-            out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"unit":i.mtpe_count_unit.unit}]
+            out = [{"file":i.task_assign.task.file.filename,"characters":i.task_assign.task.task_char_count,"billable_char_count":billable_char_count,"unit":i.mtpe_count_unit.unit}]
         file_detail.extend(out)
+    print("FileDetail----------------->",file_detail)
     context = {'name':Receiver.fullname,'project':ins.task_assign.task.job.project,'job':ins.task_assign.task.job.source_target_pair_names, 'rate':str(unit_price_float_format(ins.mtpe_rate))+'('+ins.currency.currency_code+')'+' per '+ins.mtpe_count_unit.unit,
     'files':file_detail,'deadline':ins.deadline.date().strftime('%d-%m-%Y') if ins.deadline else None}
     msg_html = render_to_string("assign_detail_mail.html", context)
     send_mail(
         "Regarding Assigned Task Detail Info",None,
         settings.DEFAULT_FROM_EMAIL,
-        [Receiver.email],
-        #['thenmozhivijay20@gmail.com',],
+        #[Receiver.email],
+        ['thenmozhivijay20@gmail.com',],
         html_message=msg_html,
     )
     print("assign detail mailsent>>")

@@ -735,7 +735,7 @@ class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = TaskAssignInfo
 		fields = ('instruction','assignment_id','deadline','mtpe_rate','estimated_hours','mtpe_count_unit','total_word_count','currency',\
-				  'assigned_by','task_assign_info','task_ven_status','account_raw_count',)
+				  'assigned_by','task_assign_info','task_ven_status','account_raw_count','billable_char_count','billable_word_count',)
 
 ####################Need to change################################
 
@@ -760,7 +760,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         fields = ('id','instruction','instruction_files','step','task_ven_status',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','estimated_hours','mtpe_count_unit','currency','files',\
-                    'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable','pre_translate','task_assign_detail','account_raw_count',)
+                    'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable',\
+                    'pre_translate','task_assign_detail','account_raw_count','billable_char_count','billable_word_count',)
 
         extra_kwargs = {
             'assigned_by':{'write_only':True},
@@ -838,6 +839,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
 
     def create(self, data):
+        from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count
         print('validated data==>',data)
         task_list = data.pop('tasks')
         step = data.pop('step')
@@ -855,7 +857,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                 except:
                     try:total_word_count = i.task_assign.task.task_details.first().task_word_count
                     except:total_word_count=None
-                TaskAssignInfo.objects.filter(id=i.id).update(total_word_count = total_word_count)
+                # billable_word_count = get_weighted_word_count(i.task_assign.task)
+                # billable_char_count = get_weighted_char_count(i.task_assign.task)
+                TaskAssignInfo.objects.filter(id=i.id).update(total_word_count = total_word_count)#,billable_char_count=billable_char_count,billable_word_count=billable_word_count)
             tt = [Instructionfiles.objects.create(**instruction_file,task_assign_info = assign) for instruction_file in files for assign in task_assign_info]
             task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(assign_to_id = assign_to) for task in task_list]
             print("Task Assign-------->",[TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first().assign_to for task in task_list])

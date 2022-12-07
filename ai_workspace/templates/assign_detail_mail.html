@@ -30,9 +30,9 @@
                 {% if files %}
                 {% for i in files %}
                 {% if i.unit == 'Word' %}
-                <p>File : {{i.file}},&emsp;Words : {{i.words}}</p>
+                <p>File : {{i.file}},&emsp; Words : {{i.words}},&emsp; Billable Words : {{i.billable_word_count}}</p>
                 {% elif i.unit == 'Char' %}
-                <p>File : {{i.file}},&emsp;Characters : {{i.characters}}</p>
+                <p>File : {{i.file}},&emsp;Characters : {{i.characters}},&emsp; Billable Charecters : {{i.billable_char_count}}</p>
                 {% else %}
                 <p>File : {{i.file}},&emsp;Words : {{i.words}}</p>
                 {% endif %}
