@@ -9,7 +9,7 @@ import zipfile
 from datetime import datetime
 from glob import glob
 from urllib.parse import urlparse
-
+from ai_auth.tasks import count_update,weighted_count_update
 import django_filters
 import docx2txt
 import nltk
@@ -1339,6 +1339,9 @@ class TaskAssignUpdateView(viewsets.ViewSet):
             serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict()},context={'request':request},partial=True)
         if serializer.is_valid():
             serializer.save()
+            if request.POST.get('account_raw_count'):
+                print("##################RAw")
+                weighted_count_update.apply_async((None,None,task_assign.task_assign_info.assignment_id,),)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         # except:
@@ -1383,16 +1386,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task = request.POST.getlist('task')
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
         tasks= [json.loads(i) for i in task]
+        job_id = Task.objects.get(id=tasks[0]).job.id
         assignment_id = create_assignment_id()
         with transaction.atomic():
             serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
-            # assignment_id = create_assignment_id()
-            # serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
             if serializer.is_valid():
                 serializer.save()
+                weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
                 msg_send(sender,Receiver,tasks[0])
-                if Receiver in hired_editors:
-                    ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+                # if Receiver in hired_editors:
+                #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
                 return Response({"msg":"Task Assigned"})
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
