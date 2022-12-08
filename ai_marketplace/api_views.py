@@ -427,18 +427,51 @@ class ChatMessageListView(viewsets.ModelViewSet):
 #         projects = [i.project_id for i in query] if query else []
 #         queryset=[x for x in Project.objects.filter(ai_user=self.request.user.id).filter(~Q(id__in = projects)).order_by('-id') if x.progress != "completed" ]
 #         return queryset
+class IncompleteProjectListFilter(django_filters.FilterSet):
 
-@api_view(['GET',])
-@permission_classes([IsAuthenticated])
-def get_incomplete_projects_list(request):
-    query = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer = request.user)\
-            |Q(project__team__owner = request.user)|Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
-    projects = [i.project_id for i in query] if query else []
-    queryset=[x for x in Project.objects.filter(Q(ai_user=request.user)\
-                |Q(team__owner = request.user)|Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).\
-                filter(~Q(id__in = projects)).order_by('-id').distinct() if x.progress != "completed" and x.get_assignable_tasks != []]#.filter(voice_proj_detail__isnull=True)
-    ser = SimpleProjectSerializer(queryset,many=True)
-    return Response(ser.data)
+    def filter(self, qs, value):
+        return (pr for pr in qs if pr.get_assignable_tasks_exists == True)
+
+
+
+
+class IncompleteProjectListView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SimpleProjectSerializer
+    filterset_class = IncompleteProjectListFilter
+
+    def get_queryset(self):
+        queryset=Project.objects.filter(Q(ai_user=self.request.user)\
+                    |Q(team__owner = self.request.user)|Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).\
+                    exclude(Q(proj_detail__deleted_at=None) and Q(proj_detail__customer=self.request.user)).order_by('-id').distinct()
+        return queryset
+
+
+    def list(self,request):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = SimpleProjectSerializer(queryset, many=True)
+        return  Response(serializer.data)
+
+
+
+# @api_view(['GET',])
+# @permission_classes([IsAuthenticated])
+# def get_incomplete_projects_list(request):
+#     queryset=Project.objects.filter(Q(ai_user=request.user)\
+#                 |Q(team__owner = request.user)|Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).\
+#                 exclude(Q(proj_detail__deleted_at=None) and Q(proj_detail__customer=request.user)).order_by('-id').distinct()
+#     filtered = (x for x in queryset if x.get_assignable_tasks_exists == True)
+#     ser = SimpleProjectSerializer(filtered,many=True)
+#     return Response(ser.data)
+
+
+    # query = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer = request.user)\
+    #         |Q(project__team__owner = request.user)|Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
+    # projects = [i.project_id for i in query] if query else []
+    # queryset=[x for x in Project.objects.filter(Q(ai_user=request.user)\
+    #             |Q(team__owner = request.user)|Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).\
+    #             filter(~Q(id__in = projects)).order_by('-id').distinct() if x.progress != "completed" and x.get_assignable_tasks != []]#.filter(voice_proj_detail__isnull=True)
+
 
 
 class JobFilter(django_filters.FilterSet):
