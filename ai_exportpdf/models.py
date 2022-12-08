@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from ai_auth.models import AiUser
-
+from ai_workspace.models import Task 
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_file",filename)
 
@@ -21,15 +21,18 @@ class Ai_PdfUpload(models.Model):
     slug = models.SlugField(default="", blank=True, null=True, db_index=True)
     docx_file_name = models.CharField(max_length=200 , null=True, blank=True)
     file_name = models.CharField(max_length=200 , null=True, blank=True)
-
-
+    task = models.ForeignKey(to = Task, on_delete = models.CASCADE , null=True, blank=True )
 
     def save(self, *args, **kwargs):
-        if self.id:
-            count = Ai_PdfUpload.objects.filter(file_name__contains=self.file_name).exclude(id=self.id).count()
-        else:
-            count = Ai_PdfUpload.objects.filter(file_name__contains=self.file_name).count()
-        print(count)
-        if count!=0:
-            self.pdf_file_name = str(self.file_name).split(".pdf")[0] + "(" + str(count) + ").pdf" 
+        # if self.id:
+        #     count = Ai_PdfUpload.objects.filter(file_name__contains=self.file_name).exclude(id=self.id).count()
+        # else:
+        #     count = Ai_PdfUpload.objects.filter(file_name__contains=self.file_name).count()
+        # print(count)
+        # if count!=0:
+        #     self.pdf_file_name = str(self.file_name).split(".pdf")[0] + "(" + str(count) + ").pdf" 
         return super().save()
+    
+    # def __str__(self):
+    #     return self.name
+    

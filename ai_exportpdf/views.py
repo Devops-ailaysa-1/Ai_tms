@@ -35,7 +35,6 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
             serializer = PdfFileStatusSerializer(queryset,many=True)
-            
             return Response(serializer.data)
         else:
             query_filter = Ai_PdfUpload.objects.filter(user = user).order_by('id')
@@ -91,7 +90,7 @@ class ConversionPortableDoc(APIView):
             #pdf consuming credits
             consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
             if initial_credit > consumable_credits:
-                task_id = pdf_conversion(int(id))
+                task_id = pdf_conversion(int(id) , Task= False)
                 celery_task[int(id)] = task_id
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
             else:
@@ -108,6 +107,28 @@ def docx_file_download(request,id):
         return download_file(docx_file_path)
     else:
         return JsonResponse({"msg":"no file associated with it"})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # def create(self, request):
     #     pdf_request_file = request.FILES.getlist('pdf_request_file')
