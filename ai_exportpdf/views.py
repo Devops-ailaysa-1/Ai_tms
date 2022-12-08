@@ -35,7 +35,6 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
             serializer = PdfFileStatusSerializer(queryset,many=True)
-            
             return Response(serializer.data)
         else:
             query_filter = Ai_PdfUpload.objects.filter(user = user).order_by('id')
@@ -55,8 +54,8 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
         user = request.user.id
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,
-                 'status':'YET TO START' } for pdf_file_list in pdf_request_file]
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,'pdf_file_name' : pdf_file_list._get_name() ,
+                 'file_name':pdf_file_list._get_name() ,'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
             serializer.save()
@@ -108,6 +107,28 @@ def docx_file_download(request,id):
         return download_file(docx_file_path)
     else:
         return JsonResponse({"msg":"no file associated with it"})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # def create(self, request):
     #     pdf_request_file = request.FILES.getlist('pdf_request_file')
