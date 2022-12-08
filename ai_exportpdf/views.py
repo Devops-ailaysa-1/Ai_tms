@@ -54,8 +54,8 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
         user = request.user.id
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,
-                 'status':'YET TO START' } for pdf_file_list in pdf_request_file]
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,'pdf_file_name' : pdf_file_list._get_name() ,
+                 'file_name':pdf_file_list._get_name() ,'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
             serializer.save()
@@ -90,7 +90,7 @@ class ConversionPortableDoc(APIView):
             #pdf consuming credits
             consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
             if initial_credit > consumable_credits:
-                task_id = pdf_conversion(int(id) , Task= False)
+                task_id = pdf_conversion(int(id))
                 celery_task[int(id)] = task_id
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
             else:

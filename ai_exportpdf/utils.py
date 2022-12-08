@@ -228,11 +228,11 @@ def project_pdf_conversion(id):
     file_obj = ContentFile(task_details.file.file.read(),task_details.file.filename)
     initial_credit = user.credit_balance.get("total_left")
     file_format,page_length = file_pdf_check(task_details.file.file.path)
-    print("file_format--->",file_format)
-    print('page_length-->' ,page_length)
+ 
     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
     if initial_credit > consumable_credits:
-        Ai_PdfUpload.objects.create(user= user , task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
+        Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
+                                   pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
         file_details = Ai_PdfUpload.objects.filter(task = task_details).last()
         lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
