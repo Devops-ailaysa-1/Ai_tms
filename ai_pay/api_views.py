@@ -33,6 +33,8 @@ from django.conf import settings
 import time
 from django.http import Http404
 from ai_auth.api_views import resync_instances
+from notifications.signals import notify
+
 logger = logging.getLogger('django')
 
 try:
@@ -437,6 +439,7 @@ def generate_client_po(task_assign_info):
             po_total_amt+=float(tot_amount)
             po.po_total_amount=po_total_amt
             po.save()
+            msg_send_po(po,"po_created")
         # print("po2",po)
     return po
 
@@ -479,6 +482,7 @@ def po_modify(task_assign_info_id,po_update):
             instance = po_tsk,
             created = False
         )
+        msg_send_po(po,"po_updated")   
         return True
     else:
         return False
@@ -734,3 +738,22 @@ class AilaysaGeneratedInvoiceViewset(viewsets.ViewSet):
         return Response(serializer.errors, status=400)
 
         
+def msg_send_po(po,input):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    sender = po.client
+    receiver = po.seller
+    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    #print("Thread--->",thread_id)
+    if input == 'po_updated':
+       message = "purchase order with "+po.poid+" has been updated."
+    elif input == 'po_created':
+       message = "purchase order with "+po.poid+" has been created."
+
+    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
