@@ -1108,35 +1108,12 @@ class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
        return True if sp else False
 
 class ProjectListSerializer(serializers.ModelSerializer):
-	assign_enable = serializers.SerializerMethodField(method_name='check_role')
-	assignable = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assign_enable","files_jobs_choice_url","assignable", )
+		fields = ("id", "project_name","files_jobs_choice_url",)
 
 
-	def check_role(self, instance):
-		if self.context.get("request")!=None:
-			user = self.context.get("request").user
-		else:user = self.context.get("ai_user", None)
-		if instance.team :
-			return True if ((instance.team.owner == user)\
-				or(instance.team.internal_member_team_info.all().\
-				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-				or(instance.team.owner.user_info.all()\
-				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-				else False
-		else:
-			return True if ((instance.ai_user == user) or\
-			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-			else False
-
-	def get_assignable(self,instance):
-		if instance.get_assignable_tasks == []:
-			return False
-		else:
-			return True
 
 class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
 	source_lang = serializers.ReadOnlyField(source = 'source_lang.language')
