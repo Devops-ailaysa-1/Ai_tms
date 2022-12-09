@@ -1,5 +1,6 @@
 from django.core.mail import send_mail
 import smtplib
+from ai_pay.api_views import po_modify_weigted_count
 from celery.utils.log import get_task_logger
 import celery,re,pickle, copy
 import djstripe
@@ -610,6 +611,7 @@ def weighted_count_update(receiver,sender,assignment_id):
     from ai_workspace.models import TaskAssignInfo
     from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
     task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
+    task_assign_obj_ls=[]
     for obj in task_assgn_objs:
         existing_wc = obj.task_assign.task_assign_info.billable_word_count
         existing_cc = obj.task_assign.task_assign_info.billable_char_count
@@ -622,6 +624,10 @@ def weighted_count_update(receiver,sender,assignment_id):
         obj.billable_char_count = char_count
         obj.billable_word_count = word_count
         obj.save()
+
+        if existing_wc != word_count and existing_cc != char_count:
+            task_assign_obj_ls.append(obj)
+    
         if receiver !=None and sender!=None:
             print("------------------POST-----------------------------------")
             Receiver = AiUser.objects.get(id = receiver)
@@ -640,6 +646,9 @@ def weighted_count_update(receiver,sender,assignment_id):
                     if existing_cc != char_count:
                         notify_word_count(assigns,word_count,char_count)
     logger.info('billable count updated and mail sent')
+
+    if len(task_assign_obj_ls) != 0:
+         po_modify_weigted_count(task_assign_obj_ls)
 
 
 @task
