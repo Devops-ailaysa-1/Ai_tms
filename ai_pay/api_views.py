@@ -448,7 +448,7 @@ def generate_client_po(task_assign_info):
 
 def po_modify_weigted_count(task_assign_info_ls):
     if len(task_assign_info_ls)!= 0:
-        assignment = POAssignment.objects.filter(assignment_id=task_assign_info_ls[0].assignment_id)       
+        assignment = POAssignment.objects.filter(assignment_id=task_assign_info_ls[0].assignment_id).last()       
         pos = PurchaseOrder.objects.filter(Q(assignment=assignment)&~Q(po_status="void"))
         if pos.count()==1:
             po =pos.last()
@@ -458,7 +458,7 @@ def po_modify_weigted_count(task_assign_info_ls):
             logger.error('returned more than one po for same assignment')
             return False
     for assign_obj in task_assign_info_ls:
-        taskpo = POTaskDetails.objects.get(task_id=assign_obj.task_assign.task.id,po=po)       
+        taskpo = POTaskDetails.objects.filter(task_id=assign_obj.task_assign.task.id,po=po)       
         tot_amount = get_task_total_amt(assign_obj)
         insert = {'word_count':assign_obj.billable_word_count,'char_count':assign_obj.billable_char_count,
                 'total_amount':tot_amount}
@@ -466,7 +466,9 @@ def po_modify_weigted_count(task_assign_info_ls):
     po_total =0
     for tasks in po.po_task.all():
         po_total += tasks.total_amount
-    po.update(po_total_amount=po_total,po_file=None)
+    po.po_total_amount=po_total
+    po.po_file=None
+    po.save()
     msg_send_po(po,"po_updated") 
 
 
