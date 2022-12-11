@@ -625,7 +625,6 @@ def weighted_count_update(receiver,sender,assignment_id):
         obj.billable_word_count = word_count
         obj.save()
 
-        logger.info("WC",word_count,char_count)
         if existing_wc != word_count and existing_cc != char_count:
             task_assign_obj_ls.append(obj)
     
