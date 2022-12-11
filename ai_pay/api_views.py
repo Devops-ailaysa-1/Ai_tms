@@ -381,12 +381,19 @@ def generate_invoice_offline(po_li,gst=None,user=None):
 def get_task_total_amt(instance):
     if instance.mtpe_count_unit.unit=='Word':
         if instance.total_word_count:
-            tot_amount =instance.total_word_count * instance.mtpe_rate
+            if instance.account_raw_count and instance.billable_word_count==None:   
+                tot_amount =instance.total_word_count * instance.mtpe_rate
+            else:
+                tot_amount =instance.billable_word_count * instance.mtpe_rate
         else:
             tot_amount = 0
     elif instance.mtpe_count_unit.unit =='Char':
         if instance.task_assign.task.task_char_count:
-            tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
+            if instance.account_raw_count and instance.billable_char_count==None:
+                tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
+            else:
+                tot_amount = instance.task_assign.task.billable_char_count* instance.mtpe_rate
+
         else:
                 tot_amount = 0
     elif instance.mtpe_count_unit.unit =='Fixed':
