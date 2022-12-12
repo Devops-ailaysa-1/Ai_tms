@@ -1,5 +1,5 @@
 import base64
-import docx ,json,logging,mimetypes,os ,pdftotext
+import docx ,json,logging,mimetypes,os #,pdftotext
 import re,requests,time,urllib.request
 from io import BytesIO
 from PyPDF2 import PdfFileReader
@@ -228,6 +228,36 @@ def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
         return int(total_pages)
     else:
         return int(total_pages)*5
+
+
+
+import openai
+OPENAI_MODEL = os.getenv('OPENAI_MODEL')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+openai.api_key = OPENAI_API_KEY
+
+
+def openai_endpoint(prompt,max_token=256,
+                    temperature=0.5,frequency_penalty=0.75,
+                    presence_penalty=0.75,top_p=1):
+
+
+    response = openai.Completion.create(
+                    model= OPENAI_MODEL,
+                    prompt=prompt,
+                    temperature=temperature,
+                    max_tokens=max_token,
+                    top_p=top_p,
+                    frequency_penalty=frequency_penalty,
+                    presence_penalty=presence_penalty,n=3
+                    )
+    generated_text = response.get('choices' ,None)
+    if generated_text:
+        text_gen_openai_ = {i['index']: i['text'] for i in generated_text}
+        return {'output':text_gen_openai_}
+    else:
+        return {'output':'no_output_generated'}
+
 
 
 # def convertio_check_credit(total_pages):
