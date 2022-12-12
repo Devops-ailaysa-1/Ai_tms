@@ -787,9 +787,10 @@ def msg_send_po(po,input):
         thread_id = thread_ser.errors.get('thread_id')
     #print("Thread--->",thread_id)
     if input == 'po_updated':
-       message = "purchase order with "+po.poid+" has been updated."
+        url = settings.USERPORTAL_URL+"payments/marketplace-payments"
+        message = f'''purchase order <a href="{url}">{po.poid}</a> has been updated.'''
     elif input == 'po_created':
-       message = "purchase order with "+po.poid+" has been created."
+        message = f'''purchase order <a href="{url}">{po.poid}</a> has been created.'''
 
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
