@@ -593,6 +593,7 @@ def count_update(job_id):
                     char_count = get_weighted_char_count(obj)
                     assigns.task_assign_info.billable_char_count = char_count
                     assigns.task_assign_info.save()
+                    po_modify_weigted_count([assigns.task_assign_info])                   
                     if assigns.task_assign_info.mtpe_count_unit_id != None:
                         if assigns.task_assign_info.mtpe_count_unit_id == 1:
                             if existing_wc != word_count:

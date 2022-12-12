@@ -379,6 +379,7 @@ def generate_invoice_offline(po_li,gst=None,user=None):
             return None
 
 def get_task_total_amt(instance):
+    tot_amount = 0
     if instance.mtpe_count_unit.unit=='Word':
         if instance.total_word_count:
             if instance.account_raw_count and instance.billable_word_count==None:   
