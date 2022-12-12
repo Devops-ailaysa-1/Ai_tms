@@ -1,6 +1,6 @@
 from ai_exportpdf.models import Ai_PdfUpload
-from django.http import   JsonResponse 
-import logging  
+from django.http import   JsonResponse
+import logging
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 from ai_exportpdf.serializer import PdfFileSerializer ,PdfFileStatusSerializer
@@ -35,7 +35,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
             serializer = PdfFileStatusSerializer(queryset,many=True)
-            
+
             return Response(serializer.data)
         else:
             query_filter = Ai_PdfUpload.objects.filter(user = user).order_by('id')
@@ -50,7 +50,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         for backend in list(filter_backends):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
-    
+
     def create(self,request):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
@@ -62,7 +62,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
- 
+
     def retrieve(self, request, pk):
         queryset = Ai_PdfUpload.objects.get(id = pk)
         serializer = PdfFileSerializer(queryset)
@@ -108,6 +108,20 @@ def docx_file_download(request,id):
         return download_file(docx_file_path)
     else:
         return JsonResponse({"msg":"no file associated with it"})
+
+from ai_exportpdf.utils import openai_endpoint
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def text_generator_openai(request):
+    print(request.user)
+    user = request.user
+    prompt = request.POST.get('prompt')
+    # initial_credit = user.credit_balance.get("total_left")
+    # token_token = 0
+    # consumable_credits = get_consumable_credits_for_openai_text_generator(token_token = total_token)
+    # print("initial_credits" , initial_credit)
+    response = openai_endpoint(prompt)
+    return JsonResponse(response)
 
     # def create(self, request):
     #     pdf_request_file = request.FILES.getlist('pdf_request_file')
