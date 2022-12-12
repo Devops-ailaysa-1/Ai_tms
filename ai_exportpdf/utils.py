@@ -1,5 +1,5 @@
 import base64
-import docx ,json,logging,mimetypes,os #,pdftotext
+import docx ,json,logging,mimetypes,os,pdftotext
 import re,requests,time,urllib.request
 from io import BytesIO
 from PyPDF2 import PdfFileReader
