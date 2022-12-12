@@ -320,6 +320,7 @@ def tbx_write(request,task_id):
         mime_type, _ = mimetypes.guess_type(fl_path)
         response = HttpResponse(fl, content_type=mime_type)
         response['Content-Disposition'] = "attachment; filename=%s" % filename
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
         os.remove(os.getcwd()+"/"+out_fileName)
         return response
 
