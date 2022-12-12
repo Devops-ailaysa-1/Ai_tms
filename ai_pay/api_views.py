@@ -33,6 +33,8 @@ from django.conf import settings
 import time
 from django.http import Http404
 from ai_auth.api_views import resync_instances
+from notifications.signals import notify
+
 logger = logging.getLogger('django')
 
 try:
@@ -376,7 +378,36 @@ def generate_invoice_offline(po_li,gst=None,user=None):
             logger.error("Invoice Generration Failed")
             return None
 
+def get_task_total_amt(instance):
+    if instance.mtpe_count_unit.unit=='Word':
+        if instance.total_word_count:
+            if instance.account_raw_count and instance.billable_word_count==None:   
+                tot_amount =instance.total_word_count * instance.mtpe_rate
+            elif instance.billable_word_count!=None:
+                tot_amount =instance.billable_word_count * instance.mtpe_rate
+        else:
+            tot_amount = 0
+    elif instance.mtpe_count_unit.unit =='Char':
+        if instance.task_assign.task.task_char_count:
+            if instance.account_raw_count and instance.billable_char_count==None:
+                tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
+            elif instance.billable_char_count!=None:
+                tot_amount = instance.task_assign.task.billable_char_count* instance.mtpe_rate
 
+        else:
+                tot_amount = 0
+    elif instance.mtpe_count_unit.unit =='Fixed':
+        tot_amount = instance.mtpe_rate
+    elif instance.mtpe_count_unit.unit =='Hour':
+        if instance.estimated_hours:
+            tot_amount = instance.estimated_hours * instance.mtpe_rate
+        else:
+            tot_amount = 0
+    else:
+        # rasie error on invalid price should be rised
+        logger.error("Invalid unit type for Po Assignment:{0}".format(instance.assignment_id))
+        tot_amount=0
+    return tot_amount
 
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
@@ -395,27 +426,7 @@ def generate_client_po(task_assign_info):
         for obj_id in task_assign_info:
             instance = TaskAssignInfo.objects.get(id=obj_id)
             assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
-            if instance.mtpe_count_unit.unit=='Word':
-                if instance.total_word_count:
-                    tot_amount =instance.total_word_count * instance.mtpe_rate
-                else:
-                    tot_amount = 0
-            elif instance.mtpe_count_unit.unit =='Char':
-                if instance.task_assign.task.task_char_count:
-                    tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
-                else:
-                     tot_amount = 0
-            elif instance.mtpe_count_unit.unit =='Fixed':
-                tot_amount = instance.mtpe_rate
-            elif instance.mtpe_count_unit.unit =='Hour':
-                if instance.estimated_hours:
-                    tot_amount = instance.estimated_hours * instance.mtpe_rate
-                else:
-                    tot_amount = 0
-            else:
-                # rasie error on invalid price should be rised
-                logger.error("Invalid unit type for Po Assignment:{0}".format(instance.assignment_id))
-                tot_amount=0
+
             
             if instance.task_ven_status == 'task_accepted':
                 tsk_accepted = True
@@ -427,9 +438,9 @@ def generate_client_po(task_assign_info):
             else:
                 task_tar_lang = instance.task_assign.task.job.target_language
 
-
+            tot_amount = get_task_total_amt(instance)
             insert={'task_id':instance.task_assign.task.id,'po':po,'assignment':assign,'project_name':instance.task_assign.task.job.project.project_name,'projectid':instance.task_assign.task.job.project.ai_project_id,
-                    'word_count':instance.total_word_count,'char_count':instance.task_assign.task.task_char_count,'unit_price':instance.mtpe_rate,'tsk_accepted':tsk_accepted,
+                    'word_count':instance.billable_word_count,'char_count':instance.billable_char_count,'unit_price':instance.mtpe_rate,'tsk_accepted':tsk_accepted,
                     'unit_type':instance.mtpe_count_unit,'estimated_hours':instance.estimated_hours,'source_language':instance.task_assign.task.job.source_language,'target_language':task_tar_lang,'total_amount':tot_amount}
             # print("insert1",insert)
             po_task=POTaskDetails.objects.create(**insert)
@@ -437,8 +448,35 @@ def generate_client_po(task_assign_info):
             po_total_amt+=float(tot_amount)
             po.po_total_amount=po_total_amt
             po.save()
+            msg_send_po(po,"po_created")
         # print("po2",po)
     return po
+
+
+def po_modify_weigted_count(task_assign_info_ls):
+    if len(task_assign_info_ls)!= 0:
+        assignment = POAssignment.objects.filter(assignment_id=task_assign_info_ls[0].assignment_id).last()       
+        pos = PurchaseOrder.objects.filter(Q(assignment=assignment)&~Q(po_status="void"))
+        if pos.count()==1:
+            po =pos.last()
+        elif pos.count()==0:
+            return True
+        else:
+            logger.error('returned more than one po for same assignment')
+            return False
+    for assign_obj in task_assign_info_ls:
+        taskpo = POTaskDetails.objects.filter(task_id=assign_obj.task_assign.task.id,po=po)       
+        tot_amount = get_task_total_amt(assign_obj)
+        insert = {'word_count':assign_obj.billable_word_count,'char_count':assign_obj.billable_char_count,
+                'total_amount':tot_amount}
+        taskpo.update(**insert)
+    po_total =0
+    for tasks in po.po_task.all():
+        po_total += tasks.total_amount
+    po.po_total_amount=po_total
+    po.po_file=None
+    po.save()
+    msg_send_po(po,"po_updated") 
 
 
 def po_modify(task_assign_info_id,po_update):
@@ -479,6 +517,7 @@ def po_modify(task_assign_info_id,po_update):
             instance = po_tsk,
             created = False
         )
+        msg_send_po(po,"po_updated")   
         return True
     else:
         return False
@@ -734,3 +773,22 @@ class AilaysaGeneratedInvoiceViewset(viewsets.ViewSet):
         return Response(serializer.errors, status=400)
 
         
+def msg_send_po(po,input):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    sender = po.client
+    receiver = po.seller
+    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
+    if thread_ser.is_valid():
+        thread_ser.save()
+        thread_id = thread_ser.data.get('id')
+    else:
+        thread_id = thread_ser.errors.get('thread_id')
+    #print("Thread--->",thread_id)
+    if input == 'po_updated':
+       message = "purchase order with "+po.poid+" has been updated."
+    elif input == 'po_created':
+       message = "purchase order with "+po.poid+" has been created."
+
+    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
