@@ -102,10 +102,9 @@ def sync_invoices_and_charges(days):
 @task
 def renewal_list():
     cycle_date = timezone.now()
-    subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
-                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=cycle_date.month)).filter(~Q(current_period_end__year=cycle_date.year ,
+    subs =Subscription.objects.filter(billing_cycle_anchor__day=cycle_date.day,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=cycle_date.month)).filter(~Q(current_period_end__year=cycle_date.year ,
                         current_period_end__month=cycle_date.month,current_period_end__day=cycle_date.day))
-    print(subs)
+    logger.info(f"renewal list count {subs.count}")
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
 
