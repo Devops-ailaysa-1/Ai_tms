@@ -26,16 +26,16 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
         'args': (),
     },
-    'renew-test': {
+    'invoice-sync': {
         'task': 'ai_auth.tasks.sync_invoices_and_charges',
         'schedule': crontab(hour=12, minute=00),
         'args': (30,),
     },
-    # 'renew-test': {
-    #     'task': 'ai_auth.tasks.renewal_list',
-    #     'schedule': crontab(hour=23, minute=57),#crontab(hour=1, minute=15),
-    #     'args': (),
-    # },
+    'renew-credits': {
+        'task': 'ai_auth.tasks.renewal_list',
+        'schedule': crontab(hour=23, minute=57),#crontab(hour=1, minute=15),
+        'args': (),
+    },
     'run-every': {
         'task': 'ai_auth.tasks.delete_hired_editors',
         'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
