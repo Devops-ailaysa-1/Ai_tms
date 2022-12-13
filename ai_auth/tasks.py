@@ -585,15 +585,17 @@ def count_update(job_id):
         for assigns in obj.task_info.filter(task_assign_info__isnull = False):
             existing_wc = assigns.task_assign_info.billable_word_count
             existing_cc = assigns.task_assign_info.billable_char_count
+            word_count = get_weighted_word_count(obj)
+            char_count = get_weighted_char_count(obj)
             if assigns.task_assign_info.account_raw_count == False:
                 if assigns.status == 1:
-                    word_count = get_weighted_word_count(obj)
+                    #word_count = get_weighted_word_count(obj)
                     assigns.task_assign_info.billable_word_count = word_count
-                    assigns.task_assign_info.save()
-                    char_count = get_weighted_char_count(obj)
+                    #assigns.task_assign_info.save()
+                    #char_count = get_weighted_char_count(obj)
                     assigns.task_assign_info.billable_char_count = char_count
                     assigns.task_assign_info.save()
-                    po_modify_weigted_count([assigns.task_assign_info])                   
+                    po_modify_weigted_count([assigns.task_assign_info])
                     if assigns.task_assign_info.mtpe_count_unit_id != None:
                         if assigns.task_assign_info.mtpe_count_unit_id == 1:
                             if existing_wc != word_count:
@@ -628,7 +630,7 @@ def weighted_count_update(receiver,sender,assignment_id):
 
         if existing_wc != word_count and existing_cc != char_count:
             task_assign_obj_ls.append(obj)
-    
+
         if receiver !=None and sender!=None:
             print("------------------POST-----------------------------------")
             Receiver = AiUser.objects.get(id = receiver)
