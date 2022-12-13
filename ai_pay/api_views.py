@@ -775,6 +775,7 @@ class AilaysaGeneratedInvoiceViewset(viewsets.ViewSet):
 
         
 def msg_send_po(po,input):
+    url = settings.USERPORTAL_URL+"payments/marketplace-payments"
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = po.client
@@ -787,10 +788,9 @@ def msg_send_po(po,input):
         thread_id = thread_ser.errors.get('thread_id')
     #print("Thread--->",thread_id)
     if input == 'po_updated':
-        url = settings.USERPORTAL_URL+"payments/marketplace-payments"
-        message = f'''purchase order <a href="{url}">{po.poid}</a> has been updated.'''
+        message = f'''purchase order &lt;a href={url}&gt;{po.poid}&lt;/a&gt; has been updated.'''
     elif input == 'po_created':
-        message = f'''purchase order <a href="{url}">{po.poid}</a> has been created.'''
+        message = f'''purchase order &lt;a href={url}&gt;{po.poid}&lt;/a&gt; has been created.'''
 
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
