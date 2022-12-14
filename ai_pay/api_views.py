@@ -414,7 +414,12 @@ def update_task_po(task_assign,po_task):
     tot_amount = get_task_total_amt(task_assign)
     insert={'word_count':task_assign.billable_word_count,'char_count':task_assign.billable_char_count,'unit_price':task_assign.mtpe_rate,'unit_type':task_assign.mtpe_count_unit,
     'estimated_hours':task_assign.estimated_hours,'total_amount':tot_amount}
-    po_task=POTaskDetails.objects.filter(id=po_task.id).update(**insert)
+    task_po_res=POTaskDetails.objects.filter(id=po_task.id).update(**insert)
+    po = task_po_res.po
+    po.po_file=None
+    po.save()
+
+    
 
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
