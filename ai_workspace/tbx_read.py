@@ -135,9 +135,9 @@ def is_tbx_template_file_empty(file_id, job_id):
         df=df.replace('\\*','',regex=True)
         df=df.replace(r'\n','', regex=True)
         df = df.dropna()
-        return df.empty 
+        return df.empty
     else:
-        return True 
+        return True
 
 def upload_template_data_to_db(file_id, job_id):
     template_file =TbxTemplateFiles.objects.get(id=file_id).tbx_template_file
@@ -148,15 +148,16 @@ def upload_template_data_to_db(file_id, job_id):
         imported_data = dataset.load(template_file.read(), format='xlsx')
         try:
             for data in imported_data:
-                value = TemplateTermsModel(
-                        # data[0],          #Blank column
-                        data[1],            #Autoincremented in the model
-                        sl_term = data[2].strip(),    #SL term column
-                        tl_term = data[3].strip()     #TL term column
-                )
-                value.job_id = job_id
-                value.file_id = file_id
-                value.save()
+                if data[2]:
+                    value = TemplateTermsModel(
+                            # data[0],          #Blank column
+                            data[1],            #Autoincremented in the model
+                            sl_term = data[2].strip(),    #SL term column
+                            tl_term = data[3].strip()     #TL term column
+                    )
+                    value.job_id = job_id
+                    value.file_id = file_id
+                    value.save()
             return True
         except Exception as e:
             print("Exception in uploading terms ----> ", e)
