@@ -372,18 +372,27 @@ def existing_vendor_onboarding_mail(user,gen_password):
         return True
 
 def send_campaign_welcome_mail(user):
-    context = {
-        "user":user,
-    }
-    email =user.email
+    context = {'user':user,}
+    email = user.email
     msg_html = render_to_string("account/email/welcome_campaign.html", context)
-    sent=send_mail(
+    # sent =send_mail(
+    #     'Become a member of Ailaysa freelancer marketplace',None,
+    #     'Ailaysa Vendor Manager <vendormanager@ailaysa.com>',
+    #     [email],
+    #     html_message=msg_html,
+    # )
+
+    msg = EmailMessage(
         "Translate your first book free",
-        None,
-         settings.DEFAULT_FROM_EMAIL,
-        [email],
-        html_message=msg_html,
+         msg_html,
+        settings.DEFAULT_FROM_EMAIL,
+        [email]
     )
+    file = open('mediafiles/email/Translate your first book.pdf', 'rb')
+    msg.attach('Translate your first book.pdf',file.read(),'application/pdf')
+    msg.content_subtype = "html"
+    sent=msg.send()
+    file.close()
     if sent ==1:
         logger.info(f"Campaign welcome mail sent for {user.uid}")
     else:
