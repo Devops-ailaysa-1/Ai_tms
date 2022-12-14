@@ -33,7 +33,10 @@ class AilzaManager(BaseUserManager):
     def dead(self):
         return SoftDeletionQuerySet(self.model, using=self._db).dead()
 
+
+
 class ProjectManager(models.Manager):
+    
     def create_and_jobs_files_bulk_create(self,\
             data, files_key, jobs_key, f_klass, j_klass,\
             ai_user, team, project_manager, created_by):

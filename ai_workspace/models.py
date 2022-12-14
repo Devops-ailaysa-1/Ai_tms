@@ -1,4 +1,6 @@
+import os
 import random
+import re
 import string
 from django.db.models.expressions import F
 from ai_staff.serializer import AiSupportedMtpeEnginesSerializer
@@ -10,37 +12,36 @@ from django.db.models.base import Model
 from django.utils.text import slugify
 from datetime import datetime, date
 from enum import Enum
-from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save, post_delete
-from django.contrib.auth import settings
-import os, re,time
-from ai_auth.models import AiUser,Team,HiredEditors
-from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes,\
-    ContentTypes, Languages, SubjectFields,Currencies,ServiceTypeunits,ProjectTypeDetail
-from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
-from ai_workspace_okapi.models import Document, Segment
-from ai_staff.models import ParanoidModel,Billingunits,MTLanguageLocaleVoiceSupport
-from django.shortcuts import reverse
-from django.core.validators import FileExtensionValidator
-from ai_workspace_okapi.utils import get_processor_name, get_file_extension
-from django.db.models import Q, Sum
-from django.utils.functional import cached_property
-from ai_workspace.utils import create_ai_project_id_if_not_exists
-from django.db.models.fields.files import FieldFile, FileField
 
-from .manager import AilzaManager
-from .utils import create_dirs_if_not_exists, create_task_id
-from ai_workspace_okapi.utils import SpacesService
-from .signals import (create_allocated_dirs, create_project_dir, \
-    create_pentm_dir_of_project,set_pentm_dir_of_project, \
-    check_job_file_version_has_same_project,)
-from .manager import ProjectManager, FileManager, JobManager,\
-    TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager,ProjectStepsManager
-from django.db.models.fields import Field
+from django.contrib.auth import settings
+from django.core.validators import FileExtensionValidator
+from django.db import models
+from django.db.models import Q, Sum
+from django.db.models.fields.files import FileField
+from django.db.models.signals import post_save, pre_save, post_delete
+from django.shortcuts import reverse
+from django.utils.functional import cached_property
+
+from ai_auth.models import AiUser, Team
+from ai_auth.utils import get_unique_pid
+from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
+    Currencies, ProjectTypeDetail
+from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
+from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 # from integerations.github_.models import ContentFile
 # from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
+from ai_workspace_okapi.models import Document, Segment
+from ai_workspace_okapi.utils import get_processor_name, get_file_extension
+from .manager import ProjectManager, FileManager, JobManager, \
+    TaskManager, TaskAssignManager, ProjectSubjectFieldManager, ProjectContentTypeManager, ProjectStepsManager
+from .signals import (create_project_dir, delete_project_dir,\
+                      create_pentm_dir_of_project, set_pentm_dir_of_project, \
+                      check_job_file_version_has_same_project, )
+from .utils import create_dirs_if_not_exists, create_task_id
+
 from ai_workspace_okapi.models import SplitSegment
+
 
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
@@ -286,6 +287,18 @@ class Project(models.Model):
         return tasks
 
     @property
+    def get_assignable_tasks_exists(self):
+        tasks=[]
+        for job in self.project_jobs_set.all():
+            for task in job.job_tasks_set.all():
+               if (task.job.target_language == None):
+                   if (task.file.get_file_extension == '.mp3'):
+                       tasks.append(task)
+                   else:pass
+               else:tasks.append(task)
+        return True if tasks else False
+
+    @property
     def get_mtpe_tasks(self):
         return [task for job in self.project_jobs_set.filter(~Q(target_language = None)) for task \
             in job.job_tasks_set.all()]
@@ -405,10 +418,18 @@ class Project(models.Model):
     @property
     def is_proj_analysed(self):
         if self.is_all_doc_opened:
-            # print("Doc opened")
             return True
         if len(self.get_tasks) == self.task_project.count() and len(self.get_tasks) != 0:
             return True
+        else:
+            return False
+
+    @property
+    def show_analysis(self):
+        if self.project_type_id != 3:
+            if self.get_mtpe_tasks:
+                return True
+            else:return False
         else:
             return False
 
@@ -458,7 +479,7 @@ class Project(models.Model):
             else:
                 out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
                 task_words = []
-                [task_words.append({i.id:i.task_details.first().task_word_count}) for i in tasks]
+                [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
 
                 return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                     "proj_seg_count":out.get('task_seg_count__sum'),
@@ -473,6 +494,7 @@ class Project(models.Model):
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
+post_delete.connect(delete_project_dir, sender=Project)
 
 class ProjectFilesCreateType(models.Model):
     class FileType(models.TextChoices):
@@ -1014,13 +1036,20 @@ class TaskAssignInfo(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
+    billable_char_count = models.IntegerField(blank=True,null=True)
+    billable_word_count = models.IntegerField(blank=True,null=True)
+    account_raw_count = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
         super().save()
 
-
+# class TaskAssignBillDetail(models.Model):
+#     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,
+#                     related_name="task_assign_word_info")
+#     billable_char_count = models.IntegerField(blank=True,null=True)
+#     billable_word_count = models.IntegerField(blank=True,null=True)
 # class TaskAssignRateInfo(models.Model):
 #     task_assign_info = models.OneToOneField(TaskAssignInfo,on_delete=models.CASCADE, null=False, blank=False,
 #             related_name="task_assign_rate_info")

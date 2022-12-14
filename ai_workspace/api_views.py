@@ -1,88 +1,88 @@
-from ai_pay.api_views import po_modify
-import django_filters, mutagen
-import shutil,docx2txt,regex,zipfile
-from ai_workspace import forms as ws_forms
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-from urllib.parse import urlparse
-from ai_workspace.utils import create_assignment_id
-from ai_workspace_okapi.models import Document
-from django.conf import settings
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.views import APIView
-from ai_vendor.models import VendorLanguagePair
-from ai_workspace_okapi.utils import download_file, get_translation
-from ai_auth.authentication import IsCustomer
-from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_glex.serializers import GlossarySetupSerializer,GlossaryFileSerializer,GlossarySerializer
-from ai_auth.models import AiUser, UserCredits, Team, InternalMember
-from rest_framework import viewsets, status
-from .utils import DjRestUtils
-from ai_auth.models import HiredEditors
-from rest_framework.response import Response
-from django.core.files.base import ContentFile
-from indicnlp.tokenize.sentence_tokenize import sentence_split
-from indicnlp.tokenize.indic_tokenize import trivial_tokenize
-from ai_workspace_okapi.utils import download_file,text_to_speech,text_to_speech_long
-from .utils import get_consumable_credits_for_text_to_speech,get_consumable_credits_for_speech_to_text
-from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer,\
-    ProjectSerializer, JobSerializer,FileSerializer,FileSerializer,FileSerializer,\
-    ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer,\
-    TaskSerializer, FileSerializerv2, FileSerializerv3, TmxFileSerializer,\
-    PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer,\
-    VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer, TbxTemplateSerializer,\
-    TaskCreditStatusSerializer,TaskAssignInfoSerializer,TaskDetailSerializer,ProjectListSerializer,\
-    GetAssignToSerializer,TaskTranscriptDetailSerializer, InstructionfilesSerializer, StepsSerializer, WorkflowsSerializer, \
-                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,ExpressProjectDetailSerializer)
-import copy, os, mimetypes, logging
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TaskCreditStatus,\
-    TempProject, TmxFile, ReferenceFiles,Templangpair,TempFiles,TemplateTermsModel, TaskDetails,\
-    TaskAssignInfo,TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, ExpressProjectDetail
-from rest_framework import permissions
-from django.shortcuts import get_object_or_404, get_list_or_404
-from django.db import IntegrityError
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Task, TbxFile, Instructionfiles
-from django.http import JsonResponse
-from .models import Task,Tbxfiles
-from lxml import etree as ET
-from django.db import transaction
-from ai_marketplace.models import ChatMessage
-from django.http import JsonResponse,HttpResponse
-import requests, json, os,mimetypes
-from ai_workspace_okapi.models import Document
-from rest_framework.decorators import api_view
-from django.http import JsonResponse, Http404, HttpResponse
-from ai_workspace.excel_utils import WriteToExcel_lite
-from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
-from django.core.files import File as DJFile
-from django.http import JsonResponse
-from tablib import Dataset
-import shutil,nltk
-from datetime import datetime
-from django.db.models import Q, Sum
-from rest_framework.decorators import permission_classes
-from notifications.signals import notify
-from ai_marketplace.serializers import ThreadSerializer
-#from controller.serializer_mapper import serializer_map
-# from ai_workspace_okapi.api_views import DocumentViewByTask
-from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
-from mutagen.mp3 import MP3
-from google.cloud import speech
-from google.cloud import speech_v1p1beta1 as speech
+import copy
 import io
-from google.cloud import storage
-from ai_auth.tasks import mt_only, write_doc_json_file, text_to_speech_long_celery, transcribe_long_file_cel
-from docx import Document
-from htmldocx import HtmlToDocx
-from delta import html
+import json
+import logging
+import mimetypes
+import os
+import shutil
+import zipfile
+from datetime import datetime
 from glob import glob
+from urllib.parse import urlparse
+from ai_auth.tasks import count_update,weighted_count_update
+import django_filters
+import docx2txt
+import nltk
+import requests
+from delta import html
+from django.conf import settings
+from django.core.files import File as DJFile
+from django.core.files.base import ContentFile
+from django.db import IntegrityError
+from django.db import transaction
+from django.db.models import Q, Sum
+from django.http import Http404, HttpResponse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, get_list_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from filesplit.split import Split
+from google.cloud import speech_v1p1beta1 as speech
+from google.cloud import storage
+from htmldocx import HtmlToDocx
+from indicnlp.tokenize.sentence_tokenize import sentence_split
+from notifications.signals import notify
 from pydub import AudioSegment
+from rest_framework import permissions
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view
+from rest_framework.decorators import permission_classes
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from filesplit.split import Split
 logger = logging.getLogger('django')
 
+from ai_auth.models import AiUser, UserCredits
+from ai_auth.models import HiredEditors
+from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel
 from ai_auth.tasks import write_doc_json_file
+from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
+from ai_marketplace.models import ChatMessage
+from ai_marketplace.serializers import ThreadSerializer
+from ai_pay.api_views import po_modify
+# from controller.serializer_mapper import serializer_map
+from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
+#from ai_tm.models import TmxFile
+from ai_workspace import forms as ws_forms
+from ai_workspace.excel_utils import WriteToExcel_lite
+from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
+from ai_workspace.utils import create_assignment_id
+from ai_workspace_okapi.models import Document
+from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long
+from ai_workspace_okapi.utils import get_translation
+from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
+    Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
+    TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
+    ExpressProjectDetail
+from .models import Task
+from .models import TbxFile, Instructionfiles
+from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
+                          ProjectSerializer, JobSerializer, FileSerializer, \
+                          ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
+                          TaskSerializer, FileSerializerv2, TmxFileSerializer, \
+                          PentmWriteSerializer, TbxUploadSerializer, ProjectQuickSetupSerializer, TbxFileSerializer, \
+                          VendorDashBoardSerializer, ProjectSerializerV2, ReferenceFileSerializer,
+                          TbxTemplateSerializer, \
+                          TaskAssignInfoSerializer, TaskDetailSerializer, ProjectListSerializer, \
+                          GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
+                          StepsSerializer, WorkflowsSerializer, \
+                          WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
+                          ExpressProjectDetailSerializer)
+from .utils import DjRestUtils
+from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
 
 spring_host = os.environ.get("SPRING_HOST")
 
@@ -257,6 +257,7 @@ class ProjectContentTypeView(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 class FileView(viewsets.ModelViewSet):
+    #from ai_workspace_okapi.api_views import DocumentViewByTask
     serializer_class = FileSerializer
     parser_classes = [MultiPartParser, FormParser]
 
@@ -293,9 +294,16 @@ class FileView(viewsets.ModelViewSet):
             return Response(serializer.data, status=201)
 
     def destroy(self, request, *args, **kwargs):
+        from ai_workspace_okapi.api_views import DocumentViewByTask
         if kwargs.get("many")=="true":
             objs = self.get_object(many=True)
             for obj in objs:
+                tasks = obj.file_tasks_set.all()
+                for i in tasks:
+                    path = DocumentViewByTask.get_json_file_path(i)
+                    if os.path.exists(path):
+                        print("Exists",path)
+                        os.remove(path)
                 os.remove(obj.file.path)
                 obj.delete()
             return Response(status=204)
@@ -496,34 +504,34 @@ class TmxFilesOfProject(APIView):
             data.append(res.text)
         return JsonResponse({"results":data}, safe=False)
 
-class ProjectReportAnalysis(APIView):
-    def get_queryset(self, project_id):
-        project_qs = Project.objects.all()
-        project = get_object_or_404(project_qs, id=project_id, ai_user=self.request.user)
-        files = project.project_files_set.all()
-        return files
-
-    def post(self, request, project_id):
-        data = dict(
-            pentm_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/.pentm/",
-            report_output_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/tt/report.html",
-            srx_file_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/okapi_resources/okapi_default_icu4j.srx"
-        )
-        files = self.get_queryset(project_id)
-        batches_data =  FileSerializerv3(files, many=True).data
-        data = {
-            **data,
-            **dict(batches=batches_data)
-        }
-        print("data---->", data)
-        res = requests.post(
-            f"http://{spring_host}:8080/project/report-analysis",
-            data = {"report_params": json.dumps(data)}
-        )
-        if res.status_code in [200, 201]:
-            return JsonResponse({"msg": res.text}, safe=False)
-        else:
-            return JsonResponse({"msg": "something went to wrong"}, safe=False)
+# class ProjectReportAnalysis(APIView):
+#     def get_queryset(self, project_id):
+#         project_qs = Project.objects.all()
+#         project = get_object_or_404(project_qs, id=project_id, ai_user=self.request.user)
+#         files = project.project_files_set.all()
+#         return files
+#
+#     def post(self, request, project_id):
+#         data = dict(
+#             pentm_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/.pentm/",
+#             report_output_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/media/u343460/u343460p1/tt/report.html",
+#             srx_file_path = "/home/langscape/Documents/ailaysa_github/Ai_TMS/okapi_resources/okapi_default_icu4j.srx"
+#         )
+#         files = self.get_queryset(project_id)
+#         batches_data =  FileSerializerv3(files, many=True).data
+#         data = {
+#             **data,
+#             **dict(batches=batches_data)
+#         }
+#         print("data---->", data)
+#         res = requests.post(
+#             f"http://{spring_host}:8080/project/report-analysis",
+#             data = {"report_params": json.dumps(data)}
+#         )
+#         if res.status_code in [200, 201]:
+#             return JsonResponse({"msg": res.text}, safe=False)
+#         else:
+#             return JsonResponse({"msg": "something went to wrong"}, safe=False)
 
 class TmxFileView(viewsets.ViewSet):
 
@@ -679,6 +687,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 pr = Project.objects.get(id=serializer.data.get('id'))
                 if pr.pre_translate == True:
                     mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
+                    # mt_only.delay((serializer.data.get('id'), str(request.auth)), )
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=409)
         else:
@@ -690,6 +699,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                 pr = Project.objects.get(id=serlzr.data.get('id'))
                 if pr.pre_translate == True:
                     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                    # mt_only.delay((serlzr.data.get('id'), str(request.auth)), )
                 #check_dict.apply_async(serlzr.data,)
                 return Response(serlzr.data, status=201)
             return Response(serlzr.errors, status=409)
@@ -697,7 +707,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def update(self, request, pk, format=None):
         instance = self.get_object()
         ser = self.get_serializer_class()
-        print("ser----------->",ser)
         task_id=request.POST.get('task_id',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
@@ -1143,6 +1152,8 @@ class ProjectAnalysisProperty(APIView):
 
     erfogd = exact_required_fields_for_okapi_get_document
 
+    # erfogd = DocumentViewByTask.exact_required_fields_for_okapi_get_document()
+
     @staticmethod
     def correct_fields(data):
         check_fields = ProjectAnalysisProperty.erfogd()
@@ -1152,7 +1163,6 @@ class ProjectAnalysisProperty(APIView):
                 check_fields.remove(i)
             else:
                 remove_keys.append(i)
-        print("remove keys--->", remove_keys)
         [data.pop(i) for i in remove_keys]
         if check_fields != []:
             raise ValueError("File processing fields not set properly !!!")
@@ -1208,6 +1218,7 @@ class ProjectAnalysisProperty(APIView):
                 ser = TaskSerializer(task)
                 data = ser.data
                 ProjectAnalysisProperty.correct_fields(data)
+                # DocumentViewByTask.correct_fields(data)
                 params_data = {**data, "output_type": None}
                 res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
                          "fprm_file_path": None,
@@ -1221,10 +1232,11 @@ class ProjectAnalysisProperty(APIView):
                 try:
                     if doc.status_code == 200 :
                         doc_data = doc.json()
-                        if doc_data["total_word_count"] >= 50000:
 
-                            task_write_data = json.dumps(doc_data, default=str)
-                            write_doc_json_file.apply_async((task_write_data, task.id))
+                        #if doc_data["total_word_count"] >= 50000:
+
+                        task_write_data = json.dumps(doc_data, default=str)
+                        write_doc_json_file.apply_async((task_write_data, task.id))
 
                         task_detail_serializer = TaskDetailSerializer(data={"task_word_count":doc_data.get('total_word_count', 0),
                                                                 "task_char_count":doc_data.get('total_char_count', 0),
@@ -1276,6 +1288,17 @@ class ProjectAnalysis(APIView):
 
 #########################################
 
+
+## PROJECT ANALYSIS FOR WEIGHTED WORD COUNT
+# class AnalyseProject(APIView):
+#     permission_classes = [IsAuthenticated]
+#
+#     def get(self, reqeust, project_id):
+
+
+
+
+
 def msg_send(sender,receiver,task):
     obj = Task.objects.get(id=task)
     proj = obj.job.project.project_name
@@ -1316,14 +1339,14 @@ class TaskAssignUpdateView(viewsets.ViewSet):
             serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict()},context={'request':request},partial=True)
         if serializer.is_valid():
             serializer.save()
+            if request.POST.get('account_raw_count'):
+                print("##################RAw")
+                weighted_count_update.apply_async((None,None,task_assign.task_assign_info.assignment_id,),)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         # except:
             # return Response({'msg':'Task Assign details not found'},status=status.HTTP_400_BAD_REQUEST)
         return Response(task, status=status.HTTP_200_OK)
-
-
-
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1363,16 +1386,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task = request.POST.getlist('task')
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
         tasks= [json.loads(i) for i in task]
+        job_id = Task.objects.get(id=tasks[0]).job.id
         assignment_id = create_assignment_id()
         with transaction.atomic():
             serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
-            # assignment_id = create_assignment_id()
-            # serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'instruction_file':file,'task':request.POST.getlist('task')},context={'request':request})
             if serializer.is_valid():
                 serializer.save()
+                weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
                 msg_send(sender,Receiver,tasks[0])
-                if Receiver in hired_editors:
-                    ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+                # if Receiver in hired_editors:
+                #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
                 return Response({"msg":"Task Assigned"})
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1449,6 +1472,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user
+            obj.task_assign.status = 1
             obj.task_assign.save()
             obj.delete()
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
@@ -1514,33 +1538,33 @@ def find_vendor(team,jobs):
 #             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
 #     return externalmembers
 
+class ProjectListFilter(django_filters.FilterSet):
+
+    def filter(self, qs, value):
+        return (pr for pr in qs if pr.get_assignable_tasks_exists == True)
+
 
 
 
 class ProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filterset_class = ProjectListFilter
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
-                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+        queryset = Project.objects.filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
-        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
-        #             |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
-        #             |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
         return queryset
 
+
     def list(self,request):
-        proj_list=[]
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
         data = serializer.data
-        for i in data:
-            if i.get('assign_enable')==True and i.get('assignable')==True:
-                proj_list.append(i)
-        return Response(proj_list)
-        # return  Response(serializer.data)
+        return  Response(serializer.data)
+
 
 
 
@@ -1928,10 +1952,10 @@ def transcribe_file(request):
     if queryset:#or state == 'SUCCESS':
         ser = TaskTranscriptDetailSerializer(queryset,many=True)
         return Response(ser.data)
-    ins = MTonlytaskCeleryStatus.objects.filter(task_id=task_id).last()
+    ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'transcribe_long_file_cel')).last()
     state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
     print("State----------------------->",state)
-    if state == 'PENDING':
+    if state == 'PENDING' or state == 'STARTED':
         return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
     else:
         obj = Task.objects.get(id = task_id)
@@ -1959,10 +1983,10 @@ def transcribe_file(request):
                 res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             else:
-                ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+                ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name = 'transcribe_long_file_cel')).last()
                 state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
                 print("State----------------------->",state)
-                if state == 'PENDING':
+                if state == 'PENDING' or state == 'STARTED':
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
                 elif (not ins) or state == 'FAILURE':
                     res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
@@ -2139,10 +2163,10 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     if initial_credit > consumable_credits:
         if len(data)>4500:
             print(name)
-            ins = MTonlytaskCeleryStatus.objects.filter(task_id=obj.id).last()
+            ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
             print("State--------------->",state)
-            if state == 'PENDING':
+            if state == 'PENDING' or state == 'STARTED':
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )
@@ -2185,8 +2209,6 @@ def get_media_link(request,task_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def convert_text_to_speech_source(request):
-    from django_celery_results.models import TaskResult
-    from ai_workspace.models import MTonlytaskCeleryStatus
     task = request.GET.get('task')
     project  = request.GET.get('project')
     language = request.GET.get('language_locale',None)
@@ -2320,9 +2342,11 @@ def task_unassign(request):
 
 
 def docx_save(name,data):
+    from docx import Document
     document = Document()
     new_parser = HtmlToDocx()
     quill_data = data.get('ops')
+    print("quilldata------------>",quill_data)
     docx = html.render(quill_data)
     new_parser.add_html_to_document(docx, document)
     document.save(name)
@@ -2502,14 +2526,14 @@ def task_get_segments(request):
             express_obj.mt_raw = trans
             express_obj.save()
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-            out =[{'task_id':obj.id,"source":content,"mt_raw":express_obj.mt_raw,"target":express_obj.target_text,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id}]
+            out =[{'task_id':obj.id,"source":content,"mt_raw":express_obj.mt_raw,"target":express_obj.target_text,'project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id}]
             return Response({'Res':out})
         else:
-            out =[{'task_id':obj.id,"source":content,"mt_raw":None,"target":'','project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":obj.job.project.mt_engine.id}]
+            out =[{'task_id':obj.id,"source":content,"mt_raw":None,"target":'','project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":obj.job.project.mt_engine.id}]
             return Response({'msg':'Insufficient Credits','Res':out})
             #return Response({'msg':'Insufficient Credits'},status=400)
     else:
-        out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id if express_obj.mt_engine else obj.job.project.mt_engine.id}]
+        out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id if express_obj.mt_engine else obj.job.project.mt_engine.id}]
         return Response({'Res':out})
 
 

@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
 import json
 import mimetypes
-import os
+import os, urllib
 from itertools import groupby
 import xml.etree.ElementTree as ET
 from django.http import HttpResponse
@@ -255,6 +255,7 @@ def glossary_template_lite(request):
     response['Content-Disposition'] = 'attachment; filename=Glossary_template_lite.xlsx'
     xlsx_data = WriteToExcel_lite()
     response.write(xlsx_data)
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
 
 
@@ -265,6 +266,7 @@ def glossary_template(request):
     response['Content-Disposition'] = 'attachment; filename=Glossary_template.xlsx'
     xlsx_data = WriteToExcel()
     response.write(xlsx_data)
+    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
     return response
 
 ######################################TBXWrite####################################
@@ -277,7 +279,7 @@ def tbx_write(request,task_id):
         tl_code = job.target_language_code if (job.target_language != job.source_language) and (job.target_language != None) else None
         objs = TermsModel.objects.filter(job = job)
         if not objs:
-            return JsonResponse({'msg':'There are no terms in glossary'})
+            return Response({'msg':'There are no terms in glossary'},status=400)
         root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
                                 nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
         tbxHeader = ET.Element("tbxHeader")
@@ -317,7 +319,10 @@ def tbx_write(request,task_id):
         fl = open(fl_path, 'rb')
         mime_type, _ = mimetypes.guess_type(fl_path)
         response = HttpResponse(fl, content_type=mime_type)
-        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
+        response['Content-Disposition'] = 'attachment;filename*=UTF-8\'\'{}' \
+            .format(encoded_filename)
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
         os.remove(os.getcwd()+"/"+out_fileName)
         return response
 

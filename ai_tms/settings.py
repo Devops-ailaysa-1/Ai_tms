@@ -152,8 +152,10 @@ INSTALLED_APPS = [
     "ai_qa",
     #'django_oso'
     #"ai_tm_management",
+    "ai_tm",
     # 'dbbackup',
     # 'django_q',
+    'ai_exportpdf',
     # 'coreapi', # Coreapi for coreapi documentation
     # 'drf_yasg', # drf_yasg fro Swagger documentation
 ]
@@ -310,6 +312,10 @@ VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
 
 APPLICATION_URL = os.getenv("APPLICATION_URL")
 
+# OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
+#
+# OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
+
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
 ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
@@ -458,6 +464,7 @@ SIMPLE_JWT = {
 #     'AUTH_COOKIE_PATH': '/',        # The path of the auth cookie.
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
+# CELERY_BROKER_URL = "redis://:ainlp2022@redis:6379/0"
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 
@@ -466,6 +473,8 @@ CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
 CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
 CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
 CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
+CELERY_TASK_TRACK_STARTED = True
+CELERY_IGNORE_RESULT = False
 # export CELERY_BROKER_URL = 'redis://localhost:6379/0'
 # export CELERY_BACKEND_URL = 'redis://redis:6379/0'
 
@@ -630,7 +639,14 @@ sentry_sdk.init(
 )
 
 
+# OPENAI_APIKEY = os.getenv('OPENAI_APIKEY')
+# MAX_TOKEN = os.getenv('OPENAI_MAX_TOKEN')
+# NLP_CLOUD_API = os.getenv('NLP_CLOUD_API')
 
+# DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
+# DOCX_URL = '/output_docx/'
+GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
+CONVERTIO_API = os.getenv("convertio_api")
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
 
 CAMPAIGN = os.getenv("CAMPAIGN")

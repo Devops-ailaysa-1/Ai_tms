@@ -1,15 +1,17 @@
 from django.core.mail import send_mail
 import smtplib
+from ai_pay.api_views import po_modify_weigted_count
 from celery.utils.log import get_task_logger
 import celery,re,pickle, copy
 import djstripe
 logger = get_task_logger(__name__)
 from celery.decorators import task
+from celery import shared_task
 from datetime import date
 from django.utils import timezone
 from .models import AiUser,UserAttribute,HiredEditors,ExistingVendorOnboardingCheck
 import datetime,os,json, collections
-from djstripe.models import Subscription,Invoice
+from djstripe.models import Subscription,Invoice,Charge
 from ai_auth.Aiwebhooks import renew_user_credits_yearly
 from notifications.models import Notification
 from ai_auth import forms as auth_forms
@@ -26,7 +28,9 @@ from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
 from datetime import datetime, timedelta
 from django.db.models import DurationField, F, ExpressionWrapper,Q
-
+#from translate.storage.tmx import tmxfile
+from celery_progress.backend import ProgressRecorder
+from time import sleep
 
 
 extend_mail_sent= 0
@@ -90,14 +94,17 @@ def sync_invoices_and_charges(days):
             diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
             ).filter(diff__gt=timedelta(days))
     resync_instances(queryset)
+    queryset = Charge.objects.annotate(
+            diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
+            ).filter(diff__gt=timedelta(days))
+    resync_instances(queryset)
 
 @task
 def renewal_list():
     cycle_date = timezone.now()
-    subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
-                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=cycle_date.month)).filter(~Q(current_period_end__year=cycle_date.year ,
+    subs =Subscription.objects.filter(billing_cycle_anchor__day=cycle_date.day,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=cycle_date.month)).filter(~Q(current_period_end__year=cycle_date.year ,
                         current_period_end__month=cycle_date.month,current_period_end__day=cycle_date.day))
-    print(subs)
+    logger.info(f"renewal list count {subs.count}")
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
 
@@ -333,7 +340,6 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 cursor.execute(mt_raw_sql, mt_params)
     logger.info("mt_raw wrriting completed")
 
-
 @task
 def mt_only(project_id,token):
     from ai_workspace.models import Project,Task
@@ -351,6 +357,37 @@ def mt_only(project_id,token):
             doc = DocumentSerializerV2(document).data
             print(doc)
             MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+    logger.info('mt-only')
+# # @task
+# @shared_task(bind=True)
+# def mt_only(self, project_id,token):
+# # def mt_only(project_id, token):
+#     from ai_workspace.models import Project,Task
+#     from ai_workspace_okapi.api_views import DocumentViewByTask
+#     from ai_workspace_okapi.serializers import DocumentSerializerV2
+#     pr = Project.objects.get(id=project_id)
+#
+#     progress_recorder = ProgressRecorder(self)
+#     # progress_recorder = ProgressRecorder()
+#
+#
+#     if pr.pre_translate == True:
+#         tasks = pr.get_mtpe_tasks
+#
+#         [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,\
+#                                                celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
+#         j = 1
+#         for i in pr.get_mtpe_tasks:
+#             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
+#             doc = DocumentSerializerV2(document).data
+#             sleep(20)
+#
+#             progress_recorder.set_progress(j, len(pr.get_mtpe_tasks), f'MT ongoing for {i}')
+#             j += 1
+#
+#             MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+#
+#     return "Finished Pre-translation"
 
 @task
 def write_doc_json_file(doc_data, task_id):
@@ -364,7 +401,8 @@ def write_doc_json_file(doc_data, task_id):
 
     source_file_path = params_data["source_file_path"]
     path_list = re.split("source/", source_file_path)
-    os.mkdir(os.path.join(path_list[0], "doc_json"))
+    if not os.path.exists(os.path.join(path_list[0], "doc_json")):
+        os.mkdir(os.path.join(path_list[0], "doc_json"))
     doc_json_path = path_list[0] + "doc_json/" + path_list[1] + ".json"
 
     with open(doc_json_path, "w") as outfile:
@@ -381,7 +419,7 @@ def text_to_speech_long_celery(consumable_credits,user_id,file_path,task_id,lang
     #tt = text_to_speech_task(obj,language,gender,user,voice_name)
     tt = long_text_source_process(consumable_credits,user,file_path,obj,language,voice_gender,voice_name)
     #MTonlytaskCeleryStatus.objects.create(task_id = obj.id,status=2,celery_task_id=text_to_speech_celery.request.id,task_name = "text_to_speech_celery")
-    print("TT-------------------->",tt)
+
     logger.info("Text to speech called")
     # if tt.status_code == 400:
     #     return tt.status_code
@@ -399,18 +437,6 @@ def google_long_text_file_process_cel(consumable_credits,document_user_id,file_p
     logger.info("Text to speech document called")
 
 
-
-    # host = os.environ.get("HOST")
-    # #Base_Url = "http://127.0.0.1:8089/"
-    # #DocumentViewByTask.as_view()(self.request)
-
-        # headers = {'Authorization':'Bearer '+token}
-        # print(headers)
-#task = DocumentViewByTask.get_object(task_id=i)
-            # print("Begin-------------->",i.id)
-            # url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
-            # res = requests.request("GET", url, headers=headers)
-            # print("doc--->",res.text)
 @task
 def transcribe_long_file_cel(speech_file,source_code,filename,task_id,length,user_id,hertz):
     from ai_workspace.api_views import transcribe_long_file
@@ -442,7 +468,7 @@ def pre_translate_update(task_id):
     split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
 
     final_segments = list(chain(segments, merge_segments, split_segments))
-    print("FinalSegments-------------->",final_segments)
+
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
 
@@ -516,3 +542,127 @@ def update_forbidden_words(forbidden_file_id):
     file = Forbidden.objects.get(id=forbidden_file_id)
     ForbiddenWords.objects.filter(file_id = forbidden_file_id).update(job=file.job)
     logger.info("forbidden words updated")
+
+
+
+
+@task
+def analysis(tasks,project_id):
+    from ai_workspace.models import Project,Task
+    from ai_tm.models import WordCountGeneral,WordCountTmxDetail,CharCountGeneral
+    from ai_tm.api_views import get_json_file_path,get_tm_analysis,get_word_count
+    proj = Project.objects.get(id=project_id)
+    for task_id in tasks:
+        MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task_id,status=1,celery_task_id=analysis.request.id)
+        task = Task.objects.get(id=task_id)
+        file_path = get_json_file_path(task)
+        doc_data = json.load(open(file_path))
+        if type(doc_data) == str:
+            doc_data = json.loads(doc_data)
+        raw_total = doc_data.get('total_word_count')
+        tm_analysis,files_list = get_tm_analysis(doc_data,task.job)
+        print("Tm Analysis----------->",tm_analysis)
+        if tm_analysis:
+            word_count = get_word_count(tm_analysis,proj,task)
+            print("WordCount------------>",word_count)
+        else:
+            word_count = WordCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
+                        new_words=doc_data.get('total_word_count'),raw_total=raw_total)
+            char_count = CharCountGeneral.objects.create(project_id =project_id,tasks_id=task.id,\
+                        new_words=doc_data.get('total_char_count'),raw_total=doc_data.get('total_char_count'))
+        [WordCountTmxDetail.objects.create(word_count=word_count,tmx_file_id=i,tmx_file_obj_id=i) for i in files_list]
+        MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task.id,status=2,celery_task_id=analysis.request.id)
+    logger.info("Analysis completed")
+
+
+@task
+def count_update(job_id):
+    from ai_workspace.models import Task
+    from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
+    task_obj = Task.objects.filter(job_id=job_id)
+    for obj in task_obj:
+        for assigns in obj.task_info.filter(task_assign_info__isnull = False):
+            existing_wc = assigns.task_assign_info.billable_word_count
+            existing_cc = assigns.task_assign_info.billable_char_count
+            word_count = get_weighted_word_count(obj)
+            print("wc----------->",word_count)
+            char_count = get_weighted_char_count(obj)
+            print("cc------------>",char_count)
+            if assigns.task_assign_info.account_raw_count == False:
+                if assigns.status == 1:
+                    assigns.task_assign_info.billable_word_count = word_count
+                    assigns.task_assign_info.billable_char_count = char_count
+                    assigns.task_assign_info.save()
+                    po_modify_weigted_count([assigns.task_assign_info])
+                    if assigns.task_assign_info.mtpe_count_unit_id != None:
+                        if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                            print("######################",existing_wc,existing_cc,word_count,char_count)
+                            if existing_wc != word_count:
+                                print("Inside if calling notify")
+                                notify_word_count(assigns,word_count,char_count)
+                        else:
+                            print("$$$$$$$$$$$$$$$$$$$$$$$$")
+                            if existing_cc != char_count:
+                                print("Inside else calling notify")
+                                notify_word_count(assigns,word_count,char_count)
+                    #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
+    logger.info('billable count updated')
+
+
+
+@task
+def weighted_count_update(receiver,sender,assignment_id):
+    from ai_workspace import forms as ws_forms
+    from ai_workspace.models import TaskAssignInfo
+    from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
+    task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
+    task_assign_obj_ls=[]
+    for obj in task_assgn_objs:
+        existing_wc = obj.task_assign.task_assign_info.billable_word_count
+        existing_cc = obj.task_assign.task_assign_info.billable_char_count
+        if obj.account_raw_count == False:
+            word_count = get_weighted_word_count(obj.task_assign.task)
+            char_count = get_weighted_char_count(obj.task_assign.task)
+        else:
+            word_count = obj.task_assign.task.task_word_count
+            char_count = obj.task_assign.task.task_char_count
+        obj.billable_char_count =  char_count
+        obj.billable_word_count = word_count
+        obj.save()
+
+        if existing_wc != word_count and existing_cc != char_count:
+            task_assign_obj_ls.append(obj)
+
+        if receiver !=None and sender!=None:
+            print("------------------POST-----------------------------------")
+            Receiver = AiUser.objects.get(id = receiver)
+            Sender = AiUser.objects.get(id = sender)
+            hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
+            if Receiver in hired_editors:
+                ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+        else:
+            print("------------------------PUT------------------------------")
+            assigns = task_assgn_objs[0].task_assign
+            if assigns.task_assign_info.mtpe_count_unit_id != None:
+                if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                    if existing_wc != word_count:
+                        notify_word_count(assigns,word_count,char_count)
+                else:
+                    if existing_cc != char_count:
+                        notify_word_count(assigns,word_count,char_count)
+    logger.info('billable count updated and mail sent')
+
+    if len(task_assign_obj_ls) != 0:
+         po_modify_weigted_count(task_assign_obj_ls)
+
+
+@task
+def check_test():
+    sleep(1000)
+# @task
+# def get_word_count_cel(tm_analysis,proj,task,raw_total):
+#     from ai_tm.api_views import get_word_count
+#     MTonlytaskCeleryStatus.objects.create(task_name = 'analysis',task_id = task,status=1,celery_task_id=analysis.request.id)
+#     word_count = get_word_count(tm_analysis,proj,task,raw_total)
+#     print("WordCount------------>",word_count)
+#     logger.info("Analysis completed")
