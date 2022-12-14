@@ -781,7 +781,7 @@ def notify_word_count(task_assign,word_count,char_count):
         thread_id = thread_ser.data.get('id')
     else:
         thread_id = thread_ser.errors.get('thread_id')
-    msg =   '''For your kind information,
+    message = '''For your kind information,
 
         TMX file(s) for the project ({proj}) have been updated.
         Weighted word count for the task ({Filename}(Languagepair), {task_id}) will be affected.
