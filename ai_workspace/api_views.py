@@ -1472,6 +1472,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user
+            obj.task_assign.status = 1
             obj.task_assign.save()
             obj.delete()
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)

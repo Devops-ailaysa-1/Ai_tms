@@ -1,6 +1,6 @@
 from ai_exportpdf.models import Ai_PdfUpload
-from django.http import   JsonResponse 
-import logging  
+from django.http import   JsonResponse
+import logging
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 from ai_exportpdf.serializer import PdfFileSerializer ,PdfFileStatusSerializer
@@ -11,7 +11,8 @@ from ai_exportpdf.utils import pdf_conversion
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
-from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
+from ai_exportpdf.utils import (get_consumable_credits_for_pdf_to_docx ,file_pdf_check,\
+                                get_consumable_credits_for_openai_text_generator)
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus
 
@@ -35,7 +36,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
             serializer = PdfFileStatusSerializer(queryset,many=True)
-            
+
             return Response(serializer.data)
         else:
             query_filter = Ai_PdfUpload.objects.filter(user = user).order_by('id')
@@ -50,7 +51,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         for backend in list(filter_backends):
             queryset = backend().filter_queryset(self.request, queryset, view=self)
         return queryset
-    
+
     def create(self,request):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
@@ -62,7 +63,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
- 
+
     def retrieve(self, request, pk):
         queryset = Ai_PdfUpload.objects.get(id = pk)
         serializer = PdfFileSerializer(queryset)
@@ -108,6 +109,24 @@ def docx_file_download(request,id):
         return download_file(docx_file_path)
     else:
         return JsonResponse({"msg":"no file associated with it"})
+
+from ai_exportpdf.utils import openai_endpoint
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def text_generator_openai(request):
+    user = request.user
+    prompt = request.POST.get('prompt')
+    initial_credit = user.credit_balance.get("total_left")
+    tot_tokn =256*4
+    consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
+    if initial_credit > consumable_credits:
+        response = openai_endpoint(prompt)
+        consume_credit = response.pop('usage')
+        consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
+        return JsonResponse(response)
+    else:
+        return Response({'msg':'Insufficient Credits'},status=400)
 
     # def create(self, request):
     #     pdf_request_file = request.FILES.getlist('pdf_request_file')

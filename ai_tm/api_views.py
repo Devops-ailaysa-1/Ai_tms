@@ -6,7 +6,7 @@ from .serializers import TmxFileSerializer,UserDefinedRateSerializer,CharCountGe
 from ai_workspace.serializers import TaskSerializer
 from ai_workspace.models import Project, File, Task
 from ai_tm import match
-from translate.storage.tmx import tmxfile
+#from translate.storage.tmx import tmxfile
 from collections import Counter
 from rest_framework import viewsets,status
 from rest_framework.decorators import api_view
@@ -454,6 +454,16 @@ def get_project_analysis(request,project_id):
 
 
 def get_weighted_word_count(task):
+    if task.task_wc_general.last() == None:
+        analysis([task.id],task.job.project.id)
+    else:
+        temp1 = [i.id for i in task.job.tmx_file_job.all()]
+        temp2 = [i.tmx_file_obj_id for i in task.task_wc_general.last().wc_general.all()]
+        temp3 = set(temp1) ^ set(temp2)
+        if temp3:
+            task.task_wc_general.last().wc_general.all().delete()
+            analysis([task.id],task.job.project.id)
+
     rates = UserDefinedRate.objects.filter(user = task.job.project.ai_user).last()
     if not rates:
         rates = UserDefinedRate.objects.filter(is_default = True).first()
@@ -469,13 +479,23 @@ def get_weighted_word_count(task):
           word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
           word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage+\
           word_count.repetition * rates.tm_repetition_percentage)/100
-
+    print("WWC-------------->",WWC)
     return round(WWC)
 
 def get_weighted_char_count(task):
     rates = UserDefinedRate.objects.filter(user = task.job.project.ai_user).last()
     if not rates:
         rates = UserDefinedRate.objects.filter(is_default = True).first()
+
+    if task.task_cc_general.last() == None:
+        analysis([task.id],task.job.project.id)
+    else:
+        temp1 = [i.id for i in task.job.tmx_file_job.all()]
+        temp2 = [i.tmx_file_obj_id for i in task.task_wc_general.last().wc_general.all()]
+        temp3 = set(temp1) ^ set(temp2)
+        if temp3:
+            task.task_wc_general.last().wc_general.all().delete()
+            analysis([task.id],task.job.project.id)
 
     ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
     print("status------------------>",ins.status)
@@ -761,10 +781,25 @@ def notify_word_count(task_assign,word_count,char_count):
         thread_id = thread_ser.data.get('id')
     else:
         thread_id = thread_ser.errors.get('thread_id')
-    if unit == 1:
-        message = "Weighted Word Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted word count: "+ str(word_count)+"."
-    if unit == 2:
-        message = "Weighted Char Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted Char count: "+ str(char_count)+"."
+    message = '''For your kind information,
+
+        TMX file(s) for the project ({proj}) have been updated.
+        Weighted word count for the task ({Filename}(Languagepair), {task_id}) will be affected.
+        Payments will be updated accordingly.
+
+        For further assistance or information, please contact the Project Owner.'''.format(proj=proj,Filename=obj.file.filename,Languagepair=obj.job.source_target_pair_names,task_id=obj.ai_taskid)
+
+    # if unit == 1:
+    #     '''For your kind information,
+    #
+    #     TMX file(s) for the project ({{proj}}) have been updated.
+    #     Weighted word count for the task ({{Filename + Language pair}}, task_id) will be affected.
+    #     Payments will be updated accordingly.
+    #
+    #     For further assistance or information, please contact the Project Owner.'''
+    #     message = "Weighted Word Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted word count: "+ str(word_count)+"."
+    # if unit == 2:
+    #     message = "Weighted Char Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted Char count: "+ str(char_count)+"."
     print("MSG---------->",message)
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     print("Chat--------->",msg)

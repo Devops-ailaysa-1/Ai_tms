@@ -1344,6 +1344,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
+				task_assign_data.update({'status':1})
 				po_update.append('assign_to')
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
