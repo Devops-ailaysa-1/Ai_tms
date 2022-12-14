@@ -454,6 +454,16 @@ def get_project_analysis(request,project_id):
 
 
 def get_weighted_word_count(task):
+    if task.task_wc_general.last() == None:
+        analysis([task.id],task.job.project.id)
+    else:
+        temp1 = [i.id for i in _ask.job.tmx_file_job.all()]
+        temp2 = [i.tmx_file_obj_id for i in task.task_wc_general.last().wc_general.all()]
+        temp3 = set(temp1) ^ set(temp2)
+        if temp3:
+            task.task_wc_general.last().wc_general.all().delete()
+            analysis([task.id],task.job.project.id)
+
     rates = UserDefinedRate.objects.filter(user = task.job.project.ai_user).last()
     if not rates:
         rates = UserDefinedRate.objects.filter(is_default = True).first()
