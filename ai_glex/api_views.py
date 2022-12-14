@@ -279,7 +279,7 @@ def tbx_write(request,task_id):
         tl_code = job.target_language_code if (job.target_language != job.source_language) and (job.target_language != None) else None
         objs = TermsModel.objects.filter(job = job)
         if not objs:
-            return JsonResponse({'msg':'There are no terms in glossary'})
+            return Response({'msg':'There are no terms in glossary'},status=400)
         root = ET.Element("tbx",type='TBX-Core',style='dca',**{"{http://www.w3.org/XML/1998/namespace}lang": sl_code},xmlns="urn:iso:std:iso:30042:ed-2",
                                 nsmap={"xml":"http://www.w3.org/XML/1998/namespace"})
         tbxHeader = ET.Element("tbxHeader")
