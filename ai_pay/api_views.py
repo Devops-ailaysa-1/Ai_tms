@@ -393,7 +393,7 @@ def get_task_total_amt(instance):
             if instance.account_raw_count and instance.billable_char_count==None:
                 tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
             elif instance.billable_char_count!=None:
-                tot_amount = instance.task_assign.task.billable_char_count* instance.mtpe_rate
+                tot_amount = instance.billable_char_count* instance.mtpe_rate
 
         else:
                 tot_amount = 0
@@ -788,9 +788,9 @@ def msg_send_po(po,input):
         thread_id = thread_ser.errors.get('thread_id')
     #print("Thread--->",thread_id)
     if input == 'po_updated':
-        message = f'''purchase order &lt;a href={url}&gt;{po.poid}&lt;/a&gt; has been updated.'''
+        message = f'''purchase order {po.poid} has been updated.'''
     elif input == 'po_created':
-        message = f'''purchase order &lt;a href={url}&gt;{po.poid}&lt;/a&gt; has been created.'''
+        message = f'''purchase order {po.poid} has been created.'''
 
     msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
     notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
