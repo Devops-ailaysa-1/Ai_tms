@@ -393,7 +393,7 @@ def get_task_total_amt(instance):
             if instance.account_raw_count and instance.billable_char_count==None:
                 tot_amount = instance.task_assign.task.task_char_count* instance.mtpe_rate
             elif instance.billable_char_count!=None:
-                tot_amount = instance.task_assign.task.billable_char_count* instance.mtpe_rate
+                tot_amount = instance.billable_char_count* instance.mtpe_rate
 
         else:
                 tot_amount = 0
