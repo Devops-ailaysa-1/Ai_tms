@@ -415,7 +415,7 @@ def update_task_po(task_assign,po_task):
     insert={'word_count':task_assign.billable_word_count,'char_count':task_assign.billable_char_count,'unit_price':task_assign.mtpe_rate,'unit_type':task_assign.mtpe_count_unit,
     'estimated_hours':task_assign.estimated_hours,'total_amount':tot_amount}
     task_po_res=POTaskDetails.objects.filter(id=po_task.id).update(**insert)
-    po = task_po_res.po
+    po = po_task.po
     po.po_file=None
     po.save()
 
