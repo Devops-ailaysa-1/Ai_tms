@@ -410,6 +410,12 @@ def get_task_total_amt(instance):
         tot_amount=0
     return tot_amount
 
+def update_task_po(task_assign,po_task):
+    tot_amount = get_task_total_amt(task_assign)
+    insert={'word_count':task_assign.billable_word_count,'char_count':task_assign.billable_char_count,'unit_price':task_assign.mtpe_rate,'unit_type':task_assign.mtpe_count_unit,
+    'estimated_hours':task_assign.estimated_hours,'total_amount':tot_amount}
+    po_task=POTaskDetails.objects.filter(id=po_task.id).update(**insert)
+
 def generate_client_po(task_assign_info):
     #pos.values('currency').annotate(dcount=Count('currency')).order_by()
     if len(task_assign_info) == 0:
@@ -493,6 +499,17 @@ def po_modify(task_assign_info_id,po_update):
             return True
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
+
+    if 'accepted_rate_by_owner' in po_update:
+        try:
+            with transaction.atomic():
+                po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
+                if update_task_po(instance,po_task_obj)==False:
+                    raise ValueError("updating task po failed")
+            return True
+            
+        except BaseException as e:
+            logger.error(f"error while updating po task status for {task_assign_info_id} for accepted_rate_by_owner,ERROR:{str(e)}")
 
     po_new =None
     with transaction.atomic():
