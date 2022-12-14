@@ -588,19 +588,20 @@ def count_update(job_id):
             char_count = get_weighted_char_count(obj)
             if assigns.task_assign_info.account_raw_count == False:
                 if assigns.status == 1:
-                    #word_count = get_weighted_word_count(obj)
                     assigns.task_assign_info.billable_word_count = word_count
-                    #assigns.task_assign_info.save()
-                    #char_count = get_weighted_char_count(obj)
                     assigns.task_assign_info.billable_char_count = char_count
                     assigns.task_assign_info.save()
                     po_modify_weigted_count([assigns.task_assign_info])
                     if assigns.task_assign_info.mtpe_count_unit_id != None:
                         if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                            print("######################",existing_wc,existing_cc,word_count,char_count)
                             if existing_wc != word_count:
+                                print("Inside if calling notify")
                                 notify_word_count(assigns,word_count,char_count)
                         else:
+                            print("$$$$$$$$$$$$$$$$$$$$$$$$")
                             if existing_cc != char_count:
+                                print("Inside else calling notify")
                                 notify_word_count(assigns,word_count,char_count)
                     #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
     logger.info('billable count updated')
