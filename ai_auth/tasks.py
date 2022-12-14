@@ -585,7 +585,9 @@ def count_update(job_id):
             existing_wc = assigns.task_assign_info.billable_word_count
             existing_cc = assigns.task_assign_info.billable_char_count
             word_count = get_weighted_word_count(obj)
+            print("wc----------->",word_count)
             char_count = get_weighted_char_count(obj)
+            print("cc------------>",char_count)
             if assigns.task_assign_info.account_raw_count == False:
                 if assigns.status == 1:
                     assigns.task_assign_info.billable_word_count = word_count
