@@ -11,7 +11,8 @@ from ai_exportpdf.utils import pdf_conversion
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
-from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
+from ai_exportpdf.utils import (get_consumable_credits_for_pdf_to_docx ,file_pdf_check,\
+                                get_consumable_credits_for_openai_text_generator)
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus
 
@@ -113,15 +114,19 @@ from ai_exportpdf.utils import openai_endpoint
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def text_generator_openai(request):
-    print(request.user)
     user = request.user
     prompt = request.POST.get('prompt')
-    # initial_credit = user.credit_balance.get("total_left")
-    # token_token = 0
-    # consumable_credits = get_consumable_credits_for_openai_text_generator(token_token = total_token)
-    # print("initial_credits" , initial_credit)
-    response = openai_endpoint(prompt)
-    return JsonResponse(response)
+    initial_credit = user.credit_balance.get("total_left")
+    tot_tokn =256*4
+    consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
+    if initial_credit > consumable_credits:
+        response = openai_endpoint(prompt)
+        consume_credit = response.pop('usage')
+        consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
+        return JsonResponse(response)
+    else:
+        return Response({'msg':'Insufficient Credits'},status=400)
 
     # def create(self, request):
     #     pdf_request_file = request.FILES.getlist('pdf_request_file')
