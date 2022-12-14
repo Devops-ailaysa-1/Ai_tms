@@ -487,6 +487,16 @@ def get_weighted_char_count(task):
     if not rates:
         rates = UserDefinedRate.objects.filter(is_default = True).first()
 
+    if task.task_cc_general.last() == None:
+        analysis([task.id],task.job.project.id)
+    else:
+        temp1 = [i.id for i in task.job.tmx_file_job.all()]
+        temp2 = [i.tmx_file_obj_id for i in task.task_wc_general.last().wc_general.all()]
+        temp3 = set(temp1) ^ set(temp2)
+        if temp3:
+            task.task_wc_general.last().wc_general.all().delete()
+            analysis([task.id],task.job.project.id)
+
     ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'analysis')).last()
     print("status------------------>",ins.status)
     if not ins or ins.status == 1:
