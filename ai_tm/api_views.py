@@ -469,7 +469,7 @@ def get_weighted_word_count(task):
           word_count.tm_75_84 * rates.tm_75_84_percentage + word_count.tm_50_74 * rates.tm_50_74_percentage +\
           word_count.tm_101 * rates.tm_101_percentage + word_count.tm_102 * rates.tm_102_percentage+\
           word_count.repetition * rates.tm_repetition_percentage)/100
-
+    print("WWC-------------->",WWC)
     return round(WWC)
 
 def get_weighted_char_count(task):
