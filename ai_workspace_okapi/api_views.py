@@ -53,6 +53,9 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
 from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
+from django_oso.auth import authorize
+from ai_auth.utils import filter_authorize
+from django.db import transaction
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -281,21 +284,26 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
                 else:
                     document = self.create_document_for_task_if_not_exists(task)
+                    authorize(request, resource=document, actor=request.user, action="read")
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
                 cel_task = mt_only.apply_async((task.job.project.id, str(request.auth)),)
+                ##need to authorize
                 return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
-                doc = DocumentSerializerV2(document).data
+                authorize(request, resource=document, actor=request.user, action="read")
+                doc = DocumentSerializerV2(document).data               
                 return Response(doc, status=201)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
+                authorize(request, resource=document, actor=request.user, action="read")
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
             document = self.create_document_for_task_if_not_exists(task)
+            authorize(request, resource=document, actor=request.user, action="read")
             try:
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
@@ -320,16 +328,17 @@ class DocumentViewByDocumentId(views.APIView):
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
         try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
         except:managers =[]
-        if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
-            dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
-            dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
-            document = self.get_object(document_id)
-            data = DocumentSerializerV2(document).data
-            data.update(dict)
-            data.update(dict_1)
-            return Response(data, status=200)
-        else:
-            return Response({"msg" : "Unauthorised"}, status=401)
+        # if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
+        dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
+        dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
+        document = self.get_object(document_id)
+        authorize(request, resource=document, actor=request.user, action="read")
+        data = DocumentSerializerV2(document).data
+        data.update(dict)
+        data.update(dict_1)
+        return Response(data, status=200)
+        # else:
+        #     return Response({"msg" : "Unauthorised"}, status=401)
 
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
@@ -337,6 +346,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
     def get_object(self, document_id):
         document = get_object_or_404(\
             Document.objects.all(), id=document_id)
+        authorize(self.request, resource=document, actor=self.request.user, action="read")
         return document
 
 
@@ -487,6 +497,7 @@ class SourceTMXFilesCreate(views.APIView):
 class SegmentsUpdateView(viewsets.ViewSet):
     def get_object(self, segment_id):
         qs = Segment.objects.all()
+        #qs = filter_authorize(self.request, qs,self.request.user,"read")
 
         if split_check(segment_id):
             segment = get_object_or_404(qs, id=segment_id)
@@ -545,6 +556,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
 
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
+        authorize(request, resource=segment, actor=request.user, action="read")
         edit_allow = self.edit_allowed_check(segment)
         if edit_allow == False:
             return Response({"msg": "Someone is working already.."}, status=400)
@@ -646,6 +658,7 @@ class MT_RawAndTM_View(views.APIView):
 
         # If raw translation is already available and Proj & Task MT engines are same
         if mt_raw:
+            authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
@@ -797,6 +810,8 @@ class MT_RawAndTM_View(views.APIView):
 
         # Getting MT params
         mt_params = self.get_segment_MT_params(segment_id)
+        seg = Segment.objects.get(id=segment_id)
+        authorize(request, resource=seg, actor=request.user, action="read")
 
         # For normal and merged segments
         if split_check(segment_id):
@@ -973,7 +988,8 @@ class DocumentToFile(views.APIView):
 
 
     def get(self, request, document_id):
-
+        doc = DocumentToFile.get_object(document_id)
+        authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
         segment_count = Segment.objects.filter(text_unit__document=document_id).count()
         if Document.objects.get(id=document_id).total_segment_count != segment_count:
@@ -1323,6 +1339,7 @@ class ProgressView(views.APIView):
 
     def get(self, request, document_id):
         document = self.get_object(document_id)
+        authorize(request, resource=document, actor=request.user, action="read")
         total_segment_count, segments_confirmed_count = self.get_progress(document)
         return JsonResponse(
             dict(total_segment_count=total_segment_count,
@@ -1335,6 +1352,7 @@ class FontSizeView(views.APIView):
     @staticmethod
     def get_object(data, request):
         obj = FontSize.objects.filter(ai_user_id=request.user.id, language_id=data.get("language", None)).first()
+        ## need to add authorize if non owner user use this  
         return  obj
 
     def post(self, request):
@@ -1383,6 +1401,7 @@ class CommentView(viewsets.ViewSet):
             if split_check(id):
                 print("normal")
                 segment = get_object_or_404(Segment.objects.all(), id=id)
+                #authorize(request, resource=segment, actor=request.user, action="read")
                 return segment.segment_comments_set.all()
             else:
                 print("split")
@@ -1392,6 +1411,7 @@ class CommentView(viewsets.ViewSet):
 
         if by=="document":
             document = get_object_or_404(Document.objects.all(), id=id)
+            authorize(request, resource=document, actor=request.user, action="read")
             comments_list=[]
             for segment in document.segments.all():
                 if segment.is_split!=True:
@@ -1422,7 +1442,9 @@ class CommentView(viewsets.ViewSet):
             segment = SplitSegment.objects.filter(id=seg).first().segment_id
             ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg})
         if ser.is_valid(raise_exception=True):
-            ser.save()
+            with transaction.atomic():
+                ser.save()
+                authorize(request, resource=ser.instance, actor=request.user, action="read")
             return Response(ser.data, status=201)
 
     def retrieve(self, request, pk=None):

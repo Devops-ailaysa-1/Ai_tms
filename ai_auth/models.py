@@ -17,6 +17,7 @@ from ai_auth.utils import get_plan_name
 # from djstripe import webhooks
 from django.db.models import Q
 from datetime import datetime,date,timedelta
+from django.db.models.constraints import UniqueConstraint
 
 class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -186,6 +187,10 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         print("username field not available.so it is returning fullname")
         return self.fullname
 
+    @property
+    def owner_pk(self):
+        return self.id
+    
 post_save.connect(update_internal_member_status, sender=AiUser)
 post_save.connect(get_currency_based_on_country, sender=AiUser)
 
@@ -225,8 +230,8 @@ class UserAttribute(models.Model):
         return super().save(*args, **kwargs)
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 pre_save.connect(create_allocated_dirs, sender=UserAttribute)
 
@@ -289,8 +294,8 @@ class Professionalidentity(models.Model):
             return self.avatar.url
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 class UserProfile(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE)
@@ -299,8 +304,8 @@ class UserProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 class CustomerSupport(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
@@ -338,8 +343,8 @@ class UserCredits(models.Model):
     ended_at = models.DateTimeField(null=True, blank=True)
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 class CreditPack(models.Model):
     name = models.CharField(max_length=200)
@@ -355,8 +360,8 @@ class BillingAddress(BaseAddress):
     country= models.ForeignKey(Countries,related_name='billing_country', on_delete=models.CASCADE,blank=True, null=True)
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 
 class UserTaxInfo(models.Model):
@@ -366,8 +371,8 @@ class UserTaxInfo(models.Model):
     #tax_uid= models.CharField(max_length=250)
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 pre_save.connect(updated_user_taxid, sender=UserTaxInfo)
 
@@ -390,8 +395,8 @@ class AiUserProfile(models.Model):
         db_table = 'ai_user_profile'
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 def file_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.email,"cv_file",filename)
@@ -465,8 +470,8 @@ class Team(models.Model):
         return [i.internal_member for i in self.internal_member_team_info.all()]
 
     @property
-    def owner(self):
-        return self.owner
+    def owner_pk(self):
+        return self.owner.user.id
 
 
 class InternalMember(models.Model):
@@ -484,8 +489,8 @@ class InternalMember(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES)
 
     @property
-    def owner(self):
-        return self.team.owner
+    def owner_pk(self):
+        return self.team.owner_pk
 
     def __str__(self):
         return self.internal_member.email
@@ -514,8 +519,8 @@ class HiredEditors(models.Model):
         unique_together = ['user', 'hired_editor','role']
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 class ReferredUsers(models.Model):
     email = models.EmailField()
@@ -534,8 +539,8 @@ class AilaysaCampaigns(models.Model):
     Addon_quantity =models.IntegerField(default=1)
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 class CampaignUsers(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='user_campaign')
@@ -543,8 +548,8 @@ class CampaignUsers(models.Model):
     subscribed = models.BooleanField(default=False)
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 class ExistingVendorOnboardingCheck(models.Model):
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,related_name='existing_vendor_info')
@@ -553,8 +558,8 @@ class ExistingVendorOnboardingCheck(models.Model):
     mail_sent_time = models.DateTimeField(blank=True, null=True)
 
     @property
-    def owner(self):
-        return self.user
+    def owner_pk(self):
+        return self.user.id
 
 class SocStates(models.Model):
     state = models.CharField(max_length=150,unique=True)
@@ -566,7 +571,12 @@ class TaskRoles(models.Model):
     user = models.ForeignKey(AiUser,related_name='user_task_roles',
         on_delete=models.CASCADE,blank=True, null=True)
     task_pk = models.CharField(_('object ID'), max_length=255)
+    proj_pk = models.CharField(_('project ID'), max_length=255)
 
+    class Meta:
+       constraints = [
+            UniqueConstraint(fields=['role', 'user', 'task_pk'], name='unique_task_roles')
+        ]
     @property
     def role_name(self):
         return self.role.role.name

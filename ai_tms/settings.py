@@ -19,6 +19,8 @@ load_dotenv(".env2")
 from pathlib import Path
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+import logging.config
+import yaml
 
 # from fluent import sender
 # from fluent import event
@@ -146,12 +148,12 @@ INSTALLED_APPS = [
     'django_filters',
     'notifications',
     'storages',
-    "guardian",
+    #"guardian",
     'django_celery_results',
     "ai_pay",
     "ai_qa",
     'silk',
-    'django_oso'
+    'django_oso',
     #"ai_tm_management",
     # 'dbbackup',
     # 'django_q',
@@ -514,6 +516,11 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
+
+# with open('./logging.yaml', 'r') as stream:
+#     config = yaml.load(stream, Loader=yaml.FullLoader)
+
+# logging.config.dictConfig(config)
 
 LOGGING = {
     'version' : 1,

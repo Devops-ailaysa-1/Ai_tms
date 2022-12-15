@@ -33,6 +33,10 @@ class Glossary(models.Model):
     glossaryobjects = GlossaryObjects() # object manager for Glossary model
     def __str__(self):
         return self.project.project_name
+    
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
 
 
 def get_file_upload_path(instance, filename):

@@ -19,25 +19,85 @@
 # allow(user: ai_auth::AiUser, "read", task: ai_workspace::Task) if
 #     task.job.project.ai_user = user;
 
+actor ai_auth::AiUser {
+}
+
+resource ai_workspace::Task{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Editor";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+resource ai_workspace::Project{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+
+
+# has_role(actor: ai_auth::AiUser, role_name: String, resource: Resource) if
+# ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id,role__role__name:role_name).count() != 0;
+has_role(actor: ai_auth::AiUser, role_name: String,resource:Resource) if
+resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo]
+and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name:role_name).count() != 0;
+
+# has_role(actor: ai_auth::AiUser, role_name: String, resource : ai_workspace::Project,ai_workspace::ProjectContentType,ai_workspace::ProjectFilesCreateType,
+# ai_workspace::ProjectSteps,ai_workspace::ProjectSubjectField) if
+# ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name:role_name).count() != 0;
+
+
+has_role(actor: ai_auth::AiUser, role_name: String, resource:Resource) if
+resource.__class__ in [ai_workspace::Project,ai_workspace::Job] 
+and ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name:role_name).count() != 0;
+
+
+
+
+
+# has_role(actor: ai_auth::AiUser, role_name: String, resource:ai_workspace::Task) if
+# ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_pk,role__role__name:role_name).count() != 0;
+
 allow(user: ai_auth::AiUser, action: String, resource) if
-    action = "read" and
-    user = resource.owner;
+    action in ["read","create","update","delete","download"] and
+    user.id = resource.owner_pk;
 
 
 
 allow(user: ai_auth::AiUser, action: String, resource) if
     rbac_allow(user, action, resource); #and role_resource_check(user,role,resource);
 
+
+# ## without action string
 # rbac_allow(actor: ai_auth::AiUser,action,resource) if
 #    action = "read" and
-#    actor = resource.owner;
+#    role_allow(actor,resource);
 
-
+# rbac_allow(actor: ai_auth::AiUser,action,resource) if
+#    role_allow(actor,action,resource);
 
 rbac_allow(actor: ai_auth::AiUser,action,resource) if
-   action = "read" and
-   role_allow(actor,resource);
+   role_allow(actor,action,resource);
 
+
+
+role_allow(actor: ai_auth::AiUser,action,resource) if
+   has_permission(actor, action, resource);
+
+# has_permission(actor, action, resource)if 
+# [ai_workspace::Job,ai_workspace_okapi::Segment,ai_workspace_okapi::MT_RawTranslation]
 #role_resource_check(actor,role,resource):
 
 # user_role(actor:ai_auth::AiUser,role,resource) if
@@ -65,14 +125,40 @@ project_owner_resources(res) if
 res in [ai_workspace::Task,ai_workspace::Document,ai_auth::Team];
 
 #if user is editor
-role_allow(user:ai_auth::AiUser,resource) if
-ai_auth::TaskRoles.objects.filter(user:user,task_pk:resource.task_pk,role__role__name:"Editor").count() != 0
-and editor_resources(resource);
+# role_allow(user:ai_auth::AiUser,action,resource) if
+# ai_auth::TaskRoles.objects.filter(user:user,task_pk:resource.task_pk,role__role__name:"Editor").count() != 0
+# and has_permission(user,action,resource);
+
+
+# role_allow(user:ai_auth::AiUser,resource) if
+# ai_auth::TaskRoles.objects.filter(user:user,task_pk:resource.task_pk,role__role__name:"Editor").count() != 0
+# and editor_resources(resource);
+
 
 #if user is project owner
-role_allow(user:ai_auth::AiUser,resource) if
-ai_auth::TaskRoles.objects.filter(user:user,task_pk:resource.task_pk,role__role__name:"Editor").count() != 0
-and project_owner_resources(resource);
+# role_allow(user:ai_auth::AiUser,resource) if
+# ai_auth::TaskRoles.objects.filter(user:user,task_pk:resource.task_pk,role__role__name:"Project owner").count() != 0
+# and project_owner_resources(resource);
+
+
+
+
+# has_permission(actor, "write", resource: ai_workspace::Task) if
+#   has_role(actor, "Editor", resource); 
+
+
+# has_role(actor, "Editor", resource) if 
+# ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_pk,role__role__name:"Editor").count() != 0;
+
+
+# has_role(user: User, name: String, resource: Resource) if
+#   role in user.roles and
+#   role.name = name and
+#   role.resource = resource;
+
+
+
+
 
 
 # and resource.task_pk = ai_auth::TaskRoles.objects.filter(user:user).task_pk;
@@ -88,3 +174,140 @@ and project_owner_resources(resource);
 # role_resource.
 #     actor = ai_auth::TaskRoles.objects.filter()
 
+# resource ai_workspace::Team{
+#     permissions = ["read", "create","update","delete"];
+#     roles = ["Editor", "Project owner"];
+
+#     "read" if "Editor";
+#     "create" if "Project owner";
+#     "update" if "Project owner";
+#     "delete" if "Project owner";
+#     "Editor" if "Project owner";
+
+# }
+
+
+resource ai_workspace::Job{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+resource ai_workspace::ProjectContentType{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+resource ai_workspace::ProjectSubjectField{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+resource ai_workspace::ProjectSteps{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+resource ai_workspace_okapi::Segment{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Editor";
+    "update" if "Editor";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+resource ai_workspace_okapi::Document{
+    permissions = ["read", "create","update","delete","download"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "download" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+
+
+resource ai_workspace_okapi::MT_RawTranslation{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Editor";
+    "update" if "Editor";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+
+resource ai_workspace::ProjectFilesCreateType{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+
+resource ai_workspace::TaskAssign{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Editor";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+resource ai_workspace::TaskAssignInfo{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Editor";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}

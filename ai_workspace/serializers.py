@@ -28,6 +28,7 @@ from django.db.models import OuterRef, Subquery
 from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.db import transaction
 from notifications.signals import notify
+from ai_auth.utils import obj_is_allowed,authorize_list,objls_is_allowed
 
 logger = logging.getLogger('django')
 
@@ -575,9 +576,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
 			create_type = validated_data.pop('from_text',None)
+			user = created_by
 		else:
 			created_by = self.context.get("ai_user", None)
 			create_type = True
+			user = created_by
 		if created_by.team:ai_user = created_by.team.owner
 		else:ai_user = created_by
 		team = created_by.team if created_by.team else None
@@ -589,41 +592,56 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
-		with transaction.atomic():
-			project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
-				validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
-				f_klass=File,j_klass=Job, ai_user=ai_user,\
-				team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
-			if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
-				ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
-			else:ProjectFilesCreateType.objects.create(project=project)
-			if proj_subject:
-				[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
-			if proj_content_type:
-				[project.proj_content_type.create(**content_data) for content_data in proj_content_type]
-			if proj_steps:
-				[project.proj_steps.create(**steps_data) for steps_data in proj_steps]
+		try:
+			with transaction.atomic():
+				project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
+					validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
+					f_klass=File,j_klass=Job, ai_user=ai_user,\
+					team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
+				obj_is_allowed(project,"create",user)
+				objls_is_allowed(files,"create",user)
+				objls_is_allowed(jobs,"create",user)
+				if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
+					pro_fil = ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
+					obj_is_allowed(pro_fil,"create",user)
+				else:
+					pro_fil = ProjectFilesCreateType.objects.create(project=project)
+					obj_is_allowed(pro_fil,"create",user)
+				if proj_subject:
+					proj_subj_ls = [project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
+					objls_is_allowed(proj_subj_ls,"create",user)
+				if proj_content_type:
+					proj_content_ls = [project.proj_content_type.create(**content_data) for content_data in proj_content_type]
+					objls_is_allowed(proj_content_ls,"create",user)
+				if proj_steps:
+					proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
+					objls_is_allowed(proj_steps_ls,"create",user)
 
-			if project_type == 1 or project_type == 2 or project_type == 5:
-				tasks = Task.objects.create_tasks_of_files_and_jobs(
-					files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
-
-			if voice_proj_detail:
-				voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
-				if voice_project.project_type_sub_category.id == 1 or 2 : #1--->speech-to-text #2--->text-to-speech
-					rr = voice_project.project.project_jobs_set.filter(~Q(target_language = None))
-					if voice_project.project_type_sub_category.id == 2 and rr:
-						tasks = Task.objects.create_tasks_of_files_and_jobs(
-							files=files, jobs=jobs, project=project, klass=Task)
-					else:
-						tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
-			if project_type == 5:
-				ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
-			# tasks = Task.objects.create_tasks_of_files_and_jobs(
-			# 	files=files, jobs=jobs, project=project, klass=Task)
-			task_assign = TaskAssign.objects.assign_task(project=project)
-			#tt = mt_only(project,self.context.get('request'))
-			#print(tt)
+				if project_type == 1 or project_type == 2 or project_type == 5:
+					tasks = Task.objects.create_tasks_of_files_and_jobs(
+						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
+					objls_is_allowed(tasks,"create",user)
+				if voice_proj_detail:
+					voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
+					if voice_project.project_type_sub_category.id == 1 or 2 : #1--->speech-to-text #2--->text-to-speech
+						rr = voice_project.project.project_jobs_set.filter(~Q(target_language = None))
+						if voice_project.project_type_sub_category.id == 2 and rr:
+							tasks = Task.objects.create_tasks_of_files_and_jobs(
+								files=files, jobs=jobs, project=project, klass=Task)
+							objls_is_allowed(tasks,"create",user)
+						else:
+							tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
+							objls_is_allowed(tasks,"create",user)
+				if project_type == 5:
+					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
+				# tasks = Task.objects.create_tasks_of_files_and_jobs(
+				# 	files=files, jobs=jobs, project=project, klass=Task)
+				task_assign = TaskAssign.objects.assign_task(project=project)
+				objls_is_allowed(task_assign,"create",user)
+				#tt = mt_only(project,self.context.get('request'))
+				#print(tt)
+		except BaseException as e:
+			logger.warning(f"project creation failed {user.uid} : {str(e)}")
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
@@ -848,6 +866,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step)) for task in task_list]
         with transaction.atomic():
             task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
+            objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
             for i in task_assign_info:
                 try:total_word_count = i.task_assign.task.document.total_word_count
                 except:

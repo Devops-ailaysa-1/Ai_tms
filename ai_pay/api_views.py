@@ -3,7 +3,7 @@ from locale import currency
 from ai_auth.models import AiUser, BillingAddress
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment, StripeSupportedCountries
 from ai_pay.signals import update_po_status
-from ai_staff.models import IndianStates
+from ai_staff.models import IndianStates,TaskRoleLevel
 from ai_workspace.models import TaskAssignInfo
 from rest_framework.views import APIView
 from rest_framework import viewsets
@@ -442,11 +442,21 @@ def generate_client_po(task_assign_info):
 
 
 def po_modify(task_assign_info_id,po_update):
+    from ai_auth.signals import assign_object
+
     instance= TaskAssignInfo.objects.get(id=task_assign_info_id)
     assignment_id= instance.assignment_id
     task =instance.task_assign.task.id
 
     if 'accepted' in po_update:
+        #if instance.owner != instance.task_assign.task.job.project.project_manager:
+        role= TaskRoleLevel.objects.get(step=instance.task_assign.step.name)
+        assign_object.send(
+            sender=TaskAssignInfo,
+            instance = instance,
+            user=instance.task_assign.assign_to,
+            role = role
+        )
         try:
             po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
             po_task_obj.tsk_accepted=True
@@ -460,7 +470,7 @@ def po_modify(task_assign_info_id,po_update):
         task_assign_info_ids = [tsk.id for tsk in TaskAssignInfo.objects.filter(assignment_id=assignment_id)]
         if 'unassigned' in po_update:
             # if task is unassigned
-            task_assign_info_ids.remove(instance.id)      
+            task_assign_info_ids.remove(instance.id)
         pos = PurchaseOrder.objects.filter(Q(assignment__assignment_id=assignment_id)&~Q(po_status="void"))
         if pos.count()==1:
             po =pos.last()

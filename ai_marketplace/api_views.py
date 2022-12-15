@@ -72,6 +72,7 @@ from ai_workspace.serializers import TaskSerializer,\
 import os,mimetypes
 from django.http import JsonResponse,HttpResponse
 from ai_workspace_okapi.utils import download_file
+from django_oso.auth import authorize
 # Create your views here.
 
 
@@ -665,6 +666,7 @@ def get_previous_accepted_rate(request):
     vendor_id = request.POST.get('vendor_id')
     job_id = request.POST.get('job_id')
     job_obj = Job.objects.get(id=job_id)
+    authorize(request, resource=job_obj, actor=request.user, action="read")
     print(job_obj.source_language,job_obj.target_language)
     vendor = AiUser.objects.get(id=vendor_id)
     print(vendor)

@@ -2360,3 +2360,5 @@ def oso_test_querys(request):
     #Document.objects.authorize(request, actor=request.user, action="read")
     print(fil)
     return JsonResponse({"msg":"sucess"},status=200)
+
+

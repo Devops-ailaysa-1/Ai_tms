@@ -4,6 +4,8 @@ from django.utils import timezone
 from django.db import models
 from django.db.models.query import QuerySet
 
+
+
 # Create your models here.
 
 class ParanoidQuerySet(QuerySet):
@@ -484,8 +486,10 @@ class AiRoles(models.Model):
         return self.name
 
 class TaskRoleLevel(models.Model):
+    # from ai_workspace.models import Steps
     role = models.ForeignKey(AiRoles,related_name='task_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
+    step = models.CharField(max_length=300)
 
 class ProjectRoleLevel(models.Model):
     role = models.ForeignKey(AiRoles,related_name='project_roles_level',
