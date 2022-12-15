@@ -155,6 +155,7 @@ INSTALLED_APPS = [
     'silk',
     'django_oso',
     #"ai_tm_management",
+    "ai_tm",
     # 'dbbackup',
     # 'django_q',
     'ai_exportpdf',
@@ -315,6 +316,10 @@ VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
 
 APPLICATION_URL = os.getenv("APPLICATION_URL")
 
+# OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
+#
+# OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
+
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
 ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'
@@ -463,7 +468,7 @@ SIMPLE_JWT = {
 #     'AUTH_COOKIE_PATH': '/',        # The path of the auth cookie.
 #     'AUTH_COOKIE_SAMESITE': 'Lax',  # Whether to set the flag restricting cookie leaks on cross-site requests.
 #                                 # This can be 'Lax', 'Strict', or None to disable the flag.
-# CELERY_BROKER_URL = "redis://:ainlp2022@redis:6379/0" 
+# CELERY_BROKER_URL = "redis://:ainlp2022@redis:6379/0"
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 
@@ -472,6 +477,8 @@ CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL")
 CELERY_ACCEPT_CONTENT =os.getenv("CELERY_ACCEPT_CONTENT", "").split()
 CELERY_RESULT_SERIALIZER = os.getenv("CELERY_RESULT_SERIALIZER")
 CELERY_TASK_SERIALIZER = os.getenv("CELERY_TASK_SERIALIZER")
+CELERY_TASK_TRACK_STARTED = True
+CELERY_IGNORE_RESULT = False
 # export CELERY_BROKER_URL = 'redis://localhost:6379/0'
 # export CELERY_BACKEND_URL = 'redis://redis:6379/0'
 

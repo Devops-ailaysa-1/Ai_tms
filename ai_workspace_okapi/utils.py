@@ -152,16 +152,11 @@ class SpacesService:
             Key=output_file_path,
             Body=f_stream.read()
         )
-        print("FIle is uploaded successfully!!!")
 
     def delete_object(file_path, bucket_name="media"):
         client = SpacesService.get_client()
         client.delete_object(Bucket=bucket_name, Key=file_path)
-        print("FIle is deleted successfully!!!")
 
-# class OkapiUtils:
-#     def get_translated_file_(self):
-#         pass
 
 def download_file(file_path):
     filename = os.path.basename(file_path)
@@ -289,12 +284,11 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
 def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     from ai_staff.models import MTLanguageLocaleVoiceSupport
     from google.cloud import texttospeech
-    print("@#@#@#@#@#",target_language,voice_gender,voice_name)
     gender = texttospeech.SsmlVoiceGender.MALE if voice_gender == 'MALE' else  texttospeech.SsmlVoiceGender.FEMALE
     voice_name = voice_name if voice_name else MTLanguageLocaleVoiceSupport.objects.filter(language__locale__locale_code = target_language).first().voice_name
     #filename = filename + "_out"+ ".mp3"
     path, name = os.path.split(ssml_file)
-    print("%%%%%%%%%%%%%%%%%",gender,voice_name)
+
     client = texttospeech.TextToSpeechClient()
     with open(ssml_file, "r") as f:
         ssml = f.read()
@@ -310,10 +304,8 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     )
     with open(filename,"wb") as out:
         out.write(response.audio_content)
-        print('Audio content written to file',filename)
     f2 = open(filename, 'rb')
     file_obj = DJFile(f2)
-    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",file_obj)
     return file_obj,f2
     # dir = os.path.join(path,"Audio")
     # if not os.path.exists(dir):
@@ -384,13 +376,7 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
     if len(response.audio_content) != 0:
         with open(filename,"wb") as out:
                 out.write(response.audio_content)
-                print('Audio content written to file',filename)
-
-# def split_check(segment_id):
-#     from .models import Segment
-#     return bool((Segment.objects.filter(id=segment_id).first() != None) and \
-#                 (Segment.objects.filter(id=segment_id).first().is_split in [None, False]))
-
+                # print('Audio content written to file',filename)
 
 def split_check(segment_id):
     from ai_workspace_okapi.models import SplitSegment

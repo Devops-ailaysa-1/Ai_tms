@@ -1717,7 +1717,7 @@ class HiredEditorsCreateView(viewsets.ViewSet,PageNumberPagination):
 
 
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def invite_accept(request):#,uid,token):
     uid = request.POST.get('uid')
     token = request.POST.get('token')

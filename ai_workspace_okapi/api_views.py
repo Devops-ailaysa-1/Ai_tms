@@ -1,3 +1,15 @@
+from .serializers import (DocumentSerializer, DocumentSerializerV3,
+                          TranslationStatusSerializer, CommentSerializer,
+                          TM_FetchSerializer, VerbSerializer)
+from ai_workspace.serializers import TaskCreditStatusSerializer, TaskTranscriptDetailSerializer
+from rest_framework import views
+import json, logging,os,re,urllib.parse,xlsxwriter
+from json import JSONDecodeError
+from django.urls import reverse
+import requests
+from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
+from django.contrib.auth import settings
+from django.http import HttpResponse, JsonResponse
 import json
 import logging
 import os
@@ -6,15 +18,17 @@ import requests
 import urllib.parse
 import urllib.parse
 import xlsxwriter
+import rapidfuzz
 from json import JSONDecodeError
 from os.path import exists
-
+from ai_tm.utils import tm_fetch_extract,tmx_read_with_target
 from django.contrib.auth import settings
 from itertools import chain
 from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_only
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http import JsonResponse
+from django_celery_results.models import TaskResult
 from django.shortcuts import get_object_or_404
 from nltk.tokenize import TweetTokenizer
 from rest_framework import permissions
@@ -24,10 +38,14 @@ from rest_framework.decorators import api_view
 from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import APIException
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from django.http import  FileResponse
+from rest_framework.views import APIView
+from django.db.models import Q
+import urllib.parse
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from wiktionaryparser import WiktionaryParser
-
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.tasks import google_long_text_file_process_cel, pre_translate_update, mt_only
 from ai_auth.tasks import write_segments_to_db
@@ -50,12 +68,35 @@ from .serializers import (SegmentSerializer, DocumentSerializerV2,
                           SegmentSerializerV2, MT_RawSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, FontSizeSerializer, CommentSerializer,
                           TM_FetchSerializer, MergeSegmentSerializer, SplitSegmentSerializer)
+from django.urls import reverse
+from json import JSONDecodeError
+from .utils import SpacesService
+from google.cloud import translate_v2 as translate
+import os, io, requests, time
+from django.http import HttpResponse
+from rest_framework.response import Response
+# from controller.models import DownloadController
+from ai_workspace.models import File
+from .utils import SpacesService,text_to_speech
+from django.contrib.auth import settings
+from ai_auth.utils import get_plan_name
+from .utils import download_file, bl_title_format, bl_cell_format,get_res_path, get_translation, split_check
+from django.db import transaction
+from rest_framework.decorators import permission_classes
+from ai_auth.tasks import write_segments_to_db
+from django.db import transaction
+from os.path import exists
 from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 from django_oso.auth import authorize
 from ai_auth.utils import filter_authorize
 from django.db import transaction
+from ai_tm.models import TmxFileNew
+from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
+#from translate.storage.tmx import tmxfile
+from ai_tm import match
+
 
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -116,9 +157,9 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             raise ValueError("OKAPI request fields not setted correctly!!!")
 
     @staticmethod
-    def trim_segments(doc_json_data):
+    def trim_segments(doc_data):
 
-        doc_data = json.loads(doc_json_data)
+        #doc_data = json.loads(doc_json_data)
         text = doc_data["text"]
         count = 0
         needed_keys = []
@@ -160,28 +201,46 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         # Writing first 100 segments in DB
 
         doc_data = json.load(open(json_file_path))
-        doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
-        serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                 "file": task.file.id, "job": task.job.id,
-                                                 }, ))
-        if serializer.is_valid(raise_exception=True):
-            document = serializer.save()
-            task.document = document
-            task.save()
 
-        # Writing remaining segment using task
-        doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
+        if type(doc_data) == str:
 
-        if doc_data_task["text"] != {}:
+            doc_data = json.loads(doc_data)
 
-            # For celery task
-            serializer_task = DocumentSerializerV2(data={**doc_data_task, \
-                                                         "file": task.file.id, "job": task.job.id, }, )
+        if doc_data['total_word_count'] >= 50000:
 
-            validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
-                                                                     "file": task.file.id, "job": task.job.id, })
-            task_write_data = json.dumps(validated_data, default=str)
-            write_segments_to_db.apply_async((task_write_data, document.id), )
+            #print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
+
+            doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
+            serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                     "file": task.file.id, "job": task.job.id,
+                                                     }, ))
+            if serializer.is_valid(raise_exception=True):
+                document = serializer.save()
+                task.document = document
+                task.save()
+
+            # Writing remaining segment using task
+            doc_data_task = DocumentViewByTask.correct_segment_for_task(json_file_path, needed_keys)
+
+            if doc_data_task["text"] != {}:
+
+                # For celery task
+                serializer_task = DocumentSerializerV2(data={**doc_data_task, \
+                                                             "file": task.file.id, "job": task.job.id, }, )
+
+                validated_data = serializer_task.to_internal_value(data={**doc_data_task, \
+                                                                         "file": task.file.id, "job": task.job.id, })
+                task_write_data = json.dumps(validated_data, default=str)
+                write_segments_to_db.apply_async((task_write_data, document.id), )
+        else:
+            #print("NOT USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
+            serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                     "file": task.file.id, "job": task.job.id,
+                                                     }, ))
+            if serializer.is_valid(raise_exception=True):
+                document = serializer.save()
+                task.document = document
+                task.save()
 
         return document
 
@@ -195,12 +254,20 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             if task.job.project.pre_translate == True:
                 mt_only_check =  MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'mt_only')).last()
                 if mt_only_check:
-                    if not get_empty_segments(task.document):
+                    if get_empty_segments(task.document) == False:
                         return task.document
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-                if state == 'PENDING':
-                    return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
+                if state == 'STARTED' or state == 'PENDING':
+                    # if get_empty_segments(task.document) == False:
+                    #     return task.document
+                    # else:
+                    try:
+                        cel = TaskResult.objects.get(task_id=ins.celery_task_id)
+                        return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
+                    except TaskResult.DoesNotExist:
+                        cel_task = pre_translate_update.apply_async((task.id,),)
+                        return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
                 elif (not ins) or state == 'FAILURE':
                     print("Inside Pre celery")
                     cel_task = pre_translate_update.apply_async((task.id,),)
@@ -216,7 +283,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
-            print("-------------------------File Already Processed-------------------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -279,7 +345,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-            if state == 'PENDING':
+            print("State------------------>",state)
+            if state == 'STARTED' or state == 'PENDING':
                 if ins.status == 1:
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
                 else:
@@ -571,6 +638,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
 class MergeSegmentDeleteView(viewsets.ModelViewSet):
     def get_queryset(self):
         return  MergeSegment.objects.all()
+
 class MT_RawAndTM_View(views.APIView):
 
     @staticmethod
@@ -758,23 +826,52 @@ class MT_RawAndTM_View(views.APIView):
             return {}, 424, "unavailable"
 
     @staticmethod
+    def find_tm_matches(seg_source, user, doc):
+
+        proj = doc.job.project
+        tmx_files = TmxFileNew.objects.filter(job=doc.job_id)
+
+        tm_lists = []
+
+        if tmx_files:
+            tm_lists = tmx_read_with_target(tmx_files,doc.job)
+            #print("TmLists--------------->",tm_lists)
+        match_results = tm_fetch_extract(seg_source,
+                                        tm_lists,
+                                        scorer=rapidfuzz.distance.Levenshtein.normalized_similarity,
+                                        score_cutoff=round(proj.threshold / 100, 2),
+                                        limit=proj.max_hits)
+        response_data = [{'source':mr[0].get('source'),'target':mr[0].get('target'),'percentage':round(mr[1]*100,2)} for mr in match_results] if match_results else []
+        return response_data
+
+    @staticmethod
     def get_tm_data(request, segment_id):
 
         # For normal segment
         if split_check(segment_id):
-            segment = Segment.objects.filter(id=segment_id).first().get_active_object()
-            if segment:
-                tm_ser = TM_FetchSerializer(segment)
-                res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                        data = {'pentmsearchparams': json.dumps(tm_ser.data)})
-                if res.status_code == 200:
-                    return res.json()
-                else:
-                    return []
-            return []
+            seg_source = Segment.objects.filter(id=segment_id).first().get_active_object().source
+            user, doc = MT_RawAndTM_View.get_user_and_doc(segment_id)
+            return MT_RawAndTM_View.find_tm_matches(seg_source, user, doc)
+
+            # Old PenTM search logic
+
+            # if segment:
+            #     tm_ser = TM_FetchSerializer(segment)
+            #     res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+            #             data = {'pentmsearchparams': json.dumps(tm_ser.data)})
+            #     if res.status_code == 200:
+            #         return res.json()
+            #     else:
+            #         return []
+            # return []
+
 
         # TMX fetch for split segment
-        else: return []
+        else:
+            split_seg = SplitSegment.objects.filter(id=segment_id).first()
+            seg_source = split_seg.source
+            user, doc = MT_RawAndTM_View.get_user_and_doc(split_seg.segment_id)
+            return MT_RawAndTM_View.find_tm_matches(seg_source, user, doc)
 
     def get_alert_msg(self, status_code, can_team):
 
@@ -806,55 +903,145 @@ class MT_RawAndTM_View(views.APIView):
             if split_seg:
                 return self.get_task_assign_data(split_seg.segment_id)
 
+
     def get(self, request, segment_id):
 
-        # Getting MT params
-        mt_params = self.get_segment_MT_params(segment_id)
-        seg = Segment.objects.get(id=segment_id)
-        authorize(request, resource=seg, actor=request.user, action="read")
+            tm_only = {
+                        "segment": segment_id,
+                        "mt_raw": "",
+                        "mt_alert": False,
+                        "alert_msg": None
+                       }
 
-        # For normal and merged segments
-        if split_check(segment_id):
-            data, status_code, can_team = self.get_data(request, segment_id, mt_params)
-            mt_alert = True if status_code == 424 else False
-            alert_msg = self.get_alert_msg(status_code, can_team)
-            tm_data = self.get_tm_data(request, segment_id)
-            return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
-                "alert_msg":alert_msg}, status=status_code)
+            mt_uc = request.GET.get("mt_uc", 'false')
 
-        # For split segment
-        else:
-            data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
-            mt_alert = True if status_code == 424 else False
-            alert_msg = self.get_alert_msg(status_code, can_team)
-            tm_data = self.get_tm_data(request, segment_id)
-            return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
-                             "alert_msg": alert_msg}, status=status_code)
+            # Getting MT params
+            mt_params = self.get_segment_MT_params(segment_id)
+            seg = Segment.objects.get(id=segment_id)
+            authorize(request, resource=seg, actor=request.user, action="read")
+
+            # For normal and merged segments
+            if split_check(segment_id):
+
+                tm_data = self.get_tm_data(request, segment_id)
+
+                if tm_data and (mt_uc == 'false'):
+                    return Response({**tm_only, "tm":tm_data}, status = 200 )
+                data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+                mt_alert = True if status_code == 424 else False
+                alert_msg = self.get_alert_msg(status_code, can_team)
+
+                return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
+                    "alert_msg":alert_msg}, status=status_code)
+
+            # For split segment
+            else:
+
+                tm_data = self.get_tm_data(request, segment_id)
+
+                if tm_data and (mt_uc == False):
+                    return Response({**tm_only, "tm": tm_data}, status=200)
+
+                data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
+                mt_alert = True if status_code == 424 else False
+                alert_msg = self.get_alert_msg(status_code, can_team)
+                # tm_data = self.get_tm_data(request, segment_id)
+                return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
+                                 "alert_msg": alert_msg}, status=status_code)
+    # def get(self, request, segment_id):
+    #
+    #     # Getting MT params
+    #     mt_params = self.get_segment_MT_params(segment_id)
+    #
+    #     # For normal and merged segments
+    #     if split_check(segment_id):
+    #         data, status_code, can_team = self.get_data(request, segment_id, mt_params)
+    #         mt_alert = True if status_code == 424 else False
+    #         alert_msg = self.get_alert_msg(status_code, can_team)
+    #         tm_data = self.get_tm_data(request, segment_id)
+    #         return Response({**data, "tm":tm_data, "mt_alert": mt_alert,
+    #             "alert_msg":alert_msg}, status=status_code)
+    #
+    #     # For split segment
+    #     else:
+    #         data, status_code, can_team = self.get_split_data(request, segment_id, mt_params)
+    #         mt_alert = True if status_code == 424 else False
+    #         alert_msg = self.get_alert_msg(status_code, can_team)
+    #         tm_data = self.get_tm_data(request, segment_id)
+    #         return Response({**data, "tm": tm_data, "mt_alert": mt_alert,
+    #                          "alert_msg": alert_msg}, status=status_code)
+
+
+# class ConcordanceSearchView(views.APIView):
+#
+#     @staticmethod
+#     def get_concordance_data(request, segment_id, search_string):
+#         segment = Segment.objects.filter(id=segment_id).first()
+#         if segment:
+#             tm_ser_data = TM_FetchSerializer(segment).data
+#             tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
+#                     "threshold": 10})
+#             res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+#                     data = {'pentmsearchparams': json.dumps( tm_ser_data), "isCncrdSrch":"true" })
+#             if res.status_code == 200:
+#                 return res.json()
+#             else:
+#                 return []
+#         return []
+#
+#     def get(self, request, segment_id):
+#         search_string = request.GET.get("string", None).strip('0123456789')
+#         concordance = []
+#         if search_string:
+#             concordance = self.get_concordance_data(request, segment_id, search_string)
+#         return Response(concordance, status=200)
 
 
 class ConcordanceSearchView(views.APIView):
 
     @staticmethod
     def get_concordance_data(request, segment_id, search_string):
-        segment = Segment.objects.filter(id=segment_id).first()
-        if segment:
-            tm_ser_data = TM_FetchSerializer(segment).data
-            tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
-                    "threshold": 10})
-            res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
-                    data = {'pentmsearchparams': json.dumps( tm_ser_data), "isCncrdSrch":"true" })
-            if res.status_code == 200:
-                return res.json()
-            else:
-                return []
+
+        seg = Segment.objects.filter(id=segment_id).first()
+        job = seg.text_unit.document.job
+
+        if seg:
+            tm_lists = []
+            tmx_files = TmxFileNew.objects.filter(job=job)
+            if tmx_files:
+                tm_lists = tmx_read_with_target(tmx_files,job)
+
+            match_results = tm_fetch_extract(search_string,
+                                        tm_lists,
+                                        scorer=rapidfuzz.distance.Levenshtein.normalized_similarity,
+                                        score_cutoff=0.85,
+                                        limit=10)
+            response_data = [{'source':mr[0].get('source'),'target':mr[0].get('target'),'percentage':round(mr[1]*100,2)} for mr in match_results] if match_results else []
+            return response_data
         return []
+        # if segment:
+        #     tm_ser_data = TM_FetchSerializer(segment).data
+        #     tm_ser_data.update({'search_source_string':search_string, "max_hits":20,\
+        #             "threshold": 10})
+        #     res = requests.post( f'http://{spring_host}:8080/pentm/source/search',\
+        #             data = {'pentmsearchparams': json.dumps( tm_ser_data), "isCncrdSrch":"true" })
+        #     if res.status_code == 200:
+        #         return res.json()
+        #     else:
+        #         return []
+        # return []
 
     def get(self, request, segment_id):
         search_string = request.GET.get("string", None).strip('0123456789')
         concordance = []
         if search_string:
             concordance = self.get_concordance_data(request, segment_id, search_string)
+        #print("Concordance------------->",concordance)
         return Response(concordance, status=200)
+
+
+
+
 
 def long_text_process(consumable_credits,document_user,file_path,task,target_language,voice_gender,voice_name):
     from ai_workspace.api_views import google_long_text_file_process
@@ -1465,22 +1652,24 @@ class CommentView(viewsets.ViewSet):
 
 class GetPageIndexWithFilterApplied(views.APIView):
 
-    def get_queryset(self, document_id, status_list):
-        doc = get_object_or_404(Document.objects.all(), id=document_id)
-        # status_list = data.get("status_list")
+    def get_queryset(self, seg, status_list):
         if '0' in status_list:
-            segments = doc.segments.filter(Q(status=None)|\
+            segments = seg.filter(Q(status=None)|\
                         Q(status__status_id__in=status_list)).all()
         else:
-            segments = doc.segments.filter(status__status_id__in=status_list).all()
+            segments = seg.filter(status__status_id__in=status_list).all()
         return  segments
 
     def post(self, request, document_id, segment_id):
-        print( "data---->", request.data )
         status_list = request.data.get("status_list", [])
-        print("status list", status_list + [] )
-        segments = self.get_queryset(document_id, status_list)
-        print("segments---->", segments)
+        doc = get_object_or_404(Document.objects.all(), id=document_id)
+        segs = doc.segments_for_find_and_replace
+        merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
+        split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
+        seg =  self.get_queryset(segs, status_list)
+        merge_seg = self.get_queryset(merge_segments, status_list)
+        split_seg = self.get_queryset(split_segments, status_list)
+        segments = list(chain(seg, merge_seg, split_seg))
         if not segments:
             return Response( {"detail": "No segment found"}, 404 )
         ids = [
