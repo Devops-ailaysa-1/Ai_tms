@@ -624,8 +624,10 @@ class GetVendorListViewNew(generics.ListAPIView):
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
         queryset = queryset_all = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
-                    .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-                    .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(email='ailaysateam@gmail.com')
+                    .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang)\
+                            & Q(vendor_lang_pair__deleted_at=None)).distinct().exclude(id = user.id)\
+                            .exclude(is_internal_member=True).exclude(is_vendor=False).exclude(email='ailaysateam@gmail.com')\
+                            .exclude(is_active=False)
         if max_price and min_price and count_unit and currency:
             ids=[]
             for i in queryset.values('vendor_lang_pair__id'):

@@ -199,11 +199,11 @@ def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
     lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
     pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path)[0]
- 
+
     if (pdf_text_ocr_check == 'ocr') or \
                 (lang in google_ocr_indian_language):
         response_result = ai_export_pdf.apply_async((id, ),)
-        
+
         file_details.pdf_task_id = response_result.id
         file_details.save()
         logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
@@ -228,7 +228,7 @@ def project_pdf_conversion(id):
     file_obj = ContentFile(task_details.file.file.read(),task_details.file.filename)
     initial_credit = user.credit_balance.get("total_left")
     file_format,page_length = file_pdf_check(task_details.file.file.path)
- 
+
     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
     if initial_credit > consumable_credits:
         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
@@ -237,7 +237,7 @@ def project_pdf_conversion(id):
         lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
         if (file_format == 'ocr') or (lang in google_ocr_indian_language):
-            
+
             response_result = ai_export_pdf.apply_async((file_details.id, ),)
             file_details.pdf_task_id = response_result.id
             file_details.save()

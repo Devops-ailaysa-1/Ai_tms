@@ -6,7 +6,7 @@ from .serializers import TmxFileSerializer,UserDefinedRateSerializer,CharCountGe
 from ai_workspace.serializers import TaskSerializer
 from ai_workspace.models import Project, File, Task
 from ai_tm import match
-from translate.storage.tmx import tmxfile
+#from translate.storage.tmx import tmxfile
 from collections import Counter
 from rest_framework import viewsets,status
 from rest_framework.decorators import api_view
@@ -195,6 +195,7 @@ def check(uploaded_file,job):
     else:return False
 
 def get_tm_analysis(doc_data,job):
+        #[list(result) for key, result  in groupby(tasks, key=lambda item: item.job)]
         #print("DocData-------------->",doc_data)
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")

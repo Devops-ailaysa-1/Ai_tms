@@ -91,7 +91,7 @@ from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
 from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
-from translate.storage.tmx import tmxfile
+#from translate.storage.tmx import tmxfile
 from ai_tm import match
 
 

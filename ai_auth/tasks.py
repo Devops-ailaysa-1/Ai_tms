@@ -27,7 +27,7 @@ from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
 from datetime import datetime, timedelta
 from django.db.models import DurationField, F, ExpressionWrapper,Q
-from translate.storage.tmx import tmxfile
+#from translate.storage.tmx import tmxfile
 from celery_progress.backend import ProgressRecorder
 from time import sleep
 
@@ -584,12 +584,14 @@ def count_update(job_id):
         for assigns in obj.task_info.filter(task_assign_info__isnull = False):
             existing_wc = assigns.task_assign_info.billable_word_count
             existing_cc = assigns.task_assign_info.billable_char_count
+            word_count = get_weighted_word_count(obj)
+            char_count = get_weighted_char_count(obj)
             if assigns.task_assign_info.account_raw_count == False:
                 if assigns.status == 1:
-                    word_count = get_weighted_word_count(obj)
+                    #word_count = get_weighted_word_count(obj)
                     assigns.task_assign_info.billable_word_count = word_count
-                    assigns.task_assign_info.save()
-                    char_count = get_weighted_char_count(obj)
+                    #assigns.task_assign_info.save()
+                    #char_count = get_weighted_char_count(obj)
                     assigns.task_assign_info.billable_char_count = char_count
                     assigns.task_assign_info.save()
                     if assigns.task_assign_info.mtpe_count_unit_id != None:

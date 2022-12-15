@@ -85,6 +85,13 @@ class JobManager(models.Manager):
         jobs = [self.create(**item, project=project) for item in data]
         return jobs
 
+    def pdf_job_create(self, \
+            data, project, klass):
+        job,created = self.get_or_create(**data, project=project)
+        print("job------>",job)
+        print("created--------------->",created)
+        return job
+
 class ProjectContentTypeManager(models.Manager):
     def bulk_create_of_project(self, \
             data, project, klass):
@@ -105,6 +112,29 @@ class ProjectSubjectFieldManager(models.Manager):
 
 class TaskManager(models.Manager):
 
+    def epub_processing(self,epub_list,project):
+       from ai_workspace.models import File
+       html_files_list =[]
+       for i in epub_list:
+           base_file,ext = os.path.splitext(i.file.path)
+           basedir = os.path.dirname(i.file.path)
+           zipped_file = base_file  + '.zip'
+           new_file = os.path.join(basedir,zipped_file)
+           shutil.copy(i.file.path,new_file)
+           zip = zipfile.ZipFile(new_file)
+           zip.extractall('epub_1')
+           for root, dirs, files in os.walk('epub_1'):
+               for file in files:
+                    if str(file).endswith('.xhtml') or str(file).endswith('.html'):
+                        existing = os.path.join(root, file)
+                        base = os.path.join(basedir,file)
+                        file_path = os.path.join(project.ai_user.uid,project.ai_project_id,'source',file)
+                        shutil.copy(existing,base)
+                        file_obj = File.objects.create(file = file_path,usage_type_id = 1,project = project,filename=file)
+                        html_files_list.append(file_obj)
+       shutil.rmtree('epub_1', ignore_errors=True)
+       return html_files_list
+
     def create_tasks_of_files_and_jobs(self, files, jobs, klass,\
           project = None):
 
@@ -112,7 +142,7 @@ class TaskManager(models.Manager):
         epub_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.epub']
         pdf_list = [file for file in files if  os.path.splitext(file.file.path)[1] == '.pdf']
         files_list = [file for file in files if  os.path.splitext(file.file.path)[1] != '.epub' and os.path.splitext(file.file.path)[1] != '.pdf']
-
+        jobs_list = [job for job in jobs if job.target_language!=None]
 
         if hasattr(project, "ai_user"):
             assign_to = project.ai_user
@@ -120,36 +150,23 @@ class TaskManager(models.Manager):
         if not assign_to:
             raise ValueError("You should send parameter either project "
                              "object or assign_to user")
-        if epub_list: #####################################working
-           from ai_workspace.models import File
-           html_files_list =[]
-           for i in epub_list:
-               base_file,ext = os.path.splitext(i.file.path)
-               basedir = os.path.dirname(i.file.path)
-               zipped_file = base_file  + '.zip'
-               new_file = os.path.join(basedir,zipped_file)
-               shutil.copy(i.file.path,new_file)
-               zip = zipfile.ZipFile(new_file)
-               zip.extractall('epub_1')
-               for root, dirs, files in os.walk('epub_1'):
-                   for file in files:
-                        if str(file).endswith('.xhtml') or str(file).endswith('.html'):
-                            existing = os.path.join(root, file)
-                            base = os.path.join(basedir,file)
-                            file_path = os.path.join(project.ai_user.uid,project.ai_project_id,'source',file)
-                            shutil.copy(existing,base)
-                            file_obj = File.objects.create(file = file_path,usage_type_id = 1,project = project,filename=file)
-                            html_files_list.append(file_obj)
-        tasks = [self.get_or_create(file=file, job=job) for file in files_list for job in jobs]
-        shutil.rmtree('epub_1', ignore_errors=True)
+
+        tasks = [self.get_or_create(file=file, job=job) for file in files_list for job in jobs_list]
         if epub_list:
+            html_files_list = self.epub_processing(epub_list,project)
             additional_tasks = [self.get_or_create(file=file, job=job) for file in html_files_list for job in jobs]
         if pdf_list:
-            from ai_workspace.models import Job
-            job_obj = Job.objects.create(source_language=jobs[0].source_language,target_language=None,project=project)
-            additional_tasks = [self.get_or_create(file=file, job=job_obj) for file in pdf_list]
+            self.create_tasks_of_pdf_files_and_jobs(project,pdf_list,jobs[0].source_language)
         return tasks
 
+    def create_tasks_of_pdf_files_and_jobs(self,project,pdf_list,lang):
+        from ai_workspace.models import Job
+        j_klass = Job
+        jobs_data = {'source_language':lang,'target_language':None}
+        job = j_klass.objects.pdf_job_create(
+            jobs_data, project, j_klass
+        )
+        additional_tasks = [self.get_or_create(file=file, job=job) for file in pdf_list]
 
     def create_tasks_of_files_and_jobs_by_project(self, project):
         files = project.project_files_set.all()
