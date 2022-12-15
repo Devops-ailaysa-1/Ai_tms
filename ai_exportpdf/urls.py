@@ -13,6 +13,7 @@ router.register(r'convertpdftodocx',views.Pdf2Docx,basename='pdf')
 # ] 
 
 urlpatterns = router.urls  
-urlpatterns+= path('convert' , views.ConversionPortableDoc.as_view() , name='convertdoc' ),
+urlpatterns += path('convert' , views.ConversionPortableDoc.as_view() , name='convertdoc' ),
 urlpatterns += path("docx_file_download/<int:id>", views.docx_file_download, name="pdf_docx_download"),
+urlpatterns += path("text_genrator" , views.text_generator_openai ,name = "text_generator"),
 urlpatterns += static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)

@@ -12,10 +12,11 @@ from pdf2image import convert_from_path
 from tqdm import tqdm
 from ai_auth.models import UserCredits
 from ai_exportpdf.models import Ai_PdfUpload
-from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API
+from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API ,OPENAI_API_KEY ,OPENAI_MODEL
 from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
 from ai_staff.models import Languages
 from django.db.models import Q
+import math
 logger = logging.getLogger('django')
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -262,9 +263,99 @@ def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
         return int(total_pages)*5
 
 
+def openai_text_trim(text):
+    text = re.search("(\.[^.]*)$",text, re.MULTILINE)
+    text = txt[:text.start()]+"."
+    
+    # max_len = len(text)-1
+    # for i in range(max_len):
+    #     index = max_len-i
+    #     str_ch = text[index]
+    #     if str_ch == '.':
+    #         text = text[:index+1]
+    #         break
+    return text
+
 # def convertio_check_credit(total_pages):
 #     if total_pages <=50:
 #         credit = 75
 #     elif total_pages <=100:
 #         credit = 150
 #     else:
+
+def ceil_round_off(token_len):
+    return math.ceil(len(token_len)/4)
+    
+
+import openai
+openai.api_key = OPENAI_API_KEY
+
+def openai_endpoint(prompt,max_token=256,
+                    temperature=0.7,frequency_penalty=1,
+                    presence_penalty=1,top_p=1):
+ 
+    response = openai.Completion.create(
+                model=OPENAI_MODEL,# "text-curie-001", 
+                prompt=prompt.strip(),
+                temperature=temperature,
+                max_tokens=max_token,
+                top_p=top_p,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty,
+                stop = ['#'],
+                n=3,
+                logit_bias = {"50256": -100})
+    generated_text = response.get('choices' ,None)
+    if generated_text:
+        # text_gen_openai_ = {i['index']: i['text'] for i in generated_text}
+        text_gen_openai_ = {i['index']:openai_text_trim(i['text']) if i['text'][-1] != "." else i['text'] for i in generated_text}
+        return {'output':text_gen_openai_ , 'usage':response['usage']['completion_tokens']}
+    else:
+        return {'output':'no_output_generated'}
+    
+    
+    # prompt = prompt.strip()
+    # tem = [0.7, 0.6 ,0.5]
+    # text_gen_openai = {}
+    # tokn_len = []
+    # for count,i in enumerate(tem):
+    #     response = openai.Completion.create(
+    #             model=  OPENAI_MODEL,
+    #             prompt=prompt,
+    #             temperature=i,
+    #             max_tokens=max_token,
+    #             top_p=top_p,
+    #             frequency_penalty=frequency_penalty,
+    #             presence_penalty=presence_penalty,
+    #             stop = ['#'],
+    #             n=1,
+    #             logit_bias={"50256": -100},echo= True)
+    #     generated_text = response['choices'][0].text
+    #     text_gen_openai[count] = generated_text
+    #     tokn_len.append(response['usage']['completion_tokens'])
+    # print({'output':text_gen_openai , 'usage':sum(tokn_len)})
+    # return {'output':text_gen_openai , 'usage':sum(tokn_len)}
+    
+    
+
+    
+def get_consumable_credits_for_openai_text_generator(total_token):
+    total_consumable_token_credit = math.ceil(total_token/12)     
+    return total_consumable_token_credit
+ 
+
+
+
+import pypandoc
+def docx_to_html(docx_file_path):
+    extra_args = ["--metadata","title= " , "--self-contained","--standalone","--css","pandoc.css"]
+    output = pypandoc.convert_file(source_file=docx_file_path,
+                                   to="html",format='docx',
+                                   extra_args=extra_args)
+    
+    bootstrap_css = '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">'
+    bootstrap_js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>'
+    return bootstrap_css+bootstrap_js+output
+
+    # with open("out1226_final.html",'w') as fp:
+    #     fp.write(output)
