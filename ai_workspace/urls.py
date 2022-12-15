@@ -87,6 +87,7 @@ urlpatterns += [
 	path('express_save/',api_views.task_segments_save),
 	path('express_task_download/<int:task_id>/',api_views.express_task_download),
 	path('express_project_detail/<int:project_id>/',api_views.express_project_detail),
+	path('translate_from_pdf/<int:task_id>/',api_views.translate_from_pdf),
 ]
 # views urls adding for local testing
 urlpatterns += [

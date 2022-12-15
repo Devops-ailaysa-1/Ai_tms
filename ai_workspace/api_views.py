@@ -2630,6 +2630,32 @@ def voice_project_progress(pr):
         return "In Progress"
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def translate_from_pdf(request,task_id):
+    from ai_exportpdf.models import Ai_PdfUpload
+    from ai_exportpdf.views import get_docx_file_path
+    task_obj = Task.objects.get(id = task_id)
+    pdf_obj = Ai_PdfUpload.objects.filter(task_id = task_id).last()
+    # updated_count = pdf_obj.updated_count+1 if pdf_obj.updated_count else 1
+    # pdf_obj.updated_count = updated_count
+    # pdf_obj.save()
+    # docx_file_name = pdf_obj.docx_file_name + '_edited_'+ str(pdf_obj.updated_count)+'.docx'
+    if pdf_obj.pdf_api_use == "convertio":
+        docx_file_path = get_docx_file_path(pdf_obj.id)
+        file = open(docx_file_path,'rb')
+        file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
+    else:
+        file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
+    ins = task_obj.job.project
+    team = True if ins.team else False
+    serlzr = ProjectQuickSetupSerializer(ins, data={"files":[file_obj],'team':[team]},context={"request": request}, partial=True)
+    if serlzr.is_valid():
+        serlzr.save()
+        return Response(serlzr.data)
+    return Response(serlzr.errors)
+
+
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 # def get_vendor_rates(request):

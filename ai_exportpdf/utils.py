@@ -1,5 +1,5 @@
-import base64,math
-import docx ,json,logging,mimetypes,os,pdftotext
+import base64
+import docx ,json,logging,mimetypes,os ,pdftotext
 import re,requests,time,urllib.request
 from io import BytesIO
 from PyPDF2 import PdfFileReader
@@ -124,7 +124,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
 import tempfile
 #########ocr ######
 @shared_task(serializer='json')
-def ai_export_pdf(id ): # , file_language , file_name , file_path
+def ai_export_pdf(id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
@@ -194,25 +194,21 @@ def file_pdf_check(file_path):
     return ["text" if len(text)>=700 else "ocr" , len(pdf)]
 
 
-
-def pdf_conversion(id):
-    # print("user-->" ,user)
-    # user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-
+from ai_workspace.models import Task
+def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
     lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
     pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path)[0]
-    # if lang in google_ocr_indian_language:
+
     if (pdf_text_ocr_check == 'ocr') or \
                 (lang in google_ocr_indian_language):
-        # print("google ocr text",lang)
-        response_result = ai_export_pdf.apply_async((id,),)
-        # print("resp res--->",response_result)
+        response_result = ai_export_pdf.apply_async((id, ),)
+
         file_details.pdf_task_id = response_result.id
         file_details.save()
         logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
         return response_result.id
-    # elif lang in list(lang_codes.keys()):
+
     elif pdf_text_ocr_check == 'text':
         response_result = convertiopdf2docx.apply_async((id,lang ,pdf_text_ocr_check),0)
         file_details.pdf_task_id = response_result.id
@@ -223,11 +219,48 @@ def pdf_conversion(id):
         return "error"
 
 
+
+from django.core.files.base import ContentFile
+from ai_workspace.api_views import UpdateTaskCreditStatus
+def project_pdf_conversion(id):
+    task_details = Task.objects.get(id = id)
+    user = task_details.job.project.ai_user
+    file_obj = ContentFile(task_details.file.file.read(),task_details.file.filename)
+    initial_credit = user.credit_balance.get("total_left")
+    file_format,page_length = file_pdf_check(task_details.file.file.path)
+
+    consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+    if initial_credit > consumable_credits:
+        Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
+                                   pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
+        file_details = Ai_PdfUpload.objects.filter(task = task_details).last()
+        lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+        if (file_format == 'ocr') or (lang in google_ocr_indian_language):
+
+            response_result = ai_export_pdf.apply_async((file_details.id, ),)
+            file_details.pdf_task_id = response_result.id
+            file_details.save()
+            return response_result.id ,file_details.id
+        elif file_format == 'text':
+            response_result = convertiopdf2docx.apply_async((file_details.id,lang ,file_format),0)
+            file_details.pdf_task_id = response_result.id
+            file_details.save()
+            return response_result.id ,file_details.id
+        else:
+            return "error"
+    else:
+        return Response({'msg':'Insufficient Credits'},status=400)
+
+
+
+
 def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
     if formats == 'text':
         return int(total_pages)
     else:
         return int(total_pages)*5
+
 
 def get_consumable_credits_for_openai_text_generator(total_token):
     total_consumable_token_credit = math.ceil(total_token/12)
@@ -273,7 +306,6 @@ def openai_endpoint(prompt,max_token=256,
         return {'output':text_gen_openai_ , 'usage':response['usage']['completion_tokens']}
     else:
         return {'output':'no_output_generated'}
-
 
 
 # def convertio_check_credit(total_pages):

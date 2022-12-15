@@ -15,6 +15,8 @@ from ai_exportpdf.utils import (get_consumable_credits_for_pdf_to_docx ,file_pdf
                                 get_consumable_credits_for_openai_text_generator)
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus
+from django.core.files.base import ContentFile
+from .utils import ai_export_pdf,convertiopdf2docx
 
 
 
@@ -36,7 +38,6 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
             serializer = PdfFileStatusSerializer(queryset,many=True)
-
             return Response(serializer.data)
         else:
             query_filter = Ai_PdfUpload.objects.filter(user = user).order_by('id')
@@ -56,8 +57,8 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
         user = request.user.id
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,
-                 'status':'YET TO START' } for pdf_file_list in pdf_request_file]
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,'pdf_file_name' : pdf_file_list._get_name() ,
+                 'file_name':pdf_file_list._get_name() ,'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
             serializer.save()
@@ -110,6 +111,50 @@ def docx_file_download(request,id):
     else:
         return JsonResponse({"msg":"no file associated with it"})
 
+
+def get_docx_file_path(pdf_id):
+    pdf_path = Ai_PdfUpload.objects.get(id=pdf_id).pdf_file.path
+    docx_file_path = pdf_path.split(".pdf")[0] +".docx"
+    return docx_file_path
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def project_pdf_conversion(request,task_id):
+    from ai_workspace.models import Task
+    from ai_staff.models import Languages
+    task_obj = Task.objects.get(id = task_id)
+    user = task_obj.job.project.ai_user
+    file_obj = ContentFile(task_obj.file.file.read(),task_obj.file.filename)
+    initial_credit = user.credit_balance.get("total_left")
+    file_format,page_length = file_pdf_check(task_obj.file.file.path)
+
+    consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+    if initial_credit > consumable_credits:
+        pdf_obj = Ai_PdfUpload.objects.filter(task = task_obj).last()
+        if pdf_obj == None:
+            pdf_obj = Ai_PdfUpload.objects.create(user= user , file_name = task_obj.file.filename, status='YET TO START',
+                                   pdf_file_name =task_obj.file.filename  ,task = task_obj ,pdf_file =file_obj , pdf_language = task_obj.job.source_language_id)
+        #file_details = Ai_PdfUpload.objects.filter(task = task_obj).last()
+        lang = Languages.objects.get(id=int(pdf_obj.pdf_language)).language.lower()
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+        if (file_format == 'ocr') or (lang in google_ocr_indian_language):
+
+            response_result = ai_export_pdf.apply_async((pdf_obj.id, ),)
+            pdf_obj.pdf_task_id = response_result.id
+            pdf_obj.save()
+            return Response({'celery_id':response_result.id ,"pdf":pdf_obj.id})
+        elif file_format == 'text':
+            response_result = convertiopdf2docx.apply_async((pdf_obj.id,lang ,file_format),0)
+            pdf_obj.pdf_task_id = response_result.id
+            pdf_obj.save()
+            return Response({'celery_id':response_result.id ,"pdf":pdf_obj.id})
+        else:
+            return Response({"msg":"error"})
+    else:
+        return Response({'msg':'Insufficient Credits'},status=400)
+
+
 from ai_exportpdf.utils import openai_endpoint
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
@@ -127,6 +172,20 @@ def text_generator_openai(request):
         return JsonResponse(response)
     else:
         return Response({'msg':'Insufficient Credits'},status=400)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # def create(self, request):
     #     pdf_request_file = request.FILES.getlist('pdf_request_file')
