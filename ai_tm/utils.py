@@ -105,7 +105,7 @@ def write_commons(workbook, worksheet, proj):
     proj_row = 6
     write_common_rows(workbook, worksheet, proj_row)
 
-    tasks = proj.get_tasks
+    tasks = proj.get_mtpe_tasks
     for task in tasks:
         proj_row += 5
         write_common_rows(workbook, worksheet, proj_row)

@@ -1472,6 +1472,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user
+            obj.task_assign.status = 1
             obj.task_assign.save()
             obj.delete()
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
@@ -1537,33 +1538,33 @@ def find_vendor(team,jobs):
 #             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
 #     return externalmembers
 
+class ProjectListFilter(django_filters.FilterSet):
+
+    def filter(self, qs, value):
+        return (pr for pr in qs if pr.get_assignable_tasks_exists == True)
+
 
 
 
 class ProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filterset_class = ProjectListFilter
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
-                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+        queryset = Project.objects.filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
-        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
-        #             |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
-        #             |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
         return queryset
 
+
     def list(self,request):
-        proj_list=[]
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
         data = serializer.data
-        for i in data:
-            if i.get('assign_enable')==True and i.get('assignable')==True:
-                proj_list.append(i)
-        return Response(proj_list)
-        # return  Response(serializer.data)
+        return  Response(serializer.data)
+
 
 
 

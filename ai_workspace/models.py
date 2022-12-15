@@ -287,6 +287,18 @@ class Project(models.Model):
         return tasks
 
     @property
+    def get_assignable_tasks_exists(self):
+        tasks=[]
+        for job in self.project_jobs_set.all():
+            for task in job.job_tasks_set.all():
+               if (task.job.target_language == None):
+                   if (task.file.get_file_extension == '.mp3'):
+                       tasks.append(task)
+                   else:pass
+               else:tasks.append(task)
+        return True if tasks else False
+
+    @property
     def get_mtpe_tasks(self):
         return [task for job in self.project_jobs_set.filter(~Q(target_language = None)) for task \
             in job.job_tasks_set.all()]

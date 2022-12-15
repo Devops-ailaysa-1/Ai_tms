@@ -1630,22 +1630,24 @@ class CommentView(viewsets.ViewSet):
 
 class GetPageIndexWithFilterApplied(views.APIView):
 
-    def get_queryset(self, document_id, status_list):
-        doc = get_object_or_404(Document.objects.all(), id=document_id)
-        # status_list = data.get("status_list")
+    def get_queryset(self, seg, status_list):
         if '0' in status_list:
-            segments = doc.segments.filter(Q(status=None)|\
+            segments = seg.filter(Q(status=None)|\
                         Q(status__status_id__in=status_list)).all()
         else:
-            segments = doc.segments.filter(status__status_id__in=status_list).all()
+            segments = seg.filter(status__status_id__in=status_list).all()
         return  segments
 
     def post(self, request, document_id, segment_id):
-        print( "data---->", request.data )
         status_list = request.data.get("status_list", [])
-        print("status list", status_list + [] )
-        segments = self.get_queryset(document_id, status_list)
-        print("segments---->", segments)
+        doc = get_object_or_404(Document.objects.all(), id=document_id)
+        segs = doc.segments_for_find_and_replace
+        merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
+        split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
+        seg =  self.get_queryset(segs, status_list)
+        merge_seg = self.get_queryset(merge_segments, status_list)
+        split_seg = self.get_queryset(split_segments, status_list)
+        segments = list(chain(seg, merge_seg, split_seg))
         if not segments:
             return Response( {"detail": "No segment found"}, 404 )
         ids = [

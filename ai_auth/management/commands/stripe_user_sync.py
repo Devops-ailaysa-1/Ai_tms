@@ -8,6 +8,7 @@ from djstripe.sync import sync_subscriber
 from djstripe.models import Customer
 from django.db.models import Q
 from django.db.models import F
+from django.db.models import Count
 
 
 class Command(BaseCommand):
@@ -26,12 +27,27 @@ class Command(BaseCommand):
             action='store_true',
             help='Sync all subscribers',
         )
+
+        parser.add_argument(
+            '--sync',
+            action='store_true',
+            help='Sync subscribers(excl. deleted)',
+        )
+
     def handle(self, *args, **options):
         """Call sync_subscriber on Subscribers without customers associated to them."""
 
         custs_outsync=Customer.objects.filter(~Q(subscriber__email=F('email')))
         custs_insync=Customer.objects.filter(Q(subscriber__email=F('email')))
         deleted_count=AiUser.objects.filter(email__icontains='deleted').count()
+        user_null_cust = []
+        user_multi_cust=[]
+
+        for count,email,id in AiUser.objects.annotate(num_count =Count('djstripe_customers')).values_list('num_count','email','id'):
+            if count> 1:
+                user_multi_cust.append(id)
+            elif count ==0:
+                user_null_cust.append(id)
 
 
         if options['delete']:
@@ -43,17 +59,18 @@ class Command(BaseCommand):
         else:
             qs = AiUser.objects.filter(Q(djstripe_customers__isnull=True) & ~Q(email__icontains='deleted')&~Q(email='AnonymousUser'))
 
+        print(f"AiUser None Customer : [{len(user_null_cust)}]  Multiple Customer: [{len(user_multi_cust)}]")
+        print(f"Stripe Customer emails Out-Of-Sync:[{custs_outsync.count()}] In-Sync:[{custs_insync.count()}] ")
 
-        print(f"Customer emails Out-Of-Sync:[{custs_outsync.count()}] In-Sync:[{custs_insync.count()}] ")
-
-        count = 0
-        total = qs.count()
-        for subscriber in qs:
-            count += 1
-            perc = int(round(100 * (float(count) / float(total))))
-            print(
-                "[{0}/{1} {2}%] Syncing {3} [{4}]".format(
-                    count, total, perc, subscriber.email, subscriber.pk
+        if options['sync']:
+            count = 0
+            total = qs.count()
+            for subscriber in qs:
+                count += 1
+                perc = int(round(100 * (float(count) / float(total))))
+                print(
+                    "[{0}/{1} {2}%] Syncing {3} [{4}]".format(
+                        count, total, perc, subscriber.email, subscriber.pk
+                    )
                 )
-            )
-            sync_subscriber(subscriber)
+                sync_subscriber(subscriber)

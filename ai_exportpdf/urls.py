@@ -18,5 +18,6 @@ urlpatterns += path("docx_file_download/<int:id>", views.docx_file_download, nam
 urlpatterns += static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)
 
 urlpatterns += [
-    path('convert_pdf_from_task/<int:task_id>/',views.project_pdf_conversion),
+path('convert_pdf_from_task/<int:task_id>/',views.project_pdf_conversion),
+path("text_generator/" , views.text_generator_openai ,name = "text_generator"),
 ]

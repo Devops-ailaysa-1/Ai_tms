@@ -1,5 +1,5 @@
-import base64
-import docx ,json,logging,mimetypes,os ,pdftotext
+import base64,math
+import docx ,json,logging,mimetypes,os,pdftotext
 import re,requests,time,urllib.request
 from io import BytesIO
 from PyPDF2 import PdfFileReader
@@ -260,6 +260,52 @@ def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
         return int(total_pages)
     else:
         return int(total_pages)*5
+
+def get_consumable_credits_for_openai_text_generator(total_token):
+    total_consumable_token_credit = math.ceil(total_token/12)
+    return total_consumable_token_credit
+
+
+def openai_text_trim(text):
+    max_len = len(text)-1
+    for i in range(max_len):
+        index = max_len-i
+        str_ch = text[index]
+        if str_ch == '.':
+            text = text[:index+1]
+            break
+    return text
+
+
+import openai
+OPENAI_MODEL = os.getenv('OPENAI_MODEL')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+openai.api_key = OPENAI_API_KEY
+
+
+def openai_endpoint(prompt,max_token=256,
+                    temperature=0.7,frequency_penalty=1,
+                    presence_penalty=1,top_p=1):
+
+    response = openai.Completion.create(
+                model= OPENAI_MODEL,
+                prompt=prompt.strip(),
+                temperature=temperature,
+                max_tokens=max_token,
+                top_p=top_p,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty,
+                stop = ['#'],
+                n=3,
+                logit_bias = {"50256": -100})
+    generated_text = response.get('choices' ,None)
+    if generated_text:
+        # text_gen_openai_ = {i['index']: i['text'] for i in generated_text}
+        text_gen_openai_ = {i['index']:openai_text_trim(i['text']) if i['text'][-1] != "." else i['text'] for i in generated_text}
+        return {'output':text_gen_openai_ , 'usage':response['usage']['completion_tokens']}
+    else:
+        return {'output':'no_output_generated'}
+
 
 
 # def convertio_check_credit(total_pages):
