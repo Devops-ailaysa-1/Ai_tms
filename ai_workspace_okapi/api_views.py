@@ -1587,8 +1587,7 @@ class CommentView(viewsets.ViewSet):
         if by=="segment":
             if split_check(id):
                 print("normal")
-                segment = get_object_or_404(Segment.objects.all(), id=id)
-                #authorize(request, resource=segment, actor=request.user, action="read")
+                segment = get_object_or_404(Segment.objects.all(), id=id)                
                 return segment.segment_comments_set.all()
             else:
                 print("split")
@@ -1598,7 +1597,6 @@ class CommentView(viewsets.ViewSet):
 
         if by=="document":
             document = get_object_or_404(Document.objects.all(), id=id)
-            authorize(request, resource=document, actor=request.user, action="read")
             comments_list=[]
             for segment in document.segments.all():
                 if segment.is_split!=True:
@@ -1617,6 +1615,9 @@ class CommentView(viewsets.ViewSet):
 
     def list(self, request):
         objs = self.get_list_of_objects(request)
+        print("user",request.user)
+        objs = filter_authorize(request, objs, user=request.user, action="read")
+        print("objs",objs)
         ser = CommentSerializer(objs, many=True)
         return Response(ser.data, status=200)
 
@@ -1631,7 +1632,7 @@ class CommentView(viewsets.ViewSet):
         if ser.is_valid(raise_exception=True):
             with transaction.atomic():
                 ser.save()
-                authorize(request, resource=ser.instance, actor=request.user, action="read")
+                authorize(request, resource=ser.instance, actor=request.user, action="create")
             return Response(ser.data, status=201)
 
     def retrieve(self, request, pk=None):
@@ -1640,13 +1641,15 @@ class CommentView(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
+        authorize(request, resource=obj, actor=request.user, action="update")
         ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
         if ser.is_valid(raise_exception=True):
-            ser.save()
+            ser.save()    
             return Response(ser.data, status=202)
 
     def destroy(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
+        authorize(request, resource=obj, actor=request.user, action="delete")
         obj.delete()
         return  Response({},204)
 

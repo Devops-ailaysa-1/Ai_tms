@@ -6,6 +6,8 @@ from django.core.exceptions import PermissionDenied
 from django_oso.auth import authorize
 import django_oso
 
+# from ai_auth.api_views import resync_instances
+
 try:
     default_djstripe_owner=Account.get_default_account()
 except BaseException as e:
@@ -42,6 +44,7 @@ def get_unique_pid(klass, iter_count=1):
 
 
 def get_plan_name(user):
+	from ai_auth.api_views import resync_instances
 	try:
 		customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
 	except Customer.DoesNotExist:
@@ -99,4 +102,13 @@ def objls_is_allowed(obj_ls,action,user):
 		if not django_oso.oso.Oso.is_allowed(
 			actor=user, resource=obj, action=action
 		):
-			raise PermissionDenied
+			raise PermissionDenied	
+
+def unassign_task(user,role_name,task):
+	from ai_auth.models import TaskRoles
+	try:
+		obj = TaskRoles.objects.get(user=user,task_pk=task.id,role__role__name=role_name)
+		obj.delete()
+	except TaskRoles.DoesNotExist:
+		raise ValueError("User is not related to this Task")
+	

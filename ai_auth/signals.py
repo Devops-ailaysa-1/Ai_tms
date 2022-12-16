@@ -275,8 +275,11 @@ assign_object= Signal()
 @receiver(assign_object)
 def assign_object_task(sender, instance,user,role,*args, **kwargs):
     from ai_auth.models import TaskRoles
+    from ai_staff.models import TaskRoleLevel
     # instance.step = 
     # role_name = {1:''Project owner'}  
     # tsk.task_assign.task.job.project.project_manager
-    TaskRoles.objects.create(user=user,task_pk=instance.task_assign.task.id,role=role)
+    role = TaskRoleLevel.objects.get(role__name=role)
+    TaskRoles.objects.create(user=user,task_pk=instance.task_assign.task.id,role=role,proj_pk=instance.task_obj.proj_obj.id)
+    print("task created")
     

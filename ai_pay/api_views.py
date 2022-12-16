@@ -3,8 +3,8 @@ from locale import currency
 from ai_auth.models import AiUser, BillingAddress
 from ai_pay.models import AiInvoicePO, AilaysaGeneratedInvoice, PurchaseOrder,POTaskDetails,POAssignment, StripeSupportedCountries
 from ai_pay.signals import update_po_status
-from ai_staff.models import IndianStates,TaskRoleLevel
-from ai_workspace.models import TaskAssignInfo
+from ai_staff.models import IndianStates
+from ai_workspace.models import TaskAssignInfo,AiRoleandStep
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from django.conf import settings
@@ -500,7 +500,8 @@ def po_modify(task_assign_info_id,po_update):
 
     if 'accepted' in po_update:
         #if instance.owner != instance.task_assign.task.job.project.project_manager:
-        role= TaskRoleLevel.objects.get(step=instance.task_assign.step.name)
+        role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
+        print("role>>",role)
         assign_object.send(
             sender=TaskAssignInfo,
             instance = instance,
@@ -514,6 +515,7 @@ def po_modify(task_assign_info_id,po_update):
             return True
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
+            
 
     if 'accepted_rate_by_owner' in po_update:
         try:

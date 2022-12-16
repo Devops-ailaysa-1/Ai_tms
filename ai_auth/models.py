@@ -5,7 +5,7 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, StripeTaxId, SubjectFields,Countries, TaskRoleLevel,Timezones,SupportType,JobPositions,SupportTopics,Role,Currencies
+from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFields,Countries, TaskRoleLevel,Timezones,SupportType,JobPositions,SupportTopics,Role,Currencies
 from django.db.models.signals import post_save, pre_save
 from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country#,vendorsinfo_update
 from django.contrib.auth.models import Permission, User
@@ -565,13 +565,30 @@ class SocStates(models.Model):
     state = models.CharField(max_length=150,unique=True)
     data = models.CharField(max_length=255, blank=True, null=True)
 
+
+class ProjectRoles(models.Model):
+    role = models.ForeignKey(ProjectRoleLevel,related_name='project_roles',
+        on_delete=models.CASCADE,blank=True, null=True)
+    user = models.ForeignKey(AiUser,related_name='user_project_roles',
+        on_delete=models.CASCADE,blank=True, null=True)
+    proj_pk = models.CharField(_('Project ID'), max_length=255)
+
+    class Meta:
+       constraints = [
+            UniqueConstraint(fields=['role', 'user', 'proj_pk'], name='unique_project_roles')
+        ]
+    @property
+    def role_name(self):
+        return self.role.role.name
+
+
 class TaskRoles(models.Model):
     role = models.ForeignKey(TaskRoleLevel,related_name='task_roles',
         on_delete=models.CASCADE,blank=True, null=True)
     user = models.ForeignKey(AiUser,related_name='user_task_roles',
         on_delete=models.CASCADE,blank=True, null=True)
-    task_pk = models.CharField(_('object ID'), max_length=255)
-    proj_pk = models.CharField(_('project ID'), max_length=255)
+    task_pk = models.CharField(_('Task ID'), max_length=255)
+    proj_pk = models.CharField(_('Project ID'), max_length=255)
 
     class Meta:
        constraints = [

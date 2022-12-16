@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeEngines, Spellcheckers,
+from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeEngines, ProjectRoleLevel, Spellcheckers,
                     SpellcheckerLanguages,SubscriptionPricing,Currencies,SubscriptionPricingPrices,SubscriptionFeatures,
                     CreditsAddons,CreditAddonPrice,IndianStates,StripeTaxId,JobPositions, LanguagesLocale, LanguageScripts,
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
@@ -91,4 +91,5 @@ admin.site.register(VendorLegalCategories)
 admin.site.register(ServiceTypeunits)
 admin.site.register(AiRoles)
 admin.site.register(TaskRoleLevel)
+admin.site.register(ProjectRoleLevel)
 

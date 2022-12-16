@@ -50,20 +50,26 @@ resource ai_workspace::Project{
 
 # has_role(actor: ai_auth::AiUser, role_name: String, resource: Resource) if
 # ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id,role__role__name:role_name).count() != 0;
+
+# For models with task obj
 has_role(actor: ai_auth::AiUser, role_name: String,resource:Resource) if
-resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo]
+resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo,ai_workspace_okapi::Document,
+    ai_workspace_okapi::Segment,ai_workspace_okapi::Comment]
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name:role_name).count() != 0;
 
 # has_role(actor: ai_auth::AiUser, role_name: String, resource : ai_workspace::Project,ai_workspace::ProjectContentType,ai_workspace::ProjectFilesCreateType,
 # ai_workspace::ProjectSteps,ai_workspace::ProjectSubjectField) if
 # ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name:role_name).count() != 0;
 
-
+# For models without task obj
 has_role(actor: ai_auth::AiUser, role_name: String, resource:Resource) if
 resource.__class__ in [ai_workspace::Project,ai_workspace::Job] 
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk__in:resource.proj_obj.get_tasks_pk ,proj_pk:resource.proj_obj.id,role__role__name:role_name).count() != 0;
 
 
+has_role(actor: ai_auth::AiUser, _role_name: "Project owner", resource:Resource) if
+    ai_auth::Team.objects.filter(owner : resource.owner_pk).count() !=0 and 
+    actor in ai_auth::Team.objects.get(owner :resource.owner_pk).get_project_manager;
 
 
 
@@ -95,6 +101,7 @@ rbac_allow(actor: ai_auth::AiUser,action,resource) if
 
 role_allow(actor: ai_auth::AiUser,action,resource) if
    has_permission(actor, action, resource);
+
 
 # has_permission(actor, action, resource)if 
 # [ai_workspace::Job,ai_workspace_okapi::Segment,ai_workspace_okapi::MT_RawTranslation]
@@ -308,6 +315,19 @@ resource ai_workspace::TaskAssignInfo{
     "create" if "Project owner";
     "update" if "Editor";
     "delete" if "Project owner";
+    "Editor" if "Project owner";
+
+}
+
+
+resource ai_workspace_okapi::Comment{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner"];
+
+    "read" if "Editor";
+    "create" if "Editor";
+    "update" if "Editor";
+    "delete" if "Editor";
     "Editor" if "Project owner";
 
 }

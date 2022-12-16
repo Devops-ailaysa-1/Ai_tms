@@ -3,6 +3,7 @@ from django.db.models.fields import NullBooleanField
 from django.utils import timezone
 from django.db import models
 from django.db.models.query import QuerySet
+from django.apps import apps
 
 
 

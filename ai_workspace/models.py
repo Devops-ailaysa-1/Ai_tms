@@ -25,7 +25,7 @@ from django.utils.functional import cached_property
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
-    Currencies, ProjectTypeDetail
+    Currencies, ProjectTypeDetail,AiRoles
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 from .manager import AilzaManager
@@ -1080,6 +1080,10 @@ class MTonlytaskCeleryStatus(models.Model):
     @property
     def owner_pk(self):
         return self.task.owner_pk
+        
+    @property
+    def task_obj(self):
+        return self.task
 
 class TaskAssign(models.Model):
     YET_TO_START = 1
@@ -1155,7 +1159,7 @@ class TaskAssignInfo(models.Model):
 
     @property
     def task_obj(self):
-        return self.task
+        return self.task_assign.task_obj
 
 
 # post_save.connect(assign_object_task, sender=TaskAssignInfo)
@@ -1422,3 +1426,10 @@ class WorkflowSteps(models.Model):
 #         null=False, blank=False, max_length=1000)
 #     text_file = models.FileField(upload_to=get_temp_file_upload_path,\
 #         null=False, blank=False, max_length=1000)
+
+
+class AiRoleandStep(models.Model):
+    role = models.ForeignKey(AiRoles,related_name='step_role',
+        on_delete=models.CASCADE,blank=True, null=True)
+    step = models.ForeignKey(Steps, on_delete=models.CASCADE,
+                        related_name="step_role")

@@ -43,7 +43,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from filesplit.split import Split
-from ai_auth.utils import authorize_list,filter_authorize
+from ai_auth.utils import authorize_list,filter_authorize, unassign_task
 from django_oso.auth import authorize
 logger = logging.getLogger('django')
 
@@ -65,7 +65,7 @@ from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document
 from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long
 from ai_workspace_okapi.utils import get_translation
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
+from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
     ExpressProjectDetail
@@ -1482,10 +1482,15 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 logger.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
-            obj.task_assign.assign_to = user
-            obj.task_assign.status = 1
-            obj.task_assign.save()
-            obj.delete()
+            with transaction.atomic():
+                assigned_user = obj.task_assign.assign_to
+                obj.task_assign.assign_to = user
+                obj.task_assign.status = 1
+                obj.task_assign.save()
+                role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
+                unassign_task(assigned_user,role,obj.task_obj)             
+                obj.delete()
+                
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
 
