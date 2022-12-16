@@ -153,6 +153,8 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
+        html_str = docx_to_html(docx_file_path)
+        txt_field_obj.html_data = html_str
         txt_field_obj.docx_url_field = docx_file_path
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2))
         txt_field_obj.pdf_api_use = "google-ocr"
@@ -285,6 +287,7 @@ def openai_text_trim(text):
 #     else:
 
 def ceil_round_off(token_len):
+    import math
     return math.ceil(len(token_len)/4)
     
 
@@ -353,14 +356,14 @@ def get_consumable_credits_for_openai_text_generator(total_token):
 
 import pypandoc
 def docx_to_html(docx_file_path):
-    extra_args = ["--metadata","title= " , "--self-contained","--standalone","--css","pandoc.css"]
+    extra_args = ["--metadata","title= " , "--self-contained","--standalone"]#,"--css","pandoc.css"]
     output = pypandoc.convert_file(source_file=docx_file_path,
                                    to="html",format='docx',
                                    extra_args=extra_args)
     
-    bootstrap_css = '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">'
-    bootstrap_js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>'
-    return bootstrap_css+bootstrap_js+output
+    #bootstrap_css = '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">'
+    #bootstrap_js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>'
+    return output#bootstrap_css+bootstrap_js+
 
 #     # with open("out1226_final.html",'w') as fp:
 #     #     fp.write(output)
