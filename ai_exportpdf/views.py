@@ -17,6 +17,7 @@ from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.core.files.base import ContentFile
 from .utils import ai_export_pdf,convertiopdf2docx
+from ai_workspace.models import Task
 
 
 
@@ -33,11 +34,17 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
     #filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
 
     def list(self, request):
+        task = request.GET.get('task',None)
         ids = request.query_params.getlist('id',None)
         user = request.user
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
             serializer = PdfFileStatusSerializer(queryset,many=True)
+            return Response(serializer.data)
+        if task:
+            task_obj = Task.objects.get(id=task)
+            queryset = task_obj.pdf_task.last()
+            serializer = PdfFileSerializer(queryset)
             return Response(serializer.data)
         else:
             query_filter = Ai_PdfUpload.objects.filter(user = user).order_by('id')
@@ -69,6 +76,19 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         queryset = Ai_PdfUpload.objects.get(id = pk)
         serializer = PdfFileSerializer(queryset)
         return Response(serializer.data)
+    
+    def update(self,request,pk):
+        task_obj = Task.objects.get(id = pk)
+        ins = task_obj.pdf_task.last()
+        docx_file = request.FILES.get('docx_file')
+        if docx_file:
+            serializer = PdfFileSerializer(ins,data={**request.POST.dict(),"docx_file_from_writer":docx_file},partial=True)
+        else:
+            serializer = PdfFileSerializer(ins,data={**request.POST.dict()},partial=True) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
 
     def destroy(self,request,pk):
         try:

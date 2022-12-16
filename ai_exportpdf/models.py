@@ -34,7 +34,7 @@ class Ai_PdfUpload(models.Model):
     docx_file_name = models.CharField(max_length=200 , null=True, blank=True)
     updated_count = models.IntegerField(blank=True,null=True)
     file_name = models.CharField(max_length=200 , null=True, blank=True)
-    task = models.ForeignKey(to = Task, on_delete = models.CASCADE , null=True, blank=True )
+    task = models.ForeignKey(to = Task, on_delete = models.CASCADE , null=True, blank=True, related_name = 'pdf_task' )
     docx_file_from_writer = models.FileField(upload_to=edited_file_path  , blank=True, null=True)
     html_data =  models.TextField(null=True,blank=True)
 
