@@ -1472,6 +1472,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             obj.task_assign.assign_to = user
+            obj.task_assign.status = 1
             obj.task_assign.save()
             obj.delete()
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
@@ -1537,33 +1538,33 @@ def find_vendor(team,jobs):
 #             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
 #     return externalmembers
 
+class ProjectListFilter(django_filters.FilterSet):
+
+    def filter(self, qs, value):
+        return (pr for pr in qs if pr.get_assignable_tasks_exists == True)
+
 
 
 
 class ProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filterset_class = ProjectListFilter
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
-                    |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+        queryset = Project.objects.filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
-        # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)\
-        #             |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
-        #             |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
         return queryset
 
+
     def list(self,request):
-        proj_list=[]
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
         data = serializer.data
-        for i in data:
-            if i.get('assign_enable')==True and i.get('assignable')==True:
-                proj_list.append(i)
-        return Response(proj_list)
-        # return  Response(serializer.data)
+        return  Response(serializer.data)
+
 
 
 
@@ -2627,6 +2628,32 @@ def voice_project_progress(pr):
         return "Completed"
     elif count != len(pr.get_tasks) or progress != 0:
         return "In Progress"
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def translate_from_pdf(request,task_id):
+    from ai_exportpdf.models import Ai_PdfUpload
+    from ai_exportpdf.views import get_docx_file_path
+    task_obj = Task.objects.get(id = task_id)
+    pdf_obj = Ai_PdfUpload.objects.filter(task_id = task_id).last()
+    # updated_count = pdf_obj.updated_count+1 if pdf_obj.updated_count else 1
+    # pdf_obj.updated_count = updated_count
+    # pdf_obj.save()
+    # docx_file_name = pdf_obj.docx_file_name + '_edited_'+ str(pdf_obj.updated_count)+'.docx'
+    if pdf_obj.pdf_api_use == "convertio":
+        docx_file_path = get_docx_file_path(pdf_obj.id)
+        file = open(docx_file_path,'rb')
+        file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
+    else:
+        file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
+    ins = task_obj.job.project
+    team = True if ins.team else False
+    serlzr = ProjectQuickSetupSerializer(ins, data={"files":[file_obj],'team':[team]},context={"request": request}, partial=True)
+    if serlzr.is_valid():
+        serlzr.save()
+        return Response(serlzr.data)
+    return Response(serlzr.errors)
 
 
 # @api_view(['GET'])

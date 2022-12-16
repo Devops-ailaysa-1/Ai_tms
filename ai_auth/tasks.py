@@ -1,5 +1,6 @@
 from django.core.mail import send_mail
 import smtplib
+from ai_pay.api_views import po_modify_weigted_count
 from celery.utils.log import get_task_logger
 import celery,re,pickle, copy
 import djstripe
@@ -27,7 +28,7 @@ from ai_workspace.models import Task,MTonlytaskCeleryStatus
 import os, json
 from datetime import datetime, timedelta
 from django.db.models import DurationField, F, ExpressionWrapper,Q
-from translate.storage.tmx import tmxfile
+#from translate.storage.tmx import tmxfile
 from celery_progress.backend import ProgressRecorder
 from time import sleep
 
@@ -101,10 +102,9 @@ def sync_invoices_and_charges(days):
 @task
 def renewal_list():
     cycle_date = timezone.now()
-    subs =Subscription.objects.filter(billing_cycle_anchor__year=cycle_date.year,
-                        billing_cycle_anchor__month=cycle_date.month,billing_cycle_anchor__day=cycle_date.day,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=cycle_date.month)).filter(~Q(current_period_end__year=cycle_date.year ,
+    subs =Subscription.objects.filter(billing_cycle_anchor__day=cycle_date.day,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=cycle_date.month)).filter(~Q(current_period_end__year=cycle_date.year ,
                         current_period_end__month=cycle_date.month,current_period_end__day=cycle_date.day))
-    print(subs)
+    logger.info(f"renewal list count {subs.count}")
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
 
@@ -584,20 +584,26 @@ def count_update(job_id):
         for assigns in obj.task_info.filter(task_assign_info__isnull = False):
             existing_wc = assigns.task_assign_info.billable_word_count
             existing_cc = assigns.task_assign_info.billable_char_count
+            word_count = get_weighted_word_count(obj)
+            print("wc----------->",word_count)
+            char_count = get_weighted_char_count(obj)
+            print("cc------------>",char_count)
             if assigns.task_assign_info.account_raw_count == False:
                 if assigns.status == 1:
-                    word_count = get_weighted_word_count(obj)
                     assigns.task_assign_info.billable_word_count = word_count
-                    assigns.task_assign_info.save()
-                    char_count = get_weighted_char_count(obj)
                     assigns.task_assign_info.billable_char_count = char_count
                     assigns.task_assign_info.save()
+                    po_modify_weigted_count([assigns.task_assign_info])
                     if assigns.task_assign_info.mtpe_count_unit_id != None:
                         if assigns.task_assign_info.mtpe_count_unit_id == 1:
+                            print("######################",existing_wc,existing_cc,word_count,char_count)
                             if existing_wc != word_count:
+                                print("Inside if calling notify")
                                 notify_word_count(assigns,word_count,char_count)
                         else:
+                            print("$$$$$$$$$$$$$$$$$$$$$$$$")
                             if existing_cc != char_count:
+                                print("Inside else calling notify")
                                 notify_word_count(assigns,word_count,char_count)
                     #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
     logger.info('billable count updated')
@@ -610,6 +616,7 @@ def weighted_count_update(receiver,sender,assignment_id):
     from ai_workspace.models import TaskAssignInfo
     from ai_tm.api_views import get_weighted_char_count,get_weighted_word_count,notify_word_count
     task_assgn_objs = TaskAssignInfo.objects.filter(assignment_id = assignment_id)
+    task_assign_obj_ls=[]
     for obj in task_assgn_objs:
         existing_wc = obj.task_assign.task_assign_info.billable_word_count
         existing_cc = obj.task_assign.task_assign_info.billable_char_count
@@ -619,9 +626,13 @@ def weighted_count_update(receiver,sender,assignment_id):
         else:
             word_count = obj.task_assign.task.task_word_count
             char_count = obj.task_assign.task.task_char_count
-        obj.billable_char_count = char_count
+        obj.billable_char_count =  char_count
         obj.billable_word_count = word_count
         obj.save()
+
+        if existing_wc != word_count and existing_cc != char_count:
+            task_assign_obj_ls.append(obj)
+
         if receiver !=None and sender!=None:
             print("------------------POST-----------------------------------")
             Receiver = AiUser.objects.get(id = receiver)
@@ -640,6 +651,9 @@ def weighted_count_update(receiver,sender,assignment_id):
                     if existing_cc != char_count:
                         notify_word_count(assigns,word_count,char_count)
     logger.info('billable count updated and mail sent')
+
+    if len(task_assign_obj_ls) != 0:
+         po_modify_weigted_count(task_assign_obj_ls)
 
 
 @task

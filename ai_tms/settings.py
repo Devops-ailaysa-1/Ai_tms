@@ -312,6 +312,10 @@ VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
 
 APPLICATION_URL = os.getenv("APPLICATION_URL")
 
+# OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
+#
+# OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
+
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
 
 ACCOUNT_ADAPTER = 'ai_auth.ai_adapter.MyAccountAdapter'

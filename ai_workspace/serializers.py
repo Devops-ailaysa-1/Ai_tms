@@ -1108,35 +1108,12 @@ class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
        return True if sp else False
 
 class ProjectListSerializer(serializers.ModelSerializer):
-	assign_enable = serializers.SerializerMethodField(method_name='check_role')
-	assignable = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assign_enable","files_jobs_choice_url","assignable", )
+		fields = ("id", "project_name","files_jobs_choice_url",)
 
 
-	def check_role(self, instance):
-		if self.context.get("request")!=None:
-			user = self.context.get("request").user
-		else:user = self.context.get("ai_user", None)
-		if instance.team :
-			return True if ((instance.team.owner == user)\
-				or(instance.team.internal_member_team_info.all().\
-				filter(Q(internal_member_id = user.id) & Q(role_id=1)))\
-				or(instance.team.owner.user_info.all()\
-				.filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-				else False
-		else:
-			return True if ((instance.ai_user == user) or\
-			(instance.ai_user.user_info.all().filter(Q(hired_editor_id = user.id) & Q(role_id=1))))\
-			else False
-
-	def get_assignable(self,instance):
-		if instance.get_assignable_tasks == []:
-			return False
-		else:
-			return True
 
 class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
 	source_lang = serializers.ReadOnlyField(source = 'source_lang.language')
@@ -1218,7 +1195,7 @@ class GetAssignToSerializer(serializers.Serializer):
 			tt=[]
 		request = self.context['request']
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		qs_ = qs.filter(hired_editor__is_active = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
 		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
 		for i in ser:
 			if i.get("vendor_lang_pair")!=[]:
@@ -1367,15 +1344,19 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
+				task_assign_data.update({'status':1})
 				po_update.append('assign_to')
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
 			task_detail = data.get('task_assign_info')
-			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail) or ('estimated_hours' in task_detail)):
+			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail) or ('estimated_hours' in task_detail) or ('mtpe_count_unit' in task_detail)):
 				if instance.task_assign_info.task_ven_status == "change_request":
 					msg_send_customer_rate_change(instance)
 					# editing po
+					print("inside accepted rate")
 					po_update.append('accepted_rate')
+				else:
+					po_update.append('accepted_rate_by_owner')
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 
 			if 'task_ven_status' in data.get('task_assign_info'):

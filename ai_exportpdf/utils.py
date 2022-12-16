@@ -200,11 +200,11 @@ def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
     lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
     pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path)[0]
- 
+
     if (pdf_text_ocr_check == 'ocr') or \
                 (lang in google_ocr_indian_language):
         response_result = ai_export_pdf.apply_async((id, ),)
-        
+
         file_details.pdf_task_id = response_result.id
         file_details.save()
         logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
@@ -229,7 +229,7 @@ def project_pdf_conversion(id):
     file_obj = ContentFile(task_details.file.file.read(),task_details.file.filename)
     initial_credit = user.credit_balance.get("total_left")
     file_format,page_length = file_pdf_check(task_details.file.file.path)
- 
+
     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
     if initial_credit > consumable_credits:
         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
@@ -238,7 +238,7 @@ def project_pdf_conversion(id):
         lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
         if (file_format == 'ocr') or (lang in google_ocr_indian_language):
-            
+
             response_result = ai_export_pdf.apply_async((file_details.id, ),)
             file_details.pdf_task_id = response_result.id
             file_details.save()
@@ -264,8 +264,9 @@ def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
 
 
 def openai_text_trim(text):
-    text = re.search("(\.[^.]*)$",text, re.MULTILINE)
-    text = txt[:text.start()]+"."
+    reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
+    if reg_text:
+        text = text[:reg_text.start()]+"."
     
     # max_len = len(text)-1
     # for i in range(max_len):
@@ -305,14 +306,18 @@ def openai_endpoint(prompt,max_token=256,
                 stop = ['#'],
                 n=3,
                 logit_bias = {"50256": -100})
+    print("resp--->" , response)
     generated_text = response.get('choices' ,None)
     if generated_text:
-        # text_gen_openai_ = {i['index']: i['text'] for i in generated_text}
-        text_gen_openai_ = {i['index']:openai_text_trim(i['text']) if i['text'][-1] != "." else i['text'] for i in generated_text}
+        print("generated_text" , generated_text)
+        text_gen_openai_ = {}
+        for i in generated_text:
+            if i['text'][-1] !='.' and i['text']:
+                i['text'] = openai_text_trim(i['text']) 
+            text_gen_openai_[i['index']] = i['text']
         return {'output':text_gen_openai_ , 'usage':response['usage']['completion_tokens']}
     else:
         return {'output':'no_output_generated'}
-    
     
     # prompt = prompt.strip()
     # tem = [0.7, 0.6 ,0.5]
@@ -357,5 +362,5 @@ def docx_to_html(docx_file_path):
     bootstrap_js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>'
     return bootstrap_css+bootstrap_js+output
 
-    # with open("out1226_final.html",'w') as fp:
-    #     fp.write(output)
+#     # with open("out1226_final.html",'w') as fp:
+#     #     fp.write(output)

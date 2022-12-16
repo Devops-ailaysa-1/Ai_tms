@@ -105,7 +105,7 @@ def write_commons(workbook, worksheet, proj):
     proj_row = 6
     write_common_rows(workbook, worksheet, proj_row)
 
-    tasks = proj.get_tasks
+    tasks = proj.get_mtpe_tasks
     for task in tasks:
         proj_row += 5
         write_common_rows(workbook, worksheet, proj_row)
@@ -155,7 +155,7 @@ def write_task_details(workbook, worksheet, proj, proj_row):
         'align': 'left',
     })
 
-    tasks = proj.get_tasks
+    tasks = proj.get_mtpe_tasks
     for task in tasks:
         if task == tasks[0]:
             proj_row += 2
@@ -175,7 +175,7 @@ def write_data(workbook, worksheet, proj):
     write_task_details(workbook, worksheet, proj, proj_row)
 
     # Adding word count from each task
-    task_wcs = WordCountGeneral.objects.filter(project_id=proj.id)
+    task_wcs = WordCountGeneral.objects.filter(project_id=proj.id).order_by('tasks','-id').distinct('tasks')
     for tk_wc in task_wcs:
         pnew += tk_wc.new_words
         prep += tk_wc.repetition

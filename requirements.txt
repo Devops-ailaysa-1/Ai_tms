@@ -212,3 +212,4 @@ google-cloud==0.34.0
 translate-toolkit==3.7.3
 rapidfuzz
 openai==0.25.0
+pypandoc==1.10

@@ -1,14 +1,26 @@
 from django.db import models
 from django.utils.text import slugify
 from ai_auth.models import AiUser
-from ai_workspace.models import Task 
+from ai_workspace.models import Task
+import os
+
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_file",filename)
+
+def edited_file_path(instance, filename):
+    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
+            "Edited", filename)
+    return file_path
+
+def pdf_converted_file_path(instance, filename):
+    file_path = os.path.join(instance.user.uid,"pdf_file", filename)
+    return file_path
 
 class Ai_PdfUpload(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     pdf_file = models.FileField(upload_to=user_directory_path  , blank=False, null=False)
     docx_url_field = models.URLField(null=True, blank=True)
+    #docx_file = models.FileField(upload_to=pdf_converted_file_path,null=True,blank=True)
     pdf_file_name = models.CharField(max_length=200 , null=True, blank=True)
     pdf_task_id = models.CharField(max_length=200 , null=True, blank=True)
     pdf_conversion_sec = models.IntegerField(null=True, blank=True)
@@ -18,10 +30,13 @@ class Ai_PdfUpload(models.Model):
     pdf_no_of_page =  models.IntegerField(null=True, blank=True)
     counter = models.IntegerField(null=True, blank=True )
     status = models.CharField(max_length=200 , null=True, blank=True)
-    slug = models.SlugField(default="", blank=True, null=True, db_index=True)
+    #slug = models.SlugField(default="", blank=True, null=True, db_index=True)
     docx_file_name = models.CharField(max_length=200 , null=True, blank=True)
+    updated_count = models.IntegerField(blank=True,null=True)
     file_name = models.CharField(max_length=200 , null=True, blank=True)
     task = models.ForeignKey(to = Task, on_delete = models.CASCADE , null=True, blank=True )
+    docx_file_from_writer = models.FileField(upload_to=edited_file_path  , blank=True, null=True)
+    html_data =  models.TextField(null=True,blank=True)
 
     def save(self, *args, **kwargs):
         # if self.id:
@@ -30,9 +45,44 @@ class Ai_PdfUpload(models.Model):
         #     count = Ai_PdfUpload.objects.filter(file_name__contains=self.file_name).count()
         # print(count)
         # if count!=0:
-        #     self.pdf_file_name = str(self.file_name).split(".pdf")[0] + "(" + str(count) + ").pdf" 
+        #     self.pdf_file_name = str(self.file_name).split(".pdf")[0] + "(" + str(count) + ").pdf"
         return super().save()
-    
+    @property
+    def filename(self):
+        return  os.path.basename(self.pdf_file.file.name)
     # def __str__(self):
     #     return self.name
+
+# class PromptList(models.Model):
+#     prompt = models.CharField(max_length=300, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+
+# class ModelGPTName(models.Model):
+#     model_name = models.CharField(max_length=40, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+#     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+# class TokenUsage(models.Model):
+#     user_input_token = models.CharField(max_length=10, null=True, blank=True)
+#     prompt_tokens =  models.CharField(max_length=10, null=True, blank=True)
+#     total_tokens =  models.CharField(max_length=10, null=True, blank=True)
+#     completion_tokens = models.CharField(max_length=10, null=True, blank=True)
+#     no_of_outcome = models.CharField(max_length=10, null=True, blank=True)
     
+# class ContentCatagories(models.Model):
+#     pass
+
+# class AiWriter(models.Model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     prompt = models.CharField(max_length = 1000, null=True, blank=True)
+#     text = models.CharField()
+#     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE)
+#     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE)
+#     response_id =  models.CharField(max_length = 50, null=True, blank=True)
+#     response_created =  models.CharField(max_length = 50, null=True, blank=True)
+#     catagories = models.ForeignKey(to= ContentCatagories, on_delete = models.CASCADE)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+    
+ 
