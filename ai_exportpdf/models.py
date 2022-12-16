@@ -52,3 +52,37 @@ class Ai_PdfUpload(models.Model):
         return  os.path.basename(self.pdf_file.file.name)
     # def __str__(self):
     #     return self.name
+
+# class PromptList(models.Model):
+#     prompt = models.CharField(max_length=300, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+
+# class ModelGPTName(models.Model):
+#     model_name = models.CharField(max_length=40, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+#     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+# class TokenUsage(models.Model):
+#     user_input_token = models.CharField(max_length=10, null=True, blank=True)
+#     prompt_tokens =  models.CharField(max_length=10, null=True, blank=True)
+#     total_tokens =  models.CharField(max_length=10, null=True, blank=True)
+#     completion_tokens = models.CharField(max_length=10, null=True, blank=True)
+#     no_of_outcome = models.CharField(max_length=10, null=True, blank=True)
+    
+# class ContentCatagories(models.Model):
+#     pass
+
+# class AiWriter(models.Model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     prompt = models.CharField(max_length = 1000, null=True, blank=True)
+#     text = models.CharField()
+#     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE)
+#     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE)
+#     response_id =  models.CharField(max_length = 50, null=True, blank=True)
+#     response_created =  models.CharField(max_length = 50, null=True, blank=True)
+#     catagories = models.ForeignKey(to= ContentCatagories, on_delete = models.CASCADE)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+    
+ 
