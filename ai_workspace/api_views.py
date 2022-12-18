@@ -68,7 +68,7 @@ from .models import Project, Job, File, ProjectContentType, ProjectSubjectField,
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
     ExpressProjectDetail
 from .models import Task
-from .models import TbxFile, Instructionfiles
+from .models import TbxFile, Instructionfiles, MyDocuments
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -80,7 +80,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
-                          ExpressProjectDetailSerializer)
+                          ExpressProjectDetailSerializer,MyDocumentSerializer)
 from .utils import DjRestUtils
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
 
@@ -2654,6 +2654,73 @@ def translate_from_pdf(request,task_id):
         serlzr.save()
         return Response(serlzr.data)
     return Response(serlzr.errors)
+
+
+class MyDocFilter(django_filters.FilterSet):
+    doc_name = django_filters.CharFilter(lookup_expr='icontains')
+    class Meta:
+        model = MyDocuments
+        fields = ['doc_name']
+
+
+class MyDocumentsView(viewsets.ModelViewSet):
+
+    serializer_class = MyDocumentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    ordering_fields = ['doc_name','id']
+    filterset_class = MyDocFilter
+    paginator = PageNumberPagination()
+    ordering = ('-id')
+    paginator.page_size = 20
+    # https://www.django-rest-framework.org/api-guide/filtering/
+
+    def get_queryset(self):
+        user = self.request.user.team.owner if self.request.user.team else self.request.user 
+        return MyDocuments.objects.filter(ai_user=user)#.order_by('-id')
+        
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        serializer = MyDocumentSerializer(pagin_tc, many=True, context={'request': request})
+        response = self.get_paginated_response(serializer.data)
+        return  response
+
+    def create(self, request):
+        file = request.FILES.get('file',None)
+        ai_user = request.user.team.owner if request.user.team else request.user
+        ser = MyDocumentSerializer(data={**request.POST.dict(),'file':file,'ai_user':ai_user.id,'created_by':request.user.id})
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=201)
+        return Response(ser.errors)
+        
+    def update(self, request, pk, format=None):
+        ins = MyDocuments.objects.get(id=pk)
+        file = request.FILES.get('file')
+        if file:
+            ser = MyDocumentSerializer(ins,data={**request.POST.dict(),'file':file},partial=True)
+        else:
+             ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
+        if ser.is_valid(raise_exception=True):
+            ser.save()
+            return Response(ser.data, status=201)
+        return Response(ser.errors)
+
+    def destroy(self, request, pk):
+        ins = MyDocuments.objects.get(id=pk)
+        if ins.file:
+            os.remove(ins.file.path)
+        ins.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+        
+
+
+
+
+
+
 
 
 # @api_view(['GET'])
