@@ -569,11 +569,11 @@ LOGGING = {
         #     'level': 'INFO',
         #     'propagate': True,
         # },
-        '': {
-            'handlers': ['console' ],
-            'level': 'INFO',
-            'propagate': False,
-        },
+        #'': {
+        #    'handlers': ['console' ],
+        #    'level': 'INFO',
+        #    'propagate': False,
+        #},
         # 'django.request': {
         #     'handlers': ['fluentdebug'],
         #     'level': 'DEBUG',
@@ -582,12 +582,12 @@ LOGGING = {
     },
 
     'handlers' : {
-        'console':{
-            'class' : 'logging.StreamHandler',
-            'level': 'INFO',
-            'formatter': 'dev_formatter',
-            'stream': 'ext://sys.stdout',
-        },
+        #'console':{
+        #    'class' : 'logging.StreamHandler',
+        #    'level': 'INFO',
+        #    'formatter': 'dev_formatter',
+        #    'stream': 'ext://sys.stdout',
+        #},
         'file' : {
             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
             'class' : 'logging.FileHandler',
