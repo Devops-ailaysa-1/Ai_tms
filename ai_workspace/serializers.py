@@ -5,7 +5,7 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectT
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,\
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail#,TaskAssignRateInfo
 import json,os
@@ -721,6 +721,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 class InstructionfilesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Instructionfiles
+        fields = "__all__"
+        
+class MyDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyDocuments
         fields = "__all__"
 
 class TaskAssignSerializer(serializers.ModelSerializer):
