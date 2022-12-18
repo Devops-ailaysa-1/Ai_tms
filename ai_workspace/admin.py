@@ -1,6 +1,7 @@
 from django.contrib import admin
 
-from .models import File, Project, Job, Version, PenseiveTM, File, Steps, Workflows, WorkflowSteps, ProjectFilesCreateType,TaskAssignInfo,Task
+from ai_workspace.models import File, Project, Job, Version, PenseiveTM, File, Steps, Workflows, WorkflowSteps, ProjectFilesCreateType,\
+    TaskAssignInfo,Task,AiRoleandStep
 
 
 # Register your models here.
@@ -17,3 +18,4 @@ admin.site.register(WorkflowSteps)
 admin.site.register(ProjectFilesCreateType)
 admin.site.register(TaskAssignInfo)
 admin.site.register(Task)
+admin.site.register(AiRoleandStep)

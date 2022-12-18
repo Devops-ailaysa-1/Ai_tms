@@ -85,6 +85,7 @@ from ai_auth.Aiwebhooks import update_user_credits
 from allauth.account.signals import email_confirmed
 from ai_auth.signals import send_campaign_email
 #from django_oso.decorators import authorize_request
+from django_oso.auth import authorize, authorize_model
 
 logger = logging.getLogger('django')
 
@@ -2331,4 +2332,33 @@ def stripe_resync_instance(instance):
 @api_view(['GET'])
 #@authorize_request
 def oso_test(request):
+    from ai_workspace.models import Task
+    from ai_workspace_okapi.models import Document
+    usr_attr = UserAttribute.objects.get(user= request.user)
+    authorize(request, resource=usr_attr, actor=request.user, action="read")
+    print("authorized user attribute")
+    tsk = Task.objects.get(id=2867)
+    doc = Document.objects.get(id=1684)
+    authorize(request, resource=doc, actor=request.user, action="read")
     return JsonResponse({"msg":"sucess"},status=200)
+
+
+
+@api_view(['GET'])
+#@authorize_request
+def oso_test_querys(request):
+    from ai_workspace.models import Task
+    from ai_workspace_okapi.models import Document
+    usr_attr = UserAttribute.objects.get(user= request.user)
+    authorize(request, resource=usr_attr, actor=request.user, action="read")
+    print("authorized user attribute")
+    tsk = Task.objects.get(id=2867)
+    #doc = Document.objects.filter(id=1684)
+    #repo_filter = authorize_model(request, Document, action="read")
+    fil = Document.objects.authorize(request, actor=request.user, action="read")
+    print("test")
+    #Document.objects.authorize(request, actor=request.user, action="read")
+    print(fil)
+    return JsonResponse({"msg":"sucess"},status=200)
+
+

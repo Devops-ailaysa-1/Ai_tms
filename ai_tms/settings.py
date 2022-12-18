@@ -19,6 +19,8 @@ load_dotenv(".env2")
 from pathlib import Path
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+import logging.config
+import yaml
 
 # from fluent import sender
 # from fluent import event
@@ -146,11 +148,12 @@ INSTALLED_APPS = [
     'django_filters',
     'notifications',
     'storages',
-    "guardian",
+    #"guardian",
     'django_celery_results',
     "ai_pay",
     "ai_qa",
-    #'django_oso'
+    'silk',
+    'django_oso',
     #"ai_tm_management",
     "ai_tm",
     # 'dbbackup',
@@ -182,6 +185,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'silk.middleware.SilkyMiddleware',
     # "middlewares.error_middleware.error_middleware",
     # "middlewares.error_middleware.StackOverflowMiddleware"
 ]
@@ -520,6 +524,11 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
 
+# with open('./logging.yaml', 'r') as stream:
+#     config = yaml.load(stream, Loader=yaml.FullLoader)
+
+# logging.config.dictConfig(config)
+
 LOGGING = {
     'version' : 1,
     'disable_existing_loggers' : False,
@@ -560,11 +569,11 @@ LOGGING = {
         #     'level': 'INFO',
         #     'propagate': True,
         # },
-        # '': {
-        #     'handlers': ['console','fluentinfo'],
-        #     'level': 'INFO',
-        #     'propagate': False,
-        # },
+        '': {
+            'handlers': ['console' ],
+            'level': 'INFO',
+            'propagate': False,
+        },
         # 'django.request': {
         #     'handlers': ['fluentdebug'],
         #     'level': 'DEBUG',
@@ -573,12 +582,12 @@ LOGGING = {
     },
 
     'handlers' : {
-        # 'console':{
-        #     'class' : 'logging.StreamHandler',
-        #     'level': 'INFO',
-        #     'formatter': 'dev_formatter',
-        #     'stream': 'ext://sys.stdout',
-        # },
+        'console':{
+            'class' : 'logging.StreamHandler',
+            'level': 'INFO',
+            'formatter': 'dev_formatter',
+            'stream': 'ext://sys.stdout',
+        },
         'file' : {
             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
             'class' : 'logging.FileHandler',
@@ -653,4 +662,9 @@ OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 
+
 RUST_BACKTRACE=1
+
+
+SILKY_AUTHENTICATION = True  # User must login
+SILKY_AUTHORISATION = True  # User must have permissions
