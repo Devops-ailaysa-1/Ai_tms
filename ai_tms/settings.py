@@ -569,11 +569,11 @@ LOGGING = {
         #     'level': 'INFO',
         #     'propagate': True,
         # },
-        '': {
-            'handlers': ['console' ],
-            'level': 'INFO',
-            'propagate': False,
-        },
+        #'': {
+        #    'handlers': ['console' ],
+        #    'level': 'INFO',
+        #    'propagate': False,
+        #},
         # 'django.request': {
         #     'handlers': ['fluentdebug'],
         #     'level': 'DEBUG',
@@ -582,12 +582,12 @@ LOGGING = {
     },
 
     'handlers' : {
-        'console':{
-            'class' : 'logging.StreamHandler',
-            'level': 'INFO',
-            'formatter': 'dev_formatter',
-            'stream': 'ext://sys.stdout',
-        },
+        #'console':{
+        #    'class' : 'logging.StreamHandler',
+        #    'level': 'INFO',
+        #    'formatter': 'dev_formatter',
+        #    'stream': 'ext://sys.stdout',
+        #},
         'file' : {
             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
             'class' : 'logging.FileHandler',
@@ -657,7 +657,8 @@ sentry_sdk.init(
 GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
 CONVERTIO_API = os.getenv("convertio_api")
 STRIPE_DASHBOARD_URL = os.getenv("STRIPE_DASHBOARD_URL")
-
+OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 

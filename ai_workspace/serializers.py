@@ -5,10 +5,10 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectT
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,\
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail#,TaskAssignRateInfo
-import json
+import json,os
 import pickle,itertools
 from ai_workspace import forms as ws_forms
 from notifications.signals import notify
@@ -740,6 +740,11 @@ class InstructionfilesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Instructionfiles
         fields = "__all__"
+        
+class MyDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyDocuments
+        fields = "__all__"
 
 class TaskAssignSerializer(serializers.ModelSerializer):
 	task_info = TaskSerializer(required=False,many=True)
@@ -935,6 +940,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	open_in =  serializers.SerializerMethodField()
 	transcribed = serializers.SerializerMethodField()
 	text_to_speech_convert_enable = serializers.SerializerMethodField()
+	converted = serializers.SerializerMethodField()
 	# can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
@@ -944,9 +950,30 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id", "filename", "download_audio_source_file", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open")
+			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted')
 
+	def get_converted(self,obj):
+		if obj.job.project.project_type_id == 4 :
+				if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+					if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+						return True
+					else:return False
+				elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+					if obj.job.target_language==None:
+						if obj.task_transcript_details.exists():
+							return True
+						else:return False
+					else:return None
+				else:return None
+		elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+				if obj.pdf_task.all().exists() == True:
+					return True
+				else:return False
+			else:return None
+		else:return None
 
+     
 	def get_transcribed(self,obj):
 		if obj.job.project.project_type_id == 4 :
 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
@@ -971,15 +998,21 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		try:
 			if obj.job.project.project_type_id == 5:
 				return "ExpressEditor"
-			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-				if obj.job.target_language==None:
-					return "Ailaysa Writer or Text Editor"
-				else:
-					return "Transeditor"
-			elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-				if obj.job.target_language==None:
-					return "Download"
-				else:return "Transeditor"
+			elif obj.job.project.project_type_id == 4:
+				if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+					if obj.job.target_language==None:
+						return "Ailaysa Writer or Text Editor"
+					else:
+						return "Transeditor"
+				elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+					if obj.job.target_language==None:
+						return "Download"
+					else:return "Transeditor"
+			elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+				if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+					try:return obj.pdf_task.last().pdf_api_use
+					except:return None
+				else:return "Transeditor"	
 			else:return "Transeditor"
 		except:
 			try:
