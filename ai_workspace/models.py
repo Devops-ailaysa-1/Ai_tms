@@ -105,6 +105,38 @@ class Workflows(models.Model):
     def __str__(self):
         return self.name
 
+def my_docs_upload_path(instance, filename):
+    file_path = os.path.join(instance.user.uid,"MyDocuments", filename)
+    return file_path
+    
+class MyDocuments(models.Model):
+    file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
+    doc_name = models.CharField(max_length=1000, null=True, blank=True,)
+    html_data = models.TextField(null=True,blank=True)
+    created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'doc_created_by')
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE,related_name = 'credit_debit_user')
+    source_language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE, related_name="doc_source_lang")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    
+    def save(self, *args, **kwargs):
+      
+        if not self.doc_name:
+            self.doc_name = 'Document-'+str(MyDocuments.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
+            
+        if self.id:
+            
+            doc_count = MyDocuments.objects.filter(doc_name__icontains=self.doc_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+        else:
+            doc_count = MyDocuments.objects.filter(doc_name__icontains=self.doc_name, \
+                            ai_user=self.ai_user,).count()
+        if doc_count != 0:
+            self.doc_name = self.doc_name + "(" + str(doc_count) + ")"
+
+        return super().save()
+
 ##########################Need to add project type################################
 class Project(models.Model):
     project_type = models.ForeignKey(ProjectType, null=False, blank=False,on_delete=models.CASCADE,default=1)

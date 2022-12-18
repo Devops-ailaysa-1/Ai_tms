@@ -123,8 +123,11 @@ class ConversionPortableDoc(APIView):
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
-def docx_file_download(request,id):
-    pdf_doc_file = Ai_PdfUpload.objects.get(id=id).pdf_file.path
+def docx_file_download(request):
+    task_id = request.GET.get('task_id')
+    obj_id = request.GET.get('id')
+    if obj_id:pdf_doc_file = Ai_PdfUpload.objects.get(id=obj_id).pdf_file.path
+    else:pdf_doc_file = Ai_PdfUpload.objects.get(task_id=task_id).pdf_file.path
     if pdf_doc_file:
         docx_file_path = str(pdf_doc_file).split(".pdf")[0] +".docx"
         return download_file(docx_file_path)
