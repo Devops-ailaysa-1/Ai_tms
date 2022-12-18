@@ -24,25 +24,27 @@ actor ai_auth::AiUser {
 
 resource ai_workspace::Task{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Editor";
     "update" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 resource ai_workspace::Project{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
@@ -196,67 +198,72 @@ res in [ai_workspace::Task,ai_workspace::Document,ai_auth::Team];
 
 resource ai_workspace::Job{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 resource ai_workspace::ProjectContentType{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 resource ai_workspace::ProjectSubjectField{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 resource ai_workspace::ProjectSteps{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 resource ai_workspace_okapi::Segment{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Editor";
     "update" if "Editor";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 resource ai_workspace_okapi::Document{
     permissions = ["read", "create","update","delete","download"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
@@ -264,6 +271,7 @@ resource ai_workspace_okapi::Document{
     "delete" if "Project owner";
     "download" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
@@ -271,63 +279,68 @@ resource ai_workspace_okapi::Document{
 
 resource ai_workspace_okapi::MT_RawTranslation{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Editor";
     "update" if "Editor";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 
 resource ai_workspace::ProjectFilesCreateType{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Project owner";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 
 resource ai_workspace::TaskAssign{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Editor";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 resource ai_workspace::TaskAssignInfo{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Project owner";
     "update" if "Editor";
     "delete" if "Project owner";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
 
 
 resource ai_workspace_okapi::Comment{
     permissions = ["read", "create","update","delete"];
-    roles = ["Editor", "Project owner"];
+    roles = ["Editor", "Project owner","Reviewer"];
 
     "read" if "Editor";
     "create" if "Editor";
     "update" if "Editor";
     "delete" if "Editor";
     "Editor" if "Project owner";
+    "Editor" if "Reviewer";
 
 }
