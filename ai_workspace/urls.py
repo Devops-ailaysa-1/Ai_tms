@@ -28,6 +28,7 @@ router.register(r'project/reference/files', api_views.ReferenceFilesView,\
 router.register(r'steps',api_views.StepsView,basename='steps')
 #router.register(r'tasks',api_views.TaskView,basename='tasks')
 router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
+router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
 urlpatterns = router.urls
 
@@ -87,6 +88,7 @@ urlpatterns += [
 	path('express_save/',api_views.task_segments_save),
 	path('express_task_download/<int:task_id>/',api_views.express_task_download),
 	path('express_project_detail/<int:project_id>/',api_views.express_project_detail),
+	path('translate_from_pdf/<int:task_id>/',api_views.translate_from_pdf),
 ]
 # views urls adding for local testing
 urlpatterns += [

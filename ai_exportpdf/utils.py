@@ -1,5 +1,5 @@
-import base64,math
-import docx ,json,logging,mimetypes,os,pdftotext
+import base64
+import docx ,json,logging,mimetypes,os ,pdftotext
 import re,requests,time,urllib.request
 from io import BytesIO
 from PyPDF2 import PdfFileReader
@@ -12,10 +12,11 @@ from pdf2image import convert_from_path
 from tqdm import tqdm
 from ai_auth.models import UserCredits
 from ai_exportpdf.models import Ai_PdfUpload
-from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API
+from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API ,OPENAI_API_KEY ,OPENAI_MODEL
 from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
 from ai_staff.models import Languages
 from django.db.models import Q
+import math
 logger = logging.getLogger('django')
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -124,7 +125,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
 import tempfile
 #########ocr ######
 @shared_task(serializer='json')
-def ai_export_pdf(id ): # , file_language , file_name , file_path
+def ai_export_pdf(id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
@@ -152,6 +153,8 @@ def ai_export_pdf(id ): # , file_language , file_name , file_path
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
+        html_str = docx_to_html(docx_file_path)
+        txt_field_obj.html_data = html_str
         txt_field_obj.docx_url_field = docx_file_path
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2))
         txt_field_obj.pdf_api_use = "google-ocr"
@@ -194,25 +197,21 @@ def file_pdf_check(file_path):
     return ["text" if len(text)>=700 else "ocr" , len(pdf)]
 
 
-
-def pdf_conversion(id):
-    # print("user-->" ,user)
-    # user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
-
+from ai_workspace.models import Task
+def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
     lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
     pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path)[0]
-    # if lang in google_ocr_indian_language:
+
     if (pdf_text_ocr_check == 'ocr') or \
                 (lang in google_ocr_indian_language):
-        # print("google ocr text",lang)
-        response_result = ai_export_pdf.apply_async((id,),)
-        # print("resp res--->",response_result)
+        response_result = ai_export_pdf.apply_async((id, ),)
+
         file_details.pdf_task_id = response_result.id
         file_details.save()
         logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
         return response_result.id
-    # elif lang in list(lang_codes.keys()):
+
     elif pdf_text_ocr_check == 'text':
         response_result = convertiopdf2docx.apply_async((id,lang ,pdf_text_ocr_check),0)
         file_details.pdf_task_id = response_result.id
@@ -223,40 +222,84 @@ def pdf_conversion(id):
         return "error"
 
 
+
+from django.core.files.base import ContentFile
+from ai_workspace.api_views import UpdateTaskCreditStatus
+def project_pdf_conversion(id):
+    task_details = Task.objects.get(id = id)
+    user = task_details.job.project.ai_user
+    file_obj = ContentFile(task_details.file.file.read(),task_details.file.filename)
+    initial_credit = user.credit_balance.get("total_left")
+    file_format,page_length = file_pdf_check(task_details.file.file.path)
+
+    consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+    if initial_credit > consumable_credits:
+        Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
+                                   pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
+        file_details = Ai_PdfUpload.objects.filter(task = task_details).last()
+        lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+        if (file_format == 'ocr') or (lang in google_ocr_indian_language):
+
+            response_result = ai_export_pdf.apply_async((file_details.id, ),)
+            file_details.pdf_task_id = response_result.id
+            file_details.save()
+            return response_result.id ,file_details.id
+        elif file_format == 'text':
+            response_result = convertiopdf2docx.apply_async((file_details.id,lang ,file_format),0)
+            file_details.pdf_task_id = response_result.id
+            file_details.save()
+            return response_result.id ,file_details.id
+        else:
+            return "error"
+    else:
+        return Response({'msg':'Insufficient Credits'},status=400)
+
+
+
+
 def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
     if formats == 'text':
         return int(total_pages)
     else:
         return int(total_pages)*5
 
-def get_consumable_credits_for_openai_text_generator(total_token):
-    total_consumable_token_credit = math.ceil(total_token/12)
-    return total_consumable_token_credit
-
 
 def openai_text_trim(text):
-    max_len = len(text)-1
-    for i in range(max_len):
-        index = max_len-i
-        str_ch = text[index]
-        if str_ch == '.':
-            text = text[:index+1]
-            break
+    reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
+    if reg_text:
+        text = text[:reg_text.start()]+"."
+    
+    # max_len = len(text)-1
+    # for i in range(max_len):
+    #     index = max_len-i
+    #     str_ch = text[index]
+    #     if str_ch == '.':
+    #         text = text[:index+1]
+    #         break
     return text
 
+# def convertio_check_credit(total_pages):
+#     if total_pages <=50:
+#         credit = 75
+#     elif total_pages <=100:
+#         credit = 150
+#     else:
+
+def ceil_round_off(token_len):
+    import math
+    return math.ceil(len(token_len)/4)
+    
 
 import openai
-OPENAI_MODEL = os.getenv('OPENAI_MODEL')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 openai.api_key = OPENAI_API_KEY
-
 
 def openai_endpoint(prompt,max_token=256,
                     temperature=0.7,frequency_penalty=1,
                     presence_penalty=1,top_p=1):
-
+ 
     response = openai.Completion.create(
-                model= OPENAI_MODEL,
+                model=OPENAI_MODEL,# "text-curie-001", 
                 prompt=prompt.strip(),
                 temperature=temperature,
                 max_tokens=max_token,
@@ -266,19 +309,61 @@ def openai_endpoint(prompt,max_token=256,
                 stop = ['#'],
                 n=3,
                 logit_bias = {"50256": -100})
+    print("resp--->" , response)
     generated_text = response.get('choices' ,None)
     if generated_text:
-        # text_gen_openai_ = {i['index']: i['text'] for i in generated_text}
-        text_gen_openai_ = {i['index']:openai_text_trim(i['text']) if i['text'][-1] != "." else i['text'] for i in generated_text}
+        print("generated_text" , generated_text)
+        text_gen_openai_ = {}
+        for i in generated_text:
+            if i['text'][-1] !='.' and i['text']:
+                i['text'] = openai_text_trim(i['text']) 
+            text_gen_openai_[i['index']] = i['text']
         return {'output':text_gen_openai_ , 'usage':response['usage']['completion_tokens']}
     else:
         return {'output':'no_output_generated'}
+    
+    # prompt = prompt.strip()
+    # tem = [0.7, 0.6 ,0.5]
+    # text_gen_openai = {}
+    # tokn_len = []
+    # for count,i in enumerate(tem):
+    #     response = openai.Completion.create(
+    #             model=  OPENAI_MODEL,
+    #             prompt=prompt,
+    #             temperature=i,
+    #             max_tokens=max_token,
+    #             top_p=top_p,
+    #             frequency_penalty=frequency_penalty,
+    #             presence_penalty=presence_penalty,
+    #             stop = ['#'],
+    #             n=1,
+    #             logit_bias={"50256": -100},echo= True)
+    #     generated_text = response['choices'][0].text
+    #     text_gen_openai[count] = generated_text
+    #     tokn_len.append(response['usage']['completion_tokens'])
+    # print({'output':text_gen_openai , 'usage':sum(tokn_len)})
+    # return {'output':text_gen_openai , 'usage':sum(tokn_len)}
+    
+    
+
+    
+def get_consumable_credits_for_openai_text_generator(total_token):
+    total_consumable_token_credit = math.ceil(total_token/12)     
+    return total_consumable_token_credit
+ 
 
 
 
-# def convertio_check_credit(total_pages):
-#     if total_pages <=50:
-#         credit = 75
-#     elif total_pages <=100:
-#         credit = 150
-#     else:
+import pypandoc
+def docx_to_html(docx_file_path):
+    extra_args = ["--metadata","title= " , "--self-contained","--standalone"]#,"--css","pandoc.css"]
+    output = pypandoc.convert_file(source_file=docx_file_path,
+                                   to="html",format='docx',
+                                   extra_args=extra_args)
+    
+    #bootstrap_css = '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">'
+    #bootstrap_js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>'
+    return output#bootstrap_css+bootstrap_js+
+
+#     # with open("out1226_final.html",'w') as fp:
+#     #     fp.write(output)
