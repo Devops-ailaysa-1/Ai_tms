@@ -43,6 +43,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from filesplit.split import Split
+from ai_auth.utils import authorize_list,filter_authorize, unassign_task
+from django_oso.auth import authorize
 logger = logging.getLogger('django')
 
 from ai_auth.models import AiUser, UserCredits
@@ -63,7 +65,7 @@ from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document
 from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long
 from ai_workspace_okapi.utils import get_translation
-from .models import Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
+from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
     ExpressProjectDetail
@@ -452,7 +454,10 @@ class Files_Jobs_List(APIView):
     def get_queryset(self, project_id):
         project = get_object_or_404(Project.objects.all(), id=project_id)
                         # ai_user=self.request.user)
+        authorize(self.request, resource=project, actor=self.request.user, action="read")
+        #project = filter_authorize(self.request,project,"read",self.request.user)
         jobs = project.project_jobs_set.all()
+        jobs = filter_authorize(self.request,jobs,"read",self.request.user)
         contents = project.proj_content_type.all()
         subjects = project.proj_subject.all()
         steps = project.proj_steps.all()
@@ -675,6 +680,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        queryset = filter_authorize(self.request,queryset,'read',self.request.user)
         return queryset
 
         # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
@@ -813,6 +819,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_object(self):
         tasks = Task.objects.order_by("-id").all()
         tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
+        tasks = authorize_list(tasks,"read",self.request.user)
         return tasks
 
     def list(self, request, *args, **kwargs):
@@ -825,7 +832,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def retrieve(self, request, pk, format=None):
         print("%%%%")
         tasks = self.get_tasks_by_projectid(pk=pk)
-        print(tasks)
+        print("tasks",tasks)
+        tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
         return Response(serlzr.data, status=200)
 
@@ -1409,6 +1417,9 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task = request.POST.getlist('task')
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
         tasks= [json.loads(i) for i in task]
+        tsks = Task.objects.filter(id__in=tasks)
+        for tsk in tsks:
+            authorize(request, resource=tsk, actor=request.user, action="read")
         job_id = Task.objects.get(id=tasks[0]).job.id
         assignment_id = create_assignment_id()
         with transaction.atomic():
@@ -1494,10 +1505,15 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 logger.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
             self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
-            obj.task_assign.assign_to = user
-            obj.task_assign.status = 1
-            obj.task_assign.save()
-            obj.delete()
+            with transaction.atomic():
+                assigned_user = obj.task_assign.assign_to
+                obj.task_assign.assign_to = user
+                obj.task_assign.status = 1
+                obj.task_assign.save()
+                role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
+                unassign_task(assigned_user,role,obj.task_obj)             
+                obj.delete()
+                
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
 
@@ -1597,6 +1613,7 @@ def tasks_list(request):
     job_id = request.GET.get("job")
     try:
         job = Job.objects.get(id = job_id)
+        authorize(request, resource=job, actor=request.user, action="read")
         #tasks = job.job_tasks_set.all()
         tasks=[]
         for task in job.job_tasks_set.all():
@@ -1607,7 +1624,7 @@ def tasks_list(request):
             else:tasks.append(task)
         ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request})
         return Response(ser.data)
-    except:
+    except Job.DoesNotExist:
         return JsonResponse({"msg":"No job exists"})
 
 
@@ -1657,7 +1674,15 @@ class AssignToListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def list(self, request, *args, **kwargs):
         project = self.request.GET.get('project')
-        user = Project.objects.get(id = project).ai_user
+        job = self.request.GET.get('job')
+        pro = Project.objects.get(id = project)
+        try:
+            job_obj = Job.objects.get(id = job)
+            authorize(request, resource=job_obj, actor=request.user, action="read")
+        except Job.DoesNotExist:
+            pass
+        authorize(request, resource=pro, actor=request.user, action="read")
+        user =pro.ai_user    
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
 
