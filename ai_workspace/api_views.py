@@ -1605,6 +1605,14 @@ class ProjectListView(viewsets.ModelViewSet):
         data = serializer.data
         return  Response(serializer.data)
 
+@permission_classes([IsAuthenticated])
+@api_view(['GET',])
+def get_file_project_list(request):
+    queryset = Project.objects.filter(Q(ai_user = request.user)|Q(team__owner = request.user)\
+                    |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
+    serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
+    data = serializer.data
+    return  Response(serializer.data)
 
 
 
