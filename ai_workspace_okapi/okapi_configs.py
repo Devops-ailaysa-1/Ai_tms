@@ -47,7 +47,7 @@ CURRENT_SUPPORT_FILE_EXTENSIONS_LIST = [
     ".txt", ".html", ".xhtml", ".tsv", ".csv", ".odp", ".ods", ".odt", ".json",
     ".properties", ".po", ".pot", ".docx", ".xlsx", ".pptx", ".xliff", ".xlf",
     ".idml", ".srt", ".strings", ".md", ".xml", ".stringsdict", ".dtd",
-    ".php", ".yaml", ".yml", ".epub",'.pdf',
+    ".php", ".yaml", ".yml", ".epub",'.pdf','.doc',
 ]#".dotx" -> file processing pending
 
 LINGVANEX_LANGUAGE_MAPPER ={
