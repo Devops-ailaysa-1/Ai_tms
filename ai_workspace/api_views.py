@@ -627,6 +627,24 @@ class ProjectFilter(django_filters.FilterSet):
         #     lookup = '__'.join([name, 'isnull'])
         #     return queryset.filter(**{lookup: False})
 
+
+def get_file_from_pdf(pdf_obj_id):
+    from ai_exportpdf.models import Ai_PdfUpload
+    pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
+    if pdf_obj.pdf_api_use == "convertio":
+        docx_file_path = get_docx_file_path(pdf_obj.id)
+        file = open(docx_file_path,'rb')
+        file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
+    else:
+        file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
+    return file_obj
+
+
+# def get_file_from_doc(doc_id):
+#     obj = MyDocuments.objects.get(id=doc_id)
+#     if obj:
+        
+
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
@@ -681,39 +699,38 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         # print("Project Creation request data----->", request.data)
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
+        pdf_obj_id = request.POST.get('pdf_obj_id',None)
         audio_file = request.FILES.getlist('audio_file',None)
         if text_data:
             if urlparse(text_data).scheme:
                 return Response({"msg":"Url not Accepted"},status = 406)
             name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
             im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
-            serializer = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
-            if serializer.is_valid(raise_exception=True):
-                serializer.save()
-                pr = Project.objects.get(id=serializer.data.get('id'))
-                if pr.pre_translate == True:
-                    mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
-                    # mt_only.delay((serializer.data.get('id'), str(request.auth)), )
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=409)
+            serlzr = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
+            
+        elif pdf_obj_id:
+            file_obj = get_file_from_pdf(pdf_obj_id)
+            serlzr = ser(data={**request.data,"files":[file_obj]},context={"request": request})    
+             
         else:
-            #serlzr = ser(data={**request.data, "files": request.FILES.getlist("files")}, context={"request": request})
             serlzr = ser(data=\
             {**request.data, "files": request.FILES.getlist("files"),"audio_file":audio_file},context={"request": request})
-            if serlzr.is_valid(raise_exception=True):
-                serlzr.save()
-                pr = Project.objects.get(id=serlzr.data.get('id'))
-                if pr.pre_translate == True:
-                    mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
-                    # mt_only.delay((serlzr.data.get('id'), str(request.auth)), )
-                #check_dict.apply_async(serlzr.data,)
-                return Response(serlzr.data, status=201)
-            return Response(serlzr.errors, status=409)
+            
+        if serlzr.is_valid(raise_exception=True):
+            serlzr.save()
+            pr = Project.objects.get(id=serlzr.data.get('id'))
+            if pr.pre_translate == True:
+                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
+                # mt_only.delay((serlzr.data.get('id'), str(request.auth)), )
+            #check_dict.apply_async(serlzr.data,)
+            return Response(serlzr.data, status=201)
+        return Response(serlzr.errors, status=409)
 
     def update(self, request, pk, format=None):
         instance = self.get_object()
         ser = self.get_serializer_class()
         task_id=request.POST.get('task_id',None)
+        pdf_obj_id = request.POST.get('pdf_obj_id',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -753,6 +770,12 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             file_obj = update_project_from_writer(task_id)
             serlzr = ser(instance, data=\
                 {**request.data, "files":[file_obj]},context={"request": request}, partial=True)
+            
+        elif pdf_obj_id:
+            file_obj = get_file_from_pdf(pdf_obj_id)
+            serlzr = ser(instance, data=\
+                {**request.data, "files":[file_obj]},context={"request": request}, partial=True)
+            
         else:
             serlzr = ser(instance, data=\
                 {**request.data, "files": request.FILES.getlist("files")},
@@ -2890,3 +2913,14 @@ class MyDocumentsView(viewsets.ModelViewSet):
                 # if os.path.exists(path+'/'+name+'_out'+"(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext):
                 #     print("True")
                 # else:
+
+
+
+            # if serializer.is_valid(raise_exception=True):
+            #     serializer.save()
+            #     pr = Project.objects.get(id=serializer.data.get('id'))
+            #     if pr.pre_translate == True:
+            #         mt_only.apply_async((serializer.data.get('id'), str(request.auth)), )
+            #         # mt_only.delay((serializer.data.get('id'), str(request.auth)), )
+            #     return Response(serializer.data, status=201)
+            # return Response(serializer.errors, status=409)
