@@ -630,6 +630,7 @@ class ProjectFilter(django_filters.FilterSet):
 
 def get_file_from_pdf(pdf_obj_id):
     from ai_exportpdf.models import Ai_PdfUpload
+    from ai_exportpdf.views import get_docx_file_path
     pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
     if pdf_obj.pdf_api_use == "convertio":
         docx_file_path = get_docx_file_path(pdf_obj.id)
