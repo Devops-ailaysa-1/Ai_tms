@@ -152,7 +152,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     "ai_pay",
     "ai_qa",
-    'silk',
+    #'silk',
     'django_oso',
     #"ai_tm_management",
     "ai_tm",
@@ -185,7 +185,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'silk.middleware.SilkyMiddleware',
+    # 'silk.middleware.SilkyMiddleware',
     # "middlewares.error_middleware.error_middleware",
     # "middlewares.error_middleware.StackOverflowMiddleware"
 ]
