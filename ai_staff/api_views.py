@@ -23,7 +23,9 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew)
-
+from rest_framework import renderers
+from django.http import FileResponse
+from django.conf import settings
 
 class ServiceTypesView(APIView):
     permission_classes = [IsAuthenticated]
@@ -842,3 +844,42 @@ def vendor_language_pair_currency(request):
     queryset = Currencies.objects.filter(id__in = [48,45,63,144])
     serializer = CurrenciesSerializer(queryset, many=True)
     return Response(serializer.data)
+
+
+class FileExtensionImage(APIView):
+    permission_classes = [AllowAny,]
+    renderer_classes = [renderers.JSONRenderer]
+
+    """
+    Get the image for the specific extension
+    """
+    def get(self, request, extension):
+        image_formats = ('JPEG', 'PNG', 'GIF', 'TIFF','BMP')
+        music_formats = ('AAC', 'MP3', 'WAV', 'WMA', 'DTS', 'AIFF', 'ASF', 'FLAC', 'ADPCM', 'DSD', 'LPCM', 'OGG')
+        excel_formats = ('xlsx', 'xlsm', 'xlsb', 'xltx', 'xltm', 'xls', 'xlt', 'xlam', 'xla', 'xlw', 'xlr', 'csv')
+        video_formats = ('MP4', 'MOV', 'WMV', 'AVI', 'MKV')
+        word_formats = ('doc', 'docm', 'docx', 'dot', 'dotx')
+        presentation_formats = ('ppt', 'pptm', 'pptx')
+        if extension.upper() in image_formats:
+            extension = 'image'
+        elif extension.upper() in music_formats:
+            extension = 'audio'
+        elif extension.lower() in excel_formats:
+            extension = 'csv'
+        elif extension.upper() in video_formats:
+            extension = 'video'
+        elif extension.lower() in word_formats:
+            extension = 'docx'
+        elif extension.lower() in presentation_formats:
+            extension = 'pptx'
+        try:
+            img = open(f'{settings.MEDIA_ROOT}/file_extension_images/' + extension + '.svg', 'rb')
+        except OSError:
+            try:
+                img = open(f'{settings.MEDIA_ROOT}/file_extension_images/default.svg', 'rb')
+            except OSError:
+                response = {'error': 'extension not found'}
+                response_code = 422
+                return Response(response, response_code)
+        response = FileResponse(img)
+        return response
