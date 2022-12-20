@@ -401,34 +401,34 @@ class SupportTopics(ParanoidModel):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
-# class ModelGPTName(models.Model):
-#     model_name = models.CharField(max_length=40, null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-#     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+class ModelGPTName(models.Model):
+    model_name = models.CharField(max_length=40, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
     
-# class PromptCategories(models.Model):
-#     category = models.CharField(max_length=1000, null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+class PromptCategories(models.Model):
+    category = models.CharField(max_length=1000, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-# class PromptTones(models.Model):
-#     tone = models.CharField(max_length=1000, null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+class PromptTones(models.Model):
+    tone = models.CharField(max_length=1000, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-# class PromptSubCategories(models.Model):
-#     category = models.ForeignKey(PromptCategories,related_name='prompt_category',
-#                                  on_delete = models.CASCADE,blank=True, null=True)
-#     sub_category = models.CharField(max_length=1000, null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+class PromptSubCategories(models.Model):
+    category = models.ForeignKey(PromptCategories,related_name='prompt_category',
+                                 on_delete = models.CASCADE,blank=True, null=True)
+    sub_category = models.CharField(max_length=1000, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
-# class PromptStartPhrases(models.Model):
-#     sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
-#                                  on_delete = models.CASCADE,blank=True, null=True)
-#     start_phrase =  models.TextField(null=True, blank=True)   
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+class PromptStartPhrases(models.Model):
+    sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
+                                 on_delete = models.CASCADE,blank=True, null=True)
+    start_phrase =  models.TextField(null=True, blank=True)   
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
 class Role(ParanoidModel):
