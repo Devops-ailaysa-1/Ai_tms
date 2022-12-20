@@ -682,7 +682,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     .filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
-        queryset = filter_authorize(self.request,queryset,'read',self.request.user)
+        #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
         return queryset
 
         # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
