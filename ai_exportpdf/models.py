@@ -3,8 +3,8 @@ from django.utils.text import slugify
 from ai_auth.models import AiUser
 from ai_workspace.models import Task
 import os
-# from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
-#                               PromptSubCategories,PromptTones,ModelGPTName)
+from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
+                              PromptSubCategories,PromptTones,ModelGPTName)
 
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_file",filename)
@@ -52,57 +52,58 @@ class Ai_PdfUpload(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.pdf_file.file.name)
-    # def __str__(self):
-    #     return self.name
+    def __str__(self):
+        return self.name
 
-# # class PromptList(models.Model):
-# #     prompt = models.CharField(max_length=300, null=True, blank=True)
-# #     created_at = models.DateTimeField(auto_now_add=True)
-# #     updated_at = models.DateTimeField(auto_now=True)
-
-# # class ModelGPTName(models.Model):
-# #     model_name = models.CharField(max_length=40, null=True, blank=True)
-# #     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-# #     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
-
-# class TokenUsage(models.Model):
-#     user_input_token = models.CharField(max_length=10, null=True, blank=True)
-#     prompt_tokens =  models.CharField(max_length=10, null=True, blank=True)
-#     total_tokens =  models.CharField(max_length=10, null=True, blank=True)
-#     completion_tokens = models.CharField(max_length=10, null=True, blank=True)
-#     no_of_outcome = models.CharField(max_length=10, null=True, blank=True)
-    
-# # class ContentCatagories(models.Model):
-# #     pass
-
-# class AiPrompt(models.Model):
-#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-#     prompt_string = models.TextField(null=True, blank=True)
-#     description = models.TextField(null=True, blank=True)
-#     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE,related_name='gpt_model')
-#     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='used_tokens')
-#     response_id =  models.CharField(max_length = 50, null=True, blank=True)
-#     response_created =  models.CharField(max_length = 50, null=True, blank=True)
-#     catagories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE)
-#     sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE)
-#     #start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE)
-#     source_prompt_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_lang')
-#     Tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='prompt_tone',blank=True,null=True)
-#     response_copies = models.IntegerField(null=True, blank=True)
-#     keywords = models.CharField(max_length = 1000, null=True, blank=True)
-#     response_charecter_limit =  models.IntegerField(null=True, blank=True)
+# class PromptList(models.Model):
+#     prompt = models.CharField(max_length=300, null=True, blank=True)
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
+
+# class ModelGPTName(models.Model):
+#     model_name = models.CharField(max_length=40, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+#     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+class TokenUsage(models.Model):
+    user_input_token = models.CharField(max_length=10, null=True, blank=True)
+    prompt_tokens =  models.CharField(max_length=10, null=True, blank=True)
+    total_tokens =  models.CharField(max_length=10, null=True, blank=True)
+    completion_tokens = models.CharField(max_length=10, null=True, blank=True)
+    no_of_outcome = models.CharField(max_length=10, null=True, blank=True)
     
-# class AiPromptResult(models.Model):
-#     prompt = models.ForeignKey(AiPrompt, on_delete=models.CASCADE, related_name = 'ai_prompt')
-#     start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE)
-#     result_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_result_lang')
-#     prompt_string_mt = models.TextField(null=True, blank=True)
-#     description_mt = models.TextField(null=True, blank=True)
-#     keywords_mt = models.TextField(null=True, blank=True)
-#     prompt_result = models.TextField(null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
+# class ContentCatagories(models.Model):
+#     pass
+
+class AiPrompt(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    prompt_string = models.TextField(null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE,related_name='gpt_model')
+    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='used_tokens')
+    catagories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE)
+    sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE)
+    #start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE)
+    source_prompt_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_lang')
+    Tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='prompt_tone',blank=True,null=True)
+    response_copies = models.IntegerField(null=True, blank=True)
+    product_name = models.CharField(max_length = 1000, null=True, blank=True)
+    keywords = models.CharField(max_length = 1000, null=True, blank=True)
+    response_charecter_limit =  models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+class AiPromptResult(models.Model):
+    prompt = models.ForeignKey(AiPrompt, on_delete=models.CASCADE, related_name = 'ai_prompt')
+    start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE)
+    result_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_result_lang')
+    prompt_string_mt = models.TextField(null=True, blank=True)
+    response_id =  models.CharField(max_length = 50, null=True, blank=True)
+    response_created =  models.CharField(max_length = 50, null=True, blank=True)
+    description_mt = models.TextField(null=True, blank=True)
+    keywords_mt = models.TextField(null=True, blank=True)
+    prompt_result = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
  
