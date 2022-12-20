@@ -39,7 +39,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         user = request.user
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
-            serializer = PdfFileStatusSerializer(queryset,many=True)
+            serializer = PdfFileSerializer(queryset,many=True)
             return Response(serializer.data)
         if task:
             task_obj = Task.objects.get(id=task)
