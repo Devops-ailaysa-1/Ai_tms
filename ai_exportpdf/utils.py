@@ -367,5 +367,17 @@ def docx_to_html(docx_file_path):
     #bootstrap_js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>'
     return output#bootstrap_css+bootstrap_js+
 
+
+import pypandoc
+def docx_to_html_with_css(docx_file_path):
+    print("DocxFilePath------------->",docx_file_path)
+    extra_args = ["--metadata","title= " , "--self-contained","--standalone","--css","pandoc.css"]
+    output = pypandoc.convert_file(source_file=docx_file_path,
+                                   to="html",format='docx',extra_args=extra_args)
+    
+    bootstrap_css = '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">'
+    bootstrap_js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>'
+    return bootstrap_css+bootstrap_js+output
+
 #     # with open("out1226_final.html",'w') as fp:
 #     #     fp.write(output)
