@@ -628,10 +628,13 @@ class ProjectFilter(django_filters.FilterSet):
         #     return queryset.filter(**{lookup: False})
 
 
-def get_file_from_pdf(pdf_obj_id):
+def get_file_from_pdf(pdf_obj_id,pdf_task_id):
     from ai_exportpdf.models import Ai_PdfUpload
     from ai_exportpdf.views import get_docx_file_path
-    pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
+    if pdf_obj_id:
+        pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
+    else:
+        pdf_obj = Ai_PdfUpload.objects.filter(task_id = pdf_task_id).last() 
     if pdf_obj.pdf_api_use == "convertio":
         docx_file_path = get_docx_file_path(pdf_obj.id)
         file = open(docx_file_path,'rb')
@@ -711,7 +714,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             serlzr = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
             
         elif pdf_obj_id:
-            file_obj = get_file_from_pdf(pdf_obj_id)
+            file_obj = get_file_from_pdf(pdf_obj_id,None)
             serlzr = ser(data={**request.data,"files":[file_obj]},context={"request": request})    
              
         else:
@@ -733,6 +736,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         ser = self.get_serializer_class()
         task_id=request.POST.get('task_id',None)
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
+        pdf_task_id = request.POST.get('pdf_task_id',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -767,16 +771,19 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if subject_delete_ids:
             subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=subject_delete_ids)
-
+        
+        team = True if instance.team else False
+        
         if task_id:
             file_obj = update_project_from_writer(task_id)
             serlzr = ser(instance, data=\
-                {**request.data, "files":[file_obj]},context={"request": request}, partial=True)
+                {**request.data, "files":[file_obj],"team":[team]},context={"request": request}, partial=True)
             
-        elif pdf_obj_id:
-            file_obj = get_file_from_pdf(pdf_obj_id)
+        elif pdf_obj_id or pdf_task_id:
+            if pdf_obj_id:file_obj = get_file_from_pdf(pdf_obj_id,None)
+            else:file_obj = get_file_from_pdf(None,pdf_task_id)
             serlzr = ser(instance, data=\
-                {**request.data, "files":[file_obj]},context={"request": request}, partial=True)
+                {**request.data, "files":[file_obj],"team":[team]},context={"request": request}, partial=True)
             
         else:
             serlzr = ser(instance, data=\
