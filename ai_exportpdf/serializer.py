@@ -30,10 +30,12 @@ class PdfFileStatusSerializer(serializers.ModelSerializer):
 
 from statistics import mode
 from rest_framework import serializers
-from ai_exportpdf.models import (AiPrompt ,AiPromptResult , ModelGPTName ,PromptCategories ,
-                        PromptSubCategories,PromptStartPhrases , Languages,PromptTones ,TokenUsage)
+from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage )
 
-from ai_openai import utils
+from ai_staff.models import ( ModelGPTName ,PromptCategories ,
+                        PromptSubCategories,PromptStartPhrases , Languages,PromptTones )
+
+from ai_exportpdf import utils
 class AiPromptSerializer(serializers.ModelSerializer):
  
     class Meta:
@@ -50,12 +52,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         start_phrase = PromptStartPhrases.objects.get(sub_category = sub_catagories)
         instance.start_phrase = start_phrase
         instance.save()
-        # print("start_phrase-->" ,start_phrase.start_phrase)
-        # print("sub-->" , start_phrase.sub_category.sub_category)
-        # print("cat-->" , start_phrase.sub_category.category.category)
-        # print("punc-->" , start_phrase.punctuation)
-        # print("tone-->" , instance.Tone)
-        # print("product_name-->" , instance.product_name)
+ 
 
         if start_phrase.sub_category.sub_category and start_phrase.sub_category.category.category:
             prompt = start_phrase.start_phrase+" "
@@ -82,7 +79,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
-                                     no_of_outcome=no_of_outcome )
+                                     no_of_outcome=no_of_outcome)
         if generated_text:
             print("generated_text" , generated_text)
             text_gen_openai_array = []

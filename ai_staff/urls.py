@@ -19,6 +19,8 @@ router.register(r'roles',api_views.TeamRoleView,basename='team-role')
 
 router.register(r'mt-language-support',api_views.MTLanguageSupportView,basename='mt-language-support')
 router.register(r'voice-support-language',api_views.VoiceSupportLanguages,basename='voice-support-language')
+router.register(r'prompt-categories-list',api_views.PromptCategoriesViewset,basename='prompt-categories-list')
+router.register(r'prompt-tone',api_views.PromptTonesViewset,basename='prompt-tone')
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -59,6 +61,7 @@ urlpatterns += [
      path('extension-image/<extension>', api_views.FileExtensionImage.as_view(), name='extension-image')
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      #path('insert',views.Bulk_insert)
+     
 
 
 ]
