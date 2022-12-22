@@ -88,7 +88,7 @@ class AiPrompt(models.Model):
    
     catagories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE)
     sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE)
-    start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE,null=True, blank=True)
+    # start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE,null=True, blank=True)
     source_prompt_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_lang')
     Tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='prompt_tone',blank=True,null=True)
     response_copies = models.IntegerField(null=True, blank=True)
@@ -118,5 +118,5 @@ class AiPromptResult(models.Model):
 
     def __str__(self) -> str:
         return self.prompt_result
-    
- 
+
+

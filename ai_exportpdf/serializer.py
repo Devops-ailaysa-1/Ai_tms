@@ -30,12 +30,12 @@ class PdfFileStatusSerializer(serializers.ModelSerializer):
 
 from statistics import mode
 from rest_framework import serializers
-from ai_exportpdf.models import (AiPrompt ,AiPromptResult )
+from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage )
 
 from ai_staff.models import ( ModelGPTName ,PromptCategories ,
-                        PromptSubCategories,PromptStartPhrases , Languages,PromptTones ,TokenUsage)
+                        PromptSubCategories,PromptStartPhrases , Languages,PromptTones )
 
-from ai_openai import utils
+from ai_exportpdf import utils
 class AiPromptSerializer(serializers.ModelSerializer):
  
     class Meta:
@@ -79,7 +79,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
-                                     no_of_outcome=no_of_outcome )
+                                     no_of_outcome=no_of_outcome)
         if generated_text:
             print("generated_text" , generated_text)
             text_gen_openai_array = []
