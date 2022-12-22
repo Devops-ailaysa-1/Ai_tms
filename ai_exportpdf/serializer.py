@@ -30,7 +30,9 @@ class PdfFileStatusSerializer(serializers.ModelSerializer):
 
 from statistics import mode
 from rest_framework import serializers
-from ai_exportpdf.models import (AiPrompt ,AiPromptResult , ModelGPTName ,PromptCategories ,
+from ai_exportpdf.models import (AiPrompt ,AiPromptResult )
+
+from ai_staff.models import ( ModelGPTName ,PromptCategories ,
                         PromptSubCategories,PromptStartPhrases , Languages,PromptTones ,TokenUsage)
 
 from ai_openai import utils
@@ -50,12 +52,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         start_phrase = PromptStartPhrases.objects.get(sub_category = sub_catagories)
         instance.start_phrase = start_phrase
         instance.save()
-        # print("start_phrase-->" ,start_phrase.start_phrase)
-        # print("sub-->" , start_phrase.sub_category.sub_category)
-        # print("cat-->" , start_phrase.sub_category.category.category)
-        # print("punc-->" , start_phrase.punctuation)
-        # print("tone-->" , instance.Tone)
-        # print("product_name-->" , instance.product_name)
+ 
 
         if start_phrase.sub_category.sub_category and start_phrase.sub_category.category.category:
             prompt = start_phrase.start_phrase+" "

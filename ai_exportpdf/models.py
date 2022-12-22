@@ -55,42 +55,8 @@ class Ai_PdfUpload(models.Model):
     def __str__(self):
         return self.name
 
-class PromptCategories(models.Model):
-    category = models.CharField(max_length=1000, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-    def __str__(self) -> str:
-        return self.category 
-        
-class PromptTones(models.Model):
-    tone = models.CharField(max_length=1000, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
-    def __str__(self) -> str:
-        return self.tone 
-
-class PromptSubCategories(models.Model):
-    category = models.ForeignKey(PromptCategories,related_name='prompt_category',
-                                 on_delete = models.CASCADE,blank=True, null=True)
-    sub_category = models.CharField(max_length=1000, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-
-    def __str__(self) -> str:
-        return self.sub_category 
-
-class PromptStartPhrases(models.Model):
-    sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
-                                 on_delete = models.CASCADE,blank=True, null=True)
-    start_phrase =  models.TextField(null=True, blank=True)   
-    punctuation = models.CharField(max_length=5 , null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-
-    def __str__(self) -> str:
-        return self.start_phrase
 
 class PromptList(models.Model):
     prompt = models.CharField(max_length=300, null=True, blank=True)
@@ -100,15 +66,7 @@ class PromptList(models.Model):
     def __str__(self) -> str:
         return self.prompt
 
-class ModelGPTName(models.Model):
-    model_name = models.CharField(max_length=40, null=True, blank=True)
-    model_code = models.CharField(max_length=40, null=True, blank=True)
-    model_ability =models.CharField(max_length=100, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
-
-    def __str__(self) -> str:
-        return self.model_name
+ 
 
 class TokenUsage(models.Model):
     user_input_token = models.CharField(max_length=10, null=True, blank=True)
