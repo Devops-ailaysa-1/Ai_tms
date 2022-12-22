@@ -156,7 +156,7 @@ INSTALLED_APPS = [
     'django_oso',
     #"ai_tm_management",
     "ai_tm",
-    # 'dbbackup',
+    'dbbackup',
     # 'django_q',
     'ai_exportpdf',
     # 'coreapi', # Coreapi for coreapi documentation
@@ -512,8 +512,17 @@ CHANNEL_LAYERS = {
 
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
-# DBBACKUP_STORAGE_OPTIONS = {'location': 'backupdb/'}
+DBBACKUP_STORAGE ='storages.backends.s3boto3.S3Boto3Storage'
 
+DBBACKUP_STORAGE_OPTIONS = {
+    'access_key': os.getenv('AWS_ACCESS_KEY_ID'),
+    'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY'),
+    'bucket_name': os.getenv('AWS_STORAGE_BUCKET_NAME'),
+    'endpoint_url': 'https://ams3.digitaloceanspaces.com',
+    'default_acl': 'private',
+    'location': os.getenv('MEDIA_BACKUP_LOCATION')
+
+}
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
