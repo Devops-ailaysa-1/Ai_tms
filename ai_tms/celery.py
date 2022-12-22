@@ -57,6 +57,11 @@ app.conf.beat_schedule = {
     'schedule': crontab(minute='*/5'),
     'args': (),
     },
+   'media-backup': {
+    'task': 'ai_auth.tasks.backup_media',
+    'schedule': crontab(hour=23, minute=40),
+    'args': (),
+    },
    # 'send-mail-30-minutes': {
    #  'task': 'ai_auth.tasks.email_send_subscription_extension',
    #  'schedule': crontab(minute='*/30'),
