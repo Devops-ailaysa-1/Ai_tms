@@ -243,6 +243,14 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task.save()
 
         return document
+    
+    def authorize_doc(self,doc,action):
+        if  dict == type(doc):
+            try:
+                doc =doc.get('doc')
+            except:
+                return False 
+        authorize(self.request, resource=doc, actor=self.request.user, action=action)
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
@@ -351,7 +359,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
                 else:
                     document = self.create_document_for_task_if_not_exists(task)
-                    authorize(request, resource=document, actor=request.user, action="read")
+                    self.authorize_doc(document,action="read")
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
@@ -360,17 +368,17 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
-                authorize(request, resource=document, actor=request.user, action="read")
+                self.authorize_doc(document,action="read")
                 doc = DocumentSerializerV2(document).data               
                 return Response(doc, status=201)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
-                authorize(request, resource=document, actor=request.user, action="read")
+                self.authorize_doc(document,action="read")
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
-            document = self.create_document_for_task_if_not_exists(task)
-            authorize(request, resource=document, actor=request.user, action="read")
+            document = self.create_document_for_task_if_not_exists(task)   
+            self.authorize_doc(document,action="read")        
             try:
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
