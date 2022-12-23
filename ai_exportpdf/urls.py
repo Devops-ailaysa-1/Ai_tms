@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from django.urls import path
 router = DefaultRouter()
 router.register(r'convertpdftodocx',views.Pdf2Docx,basename='pdf')
+router.register(r'aiprompt',views.AiPromptViewset,basename='ai_prompt')
 # router.register(r'convert' ,views.ConversionPortableDoc,basename='convertdoc')
 # urlpatterns = [
     #  path('convertpdftodocx' , views.exportpdf_to_docx_main),
@@ -20,4 +21,5 @@ urlpatterns += static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)
 urlpatterns += [
 path('convert_pdf_from_task/<int:task_id>/',views.project_pdf_conversion),
 path("text_generator/" , views.text_generator_openai ,name = "text_generator"),
+#path('aiprompt/',views.AiPromptViewset.as_view(), name='ai_prompt'),
 ]

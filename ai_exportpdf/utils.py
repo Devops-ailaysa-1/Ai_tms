@@ -293,14 +293,15 @@ def ceil_round_off(token_len):
     
 
 import openai
-openai.api_key = OPENAI_API_KEY
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
 
 def openai_endpoint(prompt,max_token=256,
                     temperature=0.7,frequency_penalty=1,
                     presence_penalty=1,top_p=1):
  
     response = openai.Completion.create(
-                model=OPENAI_MODEL,# "text-curie-001", 
+                model=os.getenv('OPENAI_MODEL'), 
                 prompt=prompt.strip(),
                 temperature=temperature,
                 max_tokens=max_token,
@@ -381,3 +382,36 @@ def docx_to_html_with_css(docx_file_path):
 
 #     # with open("out1226_final.html",'w') as fp:
 #     #     fp.write(output)
+
+
+
+
+ 
+
+ 
+
+def openai_text_trim(text):
+    reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
+    if reg_text:
+        text = text[:reg_text.start()]+"."
+    return text
+
+
+def get_prompt(prompt ,model_name , max_token ,n ):
+    max_token = 256
+    temperature=0.7
+    frequency_penalty = 1
+    presence_penalty = 1
+    top_p = 1
+    response = openai.Completion.create(
+                model=model_name, 
+                prompt=prompt.strip(),
+                temperature=temperature,
+                max_tokens=max_token,
+                top_p=top_p,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty,
+                stop = ['#'],
+                n=n,
+                logit_bias = {"50256": -100})
+    return response

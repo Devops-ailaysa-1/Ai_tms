@@ -26,4 +26,102 @@ class PdfFileStatusSerializer(serializers.ModelSerializer):
         model = Ai_PdfUpload
         fields = ('id' ,'pdf_language','counter','pdf_no_of_page' ,'pdf_task_id' ,'docx_url_field','status' ,'docx_file_name','file_name', 'pdf_file_name')
  
+
+
+from statistics import mode
+from rest_framework import serializers
+from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage )
+
+from ai_exportpdf.utils import get_prompt
+
+
+class AiPromptSerializer(serializers.ModelSerializer):
+    targets = serializers.ListField(allow_null=True,required=False)
+ 
+    class Meta:
+        model = AiPrompt
+        fields = ('user','prompt_string','description','model_gpt_name','catagories','sub_catagories',
+            'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
+            'response_charecter_limit','targets')
+
+    def prompt_generation(self,instance,prmt_res):
+        openai_available_langs = [17]
+        lang = instance.source_prompt_lang_id 
+        obj = prmt_res.first()
+        prompt=''
+        if instance.catagories.category == 'Free Style':
+            prompt = instance.prompt_string if lang in openai_available_langs else instance.prompt_string_mt
+        else:
+            start_phrase = instance.sub_catagories.prompt_sub_category.first()
+            prompt+=start_phrase.start_phrase
+            if instance.product_name:
+                prompt+=''+instance.product_name #if lang in openai_available_langs else instance.prompt_name_mt
+            if instance.keywords:
+                prompt+=' including words '+ instance.keywords if lang in openai_available_langs else instance.keywords_mt
+            if start_phrase.punctuation:
+                prompt+=start_phrase.punctuation
+            print("prompt-->" ,prompt )
+
+        openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , 
+                                instance.response_charecter_limit ,instance.response_copies )
+
+        generated_text = openai_response.get('choices' ,None)
+        response_id =openai_response.get('id' , None)
+        token_usage = openai_response.get('usage' ,None) 
+        prompt_token = token_usage['prompt_tokens']
+        total_tokens=token_usage['total_tokens']
+        completion_tokens=token_usage['completion_tokens']
+        no_of_outcome = instance.response_copies
+
+        token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
+                                    total_tokens=total_tokens , completion_tokens=completion_tokens,  
+                                    no_of_outcome=no_of_outcome )
+        if generated_text:
+            print("generated_text" , generated_text)
+            [AiPromptResult.objects.get_or_create(prompt_generated=prompt,start_phrase= start_phrase, response_id = response_id,
+                                        token_usage=token_usage,api_result=i['text'].strip(),result_lang_id=lang,\
+                    defaults = {"prompt": instance})for i in generated_text]
     
+        queryset = instance.ai_prompt.filter(response_id=None)
+        queryset_2 = instance.ai_prompt.filter(result_lang__in=openai_available_langs)
+        for i in queryset:
+            for j in queryset_2:
+                content = j.api_result
+                trans = 'rr'#get_translation(1, content , j.result_lang_code, i.result_lang_code)
+                i.translated_prompt_result = trans
+                i.save()
+
+
+    def create(self, validated_data):
+        openai_available_langs = [17]
+        print("validated_data--->" , validated_data)
+        targets = validated_data.pop('targets',None)
+        instance = AiPrompt.objects.create(**validated_data)
+        if instance.source_prompt_lang_id not in openai_available_langs:
+            prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17)
+            description_mt = 'rr'#get_translation(1, instance.description , instance.source_prompt_lang, i.result_lang_code)
+            keywords_mt = 'rr'
+            prompt_string_mt = 'rr'
+            instance.update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt)
+        else:
+            prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=instance.source_prompt_lang_id)
+        if instance.response_copies >=1:
+            [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i) for i in targets for j in range(instance.response_copies)]
+        else:
+            [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i) for i in targets]
+        prmt_final = AiPromptResult.objects.filter(id=prmt_res.id)
+        self.prompt_generation(instance,prmt_final)        
+        return instance
+
+
+
+ 
+
+class AiPromptResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiPromptResult
+        fields = '__all__'
+
+    # def create(self, validated_data):
+    #     print("validated_data--->" , validated_data)
+    #     return super().create(validated_data)

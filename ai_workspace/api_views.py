@@ -627,6 +627,21 @@ class ProjectFilter(django_filters.FilterSet):
         #     lookup = '__'.join([name, 'isnull'])
         #     return queryset.filter(**{lookup: False})
 
+def docx_save_pdf(pdf_obj):
+    from docx import Document
+    from htmldocx import HtmlToDocx
+
+    document = Document()
+    new_parser = HtmlToDocx()
+    new_parser.table_style = 'TableGrid'
+    new_parser.add_html_to_document(pdf_obj.html_data, document)
+    document.save(pdf_obj.docx_file_name)
+    f2 = open(pdf_obj.docx_file_name, 'rb')
+    file_obj = DJFile(f2)
+    pdf_obj.docx_file_from_writer = file_obj
+    pdf_obj.save()
+
+
 
 def get_file_from_pdf(pdf_obj_id,pdf_task_id):
     from ai_exportpdf.models import Ai_PdfUpload
@@ -639,7 +654,10 @@ def get_file_from_pdf(pdf_obj_id,pdf_task_id):
         docx_file_path = get_docx_file_path(pdf_obj.id)
         file = open(docx_file_path,'rb')
         file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
+        pdf_obj.translation_task_created = True
+        pdf_obj.save()
     else:
+        #docx_save_pdf(pdf_obj)
         file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
     return file_obj
 
@@ -2748,9 +2766,15 @@ class MyDocumentsView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = MyDocumentSerializer(pagin_tc, many=True, context={'request': request})
+        serializer = MyDocumentSerializer(pagin_tc, many=True)
         response = self.get_paginated_response(serializer.data)
         return  response
+
+    def retrieve(self, request, pk):
+        queryset = self.get_queryset()
+        ins = get_object_or_404(queryset, pk=pk)
+        serializer = MyDocumentSerializer(ins)
+        return Response(serializer.data)
 
     def create(self, request):
         file = request.FILES.get('file',None)
@@ -2770,7 +2794,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
              ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
-            return Response(ser.data, status=201)
+            return Response(ser.data, status=200)
         return Response(ser.errors)
 
     def destroy(self, request, pk):

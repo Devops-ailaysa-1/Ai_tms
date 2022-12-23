@@ -6,7 +6,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
-                    ProjectTypeDetail,ProjectType)
+                    ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,PromptStartPhrases,PromptTones)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -345,3 +345,33 @@ class LanguagesSerializerNew(serializers.ModelSerializer):
 
     def get_locale_code(self,obj):
         return obj.locale.first().locale_code
+
+
+class PromptStartPhrasesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromptStartPhrases
+        fields = '__all__'
+
+class PromptSubCategoriesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromptSubCategories
+        fields = '__all__'
+
+class PromptCategoriesSerializer(serializers.ModelSerializer):
+    
+    prompt_category = PromptSubCategoriesSerializer(many=True )
+    class Meta:
+        model = PromptCategories
+        fields = ('id','category','prompt_category')
+        
+        
+class PromptTonesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromptTones
+        fields = ('id','tone')
+    
+
+
+        
+
+        
