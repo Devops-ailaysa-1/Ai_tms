@@ -14,7 +14,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
-                    ProjectType,ProjectTypeDetail)
+                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -22,7 +22,8 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SupportTypeSerializer,SubscriptionPricingSerializer,
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
-                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew)
+                         GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
+                         PromptTonesSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -883,3 +884,20 @@ class FileExtensionImage(APIView):
                 return Response(response, response_code)
         response = FileResponse(img)
         return response
+    
+
+
+class PromptCategoriesViewset(viewsets.ViewSet):
+    # permission_classes = [AllowAny,]
+    def list(self,request):
+        query_set = PromptCategories.objects.all()
+        serializer = PromptCategoriesSerializer(query_set,many=True)
+        return Response(serializer.data)  
+    
+    
+class PromptTonesViewset(viewsets.ViewSet):
+    # permission_classes = [AllowAny,]
+    def list(self,request):
+        query_set = PromptTones.objects.all()
+        serializer = PromptTonesSerializer(query_set,many=True)
+        return Response(serializer.data)  
