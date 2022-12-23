@@ -31,6 +31,7 @@ from django.db.models import DurationField, F, ExpressionWrapper,Q
 #from translate.storage.tmx import tmxfile
 from celery_progress.backend import ProgressRecorder
 from time import sleep
+from django.core.management import call_command
 
 
 extend_mail_sent= 0
@@ -666,3 +667,10 @@ def check_test():
 #     word_count = get_word_count(tm_analysis,proj,task,raw_total)
 #     print("WordCount------------>",word_count)
 #     logger.info("Analysis completed")
+
+
+@task
+def backup_media():
+    if os.getenv('MEDIA_BACKUP')=='True':   
+        call_command('mediabackup')
+    logger.info("backeup of mediafiles successfull.")
