@@ -941,6 +941,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	transcribed = serializers.SerializerMethodField()
 	text_to_speech_convert_enable = serializers.SerializerMethodField()
 	converted = serializers.SerializerMethodField()
+	is_task_translated = serializers.SerializerMethodField()
 	# can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
@@ -950,7 +951,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id", "filename", "download_audio_source_file", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted')
+			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',)
 
 	def get_converted(self,obj):
 		if obj.job.project.project_type_id == 4 :
@@ -968,6 +969,15 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
 			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
 				if obj.pdf_task.all().exists() == True:
+					return True
+				else:return False
+			else:return None
+		else:return None
+
+	def get_is_task_translated(self,obj):
+		if obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+				if obj.pdf_task.all().exists() == True and obj.pdf_task.first().translation_task_created == True:
 					return True
 				else:return False
 			else:return None
@@ -993,6 +1003,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 				else:return None
 			else:return None
 		else:return None
+
 
 	def get_open_in(self,obj):
 		try:

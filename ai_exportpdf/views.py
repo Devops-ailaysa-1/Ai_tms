@@ -78,8 +78,12 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.data)
     
     def update(self,request,pk):
-        task_obj = Task.objects.get(id = pk)
-        ins = task_obj.pdf_task.last()
+        tt = request.POST.get('by')
+        if tt == 'task':
+            task_obj = Task.objects.get(id = pk)
+            ins = task_obj.pdf_task.last()
+        else:
+           ins = Ai_PdfUpload.objects.get(id = pk)
         docx_file = request.FILES.get('docx_file')
         if docx_file:
             serializer = PdfFileSerializer(ins,data={**request.POST.dict(),"docx_file_from_writer":docx_file},partial=True)
@@ -208,8 +212,8 @@ class AiPromptViewset(viewsets.ViewSet):
 
     def create(self,request):
         # keywords = request.POST.getlist('keywords')
- 
-        serializer = AiPromptSerializer(data=request.data)
+        targets = request.POST.getlist('get_result_in')
+        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':self.request.user.id,'targets':targets})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

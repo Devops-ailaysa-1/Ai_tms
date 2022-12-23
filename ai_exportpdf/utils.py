@@ -293,14 +293,15 @@ def ceil_round_off(token_len):
     
 
 import openai
-openai.api_key = OPENAI_API_KEY
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
 
 def openai_endpoint(prompt,max_token=256,
                     temperature=0.7,frequency_penalty=1,
                     presence_penalty=1,top_p=1):
  
     response = openai.Completion.create(
-                model=OPENAI_MODEL, 
+                model=os.getenv('OPENAI_MODEL'), 
                 prompt=prompt.strip(),
                 temperature=temperature,
                 max_tokens=max_token,
