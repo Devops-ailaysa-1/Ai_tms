@@ -10,8 +10,11 @@ def user_directory_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_file",filename)
 
 def edited_file_path(instance, filename):
-    file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
-            "Edited", filename)
+    if instance.task:
+        file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
+                "Edited", filename)
+    else:
+        file_path = os.path.join(instance.user.uid,"Edited", filename)
     return file_path
 
 def pdf_converted_file_path(instance, filename):
@@ -93,6 +96,10 @@ class AiPrompt(models.Model):
     def __str__(self) -> str:
         return self.prompt_string
 
+    @property
+    def source_prompt_lang_code(self):
+        return self.source_prompt_lang.locale.first().locale_code
+
 class AiPromptResult(models.Model):
     prompt = models.ForeignKey(AiPrompt, on_delete=models.CASCADE, related_name = 'ai_prompt')
     start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE,null=True, blank=True)
@@ -105,6 +112,10 @@ class AiPromptResult(models.Model):
     translated_prompt_result = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def result_lang_code(self):
+        return self.result_lang.locale.first().locale_code
 
     # def __str__(self) -> str:
     #     return self.prompt_result

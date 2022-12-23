@@ -33,6 +33,7 @@ from rest_framework import serializers
 from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage )
 
 from ai_exportpdf.utils import get_prompt
+from ai_workspace_okapi.utils import get_translation
 
 
 class AiPromptSerializer(serializers.ModelSerializer):
@@ -87,7 +88,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         for i in queryset:
             for j in queryset_2:
                 content = j.api_result
-                trans = 'rr'#get_translation(1, content , j.result_lang_code, i.result_lang_code)
+                trans = get_translation(1, content , j.result_lang_code, i.result_lang_code) if content else None
                 i.translated_prompt_result = trans
                 i.save()
 
@@ -99,10 +100,12 @@ class AiPromptSerializer(serializers.ModelSerializer):
         instance = AiPrompt.objects.create(**validated_data)
         if instance.source_prompt_lang_id not in openai_available_langs:
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17)
-            description_mt = 'rr'#get_translation(1, instance.description , instance.source_prompt_lang, i.result_lang_code)
-            keywords_mt = 'rr'
-            prompt_string_mt = 'rr'
-            instance.update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt)
+            #trans = get_translation(obj.job.project.mt_engine.id, content , obj.job.source_language_code, obj.job.target_language_code)
+            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.description else None
+            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.keywords else None
+            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code) 
+            obj = AiPrompt.objects.filter(id=instance.id)
+            obj.update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt)
         else:
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=instance.source_prompt_lang_id)
         if instance.response_copies >=1:
