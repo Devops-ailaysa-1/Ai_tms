@@ -30,8 +30,7 @@ class PdfFileStatusSerializer(serializers.ModelSerializer):
 
 from statistics import mode
 from rest_framework import serializers
-from ai_exportpdf.models import (AiPrompt ,AiPromptResult , ModelGPTName ,PromptCategories ,
-                        PromptSubCategories,PromptStartPhrases , Languages,PromptTones ,TokenUsage)
+from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage )
 
 from ai_exportpdf.utils import get_prompt
 

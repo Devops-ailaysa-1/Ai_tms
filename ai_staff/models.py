@@ -415,11 +415,16 @@ class PromptCategories(models.Model):
     category = models.CharField(max_length=1000, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
-
+    
+    def __str__(self) -> str:
+        return self.category 
 class PromptTones(models.Model):
     tone = models.CharField(max_length=1000, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.tone 
 
 class PromptSubCategories(models.Model):
     category = models.ForeignKey(PromptCategories,related_name='prompt_category',
@@ -428,6 +433,9 @@ class PromptSubCategories(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
+    def __str__(self) -> str:
+        return self.sub_category    
+ 
 class PromptStartPhrases(models.Model):
     sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
                                  on_delete = models.CASCADE,blank=True, null=True)
@@ -439,7 +447,6 @@ class PromptStartPhrases(models.Model):
     
     def __str__(self) -> str:
         return self.start_phrase
-
 
 class Role(ParanoidModel):
     name = models.CharField(max_length=100, null=True, blank=True)

@@ -245,7 +245,6 @@ class AiPromptResultViewset(viewsets.ViewSet):
 
 
 
-
     # def create(self, request):
     #     pdf_request_file = request.FILES.getlist('pdf_request_file')
     #     file_language = request.POST.get('file_language')
