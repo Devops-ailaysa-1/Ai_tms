@@ -21,5 +21,6 @@ urlpatterns += static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)
 urlpatterns += [
 path('convert_pdf_from_task/<int:task_id>/',views.project_pdf_conversion),
 path("text_generator/" , views.text_generator_openai ,name = "text_generator"),
+path("prompt_result/",views.AiPromptResultViewset.as_view({'get': 'list'})),
 #path('aiprompt/',views.AiPromptViewset.as_view(), name='ai_prompt'),
 ]

@@ -204,6 +204,7 @@ def text_generator_openai(request):
 
 class AiPromptViewset(viewsets.ViewSet):
     model = AiPrompt
+
     def get(self, request):
         query_set = self.model.objects.all()
         serializer = AiPromptSerializer(query_set ,many =True)
@@ -220,12 +221,13 @@ class AiPromptViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
 
-
 class AiPromptResultViewset(viewsets.ViewSet):
     model = AiPromptResult
 
-    def get(self, request):
-        query_set = self.model.objects.all()
+    def list(self, request):
+        prmp_id = request.GET.get('prompt_id')
+        prmp_obj = AiPrompt.objects.get(id=prmp_id)
+        query_set = prmp_obj.ai_prompt.all()
         serializer = AiPromptResultSerializer(query_set ,many =True)
         return Response(serializer.data)
 
