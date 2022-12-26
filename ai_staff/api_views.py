@@ -890,7 +890,7 @@ class FileExtensionImage(APIView):
 class PromptCategoriesViewset(viewsets.ViewSet):
     # permission_classes = [AllowAny,]
     def list(self,request):
-        query_set = PromptCategories.objects.all()
+        query_set = PromptCategories.objects.all().exclude(id = 9) 
         serializer = PromptCategoriesSerializer(query_set,many=True)
         return Response(serializer.data)  
     
