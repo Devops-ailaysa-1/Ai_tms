@@ -901,3 +901,11 @@ class PromptTonesViewset(viewsets.ViewSet):
         query_set = PromptTones.objects.all()
         serializer = PromptTonesSerializer(query_set,many=True)
         return Response(serializer.data)  
+
+# class PromptSubCategoriesViewset(viewsets.ViewSet):
+#     # permission_classes = [AllowAny,]
+#     def list(self,request,id):
+#         query_set = PromptSubCategories.objects.filter(category_id = id)
+#         serializer = PromptSubCategoriesSerializer(query_set,many=True)
+#         return Response(serializer.data) 
+

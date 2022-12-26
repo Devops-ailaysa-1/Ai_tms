@@ -106,8 +106,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     i.translated_prompt_result = trans
                     i.save()
                     print("translate")
-                    word_count = get_consumable_credits_for_text(prompt_string,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
+                    word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, word_count)
 
     
     
@@ -191,6 +191,10 @@ class AiPromptResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPromptResult
         fields = '__all__'
+
+
+# class AiPromptGetSerializer(serializers.ModelSerializer):
+#     prompt_result = AiPromptResultSerializer()
 
     # def create(self, validated_data):
     #     print("validated_data--->" , validated_data)
