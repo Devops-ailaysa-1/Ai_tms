@@ -239,7 +239,22 @@ class AiPromptResultViewset(viewsets.ViewSet):
     #     return Response(serializer.errors)
 
 
+# from ai_exportpdf.utils import openai_endpoint
+# import os,json ,requests
 
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def word_count_check(request):
+#     spring_host = os.environ.get("SPRING_HOST")
+#     prompt = request.POST.get('prompt')
+#     seg = {'segment_source': prompt,
+#             'source_language': 17,
+#             'target_language': 77,
+#             'processor_name': 'plain-text-processor',
+#             'extension': '.txt'}
+#     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count",
+#                         data={"segmentWordCountdata": json.dumps(seg)})
+#     return Response({'msg':res.json()},status=200)
 
 
 
