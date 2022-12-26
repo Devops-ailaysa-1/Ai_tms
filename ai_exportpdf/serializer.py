@@ -53,7 +53,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         prompt=''
         start_phrase= None
         if instance.catagories.category == 'Free Style':
-            prompt+= instance.prompt_string if lang in ai_langs else instance.prompt_string_mt
+            prompt+= instance.description if lang in ai_langs else instance.description_mt
         else:
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
             prompt+=start_phrase.start_phrase+' '
@@ -81,7 +81,10 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
                                     no_of_outcome=no_of_outcome )
-
+         
+            
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, total_tokens)
+        
         if generated_text:
             print("generated_text" , generated_text)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
@@ -102,6 +105,9 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     trans = get_translation(1, content , j.result_lang_code, i.result_lang_code) if content else None
                     i.translated_prompt_result = trans
                     i.save()
+                    print("translate")
+                    word_count = get_consumable_credits_for_text(prompt_string,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
 
     
     
@@ -129,13 +135,14 @@ class AiPromptSerializer(serializers.ModelSerializer):
         targets = validated_data.pop('targets',None)
         instance = AiPrompt.objects.create(**validated_data)
         initial_credit = instance.user.credit_balance.get("total_left")
+        user = instance.user
+        
         if instance.catagories.category == 'Free Style':
             print("free_style--->")
             prompt_string = validated_data['description']
             consumable_credit = self.get_consumable_credits_for_ai_writer(instance,openai_available_langs,targets,prompt_string)
             if initial_credit < consumable_credit:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
-             
         else:
             print("not free_style--->")
             prompt = ''
@@ -153,6 +160,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if initial_credit < consumable_credit:
                 # return  Response({'msg':'Insufficient Credits'},status=400)
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+         
+                
         
         
         
