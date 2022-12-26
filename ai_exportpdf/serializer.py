@@ -49,9 +49,10 @@ class AiPromptSerializer(serializers.ModelSerializer):
     def prompt_generation(self,ins,obj,ai_langs):
         instance = AiPrompt.objects.get(id=ins)
         lang = instance.source_prompt_lang_id 
+        start_phrase = None
         prompt=''
         if instance.catagories.category == 'Free Style':
-            prompt+= instance.prompt_string if lang in ai_langs else instance.prompt_string_mt
+            prompt+= instance.description if lang in ai_langs else instance.description_mt
         else:
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
             prompt+=start_phrase.start_phrase+' '
