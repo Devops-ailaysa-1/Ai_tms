@@ -415,3 +415,15 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 n=n,
                 logit_bias = {"50256": -100})
     return response
+
+model_edit = os.getenv('OPENAI_EDIT_MODEL')
+def get_prompt_edit(input_text ,instruction ):
+    response = openai.Edit.create(
+                model=model_edit, 
+                input=input_text.strip(),
+                instruction = instruction
+                )
+    return response
+    
+    
+    
