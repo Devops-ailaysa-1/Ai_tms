@@ -125,13 +125,11 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     i.save()
                     print("translate")
                     word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
-                    # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, word_count)
                     self.customize_token_deduction(instance , word_count)
 
     def get_consumable_credits_for_ai_writer(self,instance,openai_available_langs,targets ,prompt_string):
         prompt_word_count = 0
-        source_language = instance.source_prompt_lang.locale.first().locale_code  
-        consumable_credit = get_consumable_credits_for_text(prompt_string,source_lang=source_language,target_lang=None)
+        consumable_credit = get_consumable_credits_for_text(prompt_string,source_lang=instance.source_prompt_lang_code,target_lang=None)
         print("total_token to consume-->" ,consumable_credit)
         return consumable_credit
         
@@ -182,7 +180,7 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
         result_dict ={}
         results = AiPromptResult.objects.filter(prompt_id = obj.id).distinct('copy')
         for i in results:
-            rr = AiPromptResult.objects.filter(prompt_id = 79).filter(copy=i.copy)
+            rr = AiPromptResult.objects.filter(prompt_id = obj.id).filter(copy=i.copy)
             result_dict[i.copy] = AiPromptResultSerializer(rr,many=True).data
         return result_dict
 
