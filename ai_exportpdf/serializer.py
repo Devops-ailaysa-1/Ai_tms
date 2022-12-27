@@ -119,9 +119,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
             else:
                 TextgeneratedCreditDeduction.objects.create(user=instance.user,credit_to_deduce = token_deduction)
         
-        
-    
-    
     def prompt_result_update(self,ins,obj,ai_langs):
         instance = AiPrompt.objects.get(id=ins)
         self.prompt_generation(ins,obj,ai_langs) 
@@ -139,8 +136,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, word_count)
                     self.customize_token_deduction(instance , word_count)
 
-    
-    
     def get_consumable_credits_for_ai_writer(self,instance,openai_available_langs,targets ,prompt_string):
         prompt_word_count = 0
         source_language = instance.source_prompt_lang.locale.first().locale_code  
