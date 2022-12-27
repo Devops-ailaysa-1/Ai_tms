@@ -127,3 +127,11 @@ class AiPromptResult(models.Model):
 #     translated_prompt_result = models.TextField(null=True, blank=True)
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
+
+
+class TextgeneratedCreditDeduction(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    cerdit_to_deduce = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    

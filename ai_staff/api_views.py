@@ -14,7 +14,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
-                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones)
+                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -23,7 +23,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
-                         PromptTonesSerializer)
+                         PromptTonesSerializer,AiCustomizeSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -901,6 +901,15 @@ class PromptTonesViewset(viewsets.ViewSet):
         query_set = PromptTones.objects.all()
         serializer = PromptTonesSerializer(query_set,many=True)
         return Response(serializer.data)  
+
+
+class AiCustomizeViewset(viewsets.ViewSet):
+    def list(self, request):
+        query_set = AiCustomize.objects.all()
+        serializer = AiCustomizeSerializer(query_set ,many=True)
+        return Response(serializer.data)
+
+
 
 # class PromptSubCategoriesViewset(viewsets.ViewSet):
 #     # permission_classes = [AllowAny,]

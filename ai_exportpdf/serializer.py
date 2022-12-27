@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import Ai_PdfUpload
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
-
+from itertools import groupby
 
 class PdfFileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,7 +32,7 @@ from rest_framework.response import Response
 from statistics import mode
 from rest_framework import serializers
 from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage )
-from ai_staff.models import PromptCategories,PromptSubCategories
+from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize
 from ai_exportpdf.utils import get_prompt ,get_consumable_credits_for_openai_text_generator
 from ai_workspace_okapi.utils import get_translation
 import math
@@ -160,10 +160,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if initial_credit < consumable_credit:
                 # return  Response({'msg':'Insufficient Credits'},status=400)
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-         
-                
-        
-        
         
         if instance.source_prompt_lang_id not in openai_available_langs:
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17,copy=0)
@@ -185,17 +181,32 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
 
 
- 
-
 class AiPromptResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPromptResult
         fields = '__all__'
 
 
-# class AiPromptGetSerializer(serializers.ModelSerializer):
-#     prompt_result = AiPromptResultSerializer()
+class AiPromptGetSerializer(serializers.ModelSerializer):
+    prompt_results = serializers.SerializerMethodField()
+    #ai_prompt = AiPromptResultSerializer(many=True)
+
+    class Meta:
+        model = AiPrompt
+        fields = ('user','prompt_string','source_prompt_lang','description','catagories','sub_catagories','Tone',
+                    'product_name','keywords','prompt_results',)#,'ai_prompt'
+        
+
+    def get_prompt_results(self,obj):
+        result_dict ={}
+        results = AiPromptResult.objects.filter(prompt_id = obj.id).distinct('copy')
+        for i in results:
+            rr = AiPromptResult.objects.filter(prompt_id = 79).filter(copy=i.copy)
+            result_dict[i.copy] = AiPromptResultSerializer(rr,many=True).data
+        return result_dict
 
     # def create(self, validated_data):
     #     print("validated_data--->" , validated_data)
     #     return super().create(validated_data)
+
+
