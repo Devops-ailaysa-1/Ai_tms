@@ -45,8 +45,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
         fields = ('id','user','prompt_string','description','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
             'response_charecter_limit','targets')
-
-    
     def prompt_generation(self,ins,obj,ai_langs):
         instance = AiPrompt.objects.get(id=ins)
         lang = instance.source_prompt_lang_id 
