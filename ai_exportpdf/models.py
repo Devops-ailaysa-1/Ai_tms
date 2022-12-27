@@ -81,7 +81,7 @@ class AiPrompt(models.Model):
     sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE,blank=True,null=True)
     source_prompt_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_lang')
     Tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='prompt_tone',blank=True,null=True,default=1)
-    response_copies = models.IntegerField(null=True, blank=True)
+    response_copies = models.IntegerField(null=True, blank=True,default=1)
     product_name = models.CharField(max_length = 1000, null=True, blank=True)
     product_name_mt = models.CharField(max_length = 1000, null=True, blank=True)
     keywords = models.CharField(max_length = 1000, null=True, blank=True)
