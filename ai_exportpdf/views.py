@@ -259,13 +259,13 @@ def customize_text_openai(request):
     if lang!= 'en':
         user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
                                        source_lang_code=lang , target_lang_code='en')
-        response = get_prompt_edit(input_text=user_text ,instruction=customize)
+        response = customize_response(customize,user_text)
         txt_generated = response['choices'][0]['text']
         user_text = get_translation(mt_engine_id=1 , source_string = txt_generated,
                                        source_lang_code='en' , target_lang_code=lang)
         
     else:##english
-        response = get_prompt_edit(input_text=user_text ,instruction=customize)
+        response = customize_response(customize,user_text)
         user_text = response['choices'][0]['text']
     total_tokens = response['usage']['total_tokens']
     return Response({'customize_text': user_text ,'lang':lang ,'customize_cat':customize.customize},status=200)
