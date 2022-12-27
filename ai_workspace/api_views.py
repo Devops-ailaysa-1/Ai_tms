@@ -2477,26 +2477,56 @@ def get_quill_data(request):
 @permission_classes([IsAuthenticated])
 def writer_save(request):
     task_id = request.POST.get('task_id')
+    transcripted_file_writer = request.FILES.get('file',None)
     task_obj = Task.objects.get(id=task_id)
     edited_text = request.POST.get('edited_text')
-    edited_data = json.loads(edited_text)
     obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
     filename,ext = os.path.splitext(task_obj.file.filename)
-    print("Filename---------------->",filename)
-    name = filename + '.docx'
-    try:
-        file_obj,name,f2 = docx_save(name,edited_data)
-    except:
-        return Response({'msg':'something wrong with input file format'},status=400)
+    data1 = {"writer_filename":filename,"task":task_id,"html_data":edited_text,'user':request.user.id}
+    if transcripted_file_writer:
+        data1.update({"transcripted_file_writer":transcripted_file_writer})
     if obj:
-        ser1 = TaskTranscriptDetailSerializer(obj,data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+        ser1 = TaskTranscriptDetailSerializer(obj,data=data1,partial=True)#"transcripted_file_writer":file_obj,
     else:
-        ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+        ser1 = TaskTranscriptDetailSerializer(data=data1,partial=True)#"transcripted_file_writer":file_obj,
     if ser1.is_valid():
         ser1.save()
-        os.remove(name)
         return Response(ser1.data)
     return Response(ser1.errors)
+
+
+
+
+
+
+
+
+
+
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def writer_save(request):
+#     task_id = request.POST.get('task_id')
+#     task_obj = Task.objects.get(id=task_id)
+#     edited_text = request.POST.get('edited_text')
+#     edited_data = json.loads(edited_text)
+#     obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+#     filename,ext = os.path.splitext(task_obj.file.filename)
+#     print("Filename---------------->",filename)
+#     name = filename + '.docx'
+#     try:
+#         file_obj,name,f2 = docx_save(name,edited_data)
+#     except:
+#         return Response({'msg':'something wrong with input file format'},status=400)
+#     if obj:
+#         ser1 = TaskTranscriptDetailSerializer(obj,data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+#     else:
+#         ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+#     if ser1.is_valid():
+#         ser1.save()
+#         os.remove(name)
+#         return Response(ser1.data)
+#     return Response(ser1.errors)
 
 
 # class ExpressProjectSetupView(viewsets.ModelViewSet):
