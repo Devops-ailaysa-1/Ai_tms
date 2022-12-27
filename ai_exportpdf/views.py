@@ -4,7 +4,8 @@ import logging ,os
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 from ai_exportpdf.serializer import (PdfFileSerializer ,PdfFileStatusSerializer ,
-                                     AiPromptSerializer ,AiPromptResultSerializer ,AiCustomizeSerializer)
+                                     AiPromptSerializer ,AiPromptResultSerializer,
+                                     AiPromptGetSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -230,10 +231,14 @@ class AiPromptResultViewset(viewsets.ViewSet):
 
     def list(self, request):
         prmp_id = request.GET.get('prompt_id')
+        print("prmp_id----------------->",prmp_id)
         prmp_obj = AiPrompt.objects.get(id=prmp_id)
-        query_set = prmp_obj.ai_prompt.all()
-        serializer = AiPromptResultSerializer(query_set ,many =True)
+        serializer = AiPromptGetSerializer(prmp_obj)
         return Response(serializer.data)
+
+        # query_set = prmp_obj.ai_prompt.all()
+        # serializer = AiPromptResultSerializer(query_set ,many =True)
+        # return Response(serializer.data)
 
     # def create(self,request):
     #     serializer = AiPromptResultSerializer(data=request.data)
@@ -242,14 +247,7 @@ class AiPromptResultViewset(viewsets.ViewSet):
     #         return Response(serializer.data)
     #     return Response(serializer.errors)
 
-
-class AiCustomizeViewset(viewsets.ViewSet):
-    def list(self, request):
-        query_set = AiCustomize.objects.all()
-        serializer = AiCustomizeSerializer(query_set ,many=True)
-        return Response(serializer.data)
     
-
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])

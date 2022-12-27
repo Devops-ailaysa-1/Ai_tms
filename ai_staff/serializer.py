@@ -6,7 +6,8 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
-                    ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,PromptStartPhrases,PromptTones)
+                    ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
+                    PromptStartPhrases,PromptTones,AiCustomize)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -370,7 +371,10 @@ class PromptTonesSerializer(serializers.ModelSerializer):
         model = PromptTones
         fields = ('id','tone')
     
-
+class AiCustomizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiCustomize
+        fields = ('id' , 'customize')
 
         
 

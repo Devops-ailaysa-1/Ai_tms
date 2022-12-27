@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import Ai_PdfUpload
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
-
+from itertools import groupby
 
 class PdfFileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -203,8 +203,23 @@ class AiPromptResultSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# class AiPromptGetSerializer(serializers.ModelSerializer):
-#     prompt_result = AiPromptResultSerializer()
+class AiPromptGetSerializer(serializers.ModelSerializer):
+    prompt_results = serializers.SerializerMethodField()
+    #ai_prompt = AiPromptResultSerializer(many=True)
+
+    class Meta:
+        model = AiPrompt
+        fields = ('user','prompt_string','source_prompt_lang','description','catagories','sub_catagories','Tone',
+                    'product_name','keywords','prompt_results',)#,'ai_prompt'
+        
+
+    def get_prompt_results(self,obj):
+        result_dict ={}
+        results = AiPromptResult.objects.filter(prompt_id = obj.id).distinct('copy')
+        for i in results:
+            rr = AiPromptResult.objects.filter(prompt_id = 79).filter(copy=i.copy)
+            result_dict[i.copy] = AiPromptResultSerializer(rr,many=True).data
+        return result_dict
 
     # def create(self, validated_data):
     #     print("validated_data--->" , validated_data)
@@ -215,22 +230,3 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiCustomize
         fields = ('id' , 'customize')
-        
-        
-
-# def get_consumable_credits_for_ai_writer(self,instance,openai_available_langs,targets ,prompt_string):
-#     free_style_prompt_word_count = 0
-#     source_language = instance.source_prompt_lang.locale.first().locale_code
-#     if instance.source_prompt_lang_id not in openai_available_langs:
-#         #where prmpt is not in eng
-#         free_style_prompt_word_count = get_consumable_credits_for_text(prompt_string,source_lang=source_language,target_lang=None)
-        
-#     #no_need_to_cal_prompt_str_where prmpt is in eng
-#     total_token = instance.response_charecter_limit *instance.response_copies
-#     if len(targets):
-#         total_token = total_token + instance.response_charecter_limit *len(targets) 
-#         ###target is calc based on openai tokenization
-#     consumable_credit = get_consumable_credits_for_openai_text_generator(total_token=total_token)
-#     consumable_credit +=free_style_prompt_word_count
-#     print("total_token to consume-->" ,consumable_credit,"with total char" ,total_token )
-#     return consumable_credit

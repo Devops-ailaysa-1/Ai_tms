@@ -61,6 +61,7 @@ urlpatterns += [
      path('extension-image/<extension>', api_views.FileExtensionImage.as_view(), name='extension-image'),
      path('ai_tones/',api_views.PromptTonesViewset.as_view({'get': 'list'}), name='ai-tones'),
      path('ai_categories/',api_views.PromptCategoriesViewset.as_view({'get': 'list'}), name='ai-categories'),
+     path('ai_customize/',api_views.AiCustomizeViewset.as_view({'get':'list'}),name='ai-customize'),
      #path('ai_subcategories/<int:category_id>/',api_views.PromptSubCategoriesViewset.as_view({'get': 'list'}),name='ai-subcategories')
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      #path('insert',views.Bulk_insert)

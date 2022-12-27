@@ -6,7 +6,6 @@ from django.urls import path
 router = DefaultRouter()
 router.register(r'convertpdftodocx',views.Pdf2Docx,basename='pdf')
 router.register(r'aiprompt',views.AiPromptViewset,basename='ai_prompt')
-router.register(r'text-customize',views.AiCustomizeViewset,basename='text-customize')
 urlpatterns = router.urls
 urlpatterns+= path('convert' , views.ConversionPortableDoc.as_view() , name='convertdoc' ),
 urlpatterns += path("docx_file_download/", views.docx_file_download, name="pdf_docx_download"),
