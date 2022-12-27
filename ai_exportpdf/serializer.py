@@ -31,8 +31,8 @@ class PdfFileStatusSerializer(serializers.ModelSerializer):
 from rest_framework.response import Response
 from statistics import mode
 from rest_framework import serializers
-from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage )
-from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize
+from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction )
+from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize 
 from ai_exportpdf.utils import get_prompt ,get_consumable_credits_for_openai_text_generator
 from ai_workspace_okapi.utils import get_translation
 import math
@@ -77,22 +77,51 @@ class AiPromptSerializer(serializers.ModelSerializer):
         total_tokens=token_usage['total_tokens']
         completion_tokens=token_usage['completion_tokens']
         no_of_outcome = instance.response_copies
-
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
-                                    no_of_outcome=no_of_outcome )
-         
+                                    no_of_outcome=no_of_outcome)
+        self.customize_token_deduction(instance , total_tokens)
+        # initial_credit = instance.user.credit_balance.get("total_left")
+        
+        # if initial_credit >=total_tokens:
+        #     debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, total_tokens)
+        # else:
+        #     token_deduction = total_tokens - initial_credit 
+        #     deduction_update = TextgeneratedCreditDeduction.objects.filter(user=instance.user)
+        #     if deduction_update.exists():
+        #         deduction_update.update(credit_to_deduce = token_deduction)
+        #         deduction_update.save()
+        #     else:
+        #         TextgeneratedCreditDeduction.objects.create(user=instance.user,credit_to_deduce = token_deduction)
             
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, total_tokens)
+            
         
         if generated_text:
             print("generated_text" , generated_text)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
                     defaults = {'prompt_generated':prompt,'start_phrase':start_phrase,\
                     'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip()}) for j,i in enumerate(generated_text)]
-
         return generated_text
 
+    def customize_token_deduction(self,instance ,total_tokens):
+        initial_credit = instance.user.credit_balance.get("total_left")
+        if initial_credit >=total_tokens:
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, total_tokens)
+        else:
+            token_deduction = total_tokens - initial_credit 
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, initial_credit)
+            deduction_update = TextgeneratedCreditDeduction.objects.filter(user=instance.user)
+            if deduction_update.exists():
+                total_deduction = deduction_update[0].credit_to_deduce
+                total_deduction = total_deduction+token_deduction
+                deduction_update.update(credit_to_deduce = total_deduction)
+                # deduction_update.save()
+            else:
+                TextgeneratedCreditDeduction.objects.create(user=instance.user,credit_to_deduce = token_deduction)
+        
+        
+    
+    
     def prompt_result_update(self,ins,obj,ai_langs):
         instance = AiPrompt.objects.get(id=ins)
         self.prompt_generation(ins,obj,ai_langs) 
@@ -107,36 +136,25 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     i.save()
                     print("translate")
                     word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, word_count)
+                    # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, word_count)
+                    self.customize_token_deduction(instance , word_count)
 
     
     
     def get_consumable_credits_for_ai_writer(self,instance,openai_available_langs,targets ,prompt_string):
-        
-        source_language = instance.source_prompt_lang.locale.first().locale_code
-        if instance.source_prompt_lang_id not in openai_available_langs:
-            #where prmpt is not in eng
-            free_style_prompt_word_count = get_consumable_credits_for_text(prompt_string,source_lang=source_language,target_lang=None)
-            
-        #no_need_to_cal_prompt_str_where prmpt is in eng
-        total_token = instance.response_charecter_limit *instance.response_copies
-        if len(targets):
-            total_token = total_token + instance.response_charecter_limit *len(targets) 
-            ###target is calc based on openai tokenization
-        consumable_credit = get_consumable_credits_for_openai_text_generator(total_token=total_token)
-        consumable_credit +=free_style_prompt_word_count
-        print("total_token to consume-->" ,consumable_credit,"with total char" ,total_token )
+        prompt_word_count = 0
+        source_language = instance.source_prompt_lang.locale.first().locale_code  
+        consumable_credit = get_consumable_credits_for_text(prompt_string,source_lang=source_language,target_lang=None)
+        print("total_token to consume-->" ,consumable_credit)
         return consumable_credit
         
 
     def create(self, validated_data):
         openai_available_langs = [17]
-        free_style_prompt_word_count = 0
         targets = validated_data.pop('targets',None)
         instance = AiPrompt.objects.create(**validated_data)
         initial_credit = instance.user.credit_balance.get("total_left")
         user = instance.user
-        
         if instance.catagories.category == 'Free Style':
             print("free_style--->")
             prompt_string = validated_data['description']
@@ -173,9 +191,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.response_copies >1:
             tt = [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i,copy=j) for i in targets for j in range(instance.response_copies)]
         else:
-            tt= [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i,copy=0) for i in targets]
-            
-            
+            tt= [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i,copy=0) for i in targets]        
         self.prompt_result_update(instance.id,prmt_res,openai_available_langs)        
         return instance
 
@@ -210,3 +226,7 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
     #     return super().create(validated_data)
 
 
+class AiCustomizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiCustomize
+        fields = ('id' , 'customize')
