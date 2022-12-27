@@ -263,9 +263,10 @@ def customize_text_openai(request):
     if lang!= 'en':
         user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
                                        source_lang_code=lang , target_lang_code='en')
-        user_text = customize +" this: "+ user_text_mt_en
-        print("user_text " ,user_text)
-        response = get_prompt(user_text ,model_name=openai_model , max_token =100,n=1 )
+        # user_text = customize +" this: "+ user_text_mt_en
+        # print("user_text " ,user_text)
+        # response = get_prompt(user_text ,model_name=openai_model , max_token =100,n=1 )
+        response = get_prompt_edit(input_text=user_text ,instruction=customize)
         txt_generated = response['choices'][0]['text']
         user_text = get_translation(mt_engine_id=1 , source_string = txt_generated,
                                        source_lang_code='en' , target_lang_code=lang)
