@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import Ai_PdfUpload
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
-
+from itertools import groupby
 
 class PdfFileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -187,15 +187,26 @@ class AiPromptResultSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# class AiPromptGetSerializer(serializers.ModelSerializer):
-#     prompt_result = AiPromptResultSerializer()
+class AiPromptGetSerializer(serializers.ModelSerializer):
+    prompt_results = serializers.SerializerMethodField()
+    #ai_prompt = AiPromptResultSerializer(many=True)
+
+    class Meta:
+        model = AiPrompt
+        fields = ('user','prompt_string','source_prompt_lang','description','catagories','sub_catagories','Tone',
+                    'product_name','keywords','prompt_results',)#,'ai_prompt'
+        
+
+    def get_prompt_results(self,obj):
+        result_dict ={}
+        results = AiPromptResult.objects.filter(prompt_id = obj.id).distinct('copy')
+        for i in results:
+            rr = AiPromptResult.objects.filter(prompt_id = 79).filter(copy=i.copy)
+            result_dict[i.copy] = AiPromptResultSerializer(rr,many=True).data
+        return result_dict
 
     # def create(self, validated_data):
     #     print("validated_data--->" , validated_data)
     #     return super().create(validated_data)
 
 
-class AiCustomizeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AiCustomize
-        fields = ('id' , 'customize')
