@@ -131,6 +131,7 @@ class AiPromptResult(models.Model):
 
 class TextgeneratedCreditDeduction(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    cerdit_to_deduce = models.IntegerField(default=1)
+    cerdit_to_deduce = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
