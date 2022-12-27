@@ -45,7 +45,9 @@ class AiPromptSerializer(serializers.ModelSerializer):
         fields = ('id','user','prompt_string','description','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
             'response_charecter_limit','targets')
-    def prompt_generation(self,ins,obj,ai_langs):
+
+    
+    def prompt_generation(self,ins,obj,ai_langs,targets):
         instance = AiPrompt.objects.get(id=ins)
         lang = instance.source_prompt_lang_id 
         start_phrase = None
@@ -64,6 +66,10 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
             print("prompt-->" ,prompt )
+        initial_credit = instance.user.credit_balance.get("total_left")
+        consumable_credit = self.get_consumable_credits_for_ai_writer(instance,ai_langs,targets,prompt)
+        if initial_credit < consumable_credit:
+            return  Response({'msg':'Insufficient Credits'},status=400)
 
         openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , 
                                 instance.response_charecter_limit ,instance.response_copies )
@@ -78,28 +84,14 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
                                     no_of_outcome=no_of_outcome)
-        self.customize_token_deduction(instance , total_tokens)
-        # initial_credit = instance.user.credit_balance.get("total_left")
-        
-        # if initial_credit >=total_tokens:
-        #     debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, total_tokens)
-        # else:
-        #     token_deduction = total_tokens - initial_credit 
-        #     deduction_update = TextgeneratedCreditDeduction.objects.filter(user=instance.user)
-        #     if deduction_update.exists():
-        #         deduction_update.update(credit_to_deduce = token_deduction)
-        #         deduction_update.save()
-        #     else:
-        #         TextgeneratedCreditDeduction.objects.create(user=instance.user,credit_to_deduce = token_deduction)
-            
-            
+        self.customize_token_deduction(instance , total_tokens)            
         
         if generated_text:
             print("generated_text" , generated_text)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
                     defaults = {'prompt_generated':prompt,'start_phrase':start_phrase,\
                     'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip()}) for j,i in enumerate(generated_text)]
-        return generated_text
+        return None
 
     def customize_token_deduction(self,instance ,total_tokens):
         initial_credit = instance.user.credit_balance.get("total_left")
@@ -117,9 +109,11 @@ class AiPromptSerializer(serializers.ModelSerializer):
             else:
                 TextgeneratedCreditDeduction.objects.create(user=instance.user,credit_to_deduce = token_deduction)
         
-    def prompt_result_update(self,ins,obj,ai_langs):
+    def prompt_result_update(self,ins,obj,ai_langs,targets):
         instance = AiPrompt.objects.get(id=ins)
-        self.prompt_generation(ins,obj,ai_langs) 
+        prompt = self.prompt_generation(ins,obj,ai_langs,targets) 
+        if prompt:
+            return prompt
         queryset = instance.ai_prompt.filter(response_id=None).filter(api_result=None).exclude(result_lang__in=ai_langs) 
         queryset_2 = instance.ai_prompt.filter(result_lang__in=ai_langs)
         for j in queryset_2:
@@ -131,13 +125,11 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     i.save()
                     print("translate")
                     word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
-                    # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, word_count)
                     self.customize_token_deduction(instance , word_count)
 
     def get_consumable_credits_for_ai_writer(self,instance,openai_available_langs,targets ,prompt_string):
         prompt_word_count = 0
-        source_language = instance.source_prompt_lang.locale.first().locale_code  
-        consumable_credit = get_consumable_credits_for_text(prompt_string,source_lang=source_language,target_lang=None)
+        consumable_credit = get_consumable_credits_for_text(prompt_string,source_lang=instance.source_prompt_lang_code,target_lang=None)
         print("total_token to consume-->" ,consumable_credit)
         return consumable_credit
         
@@ -147,31 +139,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         targets = validated_data.pop('targets',None)
         instance = AiPrompt.objects.create(**validated_data)
         initial_credit = instance.user.credit_balance.get("total_left")
-        user = instance.user
-        if instance.catagories.category == 'Free Style':
-            print("free_style--->")
-            prompt_string = validated_data['description']
-            consumable_credit = self.get_consumable_credits_for_ai_writer(instance,openai_available_langs,targets,prompt_string)
-            if initial_credit < consumable_credit:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
-        else:
-            print("not free_style--->")
-            prompt = ''
-            start_phrase = instance.sub_catagories.prompt_sub_category.first()
-            prompt+=start_phrase.start_phrase+' '
-            if instance.product_name:
-                prompt+=' '+instance.product_name  
-            if instance.description:
-                prompt+=' '+instance.description  
-            if instance.keywords:
-                prompt+=' including words '+ instance.keywords  
-            if start_phrase.punctuation:
-                prompt+=start_phrase.punctuation
-            consumable_credit = self.get_consumable_credits_for_ai_writer(instance,openai_available_langs,targets,prompt)
-            if initial_credit < consumable_credit:
-                # return  Response({'msg':'Insufficient Credits'},status=400)
-                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-        
+        user = instance.user 
         if instance.source_prompt_lang_id not in openai_available_langs:
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17,copy=0)
             description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.description else None
@@ -185,7 +153,9 @@ class AiPromptSerializer(serializers.ModelSerializer):
             tt = [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i,copy=j) for i in targets for j in range(instance.response_copies)]
         else:
             tt= [AiPromptResult.objects.get_or_create(prompt=instance,result_lang_id=i,copy=0) for i in targets]        
-        self.prompt_result_update(instance.id,prmt_res,openai_available_langs)        
+        pr_result = self.prompt_result_update(instance.id,prmt_res,openai_available_langs,targets) 
+        if pr_result:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)        
         return instance
 
 
@@ -210,7 +180,7 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
         result_dict ={}
         results = AiPromptResult.objects.filter(prompt_id = obj.id).distinct('copy')
         for i in results:
-            rr = AiPromptResult.objects.filter(prompt_id = 79).filter(copy=i.copy)
+            rr = AiPromptResult.objects.filter(prompt_id = obj.id).filter(copy=i.copy)
             result_dict[i.copy] = AiPromptResultSerializer(rr,many=True).data
         return result_dict
 
@@ -223,3 +193,5 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiCustomize
         fields = ('id' , 'customize')
+
+

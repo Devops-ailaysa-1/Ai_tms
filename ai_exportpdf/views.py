@@ -219,7 +219,8 @@ class AiPromptViewset(viewsets.ViewSet):
     def create(self,request):
         # keywords = request.POST.getlist('keywords')
         targets = request.POST.getlist('get_result_in')
-        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':self.request.user.id,'targets':targets})
+        char_limit = request.POST.get('response_charecter_limit',256)
+        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -236,16 +237,6 @@ class AiPromptResultViewset(viewsets.ViewSet):
         serializer = AiPromptGetSerializer(prmp_obj)
         return Response(serializer.data)
 
-        # query_set = prmp_obj.ai_prompt.all()
-        # serializer = AiPromptResultSerializer(query_set ,many =True)
-        # return Response(serializer.data)
-
-    # def create(self,request):
-    #     serializer = AiPromptResultSerializer(data=request.data)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data)
-    #     return Response(serializer.errors)
 
 def customize_response(customize ,user_text):
     types = None
@@ -268,26 +259,13 @@ def customize_text_openai(request):
     if lang!= 'en':
         user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
                                        source_lang_code=lang , target_lang_code='en')
- 
-        response= customize_response(customize,user_text)
-        
-        # if customize.prompt:
-        #     response = get_prompt(prompt=customize.prompt+" "+user_text,model_name=openai_model,max_token =256,n=1)
-        # else:
-        #     response = get_prompt_edit(input_text=user_text ,instruction=customize.customize)
-        # return response 
-        
+        response = get_prompt_edit(input_text=user_text ,instruction=customize)
         txt_generated = response['choices'][0]['text']
         user_text = get_translation(mt_engine_id=1 , source_string = txt_generated,
                                        source_lang_code='en' , target_lang_code=lang)
         
     else:##english
-        # if customize.prompt:
-        #     response = get_prompt(prompt=customize.prompt+" "+user_text,model_name=openai_model,max_token =256,n=1)
-        # else:
-        #     response = get_prompt_edit(input_text=user_text ,instruction=customize.customize)
-        # return response 
-        response = customize_response(customize,user_text)
+        response = get_prompt_edit(input_text=user_text ,instruction=customize)
         user_text = response['choices'][0]['text']
     total_tokens = response['usage']['total_tokens']
     return Response({'customize_text': user_text ,'lang':lang ,'customize_cat':customize.customize},status=200)
@@ -295,6 +273,25 @@ def customize_text_openai(request):
  
 
 
+
+
+
+
+
+
+
+
+
+
+    # consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
+    # if initial_credit > consumable_credits:
+    #     response = openai_endpoint(prompt)
+    #     consume_credit = response.pop('usage')
+    #     consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
+    #     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
+    #     return JsonResponse(response)
+    # else:
+    #     return Response({'msg':'Insufficient Credits'},status=400)
         
      
 
