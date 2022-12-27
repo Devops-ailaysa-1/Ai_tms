@@ -21,7 +21,7 @@ from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages
 from langdetect import detect
-from ai_exportpdf.utils import get_prompt 
+from ai_exportpdf.utils import get_prompt ,get_prompt_edit
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 
@@ -263,18 +263,21 @@ def customize_text_openai(request):
     if lang!= 'en':
         user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
                                        source_lang_code=lang , target_lang_code='en')
-        user_text = customize +"this:"+ user_text_mt_en
-        response = get_prompt(user_text ,model_name=openai_model , max_token =256 ,n=1 )
+        user_text = customize +" this: "+ user_text_mt_en
+        print("user_text " ,user_text)
+        response = get_prompt(user_text ,model_name=openai_model , max_token =100,n=1 )
         txt_generated = response['choices'][0]['text']
         user_text = get_translation(mt_engine_id=1 , source_string = txt_generated,
                                        source_lang_code='en' , target_lang_code=lang)
         
     else:##english
-        user_text = customize +"this:"+ user_text
-        response = get_prompt(user_text ,model_name=openai_model , max_token =256 ,n=1 )
+        # user_text = customize +" text below\n:"+ user_text
+        # user_text = customize +" this:'{}'".format(user_text)
+        # print("user_text " ,user_text)
+        # response = get_prompt(user_text ,model_name=openai_model ,max_token =200 ,n=1 )
+        response = get_prompt_edit(input_text=user_text ,instruction=customize)
         user_text = response['choices'][0]['text']
     total_tokens = response['usage']['total_tokens']
-    
     return Response({'customize_text': user_text ,'lang':lang ,'customize_cat':customize},status=200)
 
     # consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
