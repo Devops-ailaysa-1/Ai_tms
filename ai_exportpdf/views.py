@@ -1,9 +1,11 @@
-from ai_exportpdf.models import Ai_PdfUpload ,AiPrompt ,AiPromptResult
+from ai_exportpdf.models import (Ai_PdfUpload ,AiPrompt ,AiPromptResult)
 from django.http import   JsonResponse
-import logging
+import logging ,os
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
-from ai_exportpdf.serializer import PdfFileSerializer ,PdfFileStatusSerializer ,AiPromptSerializer ,AiPromptResultSerializer
+from ai_exportpdf.serializer import (PdfFileSerializer ,PdfFileStatusSerializer ,
+                                     AiPromptSerializer ,AiPromptResultSerializer,
+                                     AiPromptGetSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -18,8 +20,11 @@ from ai_workspace.api_views import UpdateTaskCreditStatus
 from django.core.files.base import ContentFile
 from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
-
-
+from ai_staff.models import AiCustomize ,Languages
+from langdetect import detect
+from ai_exportpdf.utils import get_prompt ,get_prompt_edit
+from ai_workspace_okapi.utils import get_translation
+openai_model = os.getenv('OPENAI_MODEL')
 
 logger = logging.getLogger('django')
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
@@ -226,10 +231,14 @@ class AiPromptResultViewset(viewsets.ViewSet):
 
     def list(self, request):
         prmp_id = request.GET.get('prompt_id')
+        print("prmp_id----------------->",prmp_id)
         prmp_obj = AiPrompt.objects.get(id=prmp_id)
-        query_set = prmp_obj.ai_prompt.all()
-        serializer = AiPromptResultSerializer(query_set ,many =True)
+        serializer = AiPromptGetSerializer(prmp_obj)
         return Response(serializer.data)
+
+        # query_set = prmp_obj.ai_prompt.all()
+        # serializer = AiPromptResultSerializer(query_set ,many =True)
+        # return Response(serializer.data)
 
     # def create(self,request):
     #     serializer = AiPromptResultSerializer(data=request.data)
@@ -238,6 +247,49 @@ class AiPromptResultViewset(viewsets.ViewSet):
     #         return Response(serializer.data)
     #     return Response(serializer.errors)
 
+    
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def customize_text_openai(request):
+    user = request.user
+    customize_id = request.POST.get('customize_id')
+    user_text = request.POST.get('user_text')
+    customize = AiCustomize.objects.get(id =customize_id).customize
+    lang = detect(user_text)
+     
+    if lang!= 'en':
+        user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
+                                       source_lang_code=lang , target_lang_code='en')
+        # user_text = customize +" this: "+ user_text_mt_en
+        # print("user_text " ,user_text)
+        # response = get_prompt(user_text ,model_name=openai_model , max_token =100,n=1 )
+        response = get_prompt_edit(input_text=user_text ,instruction=customize)
+        txt_generated = response['choices'][0]['text']
+        user_text = get_translation(mt_engine_id=1 , source_string = txt_generated,
+                                       source_lang_code='en' , target_lang_code=lang)
+        
+    else:##english
+        # user_text = customize +" text below\n:"+ user_text
+        # user_text = customize +" this:'{}'".format(user_text)
+        # print("user_text " ,user_text)
+        # response = get_prompt(user_text ,model_name=openai_model ,max_token =200 ,n=1 )
+        response = get_prompt_edit(input_text=user_text ,instruction=customize)
+        user_text = response['choices'][0]['text']
+    total_tokens = response['usage']['total_tokens']
+    return Response({'customize_text': user_text ,'lang':lang ,'customize_cat':customize},status=200)
+
+    # consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
+    # if initial_credit > consumable_credits:
+    #     response = openai_endpoint(prompt)
+    #     consume_credit = response.pop('usage')
+    #     consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
+    #     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
+    #     return JsonResponse(response)
+    # else:
+    #     return Response({'msg':'Insufficient Credits'},status=400)
+        
+     
 
 # from ai_exportpdf.utils import openai_endpoint
 # import os,json ,requests

@@ -597,3 +597,4 @@ class TaskRoles(models.Model):
     @property
     def role_name(self):
         return self.role.role.name
+    

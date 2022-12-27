@@ -447,6 +447,17 @@ class PromptStartPhrases(models.Model):
     
     def __str__(self) -> str:
         return self.start_phrase
+    
+class AiCustomize(models.Model):
+    # user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    customize = models.CharField(max_length =200, null=True, blank=True)  
+    prompt =   models.CharField(max_length =200, null=True, blank=True)  
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.customize
+
 
 class Role(ParanoidModel):
     name = models.CharField(max_length=100, null=True, blank=True)
