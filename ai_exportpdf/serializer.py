@@ -172,7 +172,7 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPrompt
         fields = ('user','prompt_string','source_prompt_lang','description','catagories','sub_catagories','Tone',
-                    'product_name','keywords','prompt_results',)#,'ai_prompt'
+                    'product_name','keywords','created_at','prompt_results',)#,'ai_prompt'
         
 
     def get_prompt_results(self,obj):
