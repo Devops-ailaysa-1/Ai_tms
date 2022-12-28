@@ -83,6 +83,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
                                     no_of_outcome=no_of_outcome)
+        total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
         self.customize_token_deduction(instance , total_tokens)            
         
         if generated_text:
