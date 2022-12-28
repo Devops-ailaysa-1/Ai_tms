@@ -232,9 +232,12 @@ class AiPromptResultViewset(viewsets.ViewSet):
 
     def list(self, request):
         prmp_id = request.GET.get('prompt_id')
-        print("prmp_id----------------->",prmp_id)
-        prmp_obj = AiPrompt.objects.get(id=prmp_id)
-        serializer = AiPromptGetSerializer(prmp_obj)
+        if prmp_id:
+            prmp_obj = AiPrompt.objects.get(id=prmp_id)
+            serializer = AiPromptGetSerializer(prmp_obj)
+        else:
+            queryset = AiPrompt.objects.filter(user=self.request.user)
+            serializer = AiPromptGetSerializer(queryset,many=True)      
         return Response(serializer.data)
 
 
