@@ -65,7 +65,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
                 prompt+=' including words '+ instance.keywords if lang in ai_langs else ' including words '+ instance.keywords_mt
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
-            print("prompt-->" ,prompt )
         initial_credit = instance.user.credit_balance.get("total_left")
         consumable_credit = self.get_consumable_credits_for_ai_writer(instance,ai_langs,targets,prompt)
         if initial_credit < consumable_credit:
