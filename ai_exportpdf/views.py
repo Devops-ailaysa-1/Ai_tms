@@ -1,7 +1,7 @@
 from ai_exportpdf.models import (Ai_PdfUpload ,AiPrompt ,AiPromptResult)
 from django.http import   JsonResponse
 import logging ,os
-from rest_framework import viewsets
+from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from ai_exportpdf.serializer import (PdfFileSerializer ,PdfFileStatusSerializer ,
                                      AiPromptSerializer ,AiPromptResultSerializer,
@@ -10,13 +10,14 @@ from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
 from ai_exportpdf.utils import pdf_conversion
+import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
 from ai_exportpdf.utils import (get_consumable_credits_for_pdf_to_docx ,file_pdf_check,\
                                 get_consumable_credits_for_openai_text_generator)
 from ai_auth.models import UserCredits
-from ai_workspace.api_views import UpdateTaskCreditStatus
+from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from django.core.files.base import ContentFile
 from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
@@ -215,7 +216,6 @@ class AiPromptViewset(viewsets.ViewSet):
         serializer = AiPromptSerializer(query_set ,many =True)
         return Response(serializer.data)
 
-
     def create(self,request):
         # keywords = request.POST.getlist('keywords')
         targets = request.POST.getlist('get_result_in')
@@ -227,24 +227,64 @@ class AiPromptViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
 
-class AiPromptResultViewset(viewsets.ViewSet):
-    model = AiPromptResult
+# class AiPromptResultViewset(viewsets.ViewSet):
+#     model = AiPromptResult
 
-    def list(self, request):
-        prmp_id = request.GET.get('prompt_id')
+#     def list(self, request):
+#         prmp_id = request.GET.get('prompt_id')
+#         if prmp_id:
+#             prmp_obj = AiPrompt.objects.get(id=prmp_id)
+#             serializer = AiPromptGetSerializer(prmp_obj)
+#         else:
+#             queryset = AiPrompt.objects.filter(user=self.request.user)
+#             serializer = AiPromptGetSerializer(queryset,many=True)      
+#         return Response(serializer.data)
+
+class PromptFilter(django_filters.FilterSet):
+    prompt = django_filters.CharFilter(field_name='description',lookup_expr='icontains')
+    source = django_filters.CharFilter(field_name='source_prompt_lang__language',lookup_expr='icontains')
+    target = django_filters.CharFilter(field_name='ai_prompt__result_lang__language',lookup_expr='icontains')
+    category = django_filters.CharFilter(field_name='catagories__category',lookup_expr='icontains')
+    sub_category = django_filters.CharFilter(field_name='sub_catagories__sub_category',lookup_expr='icontains')
+    tone = django_filters.CharFilter(field_name='Tone__tone',lookup_expr='icontains')
+    class Meta:
+        model = AiPrompt
+        fields = ('prompt', 'source','target','category','sub_category','tone',)
+
+
+
+class NoPagination(PageNumberPagination):
+      page_size = None
+
+class AiPromptResultViewset(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AiPromptGetSerializer
+    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
+    ordering_fields = ['id']
+    ordering = ('-id')
+    filterset_class = PromptFilter
+    search_fields = ['description','catagories__category','sub_catagories__sub_category',]
+    pagination_class = NoPagination
+    page_size = None
+
+    def get_queryset(self):
+        prmp_id = self.request.query_params.get('prompt_id')
+        #prmp_id = self.request.GET.get('prompt_id')
         if prmp_id:
-            prmp_obj = AiPrompt.objects.get(id=prmp_id)
-            serializer = AiPromptGetSerializer(prmp_obj)
+            queryset = AiPrompt.objects.filter(id=prmp_id)
         else:
             queryset = AiPrompt.objects.filter(user=self.request.user)
-            serializer = AiPromptGetSerializer(queryset,many=True)      
-        return Response(serializer.data)
+        return queryset
 
 
-def customize_response(customize ,user_text):
-    types = None
+
+def customize_response(customize ,user_text,request):
     if customize.prompt:
+        initial_credit = request.user.credit_balance.get("total_left")
         response = get_prompt(prompt=customize.prompt+" "+user_text,model_name=openai_model,max_token =256,n=1)
+        total_tokens = response['usage']['total_tokens']
+        total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
+        AiPromptSerializer().customize_token_deduction(instance = request,total_tokens=total_tokens)
     else:
         response = get_prompt_edit(input_text=user_text ,instruction=customize.customize)
     return response 
@@ -260,18 +300,32 @@ def customize_text_openai(request):
     lang = detect(user_text)
     
     if lang!= 'en':
-        user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
-                                       source_lang_code=lang , target_lang_code='en')
-        response = customize_response(customize,user_text)
-        txt_generated = response['choices'][0]['text']
-        user_text = get_translation(mt_engine_id=1 , source_string = txt_generated,
-                                       source_lang_code='en' , target_lang_code=lang)
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
+        #print("credits for input text----------->",consumable_credits_user_text)
+        if initial_credit > consumable_credits_user_text:
+            user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
+                                        source_lang_code=lang , target_lang_code='en')
+            consumable_credits_txt_generated = get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
+            #print("credits for mt------------>",consumable_credits_txt_generated)
+            response = customize_response(customize,user_text_mt_en,request)
+            result_txt = response['choices'][0]['text']
+            #print("openai_result--------->",result_txt)
+            txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt,
+                                        source_lang_code='en' , target_lang_code=lang)
+            #print("credits for result mt---------> ",get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang))
+            consumable_credits_txt_generated += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
+            #print("Tot----------->",consumable_credits_txt_generated)
+            AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= consumable_credits_txt_generated)
+            
+        else:
+            return  Response({'msg':'Insufficient Credits'},status=400)
         
     else:##english
-        response = customize_response(customize,user_text)
-        user_text = response['choices'][0]['text']
-    total_tokens = response['usage']['total_tokens']
-    return Response({'customize_text': user_text ,'lang':lang ,'customize_cat':customize.customize},status=200)
+        response = customize_response(customize,user_text,request)
+        txt_generated = response['choices'][0]['text']
+    #total_tokens = response['usage']['total_tokens']
+    return Response({'customize_text': txt_generated ,'lang':lang ,'customize_cat':customize.customize},status=200)
 
  
 

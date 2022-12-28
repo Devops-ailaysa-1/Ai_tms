@@ -65,7 +65,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
                 prompt+=' including words '+ instance.keywords if lang in ai_langs else ' including words '+ instance.keywords_mt
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
-            print("prompt-->" ,prompt )
         initial_credit = instance.user.credit_balance.get("total_left")
         consumable_credit = self.get_consumable_credits_for_ai_writer(instance,ai_langs,targets,prompt)
         if initial_credit < consumable_credit:
@@ -84,6 +83,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
                                     no_of_outcome=no_of_outcome)
+        total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
         self.customize_token_deduction(instance , total_tokens)            
         
         if generated_text:
@@ -172,7 +172,7 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AiPrompt
-        fields = ('user','prompt_string','source_prompt_lang','description','catagories','sub_catagories','Tone',
+        fields = ('id','user','prompt_string','source_prompt_lang','description','catagories','sub_catagories','Tone',
                     'product_name','keywords','created_at','prompt_results',)#,'ai_prompt'
         
 
