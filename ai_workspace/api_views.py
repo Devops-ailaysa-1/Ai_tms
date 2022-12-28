@@ -650,12 +650,14 @@ def get_file_from_pdf(pdf_obj_id,pdf_task_id):
         pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
     else:
         pdf_obj = Ai_PdfUpload.objects.filter(task_id = pdf_task_id).last() 
+    print("pdf Before---------->",pdf_obj)
     if pdf_obj.pdf_api_use == "convertio":
         docx_file_path = get_docx_file_path(pdf_obj.id)
         file = open(docx_file_path,'rb')
         file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
         pdf_obj.translation_task_created = True
         pdf_obj.save()
+        print("Pdf------->",pdf_obj.translation_task_created)
     else:
         #docx_save_pdf(pdf_obj)
         file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
