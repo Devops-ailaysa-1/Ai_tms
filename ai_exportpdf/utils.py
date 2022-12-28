@@ -417,6 +417,7 @@ def get_prompt(prompt ,model_name , max_token ,n ):
     return response
 
 model_edit = os.getenv('OPENAI_EDIT_MODEL')
+
 def get_prompt_edit(input_text ,instruction ):
     response = openai.Edit.create(
                 model=model_edit, 
