@@ -16,7 +16,7 @@ from ai_workspace_okapi.utils import download_file
 from ai_exportpdf.utils import (get_consumable_credits_for_pdf_to_docx ,file_pdf_check,\
                                 get_consumable_credits_for_openai_text_generator)
 from ai_auth.models import UserCredits
-from ai_workspace.api_views import UpdateTaskCreditStatus
+from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from django.core.files.base import ContentFile
 from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
@@ -215,7 +215,6 @@ class AiPromptViewset(viewsets.ViewSet):
         serializer = AiPromptSerializer(query_set ,many =True)
         return Response(serializer.data)
 
-
     def create(self,request):
         # keywords = request.POST.getlist('keywords')
         targets = request.POST.getlist('get_result_in')
@@ -239,7 +238,6 @@ class AiPromptResultViewset(viewsets.ViewSet):
 
 
 def customize_response(customize ,user_text):
-    types = None
     if customize.prompt:
         response = get_prompt(prompt=customize.prompt+" "+user_text,model_name=openai_model,max_token =256,n=1)
     else:
@@ -257,12 +255,20 @@ def customize_text_openai(request):
     lang = detect(user_text)
     
     if lang!= 'en':
-        user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
-                                       source_lang_code=lang , target_lang_code='en')
-        response = customize_response(customize,user_text)
-        txt_generated = response['choices'][0]['text']
-        user_text = get_translation(mt_engine_id=1 , source_string = txt_generated,
-                                       source_lang_code='en' , target_lang_code=lang)
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
+        if initial_credit > consumable_credits_user_text:
+            user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
+                                        source_lang_code=lang , target_lang_code='en')
+            response = customize_response(customize,user_text)
+            txt_generated = response['choices'][0]['text']
+            user_text = get_translation(mt_engine_id=1 , source_string = txt_generated,
+                                        source_lang_code='en' , target_lang_code=lang)
+            consumable_credits_txt_generated = get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
+            consumable_credits = consumable_credits_txt_generated+consumable_credits_user_text
+            AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= consumable_credits)
+        else:
+            return  Response({'msg':'Insufficient Credits'},status=400)
         
     else:##english
         response = customize_response(customize,user_text)
