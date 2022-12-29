@@ -130,7 +130,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
     def get_consumable_credits_for_ai_writer(self,instance,openai_available_langs,targets ,prompt_string):
         prompt_word_count = 0
         consumable_credit = get_consumable_credits_for_text(prompt_string,source_lang=instance.source_prompt_lang_code,target_lang=None)
-        print("total_token to consume-->" ,consumable_credit)
         return consumable_credit
         
 
