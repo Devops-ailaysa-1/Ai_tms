@@ -14,7 +14,7 @@ from os.path import join
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from stripe.api_resources import subscription
-from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,TeamAccess
+# from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,TeamAccess
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
@@ -500,7 +500,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
 
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
-        success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        success_url=domain_url + 'success?ses={CHECKOUT_SESSION_ID}',
         cancel_url=domain_url + 'cancel/',
         payment_method_types=['card'],
         customer =customer.id,
@@ -654,7 +654,7 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
     #     addr_collect= 'required'
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=Aicustomer.subscriber,
-        success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        success_url=domain_url + 'success?ses={CHECKOUT_SESSION_ID}',
         cancel_url=domain_url + 'cancel/',
         payment_method_types=['card'],
         mode='payment',
@@ -2352,13 +2352,15 @@ def oso_test_querys(request):
     usr_attr = UserAttribute.objects.get(user= request.user)
     authorize(request, resource=usr_attr, actor=request.user, action="read")
     print("authorized user attribute")
-    tsk = Task.objects.get(id=2867)
+    # tsk = Task.objects.get(id=2867)
     #doc = Document.objects.filter(id=1684)
-    #repo_filter = authorize_model(request, Document, action="read")
-    fil = Document.objects.authorize(request, actor=request.user, action="read")
+    repo_filter = authorize_model(request, Project, action="read")
+    # fil = Document.objects.authorize(request, actor=request.user, action="read")
+    pros =  Project.objects.filter(repo_filter)
+    print("pros",pros)
     print("test")
     #Document.objects.authorize(request, actor=request.user, action="read")
-    print(fil)
+    # print(fil)
     return JsonResponse({"msg":"sucess"},status=200)
 
 
