@@ -102,7 +102,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, initial_credit)
             deduction_update = TextgeneratedCreditDeduction.objects.filter(user=instance.user)
             if deduction_update.exists():
-                total_deduction = deduction_update[0].credit_to_deduce
+                total_deduction = deduction_update.first().credit_to_deduce
                 total_deduction = total_deduction+token_deduction
                 deduction_update.update(credit_to_deduce = total_deduction)
                 # deduction_update.save()
@@ -152,6 +152,9 @@ class AiPromptSerializer(serializers.ModelSerializer):
             product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.product_name else None
             AiPrompt.objects.filter(id=instance.id).update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt,product_name_mt=product_name_mt)
             consumed_credits = self.get_total_consumable_credits(instance.source_prompt_lang_code,string_list)
+            print("cons---------->",consumed_credits)
+            if initial_credit < consumed_credits:
+                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             self.customize_token_deduction(instance , consumed_credits)
         else:
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=instance.source_prompt_lang_id,copy=0)

@@ -188,23 +188,23 @@ def project_pdf_conversion(request,task_id):
         return Response({'msg':'Insufficient Credits'},status=400)
 
 
-from ai_exportpdf.utils import openai_endpoint
-@api_view(['POST',])
-@permission_classes([IsAuthenticated])
-def text_generator_openai(request):
-    user = request.user
-    prompt = request.POST.get('prompt')
-    initial_credit = user.credit_balance.get("total_left")
-    tot_tokn =256*4
-    consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
-    if initial_credit > consumable_credits:
-        response = openai_endpoint(prompt)
-        consume_credit = response.pop('usage')
-        consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
-        return JsonResponse(response)
-    else:
-        return Response({'msg':'Insufficient Credits'},status=400)
+# from ai_exportpdf.utils import openai_endpoint
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def text_generator_openai(request):
+#     user = request.user
+#     prompt = request.POST.get('prompt')
+#     initial_credit = user.credit_balance.get("total_left")
+#     tot_tokn =256*4
+#     consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
+#     if initial_credit > consumable_credits:
+#         response = openai_endpoint(prompt)
+#         consume_credit = response.pop('usage')
+#         consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
+#         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
+#         return JsonResponse(response)
+#     else:
+#         return Response({'msg':'Insufficient Credits'},status=400)
 
 
 
