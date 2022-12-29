@@ -287,7 +287,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 status_id = None
             else:
                 initial_credit = user.credit_balance.get("total_left")
-                consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source']) if seg['source']!='' else 0
                 if initial_credit > consumable_credits:
                     mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
                     if str(target_tags) != '':
