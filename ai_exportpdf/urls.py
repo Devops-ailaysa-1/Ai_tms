@@ -13,9 +13,10 @@ urlpatterns += static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)
 
 urlpatterns += [
 path('convert_pdf_from_task/<int:task_id>/',views.project_pdf_conversion),
-path("text_generator/" , views.text_generator_openai ,name = "text_generator"),
+#path("text_generator/" , views.text_generator_openai ,name = "text_generator"),
 path("prompt_result/",views.AiPromptResultViewset.as_view()),
-path("customize_text_generate",views.customize_text_openai)
+path("customize_text_generate",views.customize_text_openai),
+path("history/",views.history_delete),
 
 # path('/',views.c, name='word_count_check'),
 ]

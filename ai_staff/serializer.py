@@ -359,16 +359,23 @@ class PromptFieldsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class PromptSubCategoriesSerializer(serializers.ModelSerializer):
+<<<<<<< HEAD
     sub_category_fields = PromptFieldsSerializer(many=True )
     class Meta:
         model = PromptSubCategories
         fields = ('id','category','sub_category','sub_category_fields')
+=======
+    sub_category_fields = PromptFieldsSerializer(many=True)
+    class Meta:
+        model = PromptSubCategories
+        fields = ('id','category','sub_category','sub_category_fields',)
+>>>>>>> origin/v4-merged-pdf
 
 class PromptCategoriesSerializer(serializers.ModelSerializer):
     prompt_category = PromptSubCategoriesSerializer(many=True )
     class Meta:
         model = PromptCategories
-        fields = ('id','category','prompt_category')
+        fields = ('id','category','prompt_category',)
         
         
 class PromptTonesSerializer(serializers.ModelSerializer):

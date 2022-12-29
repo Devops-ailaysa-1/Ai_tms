@@ -188,23 +188,23 @@ def project_pdf_conversion(request,task_id):
         return Response({'msg':'Insufficient Credits'},status=400)
 
 
-from ai_exportpdf.utils import openai_endpoint
-@api_view(['POST',])
-@permission_classes([IsAuthenticated])
-def text_generator_openai(request):
-    user = request.user
-    prompt = request.POST.get('prompt')
-    initial_credit = user.credit_balance.get("total_left")
-    tot_tokn =256*4
-    consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
-    if initial_credit > consumable_credits:
-        response = openai_endpoint(prompt)
-        consume_credit = response.pop('usage')
-        consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
-        return JsonResponse(response)
-    else:
-        return Response({'msg':'Insufficient Credits'},status=400)
+# from ai_exportpdf.utils import openai_endpoint
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def text_generator_openai(request):
+#     user = request.user
+#     prompt = request.POST.get('prompt')
+#     initial_credit = user.credit_balance.get("total_left")
+#     tot_tokn =256*4
+#     consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
+#     if initial_credit > consumable_credits:
+#         response = openai_endpoint(prompt)
+#         consume_credit = response.pop('usage')
+#         consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
+#         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
+#         return JsonResponse(response)
+#     else:
+#         return Response({'msg':'Insufficient Credits'},status=400)
 
 
 
@@ -226,19 +226,6 @@ class AiPromptViewset(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors)
 
-
-# class AiPromptResultViewset(viewsets.ViewSet):
-#     model = AiPromptResult
-
-#     def list(self, request):
-#         prmp_id = request.GET.get('prompt_id')
-#         if prmp_id:
-#             prmp_obj = AiPrompt.objects.get(id=prmp_id)
-#             serializer = AiPromptGetSerializer(prmp_obj)
-#         else:
-#             queryset = AiPrompt.objects.filter(user=self.request.user)
-#             serializer = AiPromptGetSerializer(queryset,many=True)      
-#         return Response(serializer.data)
 
 class PromptFilter(django_filters.FilterSet):
     prompt = django_filters.CharFilter(field_name='description',lookup_expr='icontains')
@@ -329,9 +316,21 @@ def customize_text_openai(request):
 
  
 
-
-
-
+@api_view(['DELETE',])
+@permission_classes([IsAuthenticated])
+def history_delete(request):
+    prmp = request.GET.get('prompt_id',None)
+    obj = request.GET.get('obj_id',None)
+    if obj:
+        result = AiPromptResult.objects.get(id=obj)
+        count = result.prompt.ai_prompt.all().count()
+        if count>1:
+            result.delete()
+        else:
+            result.prompt.delete()
+    if prmp:
+        prmb_obj = AiPrompt.objects.get(id=prmp).delete()
+    return Response(status=204)
 
 
 

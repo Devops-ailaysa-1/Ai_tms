@@ -66,7 +66,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
         initial_credit = instance.user.credit_balance.get("total_left")
-        consumable_credit = self.get_consumable_credits_for_ai_writer(instance,ai_langs,targets,prompt)
+        consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
 
@@ -102,7 +102,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, initial_credit)
             deduction_update = TextgeneratedCreditDeduction.objects.filter(user=instance.user)
             if deduction_update.exists():
-                total_deduction = deduction_update[0].credit_to_deduce
+                total_deduction = deduction_update.first().credit_to_deduce
                 total_deduction = total_deduction+token_deduction
                 deduction_update.update(credit_to_deduce = total_deduction)
                 # deduction_update.save()
@@ -127,10 +127,14 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
                     self.customize_token_deduction(instance , word_count)
 
-    def get_consumable_credits_for_ai_writer(self,instance,openai_available_langs,targets ,prompt_string):
-        prompt_word_count = 0
-        consumable_credit = get_consumable_credits_for_text(prompt_string,source_lang=instance.source_prompt_lang_code,target_lang=None)
-        return consumable_credit
+    def get_total_consumable_credits(self,source_lang,prompt_string_list):
+        credit = 0
+        for i in prompt_string_list:
+            if i != None:
+                consumable_credit = get_consumable_credits_for_text(i,None,source_lang)
+                credit+=consumable_credit
+        return credit
+
         
 
     def create(self, validated_data):
@@ -140,12 +144,18 @@ class AiPromptSerializer(serializers.ModelSerializer):
         initial_credit = instance.user.credit_balance.get("total_left")
         user = instance.user 
         if instance.source_prompt_lang_id not in openai_available_langs:
+            string_list = [instance.description,instance.keywords,instance.prompt_string,instance.product_name]
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17,copy=0)
             description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.description else None
             keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.keywords else None
             prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.prompt_string else None
             product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.product_name else None
             AiPrompt.objects.filter(id=instance.id).update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt,product_name_mt=product_name_mt)
+            consumed_credits = self.get_total_consumable_credits(instance.source_prompt_lang_code,string_list)
+            print("cons---------->",consumed_credits)
+            if initial_credit < consumed_credits:
+                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+            self.customize_token_deduction(instance , consumed_credits)
         else:
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=instance.source_prompt_lang_id,copy=0)
         if instance.response_copies >1:
@@ -167,13 +177,16 @@ class AiPromptResultSerializer(serializers.ModelSerializer):
 
 class AiPromptGetSerializer(serializers.ModelSerializer):
     prompt_results = serializers.SerializerMethodField()
+    target_langs = serializers.SerializerMethodField()
     #ai_prompt = AiPromptResultSerializer(many=True)
 
     class Meta:
         model = AiPrompt
-        fields = ('id','user','prompt_string','source_prompt_lang','description','catagories','sub_catagories','Tone',
+        fields = ('id','user','prompt_string','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
                     'product_name','keywords','created_at','prompt_results',)#,'ai_prompt'
         
+    def get_target_langs(self,obj):
+        return [i.result_lang.language for i in obj.ai_prompt.all().distinct('result_lang')]
 
     def get_prompt_results(self,obj):
         result_dict ={}

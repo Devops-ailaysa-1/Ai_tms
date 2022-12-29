@@ -255,8 +255,6 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         from .api_views import MT_RawAndTM_View
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source)
-        print("consumable_credits-->",consumable_credits)
-        print("initial_credit-->",initial_credit)
         if initial_credit > consumable_credits:
             try:
                 mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)
