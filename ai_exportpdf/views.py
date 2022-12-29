@@ -227,19 +227,6 @@ class AiPromptViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
 
-# class AiPromptResultViewset(viewsets.ViewSet):
-#     model = AiPromptResult
-
-#     def list(self, request):
-#         prmp_id = request.GET.get('prompt_id')
-#         if prmp_id:
-#             prmp_obj = AiPrompt.objects.get(id=prmp_id)
-#             serializer = AiPromptGetSerializer(prmp_obj)
-#         else:
-#             queryset = AiPrompt.objects.filter(user=self.request.user)
-#             serializer = AiPromptGetSerializer(queryset,many=True)      
-#         return Response(serializer.data)
-
 class PromptFilter(django_filters.FilterSet):
     prompt = django_filters.CharFilter(field_name='description',lookup_expr='icontains')
     source = django_filters.CharFilter(field_name='source_prompt_lang__language',lookup_expr='icontains')
@@ -329,9 +316,16 @@ def customize_text_openai(request):
 
  
 
-
-
-
+@api_view(['DELETE',])
+@permission_classes([IsAuthenticated])
+def history_delete(request):
+    prmp = request.GET.get('prompt_id',None)
+    obj = request.GET.get('obj_id',None)
+    if obj:
+        AiPromptResult.objects.filter(id=obj).delete()
+    if prmp:
+        prmb_obj = AiPrompt.objects.get(id=prmp).delete()
+    return Response(status=204)
 
 
 
