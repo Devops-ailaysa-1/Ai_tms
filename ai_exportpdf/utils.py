@@ -384,12 +384,6 @@ def docx_to_html_with_css(docx_file_path):
 #     #     fp.write(output)
 
 
-
-
- 
-
- 
-
 def openai_text_trim(text):
     reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
     if reg_text:

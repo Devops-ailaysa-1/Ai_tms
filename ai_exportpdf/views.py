@@ -283,7 +283,7 @@ def customize_credit_consumption(request,user_text,customize,consumable_credits_
         if mode == 'complete_mode':
             total_tokens = response['usage']['total_tokens']
             total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
-            total_tokens+=consumable_credits_user_text
+            # total_tokens+=consumable_credits_user_text
         AiPromptSerializer().customize_token_deduction(instance=request,total_tokens=total_tokens)
         print("mode",mode ,"total_usuge",total_tokens)
     else:##english
@@ -295,8 +295,7 @@ def customize_credit_consumption(request,user_text,customize,consumable_credits_
             AiPromptSerializer().customize_token_deduction(instance = request,total_tokens=total_tokens)
             print("mode",mode ,"total_usuge",total_tokens)
     return user_text
-    
-    
+
 
 
 
