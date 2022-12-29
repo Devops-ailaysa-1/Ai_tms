@@ -7,7 +7,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
-                    PromptStartPhrases,PromptTones,AiCustomize)
+                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -353,6 +353,11 @@ class PromptStartPhrasesSerializer(serializers.ModelSerializer):
         model = PromptStartPhrases
         fields = '__all__'
 
+class PromptFieldsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromptFields
+        fields = '__all__'
+
 class PromptSubCategoriesSerializer(serializers.ModelSerializer):
     class Meta:
         model = PromptSubCategories
@@ -361,6 +366,7 @@ class PromptSubCategoriesSerializer(serializers.ModelSerializer):
 class PromptCategoriesSerializer(serializers.ModelSerializer):
     
     prompt_category = PromptSubCategoriesSerializer(many=True )
+    # fields_id = serializers.PrimaryKeyRelatedField(queryset=PromptFields.objects.all(), write_only=True, source='prompt_category')
     class Meta:
         model = PromptCategories
         fields = ('id','category','prompt_category')

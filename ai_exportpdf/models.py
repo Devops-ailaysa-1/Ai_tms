@@ -92,8 +92,8 @@ class AiPrompt(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self) -> str:
-        return self.prompt_string
+    # def __str__(self) -> str:
+    #     return self.description
 
     @property
     def source_prompt_lang_code(self):
