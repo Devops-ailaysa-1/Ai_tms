@@ -322,7 +322,12 @@ def history_delete(request):
     prmp = request.GET.get('prompt_id',None)
     obj = request.GET.get('obj_id',None)
     if obj:
-        AiPromptResult.objects.filter(id=obj).delete()
+        result = AiPromptResult.objects.get(id=obj)
+        count = result.prompt.ai_prompt.all().count()
+        if count>1:
+            result.delete()
+        else:
+            result.prompt.delete()
     if prmp:
         prmb_obj = AiPrompt.objects.get(id=prmp).delete()
     return Response(status=204)
