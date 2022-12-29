@@ -308,7 +308,7 @@ def openai_endpoint(prompt,max_token=256,
                 top_p=top_p,
                 frequency_penalty=frequency_penalty,
                 presence_penalty=presence_penalty,
-                stop = ['#'],
+                # stop = ['#'],
                 n=3,
                 logit_bias = {"50256": -100})
     print("resp--->" , response)
@@ -384,12 +384,6 @@ def docx_to_html_with_css(docx_file_path):
 #     #     fp.write(output)
 
 
-
-
- 
-
- 
-
 def openai_text_trim(text):
     reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
     if reg_text:
@@ -411,7 +405,7 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 top_p=top_p,
                 frequency_penalty=frequency_penalty,
                 presence_penalty=presence_penalty,
-                stop = ['#'],
+                # stop = ['#'],
                 n=n,
                 logit_bias = {"50256": -100})
     return response
