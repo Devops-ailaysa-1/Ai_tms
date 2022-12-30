@@ -415,7 +415,7 @@ def get_prompt_freestyle(prompt):
                 model="text-curie-001",
                 prompt=prompt.strip(),
                 temperature=0.7,
-                max_tokens=256,
+                max_tokens=300,
                 top_p=1,
                 frequency_penalty=1,
                 presence_penalty=1,
