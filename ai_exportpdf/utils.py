@@ -410,6 +410,19 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 logit_bias = {"50256": -100})
     return response
 
+def get_prompt_freestyle(prompt):
+    response = openai.Completion.create(
+                model="text-curie-001",
+                prompt=prompt.strip(),
+                temperature=0.7,
+                max_tokens=256,
+                top_p=1,
+                frequency_penalty=1,
+                presence_penalty=1,
+                n=1,
+                logit_bias = {"50256": -100})
+    return response
+
 model_edit = os.getenv('OPENAI_EDIT_MODEL')
 
 def get_prompt_edit(input_text ,instruction ):
