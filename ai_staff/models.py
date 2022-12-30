@@ -456,6 +456,7 @@ class PromptStartPhrases(models.Model):
     
     start_phrase =  models.TextField(null=True, blank=True)   
     punctuation = models.CharField(max_length=5 , null=True,blank=True)
+    max_token = models.CharField(max_length=10 , null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
