@@ -254,7 +254,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
     def pre_flow(self,user,source,document,mt_engine,target_tags):
         from .api_views import MT_RawAndTM_View
         initial_credit = user.credit_balance.get("total_left")
-        consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source) if source!='' else 0
+        consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source)
         if initial_credit > consumable_credits:
             try:
                 mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)

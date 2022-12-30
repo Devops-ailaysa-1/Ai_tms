@@ -365,9 +365,7 @@ class PromptSubCategoriesSerializer(serializers.ModelSerializer):
         fields = ('id','category','sub_category','sub_category_fields',)
 
 class PromptCategoriesSerializer(serializers.ModelSerializer):
-    
     prompt_category = PromptSubCategoriesSerializer(many=True )
-    # fields_id = serializers.PrimaryKeyRelatedField(queryset=PromptFields.objects.all(), write_only=True, source='prompt_category')
     class Meta:
         model = PromptCategories
         fields = ('id','category','prompt_category',)

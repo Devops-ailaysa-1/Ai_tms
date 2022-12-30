@@ -55,12 +55,16 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.catagories.category == 'Free Style':
             prompt+= instance.description if lang in ai_langs else instance.description_mt
         else:
+            print("not Free Style")
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
             prompt+=start_phrase.start_phrase+' '
             if instance.product_name:
                 prompt+=' '+instance.product_name if lang in ai_langs else instance.product_name_mt
             if instance.description:
                 prompt+=' '+instance.description if lang in ai_langs else instance.description_mt
+            
+            prompt+=', in {} tone'.format(instance.Tone.tone)
+            print("prompt-->",prompt)
             if instance.keywords:
                 prompt+=' including words '+ instance.keywords if lang in ai_langs else ' including words '+ instance.keywords_mt
             if start_phrase.punctuation:
@@ -69,9 +73,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
         consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
-
         openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , 
-                                instance.response_charecter_limit ,instance.response_copies )
+                                instance.sub_catagories.prompt_sub_category.first().max_token ,instance.response_copies )
 
         generated_text = openai_response.get('choices' ,None)
         response_id =openai_response.get('id' , None)
