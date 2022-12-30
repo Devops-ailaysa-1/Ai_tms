@@ -55,12 +55,16 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.catagories.category == 'Free Style':
             prompt+= instance.description if lang in ai_langs else instance.description_mt
         else:
+            print("not Free Style")
             start_phrase = instance.sub_catagories.prompt_sub_category.first()
             prompt+=start_phrase.start_phrase+' '
             if instance.product_name:
                 prompt+=' '+instance.product_name if lang in ai_langs else instance.product_name_mt
             if instance.description:
                 prompt+=' '+instance.description if lang in ai_langs else instance.description_mt
+            
+            prompt+=', in {} tone'.format(instance.Tone.tone)
+            print("prompt-->",prompt)
             if instance.keywords:
                 prompt+=' including words '+ instance.keywords if lang in ai_langs else ' including words '+ instance.keywords_mt
             if start_phrase.punctuation:

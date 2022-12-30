@@ -678,7 +678,6 @@ class MT_RawAndTM_View(views.APIView):
                     }
         res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
                             data={"segmentWordCountdata": json.dumps(seg_data)})
-
         if res.status_code == 200:
             return res.json()
         else:
