@@ -33,7 +33,7 @@ from statistics import mode
 from rest_framework import serializers
 from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize 
-from ai_exportpdf.utils import get_prompt ,get_consumable_credits_for_openai_text_generator
+from ai_exportpdf.utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle
 from ai_workspace_okapi.utils import get_translation
 import math
 
@@ -73,8 +73,11 @@ class AiPromptSerializer(serializers.ModelSerializer):
         consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
-        openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , 
-                                instance.sub_catagories.prompt_sub_category.first().max_token ,instance.response_copies )
+        if instance.catagories.category == 'Free Style':
+            openai_response =get_prompt_freestyle(prompt)
+        else:
+            openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , 
+                                    instance.sub_catagories.prompt_sub_category.first().max_token ,instance.response_copies )
 
         generated_text = openai_response.get('choices' ,None)
         response_id =openai_response.get('id' , None)
@@ -175,7 +178,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
 class AiPromptResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPromptResult
-        fields = '__all__'
+        fields = ('id', 'copy','api_result','translated_prompt_result','result_lang','prompt',)#'__all__'
 
 
 class AiPromptGetSerializer(serializers.ModelSerializer):
