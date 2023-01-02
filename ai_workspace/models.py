@@ -427,6 +427,14 @@ class Project(models.Model):
                     return False
             return True
 
+    # @property
+    # def assigned_date(self):
+    #     assigned = TaskAssignInfo.objects.filter(task_assign__task__job__project=self).order_by('-created_at')[0].created_at
+    #     if assigned > self.created_at:
+    #         return assigned
+    #     else:
+    #         return self.created_at
+
 
     @property
     def tmx_files_path(self):
