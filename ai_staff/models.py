@@ -465,7 +465,8 @@ class PromptStartPhrases(models.Model):
 class AiCustomize(models.Model):
     # user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     customize = models.CharField(max_length =200, null=True, blank=True)  
-    prompt =   models.CharField(max_length =200, null=True, blank=True)  
+    prompt =   models.CharField(max_length =200, null=True, blank=True)
+    grouping = models.CharField(max_length =200, null=True, blank=True)  
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
