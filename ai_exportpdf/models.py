@@ -143,25 +143,25 @@ class TextgeneratedCreditDeduction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
 
-class AiImageGeneration(models.Model):
-    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    prompt = models.CharField(max_length=200 ,null=True, blank=True)
-    # result_image = models.FileField(upload_to=user_directory_path_image_gen_result  , blank=False, null=False) ###bytecode or url expri openai(url) within hour to image file
-    # token_usage = models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='image_generate_used_tokens',null=True, blank=True)
-    # prompt_lang=models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='image_gen_prompt_lang_src',null=True, blank=True)  
-    # user_image = models.FileField(upload_to=user_directory_path_image_gen  , blank=False, null=False)
-    # user_mask_image = models.FileField(upload_to=user_directory_path_image_gen  , blank=False, null=False)
-    # no_of_image = models.IntegerField(null=True, blank=True) 
-    image_resolution = models.CharField(max_length=100,null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+# class AiImageGeneration(models.Model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     prompt = models.CharField(max_length=200 ,null=True, blank=True)
+#     # result_image = models.FileField(upload_to=user_directory_path_image_gen_result  , blank=False, null=False) ###bytecode or url expri openai(url) within hour to image file
+#     # token_usage = models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='image_generate_used_tokens',null=True, blank=True)
+#     # prompt_lang=models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='image_gen_prompt_lang_src',null=True, blank=True)  
+#     # user_image = models.FileField(upload_to=user_directory_path_image_gen  , blank=False, null=False)
+#     # user_mask_image = models.FileField(upload_to=user_directory_path_image_gen  , blank=False, null=False)
+#     # no_of_image = models.IntegerField(null=True, blank=True) 
+#     image_resolution = models.CharField(max_length=100,null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
     
-    def __str__(self):
-        return self.prompt 
+#     def __str__(self):
+#         return self.prompt 
     
     
-class AiImageGenerationResult(models.Model):
-    image_gen = models.ForeignKey(AiImageGeneration, on_delete = models.CASCADE,related_name='image_generate',null=True, blank=True)
-    result_image = models.FileField(upload_to=user_directory_path_image_gen_result  , blank=False, null=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+# class AiImageGenerationResult(models.Model):
+#     image_gen = models.ForeignKey(AiImageGeneration, on_delete = models.CASCADE,related_name='image_generate',null=True, blank=True)
+#     result_image = models.FileField(upload_to=user_directory_path_image_gen_result  , blank=False, null=False)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)

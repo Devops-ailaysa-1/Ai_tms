@@ -1,6 +1,6 @@
 from statistics import mode
 from rest_framework import serializers
-from .models import Ai_PdfUpload , AiImageGeneration
+from .models import Ai_PdfUpload # AiImageGeneration
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from itertools import groupby
@@ -212,12 +212,12 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
         model = AiCustomize
         fields = ('id' , 'customize')
 
-class AiImageGenerationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AiImageGeneration
-        fields = ('id','prompt','image_resolution')
+# class AiImageGenerationSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = AiImageGeneration
+#         fields = ('id','prompt','image_resolution')
 
-    def create(self, validated_data):
-        # print(validated_data)
-        return validated_data
+#     def create(self, validated_data):
+#         # print(validated_data)
+#         return validated_data
         

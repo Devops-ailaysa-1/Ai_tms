@@ -1,11 +1,11 @@
-from ai_exportpdf.models import (Ai_PdfUpload ,AiPrompt ,AiPromptResult , AiImageGeneration)
+from ai_exportpdf.models import (Ai_PdfUpload ,AiPrompt ,AiPromptResult , )#AiImageGeneration)
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from ai_exportpdf.serializer import (PdfFileSerializer ,PdfFileStatusSerializer ,
                                      AiPromptSerializer ,AiPromptResultSerializer,
-                                     AiPromptGetSerializer,AiImageGenerationSerializer)
+                                     AiPromptGetSerializer,)#AiImageGenerationSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -339,9 +339,8 @@ def history_delete(request):
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def image_gen(request):
-    image_gen_prompt = request.POST.get('image_gen_prompt')
-    image_gen_prompt = image_gen_prompt.strip()
-    res = get_prompt_image_generations(prompt=image_gen_prompt,size='512x512',n=2)
+    prompt = request.POST.get('prompt')
+    res = get_prompt_image_generations(prompt=prompt.strip(),size='256x256',n=2)
     res_url = res["data"]
     return Response({'gen_image_url': res_url},status=200) 
 
