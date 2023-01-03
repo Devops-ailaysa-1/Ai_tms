@@ -16,7 +16,7 @@ from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API ,O
 from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
 from ai_staff.models import Languages
 from django.db.models import Q
-import math
+import math 
 logger = logging.getLogger('django')
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -89,6 +89,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
         txt_field_obj.save()
         ###retain cred if error
         file_format,page_length =  file_pdf_check(fp)
+        # file_format,page_length = pdf_text_check(fp)
         consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
         user_credit.credits_left = user_credit.credits_left + consum_cred
         user_credit.save()
@@ -121,6 +122,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
                 txt_field_obj.status = "ERROR"
                 txt_field_obj.save()
                 file_format,page_length =  file_pdf_check(fp)
+                # file_format,page_length = pdf_text_check(fp)
                 consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
                 user_credit.credits_left = user_credit.credits_left + consum_cred
                 user_credit.save()
@@ -172,17 +174,15 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.status = "ERROR"
         txt_field_obj.save()
         ###retain cred if error
-        file_format,page_length =  file_pdf_check(fp)
+        file_format,page_length =  file_pdf_check(fp) 
+        # file_format,page_length = pdf_text_check(fp)
         consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
         user_credit.credits_left = user_credit.credits_left + consum_cred
         user_credit.save()
         print("pdf_conversion_something went wrong")
  
-
-
 def google_ocr_pdf():
     pass
-
 
 def para_creation_from_ocr(texts):
     para_text = []
@@ -212,7 +212,7 @@ def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
     lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
     pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path)[0]
-
+    # pdf_text_ocr_check = pdf_text_check(file_details.pdf_file.path)[0]
     if (pdf_text_ocr_check == 'ocr') or \
                 (lang in google_ocr_indian_language):
         response_result = ai_export_pdf.apply_async((id, ),)
@@ -265,30 +265,16 @@ def project_pdf_conversion(id):
     else:
         return Response({'msg':'Insufficient Credits'},status=400)
 
-
-
-
 def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
     if formats == 'text':
         return int(total_pages)
     else:
         return int(total_pages)*5
 
-
-
-# def convertio_check_credit(total_pages):
-#     if total_pages <=50:
-#         credit = 75
-#     elif total_pages <=100:
-#         credit = 150
-#     else:
-
 def ceil_round_off(token_len):
     import math
     return math.ceil(len(token_len)/4)
     
-   
-
 import pypandoc
 def docx_to_html(docx_file_path):
     print("DocxFilePath------------->",docx_file_path)
@@ -319,15 +305,24 @@ def docx_to_html_with_css(docx_file_path):
 def remove_duplicate_new_line(text):
     return re.sub(r'\n+', '\n', text)
 
+# def pdf_text_check(file_name ):
+#     total_page_area = 0.0
+#     total_text_area = 0.0
+#     with open(file_name,"rb") as f:
+#         doc = fitz.open(f)
+#     for page_num, page in enumerate(doc):
+#         total_page_area = total_page_area + abs(page.rect)
+#         text_area = 0.0
+#         for b in page.get_text("blocks"):
+#             r = fitz.Rect(b[:4]).get_area()  # rectangle where block text appears
+#             text_area = text_area + abs(r )
+#         total_text_area = total_text_area + text_area
+#     # doc.close()
+#     tot = total_text_area / total_page_area
+#     len_doc = doc.page_count
+#     doc.close()
+#     return ["text" if text_perc < 0.01 else "ocr" ,len_doc ]
 
 
-
-    
-
-####image_generation DALL-E ###
-
-def get_prompt_image_generations(prompt,size,n):
-    response = openai.Image.create(prompt=prompt,n=n,size=size)
-    return response
 
 
