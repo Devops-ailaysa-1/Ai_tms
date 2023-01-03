@@ -400,6 +400,7 @@ def send_email(subject,template,context):
 
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
 
     def create(self,request):
         serializer = TempPricingPreferenceSerializer(data={**request.POST.dict()})
