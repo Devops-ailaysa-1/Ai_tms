@@ -1,11 +1,11 @@
-from ai_exportpdf.models import (Ai_PdfUpload ,AiPrompt ,AiPromptResult , )#AiImageGeneration)
+from ai_exportpdf.models import Ai_PdfUpload #,AiPrompt ,AiPromptResult)
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
-from ai_exportpdf.serializer import (PdfFileSerializer ,PdfFileStatusSerializer ,
-                                     AiPromptSerializer ,AiPromptResultSerializer,
-                                     AiPromptGetSerializer,)#AiImageGenerationSerializer)
+from ai_exportpdf.serializer import (PdfFileSerializer ,PdfFileStatusSerializer )
+                                    #  AiPromptSerializer ,AiPromptResultSerializer,
+                                    #  AiPromptGetSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -14,8 +14,7 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
-from ai_exportpdf.utils import (get_consumable_credits_for_pdf_to_docx ,file_pdf_check,\
-                                get_consumable_credits_for_openai_text_generator)
+from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from django.core.files.base import ContentFile
@@ -23,7 +22,6 @@ from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages
 from langdetect import detect
-from ai_exportpdf.utils import get_prompt ,get_prompt_edit , get_prompt_image_generations
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 
@@ -188,263 +186,3 @@ def project_pdf_conversion(request,task_id):
         return Response({'msg':'Insufficient Credits'},status=400)
 
 
-# from ai_exportpdf.utils import openai_endpoint
-# @api_view(['POST',])
-# @permission_classes([IsAuthenticated])
-# def text_generator_openai(request):
-#     user = request.user
-#     prompt = request.POST.get('prompt')
-#     initial_credit = user.credit_balance.get("total_left")
-#     tot_tokn =256*4
-#     consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
-#     if initial_credit > consumable_credits:
-#         response = openai_endpoint(prompt)
-#         consume_credit = response.pop('usage')
-#         consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
-#         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
-#         return JsonResponse(response)
-#     else:
-#         return Response({'msg':'Insufficient Credits'},status=400)
-
-
-
-class AiPromptViewset(viewsets.ViewSet):
-    model = AiPrompt
-
-    def get(self, request):
-        query_set = self.model.objects.all()
-        serializer = AiPromptSerializer(query_set ,many =True)
-        return Response(serializer.data)
-
-    def create(self,request):
-        # keywords = request.POST.getlist('keywords')
-        targets = request.POST.getlist('get_result_in')
-        char_limit = request.POST.get('response_charecter_limit',256)
-        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
-
-
-class PromptFilter(django_filters.FilterSet):
-    prompt = django_filters.CharFilter(field_name='description',lookup_expr='icontains')
-    source = django_filters.CharFilter(field_name='source_prompt_lang__language',lookup_expr='icontains')
-    target = django_filters.CharFilter(field_name='ai_prompt__result_lang__language',lookup_expr='icontains')
-    category = django_filters.CharFilter(field_name='catagories__category',lookup_expr='icontains')
-    sub_category = django_filters.CharFilter(field_name='sub_catagories__sub_category',lookup_expr='icontains')
-    tone = django_filters.CharFilter(field_name='Tone__tone',lookup_expr='icontains')
-    class Meta:
-        model = AiPrompt
-        fields = ('prompt', 'source','target','category','sub_category','tone',)
-
-
-
-class NoPagination(PageNumberPagination):
-      page_size = None
-
-class AiPromptResultViewset(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = AiPromptGetSerializer
-    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
-    ordering_fields = ['id']
-    ordering = ('-id')
-    filterset_class = PromptFilter
-    search_fields = ['description','catagories__category','sub_catagories__sub_category',]
-    pagination_class = NoPagination
-    page_size = None
-
-    def get_queryset(self):
-        prmp_id = self.request.query_params.get('prompt_id')
-        #prmp_id = self.request.GET.get('prompt_id')
-        if prmp_id:
-            queryset = AiPrompt.objects.filter(id=prmp_id)
-        else:
-            queryset = AiPrompt.objects.filter(user=self.request.user)
-        return queryset
-
-
-
-def customize_response(customize ,user_text,request):
-    if customize.prompt:
-        initial_credit = request.user.credit_balance.get("total_left")
-        response = get_prompt(prompt=customize.prompt+" "+user_text,model_name=openai_model,max_token =256,n=1)
-        total_tokens = response['usage']['total_tokens']
-        total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
-        AiPromptSerializer().customize_token_deduction(instance = request,total_tokens=total_tokens)
-    else:
-        response = get_prompt_edit(input_text=user_text ,instruction=customize.customize)
-    return response 
-    
-
-@api_view(['POST',])
-@permission_classes([IsAuthenticated])
-def customize_text_openai(request):
-    user = request.user
-    customize_id = request.POST.get('customize_id')
-    user_text = request.POST.get('user_text')
-    customize = AiCustomize.objects.get(id =customize_id)
-    lang = detect(user_text)
-    
-    if lang!= 'en':
-        initial_credit = user.credit_balance.get("total_left")
-        consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
-        #print("credits for input text----------->",consumable_credits_user_text)
-        if initial_credit > consumable_credits_user_text:
-            user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
-                                        source_lang_code=lang , target_lang_code='en')
-            consumable_credits_txt_generated = get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
-            #print("credits for mt------------>",consumable_credits_txt_generated)
-            response = customize_response(customize,user_text_mt_en,request)
-            result_txt = response['choices'][0]['text']
-            #print("openai_result--------->",result_txt)
-            txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt,
-                                        source_lang_code='en' , target_lang_code=lang)
-            #print("credits for result mt---------> ",get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang))
-            consumable_credits_txt_generated += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
-            #print("Tot----------->",consumable_credits_txt_generated)
-            AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= consumable_credits_txt_generated)
-            
-        else:
-            return  Response({'msg':'Insufficient Credits'},status=400)
-        
-    else:##english
-        response = customize_response(customize,user_text,request)
-        txt_generated = response['choices'][0]['text']
-    #total_tokens = response['usage']['total_tokens']
-    return Response({'customize_text': txt_generated ,'lang':lang ,'customize_cat':customize.customize},status=200)
-
- 
-
-@api_view(['DELETE',])
-@permission_classes([IsAuthenticated])
-def history_delete(request):
-    prmp = request.GET.get('prompt_id',None)
-    obj = request.GET.get('obj_id',None)
-    if obj:
-        result = AiPromptResult.objects.get(id=obj)
-        count = result.prompt.ai_prompt.all().count()
-        if count>1:
-            result.delete()
-        else:
-            result.prompt.delete()
-    if prmp:
-        prmb_obj = AiPrompt.objects.get(id=prmp).delete()
-    return Response(status=204)
-
-
-
-
-
-@api_view(['POST',])
-@permission_classes([IsAuthenticated])
-def image_gen(request):
-    prompt = request.POST.get('prompt')
-    res = get_prompt_image_generations(prompt=prompt.strip(),size='256x256',n=2)
-    res_url = res["data"]
-    return Response({'gen_image_url': res_url},status=200) 
-
-
-
-
-
-# class AiImageGenerationViewset(viewsets.ViewSet):
-    
-#     def create(self,request):
-#         data = {**request.POST.dict(),'user':self.request.user.id}
-#         serializer = AiImageGenerationSerializer(data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors)
-
-        
-#     def list(self,request):
-#         query_set = AiImageGeneration.objects.all()
-#         serializer = AiImageGenerationSerializer(query_set ,many =True)
-#         return Response(serializer.data)
-    
-    
-    
-    
-    
-    
-    
-    
-    # consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
-    # if initial_credit > consumable_credits:
-    #     response = openai_endpoint(prompt)
-    #     consume_credit = response.pop('usage')
-    #     consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
-    #     debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
-    #     return JsonResponse(response)
-    # else:
-    #     return Response({'msg':'Insufficient Credits'},status=400)
-        
-     
-
-# from ai_exportpdf.utils import openai_endpoint
-# import os,json ,requests
-
-# @api_view(['POST',])
-# @permission_classes([IsAuthenticated])
-# def word_count_check(request):
-#     spring_host = os.environ.get("SPRING_HOST")
-#     prompt = request.POST.get('prompt')
-#     seg = {'segment_source': prompt,
-#             'source_language': 17,
-#             'target_language': 77,
-#             'processor_name': 'plain-text-processor',
-#             'extension': '.txt'}
-#     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count",
-#                         data={"segmentWordCountdata": json.dumps(seg)})
-#     return Response({'msg':res.json()},status=200)
-
-
-
-
-
-
-
-    # def create(self, request):
-    #     pdf_request_file = request.FILES.getlist('pdf_request_file')
-    #     file_language = request.POST.get('file_language')
-    #     # format = request.POST.get('format')
-    #     user = request.user.id
-    #     response_result = {}
-    #     celery_status_id = {}
-    #     for pdf_file_lis in  pdf_request_file :
-
-    #         lang = Languages.objects.get(id=int(file_language)).language.lower()
-    #         if pdf_file_lis.name.endswith('.pdf') and lang:
-    #             Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_file_lis ,
-    #                                         pdf_file_name = str(pdf_file_lis) ,
-    #                                         pdf_language =lang.lower()).save()
-    #             serve_path = str(Ai_PdfUpload.objects.all().filter(user_id = user).last().pdf_file)
-    #             pdf_file_name = settings.MEDIA_ROOT+"/"+serve_path
-    #             pdf_text_ocr_check = file_pdf_check(pdf_file_name)
-    #             if lang in google_ocr_indian_language:  ###this may throw false if multiple language
-    #                 response_result = ai_export_pdf.delay(serve_path)        #, file_language , pdf_file_name_only , instance_path
-    #                 file_upload = Ai_PdfUpload.objects.get(pdf_file = serve_path)
-    #                 file_upload.pdf_task_id = response_result.id
-    #                 file_upload.save()
-    #                 # file_uploadpdf_task_id = response_result.id)
-    #                 logger.info('assigned ocr ,file_name: google indian language'+str(pdf_file_name))
-    #                 celery_status_id[file_upload.id] = response_result.id
-    #                 # return JsonResponse({'result':response_result.id} , safe=False)
-    #             elif lang in list(lang_codes.keys()):  ###this may throw false if multiple language
-    #                 response_result = convertiopdf2docx.delay(serve_path = serve_path ,
-    #                                                           language = lang ,
-    #                                                           ocr = pdf_text_ocr_check)
-    #                 file_upload = Ai_PdfUpload.objects.get(pdf_file = serve_path)
-    #                 file_upload.pdf_task_id = response_result.id
-    #                 file_upload.save()
-    #                 file_upload.pdf_task_id = response_result.id
-    #                 logger.info('assigned pdf text ,file_name: convertio'+str(pdf_file_name))
-    #                 celery_status_id[file_upload.id] = response_result.id
-    #                 # return JsonResponse({'result':response_result.id} , safe=False)
-    #             else:
-    #                 celery_status_id["err"] = "error"
-    #         else:
-    #             celery_status_id[serve_path] = "need_pdf_file"
-    #     return JsonResponse({'result':celery_status_id} , safe=False)
