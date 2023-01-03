@@ -379,8 +379,20 @@ class PromptTonesSerializer(serializers.ModelSerializer):
 class AiCustomizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiCustomize
-        fields = ('id' , 'customize')
+        fields = ('id' , 'customize',)
 
-        
+class AiCustomizeGroupingSerializer(serializers.ModelSerializer):
+    results = serializers.SerializerMethodField()
 
+    class Meta:
+        model = AiCustomize
+        fields = ('results',)
+
+    def get_results(self,obj):
+        result_dict ={}
+        results =['General','Ask','Change','Change tone',]
+        for i in results:
+            rr = AiCustomize.objects.filter(grouping=i)
+            result_dict[i] = AiCustomizeSerializer(rr,many=True).data
+        return result_dict
         

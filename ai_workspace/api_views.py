@@ -2815,7 +2815,11 @@ class MyDocumentsView(viewsets.ModelViewSet):
         
 
     def list(self, request, *args, **kwargs):
+        paginate = request.GET.get('pagination',True)
         queryset = self.filter_queryset(self.get_queryset())
+        if paginate == 'False':
+            serializer = MyDocumentSerializer(queryset, many=True)
+            return Response(serializer.data)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = MyDocumentSerializer(pagin_tc, many=True)
         response = self.get_paginated_response(serializer.data)
