@@ -307,10 +307,18 @@ def docx_to_html_with_css(docx_file_path):
 #     # with open("out1226_final.html",'w') as fp:
 #     #     fp.write(output)
 
+def remove_duplicate_new_line(text):
+    return re.sub(r'\n+', '\n', text)
 
 
 
 
     
-    
-    
+
+####image_generation DALL-E ###
+
+def get_prompt_image_generations(prompt,size,n):
+    response = openai.Image.create(prompt=prompt,n=n,size=size)
+    return response
+
+

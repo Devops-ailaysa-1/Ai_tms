@@ -9,6 +9,13 @@ from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_file",filename)
 
+
+def user_directory_path_image_gen(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation",filename)
+
+def user_directory_path_image_gen_result(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation_result",filename)
+
 def edited_file_path(instance, filename):
     if instance.task:
         file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
