@@ -266,19 +266,6 @@ def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
         return int(total_pages)*5
 
 
-def openai_text_trim(text):
-    reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
-    if reg_text:
-        text = text[:reg_text.start()]+"."
-    
-    # max_len = len(text)-1
-    # for i in range(max_len):
-    #     index = max_len-i
-    #     str_ch = text[index]
-    #     if str_ch == '.':
-    #         text = text[:index+1]
-    #         break
-    return text
 
 # def convertio_check_credit(total_pages):
 #     if total_pages <=50:
@@ -291,70 +278,7 @@ def ceil_round_off(token_len):
     import math
     return math.ceil(len(token_len)/4)
     
-
-import openai
-openai.api_key = os.getenv('OPENAI_API_KEY')
-
-
-def openai_endpoint(prompt,max_token=30,#256
-                    temperature=0.7,frequency_penalty=1,
-                    presence_penalty=1,top_p=1):
- 
-    response = openai.Completion.create(
-                model=os.getenv('OPENAI_MODEL'), 
-                prompt=prompt.strip(),
-                temperature=temperature,
-                max_tokens=max_token,
-                top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty,
-                # stop = ['#'],
-                n=3,
-                logit_bias = {"50256": -100})
-    print("resp--->" , response)
-    generated_text = response.get('choices' ,None)
-    if generated_text:
-        print("generated_text" , generated_text)
-        text_gen_openai_ = {}
-        for i in generated_text:
-            if i['text'][-1] !='.' and i['text']:
-                i['text'] = openai_text_trim(i['text']) 
-            text_gen_openai_[i['index']] = i['text']
-        return {'output':text_gen_openai_ , 'usage':response['usage']['completion_tokens']}
-    else:
-        return {'output':'no_output_generated'}
-    
-    # prompt = prompt.strip()
-    # tem = [0.7, 0.6 ,0.5]
-    # text_gen_openai = {}
-    # tokn_len = []
-    # for count,i in enumerate(tem):
-    #     response = openai.Completion.create(
-    #             model=  OPENAI_MODEL,
-    #             prompt=prompt,
-    #             temperature=i,
-    #             max_tokens=max_token,
-    #             top_p=top_p,
-    #             frequency_penalty=frequency_penalty,
-    #             presence_penalty=presence_penalty,
-    #             stop = ['#'],
-    #             n=1,
-    #             logit_bias={"50256": -100},echo= True)
-    #     generated_text = response['choices'][0].text
-    #     text_gen_openai[count] = generated_text
-    #     tokn_len.append(response['usage']['completion_tokens'])
-    # print({'output':text_gen_openai , 'usage':sum(tokn_len)})
-    # return {'output':text_gen_openai , 'usage':sum(tokn_len)}
-    
-    
-
-    
-def get_consumable_credits_for_openai_text_generator(total_token):
-    total_consumable_token_credit = math.ceil(total_token/12)     
-    return total_consumable_token_credit
- 
-
-
+   
 
 import pypandoc
 def docx_to_html(docx_file_path):
@@ -384,54 +308,9 @@ def docx_to_html_with_css(docx_file_path):
 #     #     fp.write(output)
 
 
-def openai_text_trim(text):
-    reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
-    if reg_text:
-        text = text[:reg_text.start()]+"."
-    return text
 
 
-def get_prompt(prompt ,model_name , max_token ,n ):
-    #max_token = 256
-    temperature=0.7
-    frequency_penalty = 1
-    presence_penalty = 1
-    top_p = 1
-    response = openai.Completion.create(
-                model=model_name, 
-                prompt=prompt.strip(),
-                temperature=temperature,
-                max_tokens=int(max_token),
-                top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty,
-                # stop = ['#'],
-                n=n,
-                logit_bias = {"50256": -100})
-    return response
 
-def get_prompt_freestyle(prompt):
-    response = openai.Completion.create(
-                model="text-curie-001",
-                prompt=prompt.strip(),
-                temperature=0.7,
-                max_tokens=300,
-                top_p=1,
-                frequency_penalty=1,
-                presence_penalty=1,
-                n=1,
-                logit_bias = {"50256": -100})
-    return response
-
-model_edit = os.getenv('OPENAI_EDIT_MODEL')
-
-def get_prompt_edit(input_text ,instruction ):
-    response = openai.Edit.create(
-                model=model_edit, 
-                input=input_text.strip(),
-                instruction = instruction
-                )
-    return response
     
     
     

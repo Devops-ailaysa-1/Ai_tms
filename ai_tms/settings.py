@@ -159,6 +159,7 @@ INSTALLED_APPS = [
     'dbbackup',
     # 'django_q',
     'ai_exportpdf',
+    'ai_openai',
     # 'coreapi', # Coreapi for coreapi documentation
     # 'drf_yasg', # drf_yasg fro Swagger documentation
 ]
@@ -269,7 +270,7 @@ REST_USE_JWT = True
 # if os.environ.get("email_creds_avail", False):
 # EMAIL_BACKEND = 'ai_auth.email_backend.AiEmailBackend'
 
-#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv( "EMAIL_HOST" )
 EMAIL_PORT = int(os.getenv( "EMAIL_PORT" )) if os.getenv("EMAIL_PORT") else None
 EMAIL_USE_TLS = (True if os.getenv( "EMAIL_TLS" ) == 'True' else False)
@@ -277,7 +278,7 @@ EMAIL_HOST_USER = os.getenv( "EMAIL_HOST_USER" )
 EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ACCOUNT_AUTHENTICATION_METHOD = os.getenv("ACCOUNT_AUTHENTICATION_METHOD")
 ACCOUNT_USERNAME_REQUIRED = (True if os.getenv( "ACCOUNT_USERNAME_REQUIRED" ) == 'True' else False)
 ACCOUNT_EMAIL_REQUIRED = (True if os.getenv( "ACCOUNT_EMAIL_REQUIRED" ) == 'True' else False)
