@@ -9,6 +9,13 @@ from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
 def user_directory_path(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_file",filename)
 
+
+def user_directory_path_image_gen(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation",filename)
+
+def user_directory_path_image_gen_result(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation_result",filename)
+
 def edited_file_path(instance, filename):
     if instance.task:
         file_path = os.path.join(instance.task.job.project.ai_user.uid,instance.task.job.project.ai_project_id,instance.task.file.usage_type.type_path,\
@@ -135,3 +142,26 @@ class TextgeneratedCreditDeduction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+
+# class AiImageGeneration(models.Model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     prompt = models.CharField(max_length=200 ,null=True, blank=True)
+#     # result_image = models.FileField(upload_to=user_directory_path_image_gen_result  , blank=False, null=False) ###bytecode or url expri openai(url) within hour to image file
+#     # token_usage = models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='image_generate_used_tokens',null=True, blank=True)
+#     # prompt_lang=models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='image_gen_prompt_lang_src',null=True, blank=True)  
+#     # user_image = models.FileField(upload_to=user_directory_path_image_gen  , blank=False, null=False)
+#     # user_mask_image = models.FileField(upload_to=user_directory_path_image_gen  , blank=False, null=False)
+#     # no_of_image = models.IntegerField(null=True, blank=True) 
+#     image_resolution = models.CharField(max_length=100,null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+    
+#     def __str__(self):
+#         return self.prompt 
+    
+    
+# class AiImageGenerationResult(models.Model):
+#     image_gen = models.ForeignKey(AiImageGeneration, on_delete = models.CASCADE,related_name='image_generate',null=True, blank=True)
+#     result_image = models.FileField(upload_to=user_directory_path_image_gen_result  , blank=False, null=False)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)

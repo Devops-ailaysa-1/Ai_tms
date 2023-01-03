@@ -6,9 +6,11 @@ from django.urls import path
 router = DefaultRouter()
 router.register(r'convertpdftodocx',views.Pdf2Docx,basename='pdf')
 router.register(r'aiprompt',views.AiPromptViewset,basename='ai_prompt')
+# router.register(r'prompt_image_generations', views.AiImageGenerationViewset , basename='prompt_image_generations')
 urlpatterns = router.urls
 urlpatterns+= path('convert' , views.ConversionPortableDoc.as_view() , name='convertdoc' ),
 urlpatterns += path("docx_file_download/", views.docx_file_download, name="pdf_docx_download"),
+
 urlpatterns += static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)
 
 urlpatterns += [
@@ -17,6 +19,6 @@ path('convert_pdf_from_task/<int:task_id>/',views.project_pdf_conversion),
 path("prompt_result/",views.AiPromptResultViewset.as_view()),
 path("customize_text_generate",views.customize_text_openai),
 path("history/",views.history_delete),
-
+path('prompt_image_generations/',views.image_gen)
 # path('/',views.c, name='word_count_check'),
 ]

@@ -453,7 +453,6 @@ class PromptFields(models.Model):
 class PromptStartPhrases(models.Model):
     sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
                                  on_delete = models.CASCADE,blank=True, null=True)
-    
     start_phrase =  models.TextField(null=True, blank=True)   
     punctuation = models.CharField(max_length=5 , null=True,blank=True)
     max_token = models.CharField(max_length=10 , null=True,blank=True)
