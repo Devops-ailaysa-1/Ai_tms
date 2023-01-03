@@ -352,11 +352,13 @@ def mt_only(project_id,token):
     if pr.pre_translate == True:
         tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)
+        print("this is mt-only functions projects")
         [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
         for i in pr.get_mtpe_tasks:
+            print("i----->" , i)
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             doc = DocumentSerializerV2(document).data
-            print(doc)
+            print("this is mt-only functions tasks")
             MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
     logger.info('mt-only')
 # # @task
@@ -472,7 +474,7 @@ def pre_translate_update(task_id):
 
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
-
+    
     for seg in final_segments:###############Need to revise####################
 
         if seg.target == '' or seg.target==None:

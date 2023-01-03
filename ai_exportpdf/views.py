@@ -1,11 +1,11 @@
-from ai_exportpdf.models import (Ai_PdfUpload ,AiPrompt ,AiPromptResult)
+from ai_exportpdf.models import (Ai_PdfUpload ,AiPrompt ,AiPromptResult , AiImageGeneration)
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from ai_exportpdf.serializer import (PdfFileSerializer ,PdfFileStatusSerializer ,
                                      AiPromptSerializer ,AiPromptResultSerializer,
-                                     AiPromptGetSerializer)
+                                     AiPromptGetSerializer,AiImageGenerationSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -23,7 +23,7 @@ from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages
 from langdetect import detect
-from ai_exportpdf.utils import get_prompt ,get_prompt_edit
+from ai_exportpdf.utils import get_prompt ,get_prompt_edit , get_prompt_image_generations
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 
@@ -336,9 +336,42 @@ def history_delete(request):
 
 
 
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def image_gen(request):
+    image_gen_prompt = request.POST.get('image_gen_prompt')
+    image_gen_prompt = image_gen_prompt.strip()
+    res = get_prompt_image_generations(prompt=image_gen_prompt,size='512x512',n=2)
+    res_url = res["data"]
+    return Response({'gen_image_url': res_url},status=200) 
 
 
 
+
+
+# class AiImageGenerationViewset(viewsets.ViewSet):
+    
+#     def create(self,request):
+#         data = {**request.POST.dict(),'user':self.request.user.id}
+#         serializer = AiImageGenerationSerializer(data=data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
+
+        
+#     def list(self,request):
+#         query_set = AiImageGeneration.objects.all()
+#         serializer = AiImageGenerationSerializer(query_set ,many =True)
+#         return Response(serializer.data)
+    
+    
+    
+    
+    
+    
+    
+    
     # consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
     # if initial_credit > consumable_credits:
     #     response = openai_endpoint(prompt)

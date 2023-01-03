@@ -35,7 +35,6 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
         instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)
 
 
-
 def  vendor_status_send_email(sender, instance, *args, **kwargs):
     from ai_auth.api_views import subscribe_vendor
     print("status----->",instance.get_status_display())

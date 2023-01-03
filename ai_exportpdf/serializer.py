@@ -1,6 +1,6 @@
 from statistics import mode
 from rest_framework import serializers
-from .models import Ai_PdfUpload
+from .models import Ai_PdfUpload , AiImageGeneration
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from itertools import groupby
@@ -33,7 +33,7 @@ from statistics import mode
 from rest_framework import serializers
 from ai_exportpdf.models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize 
-from ai_exportpdf.utils import get_prompt ,get_consumable_credits_for_openai_text_generator
+from ai_exportpdf.utils import get_prompt ,get_consumable_credits_for_openai_text_generator ,remove_duplicate_new_line
 from ai_workspace_okapi.utils import get_translation
 import math
 
@@ -90,7 +90,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
         self.customize_token_deduction(instance , total_tokens)            
         
         if generated_text:
-            print("generated_text" , generated_text)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
                     defaults = {'prompt_generated':prompt,'start_phrase':start_phrase,\
                     'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip()}) for j,i in enumerate(generated_text)]
@@ -209,4 +208,12 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
         model = AiCustomize
         fields = ('id' , 'customize')
 
+class AiImageGenerationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiImageGeneration
+        fields = ('id','prompt','image_resolution')
 
+    def create(self, validated_data):
+        # print(validated_data)
+        return validated_data
+        
