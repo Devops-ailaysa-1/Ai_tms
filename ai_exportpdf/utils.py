@@ -94,14 +94,16 @@ def convertiopdf2docx(id ,language,ocr = None ):
         user_credit.save()
         print({"result":"Error during input file fetching: couldn't connect to host"})
     else:
+        get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
         try:
-            get_url = 'https://api.convertio.co/convert/{}/status'.format(str(response_status['data']['id']))
+            
             while (requests.get(url = get_url).json()['data']['step'] != 'finish'): # \
                 # and  (requests.get(url = get_url).json()['status'] != 'ok') \
                 #     and (requests.get(url = get_url).json()['code'] != 200):
                 txt_field_obj.status = "PENDING"
                 txt_field_obj.save()
                 time.sleep(2)
+
             convertio_response_link =  requests.get(url = get_url).json()
             file_link = convertio_response_link['data']['output']['url']  ##after finished get converted file from convertio
             direct_download_urlib_docx(url= file_link , filename= str(settings.MEDIA_ROOT+"/"+ str(txt_field_obj.pdf_file)).split(".pdf")[0] +".docx" )
@@ -112,14 +114,17 @@ def convertiopdf2docx(id ,language,ocr = None ):
             txt_field_obj.save()
             print({"result":"finished_task" })
         except:
-            end = time.time()
-            txt_field_obj.status = "ERROR"
-            txt_field_obj.save()
-            file_format,page_length =  file_pdf_check(fp)
-            consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
-            user_credit.credits_left = user_credit.credits_left + consum_cred
-            user_credit.save()
-            print("pdf_conversion_something went wrong")
+            if "error" in requests.get(url = get_url).json():
+                response_result = ai_export_pdf.apply_async((id, ),)
+            # end = time.time()
+            else:
+                txt_field_obj.status = "ERROR"
+                txt_field_obj.save()
+                file_format,page_length =  file_pdf_check(fp)
+                consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
+                user_credit.credits_left = user_credit.credits_left + consum_cred
+                user_credit.save()
+                print("pdf_conversion_something went wrong")
 
 
 import tempfile
@@ -149,7 +154,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
         logger.info('finished ocr and saved as docx ,file_name: ' )
-        print('finished ocr and saved as docx ,file_name: ')
+ 
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
@@ -161,8 +166,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
-        # print("pdf_conversion_done")
-        # return {"result":"finished_task"}
+ 
     except:
         end = time.time()
         txt_field_obj.status = "ERROR"
@@ -173,7 +177,12 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         user_credit.credits_left = user_credit.credits_left + consum_cred
         user_credit.save()
         print("pdf_conversion_something went wrong")
-        # return {'result':"something went wrong"}
+ 
+
+
+def google_ocr_pdf():
+    pass
+
 
 def para_creation_from_ocr(texts):
     para_text = []
