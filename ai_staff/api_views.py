@@ -23,7 +23,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
-                         PromptTonesSerializer,AiCustomizeSerializer)
+                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -906,7 +906,7 @@ class PromptTonesViewset(viewsets.ViewSet):
 class AiCustomizeViewset(viewsets.ViewSet):
     def list(self, request):
         query_set = AiCustomize.objects.all()
-        serializer = AiCustomizeSerializer(query_set ,many=True)
+        serializer = AiCustomizeGroupingSerializer(query_set)
         return Response(serializer.data)
 
 
