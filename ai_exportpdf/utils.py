@@ -296,7 +296,7 @@ import openai
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
-def openai_endpoint(prompt,max_token=256,
+def openai_endpoint(prompt,max_token=30,#256
                     temperature=0.7,frequency_penalty=1,
                     presence_penalty=1,top_p=1):
  
@@ -394,7 +394,7 @@ def openai_text_trim(text):
 
 
 def get_prompt(prompt ,model_name , max_token ,n ):
-    max_token = 256
+    #max_token = 256
     temperature=0.7
     frequency_penalty = 1
     presence_penalty = 1
@@ -403,12 +403,25 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 model=model_name, 
                 prompt=prompt.strip(),
                 temperature=temperature,
-                max_tokens=max_token,
+                max_tokens=int(max_token),
                 top_p=top_p,
                 frequency_penalty=frequency_penalty,
                 presence_penalty=presence_penalty,
                 # stop = ['#'],
                 n=n,
+                logit_bias = {"50256": -100})
+    return response
+
+def get_prompt_freestyle(prompt):
+    response = openai.Completion.create(
+                model="text-curie-001",
+                prompt=prompt.strip(),
+                temperature=0.7,
+                max_tokens=300,
+                top_p=1,
+                frequency_penalty=1,
+                presence_penalty=1,
+                n=1,
                 logit_bias = {"50256": -100})
     return response
 

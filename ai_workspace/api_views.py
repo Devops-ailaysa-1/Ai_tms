@@ -46,7 +46,8 @@ from filesplit.split import Split
 from ai_auth.utils import authorize_list,filter_authorize, unassign_task
 from django_oso.auth import authorize
 logger = logging.getLogger('django')
-
+from django.db import models
+from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
 from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel
@@ -586,6 +587,71 @@ class TbxUploadView(APIView):
             return Response(serializer.errors)
 
 
+def docx_save_pdf(pdf_obj):
+    from docx import Document
+    from htmldocx import HtmlToDocx
+
+    document = Document()
+    new_parser = HtmlToDocx()
+    new_parser.table_style = 'TableGrid'
+    new_parser.add_html_to_document(pdf_obj.html_data, document)
+    document.save(pdf_obj.docx_file_name)
+    f2 = open(pdf_obj.docx_file_name, 'rb')
+    file_obj = DJFile(f2)
+    pdf_obj.docx_file_from_writer = file_obj
+    pdf_obj.save()
+
+
+
+def get_file_from_pdf(pdf_obj_id,pdf_task_id):
+    from ai_exportpdf.models import Ai_PdfUpload
+    from ai_exportpdf.views import get_docx_file_path
+    if pdf_obj_id:
+        pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
+    else:
+        pdf_obj = Ai_PdfUpload.objects.filter(task_id = pdf_task_id).last() 
+    #print("pdf Before---------->",pdf_obj)
+    if pdf_obj.pdf_api_use == "convertio":
+        docx_file_path = get_docx_file_path(pdf_obj.id)
+        file = open(docx_file_path,'rb')
+        file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
+        pdf_obj.translation_task_created = True
+        pdf_obj.save()
+        #print("Pdf------->",pdf_obj.translation_task_created)
+    else:
+        #docx_save_pdf(pdf_obj)
+        file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
+    return file_obj
+
+
+# def get_file_from_doc(doc_id):
+#     obj = MyDocuments.objects.get(id=doc_id)
+#     if obj:
+
+def get_field_type(field_name, queryset):
+    stripped_field_name = field_name.lstrip('-')
+    if stripped_field_name in queryset.query.annotations:
+        return queryset.query.annotations[stripped_field_name].output_field
+    return queryset.model._meta.get_field(stripped_field_name)
+
+class CaseInsensitiveOrderingFilter(OrderingFilter):
+    
+    def filter_queryset(self, request, queryset, view):
+        ordering = self.get_ordering(request, queryset, view)
+
+        if ordering:
+            new_ordering = []
+            for field in ordering:
+                if not isinstance(get_field_type(field, queryset), (models.CharField, models.TextField)):
+                    new_ordering.append(field)
+                elif field.startswith('-'):
+                    new_ordering.append(Lower(field[1:]).desc())
+                else:
+                    new_ordering.append(Lower(field).asc())
+            return queryset.order_by(*new_ordering)
+
+        return queryset
+
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
@@ -619,66 +685,18 @@ class ProjectFilter(django_filters.FilterSet):
         if value == "express":
             queryset = queryset.filter(project_type_id=5)
             return queryset
-            #queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
-        # if value == "glossary":
-        #     lookup = '__'.join([name, 'isnull'])
-        #     return queryset.filter(**{lookup: False})
-        # if value == "voice":
-        #     lookup = '__'.join([name, 'isnull'])
-        #     return queryset.filter(**{lookup: False})
 
-def docx_save_pdf(pdf_obj):
-    from docx import Document
-    from htmldocx import HtmlToDocx
-
-    document = Document()
-    new_parser = HtmlToDocx()
-    new_parser.table_style = 'TableGrid'
-    new_parser.add_html_to_document(pdf_obj.html_data, document)
-    document.save(pdf_obj.docx_file_name)
-    f2 = open(pdf_obj.docx_file_name, 'rb')
-    file_obj = DJFile(f2)
-    pdf_obj.docx_file_from_writer = file_obj
-    pdf_obj.save()
-
-
-
-def get_file_from_pdf(pdf_obj_id,pdf_task_id):
-    from ai_exportpdf.models import Ai_PdfUpload
-    from ai_exportpdf.views import get_docx_file_path
-    if pdf_obj_id:
-        pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
-    else:
-        pdf_obj = Ai_PdfUpload.objects.filter(task_id = pdf_task_id).last() 
-    print("pdf Before---------->",pdf_obj)
-    if pdf_obj.pdf_api_use == "convertio":
-        docx_file_path = get_docx_file_path(pdf_obj.id)
-        file = open(docx_file_path,'rb')
-        file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
-        pdf_obj.translation_task_created = True
-        pdf_obj.save()
-        print("Pdf------->",pdf_obj.translation_task_created)
-    else:
-        #docx_save_pdf(pdf_obj)
-        file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
-    return file_obj
-
-
-# def get_file_from_doc(doc_id):
-#     obj = MyDocuments.objects.get(id=doc_id)
-#     if obj:
-        
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     serializer_class = ProjectQuickSetupSerializer
-    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['project_name','team__name','id']
     filterset_class = ProjectFilter
     search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
                     'project_jobs_set__target_language__language']
-    ordering = ('-id')
+    ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
     paginator.page_size = 20
 
     def get_serializer_class(self):
@@ -1606,31 +1624,32 @@ def find_vendor(team,jobs):
 #             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
 #     return externalmembers
 
-class ProjectListFilter(django_filters.FilterSet):
+# class ProjectListFilter(django_filters.FilterSet):
 
-    def filter(self, qs, value):
-        return (pr for pr in qs if pr.get_assignable_tasks_exists == True)
-
-
+#     def filter(self, qs, value):
+#         print("$$$$$$$$$$$$$$",value)
+#         tt =  (pr for pr in qs if pr.get_assignable_tasks_exists == True)
+#         qs = super().filter(tt, value)
+#         return qs
 
 
 class ProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
-    filterset_class = ProjectListFilter
+    #filterset_class = ProjectListFilter
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+        queryset = Project.objects.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
         return queryset
 
 
     def list(self,request):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
-        data = serializer.data
+        queryset = self.get_queryset()
+        filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
+        serializer = ProjectListSerializer(filtered, many=True, context={'request': request})
         return  Response(serializer.data)
 
 @permission_classes([IsAuthenticated])
@@ -2782,7 +2801,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     serializer_class = MyDocumentSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['doc_name','id']
     filterset_class = MyDocFilter
     paginator = PageNumberPagination()

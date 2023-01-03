@@ -82,5 +82,5 @@ def roundup(x):
 def get_consumable_credits_for_text_to_speech(total_chars):
     return round(total_chars/20)
 
-def get_consumable_credits_for_speech_to_text(total_seconds):#######Minimum billable 15 seconds Need to update##########
+def get_consumable_credits_for_speech_to_text(total_seconds):#######Minimum billable 15 seconds##########
     return round(roundup(total_seconds)/3)
