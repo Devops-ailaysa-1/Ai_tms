@@ -10,6 +10,7 @@ urlpatterns += [
 path("prompt_result/",api_views.AiPromptResultViewset.as_view()),
 path("customize_text_generate",api_views.customize_text_openai),
 path("history/",api_views.history_delete),
+path("prompt_image_generations/" ,api_views.image_gen)
 ]
 
 
