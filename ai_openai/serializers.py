@@ -46,8 +46,9 @@ class AiPromptSerializer(serializers.ModelSerializer):
         # if instance.catagories.category == 'Free Style':
         #     openai_response =get_prompt_freestyle(prompt)
         # else:
+        token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 256
         openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , 
-                                instance.sub_catagories.prompt_sub_category.first().max_token ,instance.response_copies )
+                                token ,instance.response_copies )
 
         generated_text = openai_response.get('choices' ,None)
         response_id =openai_response.get('id' , None)
