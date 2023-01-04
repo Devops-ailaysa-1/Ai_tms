@@ -130,6 +130,7 @@ def my_docs_upload_path(instance, filename):
 class MyDocuments(models.Model):
     file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
+    word_count = models.IntegerField(null=True,blank=True)
     html_data = models.TextField(null=True,blank=True)
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'doc_created_by')
     ai_user = models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE,related_name = 'credit_debit_user')
