@@ -215,3 +215,4 @@ django-silk
 django-oso
 openai==0.25.0
 pypandoc==1.10
+
