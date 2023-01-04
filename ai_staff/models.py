@@ -442,7 +442,7 @@ class PromptFields(models.Model):
                                  on_delete = models.CASCADE,blank=True, null=True)
     fields = models.CharField(max_length=100, null=True, blank=True)
     # optional_field =  models.BooleanField()
-    help_text = models.CharField(max_length=100, null=True, blank=True)
+    help_text = models.CharField(max_length=500, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
