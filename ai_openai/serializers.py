@@ -43,11 +43,11 @@ class AiPromptSerializer(serializers.ModelSerializer):
         consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
-        if instance.catagories.category == 'Free Style':
-            openai_response =get_prompt_freestyle(prompt)
-        else:
-            openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , 
-                                    instance.sub_catagories.prompt_sub_category.first().max_token ,instance.response_copies )
+        # if instance.catagories.category == 'Free Style':
+        #     openai_response =get_prompt_freestyle(prompt)
+        # else:
+        openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , 
+                                instance.sub_catagories.prompt_sub_category.first().max_token ,instance.response_copies )
 
         generated_text = openai_response.get('choices' ,None)
         response_id =openai_response.get('id' , None)
