@@ -64,7 +64,8 @@ def get_prompt_freestyle(prompt):
                 frequency_penalty=1,
                 presence_penalty=1,
                 n=1,
-                logit_bias = {"50256": -100})
+                #logit_bias = {"50256": -100}
+                )
     return response
 
 model_edit = os.getenv('OPENAI_EDIT_MODEL')
