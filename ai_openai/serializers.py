@@ -160,7 +160,7 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPrompt
         fields = ('id','user','prompt_string','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
-                    'product_name','keywords','created_at','prompt_results',)#,'ai_prompt'
+                    'product_name','keywords','prompt_generated','created_at','prompt_results',)#,'ai_prompt'
         
     def get_target_langs(self,obj):
         return [i.result_lang.language for i in obj.ai_prompt.all().distinct('result_lang')]
