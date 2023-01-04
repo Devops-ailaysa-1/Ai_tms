@@ -17,8 +17,9 @@ from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages
-from langdetect import detect
-import langid
+#from langdetect import detect
+#import langid
+from googletrans import Translator
 from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
@@ -102,7 +103,8 @@ def customize_text_openai(request):
     customize_id = request.POST.get('customize_id')
     user_text = request.POST.get('user_text')
     customize = AiCustomize.objects.get(id =customize_id)
-    lang = langid.classify(user_text)[0]
+    detector = Translator()
+    lang = detector.detect(user_text).lang
     #print(lang)
     
     if lang!= 'en':
