@@ -119,7 +119,7 @@ def customize_text_openai(request):
             response = customize_response(customize,user_text_mt_en,request)
             result_txt = response['choices'][0]['text']
             #print("openai_result--------->",result_txt)
-            txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt,
+            txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
                                         source_lang_code='en' , target_lang_code=lang)
             #print("credits for result mt---------> ",get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang))
             consumable_credits_txt_generated += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
@@ -132,8 +132,9 @@ def customize_text_openai(request):
     else:##english
         response = customize_response(customize,user_text,request)
         txt_generated = response['choices'][0]['text']
+        #print("Txt------>",txt_generated.strip())
     #total_tokens = response['usage']['total_tokens']
-    return Response({'customize_text': txt_generated ,'lang':lang ,'customize_cat':customize.customize},status=200)
+    return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
 
  
 
