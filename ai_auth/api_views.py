@@ -2276,13 +2276,14 @@ class UserDetailView(viewsets.ViewSet):
             return Response({'error':f'updation failed {str(e)}'},status=400)
 
 
-
+from googletrans import Translator
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def lang_detect(request):
     from ai_staff.models import Languages
     text = request.GET.get('text')
-    lang = detect(text)
+    detector = Translator()
+    lang = detector.detect(text).lang
     lang_obj = Languages.objects.filter(locale__locale_code = lang).first()
     return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
 
