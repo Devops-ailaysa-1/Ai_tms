@@ -18,7 +18,7 @@ from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credit
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages
 from langdetect import detect
-from .utils import get_prompt ,get_prompt_edit
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
@@ -149,3 +149,14 @@ def history_delete(request):
         prmb_obj = AiPrompt.objects.get(id=prmp).delete()
     return Response(status=204)
 
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def image_gen(request):
+    prompt = request.POST.get('prompt')
+    res = get_prompt_image_generations(prompt=prompt.strip(),size='256x256',n=2)
+    if 'data' in res:
+        res_url = res["data"]
+        return Response({'gen_image_url': res_url},status=200) 
+    else:
+        return Response({'gen_image_url':res}, status=400 )
