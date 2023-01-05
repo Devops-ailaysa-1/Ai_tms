@@ -98,7 +98,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         present = datetime.now()
 
         try:
-            addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon"))
+            addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon")&Q(expiry__gte=timezone.now()))
             for addon in addon_credits:
                 addons += addon.credits_left
                 # addon credits doesn't have expiry so we are excluding record with zero credits_left
@@ -353,6 +353,7 @@ class CreditPack(models.Model):
     product =models.ForeignKey(Product,on_delete=models.CASCADE)
     type = models.CharField(max_length=200)
     credits = models.IntegerField(default=0)
+    expires_at = models.IntegerField(null=True,blank=True,help_text = "no of months")
 
 class BillingAddress(BaseAddress):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='billing_addr_user')
