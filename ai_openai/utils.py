@@ -74,7 +74,9 @@ def get_prompt_edit(input_text ,instruction ):
     response = openai.Edit.create(
                 model=model_edit, 
                 input=input_text.strip(),
-                instruction = instruction
+                instruction=instruction,
+                # temperature=0.7,
+                # top_p=1,
                 )
     return response
     

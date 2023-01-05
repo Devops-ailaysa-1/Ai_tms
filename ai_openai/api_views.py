@@ -99,7 +99,7 @@ def customize_response(customize ,user_text,tone,request):
         total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
         AiPromptSerializer().customize_token_deduction(instance = request,total_tokens=total_tokens)
     else:
-        response = get_prompt_edit(input_text=user_text ,instruction=customize.customize)
+        response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
     return response 
     
 
