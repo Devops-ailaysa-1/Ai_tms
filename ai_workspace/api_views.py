@@ -1039,7 +1039,8 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_addon_credit(user, actual_used_credits=None, credit_diff=None):
-        add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon")).filter(Q(expiry__isnull=True) | Q(expiry__gte=timezone.now()))
+        add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon")).\
+                    filter(Q(expiry__isnull=True) | Q(expiry__gte=timezone.now())).order_by('expiry')
         if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
             for addon in add_ons:

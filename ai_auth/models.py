@@ -98,7 +98,8 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         present = datetime.now()
 
         try:
-            addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon")).filter(Q(expiry__isnull=True) | Q(expiry__gte=timezone.now()))
+            addon_credits = UserCredits.objects.filter(Q(user=self) & Q(credit_pack_type="Addon")).\
+                    filter(Q(expiry__isnull=True) | Q(expiry__gte=timezone.now())).order_by('expiry')
             for addon in addon_credits:
                 addons += addon.credits_left
                 # addon credits doesn't have expiry so we are excluding record with zero credits_left
