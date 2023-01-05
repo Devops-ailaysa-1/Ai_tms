@@ -56,7 +56,7 @@ def add_months(sourcedate, months):
 
 
 def calculate_addon_expiry(start_date,pack):
-    if pack.expiry == None:
+    if pack.expires_at == None:
         return None
     else:
         return add_months(start_date,pack.expires_at)
