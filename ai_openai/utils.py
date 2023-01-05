@@ -48,7 +48,7 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 top_p=top_p,
                 frequency_penalty=frequency_penalty,
                 presence_penalty=presence_penalty,
-                # stop = ['#'],
+                stop = ['/n/n/n'],
                 n=n,
                 logit_bias = {"50256": -100})
     return response

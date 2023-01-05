@@ -197,14 +197,32 @@ def para_creation_from_ocr(texts):
             para_text.append("".join(text_list))
     return "\n".join(para_text)
 
-
+import PyPDF2
 def file_pdf_check(file_path):
-    text = ""
-    with open(file_path ,"rb") as f:
-        pdf = pdftotext.PDF(f)
-    for page in range(len(pdf)):
-        text+=pdf[page]
-    return ["text" if len(text)>=700 else "ocr" , len(pdf)]
+    pdfdoc = PyPDF2.PdfReader(file_path)
+    pdf_check = {0:'ocr',1:'text'}
+    pdf_check_list = []
+    for i in tqdm(range(len(pdfdoc.pages))):
+        current_page = pdfdoc.pages[i]
+        if current_page.extract_text():
+            pdf_check_list.append(1)
+        else:
+            pdf_check_list.append(0)
+    return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
+    
+    
+    
+ 
+    # with open(file_path ,"rb") as f:
+    #     pdf = pdftotext.PDF(f)
+    # for page in range(len(pdf)):
+    #     text =pdf[page]
+    #     if text:
+    #         pdf_check_list.append(1)
+    #     else:
+    #         pdf_check_list.append(0)
+            
+    # return [pdf_check.get(max(pdf_check_list)) , len(pdf)]
 
 
 from ai_workspace.models import Task
