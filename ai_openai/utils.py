@@ -48,7 +48,7 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 top_p=top_p,
                 frequency_penalty=frequency_penalty,
                 presence_penalty=presence_penalty,
-                #stop = ['\n\n\n'],
+                # stop = ['#'],
                 n=n,
                 #logit_bias = {"50256": -100}
                 )
@@ -74,7 +74,9 @@ def get_prompt_edit(input_text ,instruction ):
     response = openai.Edit.create(
                 model=model_edit, 
                 input=input_text.strip(),
-                instruction = instruction
+                instruction=instruction,
+                # temperature=0.7,
+                # top_p=1,
                 )
     return response
     
