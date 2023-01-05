@@ -418,6 +418,8 @@ class PromptCategories(models.Model):
     
     def __str__(self) -> str:
         return self.category 
+
+        
 class PromptTones(models.Model):
     tone = models.CharField(max_length=1000, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

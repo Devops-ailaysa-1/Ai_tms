@@ -16,7 +16,7 @@ from .utils import get_consumable_credits_for_openai_text_generator
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from ai_workspace.models import Task
-from ai_staff.models import AiCustomize ,Languages
+from ai_staff.models import AiCustomize ,Languages, PromptTones
 #from langdetect import detect
 #import langid
 from googletrans import Translator
@@ -26,7 +26,7 @@ openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
 
 
-
+from string import punctuation
 class AiPromptViewset(viewsets.ViewSet):
     model = AiPrompt
 
@@ -38,8 +38,9 @@ class AiPromptViewset(viewsets.ViewSet):
     def create(self,request):
         # keywords = request.POST.getlist('keywords')
         targets = request.POST.getlist('get_result_in')
+        description = request.POST.get('description').rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
-        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
+        serializer = AiPromptSerializer(data={**request.POST.dict(),'description':description,'user':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -84,10 +85,16 @@ class AiPromptResultViewset(generics.ListAPIView):
 
 
 
-def customize_response(customize ,user_text,request):
-    if customize.prompt:
+def customize_response(customize ,user_text,tone,request):
+    if customize.prompt or customize.customize == "Text completion":
         initial_credit = request.user.credit_balance.get("total_left")
-        response = get_prompt(prompt=customize.prompt+" "+user_text,model_name=openai_model,max_token =256,n=1)
+        if customize.customize == "Text completion":
+            tone_ = PromptTones.objects.get(id=tone).tone
+            prompt = customize.prompt+' {} tone : '.format(tone_)+user_text#+', in {} tone.'.format(tone_)
+            print("Prompt Created-------->",prompt)
+            response = get_prompt(prompt=prompt,model_name=openai_model,max_token =150,n=1)
+        else:
+            response = get_prompt(prompt=customize.prompt+" "+user_text,model_name=openai_model,max_token =256,n=1)
         total_tokens = response['usage']['total_tokens']
         total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
         AiPromptSerializer().customize_token_deduction(instance = request,total_tokens=total_tokens)
@@ -102,11 +109,10 @@ def customize_text_openai(request):
     user = request.user
     customize_id = request.POST.get('customize_id')
     user_text = request.POST.get('user_text')
+    tone = request.POST.get('tone',1)
     customize = AiCustomize.objects.get(id =customize_id)
     detector = Translator()
     lang = detector.detect(user_text).lang
-    #print(lang)
-    
     if lang!= 'en':
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
@@ -116,7 +122,7 @@ def customize_text_openai(request):
                                         source_lang_code=lang , target_lang_code='en')
             consumable_credits_txt_generated = get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             #print("credits for mt------------>",consumable_credits_txt_generated)
-            response = customize_response(customize,user_text_mt_en,request)
+            response = customize_response(customize,user_text_mt_en,tone,request)
             result_txt = response['choices'][0]['text']
             #print("openai_result--------->",result_txt)
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
@@ -130,7 +136,7 @@ def customize_text_openai(request):
             return  Response({'msg':'Insufficient Credits'},status=400)
         
     else:##english
-        response = customize_response(customize,user_text,request)
+        response = customize_response(customize,user_text,tone,request)
         txt_generated = response['choices'][0]['text']
         #print("Txt------>",txt_generated.strip())
     #total_tokens = response['usage']['total_tokens']
@@ -165,3 +171,6 @@ def image_gen(request):
         return Response({'gen_image_url': res_url},status=200) 
     else:
         return Response({'gen_image_url':res}, status=400 )
+
+
+    
