@@ -475,7 +475,7 @@ class AiCustomize(models.Model):
     
     def __str__(self) -> str:
         return self.customize
-
+    
 
 class Role(ParanoidModel):
     name = models.CharField(max_length=100, null=True, blank=True)
