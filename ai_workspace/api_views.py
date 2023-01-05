@@ -85,6 +85,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer)
 from .utils import DjRestUtils
+from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
 
 spring_host = os.environ.get("SPRING_HOST")
@@ -1085,7 +1086,7 @@ class UpdateTaskCreditStatus(APIView):
 
     @staticmethod
     def update_addon_credit(user, actual_used_credits=None, credit_diff=None):
-        add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon"))
+        add_ons = UserCredits.objects.filter(Q(user=user) & Q(credit_pack_type="Addon") &Q(expiry__gte=timezone.now()))
         if add_ons.exists():
             case = credit_diff if credit_diff != None else actual_used_credits
             for addon in add_ons:
