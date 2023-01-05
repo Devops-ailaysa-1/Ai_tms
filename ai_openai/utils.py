@@ -48,9 +48,10 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 top_p=top_p,
                 frequency_penalty=frequency_penalty,
                 presence_penalty=presence_penalty,
-                stop = ['/n/n/n'],
+                # stop = ['#'],
                 n=n,
-                logit_bias = {"50256": -100})
+                #logit_bias = {"50256": -100}
+                )
     return response
 
 def get_prompt_freestyle(prompt):
@@ -63,7 +64,8 @@ def get_prompt_freestyle(prompt):
                 frequency_penalty=1,
                 presence_penalty=1,
                 n=1,
-                logit_bias = {"50256": -100})
+                #logit_bias = {"50256": -100}
+                )
     return response
 
 model_edit = os.getenv('OPENAI_EDIT_MODEL')

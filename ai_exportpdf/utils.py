@@ -116,6 +116,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
             print({"result":"finished_task" })
         except:
             if "error" in requests.get(url = get_url).json():
+                print("OCR Calling")
                 response_result = ai_export_pdf.apply_async((id, ),)
             # end = time.time()
             else:
