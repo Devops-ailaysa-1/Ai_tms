@@ -94,7 +94,7 @@ def customize_response(customize ,user_text,tone,request):
             print("Prompt Created-------->",prompt)
             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =150,n=1)
         else:
-            response = get_prompt(prompt=customize.prompt+" "+user_text,model_name=openai_model,max_token =256,n=1)
+            response = get_prompt(prompt=customize.prompt+" "+user_text+"?",model_name=openai_model,max_token =256,n=1)
         total_tokens = response['usage']['total_tokens']
         total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
         AiPromptSerializer().customize_token_deduction(instance = request,total_tokens=total_tokens)
