@@ -35,11 +35,13 @@ def openai_text_trim(text):
 
 
 def get_prompt(prompt ,model_name , max_token ,n ):
+
     #max_token = 256
     temperature=0.7
     frequency_penalty = 1
     presence_penalty = 1
     top_p = 1
+
     response = openai.Completion.create(
                 model=model_name, 
                 prompt=prompt.strip(),

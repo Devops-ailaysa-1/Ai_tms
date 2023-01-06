@@ -673,19 +673,21 @@ class ProjectFilter(django_filters.FilterSet):
     def filter_not_empty(self,queryset, name, value):
         if value == "glossary":
             queryset = queryset.filter(Q(glossary_project__isnull=False))
-            return queryset
-        if value == "voice":
+        elif value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
-            return queryset
-        if value == "files":
+        elif value == "speech_to_text":
+            queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 1))
+        elif value == "text_to_speech":
+            queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
+        elif value == "files":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_file_create_type__file_create_type="From insta text").exclude(project_type_id = 5)
-            return queryset
-        if value == "text":
+        elif value == "text":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-            return queryset
-        if value == "express":
+        elif value == "assigned":
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
+        elif value == "express":
             queryset = queryset.filter(project_type_id=5)
-            return queryset
+        return queryset
 
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
@@ -727,8 +729,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
         return queryset
 
-        # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
-        # return Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -740,7 +740,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def create(self, request):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-        # print("Project Creation request data----->", request.data)
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
@@ -765,8 +764,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             pr = Project.objects.get(id=serlzr.data.get('id'))
             if pr.pre_translate == True:
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
-                # mt_only.delay((serlzr.data.get('id'), str(request.auth)), )
-            #check_dict.apply_async(serlzr.data,)
             return Response(serlzr.data, status=201)
         return Response(serlzr.errors, status=409)
 
@@ -834,6 +831,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
+
     # def delete(self, request, pk):
     #     project = self.get_object()
     #     project.delete()
@@ -878,9 +876,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
-        print("%%%%")
+        #print("%%%%")
         tasks = self.get_tasks_by_projectid(pk=pk)
-        print("tasks",tasks)
         tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
         return Response(serlzr.data, status=200)
@@ -980,17 +977,10 @@ class TbxFileListCreateView(APIView):
 
     def post(self, request, project_id):
         data = {**request.POST.dict(), "tbx_file" : request.FILES.getlist('tbx_file'),'project_id':project_id}
-        # data["project_id"] = project_id
-        #data.update({'project_id': project_id})
-        #print("########", data)
         ser_data = TbxFileSerializer.prepare_data(data)
-        #print("$$$$$$", ser_data)
         serializer = TbxFileSerializer(data=ser_data,many=True)
-        #print("%%%%%%%%%%", serializer.is_valid())
         if serializer.is_valid(raise_exception=True):
-            #print("***VALID***")
             serializer.save()
-            #print("AFTER SAVE", serializer.data)
         return Response(serializer.data, status=201)
 
 class TbxFileDetail(APIView):
