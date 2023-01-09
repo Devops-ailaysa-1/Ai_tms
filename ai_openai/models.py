@@ -80,3 +80,9 @@ class TextgeneratedCreditDeduction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
 
+# class AiPromptCustomize(models.Model):
+#     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, related_name = 'ai_doc')
+#     customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'ai_cust')
+#     user_text = models.TextField(null=True, blank=True)
+#     prompt_generated = models.TextField(null=True, blank=True)
+#     prompt_result = models.TextField(null=True, blank=True) 
