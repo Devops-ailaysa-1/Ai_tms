@@ -94,12 +94,18 @@ def customize_response(customize ,user_text,tone,request):
             print("Prompt Created-------->",prompt)
             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =150,n=1)
         else:
-            response = get_prompt(prompt=customize.prompt+" "+user_text+"?",model_name=openai_model,max_token =256,n=1)
+            if customize.grouping == "Ask":
+                prompt = customize.prompt+" "+user_text+"?"
+            else:
+                prompt = customize.prompt+" "+user_text+"."
+            print("Prompt Created-------->",prompt)
+            response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         total_tokens = response['usage']['total_tokens']
         total_tokens = get_consumable_credits_for_openai_text_generator(total_tokens)
         AiPromptSerializer().customize_token_deduction(instance = request,total_tokens=total_tokens)
     else:
-        response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
+        try:response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
+        except:return None
     return response 
     
 
@@ -137,7 +143,8 @@ def customize_text_openai(request):
         
     else:##english
         response = customize_response(customize,user_text,tone,request)
-        txt_generated = response['choices'][0]['text']
+        if response:txt_generated = response['choices'][0]['text']
+        else:txt_generated = 'Something Went Wrong.Try Again'
         #print("Txt------>",txt_generated.strip())
     #total_tokens = response['usage']['total_tokens']
     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
