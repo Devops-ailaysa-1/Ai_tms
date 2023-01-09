@@ -130,6 +130,7 @@ def my_docs_upload_path(instance, filename):
 class MyDocuments(models.Model):
     file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
+    word_count = models.IntegerField(null=True,blank=True)
     html_data = models.TextField(null=True,blank=True)
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'doc_created_by')
     ai_user = models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE,related_name = 'credit_debit_user')
@@ -426,6 +427,14 @@ class Project(models.Model):
                 if task.task_info.filter(task_assign_info__isnull=False).filter(step_id=2):
                     return False
             return True
+
+    # @property
+    # def assigned_date(self):
+    #     assigned = TaskAssignInfo.objects.filter(task_assign__task__job__project=self).order_by('-created_at')[0].created_at
+    #     if assigned > self.created_at:
+    #         return assigned
+    #     else:
+    #         return self.created_at
 
 
     @property
@@ -1277,6 +1286,7 @@ class TaskTranscriptDetails(models.Model):
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
     quill_data =  models.TextField(null=True,blank=True)
+    html_data = models.TextField(null=True,blank=True)
     audio_file_length = models.IntegerField(null=True,blank=True)
     user = models.ForeignKey(AiUser, on_delete = models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)

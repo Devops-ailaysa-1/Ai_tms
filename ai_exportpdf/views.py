@@ -1,25 +1,29 @@
-from ai_exportpdf.models import Ai_PdfUpload
+from ai_exportpdf.models import Ai_PdfUpload #,AiPrompt ,AiPromptResult)
 from django.http import   JsonResponse
-import logging
-from rest_framework import viewsets
+import logging ,os
+from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
-from ai_exportpdf.serializer import PdfFileSerializer ,PdfFileStatusSerializer
+from ai_exportpdf.serializer import (PdfFileSerializer ,PdfFileStatusSerializer )
+                                    #  AiPromptSerializer ,AiPromptResultSerializer,
+                                    #  AiPromptGetSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
 from ai_exportpdf.utils import pdf_conversion
+import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
-from ai_exportpdf.utils import (get_consumable_credits_for_pdf_to_docx ,file_pdf_check,\
-                                get_consumable_credits_for_openai_text_generator)
+from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
 from ai_auth.models import UserCredits
-from ai_workspace.api_views import UpdateTaskCreditStatus
+from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from django.core.files.base import ContentFile
 from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
-
-
+from ai_staff.models import AiCustomize ,Languages
+from langdetect import detect
+from ai_workspace_okapi.utils import get_translation
+openai_model = os.getenv('OPENAI_MODEL')
 
 logger = logging.getLogger('django')
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
@@ -39,7 +43,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         user = request.user
         if ids:
             queryset = Ai_PdfUpload.objects.filter(id__in = ids)
-            serializer = PdfFileStatusSerializer(queryset,many=True)
+            serializer = PdfFileSerializer(queryset,many=True)
             return Response(serializer.data)
         if task:
             task_obj = Task.objects.get(id=task)
@@ -78,8 +82,12 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.data)
     
     def update(self,request,pk):
-        task_obj = Task.objects.get(id = pk)
-        ins = task_obj.pdf_task.last()
+        tt = request.POST.get('by')
+        if tt == 'task':
+            task_obj = Task.objects.get(id = pk)
+            ins = task_obj.pdf_task.last()
+        else:
+           ins = Ai_PdfUpload.objects.get(id = pk)
         docx_file = request.FILES.get('docx_file')
         if docx_file:
             serializer = PdfFileSerializer(ins,data={**request.POST.dict(),"docx_file_from_writer":docx_file},partial=True)
@@ -178,77 +186,3 @@ def project_pdf_conversion(request,task_id):
         return Response({'msg':'Insufficient Credits'},status=400)
 
 
-from ai_exportpdf.utils import openai_endpoint
-@api_view(['POST',])
-@permission_classes([IsAuthenticated])
-def text_generator_openai(request):
-    user = request.user
-    prompt = request.POST.get('prompt')
-    initial_credit = user.credit_balance.get("total_left")
-    tot_tokn =256*4
-    consumable_credits = get_consumable_credits_for_openai_text_generator(total_token =tot_tokn )
-    if initial_credit > consumable_credits:
-        response = openai_endpoint(prompt)
-        consume_credit = response.pop('usage')
-        consume_credit = get_consumable_credits_for_openai_text_generator(total_token =consume_credit )
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consume_credit)
-        return JsonResponse(response)
-    else:
-        return Response({'msg':'Insufficient Credits'},status=400)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # def create(self, request):
-    #     pdf_request_file = request.FILES.getlist('pdf_request_file')
-    #     file_language = request.POST.get('file_language')
-    #     # format = request.POST.get('format')
-    #     user = request.user.id
-    #     response_result = {}
-    #     celery_status_id = {}
-    #     for pdf_file_lis in  pdf_request_file :
-
-    #         lang = Languages.objects.get(id=int(file_language)).language.lower()
-    #         if pdf_file_lis.name.endswith('.pdf') and lang:
-    #             Ai_PdfUpload.objects.create(user_id = user , pdf_file = pdf_file_lis ,
-    #                                         pdf_file_name = str(pdf_file_lis) ,
-    #                                         pdf_language =lang.lower()).save()
-    #             serve_path = str(Ai_PdfUpload.objects.all().filter(user_id = user).last().pdf_file)
-    #             pdf_file_name = settings.MEDIA_ROOT+"/"+serve_path
-    #             pdf_text_ocr_check = file_pdf_check(pdf_file_name)
-    #             if lang in google_ocr_indian_language:  ###this may throw false if multiple language
-    #                 response_result = ai_export_pdf.delay(serve_path)        #, file_language , pdf_file_name_only , instance_path
-    #                 file_upload = Ai_PdfUpload.objects.get(pdf_file = serve_path)
-    #                 file_upload.pdf_task_id = response_result.id
-    #                 file_upload.save()
-    #                 # file_uploadpdf_task_id = response_result.id)
-    #                 logger.info('assigned ocr ,file_name: google indian language'+str(pdf_file_name))
-    #                 celery_status_id[file_upload.id] = response_result.id
-    #                 # return JsonResponse({'result':response_result.id} , safe=False)
-    #             elif lang in list(lang_codes.keys()):  ###this may throw false if multiple language
-    #                 response_result = convertiopdf2docx.delay(serve_path = serve_path ,
-    #                                                           language = lang ,
-    #                                                           ocr = pdf_text_ocr_check)
-    #                 file_upload = Ai_PdfUpload.objects.get(pdf_file = serve_path)
-    #                 file_upload.pdf_task_id = response_result.id
-    #                 file_upload.save()
-    #                 file_upload.pdf_task_id = response_result.id
-    #                 logger.info('assigned pdf text ,file_name: convertio'+str(pdf_file_name))
-    #                 celery_status_id[file_upload.id] = response_result.id
-    #                 # return JsonResponse({'result':response_result.id} , safe=False)
-    #             else:
-    #                 celery_status_id["err"] = "error"
-    #         else:
-    #             celery_status_id[serve_path] = "need_pdf_file"
-    #     return JsonResponse({'result':celery_status_id} , safe=False)

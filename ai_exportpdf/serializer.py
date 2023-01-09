@@ -1,8 +1,9 @@
 from statistics import mode
 from rest_framework import serializers
-from .models import Ai_PdfUpload
-
-
+from .models import Ai_PdfUpload # AiImageGeneration
+from ai_auth.models import UserCredits
+from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
+from itertools import groupby
 
 class PdfFileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,4 +27,4 @@ class PdfFileStatusSerializer(serializers.ModelSerializer):
         model = Ai_PdfUpload
         fields = ('id' ,'pdf_language','counter','pdf_no_of_page' ,'pdf_task_id' ,'docx_url_field','status' ,'docx_file_name','file_name', 'pdf_file_name')
  
-    
+

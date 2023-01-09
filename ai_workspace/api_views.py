@@ -46,7 +46,8 @@ from filesplit.split import Split
 from ai_auth.utils import authorize_list,filter_authorize, unassign_task
 from django_oso.auth import authorize
 logger = logging.getLogger('django')
-
+from django.db import models
+from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
 from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel
@@ -587,6 +588,71 @@ class TbxUploadView(APIView):
             return Response(serializer.errors)
 
 
+def docx_save_pdf(pdf_obj):
+    from docx import Document
+    from htmldocx import HtmlToDocx
+
+    document = Document()
+    new_parser = HtmlToDocx()
+    new_parser.table_style = 'TableGrid'
+    new_parser.add_html_to_document(pdf_obj.html_data, document)
+    document.save(pdf_obj.docx_file_name)
+    f2 = open(pdf_obj.docx_file_name, 'rb')
+    file_obj = DJFile(f2)
+    pdf_obj.docx_file_from_writer = file_obj
+    pdf_obj.save()
+
+
+
+def get_file_from_pdf(pdf_obj_id,pdf_task_id):
+    from ai_exportpdf.models import Ai_PdfUpload
+    from ai_exportpdf.views import get_docx_file_path
+    if pdf_obj_id:
+        pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
+    else:
+        pdf_obj = Ai_PdfUpload.objects.filter(task_id = pdf_task_id).last() 
+    #print("pdf Before---------->",pdf_obj)
+    if pdf_obj.pdf_api_use == "convertio":
+        docx_file_path = get_docx_file_path(pdf_obj.id)
+        file = open(docx_file_path,'rb')
+        file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
+        pdf_obj.translation_task_created = True
+        pdf_obj.save()
+        #print("Pdf------->",pdf_obj.translation_task_created)
+    else:
+        #docx_save_pdf(pdf_obj)
+        file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
+    return file_obj
+
+
+# def get_file_from_doc(doc_id):
+#     obj = MyDocuments.objects.get(id=doc_id)
+#     if obj:
+
+def get_field_type(field_name, queryset):
+    stripped_field_name = field_name.lstrip('-')
+    if stripped_field_name in queryset.query.annotations:
+        return queryset.query.annotations[stripped_field_name].output_field
+    return queryset.model._meta.get_field(stripped_field_name)
+
+class CaseInsensitiveOrderingFilter(OrderingFilter):
+    
+    def filter_queryset(self, request, queryset, view):
+        ordering = self.get_ordering(request, queryset, view)
+
+        if ordering:
+            new_ordering = []
+            for field in ordering:
+                if not isinstance(get_field_type(field, queryset), (models.CharField, models.TextField)):
+                    new_ordering.append(field)
+                elif field.startswith('-'):
+                    new_ordering.append(Lower(field[1:]).desc())
+                else:
+                    new_ordering.append(Lower(field).asc())
+            return queryset.order_by(*new_ordering)
+
+        return queryset
+
 class ProjectFilter(django_filters.FilterSet):
     project = django_filters.CharFilter(field_name='project_name',lookup_expr='icontains')
     filter = django_filters.CharFilter(label='glossary or voice',method='filter_not_empty')
@@ -607,55 +673,33 @@ class ProjectFilter(django_filters.FilterSet):
     def filter_not_empty(self,queryset, name, value):
         if value == "glossary":
             queryset = queryset.filter(Q(glossary_project__isnull=False))
-            return queryset
-        if value == "voice":
+        elif value == "voice":
             queryset = queryset.filter(Q(voice_proj_detail__isnull=False))
-            return queryset
-        if value == "files":
+        elif value == "speech_to_text":
+            queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 1))
+        elif value == "text_to_speech":
+            queryset = queryset.filter(Q(voice_proj_detail__isnull=False)&Q(voice_proj_detail__project_type_sub_category_id = 2))
+        elif value == "files":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).exclude(project_file_create_type__file_create_type="From insta text").exclude(project_type_id = 5)
-            return queryset
-        if value == "text":
+        elif value == "text":
             queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True)).filter(project_file_create_type__file_create_type="From insta text")
-            return queryset
-        if value == "express":
+        elif value == "assigned":
+            queryset = queryset.filter(Q(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False))
+        elif value == "express":
             queryset = queryset.filter(project_type_id=5)
-            return queryset
-            #queryset = queryset.filter(Q(glossary_project__isnull=True)&Q(voice_proj_detail__isnull=True))
-        # if value == "glossary":
-        #     lookup = '__'.join([name, 'isnull'])
-        #     return queryset.filter(**{lookup: False})
-        # if value == "voice":
-        #     lookup = '__'.join([name, 'isnull'])
-        #     return queryset.filter(**{lookup: False})
+        return queryset
 
-
-def get_file_from_pdf(pdf_obj_id):
-    from ai_exportpdf.models import Ai_PdfUpload
-    pdf_obj = Ai_PdfUpload.objects.get(id = pdf_obj_id)
-    if pdf_obj.pdf_api_use == "convertio":
-        docx_file_path = get_docx_file_path(pdf_obj.id)
-        file = open(docx_file_path,'rb')
-        file_obj = ContentFile(file.read(),name= os.path.basename(docx_file_path))#name=docx_file_name
-    else:
-        file_obj = ContentFile(pdf_obj.docx_file_from_writer.file.read(),name= os.path.basename(pdf_obj.docx_file_from_writer.path))
-    return file_obj
-
-
-# def get_file_from_doc(doc_id):
-#     obj = MyDocuments.objects.get(id=doc_id)
-#     if obj:
-        
 
 class QuickProjectSetupView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     paginator = PageNumberPagination()
     serializer_class = ProjectQuickSetupSerializer
-    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['project_name','team__name','id']
     filterset_class = ProjectFilter
     search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
                     'project_jobs_set__target_language__language']
-    ordering = ('-id')
+    ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
     paginator.page_size = 20
 
     def get_serializer_class(self):
@@ -678,14 +722,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     def get_queryset(self):
         print(self.request.user)
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
-        queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
+        queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
+                    .filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
         return queryset
 
-        # return Project.objects.filter(ai_user=self.request.user).order_by("-id").all()
-        # return Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)).distinct().order_by("-id")
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -697,7 +740,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def create(self, request):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
-        # print("Project Creation request data----->", request.data)
         text_data=request.POST.get('text_data')
         ser = self.get_serializer_class()
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
@@ -710,7 +752,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             serlzr = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
             
         elif pdf_obj_id:
-            file_obj = get_file_from_pdf(pdf_obj_id)
+            file_obj = get_file_from_pdf(pdf_obj_id,None)
             serlzr = ser(data={**request.data,"files":[file_obj]},context={"request": request})    
              
         else:
@@ -722,8 +764,6 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             pr = Project.objects.get(id=serlzr.data.get('id'))
             if pr.pre_translate == True:
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
-                # mt_only.delay((serlzr.data.get('id'), str(request.auth)), )
-            #check_dict.apply_async(serlzr.data,)
             return Response(serlzr.data, status=201)
         return Response(serlzr.errors, status=409)
 
@@ -732,6 +772,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         ser = self.get_serializer_class()
         task_id=request.POST.get('task_id',None)
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
+        pdf_task_id = request.POST.get('pdf_task_id',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -766,16 +807,19 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if subject_delete_ids:
             subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=subject_delete_ids)
-
+        
+        team = True if instance.team else False
+        
         if task_id:
             file_obj = update_project_from_writer(task_id)
             serlzr = ser(instance, data=\
-                {**request.data, "files":[file_obj]},context={"request": request}, partial=True)
+                {**request.data, "files":[file_obj],"team":[team]},context={"request": request}, partial=True)
             
-        elif pdf_obj_id:
-            file_obj = get_file_from_pdf(pdf_obj_id)
+        elif pdf_obj_id or pdf_task_id:
+            if pdf_obj_id:file_obj = get_file_from_pdf(pdf_obj_id,None)
+            else:file_obj = get_file_from_pdf(None,pdf_task_id)
             serlzr = ser(instance, data=\
-                {**request.data, "files":[file_obj]},context={"request": request}, partial=True)
+                {**request.data, "files":[file_obj],"team":[team]},context={"request": request}, partial=True)
             
         else:
             serlzr = ser(instance, data=\
@@ -787,6 +831,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
+
     # def delete(self, request, pk):
     #     project = self.get_object()
     #     project.delete()
@@ -831,9 +876,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
         return self.get_paginated_response(serlzr.data)
 
     def retrieve(self, request, pk, format=None):
-        print("%%%%")
+        #print("%%%%")
         tasks = self.get_tasks_by_projectid(pk=pk)
-        print("tasks",tasks)
         tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
         return Response(serlzr.data, status=200)
@@ -933,17 +977,10 @@ class TbxFileListCreateView(APIView):
 
     def post(self, request, project_id):
         data = {**request.POST.dict(), "tbx_file" : request.FILES.getlist('tbx_file'),'project_id':project_id}
-        # data["project_id"] = project_id
-        #data.update({'project_id': project_id})
-        #print("########", data)
         ser_data = TbxFileSerializer.prepare_data(data)
-        #print("$$$$$$", ser_data)
         serializer = TbxFileSerializer(data=ser_data,many=True)
-        #print("%%%%%%%%%%", serializer.is_valid())
         if serializer.is_valid(raise_exception=True):
-            #print("***VALID***")
             serializer.save()
-            #print("AFTER SAVE", serializer.data)
         return Response(serializer.data, status=201)
 
 class TbxFileDetail(APIView):
@@ -1579,33 +1616,42 @@ def find_vendor(team,jobs):
 #             externalmembers.append({'name':j.hired_editor.fullname,'id':j.hired_editor_id,'status':j.get_status_display(),"avatar":profile})
 #     return externalmembers
 
-class ProjectListFilter(django_filters.FilterSet):
+# class ProjectListFilter(django_filters.FilterSet):
 
-    def filter(self, qs, value):
-        return (pr for pr in qs if pr.get_assignable_tasks_exists == True)
-
-
+#     def filter(self, qs, value):
+#         print("$$$$$$$$$$$$$$",value)
+#         tt =  (pr for pr in qs if pr.get_assignable_tasks_exists == True)
+#         qs = super().filter(tt, value)
+#         return qs
 
 
 class ProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
-    filterset_class = ProjectListFilter
+    #filterset_class = ProjectListFilter
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+        queryset = Project.objects.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
         return queryset
 
 
     def list(self,request):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
-        data = serializer.data
+        queryset = self.get_queryset()
+        filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
+        serializer = ProjectListSerializer(filtered, many=True, context={'request': request})
         return  Response(serializer.data)
 
+@permission_classes([IsAuthenticated])
+@api_view(['GET',])
+def get_file_project_list(request):
+    queryset = Project.objects.filter(Q(ai_user = request.user)|Q(team__owner = request.user)\
+                    |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
+    serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
+    data = serializer.data
+    return  Response(serializer.data)
 
 
 
@@ -2444,26 +2490,56 @@ def get_quill_data(request):
 @permission_classes([IsAuthenticated])
 def writer_save(request):
     task_id = request.POST.get('task_id')
+    transcripted_file_writer = request.FILES.get('file',None)
     task_obj = Task.objects.get(id=task_id)
     edited_text = request.POST.get('edited_text')
-    edited_data = json.loads(edited_text)
     obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
     filename,ext = os.path.splitext(task_obj.file.filename)
-    print("Filename---------------->",filename)
-    name = filename + '.docx'
-    try:
-        file_obj,name,f2 = docx_save(name,edited_data)
-    except:
-        return Response({'msg':'something wrong with input file format'},status=400)
+    data1 = {"writer_filename":filename,"task":task_id,"html_data":edited_text,'user':request.user.id}
+    if transcripted_file_writer:
+        data1.update({"transcripted_file_writer":transcripted_file_writer})
     if obj:
-        ser1 = TaskTranscriptDetailSerializer(obj,data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+        ser1 = TaskTranscriptDetailSerializer(obj,data=data1,partial=True)#"transcripted_file_writer":file_obj,
     else:
-        ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+        ser1 = TaskTranscriptDetailSerializer(data=data1,partial=True)#"transcripted_file_writer":file_obj,
     if ser1.is_valid():
         ser1.save()
-        os.remove(name)
         return Response(ser1.data)
     return Response(ser1.errors)
+
+
+
+
+
+
+
+
+
+
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def writer_save(request):
+#     task_id = request.POST.get('task_id')
+#     task_obj = Task.objects.get(id=task_id)
+#     edited_text = request.POST.get('edited_text')
+#     edited_data = json.loads(edited_text)
+#     obj = TaskTranscriptDetails.objects.filter(task_id = task_id).first()
+#     filename,ext = os.path.splitext(task_obj.file.filename)
+#     print("Filename---------------->",filename)
+#     name = filename + '.docx'
+#     try:
+#         file_obj,name,f2 = docx_save(name,edited_data)
+#     except:
+#         return Response({'msg':'something wrong with input file format'},status=400)
+#     if obj:
+#         ser1 = TaskTranscriptDetailSerializer(obj,data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+#     else:
+#         ser1 = TaskTranscriptDetailSerializer(data={"writer_filename":filename,"transcripted_file_writer":file_obj,"task":task_id,"quill_data":edited_text,'user':request.user.id},partial=True)
+#     if ser1.is_valid():
+#         ser1.save()
+#         os.remove(name)
+#         return Response(ser1.data)
+#     return Response(ser1.errors)
 
 
 # class ExpressProjectSetupView(viewsets.ModelViewSet):
@@ -2717,7 +2793,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     serializer_class = MyDocumentSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['doc_name','id']
     filterset_class = MyDocFilter
     paginator = PageNumberPagination()
@@ -2731,11 +2807,21 @@ class MyDocumentsView(viewsets.ModelViewSet):
         
 
     def list(self, request, *args, **kwargs):
+        paginate = request.GET.get('pagination',True)
         queryset = self.filter_queryset(self.get_queryset())
+        if paginate == 'False':
+            serializer = MyDocumentSerializer(queryset, many=True)
+            return Response(serializer.data)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = MyDocumentSerializer(pagin_tc, many=True, context={'request': request})
+        serializer = MyDocumentSerializer(pagin_tc, many=True)
         response = self.get_paginated_response(serializer.data)
         return  response
+
+    def retrieve(self, request, pk):
+        queryset = self.get_queryset()
+        ins = get_object_or_404(queryset, pk=pk)
+        serializer = MyDocumentSerializer(ins)
+        return Response(serializer.data)
 
     def create(self, request):
         file = request.FILES.get('file',None)
@@ -2755,7 +2841,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
              ser = MyDocumentSerializer(ins,data={**request.POST.dict()},partial=True)
         if ser.is_valid(raise_exception=True):
             ser.save()
-            return Response(ser.data, status=201)
+            return Response(ser.data, status=200)
         return Response(ser.errors)
 
     def destroy(self, request, pk):

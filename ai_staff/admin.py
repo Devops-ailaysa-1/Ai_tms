@@ -5,7 +5,8 @@ from .models import (AiUserType, ApiProvider, ApiService, Languages,AssetUsageTy
                     CreditsAddons,CreditAddonPrice,IndianStates,StripeTaxId,JobPositions, LanguagesLocale, LanguageScripts,
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
                     ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles,
-                    TaskRoleLevel,ApiServiceList,)
+                    TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields,
+                    ApiServiceList,)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -93,6 +94,7 @@ admin.site.register(AiRoles)
 admin.site.register(TaskRoleLevel)
 admin.site.register(ProjectRoleLevel)
 
+
 admin.site.register(ApiProvider)
 admin.site.register(ApiService)
 admin.site.register(ApiServiceList)
@@ -100,3 +102,11 @@ admin.site.register(ApiServiceList)
 
 
 
+
+admin.site.register(ModelGPTName)
+admin.site.register(PromptCategories)
+admin.site.register(PromptTones)
+admin.site.register(PromptSubCategories)
+admin.site.register(PromptStartPhrases)
+admin.site.register(AiCustomize)
+admin.site.register(PromptFields)

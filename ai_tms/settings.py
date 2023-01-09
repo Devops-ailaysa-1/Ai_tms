@@ -156,9 +156,10 @@ INSTALLED_APPS = [
     'django_oso',
     #"ai_tm_management",
     "ai_tm",
-    # 'dbbackup',
+    'dbbackup',
     # 'django_q',
     'ai_exportpdf',
+    'ai_openai',
     # 'coreapi', # Coreapi for coreapi documentation
     # 'drf_yasg', # drf_yasg fro Swagger documentation
 ]
@@ -317,7 +318,7 @@ VENDOR_RENEWAL_ACCEPT_URL = os.getenv("VENDOR_RENEWAL_ACCEPT_URL")
 APPLICATION_URL = os.getenv("APPLICATION_URL")
 
 # OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
-#
+
 # OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 
 #ACCOUNT_FORMS = {'reset_password': 'ai_auth.forms.SendInviteForm'}
@@ -512,8 +513,17 @@ CHANNEL_LAYERS = {
 
 
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
-# DBBACKUP_STORAGE_OPTIONS = {'location': 'backupdb/'}
+DBBACKUP_STORAGE ='storages.backends.s3boto3.S3Boto3Storage'
 
+DBBACKUP_STORAGE_OPTIONS = {
+    'access_key': os.getenv('AWS_ACCESS_KEY_ID'),
+    'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY'),
+    'bucket_name': os.getenv('AWS_STORAGE_BUCKET_NAME'),
+    'endpoint_url': 'https://ams3.digitaloceanspaces.com',
+    'default_acl': 'private',
+    'location': os.getenv('MEDIA_BACKUP_LOCATION')
+
+}
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')

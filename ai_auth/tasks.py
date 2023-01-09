@@ -31,6 +31,7 @@ from django.db.models import DurationField, F, ExpressionWrapper,Q
 #from translate.storage.tmx import tmxfile
 from celery_progress.backend import ProgressRecorder
 from time import sleep
+from django.core.management import call_command
 
 
 extend_mail_sent= 0
@@ -286,7 +287,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 status_id = None
             else:
                 initial_credit = user.credit_balance.get("total_left")
-                consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source'])
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source']) if seg['source']!='' else 0
                 if initial_credit > consumable_credits:
                     mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
                     if str(target_tags) != '':
@@ -351,11 +352,13 @@ def mt_only(project_id,token):
     if pr.pre_translate == True:
         tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)
+        print("this is mt-only functions projects")
         [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
         for i in pr.get_mtpe_tasks:
+            print("i----->" , i)
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             doc = DocumentSerializerV2(document).data
-            print(doc)
+            print("this is mt-only functions tasks")
             MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
     logger.info('mt-only')
 # # @task
@@ -471,7 +474,7 @@ def pre_translate_update(task_id):
 
     update_list, update_list_for_merged,update_list_for_split = [],[],[]
     mt_segments, mt_split_segments = [],[]
-
+    
     for seg in final_segments:###############Need to revise####################
 
         if seg.target == '' or seg.target==None:
@@ -667,6 +670,13 @@ def check_test():
 #     print("WordCount------------>",word_count)
 #     logger.info("Analysis completed")
 
+
+@task
+def backup_media():
+    if os.getenv('MEDIA_BACKUP')=='True':   
+        call_command('mediabackup')
+    logger.info("backeup of mediafiles successfull.")
+    
 @task
 def mail_report():
     from ai_auth.reports import AilaysaReport

@@ -19,6 +19,8 @@ router.register(r'roles',api_views.TeamRoleView,basename='team-role')
 
 router.register(r'mt-language-support',api_views.MTLanguageSupportView,basename='mt-language-support')
 router.register(r'voice-support-language',api_views.VoiceSupportLanguages,basename='voice-support-language')
+router.register(r'prompt-categories-list',api_views.PromptCategoriesViewset,basename='prompt-categories-list')
+router.register(r'prompt-tone',api_views.PromptTonesViewset,basename='prompt-tone')
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -56,9 +58,14 @@ urlpatterns += [
      path('sub_category/',api_views.ProjectTypeDetailView.as_view({'get': 'list'}),name = 'project-type-detail'),
      path('get_languages/',api_views.get_languages),
      path('vendor_language_pair_currency/',api_views.vendor_language_pair_currency),
-     path('extension-image/<extension>', api_views.FileExtensionImage.as_view(), name='extension-image')
+     path('extension-image/<extension>', api_views.FileExtensionImage.as_view(), name='extension-image'),
+     path('ai_tones/',api_views.PromptTonesViewset.as_view({'get': 'list'}), name='ai-tones'),
+     path('ai_categories/',api_views.PromptCategoriesViewset.as_view({'get': 'list'}), name='ai-categories'),
+     path('ai_customize/',api_views.AiCustomizeViewset.as_view({'get':'list'}),name='ai-customize'),
+     #path('ai_subcategories/<int:category_id>/',api_views.PromptSubCategoriesViewset.as_view({'get': 'list'}),name='ai-subcategories')
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      #path('insert',views.Bulk_insert)
+     
 
 
 ]

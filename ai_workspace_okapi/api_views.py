@@ -243,12 +243,20 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task.save()
 
         return document
+    
+    def authorize_doc(self,doc,action):
+        if  dict == type(doc):
+            try:
+                doc =doc.get('doc')
+            except:
+                return False 
+        authorize(self.request, resource=doc, actor=self.request.user, action=action)
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
-
+        print("create_document_for_task_if_not_exists")
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -315,13 +323,15 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
-
+                print("params_data exists------------>",params_data)
+                print("data---->" ,data)
+                
             else:
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params": json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-
+                print("params_data------------>",params_data)
                 if doc.status_code == 200:
                     doc_data = doc.json()
                     serializer = (DocumentSerializerV2(data={**doc_data, \
@@ -351,7 +361,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
                 else:
                     document = self.create_document_for_task_if_not_exists(task)
-                    authorize(request, resource=document, actor=request.user, action="read")
+                    self.authorize_doc(document,action="read")
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
@@ -360,17 +370,17 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
-                authorize(request, resource=document, actor=request.user, action="read")
+                self.authorize_doc(document,action="read")
                 doc = DocumentSerializerV2(document).data               
                 return Response(doc, status=201)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
-                authorize(request, resource=document, actor=request.user, action="read")
+                self.authorize_doc(document,action="read")
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
-            document = self.create_document_for_task_if_not_exists(task)
-            authorize(request, resource=document, actor=request.user, action="read")
+            document = self.create_document_for_task_if_not_exists(task)   
+            self.authorize_doc(document,action="read")        
             try:
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
@@ -647,11 +657,11 @@ class MT_RawAndTM_View(views.APIView):
         hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
 
         # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
-        if get_plan_name(debit_user) != "Business" or 'Business-PAYG':
+        if get_plan_name(debit_user) != "Business" or 'Pay-As-You-Go':
             return {}, 424, "cannot_translate"
 
         elif (request.user.is_internal_member or request.user.id in hired_editors) and \
-            (get_plan_name(debit_user) == "Business" or 'Business-PAYG') and \
+            (get_plan_name(debit_user) == "Business" or 'Pay-As-You-Go') and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
             return {}, 424, "cannot_translate"
@@ -670,7 +680,6 @@ class MT_RawAndTM_View(views.APIView):
                     }
         res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
                             data={"segmentWordCountdata": json.dumps(seg_data)})
-
         if res.status_code == 200:
             return res.json()
         else:
