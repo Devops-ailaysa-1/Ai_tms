@@ -5,7 +5,7 @@ from ai_auth.managers import CustomUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFields,Countries, TaskRoleLevel,Timezones,SupportType,JobPositions,SupportTopics,Role,Currencies
+from ai_staff.models import AiUserType, ProjectRoleLevel, StripeTaxId, SubjectFields,Countries, TaskRoleLevel,Timezones,SupportType,JobPositions,SupportTopics,Role,Currencies,ApiServiceList
 from django.db.models.signals import post_save, pre_save
 from ai_auth.signals import create_allocated_dirs, updated_user_taxid, update_internal_member_status, vendor_status_send_email, get_currency_based_on_country#,vendorsinfo_update
 from django.contrib.auth.models import Permission, User
@@ -18,6 +18,7 @@ from ai_auth.utils import get_plan_name
 from django.db.models import Q
 from datetime import datetime,date,timedelta
 from django.db.models.constraints import UniqueConstraint
+from simple_history.models import HistoricalRecords
 
 class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -599,3 +600,10 @@ class TaskRoles(models.Model):
     @property
     def role_name(self):
         return self.role.role.name
+
+class ApiUsage(models.Model):
+    uid = models.CharField(max_length = 200)
+    email = models.CharField(max_length = 200)
+    service = models.ForeignKey(ApiServiceList,related_name='usage_service_list', on_delete=models.CASCADE)
+    usage =models.IntegerField()
+    history = HistoricalRecords()

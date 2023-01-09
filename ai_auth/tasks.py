@@ -666,3 +666,10 @@ def check_test():
 #     word_count = get_word_count(tm_analysis,proj,task,raw_total)
 #     print("WordCount------------>",word_count)
 #     logger.info("Analysis completed")
+
+@task
+def mail_report():
+    from ai_auth.reports import AilaysaReport
+    report = AilaysaReport()
+    report.report_generate()
+    report.send_report()
