@@ -1,8 +1,9 @@
 from django.db import models
 from ai_auth.models import AiUser
 import os
+from ai_workspace.models import MyDocuments
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
-                              PromptSubCategories,PromptTones,ModelGPTName)
+                              PromptSubCategories,PromptTones,ModelGPTName,AiCustomize)
 
 class TokenUsage(models.Model):
     user_input_token = models.CharField(max_length=10, null=True, blank=True)
@@ -80,9 +81,15 @@ class TextgeneratedCreditDeduction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
 
-# class AiPromptCustomize(models.Model):
-#     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, related_name = 'ai_doc')
-#     customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'ai_cust')
-#     user_text = models.TextField(null=True, blank=True)
-#     prompt_generated = models.TextField(null=True, blank=True)
-#     prompt_result = models.TextField(null=True, blank=True) 
+class AiPromptCustomize(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc')
+    customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'ai_cust')
+    user_text = models.TextField(null=True, blank=True)
+    tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='customize_tone',blank=True,null=True,default=1)
+    user_text_mt = models.TextField(null=True, blank=True)
+    credits_used = models.IntegerField(null=True, blank=True)
+    api_result = models.TextField(null=True, blank=True) 
+    user_text_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='text_lang')
+    prompt_generated = models.TextField(null=True, blank=True)
+    prompt_result = models.TextField(null=True, blank=True) 
