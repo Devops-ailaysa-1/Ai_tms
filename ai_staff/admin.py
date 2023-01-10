@@ -1,12 +1,11 @@
 from django.contrib import admin
 
-from .models import (AiUserType, ApiProvider, ApiService, Languages,AssetUsageTypes,AilaysaSupportedMtpeEngines, ProjectRoleLevel, Spellcheckers,
+from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeEngines, ProjectRoleLevel, Spellcheckers,
                     SpellcheckerLanguages,SubscriptionPricing,Currencies,SubscriptionPricingPrices,SubscriptionFeatures,
                     CreditsAddons,CreditAddonPrice,IndianStates,StripeTaxId,JobPositions, LanguagesLocale, LanguageScripts,
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
                     ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles,
-                    TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields,
-                    ApiServiceList,)
+                    TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -93,14 +92,6 @@ admin.site.register(ServiceTypeunits)
 admin.site.register(AiRoles)
 admin.site.register(TaskRoleLevel)
 admin.site.register(ProjectRoleLevel)
-
-
-admin.site.register(ApiProvider)
-admin.site.register(ApiService)
-admin.site.register(ApiServiceList)
-
-
-
 
 
 admin.site.register(ModelGPTName)
