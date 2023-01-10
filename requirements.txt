@@ -216,3 +216,4 @@ django-oso
 openai==0.25.0
 pypandoc==1.10
 googletrans==3.1.0a0
+django-simple-history
