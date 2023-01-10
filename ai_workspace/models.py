@@ -208,12 +208,16 @@ class Project(models.Model):
         if self.id:
             project_count = Project.objects.filter(project_name=self.project_name, \
                             ai_user=self.ai_user).exclude(id=self.id).count()
-        # else:
-        #     project_count = Project.objects.filter(project_name=self.project_name, \
-        #                     ai_user=self.ai_user).count()
+        else:
+            project_count = Project.objects.filter(project_name=self.project_name, \
+                            ai_user=self.ai_user).count()
         if project_count != 0:
-            count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                            ai_user=self.ai_user).exclude(id=self.id).count()
+            if self.id:
+                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                                ai_user=self.ai_user).exclude(id=self.id).count()
+            else:
+                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                                ai_user=self.ai_user).count()
             self.project_name = self.project_name + "(" + str(count_num) + ")"
         return super().save()
 
