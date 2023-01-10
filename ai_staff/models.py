@@ -578,15 +578,3 @@ class TeamRoleLevel(models.Model):
 class OrganizationRoleLevel(models.Model):
     role = models.ForeignKey(AiRoles,related_name='org_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
-
-class ApiProvider(models.Model):
-    name = models.CharField(max_length=300)
-
-class ApiService(models.Model):
-    name = models.CharField(max_length=500)
-
-class ApiServiceList(models.Model):
-    provider = models.ForeignKey(ApiProvider,related_name ='provider_list', on_delete=models.CASCADE)
-    service = models.ForeignKey(ApiService,related_name = 'service_list', on_delete=models.CASCADE)
-
-
