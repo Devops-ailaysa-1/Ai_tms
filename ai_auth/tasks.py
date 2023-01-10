@@ -676,3 +676,10 @@ def backup_media():
     if os.getenv('MEDIA_BACKUP')=='True':   
         call_command('mediabackup')
     logger.info("backeup of mediafiles successfull.")
+    
+@task
+def mail_report():
+    from ai_auth.reports import AilaysaReport
+    report = AilaysaReport()
+    report.report_generate()
+    report.send_report()
