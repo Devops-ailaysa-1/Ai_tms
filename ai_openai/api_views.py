@@ -1,4 +1,4 @@
-from .models import AiPrompt ,AiPromptResult
+from .models import AiPrompt ,AiPromptResult, AiPromptCustomize
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
@@ -186,6 +186,20 @@ def image_gen(request):
 
 
 
+class AiPromptCustomizeViewset(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AiPromptCustomizeSerializer
+    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
+    ordering_fields = ['id']
+    ordering = ('-id')
+    #filterset_class = PromptFilter
+    search_fields = ['user_text']
+    pagination_class = NoPagination
+    page_size = None
+
+    def get_queryset(self):
+        queryset = AiPromptCustomize.objects.filter(user=self.request.user)
+        return queryset
 
 
 
