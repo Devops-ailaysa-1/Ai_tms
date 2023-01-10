@@ -29,6 +29,7 @@ from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.db import transaction
 from notifications.signals import notify
 from ai_auth.utils import obj_is_allowed,authorize_list,objls_is_allowed
+from ai_workspace.utils import task_assing_role_ls
 
 logger = logging.getLogger('django')
 
@@ -890,8 +891,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
             if mt_engine_id or mt_enable or pre_translate:
                 [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_engine_id=mt_engine_id,mt_enable=mt_enable,pre_translate=pre_translate) for task in task_list]
         if user1.is_internal_member == False:
-          print("task_assing id",[i.task_assign.assign_to for i in task_assign_info])
           generate_client_po([i.id for i in task_assign_info])
+        else:
+          task_assing_role_ls([i.id for i in task_assign_info])
         return task_assign_info
 
 

@@ -1550,7 +1550,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 obj.task_assign.status = 1
                 obj.task_assign.save()
                 role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
-                unassign_task(assigned_user,role,obj.task_obj)             
+                if obj.task_ven_status != "task_accepted":
+                    unassign_task(assigned_user,role,obj.task_obj)             
                 obj.delete()
                 
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
