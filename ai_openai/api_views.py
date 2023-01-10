@@ -156,6 +156,7 @@ def customize_text_openai(request):
 def history_delete(request):
     prmp = request.GET.get('prompt_id',None)
     obj = request.GET.get('obj_id',None)
+    customize_obj = request.GET.get('customize_obj_id',None)
     if obj:
         result = AiPromptResult.objects.get(id=obj)
         count = result.prompt.ai_prompt.all().count()
@@ -165,6 +166,8 @@ def history_delete(request):
             result.prompt.delete()
     if prmp:
         prmb_obj = AiPrompt.objects.get(id=prmp).delete()
+    if customize_obj:
+        AiPromptCustomize.objects.get(id=customize_obj).delete()
     return Response(status=204)
 
 
