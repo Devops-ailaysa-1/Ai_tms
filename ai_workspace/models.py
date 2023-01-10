@@ -145,13 +145,18 @@ class MyDocuments(models.Model):
             self.doc_name = 'Document-'+str(MyDocuments.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
             
         if self.id:
-            
-            doc_count = MyDocuments.objects.filter(doc_name__icontains=self.doc_name, \
+            doc_exact = MyDocuments.objects.filter(doc_name=self.doc_name, \
                             ai_user=self.ai_user).exclude(id=self.id).count()
         else:
-            doc_count = MyDocuments.objects.filter(doc_name__icontains=self.doc_name, \
+            doc_exact = MyDocuments.objects.filter(doc_name=self.doc_name, \
                             ai_user=self.ai_user,).count()
-        if doc_count != 0:
+        if doc_exact != 0:
+            if self.id:
+                doc_count = MyDocuments.objects.filter(doc_name__icontains=self.doc_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+            else:
+                doc_count = MyDocuments.objects.filter(doc_name__icontains=self.doc_name, \
+                            ai_user=self.ai_user,).count()
             self.doc_name = self.doc_name + "(" + str(doc_count) + ")"
 
         return super().save()

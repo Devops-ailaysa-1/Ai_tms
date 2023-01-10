@@ -93,3 +93,4 @@ class AiPromptCustomize(models.Model):
     user_text_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='text_lang')
     prompt_generated = models.TextField(null=True, blank=True)
     prompt_result = models.TextField(null=True, blank=True) 
+    created_at = models.DateTimeField(auto_now_add=True)

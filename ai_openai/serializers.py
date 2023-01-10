@@ -189,7 +189,7 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
         model = AiPromptCustomize
         fields = ('id','document','customize','customize_name','user_text',\
                     'tone','api_result','prompt_result','user_text_lang','user',\
-                    'credits_used','prompt_generated','user_text_mt',)
+                    'credits_used','prompt_generated','user_text_mt','created_at')
 
         extra_kwargs = {
             "user":{"write_only": True},
