@@ -8,23 +8,23 @@ import string
 
 class DjRestUtils:
 
-	def get_a_inmemoryuploaded_file():
-		io = BytesIO()
-		with open("/home/langscape/Documents/translate_status_api.txt", "rb") as f:
-			io.write(f.read())
-		io.seek(0)
-		im = InMemoryUploadedFile(io, None, "text.txt", "text/plain",
-				sys.getsizeof(io), None)
-		return im
+    def get_a_inmemoryuploaded_file():
+        io = BytesIO()
+        with open("/home/langscape/Documents/translate_status_api.txt", "rb") as f:
+            io.write(f.read())
+        io.seek(0)
+        im = InMemoryUploadedFile(io, None, "text.txt", "text/plain",
+                sys.getsizeof(io), None)
+        return im
 
-	def convert_content_to_inmemoryfile(filecontent, file_name):
-		# text/plain hardcoded may be needs to be change as generic...
-		io = BytesIO()
-		io.write(filecontent)
-		io.seek(0)
-		im = InMemoryUploadedFile(io, None, file_name,
-								  "text/plain", sys.getsizeof(io), None)
-		return im
+    def convert_content_to_inmemoryfile(filecontent, file_name):
+        # text/plain hardcoded may be needs to be change as generic...
+        io = BytesIO()
+        io.write(filecontent)
+        io.seek(0)
+        im = InMemoryUploadedFile(io, None, file_name,
+                                  "text/plain", sys.getsizeof(io), None)
+        return im
 
 def create_dirs_if_not_exists(path):
 	if not os.path.isdir(path):
@@ -75,26 +75,12 @@ def create_ai_project_id_if_not_exists(user):
 import math
 
 def roundup(x):
-	return int(math.ceil(x / 15.0)) * 15
+    return int(math.ceil(x / 15.0)) * 15
 
 
 
 def get_consumable_credits_for_text_to_speech(total_chars):
-	return round(total_chars/20)
+    return round(total_chars/20)
 
 def get_consumable_credits_for_speech_to_text(total_seconds):#######Minimum billable 15 seconds##########
-	return round(roundup(total_seconds)/3)
-
-def task_assing_role_ls(task_assign_info_ls):
-	from ai_auth.signals import assign_object
-	from ai_workspace.models import TaskAssignInfo
-	from ai_workspace.models import AiRoleandStep
-	objs = TaskAssignInfo.objects.filter(id__in=task_assign_info_ls)
-	for instance in objs:
-		role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
-		assign_object.send(
-			sender=TaskAssignInfo,
-			instance = instance,
-			user=instance.task_assign.assign_to,
-			role = role
-		)
+    return round(roundup(total_seconds)/3)
