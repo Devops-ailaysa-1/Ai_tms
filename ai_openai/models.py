@@ -94,3 +94,12 @@ class AiPromptCustomize(models.Model):
     prompt_generated = models.TextField(null=True, blank=True)
     prompt_result = models.TextField(null=True, blank=True) 
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+# class AiImage(models.Model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
+#     prompt = models.TextField(null=True, blank=True)
+#     prompt_mt = models.TextField(null=True, blank=True)
+#     credits_used = models.IntegerField(null=True, blank=True)
+#     result_url = models.TextField(null=True, blank=True) 
