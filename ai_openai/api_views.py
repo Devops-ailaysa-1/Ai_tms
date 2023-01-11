@@ -86,6 +86,7 @@ class AiPromptResultViewset(generics.ListAPIView):
 
 
 def customize_response(customize ,user_text,tone,used_tokens):
+    user_text = user_text.strip()
     if customize.prompt or customize.customize == "Text completion":
         if customize.customize == "Text completion":
             tone_ = PromptTones.objects.get(id=tone).tone
@@ -133,13 +134,14 @@ def customize_text_openai(request):
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
                                         source_lang_code='en' , target_lang_code=lang)
             total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
-            AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+            #AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
         
     else:##english
         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
+    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
     data = {'document':document,'customize':customize_id,'user':request.user.id,\
             'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
@@ -175,7 +177,7 @@ def history_delete(request):
 @permission_classes([IsAuthenticated])
 def image_gen(request):
     prompt = request.POST.get('prompt')
-    res = get_prompt_image_generations(prompt=prompt.strip(),size='256x256',n=2)
+    res = get_prompt_image_generations(prompt=prompt.strip(),size='256x256',n=1)
     if 'data' in res:
         res_url = res["data"]
         return Response({'gen_image_url': res_url},status=200) 
@@ -184,9 +186,6 @@ def image_gen(request):
 
 
     
-
-
-
 
 
 class AiPromptCustomizeViewset(generics.ListAPIView):
