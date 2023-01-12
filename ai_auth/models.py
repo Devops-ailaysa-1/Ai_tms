@@ -599,4 +599,15 @@ class TaskRoles(models.Model):
     @property
     def role_name(self):
         return self.role.role.name
-    
+
+class ApiUsage(models.Model):
+    uid = models.CharField(max_length = 200)
+    email = models.CharField(max_length = 200)
+    service = models.ForeignKey(ApiServiceList,related_name='usage_service_list', on_delete=models.CASCADE)
+    usage =models.IntegerField(default=0)
+    history = HistoricalRecords()
+
+    class Meta:
+       constraints = [
+            UniqueConstraint(fields=['uid', 'email', 'service'], name='unique_user_usage')
+        ]
