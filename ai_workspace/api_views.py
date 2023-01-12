@@ -2262,8 +2262,10 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
             if state == 'PENDING' or state == 'STARTED':
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
-                dir = os.path.join('/ai_home/',"OutputAudio_"+str(obj.id))
-                shutil.rmtree(dir) if os.path.exists(dir) else None
+                if state == "FAILURE":
+                    user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+                    user_credit.credits_left = user_credit.credits_left + consumable_credits
+                    user_credit.save()
                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
