@@ -5,7 +5,8 @@ from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeE
                     CreditsAddons,CreditAddonPrice,IndianStates,StripeTaxId,JobPositions, LanguagesLocale, LanguageScripts,
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
                     ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles,
-                    TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields)
+                    TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields,ApiServiceList,
+                    ApiProvider,ApiService)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
