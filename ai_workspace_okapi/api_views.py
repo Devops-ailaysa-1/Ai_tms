@@ -2159,7 +2159,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
     initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
     if initial_credit > consumable_credits:
-        if len(data)>5000:
+        if len(data)>4500:
             celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
             MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
             return {'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id}
@@ -2198,6 +2198,7 @@ def segments_with_target(document_id):
     temp_name = filename + '.txt'
     counter = 0
     data = []
+    limit = 1000 if document.target_language_code in ['ta','ja'] else 3500
 
     for i in segments_ser.data:
         # If the segment is merged
@@ -2224,7 +2225,7 @@ def segments_with_target(document_id):
         for i in data:
             counter = counter + len(i)
             out.write(' '+i)
-            if counter>3500:
+            if counter>limit:
                 out.write('\n')
                 counter = 0
 
