@@ -2161,19 +2161,23 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     print(len(data))
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
     initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
+    print("Init------>",initial_credit)
+    print("Cons----->",consumable_credits)
     if initial_credit > consumable_credits:
         if len(data)>4500:
             celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
             MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
             return {'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id}
             #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
             #res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
         else:
             filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
             res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
             os.remove(filename_)
             os.remove(temp_name)
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
+        
         if task.task_transcript_details.first()==None:
             ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
         else:
