@@ -160,6 +160,7 @@ INSTALLED_APPS = [
     # 'django_q',
     'ai_exportpdf',
     'ai_openai',
+    'simple_history',
     # 'coreapi', # Coreapi for coreapi documentation
     # 'drf_yasg', # drf_yasg fro Swagger documentation
 ]
