@@ -2128,7 +2128,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
             text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
-    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'))]
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1]))]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
@@ -2192,7 +2192,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
             print("ARGS--------->",filepath,language,obj.job.source_language_code,audiofile,gender,voice_name)
             rr = text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
             #print("RR------------------------>",rr.status_code)
-    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3')) if len(mp3_file)!=0]
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:

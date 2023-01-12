@@ -2112,6 +2112,9 @@ def get_word_api(request):
 #             url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
 #             res = requests.request("GET", url, headers=headers)
 #     print("doc--->",res.text)
+
+
+
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def download_audio_output_file(request):
