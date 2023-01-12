@@ -1550,8 +1550,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 obj.task_assign.status = 1
                 obj.task_assign.save()
                 role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
-                if obj.task_ven_status != "task_accepted":
-                    unassign_task(assigned_user,role,obj.task_obj)             
+                unassign_task(assigned_user,role,obj.task_obj)             
                 obj.delete()
                 
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
@@ -2853,8 +2852,21 @@ class MyDocumentsView(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
         
 
-
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def default_proj_detail(request):
+    last_pr = Project.objects.filter(ai_user = request.user).last()
+    if last_pr:
+        langs = Job.objects.filter(project__ai_user_id = request.user).exclude(target_language=None).\
+                values_list("source_language","target_language").distinct('target_language')
+        source_langs = [i[0] for i in langs]
+        target_langs = [i[1] for i in langs]
+        final_list = list(set().union(source_langs,target_langs))
+        source = last_pr.project_jobs_set.first().source_language_id
+        mt_engine =last_pr.mt_engine_id
+        return JsonResponse({'source_lang_id':source,'target_lang_ids':final_list,'mt_engine_id':mt_engine})
+    else:
+        return JsonResponse({'source_lang_id':None,'target_lang_ids':[],'mt_engine_id':None})
 
 
 

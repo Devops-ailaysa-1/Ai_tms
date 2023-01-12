@@ -1,7 +1,8 @@
 from rest_framework.response import Response
 from rest_framework import serializers
-from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction )
-from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize 
+from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
+                    AiPromptCustomize )
+from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle
 from ai_workspace_okapi.utils import get_translation
 import math
@@ -99,7 +100,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     trans = get_translation(1, content , j.result_lang_code, i.result_lang_code) if content else None
                     i.translated_prompt_result = trans
                     i.save()
-                    print("translate")
                     word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
                     self.customize_token_deduction(instance , word_count)
 
@@ -183,3 +183,17 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
         fields = ('id' , 'customize')
 
 
+class AiPromptCustomizeSerializer(serializers.ModelSerializer):
+    customize_name = serializers.ReadOnlyField(source='customize.customize')
+    class Meta:
+        model = AiPromptCustomize
+        fields = ('id','document','customize','customize_name','user_text',\
+                    'tone','api_result','prompt_result','user_text_lang','user',\
+                    'credits_used','prompt_generated','user_text_mt','created_at')
+
+        extra_kwargs = {
+            "user":{"write_only": True},
+            "prompt_generated": {"write_only": True},
+            "credits_used": {"write_only": True},
+            "user_text_mt": {"write_only": True},
+        }
