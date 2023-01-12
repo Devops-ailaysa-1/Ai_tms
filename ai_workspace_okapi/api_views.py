@@ -248,6 +248,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if  dict == type(doc):
             try:
                 doc =doc.get('doc')
+                if doc ==None:
+                    return False 
             except:
                 return False 
         authorize(self.request, resource=doc, actor=self.request.user, action=action)
