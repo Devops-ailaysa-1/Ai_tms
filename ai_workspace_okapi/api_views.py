@@ -759,7 +759,7 @@ class MT_RawAndTM_View(views.APIView):
 
                 #############   Update   ############
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                              doc.source_language_code, doc.target_language_code)
+                                              doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk)
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
@@ -818,7 +818,7 @@ class MT_RawAndTM_View(views.APIView):
             # Updating raw translation of split segments
             if mt_raw_split:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code)
+                                              doc.target_language_code,user_id=doc.owner_pk)
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -826,7 +826,7 @@ class MT_RawAndTM_View(views.APIView):
             # Creating new MT raw for split segment
             else:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code)
+                                              doc.target_language_code,user_id=doc.owner_pk)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"

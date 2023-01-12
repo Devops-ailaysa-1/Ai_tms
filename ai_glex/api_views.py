@@ -443,7 +443,7 @@ class GetTranslation(APIView):#############Mt update need to work###############
         if credit_balance > word_count:
 
             # get translation
-            translation = get_translation(mt_engine_id, source, sl_code, tl_code)
+            translation = get_translation(mt_engine_id, source, sl_code, tl_code,user_id=user.id)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
             tt = GlossaryMt.objects.create(task_id = task_id,source = source,target_mt = translation,mt_engine_id=mt_engine_id)
             return Response(GlossaryMtSerializer(tt).data,status=201)
