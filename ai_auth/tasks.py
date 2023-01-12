@@ -683,3 +683,8 @@ def mail_report():
     report = AilaysaReport()
     report.report_generate()
     report.send_report()
+
+@task
+def record_api_usage(provider,service,uid,email,usage):
+    from ai_auth.utils import record_usage
+    record_usage(provider,service,uid,email,usage)

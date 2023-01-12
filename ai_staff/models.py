@@ -582,11 +582,18 @@ class OrganizationRoleLevel(models.Model):
 class ApiProvider(models.Model):
     name = models.CharField(max_length=300)
 
+    def __str__(self):
+        return self.name
+
 class ApiService(models.Model):
     name = models.CharField(max_length=500)
+
+    def __str__(self):
+        return self.name
 
 class ApiServiceList(models.Model):
     provider = models.ForeignKey(ApiProvider,related_name ='provider_list', on_delete=models.CASCADE)
     service = models.ForeignKey(ApiService,related_name = 'service_list', on_delete=models.CASCADE)
+
 
 
