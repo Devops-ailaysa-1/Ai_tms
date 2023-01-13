@@ -185,9 +185,10 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
 
 class AiPromptCustomizeSerializer(serializers.ModelSerializer):
     customize_name = serializers.ReadOnlyField(source='customize.customize')
+    doc_name =  serializers.ReadOnlyField(source='document.doc_name')
     class Meta:
         model = AiPromptCustomize
-        fields = ('id','document','customize','customize_name','user_text',\
+        fields = ('id','document','doc_name','customize','customize_name','user_text',\
                     'tone','api_result','prompt_result','user_text_lang','user',\
                     'credits_used','prompt_generated','user_text_mt','created_at')
 

@@ -2801,7 +2801,8 @@ class MyDocumentsView(viewsets.ModelViewSet):
     # https://www.django-rest-framework.org/api-guide/filtering/
 
     def get_queryset(self):
-        user = self.request.user.team.owner if self.request.user.team else self.request.user 
+        user = self.request.user
+        ai_user = user.team.owner if user in user.team.get_project_manager else user 
         return MyDocuments.objects.filter(ai_user=user)#.order_by('-id')
         
 
