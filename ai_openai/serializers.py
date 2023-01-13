@@ -122,10 +122,10 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.source_prompt_lang_id not in openai_available_langs:
             string_list = [instance.description,instance.keywords,instance.prompt_string,instance.product_name]
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17,copy=0)
-            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.description else None
-            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.keywords else None
-            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.prompt_string else None
-            product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.product_name else None
+            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user) if instance.description else None
+            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user) if instance.keywords else None
+            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user) if instance.prompt_string else None
+            product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user) if instance.product_name else None
             AiPrompt.objects.filter(id=instance.id).update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt,product_name_mt=product_name_mt)
             consumed_credits = self.get_total_consumable_credits(instance.source_prompt_lang_code,string_list)
             print("cons---------->",consumed_credits)
@@ -185,9 +185,10 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
 
 class AiPromptCustomizeSerializer(serializers.ModelSerializer):
     customize_name = serializers.ReadOnlyField(source='customize.customize')
+    doc_name =  serializers.ReadOnlyField(source='document.doc_name')
     class Meta:
         model = AiPromptCustomize
-        fields = ('id','document','customize','customize_name','user_text',\
+        fields = ('id','document','doc_name','customize','customize_name','user_text',\
                     'tone','api_result','prompt_result','user_text_lang','user',\
                     'credits_used','prompt_generated','user_text_mt','created_at')
 

@@ -2645,7 +2645,7 @@ def task_get_segments(request):
         print("InitialCredits---------------->",initial_credit)
         print("ConsumableCredits---------------->",consumable_credits)
         if initial_credit > consumable_credits:
-            trans = get_translation(obj.job.project.mt_engine.id, content , obj.job.source_language_code, obj.job.target_language_code)
+            trans = get_translation(obj.job.project.mt_engine.id, content , obj.job.source_language_code, obj.job.target_language_code,user_id=obj.owner_pk)
             express_obj.target_text = trans
             express_obj.mt_engine = obj.job.project.mt_engine
             express_obj.mt_raw = trans
@@ -2801,7 +2801,8 @@ class MyDocumentsView(viewsets.ModelViewSet):
     # https://www.django-rest-framework.org/api-guide/filtering/
 
     def get_queryset(self):
-        user = self.request.user.team.owner if self.request.user.team else self.request.user 
+        user = self.request.user
+        ai_user = user.team.owner if user in user.team.get_project_manager else user 
         return MyDocuments.objects.filter(ai_user=user)#.order_by('-id')
         
 

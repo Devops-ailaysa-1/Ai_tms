@@ -127,12 +127,12 @@ def customize_text_openai(request):
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
         if initial_credit > consumable_credits_user_text:
             user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
-                                        source_lang_code=lang , target_lang_code='en')
+                                        source_lang_code=lang , target_lang_code='en',user_id=user.id)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
             result_txt = response['choices'][0]['text']
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
-                                        source_lang_code='en' , target_lang_code=lang)
+                                        source_lang_code='en' , target_lang_code=lang,user_id=user.id)
             total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
             #AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
         else:
