@@ -13,7 +13,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
     sub_catagories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     class Meta:
         model = AiPrompt
-        fields = ('id','user','prompt_string','description','model_gpt_name','catagories','sub_catagories',
+        fields = ('id','user','prompt_string','description','document','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
             'response_charecter_limit','targets')
 
@@ -149,17 +149,26 @@ class AiPromptResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPromptResult
         fields = ('id', 'copy','prompt_generated','api_result','translated_prompt_result','result_lang','prompt',)#'__all__'
-
+        
+        extra_kwargs = {
+            "prompt_generated": {"write_only": True},
+        }
 
 class AiPromptGetSerializer(serializers.ModelSerializer):
     prompt_results = serializers.SerializerMethodField()
     target_langs = serializers.SerializerMethodField()
+    doc_name = serializers.ReadOnlyField(source='document.doc_name')
     #ai_prompt = AiPromptResultSerializer(many=True)
 
     class Meta:
         model = AiPrompt
-        fields = ('id','user','prompt_string','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
+        fields = ('id','user','prompt_string','doc_name','document','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
                     'product_name','keywords','created_at','prompt_results',)#,'ai_prompt'
+        
+        extra_kwargs = {
+            "prompt_string": {"write_only": True},
+            "document": {"write_only": True},
+        }
         
     def get_target_langs(self,obj):
         return [i.result_lang.language for i in obj.ai_prompt.all().distinct('result_lang')]

@@ -142,6 +142,7 @@ def customize_text_openai(request):
         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+    print("TT---------->",prompt)
     data = {'document':document,'customize':customize_id,'user':request.user.id,\
             'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\

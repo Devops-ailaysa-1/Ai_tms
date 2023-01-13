@@ -1967,9 +1967,9 @@ def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
         for result in response.results:
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
-            file_length = int(result.result_end_time.seconds)
-            print("Len--------->",file_length)
-        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
+        file_length = int(response.total_billed_time.seconds)
+        print("Length return from api--------->",file_length)
+        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
         if ser.is_valid():
             ser.save()
             return (ser.data)
@@ -2020,8 +2020,8 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     response = operation.result(timeout=10000)
     for result in response.results:
         transcript += result.alternatives[0].transcript
-        file_length = int(result.result_end_time.seconds)
-        print("Len------->",file_length)
+    file_length = int(response.total_billed_time.seconds)
+    print("Len------->",file_length)
     print("Transcript--------->",transcript)
 
     delete_blob(bucket_name, destination_blob_name)
@@ -2067,7 +2067,7 @@ def transcribe_file(request):
             hertz = audio.frame_rate
         except:
             length=None
-        print("Length----->",length)
+        print("Length in main----->",length)
         if length==None:
             return Response({'msg':'something wrong in input file'},status=400)
         initial_credit = account_debit_user.credit_balance.get("total_left")
@@ -2077,14 +2077,16 @@ def transcribe_file(request):
         if initial_credit > consumable_credits:
             if length and length<60:
                 res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+                if res.get('msg') == None:
+                    consumable_credits = get_consumable_credits_for_speech_to_text(res.get('audio_file_length'))
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             else:
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name = 'transcribe_long_file_cel')).last()
                 state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
                 print("State----------------------->",state)
                 if state == 'PENDING' or state == 'STARTED':
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
-                elif (not ins) or state == 'FAILURE':
+                elif (not ins) or state == 'FAILURE':#need to revert credits
                     res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':res.id},status=400)

@@ -21,6 +21,7 @@ class AiPrompt(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     prompt_string = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='prompt_doc')
     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE,related_name='gpt_model',default=1)
     catagories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE ,blank=True,null=True )
     sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE,blank=True,null=True)
