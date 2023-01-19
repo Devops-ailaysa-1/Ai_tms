@@ -1866,6 +1866,7 @@ def previously_created_steps(request):
 #     else:
 #         return Response({'msg':'something went wrong'})
 
+
 @api_view(["GET"])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
@@ -1876,9 +1877,10 @@ def project_download(request,project_id):
                 file_name,ext = os.path.splitext(i.file.filename)
                 target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
                 target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
+                print("File Path--------------->",target_filepath)
                 with open(target_filepath,'w') as f:
                     f.write(express_obj.target_text)
-                    print("File Written--------------->",target_filepath)
+                #print("File Written--------------->",target_filepath)
             else:
                 pass
 
@@ -2686,6 +2688,7 @@ def express_task_download(request,task_id):###############permission need to be 
     target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
     with open(target_filename,'w') as f:
         f.write(express_obj.target_text)
+    print("File Written--------------->",target_filename)
     res = download_file(target_filename)
     os.remove(target_filename)
     return res
