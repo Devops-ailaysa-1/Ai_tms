@@ -379,7 +379,7 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
     #print("File----------->",ssml_file)
-    print("Len of input text in API---------------->",len(ssml))
+    #print("Len of input text in API---------------->",len(ssml))
     voice = texttospeech.VoiceSelectionParams(
         name=voice_name,language_code=target_language, ssml_gender=gender
     )

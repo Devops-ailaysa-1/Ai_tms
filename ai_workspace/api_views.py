@@ -1928,6 +1928,8 @@ class ShowMTChoices(APIView):
 
 
     def post(self, request):
+        user = request.user if request.user else None
+        print("USER-------------->",user)
         data = request.POST.dict()
         text = data.get("text", "")
         target_languages = json.loads(data["target_language"])
