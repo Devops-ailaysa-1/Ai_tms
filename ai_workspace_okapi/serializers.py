@@ -257,7 +257,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source)
         if initial_credit > consumable_credits:
             try:
-                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)
+                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code,user_id=document.owner_pk)
                 if target_tags !='':
                     temp_target = mt + target_tags
                     target = mt + target_tags
