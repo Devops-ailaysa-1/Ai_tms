@@ -151,6 +151,22 @@ six = "*"
 visualize = ["Twisted (>=16.1.1)", "graphviz (>0.5.1)"]
 
 [[package]]
+name = "autopep8"
+version = "2.0.1"
+description = "A tool that automatically formats Python code to conform to the PEP 8 style guide"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "autopep8-2.0.1-py2.py3-none-any.whl", hash = "sha256:be5bc98c33515b67475420b7b1feafc8d32c1a69862498eda4983b45bffd2687"},
+    {file = "autopep8-2.0.1.tar.gz", hash = "sha256:d27a8929d8dcd21c0f4b3859d2d07c6c25273727b98afc984c039df0f0d86566"},
+]
+
+[package.dependencies]
+pycodestyle = ">=2.10.0"
+tomli = {version = "*", markers = "python_version < \"3.11\""}
+
+[[package]]
 name = "babel"
 version = "2.11.0"
 description = "Internationalization utilities"
@@ -1038,6 +1054,23 @@ requests = "*"
 requests-oauthlib = ">=0.3.0"
 
 [[package]]
+name = "django-cacheops"
+version = "6.1"
+description = "A slick ORM cache with automatic granular event-driven invalidation for Django."
+category = "main"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "django-cacheops-6.1.tar.gz", hash = "sha256:b684ef39fd434189d3cbb7d85417cd972af635289a032447982473b4a89f727d"},
+]
+
+[package.dependencies]
+django = ">=2.1"
+funcy = ">=1.8,<2.0"
+redis = ">=3.0.0"
+six = ">=1.4.0"
+
+[[package]]
 name = "django-celery-results"
 version = "2.2.0"
 description = "Celery result backends for Django."
@@ -1082,6 +1115,22 @@ files = [
 Django = ">=1.5"
 pytz = "*"
 six = "*"
+
+[[package]]
+name = "django-debug-toolbar"
+version = "3.8.1"
+description = "A configurable set of panels that display various debug information about the current request/response."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "django_debug_toolbar-3.8.1-py3-none-any.whl", hash = "sha256:879f8a4672d41621c06a4d322dcffa630fc4df056cada6e417ed01db0e5e0478"},
+    {file = "django_debug_toolbar-3.8.1.tar.gz", hash = "sha256:24ef1a7d44d25e60d7951e378454c6509bf536dce7e7d9d36e7c387db499bc27"},
+]
+
+[package.dependencies]
+django = ">=3.2.4"
+sqlparse = ">=0.2"
 
 [[package]]
 name = "django-extensions"
@@ -1176,6 +1225,24 @@ files = [
 [package.dependencies]
 django = ">=2.2"
 oso = ">=0.26.1,<0.27.0"
+
+[[package]]
+name = "django-silk"
+version = "5.0.3"
+description = "Silky smooth profiling for the Django Framework"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "django-silk-5.0.3.tar.gz", hash = "sha256:2f1fcaaf21192011147537fe1ca72dc9f552f32d7043ebd82aeeda370f194469"},
+    {file = "django_silk-5.0.3-py3-none-any.whl", hash = "sha256:50552f06d9306d06517fbeab9a2c74856355e06304f03ed16b6dd353f7c77e7a"},
+]
+
+[package.dependencies]
+autopep8 = "*"
+Django = ">=3.2"
+gprof2dot = ">=2017.09.19"
+sqlparse = "*"
 
 [[package]]
 name = "django-simple-history"
@@ -1369,6 +1436,18 @@ type1 = ["xattr"]
 ufo = ["fs (>=2.2.0,<3)"]
 unicode = ["unicodedata2 (>=14.0.0)"]
 woff = ["brotli (>=1.0.1)", "brotlicffi (>=0.8.0)", "zopfli (>=0.1.4)"]
+
+[[package]]
+name = "funcy"
+version = "1.17"
+description = "A fancy and practical functional tools"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "funcy-1.17-py2.py3-none-any.whl", hash = "sha256:ba7af5e58bfc69321aaf860a1547f18d35e145706b95d1b3c966abc4f0b60309"},
+    {file = "funcy-1.17.tar.gz", hash = "sha256:40b9b9a88141ae6a174df1a95861f2b82f2fdc17669080788b73a3ed9370e968"},
+]
 
 [[package]]
 name = "gevent"
@@ -1752,6 +1831,18 @@ files = [
 
 [package.dependencies]
 httpx = "0.13.3"
+
+[[package]]
+name = "gprof2dot"
+version = "2022.7.29"
+description = "Generate a dot graph from the output of several profilers."
+category = "main"
+optional = false
+python-versions = ">=2.7"
+files = [
+    {file = "gprof2dot-2022.7.29-py2.py3-none-any.whl", hash = "sha256:f165b3851d3c52ee4915eb1bd6cca571e5759823c2cd0f71a79bda93c2dc85d6"},
+    {file = "gprof2dot-2022.7.29.tar.gz", hash = "sha256:45b4d298bd36608fccf9511c3fd88a773f7a1abc04d6cd39445b11ba43133ec5"},
+]
 
 [[package]]
 name = "greenlet"
@@ -3259,6 +3350,18 @@ files = [
 pyasn1 = ">=0.4.6,<0.5.0"
 
 [[package]]
+name = "pycodestyle"
+version = "2.10.0"
+description = "Python style guide checker"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "pycodestyle-2.10.0-py2.py3-none-any.whl", hash = "sha256:8a4eaf0d0495c7395bdab3589ac2db602797d76207242c17d470186815706610"},
+    {file = "pycodestyle-2.10.0.tar.gz", hash = "sha256:347187bdb476329d98f695c213d7295a846d1152ff4fe9bacb8a9590b8ee7053"},
+]
+
+[[package]]
 name = "pycparser"
 version = "2.21"
 description = "C parser in Python"
@@ -4549,7 +4652,7 @@ test = ["flake8", "isort", "pytest"]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -4989,4 +5092,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "fc97d708fd389d6a84d58a759aba4d6a3fd89b0e676776bb817b08a454e62cce"
+content-hash = "422fae302a33082e2fb877982bd0d838a7924d65b9020af8b44813b546bcd955"
