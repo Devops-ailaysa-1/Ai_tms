@@ -307,6 +307,7 @@ def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
     with open(ssml_file, "r") as f:
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
+    #print("Len of input text in API---------------->",len(input_text))
     voice = texttospeech.VoiceSelectionParams(
         name=voice_name,language_code=target_language, ssml_gender=gender
     )
@@ -377,6 +378,8 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
     with open(ssml_file, "r") as f:
         ssml = f.read()
         input_text = texttospeech.SynthesisInput(ssml=ssml)
+    #print("File----------->",ssml_file)
+    #print("Len of input text in API---------------->",len(ssml))
     voice = texttospeech.VoiceSelectionParams(
         name=voice_name,language_code=target_language, ssml_gender=gender
     )
@@ -389,8 +392,10 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
     #print("Response------------>",response)
     if len(response.audio_content) != 0:
         with open(filename,"wb") as out:
-                out.write(response.audio_content)
-                # print('Audio content written to file',filename)
+            out.write(response.audio_content)
+            print('Audio content written to file',filename)
+
+
 
 def split_check(segment_id):
     from ai_workspace_okapi.models import SplitSegment
