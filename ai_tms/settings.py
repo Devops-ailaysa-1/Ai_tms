@@ -119,6 +119,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cacheops',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -152,7 +153,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     "ai_pay",
     "ai_qa",
-    #'silk',
+    # 'silk',
     'django_oso',
     #"ai_tm_management",
     "ai_tm",
@@ -161,6 +162,7 @@ INSTALLED_APPS = [
     'ai_exportpdf',
     'ai_openai',
     'simple_history',
+    # 'debug_toolbar',
     # 'coreapi', # Coreapi for coreapi documentation
     # 'drf_yasg', # drf_yasg fro Swagger documentation
 ]
@@ -502,6 +504,39 @@ LOGOUT_REDIRECT_URL = '/'
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
+CACHEOPS_REDIS = os.getenv("CACHEOPS_REDIS_HOST")
+
+# CACHEOPS_DEFAULTS = {
+#     'timeout': 60*60
+# }
+
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": os.getenv("CACHEOPS_REDIS_HOST"),
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         }
+#     }
+#     }
+
+CACHEOPS = {
+
+    # Cache all queries to Permission
+    # 'all' is an alias for {'get', 'fetch', 'count', 'aggregate', 'exists'}
+    'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
+
+
+    # # And since ops is empty by default you can rewrite last line as:
+    # '*.*': {'timeout': 60*60},
+
+    # # NOTE: binding signals has its overhead, like preventing fast mass deletes,
+    # #       you might want to only register whatever you cache and dependencies.
+
+    # # Finally you can explicitely forbid even manual caching with:
+    # 'some_app.*': None,
+}
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -672,6 +707,12 @@ OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
+# SILKY_PYTHON_PROFILER = True
+
+# SILKY_DYNAMIC_PROFILING = [{
+#     'module': 'ai_staff.api_views',
+#     'function': 'CurrenciesView.get'
+# }]
 
 
 RUST_BACKTRACE=1
@@ -679,3 +720,15 @@ RUST_BACKTRACE=1
 
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
+
+# INTERNAL_IPS = [
+#     # ...
+#     "127.0.0.1",
+#     # ...
+# ]
+
+# def show_toolbar(request):
+#     return True
+# DEBUG_TOOLBAR_CONFIG = {
+#     "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
+# }
