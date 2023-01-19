@@ -2804,7 +2804,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        ai_user = user.team.owner if user in user.team.get_project_manager else user 
+        ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
         return MyDocuments.objects.filter(ai_user=user)#.order_by('-id')
         
 
