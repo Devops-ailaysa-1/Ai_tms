@@ -29,6 +29,7 @@ from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.db import transaction
 from notifications.signals import notify
 from ai_auth.utils import obj_is_allowed,authorize_list,objls_is_allowed
+from ai_workspace.utils import task_assing_role_ls
 
 logger = logging.getLogger('django')
 
@@ -892,6 +893,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         if user1.is_internal_member == False:
           print("task_assing id",[i.task_assign.assign_to for i in task_assign_info])
           generate_client_po([i.id for i in task_assign_info])
+        else:
+          task_assing_role_ls([i.id for i in task_assign_info])
         return task_assign_info
 
 
