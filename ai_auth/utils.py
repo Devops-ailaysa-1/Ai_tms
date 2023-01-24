@@ -118,6 +118,9 @@ def unassign_task(user,role_name,task):
 def record_usage(provider,service,uid,email,usage):
 	from ai_auth.models import ApiUsage
 	from ai_staff.models import ApiServiceList
+	if uid == None and email == None:
+		uid = "Anonymous"
+		email= "Anonymous"
 	try:
 		service_obj = ApiServiceList.objects.get(provider__name=provider,service__name=service)
 		usage_obj = ApiUsage.objects.get(uid=uid,service=service_obj)
