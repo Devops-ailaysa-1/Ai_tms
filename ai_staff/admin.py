@@ -5,7 +5,8 @@ from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeE
                     CreditsAddons,CreditAddonPrice,IndianStates,StripeTaxId,JobPositions, LanguagesLocale, LanguageScripts,
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
                     ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles,
-                    TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields)
+                    TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields,ApiServiceList,
+                    ApiProvider,ApiService)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -55,6 +56,10 @@ class SubscriptionPricingPricesAdmin(admin.ModelAdmin):
 class SubscriptionPricingAdmin(admin.ModelAdmin):
    list_display = ('subscriptionplan','features','description','set_id','sequence_id')
 
+@admin.register(ApiServiceList)
+class ApiServiceListAdmin(admin.ModelAdmin):
+    list_display = ("provider","service")
+
 admin.site.register(AiUserType)
 admin.site.register(Languages,LanguagesAdmin)
 admin.site.register(AssetUsageTypes)
@@ -93,6 +98,8 @@ admin.site.register(AiRoles)
 admin.site.register(TaskRoleLevel)
 admin.site.register(ProjectRoleLevel)
 
+admin.site.register(ApiProvider)
+admin.site.register(ApiService)
 
 admin.site.register(ModelGPTName)
 admin.site.register(PromptCategories)

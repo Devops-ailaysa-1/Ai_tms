@@ -1,8 +1,9 @@
 from django.db import models
 from ai_auth.models import AiUser
 import os
+from ai_workspace.models import MyDocuments
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
-                              PromptSubCategories,PromptTones,ModelGPTName)
+                              PromptSubCategories,PromptTones,ModelGPTName,AiCustomize)
 
 class TokenUsage(models.Model):
     user_input_token = models.CharField(max_length=10, null=True, blank=True)
@@ -20,6 +21,7 @@ class AiPrompt(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     prompt_string = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='prompt_doc')
     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE,related_name='gpt_model',default=1)
     catagories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE ,blank=True,null=True )
     sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE,blank=True,null=True)
@@ -80,9 +82,25 @@ class TextgeneratedCreditDeduction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
 
-# class AiPromptCustomize(models.Model):
-#     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, related_name = 'ai_doc')
-#     customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'ai_cust')
-#     user_text = models.TextField(null=True, blank=True)
-#     prompt_generated = models.TextField(null=True, blank=True)
-#     prompt_result = models.TextField(null=True, blank=True) 
+class AiPromptCustomize(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc')
+    customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'ai_cust')
+    user_text = models.TextField(null=True, blank=True)
+    tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='customize_tone',blank=True,null=True,default=1)
+    user_text_mt = models.TextField(null=True, blank=True)
+    credits_used = models.IntegerField(null=True, blank=True)
+    api_result = models.TextField(null=True, blank=True) 
+    user_text_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='text_lang')
+    prompt_generated = models.TextField(null=True, blank=True)
+    prompt_result = models.TextField(null=True, blank=True) 
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+# class AiImage(models.Model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
+#     prompt = models.TextField(null=True, blank=True)
+#     prompt_mt = models.TextField(null=True, blank=True)
+#     credits_used = models.IntegerField(null=True, blank=True)
+#     result_url = models.TextField(null=True, blank=True) 

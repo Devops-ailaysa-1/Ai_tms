@@ -66,9 +66,9 @@ django-guardian = "2.4.0"
 openpyxl = "^3.0.10"
 markupsafe = "2.0.1"
 django-simple-history = "^3.2.0"
-googletrans = "3.1.0a0"
 dbbackup = "^0.1.13"
 django-dbbackup = "3.3.0"
+googletrans = "3.1.0a0"
 redis = "^4.4.1"
 
 [tool.poetry.dev-dependencies]

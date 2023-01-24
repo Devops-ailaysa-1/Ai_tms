@@ -5,6 +5,8 @@ import time
 from django.core.exceptions import PermissionDenied
 from django_oso.auth import authorize
 import django_oso
+import logging
+logger = logging.getLogger('django')
 
 # from ai_auth.api_views import resync_instances
 
@@ -110,5 +112,19 @@ def unassign_task(user,role_name,task):
 		obj = TaskRoles.objects.get(user=user,task_pk=task.id,role__role__name=role_name)
 		obj.delete()
 	except TaskRoles.DoesNotExist:
-		raise ValueError("User is not related to this Task")
+		logger.info("User is not related to this Task")
 	
+
+def record_usage(provider,service,uid,email,usage):
+	from ai_auth.models import ApiUsage
+	from ai_staff.models import ApiServiceList
+	try:
+		service_obj = ApiServiceList.objects.get(provider__name=provider,service__name=service)
+		usage_obj = ApiUsage.objects.get(uid=uid,service=service_obj)
+	except ApiUsage.DoesNotExist:
+		usage_obj =	ApiUsage.objects.create(uid=uid,email=email,service = service_obj)
+	except ApiServiceList.DoesNotExist:
+		logger.error("Api servicelist not found")
+	usage_obj.usage = usage_obj.usage + usage
+	usage_obj.save()
+

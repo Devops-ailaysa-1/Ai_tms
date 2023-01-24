@@ -1,7 +1,8 @@
 from rest_framework.response import Response
 from rest_framework import serializers
-from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction )
-from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize 
+from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
+                    AiPromptCustomize )
+from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle
 from ai_workspace_okapi.utils import get_translation
 import math
@@ -12,7 +13,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
     sub_catagories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     class Meta:
         model = AiPrompt
-        fields = ('id','user','prompt_string','description','model_gpt_name','catagories','sub_catagories',
+        fields = ('id','user','prompt_string','description','document','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
             'response_charecter_limit','targets')
 
@@ -99,7 +100,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     trans = get_translation(1, content , j.result_lang_code, i.result_lang_code) if content else None
                     i.translated_prompt_result = trans
                     i.save()
-                    print("translate")
                     word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
                     self.customize_token_deduction(instance , word_count)
 
@@ -122,10 +122,10 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.source_prompt_lang_id not in openai_available_langs:
             string_list = [instance.description,instance.keywords,instance.prompt_string,instance.product_name]
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17,copy=0)
-            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.description else None
-            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.keywords else None
-            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.prompt_string else None
-            product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code) if instance.product_name else None
+            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user) if instance.description else None
+            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user) if instance.keywords else None
+            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user) if instance.prompt_string else None
+            product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user) if instance.product_name else None
             AiPrompt.objects.filter(id=instance.id).update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt,product_name_mt=product_name_mt)
             consumed_credits = self.get_total_consumable_credits(instance.source_prompt_lang_code,string_list)
             print("cons---------->",consumed_credits)
@@ -149,17 +149,26 @@ class AiPromptResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPromptResult
         fields = ('id', 'copy','prompt_generated','api_result','translated_prompt_result','result_lang','prompt',)#'__all__'
-
+        
+        extra_kwargs = {
+            "prompt_generated": {"write_only": True},
+        }
 
 class AiPromptGetSerializer(serializers.ModelSerializer):
     prompt_results = serializers.SerializerMethodField()
     target_langs = serializers.SerializerMethodField()
+    doc_name = serializers.ReadOnlyField(source='document.doc_name')
     #ai_prompt = AiPromptResultSerializer(many=True)
 
     class Meta:
         model = AiPrompt
-        fields = ('id','user','prompt_string','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
+        fields = ('id','user','prompt_string','doc_name','document','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
                     'product_name','keywords','created_at','prompt_results',)#,'ai_prompt'
+        
+        extra_kwargs = {
+            "prompt_string": {"write_only": True},
+            "document": {"write_only": True},
+        }
         
     def get_target_langs(self,obj):
         return [i.result_lang.language for i in obj.ai_prompt.all().distinct('result_lang')]
@@ -183,3 +192,18 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
         fields = ('id' , 'customize')
 
 
+class AiPromptCustomizeSerializer(serializers.ModelSerializer):
+    customize_name = serializers.ReadOnlyField(source='customize.customize')
+    doc_name =  serializers.ReadOnlyField(source='document.doc_name')
+    class Meta:
+        model = AiPromptCustomize
+        fields = ('id','document','doc_name','customize','customize_name','user_text',\
+                    'tone','api_result','prompt_result','user_text_lang','user',\
+                    'credits_used','prompt_generated','user_text_mt','created_at')
+
+        extra_kwargs = {
+            "user":{"write_only": True},
+            "prompt_generated": {"write_only": True},
+            "credits_used": {"write_only": True},
+            "user_text_mt": {"write_only": True},
+        }

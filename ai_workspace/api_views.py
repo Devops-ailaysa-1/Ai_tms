@@ -1866,6 +1866,7 @@ def previously_created_steps(request):
 #     else:
 #         return Response({'msg':'something went wrong'})
 
+
 @api_view(["GET"])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
@@ -1876,9 +1877,10 @@ def project_download(request,project_id):
                 file_name,ext = os.path.splitext(i.file.filename)
                 target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
                 target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
+                print("File Path--------------->",target_filepath)
                 with open(target_filepath,'w') as f:
                     f.write(express_obj.target_text)
-                    print("File Written--------------->",target_filepath)
+                #print("File Written--------------->",target_filepath)
             else:
                 pass
 
@@ -1928,6 +1930,8 @@ class ShowMTChoices(APIView):
 
 
     def post(self, request):
+        user = request.user if request.user else None
+        print("USER-------------->",user)
         data = request.POST.dict()
         text = data.get("text", "")
         target_languages = json.loads(data["target_language"])
@@ -1967,9 +1971,9 @@ def transcribe_short_file(speech_file,source_code,obj,length,user,hertz):
         for result in response.results:
             print(u"Transcript: {}".format(result.alternatives[0].transcript))
             transcript += result.alternatives[0].transcript
-            file_length = int(result.result_end_time.seconds)
-            print("Len--------->",file_length)
-        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
+        file_length = int(response.total_billed_time.seconds)
+        print("Length return from api--------->",file_length)
+        ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":file_length,"user":user.id})
         if ser.is_valid():
             ser.save()
             return (ser.data)
@@ -2020,8 +2024,8 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     response = operation.result(timeout=10000)
     for result in response.results:
         transcript += result.alternatives[0].transcript
-        file_length = int(result.result_end_time.seconds)
-        print("Len------->",file_length)
+    file_length = int(response.total_billed_time.seconds)
+    print("Len------->",file_length)
     print("Transcript--------->",transcript)
 
     delete_blob(bucket_name, destination_blob_name)
@@ -2067,7 +2071,7 @@ def transcribe_file(request):
             hertz = audio.frame_rate
         except:
             length=None
-        print("Length----->",length)
+        print("Length in main----->",length)
         if length==None:
             return Response({'msg':'something wrong in input file'},status=400)
         initial_credit = account_debit_user.credit_balance.get("total_left")
@@ -2077,14 +2081,16 @@ def transcribe_file(request):
         if initial_credit > consumable_credits:
             if length and length<60:
                 res = transcribe_short_file(speech_file,source_code,obj,length,user,hertz)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
+                if res.get('msg') == None:
+                    consumable_credits = get_consumable_credits_for_speech_to_text(res.get('audio_file_length'))
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
             else:
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name = 'transcribe_long_file_cel')).last()
                 state = transcribe_long_file_cel.AsyncResult(ins.celery_task_id).state if ins else None
                 print("State----------------------->",state)
                 if state == 'PENDING' or state == 'STARTED':
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':ins.celery_task_id},status=400)
-                elif (not ins) or state == 'FAILURE':
+                elif (not ins) or state == 'FAILURE':#need to revert credits
                     res = transcribe_long_file_cel.apply_async((speech_file,source_code,filename,obj.id,length,user.id,hertz),)
                     debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
                     return Response({'msg':'Transcription is ongoing. Pls Wait','celery_id':res.id},status=400)
@@ -2109,6 +2115,7 @@ def transcribe_file_get(request):
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     print("Main func Voice Name---------->",voice_name)
     final_name,ext =  os.path.splitext(file)
+    size_limit = 1000 if obj.job.target_language_code in ['ta','ja'] else 3500
     #final_audio = final_name + '.mp3'
     #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
     final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
@@ -2116,7 +2123,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
     split = Split(file,dir_1)
-    split.bysize(4000,True)
+    split.bysize(size_limit,True)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
         if file.endswith('.txt'):
@@ -2127,7 +2134,7 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
             audio_ = name + '.mp3'
             audiofile = os.path.join(dir,audio_)
             text_to_speech_long(filepath,language if language else obj.job.target_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
-    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'))]
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1]))]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
@@ -2155,34 +2162,33 @@ def long_text_source_process(consumable_credits,user,file_path,task,language,voi
 #####################Need to work###########################################
 
 def google_long_text_source_file_process(file,obj,language,gender,voice_name):
+    print("Lang-------------->",obj.job.source_language_code)
     project_id  = obj.job.project.id
     final_name,ext =  os.path.splitext(file)
     lang_list = ['hi','bn','or','ne','pa']
-    #final_audio = final_name + '.mp3'
     final_audio = final_name + "_" + obj.job.source_language_code  + ".mp3"#+ "_" + obj.ai_taskid
     dir_1 = os.path.join('/ai_home/',"Output_"+str(obj.id))
     if not os.path.exists(dir_1):
         os.mkdir(dir_1)
-        count=0
-        out_filename = final_name + '_out.txt'
-        with open(file) as infile, open(out_filename, 'w') as outfile:
-          lines = infile.readlines()
-          for line in lines:
-              if language in lang_list:sents = sentence_split(line, language, delim_pat='auto')
-              else:sents = nltk.sent_tokenize(line)
-              for i in sents:
-                  outfile.write(i)
-                  count = count+len(i)
-                 # print("<--------------------count-------------------------->",count)
-                  if count > 3500:
+    count=0
+    out_filename = final_name + '_out.txt'
+    size_limit = 1000 if obj.job.source_language_code in ['ta','ja'] else 3500
+    with open(file) as infile, open(out_filename, 'w') as outfile:
+        lines = infile.readlines()
+        for line in lines:
+            if obj.job.source_language_code in lang_list:sents = sentence_split(line, obj.job.source_language_code, delim_pat='auto')
+            else:sents = nltk.sent_tokenize(line)
+            for i in sents:
+                outfile.write(i)
+                count = count+len(i)
+                if count > size_limit:
                     outfile.write('\n')
                     count=0
     split = Split(out_filename,dir_1)
-    split.bysize(4000,True)
+    split.bysize(size_limit,True)
     for file in os.listdir(dir_1):
         filepath = os.path.join(dir_1, file)
         if file.endswith('.txt') :
-            print("File--------------->",file)
             name,ext = os.path.splitext(file)
             dir = os.path.join('/ai_home/',"OutputAudio_"+str(obj.id))
             if not os.path.exists(dir):
@@ -2192,7 +2198,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
             print("ARGS--------->",filepath,language,obj.job.source_language_code,audiofile,gender,voice_name)
             rr = text_to_speech_long(filepath,language if language else obj.job.source_language_code ,audiofile,gender if gender else 'FEMALE',voice_name)
             #print("RR------------------------>",rr.status_code)
-    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3')) if len(mp3_file)!=0]
+    list_of_audio_files = [AudioSegment.from_mp3(mp3_file) for mp3_file in sorted(glob('*/*.mp3'),key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[-1])) if len(mp3_file)!=0]
     print("ListOfAudioFiles---------------------->",list_of_audio_files)
     combined = AudioSegment.empty()
     for aud in list_of_audio_files:
@@ -2216,7 +2222,6 @@ def convert_and_download_text_to_speech_source(request):#########working########
     project = request.GET.get('project',None)
     language = request.GET.get('language_locale',None)
     gender = request.GET.get('gender',None)
-    # task = request.GET.get('task',None)
     pr = Project.objects.get(id=project)
     for _task in pr.get_source_only_tasks:
         if _task.task_transcript_details.first() == None:
@@ -2230,10 +2235,9 @@ def convert_and_download_text_to_speech_source(request):#########working########
 
 
 def text_to_speech_task(obj,language,gender,user,voice_name):
-    #obj = Task.objects.get(id=task_id)
+    
     from ai_workspace.models import MTonlytaskCeleryStatus
     project = obj.job.project
-    print("Gender------------------->",gender)
     account_debit_user = project.team.owner if project.team else project.ai_user
     file,ext = os.path.splitext(obj.file.file.path)
     dir,name_ = os.path.split(os.path.abspath(file))
@@ -2258,18 +2262,19 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     print("Initial Credits---------------->",initial_credit)
     if initial_credit > consumable_credits:
         if len(data)>4500:
-            print(name)
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
             print("State--------------->",state)
             if state == 'PENDING' or state == 'STARTED':
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':ins.celery_task_id},status=400)
             elif (obj.task_transcript_details.exists()==False) or (not ins) or state == "FAILURE":
+                if state == "FAILURE":
+                    user_credit = UserCredits.objects.get(Q(user=user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+                    user_credit.credits_left = user_credit.credits_left + consumable_credits
+                    user_credit.save()
                 celery_task = text_to_speech_long_celery.apply_async((consumable_credits,account_debit_user.id,name,obj.id,language,gender,voice_name), )
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return Response({'msg':'Text to Speech conversion ongoing. Please wait','celery_id':celery_task.id},status=400)
-            #res2,f2 = google_long_text_source_file_process(name,obj,language,gender,voice_name)
-            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(account_debit_user, consumable_credits)
         else:
             audio_file = name_ + "_source" + "_" + obj.job.source_language_code + ".mp3"#+ "_" + obj.ai_taskid
             print("Args short------->",name,language,obj.job.source_language_code,audio_file,gender,voice_name)
@@ -2646,7 +2651,7 @@ def task_get_segments(request):
         print("InitialCredits---------------->",initial_credit)
         print("ConsumableCredits---------------->",consumable_credits)
         if initial_credit > consumable_credits:
-            trans = get_translation(obj.job.project.mt_engine.id, content , obj.job.source_language_code, obj.job.target_language_code)
+            trans = get_translation(obj.job.project.mt_engine.id, content , obj.job.source_language_code, obj.job.target_language_code,user_id=obj.owner_pk)
             express_obj.target_text = trans
             express_obj.mt_engine = obj.job.project.mt_engine
             express_obj.mt_raw = trans
@@ -2683,6 +2688,7 @@ def express_task_download(request,task_id):###############permission need to be 
     target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
     with open(target_filename,'w') as f:
         f.write(express_obj.target_text)
+    print("File Written--------------->",target_filename)
     res = download_file(target_filename)
     os.remove(target_filename)
     return res
@@ -2802,7 +2808,8 @@ class MyDocumentsView(viewsets.ModelViewSet):
     # https://www.django-rest-framework.org/api-guide/filtering/
 
     def get_queryset(self):
-        user = self.request.user.team.owner if self.request.user.team else self.request.user 
+        user = self.request.user
+        ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
         return MyDocuments.objects.filter(ai_user=user)#.order_by('-id')
         
 

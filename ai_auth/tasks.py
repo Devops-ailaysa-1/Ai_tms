@@ -289,7 +289,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source']) if seg['source']!='' else 0
                 if initial_credit > consumable_credits:
-                    mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code)
+                    mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code,document.owner_pk)
                     if str(target_tags) != '':
                         random_tags = json.loads(seg["random_tag_ids"])
                         if random_tags == []:tags = str(target_tags)
@@ -481,7 +481,7 @@ def pre_translate_update(task_id):
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
             if initial_credit > consumable_credits:
-                mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code)
+                mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk)
                 tags = get_tags(seg)
                 if tags:
                     seg.target = mt + tags
@@ -676,3 +676,15 @@ def backup_media():
     if os.getenv('MEDIA_BACKUP')=='True':   
         call_command('mediabackup')
     logger.info("backeup of mediafiles successfull.")
+    
+@task
+def mail_report():
+    from ai_auth.reports import AilaysaReport
+    report = AilaysaReport()
+    report.report_generate()
+    report.send_report()
+
+@task
+def record_api_usage(provider,service,uid,email,usage):
+    from ai_auth.utils import record_usage
+    record_usage(provider,service,uid,email,usage)
