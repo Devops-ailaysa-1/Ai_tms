@@ -20,7 +20,7 @@ from pathlib import Path
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 import logging.config
-import yaml
+# import yaml
 
 # from fluent import sender
 # from fluent import event
@@ -156,7 +156,7 @@ INSTALLED_APPS = [
     'django_oso',
     #"ai_tm_management",
     "ai_tm",
-    'dbbackup',
+    # 'dbbackup',
     # 'django_q',
     'ai_exportpdf',
     'ai_openai',
