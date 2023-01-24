@@ -1179,8 +1179,13 @@ class TaskView(APIView):
 
     def delete(self, request, id):
         task = Task.objects.get(id = id)
-        task.delete()
-        return Response(data={"Message": "Task Deleted Successfully"}, status=204)
+        if task.task_info.filter(task_assign_info__isnull=False):
+            print("assigned")
+            return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
+        else:
+            print("Not assigned")
+            task.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 
@@ -1930,7 +1935,8 @@ class ShowMTChoices(APIView):
 
 
     def post(self, request):
-        user = request.user if request.user else None
+        print("Request User------------>",request.user)
+        user = None if request.user.is_anonymous == True else request.user
         print("USER-------------->",user)
         data = request.POST.dict()
         text = data.get("text", "")
@@ -1939,16 +1945,30 @@ class ShowMTChoices(APIView):
         text_1 = self.reduce_text(text,self.get_lang_code(sl_code))
         # print("###",text_1)
         res = {}
-
         for tl in target_languages:
             mt_responses = {}
             for mt_engine in AilaysaSupportedMtpeEngines.objects.all():
-                try:
-                    mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
-                except:
-                    mt_responses[mt_engine.name] = None
-                res[tl] = mt_responses
-
+                print("$%$%$$$%")
+                if user:
+                    print("Inside Authorized")
+                    initial_credit = user.credit_balance.get("total_left")
+                    consumable_credits =  get_consumable_credits_for_text(text_1,source_lang=self.get_lang_code(sl_code),target_lang=self.get_lang_code(tl))
+                    #print("Before Deduction","Initial--->",initial_credit,"Consumable---->",consumable_credits)
+                    if initial_credit > consumable_credits:
+                        mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
+                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    else:
+                        mt_responses[mt_engine.name] = 'Insufficient Credits'
+                    #print("After Deduction","Initial--->",initial_credit)
+                    res[tl] = mt_responses
+                else:
+                    print("Not Authorized")
+                    try:
+                        mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
+                    except:
+                        mt_responses[mt_engine.name] = None
+                    res[tl] = mt_responses
+                    
         return Response(res, status=status.HTTP_200_OK)
 
 
@@ -2858,20 +2878,23 @@ class MyDocumentsView(viewsets.ModelViewSet):
         ins.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
         
-
+from django.db.models import Subquery
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def default_proj_detail(request):
     last_pr = Project.objects.filter(ai_user = request.user).last()
     if last_pr:
-        langs = Job.objects.filter(project__ai_user_id = request.user).exclude(target_language=None).\
-                values_list("source_language","target_language").distinct('target_language')
-        source_langs = [i[0] for i in langs]
+        query = Job.objects.filter(project__ai_user = request.user).exclude(target_language=None)
+        langs = query.filter(pk__in=Subquery(query.distinct('target_language').values("id"))).\
+                values_list("source_language","target_language").order_by('-project__created_at')
+        # langs = Job.objects.filter(project__ai_user_id = request.user).exclude(target_language=None).\
+        #         values_list("source_language","target_language").distinct('target_language')
+        #source_langs = [i[0] for i in langs]
         target_langs = [i[1] for i in langs]
-        final_list = list(set().union(source_langs,target_langs))
+        #final_list = list(set().union(source_langs,target_langs))
         source = last_pr.project_jobs_set.first().source_language_id
         mt_engine =last_pr.mt_engine_id
-        return JsonResponse({'source_lang_id':source,'target_lang_ids':final_list,'mt_engine_id':mt_engine})
+        return JsonResponse({'source_lang_id':source,'target_lang_ids':target_langs,'mt_engine_id':mt_engine})
     else:
         return JsonResponse({'source_lang_id':None,'target_lang_ids':[],'mt_engine_id':None})
 
