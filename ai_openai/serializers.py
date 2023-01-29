@@ -1,9 +1,10 @@
 from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
-                    AiPromptCustomize )
+                    AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
+                    ImageGeneratorResolution  )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
-from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle
+from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
 import math
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
@@ -207,3 +208,40 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
             "credits_used": {"write_only": True},
             "user_text_mt": {"write_only": True},
         }
+        
+        
+from django import core
+
+class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImageGenerationPromptResponse
+        fields = ('id' , 'generated_image')
+
+class ImageGeneratorPromptSerializer(serializers.ModelSerializer):  
+    gen_img = ImageGenerationPromptResponseSerializer(many=True,required=False)
+    class Meta:
+        model = ImageGeneratorPrompt
+        fields = ('id','prompt','prompt_mt','image_resolution','no_of_image','gen_img' )
+        
+        
+    def create(self, validated_data):
+        user=self.context['request'].user
+        inst = ImageGeneratorPrompt.objects.create(**validated_data)
+        image_reso = ImageGeneratorResolution.objects.get(image_resolution =inst.image_resolution )
+        image_res = get_prompt_image_generations(inst.prompt,
+                                          image_reso.image_resolution,
+                                          inst.no_of_image)
+        data = image_res['data']     
+        created_id = image_res["created"]  
+        for i in range(inst.no_of_image):
+            img_content = get_img_content_from_openai_url(data[i]['url'])
+            image_file = core.files.File(core.files.base.ContentFile(img_content),"file.png")
+            img_gen_Pmpt_res=ImageGenerationPromptResponse.objects.create(user =user,created_id = created_id ,
+                                                        generated_image = image_file,
+                                                        image_generator_prompt = inst)                                                                                    
+        return inst
+    
+    
+
+ 
+ 

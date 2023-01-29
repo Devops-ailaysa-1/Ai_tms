@@ -3,7 +3,7 @@ from ai_auth.models import AiUser
 import os
 from ai_workspace.models import MyDocuments
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
-                              PromptSubCategories,PromptTones,ModelGPTName,AiCustomize)
+                              PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution)
 
 class TokenUsage(models.Model):
     user_input_token = models.CharField(max_length=10, null=True, blank=True)
@@ -104,3 +104,33 @@ class AiPromptCustomize(models.Model):
 #     prompt_mt = models.TextField(null=True, blank=True)
 #     credits_used = models.IntegerField(null=True, blank=True)
 #     result_url = models.TextField(null=True, blank=True) 
+
+ 
+
+
+def user_directory_path_image_gen_result(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation_result",filename)
+
+ # document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
+class ImageGeneratorPrompt(models.Model):
+    prompt = models.TextField(null=True, blank=True)
+    prompt_mt = models.TextField(null=True, blank=True)
+    image_resolution = models.ForeignKey(ImageGeneratorResolution , on_delete= models.CASCADE)
+    credits_used = models.IntegerField(null=True, blank=True)
+    no_of_image = models.IntegerField(null=True, blank=True)
+ 
+class ImageGenerationPromptResponse(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    created_id = models.CharField(max_length = 50, null=True, blank=True)
+    generated_image =models.FileField(upload_to=user_directory_path_image_gen_result,blank=False, null=False)
+    image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt , on_delete= models.CASCADE,related_name='gen_img')
+
+
+
+# class AiImageGeneration(models.Model):
+#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+#     image_generator_prompt_response = models.ForeignKey(to=ImageGenerationPromptResponse, on_delete = models.CASCADE)
+
+
+
+   

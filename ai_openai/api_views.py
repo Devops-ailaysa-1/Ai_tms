@@ -1,10 +1,11 @@
-from .models import AiPrompt ,AiPromptResult, AiPromptCustomize
+from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
-                                     AiPromptGetSerializer,AiPromptCustomizeSerializer)
+                                     AiPromptGetSerializer,AiPromptCustomizeSerializer,
+                                     ImageGeneratorPromptSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -46,6 +47,28 @@ class AiPromptViewset(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors)
 
+
+
+class ImageGeneratorPromptViewset(viewsets.ViewSet):
+    model = ImageGeneratorPrompt
+    
+    def get(self, request):
+        query_set = self.model.objects.all()
+        serializer = ImageGeneratorPromptSerializer(query_set ,many =True)
+        return Response(serializer.data)
+    
+    def create(self,request):
+        serializer = ImageGeneratorPromptSerializer(data=request.POST.dict() ,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+        
+        
+        
+    
+    
+    
 
 class PromptFilter(django_filters.FilterSet):
     prompt = django_filters.CharFilter(field_name='description',lookup_expr='icontains')
@@ -178,7 +201,8 @@ def history_delete(request):
 @permission_classes([IsAuthenticated])
 def image_gen(request):
     prompt = request.POST.get('prompt')
-    res = get_prompt_image_generations(prompt=prompt.strip(),size='256x256',n=1)
+    img_resolution = request.POST.get('img_resolution')
+    res = get_prompt_image_generations(prompt=prompt.strip(),size=img_resolution,n=1)
     if 'data' in res:
         res_url = res["data"]
         return Response({'gen_image_url': res_url},status=200) 
@@ -203,6 +227,11 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
     def get_queryset(self):
         queryset = AiPromptCustomize.objects.filter(user=self.request.user)
         return queryset
+    
+    
+
+
+    
 
 
 

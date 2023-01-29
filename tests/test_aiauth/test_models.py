@@ -18,6 +18,8 @@ import django.apps
 #     with pytest.raises(ForbiddenError):
 #         oso.authorize(contributor, "read", repo)
 
+
+
 class TestAllModelOwnerPermission:
     def test_ai_auth_models(user):
         if user != None:
@@ -25,3 +27,5 @@ class TestAllModelOwnerPermission:
 
     def test_ai_workspace_models():
         pass
+    
+    

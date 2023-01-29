@@ -3,7 +3,7 @@ from . import api_views
 from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register(r'aiprompt',api_views.AiPromptViewset,basename='ai_prompt')
-
+router.register(r'ai_image_gen',api_views.ImageGeneratorPromptViewset,basename='ai_image_gen')
 urlpatterns = router.urls
 
 urlpatterns += [
