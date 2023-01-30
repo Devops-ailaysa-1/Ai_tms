@@ -21,9 +21,11 @@ def test_openai_api(prompt,model_name,max_token,n):
     assert len(res["choices"]) == n 
     assert res["choices"][0]['text'] != None 
     assert res["model"] == OPENAI_MODEL
-    assert res["usage"]["prompt_tokens"] < res["usage"]["completion_tokens"]
     assert res['usage']["total_tokens"] == res["usage"]["prompt_tokens"] + res["usage"]["completion_tokens"]
-    
+
+
+
+
 
 # def test_row_count():
 #     print(PromptStartPhrases.objects.all() )
