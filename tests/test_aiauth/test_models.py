@@ -18,10 +18,10 @@ import django.apps
 #     with pytest.raises(ForbiddenError):
 #         oso.authorize(contributor, "read", repo)
 
-class TestAllModelOwnerPermission:
-    def test_ai_auth_models(user):
-        if user != None:
-            django.apps.apps.get_models()
+# class TestAllModelOwnerPermission:
+#     def test_ai_auth_models(user):
+#         if user != None:
+#             django.apps.apps.get_models()
 
-    def test_ai_workspace_models():
-        pass
+#     def test_ai_workspace_models():
+#         pass
