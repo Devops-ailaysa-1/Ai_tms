@@ -1183,8 +1183,10 @@ class TaskView(APIView):
             print("assigned")
             return Response(data={"Message":"Task is assigned.Unassign and Delete"},status=400)
         else:
-            print("Not assigned")
-            task.delete()
+            if len(task.job.project.get_tasks) == 1:
+                task.job.project.delete()
+            else:
+                task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
