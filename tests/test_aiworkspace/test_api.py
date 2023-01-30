@@ -1,6 +1,7 @@
 from tests import load_files,get_test_file,get_test_file_path
-import pytest
+import pytest,os
 from django.core.files.uploadedfile import SimpleUploadedFile
+from pathlib import Path
 
 # @pytest.mark.run1
 # @pytest.mark.django_db
@@ -35,18 +36,18 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 def test_create_project(api_client):
     endpoint = '/workspace/project/quick/setup/'
     client = api_client()
-    file = get_test_file_path("test-en.txt")
-    tmp_file = SimpleUploadedFile(
-                    "file.jpg", "file_content", content_type="image/jpg")
+    #file = get_test_file_path("test-en.txt")
+    # tmp_file = SimpleUploadedFile(
+    #                 "file.jpg", "file_content", content_type="image/jpg")
     payload = {"source_language":17,"target_languages":77,"project_name":"express test","mt_engine":1,
-    "files":get_test_file("test-en.txt").read()}
+    "files":('test-en.txt', open('tests/files/test-en.txt', 'rb'))}
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {pytest.access_token}")
 
     response =client.post(
     endpoint,
     payload,
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     print(response.content)
     print(response.json())
     # assert response.json()['Res'][0]['task_id'] != None

@@ -71,12 +71,12 @@ def django_db_setup(django_db_setup, django_db_blocker):
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         call_command('loaddata', 'fixtures/aistaff.json')
-        # call_command('loaddata', 'fixtures/aiuser_re.json')
-        # call_command('loaddata', 'fixtures/stripe_customer.json')
-        # call_command('loaddata', 'fixtures/userattribute.json')
-        # call_command('loaddata', 'fixtures/emailaddress.json')
-        # call_command('loaddata', 'fixtures/steps.json')
-        # call_command('loaddata', 'fixtures/user_credits.json')
+        call_command('loaddata', 'fixtures/aiuser_re.json')
+        call_command('loaddata', 'fixtures/stripe_customer.json')
+        call_command('loaddata', 'fixtures/userattribute.json')
+        call_command('loaddata', 'fixtures/emailaddress.json')
+        call_command('loaddata', 'fixtures/steps.json')
+        call_command('loaddata', 'fixtures/user_credits.json')
 
         
 # @pytest.fixture
