@@ -11,7 +11,8 @@ def test_sqrt():
    
 @pytest.mark.parametrize("prompt,model_name,max_token,n",[
     ('this is test1',OPENAI_MODEL,256,1) ,
-    ('this is test2',OPENAI_MODEL,126,3)
+    ('this is test2',OPENAI_MODEL,126,3) ,
+    ('this is test3',OPENAI_MODEL,56,2)
     ])   
 def test_openai_api(prompt,model_name,max_token,n):
     res =  get_prompt(prompt='this is test' ,model_name=model_name , max_token=max_token ,n=n )
