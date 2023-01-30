@@ -126,12 +126,16 @@ class TimezonesSerializer(serializers.ModelSerializer):
         return t_zone
 
 class LanguagesSerializer(serializers.ModelSerializer):
+    locale_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Languages
 
-        fields = ('id', 'language','created_at','updated_at')
+        fields = ('id', 'language','locale_code','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
+
+    def get_locale_code(self,obj):
+        return obj.locale.first().locale_code
 
     def create(self, validated_data):
         request = self.context['request']
