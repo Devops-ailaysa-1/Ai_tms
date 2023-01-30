@@ -878,7 +878,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def retrieve(self, request, pk, format=None):
         #print("%%%%")
         tasks = self.get_tasks_by_projectid(pk=pk)
-        tasks = authorize_list(tasks,"read",self.request.user)
+        #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
         return Response(serlzr.data, status=200)
 
