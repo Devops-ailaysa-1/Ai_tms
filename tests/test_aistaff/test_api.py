@@ -115,7 +115,7 @@ class TestSignin:
             format='json'
         )
         data= response.json()
-        print(data)
+        print("Data--------------->",data)
         assert response.status_code == 200
         assert data.get('access_token',None) != None,"access token not found"
         if data.get('access_token',None):

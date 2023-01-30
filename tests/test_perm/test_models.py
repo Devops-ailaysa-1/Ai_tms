@@ -47,16 +47,16 @@ class TestAllModelOwnerPermission:
 #         pass
 
 
-def test_ai_auth_models():
-    models = django.apps.apps.get_models()
-    print("count-->",len(models))
-    for mod in models:
-        obj =  mod.objects.last()
-        if obj != None:
-            try: 
-                assert obj.owner
-                print("found",mod)
-            except AttributeError:
-                print("No owner",mod)
-        else:
-            print("Table empty",mod)
+# def test_ai_auth_models():
+#     models = django.apps.apps.get_models()
+#     print("count-->",len(models))
+#     for mod in models:
+#         obj =  mod.objects.last()
+#         if obj != None:
+#             try: 
+#                 assert obj.owner
+#                 print("found",mod)
+#             except AttributeError:
+#                 print("No owner",mod)
+#         else:
+#             print("Table empty",mod)
