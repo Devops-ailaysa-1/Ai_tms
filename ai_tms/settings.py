@@ -21,7 +21,9 @@ import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 import logging.config
 import yaml
-
+import newrelic.agent
+from newrelic.agent import NewRelicContextFormatter
+newrelic.agent.initialize('newrelic.ini')
 # from fluent import sender
 # from fluent import event
 # sender.setup('django', host='fluentd', port=24224)
@@ -341,9 +343,17 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-    ]
-
+    ],
+    # 'DEFAULT_THROTTLE_CLASSES': [
+    # 'rest_framework.throttling.AnonRateThrottle',
+    # 'rest_framework.throttling.UserRateThrottle'
+    # ],
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'anon': '50/minute',
+    #     'user': '100/minute'
+    # }
 }
+
 
 # SOCIALACCOUNT_ADAPTER="ai_auth.ai_adapter.SocialAdapter"
 
@@ -584,6 +594,10 @@ LOGGING = {
             'format' : '{levelname} {asctime} {pathname} {message}',
             'style' : '{',
         },
+        'newrelic_formatter': {
+            '()': NewRelicContextFormatter,
+        },
+
         # 'fluent_fmt':{
         # '()': 'fluent.handler.FluentRecordFormatter',
         # 'format':{
@@ -601,7 +615,7 @@ LOGGING = {
         # },
 
         'django' : {
-            'handlers' : ['file_prod',],
+            'handlers' : ['file_prod','newrelic'],
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'propogate' : True,
         },
@@ -646,6 +660,11 @@ LOGGING = {
             'class' : 'logging.FileHandler',
             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
             'formatter' : 'dev_formatter',
+        },
+        'newrelic': {
+            'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
+            'class': 'logging.StreamHandler',
+            'formatter' : 'newrelic_formatter',
         },
     #     'fluentinfo':{
     #         'level':'INFO',

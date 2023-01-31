@@ -218,4 +218,4 @@ pypandoc==1.10
 googletrans==3.1.0a0
 django-simple-history==3.2.0
 django-cacheops==6.1
-
+newrelic
