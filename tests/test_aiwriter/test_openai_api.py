@@ -2,14 +2,15 @@ import pytest
 import math
 from ai_tms.settings import  OPENAI_MODEL
 from ai_openai.utils import get_prompt
-
+import requests
 import json
 import pytest
 from pathlib import Path
 from django.urls import reverse
-from ai_staff.models import PromptStartPhrases ,PromptSubCategories , PromptTones , PromptCategories
+from ai_staff.models import PromptStartPhrases ,PromptSubCategories , PromptTones , PromptCategories ,AiCustomize
+from rest_framework.test import APIClient
+client =  APIClient()
 
- 
 @pytest.mark.parametrize("prompt,model_name,max_token,n",[
     ('A Girl Like the Moon',OPENAI_MODEL,256,1) ,
     ('The Moon as a Face',OPENAI_MODEL,126,3) ,
@@ -25,30 +26,13 @@ def test_openai_api(prompt,model_name,max_token,n):
     assert res['usage']["total_tokens"] == res["usage"]["prompt_tokens"] + res["usage"]["completion_tokens"]
 
 
-
- 
-
-@pytest.fixture
-def json_data(datadir):
-    file_path = datadir / "prompt_start_phrases.json"
-    with open(file_path, "r") as f:
-        return json.load(f)
-
-@pytest.fixture
-def load_data_to_db(json_data, django_db_reset_sequences):
-    for item in json_data:
-        PromptStartPhrases.objects.create(**item)
-
-
-
-
 @pytest.mark.django_db
 def test_row_count_promptstartphrases():
-    assert PromptStartPhrases.objects.all().nocache().count() ==  58 
+    assert PromptStartPhrases.objects.all().nocache().count() ==  59 
     
 @pytest.mark.django_db
 def test_row_count_promptsubcategories():
-    assert PromptSubCategories.objects.all().nocache().count() == 59
+    assert PromptSubCategories.objects.all().nocache().count() == 60
     
 
 @pytest.mark.django_db
@@ -57,9 +41,33 @@ def test_row_count_prompt_tones():
 
 @pytest.mark.django_db
 def test_row_count_promptcategories():
-     assert PromptCategories.objects.all().nocache().count() == 9
+     assert PromptCategories.objects.all().nocache().count() == 8
      
+@pytest.mark.django_db
+def test_row_count_aicustomize():
+     assert AiCustomize.objects.all().nocache().count() == 19
 
 
+
+
+@pytest.mark.django_db
+def test_openai_api(client):
     
+    payload = {
+        # 'description':description,
+        # 'model_gpt_name': model_gpt_name,
+        # 'catagories':catagories,
+        # 'sub_catagories':sub_catagories,
+        # 'source_prompt_lang':source_prompt_lang,
+        # 'response_copies':response_copies,
+        # 'keywords':keywords,
+        # 'response_charecter_limit':response_charecter_limit,
+        # 'get_result_in':get_result_in
+        
+        
+    }
     
+    response = client.post('/openai/aiprompt/' , payload = payload)
+    assert response.status_code == 200
+ 
+ 
