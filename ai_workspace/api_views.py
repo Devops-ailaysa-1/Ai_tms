@@ -5,7 +5,7 @@ import logging
 import mimetypes
 import os
 import shutil
-import zipfile
+import zipfile,itertools
 from datetime import datetime
 from glob import glob
 from urllib.parse import urlparse
@@ -20,7 +20,7 @@ from django.core.files import File as DJFile
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from django.http import Http404, HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, get_list_or_404
@@ -2881,7 +2881,7 @@ from django.db.models import Subquery
 def default_proj_detail(request):
     last_pr = Project.objects.filter(ai_user = request.user).last()
     if last_pr:
-        query = Project.objects.filter(ai_user=request.user).exclude(project_jobs_set__target_language=None).order_by('-id')[:5]
+        query =  Project.objects.filter(ai_user=request.user).exclude(project_jobs_set__target_language=None).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gt = 1)[:20]
         out = []
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
@@ -2896,7 +2896,8 @@ def default_proj_detail(request):
         #final_list = list(set().union(source_langs,target_langs))
         #source = last_pr.project_jobs_set.first().source_language_id
         mt_engine =last_pr.mt_engine_id
-        return JsonResponse({'recent_pairs':out,'mt_engine_id':mt_engine})
+        out_1 = [a[0] for a in itertools.groupby(out)][:5]
+        return JsonResponse({'recent_pairs':out_1,'mt_engine_id':mt_engine})
     else:
         return JsonResponse({'recent_pairs':[],'mt_engine_id':None})
 
