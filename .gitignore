@@ -115,3 +115,6 @@ ai_workspace_okapi/dummy.txt
 my_env
 req_ilango.txt
 .coverage
+*.yml
+*.ini
+*.dockerfile

@@ -7,6 +7,9 @@ from ai_tms.settings import OPENAI_API_KEY ,OPENAI_MODEL
 from ai_staff.models import Languages
 from django.db.models import Q
 import math
+import requests
+from io import BytesIO
+from PIL import Image
 logger = logging.getLogger('django')
 
 
@@ -83,9 +86,18 @@ def get_prompt_edit(input_text ,instruction ):
     return response
     
 #DALLE
-def get_prompt_image_generations(prompt,size,n):
+def get_prompt_image_generations(prompt,image_resolution,no_of_image):
     try:
-        response = openai.Image.create(prompt=prompt,n=n,size=size)
+        response = openai.Image.create(prompt=prompt,n=no_of_image,size=image_resolution) 
     except:
         response = {'error':"Your requested prompt was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system."}
     return response
+
+
+def get_img_content_from_openai_url(image_url):
+    r = requests.get(image_url)
+    pil_img = Image.open(BytesIO(r.content))
+    img_byte_arr = BytesIO()
+    pil_img.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+    return img_byte_arr

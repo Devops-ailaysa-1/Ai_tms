@@ -1,10 +1,11 @@
-from .models import AiPrompt ,AiPromptResult, AiPromptCustomize
+from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt , InstantTranslation
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
-                                     AiPromptGetSerializer,AiPromptCustomizeSerializer)
+                                     AiPromptGetSerializer,AiPromptCustomizeSerializer,
+                                     ImageGeneratorPromptSerializer ,InstantTranslationSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -47,6 +48,22 @@ class AiPromptViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
 
+
+class ImageGeneratorPromptViewset(viewsets.ViewSet):
+    model = ImageGeneratorPrompt
+    
+    def get(self, request):
+        query_set = self.model.objects.all()
+        serializer = ImageGeneratorPromptSerializer(query_set ,many =True)
+        return Response(serializer.data)
+    
+    def create(self,request):
+        serializer = ImageGeneratorPromptSerializer(data=request.POST.dict() ,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+        
 class PromptFilter(django_filters.FilterSet):
     prompt = django_filters.CharFilter(field_name='description',lookup_expr='icontains')
     source = django_filters.CharFilter(field_name='source_prompt_lang__language',lookup_expr='icontains')
@@ -104,6 +121,8 @@ def customize_response(customize ,user_text,tone,used_tokens):
     else:
         total_tokens = 0
         prompt = None
+        print("user_text" , user_text)
+        print("instruction" , customize.instruct)
         response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
     return response,total_tokens,prompt
     
@@ -178,15 +197,13 @@ def history_delete(request):
 @permission_classes([IsAuthenticated])
 def image_gen(request):
     prompt = request.POST.get('prompt')
-    res = get_prompt_image_generations(prompt=prompt.strip(),size='256x256',n=1)
+    img_resolution = request.POST.get('img_resolution')
+    res = get_prompt_image_generations(prompt=prompt.strip(),size=img_resolution,n=1)
     if 'data' in res:
         res_url = res["data"]
         return Response({'gen_image_url': res_url},status=200) 
     else:
         return Response({'gen_image_url':res}, status=400 )
-
-
-    
 
 
 class AiPromptCustomizeViewset(generics.ListAPIView):
@@ -203,7 +220,83 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
     def get_queryset(self):
         queryset = AiPromptCustomize.objects.filter(user=self.request.user)
         return queryset
+    
+    
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def instant_translation_custom(request):
+    user = request.user
+    instant_text = request.POST.get('instant_text')
+    source_lang = request.POST.get('source_lang')
+    target_lang = request.POST.get('target_lang')
+    customize_id = request.POST.get('customize_id')
+    customize = AiCustomize.objects.get(id =customize_id)
+    target_lang_code = Languages.objects.get(id = target_lang ).locale.first().locale_code
+    total_tokens = 0
+    if target_lang_code != 'en':
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=target_lang_code,target_lang='en')
+        if initial_credit > consumable_credits_user_text:
+            user_insta_text_mt_en = get_translation(mt_engine_id=1 , source_string = instant_text,
+                            source_lang_code=target_lang_code , target_lang_code='en',user_id=user.id)
+            
+            total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
+            tone=1
+            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
+            result_txt = response['choices'][0]['text']
+            result_txt = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
+                              source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
+            total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
+            
+        else:
+            return  Response({'msg':'Insufficient Credits'},status=400)
+    
+    else:##english
+        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
+        result_txt = response['choices'][0]['text']
+    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+    inst_data = {'user':request.user.id ,'instant_text':instant_text, 'source_lang':source_lang,
+                 'target_lang':target_lang , 'customize':customize_id ,'insta_usage':total_tokens,
+                 'instant_result':result_txt}
+    print("inst_data--->",inst_data)
+    serializer = InstantTranslationSerializer(data=inst_data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors)
+        
+        # initial_credit = user.credit_balance.get("total_left")
+        # consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang='en')
+        # if initial_credit > consumable_credits_user_text:
+        #     user_insta_text_mt_en = get_translation(mt_engine_id=1 , source_string = instant_text,
+        #                     source_lang_code=source_lang_code , target_lang_code='en',user_id=user.id)
+            
+        #     total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=source_lang_code,target_lang='en')
+        #     tone=1
+        #     response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
+        #     result_txt = response['choices'][0]['text']
+        #     txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
+        #                                 source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
+            
+        #     total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=target_lang_code)
+            
+        # else:
+        #     return  Response({'msg':'Insufficient Credits'},status=400)
+        
+        
+        
+        
 
+# class InstantTranslationViewset(viewsets.ViewSet):
+#     model = InstantTranslation
+    
+#     def create(self,request):
+#         serializer = InstantTranslationSerializer(data=request.POST.dict(),context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
+        
 
 
 
