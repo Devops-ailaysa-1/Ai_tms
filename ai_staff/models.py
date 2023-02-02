@@ -451,6 +451,17 @@ class PromptFields(models.Model):
     def __str__(self) -> str:
         return self.fields 
 
+
+class ImageGeneratorResolution(models.Model):
+    image_resolution = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.image_resolution 
+    
+    
+
  
 class PromptStartPhrases(models.Model):
     sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
