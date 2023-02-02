@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution  )
+                    ImageGeneratorResolution,InstantTranslation )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
@@ -242,6 +242,13 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
         return inst
     
     
-
+class InstantTranslationSerializer(serializers.ModelSerializer):
+    instant_result = serializers.CharField(required = False)
+    class Meta:
+        model = InstantTranslation
+        fields = '__all__'
+        
+ 
+        
  
  

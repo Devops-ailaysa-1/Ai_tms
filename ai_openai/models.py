@@ -127,10 +127,20 @@ class ImageGenerationPromptResponse(models.Model):
 
 
 
-# class AiImageGeneration(models.Model):
-#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-#     image_generator_prompt_response = models.ForeignKey(to=ImageGenerationPromptResponse, on_delete = models.CASCADE)
-
+class InstantTranslation(models.Model):
+    # InstantChoice=[
+    #     ('Shorten' , 'Shorten'),
+    #     ('Simplify' ,'Simplify')
+    # ]
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    instant_text = models.CharField(max_length=800)
+    source_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='insta_trans_src_lang')
+    target_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='insta_trans_tar_lang') 
+    # instance_choice = models.CharField(max_length=30, choices=InstantChoice)
+    customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'insta_cust')
+    insta_usage = models.IntegerField()
+    instant_result = models.CharField(max_length=800)
+    
 
 
    
