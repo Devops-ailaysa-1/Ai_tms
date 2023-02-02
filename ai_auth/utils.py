@@ -121,6 +121,7 @@ def record_usage(provider,service,uid,email,usage):
 	if uid == None and email == None:
 		uid = "Anonymous"
 		email= "Anonymous"
+	usage_obj = None
 	try:
 		service_obj = ApiServiceList.objects.get(provider__name=provider,service__name=service)
 		usage_obj = ApiUsage.objects.get(uid=uid,service=service_obj)
@@ -128,6 +129,7 @@ def record_usage(provider,service,uid,email,usage):
 		usage_obj =	ApiUsage.objects.create(uid=uid,email=email,service = service_obj)
 	except ApiServiceList.DoesNotExist:
 		logger.error("Api servicelist not found")
-	usage_obj.usage = usage_obj.usage + usage
-	usage_obj.save()
+	if usage_obj != None:
+		usage_obj.usage = usage_obj.usage + usage
+		usage_obj.save()
 
