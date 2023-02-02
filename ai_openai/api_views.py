@@ -64,12 +64,6 @@ class ImageGeneratorPromptViewset(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors)
         
-        
-        
-
-    
-    
-
 class PromptFilter(django_filters.FilterSet):
     prompt = django_filters.CharFilter(field_name='description',lookup_expr='icontains')
     source = django_filters.CharFilter(field_name='source_prompt_lang__language',lookup_expr='icontains')
@@ -110,10 +104,6 @@ class AiPromptResultViewset(generics.ListAPIView):
 
 def customize_response(customize ,user_text,tone,used_tokens):
     user_text = user_text.strip()
-    print("customize_fun--->", customize)
-    print("type--->" , type(customize))
-    print("cus.prompt",customize.prompt)
-    print("customize.customize",customize.customize)
     if customize.prompt or customize.customize == "Text completion":
         if customize.customize == "Text completion":
             tone_ = PromptTones.objects.get(id=tone).tone
