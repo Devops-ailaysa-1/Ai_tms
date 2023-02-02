@@ -159,7 +159,7 @@ INSTALLED_APPS = [
     'django_oso',
     #"ai_tm_management",
     "ai_tm",
-    # 'dbbackup',
+    'dbbackup',
     # 'django_q',
     'ai_exportpdf',
     'ai_openai',
@@ -534,7 +534,7 @@ CACHEOPS = {
 
     # Cache all queries to Permission
     # 'all' is an alias for {'get', 'fetch', 'count', 'aggregate', 'exists'}
-    # 'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
+    'ai_staff.*': {'ops': 'all', 'timeout': 60*60},
 
 
     # # And since ops is empty by default you can rewrite last line as:
@@ -544,7 +544,7 @@ CACHEOPS = {
     # #       you might want to only register whatever you cache and dependencies.
 
     # # Finally you can explicitely forbid even manual caching with:
-    'some_app.*': None,
+    # 'some_app.*': None,
 }
 
 CHANNEL_LAYERS = {
