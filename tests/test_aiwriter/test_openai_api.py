@@ -26,6 +26,9 @@ def test_openai_api(prompt,model_name,max_token,n):
     assert res['usage']["total_tokens"] == res["usage"]["prompt_tokens"] + res["usage"]["completion_tokens"]
 
 
+
+
+
 @pytest.mark.django_db
 def test_row_count_promptstartphrases():
     assert PromptStartPhrases.objects.all().nocache().count() ==  59 
@@ -68,6 +71,7 @@ def test_openai_api(client):
     }
     
     response = client.post('/openai/aiprompt/' , payload = payload)
+    print(response.json())
     assert response.status_code == 200
  
  

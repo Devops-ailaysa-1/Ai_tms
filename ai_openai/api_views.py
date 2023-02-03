@@ -25,9 +25,9 @@ from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
-
-
 from string import punctuation
+
+
 class AiPromptViewset(viewsets.ViewSet):
     model = AiPrompt
 
@@ -41,6 +41,7 @@ class AiPromptViewset(viewsets.ViewSet):
         targets = request.POST.getlist('get_result_in')
         description = request.POST.get('description').rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
+        print(request.POST.dict())
         serializer = AiPromptSerializer(data={**request.POST.dict(),'description':description,'user':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
         if serializer.is_valid():
             serializer.save()
@@ -121,8 +122,6 @@ def customize_response(customize ,user_text,tone,used_tokens):
     else:
         total_tokens = 0
         prompt = None
-        print("user_text" , user_text)
-        print("instruction" , customize.instruct)
         response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
     return response,total_tokens,prompt
     

@@ -19,6 +19,17 @@ class AiPromptSerializer(serializers.ModelSerializer):
             'response_charecter_limit','targets')
 
     
+    # def to_internal_value(self, data):
+    #     data = super().to_internal_value(data)
+    #     data['model_gpt_name'] = int(data['model_gpt_name'])
+    #     data['catagories'] = int(data['catagories'])
+    #     data['sub_catagories'] = int(data['sub_catagories'])
+    #     data['source_prompt_lang'] = int(data['source_prompt_lang'])
+    #     data['Tone'] = int(data['Tone'])
+    #     data['response_copies'] = int(data['response_copies'])
+    #     return data
+    
+    
     def prompt_generation(self,ins,obj,ai_langs,targets):
         instance = AiPrompt.objects.get(id=ins)
         lang = instance.source_prompt_lang_id 
@@ -111,8 +122,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
                 consumable_credit = get_consumable_credits_for_text(i,None,source_lang)
                 credit+=consumable_credit
         return credit
-
-        
 
     def create(self, validated_data):
         openai_available_langs = [17]

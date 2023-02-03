@@ -11,17 +11,14 @@ import requests
 from io import BytesIO
 from PIL import Image
 logger = logging.getLogger('django')
-
-
-
-
+import openai
+openai.api_key = os.getenv('OPENAI_API_KEY')
 def ceil_round_off(token_len):
     import math
     return math.ceil(len(token_len)/4)
     
 
-import openai
-openai.api_key = os.getenv('OPENAI_API_KEY')
+
 
 
     
