@@ -117,7 +117,7 @@ class ConversionPortableDoc(APIView):
         initial_credit = user.credit_balance.get("total_left")
         for id in ids:
             pdf_path = Ai_PdfUpload.objects.get(id = int(id)).pdf_file.path
-            file_format,page_length = file_pdf_check(pdf_path)
+            file_format,page_length = file_pdf_check(pdf_path,id)
             #pdf consuming credits
             consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
             if initial_credit > consumable_credits:
@@ -158,7 +158,7 @@ def project_pdf_conversion(request,task_id):
     user = task_obj.job.project.ai_user
     file_obj = ContentFile(task_obj.file.file.read(),task_obj.file.filename)
     initial_credit = user.credit_balance.get("total_left")
-    file_format,page_length = file_pdf_check(task_obj.file.file.path)
+    file_format,page_length = file_pdf_check(task_obj.file.file.path,id)
 
     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
     if initial_credit > consumable_credits:

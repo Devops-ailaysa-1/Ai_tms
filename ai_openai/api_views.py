@@ -41,14 +41,12 @@ class AiPromptViewset(viewsets.ViewSet):
         targets = request.POST.getlist('get_result_in')
         description = request.POST.get('description').rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
-        print(request.POST.dict())
+     
         serializer = AiPromptSerializer(data={**request.POST.dict(),'description':description,'user':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
-
-
 
 class ImageGeneratorPromptViewset(viewsets.ViewSet):
     model = ImageGeneratorPrompt
@@ -134,11 +132,15 @@ def customize_text_openai(request):
     customize_id = request.POST.get('customize_id')
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
+    language =  request.POST.get('language',None)
     customize = AiCustomize.objects.get(id =customize_id)
     detector = Translator()
     total_tokens = 0
     user_text_mt_en,txt_generated = None,None
-    lang = detector.detect(user_text).lang
+    if language:
+        lang = Languages.objects.get(id=language).locale.first().locale_code
+    else:
+        lang = detector.detect(user_text).lang
     user_text_lang = LanguagesLocale.objects.filter(locale_code=lang).first().language.id
     if lang!= 'en':
         initial_credit = user.credit_balance.get("total_left")

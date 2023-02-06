@@ -20,16 +20,19 @@ class AiPromptSerializer(serializers.ModelSerializer):
 
     
     # def to_internal_value(self, data):
+    #     print("to_internal_value")
+    #     print("before",type(data['catagories']))
     #     data = super().to_internal_value(data)
-    #     data['model_gpt_name'] = int(data['model_gpt_name'])
+    # #     data['model_gpt_name'] = int(data['model_gpt_name'])
     #     data['catagories'] = int(data['catagories'])
-    #     data['sub_catagories'] = int(data['sub_catagories'])
-    #     data['source_prompt_lang'] = int(data['source_prompt_lang'])
-    #     data['Tone'] = int(data['Tone'])
-    #     data['response_copies'] = int(data['response_copies'])
+    #     print("after",data)
+    # #     data['sub_catagories'] = int(data['sub_catagories'])
+    # #     data['source_prompt_lang'] = int(data['source_prompt_lang'])
+    # #     data['Tone'] = int(data['Tone'])
+    # #     data['response_copies'] = int(data['response_copies'])
     #     return data
-    
-    
+
+  
     def prompt_generation(self,ins,obj,ai_langs,targets):
         instance = AiPrompt.objects.get(id=ins)
         lang = instance.source_prompt_lang_id 
@@ -124,6 +127,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         return credit
 
     def create(self, validated_data):
+        
         openai_available_langs = [17]
         targets = validated_data.pop('targets',None)
         instance = AiPrompt.objects.create(**validated_data)
