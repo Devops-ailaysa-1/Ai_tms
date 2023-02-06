@@ -25,9 +25,9 @@ from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
-
-
 from string import punctuation
+
+
 class AiPromptViewset(viewsets.ViewSet):
     model = AiPrompt
 
@@ -41,13 +41,12 @@ class AiPromptViewset(viewsets.ViewSet):
         targets = request.POST.getlist('get_result_in')
         description = request.POST.get('description').rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
+     
         serializer = AiPromptSerializer(data={**request.POST.dict(),'description':description,'user':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
-
-
 
 class ImageGeneratorPromptViewset(viewsets.ViewSet):
     model = ImageGeneratorPrompt
@@ -121,8 +120,6 @@ def customize_response(customize ,user_text,tone,used_tokens):
     else:
         total_tokens = 0
         prompt = None
-        print("user_text" , user_text)
-        print("instruction" , customize.instruct)
         response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
     return response,total_tokens,prompt
     
@@ -135,11 +132,15 @@ def customize_text_openai(request):
     customize_id = request.POST.get('customize_id')
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
+    language =  request.POST.get('language',None)
     customize = AiCustomize.objects.get(id =customize_id)
     detector = Translator()
     total_tokens = 0
     user_text_mt_en,txt_generated = None,None
-    lang = detector.detect(user_text).lang
+    if language:
+        lang = Languages.objects.get(id=language).locale.first().locale_code
+    else:
+        lang = detector.detect(user_text).lang
     user_text_lang = LanguagesLocale.objects.filter(locale_code=lang).first().language.id
     if lang!= 'en':
         initial_credit = user.credit_balance.get("total_left")
