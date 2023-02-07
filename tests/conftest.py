@@ -77,6 +77,12 @@ def django_db_setup(django_db_setup, django_db_blocker):
         call_command('loaddata', 'fixtures/emailaddress.json')
         call_command('loaddata', 'fixtures/steps.json')
         call_command('loaddata', 'fixtures/user_credits.json')
+        call_command('loaddata', 'fixtures/prompt_categories.json')
+        call_command('loaddata', 'fixtures/prompt_sub_categories.json')
+        call_command('loaddata', 'fixtures/prompt_start_phrases.json')
+        call_command('loaddata', 'fixtures/prompt_tone.json')
+        call_command('loaddata', 'fixtures/ai_customize.json')
+        
 
         
 # @pytest.fixture
