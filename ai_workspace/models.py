@@ -1512,6 +1512,13 @@ class ExpressProjectSrcMTRaw(models.Model):
     mt_raw =models.TextField(null=True,blank=True)
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_raw")
 
+
+class ExpressProjectAIMT(models.Model):
+    express = models.ForeignKey(ExpressProjectDetail, on_delete=models.CASCADE,related_name="express_src_text")
+    source = models.TextField(null=True,blank=True)
+    shortened_mt = models.TextField(null=True,blank=True)
+    simplified_mt = models.TextField(null=True,blank=True)
+    
 # class ExpressProjectTarSegment(models.Model):
 #     src_seg = models.ForeignKey(ExpressProjectSrcSegment,null=True,blank=True,on_delete=models.CASCADE,related_name="exp_src_seg")
 #     tar_text_unit = models.IntegerField()
