@@ -930,14 +930,15 @@ class MT_RawAndTM_View(views.APIView):
             mt_params = self.get_segment_MT_params(segment_id)
             
             if split_check(segment_id):
+                seg = Segment.objects.get(id=segment_id)
+                authorize(request, resource=seg, actor=request.user, action="read")
+            else:
                 seg_id = SplitSegment.objects.get(id=segment_id).get_parent_seg_id
                 seg = Segment.objects.get(id=seg_id)
                 print("entered split check")
                 authorize(request, resource=seg, actor=request.user, action="read")
                 print("pass")
-            else:
-                seg = Segment.objects.get(id=segment_id)
-                authorize(request, resource=seg, actor=request.user, action="read")
+
 
             # For normal and merged segments
             if split_check(segment_id):
