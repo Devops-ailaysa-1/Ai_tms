@@ -57,7 +57,7 @@ from ai_marketplace.models import ChatMessage
 from ai_marketplace.serializers import ThreadSerializer
 from ai_pay.api_views import po_modify
 # from controller.serializer_mapper import serializer_map
-from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines
+from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines,AiCustomize
 #from ai_tm.models import TmxFile
 from ai_workspace import forms as ws_forms
 from ai_workspace.excel_utils import WriteToExcel_lite
@@ -71,7 +71,8 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
     ExpressProjectDetail
 from .models import Task
-from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw
+from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
+                    ExpressProjectAIMT
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -83,7 +84,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
-                          ExpressProjectDetailSerializer,MyDocumentSerializer)
+                          ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
@@ -2663,16 +2664,13 @@ def exp_proj_save(task_id,mt_change):
         rr = exp_obj.filter(src_text_unit=i.src_text_unit)
         for i in rr:
             tar_1 = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first().mt_raw #ExpressProjectSrcMTRaw.objects.get(src_seg = i).mt_raw
-            tar = tar + tar_1
+            tar = tar + tar_1 if tar_1 else ''
         tar = tar + '\n'
-    if mt_change:
-        express_obj.mt_raw = tar.strip('\n')
-        express_obj.save()
-    else:
-        express_obj.mt_raw = tar.strip('\n')
-        express_obj.target_text = tar.strip('\n')
-        express_obj.save()
-    ExpressProjectSrcSegment.objects.filter(task_id = task_id).exclude(version = vers).delete()
+    express_obj.mt_raw = tar.strip('\n')
+    express_obj.target_text = tar.strip('\n')
+    express_obj.save()
+    if mt_change == None:
+        ExpressProjectSrcSegment.objects.filter(task_id = task_id).exclude(version = vers).delete()
     return express_obj
 
 
@@ -2771,28 +2769,35 @@ def task_get_segments(request):
         if initial_credit > consumable_credits:
             res = seg_create(task_id,content)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-            out =[{'task_id':obj.id,"source":content,"mt_raw":res.mt_raw,"target":res.target_text,'project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":res.mt_engine.id if res.mt_engine else obj.job.project.mt_engine.id}]
-            return Response({'Res':out})
+            express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+            ser = ExpressProjectDetailSerializer(express_obj)
+            return Response({'Res':ser.data})
+            # out =[{'task_id':obj.id,"source":content,"mt_raw":res.mt_raw,"target":res.target_text,'project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":res.mt_engine.id if res.mt_engine else obj.job.project.mt_engine.id}]
+            # return Response({'Res':out})
         else:
-            out =[{'task_id':obj.id,"source":content,"mt_raw":None,"target":'','project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":obj.job.project.mt_engine.id}]
+            express_obj.source_text = content
+            express_obj.save()
+            ser = ExpressProjectDetailSerializer(express_obj)
+            out = ser.data
+            #out =[{'task_id':obj.id,"source":content,"mt_raw":None,"target":'','project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":obj.job.project.mt_engine.id}]
             return Response({'msg':'Insufficient Credits','Res':out})
             #return Response({'msg':'Insufficient Credits'},status=400)
     else:
-        out =[{'task_id':obj.id,"source":content,"target":express_obj.target_text,"mt_raw":express_obj.mt_raw,'project_id':obj.job.project.id,'project_name':obj.job.project.project_name,'target_lang_name':obj.job.target_language.language,'job_id':obj.job.id,"target_lang_id":obj.job.target_language.id,"source_lang_id":obj.job.source_language.id,"mt_engine_id":express_obj.mt_engine.id if express_obj.mt_engine else obj.job.project.mt_engine.id}]
-        return Response({'Res':out})
+        ser = ExpressProjectDetailSerializer(express_obj)
+        return Response({'Res':ser.data})
 
 
 
-def seg_get_new_mt(task,mt_engine_id,user):
+def seg_get_new_mt(task,mt_engine_id,user,express_obj):
     latest =  ExpressProjectSrcSegment.objects.filter(task=task).last().version
     for i in ExpressProjectSrcSegment.objects.filter(task=task,version=latest):
-        mt_obj = i.first().express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first() 
+        mt_obj = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first() 
         if not mt_obj:
             consumable_credit = get_consumable_credits_for_text(i.src_segment,None,task.job.source_language_code)
-            tar = get_translation(mt_engine_id=mt_engine_id,source_string = i.src_segment ,source_lang_code=i.task.job.source_language_code , target_lang_code=i.task.job.target_language_code,user_id=i.task.job.project.ai_user.id)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+            tar = get_translation(express_obj.mt_engine.id,i.src_segment ,i.task.job.source_language_code,i.task.job.target_language_code,i.task.job.project.ai_user.id)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credit)
             ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=mt_engine_id)
-    exp_proj_save(task_id,True)
+    exp_proj_save(task.id,True)
     print("MtChangeDone")
 
 import difflib
@@ -2801,6 +2806,8 @@ import difflib
 def task_segments_save(request):
     task_id = request.POST.get('task_id')
     target_text = request.POST.get('target_text')
+    simplified_text = request.POST.get('simplified_text')
+    shortened_text = request.POST.get('shortened_text')
     mt_engine_id = request.POST.get('mt_engine',None)
     source_text = request.POST.get('source_text')
     apply_all = request.POST.get('apply_all')
@@ -2811,6 +2818,14 @@ def task_segments_save(request):
     if target_text:
         express_obj.target_text = target_text
         express_obj.save()
+    elif simplified_text:
+        inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Simplify').last()
+        inst_cust_obj.final_result = simplified_text
+        inst_cust_obj.save()
+    elif shortened_text:
+        inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Shorten').last()
+        inst_cust_obj.final_result = shortened_text
+        inst_cust_obj.save()
     elif ((source_text) or (source_text and mt_engine_id)):
         if mt_engine_id:
             express_obj.mt_engine_id = mt_engine_id
@@ -2830,12 +2845,14 @@ def task_segments_save(request):
                 express_obj.save()
                 seg_edit(express_obj,i.id,source_text)
     elif mt_engine_id:
-            initial_credit = user.credit_balance.get("total_left")
-            consumable_credits = get_consumable_credits_for_text(express_obj.source_text,target_lang=None,source_lang=obj.job.source_language_code)
-            if initial_credit < consumable_credit:
-                return  Response({'msg':'Insufficient Credits'},status=400) 
-            else:
-                seg_get_new_mt(obj,mt_engine_id,user)
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits = get_consumable_credits_for_text(express_obj.source_text,target_lang=None,source_lang=obj.job.source_language_code)
+        if initial_credit < consumable_credits:
+            return  Response({'msg':'Insufficient Credits'},status=400) 
+        else:
+            express_obj.mt_engine_id = mt_engine_id
+            express_obj.save()
+            seg_get_new_mt(obj,mt_engine_id,user,express_obj)
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     ser = ExpressProjectDetailSerializer(express_obj)
     return Response(ser.data)
@@ -3046,7 +3063,93 @@ def default_proj_detail(request):
         return JsonResponse({'recent_pairs':[],'mt_engine_id':None})
 
 
+def express_custom(request,exp_obj,option):
+    from ai_openai.serializers import AiPromptSerializer
+    from ai_openai.api_views import customize_response
+    user = exp_obj.task.job.project.ai_user
+    instant_text = exp_obj.source_text
+    target_lang_code = exp_obj.task.job.target_language_code
+    customize = AiCustomize.objects.get(customize = option)
+    total_tokens = 0
+    if target_lang_code != 'en':
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=target_lang_code,target_lang='en')
+        if initial_credit > consumable_credits_user_text:
+            user_insta_text_mt_en = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = instant_text,
+                            source_lang_code=target_lang_code , target_lang_code='en',user_id=user.id)
+            
+            total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
+            tone=1
+            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
+            result_txt = response['choices'][0]['text']
+            txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
+                            source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
+            total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
+            
+        else:
+            return ({'msg':'Insufficient Credits'})
+    
+    else:##english
+        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
+        result_txt = response['choices'][0]['text']
+    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+    print("MT----->",exp_obj.mt_engine_id)
+    inst_data = {'express':exp_obj.id,'source':instant_text, 'customize':customize.id,
+                'api_result':result_txt.strip() if result_txt else None,'mt_engine':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else None}
+    print("inst_data--->",inst_data)
+    queryset = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize).last()
+    if queryset:
+        serializer = ExpressProjectAIMTSerializer(queryset,data=inst_data,partial=True)
+    else:
+        serializer = ExpressProjectAIMTSerializer(data=inst_data)
+    if serializer.is_valid():
+        serializer.save()
+        return (serializer.data)
+    return (serializer.errors)
 
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def instant_translation_custom(request):
+    from ai_openai.serializers import AiPromptSerializer
+    from ai_openai.api_views import customize_response
+    task = request.POST.get('task')
+    output_list = []
+    option = request.POST.get('option')#Shorten#Simplify
+    customize = AiCustomize.objects.get(customize = option)
+    exp_obj = ExpressProjectDetail.objects.get(task_id = task)
+    queryset = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize).last()
+    if queryset:
+        text1 = exp_obj.source_text
+        text2 = queryset.source
+        output_list = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+']
+        print("OL------>",output_list)
+        print("Mt------>",exp_obj.mt_engine_id) 
+        print("Custom------>",queryset.mt_engine_id)
+        if output_list == []:
+            if exp_obj.mt_engine_id == queryset.mt_engine_id:
+                serializer = ExpressProjectAIMTSerializer(queryset)
+                return Response(serializer.data)
+            else:
+                input_src = queryset.api_result
+                txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = input_src,
+                                source_lang_code=exp_obj.task.job.source_language_code , target_lang_code=exp_obj.task.job.target_language_code,user_id=exp_obj.task.job.project.ai_user_id)
+                serializer = ExpressProjectAIMTSerializer(queryset,data={'final_result':txt_generated,'mt_engine':exp_obj.mt_engine.id},partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
+                return Response(serializer.errors)
+        else:
+            res = express_custom(request,exp_obj,option)
+            if res.get('msg'):return Response(res,status=400)
+            else:return Response(res)
+            
+    elif not queryset:
+        res = express_custom(request,exp_obj,option)
+        if res.get('msg'):return Response(res,status=400)
+        else:return Response(res)
+        
 
 
 # @api_view(['GET'])

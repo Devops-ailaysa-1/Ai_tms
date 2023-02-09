@@ -25,7 +25,7 @@ from django.utils.functional import cached_property
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
-    Currencies, ProjectTypeDetail,AiRoles
+    Currencies, ProjectTypeDetail,AiRoles,AiCustomize
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 from .manager import AilzaManager
@@ -1516,9 +1516,10 @@ class ExpressProjectSrcMTRaw(models.Model):
 class ExpressProjectAIMT(models.Model):
     express = models.ForeignKey(ExpressProjectDetail, on_delete=models.CASCADE,related_name="express_src_text")
     source = models.TextField(null=True,blank=True)
-    shortened_mt = models.TextField(null=True,blank=True)
-    simplified_mt = models.TextField(null=True,blank=True)
-    
+    customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'insta_cust')
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt")
+    api_result = models.TextField(null=True,blank=True)
+    final_result = models.TextField(null=True,blank=True)
 # class ExpressProjectTarSegment(models.Model):
 #     src_seg = models.ForeignKey(ExpressProjectSrcSegment,null=True,blank=True,on_delete=models.CASCADE,related_name="exp_src_seg")
 #     tar_text_unit = models.IntegerField()
