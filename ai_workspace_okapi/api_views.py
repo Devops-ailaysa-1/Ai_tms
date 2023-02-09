@@ -737,7 +737,7 @@ class MT_RawAndTM_View(views.APIView):
 
         # If raw translation is already available and Proj & Task MT engines are same
         if mt_raw:
-            authorize(request, resource=mt_raw, actor=request.user, action="read")
+            # authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
@@ -928,8 +928,16 @@ class MT_RawAndTM_View(views.APIView):
 
             # Getting MT params
             mt_params = self.get_segment_MT_params(segment_id)
-            seg = Segment.objects.get(id=segment_id)
-            authorize(request, resource=seg, actor=request.user, action="read")
+            
+            if split_check(segment_id):
+                seg_id = SplitSegment.objects.get(id=segment_id).get_parent_seg_id
+                seg = Segment.objects.get(id=seg_id)
+                print("entered split check")
+                authorize(request, resource=seg, actor=request.user, action="read")
+                print("pass")
+            else:
+                seg = Segment.objects.get(id=segment_id)
+                authorize(request, resource=seg, actor=request.user, action="read")
 
             # For normal and merged segments
             if split_check(segment_id):
