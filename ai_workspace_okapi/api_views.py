@@ -325,17 +325,18 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
-                print("params_data exists------------>",params_data)
-                print("data---->" ,data)
+                #print("params_data exists------------>",params_data)
+                #print("data---->" ,data)
                 
             else:
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params": json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-                print("params_data------------>",params_data)
+                #print("params_data------------>",params_data)
                 if doc.status_code == 200:
                     doc_data = doc.json()
+                    print("doc_data--------------->",doc_data)
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
 

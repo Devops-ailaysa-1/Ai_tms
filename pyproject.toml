@@ -74,6 +74,7 @@ django-cacheops = "^6.1"
 django-silk = "^5.0.3"
 django-redis = "^5.2.0"
 newrelic = "^8.5.0"
+backoff = "^2.2.1"
 
 [tool.poetry.dev-dependencies]
 

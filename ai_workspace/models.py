@@ -25,7 +25,7 @@ from django.utils.functional import cached_property
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
-    Currencies, ProjectTypeDetail,AiRoles
+    Currencies, ProjectTypeDetail,AiRoles,AiCustomize
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
 from .manager import AilzaManager
@@ -1094,6 +1094,7 @@ def ref_file_upload_path(instance, filename):
 
 class ExpressProjectDetail(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_task_detail")
+    source_text = models.TextField(null=True,blank=True)
     target_text = models.TextField(null=True,blank=True)
     mt_raw =models.TextField(null=True,blank=True)
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_detail")
@@ -1477,3 +1478,50 @@ class AiRoleandStep(models.Model):
         on_delete=models.CASCADE,blank=True, null=True)
     step = models.ForeignKey(Steps, on_delete=models.CASCADE,
                         related_name="step_role")
+
+
+
+# class ExpressProjectSrcTextUnit(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_src_text_unit")
+#     seq_id=models.IntegerField()
+
+# class ExpressProjectTarTextUnit(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_tar_text_unit")
+#     src_text_unit = models.ForeignKey(ExpressProjectSrcTextUnit,null=True,blank=True,on_delete=models.CASCADE,related_name="exp_tar_text_unit")
+#     seq_id=models.IntegerField()
+
+
+# class ExpressProjectDetail(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_task_detail")
+#     source_text = models.TextField(null=True,blank=True)
+#     target_text = models.TextField(null=True,blank=True)
+#     mt_raw =models.TextField(null=True,blank=True)
+#     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_detail")
+
+class ExpressProjectSrcSegment(models.Model):
+    #src_text_unit = models.ForeignKey(ExpressProjectSrcTextUnit, on_delete=models.CASCADE,related_name="exp_src_seg")
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_src_text_unit")
+    src_text_unit = models.IntegerField()
+    src_segment = models.TextField(null=True,blank=True)
+    #tar_segment = models.TextField(null=True,blank=True)
+    seq_id=models.IntegerField()
+    version = models.IntegerField()
+
+class ExpressProjectSrcMTRaw(models.Model):
+    src_seg = models.ForeignKey(ExpressProjectSrcSegment,on_delete=models.CASCADE,related_name="express_src_mt")
+    mt_raw =models.TextField(null=True,blank=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_raw")
+
+
+class ExpressProjectAIMT(models.Model):
+    express = models.ForeignKey(ExpressProjectDetail, on_delete=models.CASCADE,related_name="express_src_text")
+    source = models.TextField(null=True,blank=True)
+    customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'insta_cust')
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt")
+    api_result = models.TextField(null=True,blank=True)
+    final_result = models.TextField(null=True,blank=True)
+# class ExpressProjectTarSegment(models.Model):
+#     src_seg = models.ForeignKey(ExpressProjectSrcSegment,null=True,blank=True,on_delete=models.CASCADE,related_name="exp_src_seg")
+#     tar_text_unit = models.IntegerField()
+#     tar_text = models.TextField(null=True,blank=True)
+#     seq_id=models.IntegerField()

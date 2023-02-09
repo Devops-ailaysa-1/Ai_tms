@@ -88,7 +88,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
         txt_field_obj.status = "ERROR"
         txt_field_obj.save()
         ###retain cred if error
-        file_format,page_length =  file_pdf_check(fp)
+        file_format,page_length =  file_pdf_check(fp,id)
         # file_format,page_length = pdf_text_check(fp)
         consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
         user_credit.credits_left = user_credit.credits_left + consum_cred
@@ -122,7 +122,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
             else:
                 txt_field_obj.status = "ERROR"
                 txt_field_obj.save()
-                file_format,page_length =  file_pdf_check(fp)
+                file_format,page_length =  file_pdf_check(fp,id)
                 # file_format,page_length = pdf_text_check(fp)
                 consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
                 user_credit.credits_left = user_credit.credits_left + consum_cred
@@ -175,7 +175,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.status = "ERROR"
         txt_field_obj.save()
         ###retain cred if error
-        file_format,page_length =  file_pdf_check(fp) 
+        file_format,page_length =  file_pdf_check(fp , id ) 
         # file_format,page_length = pdf_text_check(fp)
         consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
         user_credit.credits_left = user_credit.credits_left + consum_cred
@@ -199,38 +199,34 @@ def para_creation_from_ocr(texts):
     return "\n".join(para_text)
 
 import PyPDF2
-def file_pdf_check(file_path):
-    pdfdoc = PyPDF2.PdfReader(file_path)
-    pdf_check = {0:'ocr',1:'text'}
-    pdf_check_list = []
-    for i in tqdm(range(len(pdfdoc.pages))):
-        current_page = pdfdoc.pages[i]
-        if current_page.extract_text():
-            pdf_check_list.append(1)
-        else:
-            pdf_check_list.append(0)
-    return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
-    
+from rest_framework import serializers
+def file_pdf_check(file_path,id):
+    try:
+        pdfdoc = PyPDF2.PdfReader(file_path)
+        pdf_check = {0:'ocr',1:'text'}
+        pdf_check_list = []
+        for i in tqdm(range(len(pdfdoc.pages))):
+            current_page = pdfdoc.pages[i]
+            if current_page.extract_text():
+                pdf_check_list.append(1)
+            else:
+                pdf_check_list.append(0)
+        return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
+    except:
+        file_details = Ai_PdfUpload.objects.get(id = id)
+        file_details.delete()
+        raise serializers.ValidationError({'msg':'pdf_corrupted'}, 
+                                          code =400)
     
     
  
-    # with open(file_path ,"rb") as f:
-    #     pdf = pdftotext.PDF(f)
-    # for page in range(len(pdf)):
-    #     text =pdf[page]
-    #     if text:
-    #         pdf_check_list.append(1)
-    #     else:
-    #         pdf_check_list.append(0)
-            
-    # return [pdf_check.get(max(pdf_check_list)) , len(pdf)]
 
 
 from ai_workspace.models import Task
 def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
     lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
-    pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path)[0]
+    pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
     # pdf_text_ocr_check = pdf_text_check(file_details.pdf_file.path)[0]
     if (pdf_text_ocr_check == 'ocr') or \
                 (lang in google_ocr_indian_language):
@@ -259,7 +255,7 @@ def project_pdf_conversion(id):
     user = task_details.job.project.ai_user
     file_obj = ContentFile(task_details.file.file.read(),task_details.file.filename)
     initial_credit = user.credit_balance.get("total_left")
-    file_format,page_length = file_pdf_check(task_details.file.file.path)
+    file_format,page_length = file_pdf_check(task_details.file.file.path,id)
 
     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
     if initial_credit > consumable_credits:
