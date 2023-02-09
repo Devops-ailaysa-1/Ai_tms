@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution,InstantTranslation )
+                    ImageGeneratorResolution )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
@@ -19,6 +19,20 @@ class AiPromptSerializer(serializers.ModelSerializer):
             'response_charecter_limit','targets')
 
     
+    # def to_internal_value(self, data):
+    #     print("to_internal_value")
+    #     print("before",type(data['catagories']))
+    #     data = super().to_internal_value(data)
+    # #     data['model_gpt_name'] = int(data['model_gpt_name'])
+    #     data['catagories'] = int(data['catagories'])
+    #     print("after",data)
+    # #     data['sub_catagories'] = int(data['sub_catagories'])
+    # #     data['source_prompt_lang'] = int(data['source_prompt_lang'])
+    # #     data['Tone'] = int(data['Tone'])
+    # #     data['response_copies'] = int(data['response_copies'])
+    #     return data
+
+  
     def prompt_generation(self,ins,obj,ai_langs,targets):
         instance = AiPrompt.objects.get(id=ins)
         lang = instance.source_prompt_lang_id 
@@ -112,9 +126,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
                 credit+=consumable_credit
         return credit
 
-        
-
     def create(self, validated_data):
+        
         openai_available_langs = [17]
         targets = validated_data.pop('targets',None)
         instance = AiPrompt.objects.create(**validated_data)
@@ -242,11 +255,11 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
         return inst
     
     
-class InstantTranslationSerializer(serializers.ModelSerializer):
-    instant_result = serializers.CharField(required = False)
-    class Meta:
-        model = InstantTranslation
-        fields = '__all__'
+# class InstantTranslationSerializer(serializers.ModelSerializer):
+#     instant_result = serializers.CharField(required = False)
+#     class Meta:
+#         model = InstantTranslation
+#         fields = '__all__'
         
  
         

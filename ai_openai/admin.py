@@ -1,9 +1,9 @@
 from django.contrib import admin
 
-from .models import AiPrompt ,AiPromptResult ,TokenUsage ,InstantTranslation
+from .models import AiPrompt ,AiPromptResult ,TokenUsage 
 
 admin.site.register(AiPrompt)
 admin.site.register(AiPromptResult)
 admin.site.register(TokenUsage)
-admin.site.register(InstantTranslation)
+#admin.site.register(InstantTranslation)
 

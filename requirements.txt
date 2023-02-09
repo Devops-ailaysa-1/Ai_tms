@@ -21,7 +21,7 @@ certifi==2020.12.5
 cffi==1.14.5
 channels==3.0.3
 channels-redis==3.3.1
-chardet==4.0.0
+chardet
 click==7.1.2
 click-didyoumean==0.0.3
 click-plugins==1.1.1
@@ -219,3 +219,4 @@ googletrans==3.1.0a0
 django-simple-history==3.2.0
 django-cacheops==6.1
 newrelic
+backoff==2.2.1

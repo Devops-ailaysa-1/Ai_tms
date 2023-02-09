@@ -11,19 +11,12 @@ import requests
 from io import BytesIO
 from PIL import Image
 logger = logging.getLogger('django')
-
-
-
-
+import openai
+openai.api_key = os.getenv('OPENAI_API_KEY')
 def ceil_round_off(token_len):
     import math
     return math.ceil(len(token_len)/4)
     
-
-import openai
-openai.api_key = os.getenv('OPENAI_API_KEY')
-
-
     
 def get_consumable_credits_for_openai_text_generator(total_token):
     total_consumable_token_credit = math.ceil(total_token/12)     
@@ -36,7 +29,8 @@ def openai_text_trim(text):
         text = text[:reg_text.start()]+"."
     return text
 
-
+import backoff
+@backoff.on_exception(backoff.expo, openai.error.RateLimitError)
 def get_prompt(prompt ,model_name , max_token ,n ):
 
     #max_token = 256
@@ -59,6 +53,7 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 )
     return response
 
+@backoff.on_exception(backoff.expo, openai.error.RateLimitError)
 def get_prompt_freestyle(prompt):
     response = openai.Completion.create(
                 model="text-curie-001",
