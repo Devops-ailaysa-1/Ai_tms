@@ -126,7 +126,8 @@ class Workflows(models.Model):
 def my_docs_upload_path(instance, filename):
     file_path = os.path.join(instance.user.uid,"MyDocuments", filename)
     return file_path
-    
+
+
 class MyDocuments(models.Model):
     file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
