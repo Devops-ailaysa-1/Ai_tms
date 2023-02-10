@@ -2,8 +2,8 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution,InstantTranslation )
-from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
+                    ImageGeneratorResolution,BlogKeywordGenerate,BlogCreation )
+from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,PromptStartPhrases
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
 import math
@@ -240,11 +240,11 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
         return inst
     
     
-class InstantTranslationSerializer(serializers.ModelSerializer):
-    instant_result = serializers.CharField(required = False)
-    class Meta:
-        model = InstantTranslation
-        fields = '__all__'
+# class InstantTranslationSerializer(serializers.ModelSerializer):
+#     instant_result = serializers.CharField(required = False)
+#     class Meta:
+#         model = InstantTranslation
+#         fields = '__all__'
         
  
 def openai_token_usage(openai_response ):
@@ -265,7 +265,7 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 class BlogCreationSerializer(serializers.ModelSerializer):
- 
+    blogcreate = BlogKeywordGenerateSerializer(required=False,many=True)
     blog_key_gen = serializers.PrimaryKeyRelatedField(queryset=BlogKeywordGenerate.objects.all(),many=False,required=False) 
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     categories = serializers.PrimaryKeyRelatedField(queryset=PromptCategories.objects.all(),many=False,required=False)
@@ -274,7 +274,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         model = BlogCreation
         # fields = '__all__'
         fields = ('id','user_title' , 'categories' , 'sub_categories', 'user_language' , 'user_title_mt' , 
-                  'keywords_mt' ,'blog_key_gen')  
+                  'keywords_mt' ,'blog_key_gen', 'blogcreate',)  
     
     def validate(self, data):
         validated_data = super().validate(data)
