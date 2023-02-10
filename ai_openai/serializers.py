@@ -263,29 +263,37 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogKeywordGenerate
         fields = '__all__'
-        
+    
+    
+    def update(self, instance, validated_data):
+        instance.selected_field = validated_data.get(True, instance.selected_field)
+        instance.save()
+        return instance
+    
 class BlogCreationSerializer(serializers.ModelSerializer):
     blogcreate = BlogKeywordGenerateSerializer(required=False,many=True)
-    blog_key_gen = serializers.PrimaryKeyRelatedField(queryset=BlogKeywordGenerate.objects.all(),many=False,required=False) 
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     categories = serializers.PrimaryKeyRelatedField(queryset=PromptCategories.objects.all(),many=False,required=False)
-     
+    blog_key_gen = serializers.PrimaryKeyRelatedField(queryset=BlogKeywordGenerate.objects.all(),many=False,required=False)
     class Meta:
         model = BlogCreation
         # fields = '__all__'
         fields = ('id','user_title' , 'categories' , 'sub_categories', 'user_language' , 'user_title_mt' , 
-                  'keywords_mt' ,'blog_key_gen', 'blogcreate',)  
+                  'keywords_mt' , 'blogcreate','blog_key_gen')  
     
-    def validate(self, data):
-        validated_data = super().validate(data)
-        user=self.context['request'].user
-        validated_data['user'] = user
-        return validated_data
+    def validate(self, data ,request=None ):
+        if not request:
+            print("data" , data)
+            return data
+        else:
+            validated_data = super().validate(data)
+            user=self.context['request'].user
+            validated_data['user'] = user
+            return validated_data
       
     def create(self, validated_data):
         blog_available_langs = [17]
         user=self.context['request'].user
-        print("validated_data" , validated_data)
         # sub_categories = validated_data.get('sub_categories' ,None)
         instance = BlogCreation.objects.create(**validated_data)
         blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
@@ -316,7 +324,10 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         return instance
         
     def update(self, instance, validated_data):
-        print(instance, validated_data)
+ 
+        blog_key_id = validated_data.pop('blog_key_gen')
+        blog_key_id.selected_field = True
+        blog_key_id.save()
         return instance
 
 

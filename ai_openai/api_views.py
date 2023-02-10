@@ -241,7 +241,8 @@ class BlogCreationViewset(viewsets.ViewSet):
 
     def update(self,request,pk):
         query_set = BlogCreation.objects.get(id = pk)
-        serializer = BlogCreationSerializer(query_set,data=request.data ,partial=True)
+        print("request.data" , request.data)
+        serializer = BlogCreationSerializer(query_set,data=request.data ,partial=True  )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
