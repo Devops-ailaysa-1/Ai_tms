@@ -1,11 +1,11 @@
-from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt , InstantTranslation
+from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
                                      AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                                     ImageGeneratorPromptSerializer ,InstantTranslationSerializer)
+                                     ImageGeneratorPromptSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -253,19 +253,18 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
 #         else:
 #             return  Response({'msg':'Insufficient Credits'},status=400)
     
-    else:##english
-        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-        result_txt = response['choices'][0]['text']
-    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
-    inst_data = {'user':request.user.id ,'instant_text':instant_text, 'source_lang':source_lang,
-                 'target_lang':target_lang , 'customize':customize_id ,'insta_usage':total_tokens,
-                 'instant_result':result_txt}
-    print("inst_data--->",inst_data)
-    serializer = InstantTranslationSerializer(data=inst_data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors)
+#     else:##english
+#         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
+#         result_txt = response['choices'][0]['text']
+#     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+#     inst_data = {'express_id':express_obj.id,'source':instant_text, 'customize':customize,
+#                  'api_result':result_txt,'mt_engine_id':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else None}
+#     print("inst_data--->",inst_data)
+#     serializer = ExpressProjectAIMTSerializer(data=inst_data)
+#     if serializer.is_valid():
+#         serializer.save()
+#         return Response(serializer.data)
+#     return Response(serializer.errors)
         
         # initial_credit = user.credit_balance.get("total_left")
         # consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang='en')
