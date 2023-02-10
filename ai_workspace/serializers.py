@@ -7,7 +7,8 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
-		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail#,TaskAssignRateInfo
+		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail,\
+		ExpressProjectAIMT#,TaskAssignRateInfo
 import json,os
 import pickle,itertools
 from ai_workspace import forms as ws_forms
@@ -156,11 +157,33 @@ class VoiceProjectDetailSerializer(serializers.ModelSerializer):
 		fields = ("id","project","source_language", "project_type_sub_category")
 		read_only_fields = ("id","project",)
 
+class ExpressProjectAIMTSerializer(serializers.ModelSerializer):
+	customize_name = serializers.ReadOnlyField(source='customize.customize')
+	class Meta:
+			model = ExpressProjectAIMT
+			fields = ("id",'express','source','customize','mt_engine','api_result','final_result','customize_name')
+		# 	extra_kwargs = {
+        #     "id":{"write_only": True},
+        #     "express": {"write_only": True},
+        #     "source": {"write_only": True},
+        #     "customize": {"write_only": True},
+		# 	"mt_engine":{"write_only": True},
+        #     "api_result": {"write_only": True},
+        # }
 
 class ExpressProjectDetailSerializer(serializers.ModelSerializer):
+	express_src_text = ExpressProjectAIMTSerializer(required=False,many=True,read_only=True)
+	project_id = serializers.ReadOnlyField(source='task.job.project.id')
+	project_name = serializers.ReadOnlyField(source='task.job.project.project_name')
+	target_lang_name = serializers.ReadOnlyField(source='task.job.target_language.language')
+	job_id = serializers.ReadOnlyField(source='task.job.id')
+	target_lang_id = serializers.ReadOnlyField(source='task.job.target_language.id')
+	source_lang_id = serializers.ReadOnlyField(source='task.job.source_language.id')
 	class Meta:
 		model = ExpressProjectDetail
-		fields = "__all__"
+		fields = ('id','task','source_text','target_text','mt_engine','mt_raw',
+					"project_id","project_name","target_lang_name","job_id",
+					"target_lang_id","source_lang_id",'express_src_text',)
 		# extra_kwargs = {
 		# 	"audio_file":{
 		# 		"required": False
@@ -1447,3 +1470,6 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		if 'files' in data:
 			[Instructionfiles.objects.create(**instruction_file,task_assign_info = instance.task_assign_info) for instruction_file in data['files']]
 		return data
+
+
+
