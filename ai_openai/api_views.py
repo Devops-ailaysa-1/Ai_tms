@@ -1,11 +1,13 @@
-from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt , InstantTranslation
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt , 
+                     InstantTranslation ,BlogCreation  , Blogtitle ,BlogOutline ,BlogArticle)
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
-                                     AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                                     ImageGeneratorPromptSerializer ,InstantTranslationSerializer)
+                        AiPromptGetSerializer,AiPromptCustomizeSerializer,
+                    ImageGeneratorPromptSerializer ,InstantTranslationSerializer ,
+                    BlogCreationSerializer,BlogKeywordGenerateSerializer )
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -21,7 +23,7 @@ from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale
 #from langdetect import detect
 #import langid
 from googletrans import Translator
-from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations ,lang_detect
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
@@ -134,13 +136,14 @@ def customize_text_openai(request):
     tone = request.POST.get('tone',1)
     language =  request.POST.get('language',None)
     customize = AiCustomize.objects.get(id =customize_id)
-    detector = Translator()
+    # detector = Translator()
     total_tokens = 0
     user_text_mt_en,txt_generated = None,None
     if language:
         lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
-        lang = detector.detect(user_text).lang
+        lang = lang_detect(user_text)
+        # lang = detector.detect(user_text).lang
     user_text_lang = LanguagesLocale.objects.filter(locale_code=lang).first().language.id
     if lang!= 'en':
         initial_credit = user.credit_balance.get("total_left")
@@ -265,7 +268,58 @@ def instant_translation_custom(request):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors)
-        
+
+
+class BlogCreationViewset(viewsets.ViewSet):
+    model = BlogCreation
+    def get(self, request):
+        query_set = BlogCreation.objects.all()
+        serializer = BlogCreationSerializer(query_set ,many =True)
+        return Response(serializer.data)
+    
+    def create(self,request):
+        serializer = BlogCreationSerializer(data= request.POST.dict(),context={'request':request}) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def update(self,request,pk):
+        query_set = BlogCreation.objects.get(id = pk)
+        serializer = BlogCreationSerializer(query_set,data=request.data ,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+
+class BlogKeywordGenerateViewset(viewsets.ViewSet):
+ 
+    def get(self, request):
+        query_set = BlogKeywordGenerate.objects.all()
+        serializer = BlogKeywordGenerateSerializer(query_set ,many =True)
+        return Response(serializer.data)
+    
+    def create(self,request):
+        serializer = BlogKeywordGenerateSerializer(data={**request.POST.dict(),'user':self.request.user.id }) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def update(self,request,pk):
+        query_set = BlogKeywordGenerate.objects.get(id = pk)
+        serializer = BlogKeywordGenerateSerializer(query_set,data=request.data ,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+
+
+      
         # initial_credit = user.credit_balance.get("total_left")
         # consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang='en')
         # if initial_credit > consumable_credits_user_text:

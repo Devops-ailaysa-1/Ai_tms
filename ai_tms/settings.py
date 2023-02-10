@@ -615,7 +615,7 @@ LOGGING = {
         # },
 
         'django' : {
-            'handlers' : ['file_prod','newrelic'],
+            'handlers' : ['file_prod'],
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'propogate' : True,
         },
@@ -661,11 +661,11 @@ LOGGING = {
             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
             'formatter' : 'dev_formatter',
         },
-        'newrelic': {
-            'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
-            'class': 'logging.StreamHandler',
-            'formatter' : 'newrelic_formatter',
-        },
+        # 'newrelic': {
+        #     'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
+        #     'class': 'logging.StreamHandler',
+        #     'formatter' : 'newrelic_formatter',
+        # },
     #     'fluentinfo':{
     #         'level':'INFO',
     #         'class':'fluent.handler.FluentHandler',

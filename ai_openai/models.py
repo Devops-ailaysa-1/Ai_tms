@@ -47,6 +47,7 @@ class AiPrompt(models.Model):
     def source_prompt_lang_code(self):
         return self.source_prompt_lang.locale.first().locale_code
 
+
 class AiPromptResult(models.Model):
     prompt = models.ForeignKey(AiPrompt, on_delete=models.CASCADE, related_name = 'ai_prompt')
     start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE,null=True, blank=True)
@@ -65,16 +66,61 @@ class AiPromptResult(models.Model):
     def result_lang_code(self):
         return self.result_lang.locale.first().locale_code
 
-    # def __str__(self) -> str:
-    #     return self.prompt_result
+class BlogCreation(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    user_title = models.CharField(max_length = 100, null=True, blank=True)
+    keywords = models.CharField(max_length = 200, null=True, blank=True)
+    categories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE,related_name = 'blog_categories' ,blank=True,null=True )
+    sub_categories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE,related_name = 'blog_sub_categories',blank=True,null=True)
+    user_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='user_test_lang_src',null=True, blank=True)  
+    user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
+    keywords_mt = models.CharField(max_length = 200, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+ 
+    
+    @property
+    def user_language_code(self):
+        return self.user_language.locale.first().locale_code
 
-# class AiPromptMulti(models.Model):
-#     prompt = models.ForeignKey(AiPrompt, on_delete=models.CASCADE, related_name = 'ai_prompt_src')
-#     prompt_result = models.ForeignKey(AiPromptResult, on_delete=models.CASCADE, related_name = 'ai_prompt_result_src') 
-#     result_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_result_lang')  
-#     translated_prompt_result = models.TextField(null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
+class BlogKeywordGenerate(models.Model):
+    blog_creation =  models.ForeignKey(BlogCreation, on_delete=models.CASCADE, related_name = 'blogcreate')
+    blog_keyword = models.CharField(max_length = 200, null=True, blank=True)
+    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blog_creation_used_tokens',null=True, blank=True)
+    selected_field = models.BooleanField()
+    blog_keyword_mt = models.CharField(max_length = 200, null=True, blank=True)
+    
+
+
+class Blogtitle(models.Model):
+    blog_creation = models.ForeignKey(BlogKeywordGenerate, on_delete=models.CASCADE, related_name = 'blogtitle_keygen')
+    blog_title = models.CharField(max_length = 200 , null=True, blank=True)
+    blog_title_mt =  models.CharField(max_length = 200 , null=True, blank=True)
+    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogtitle_used_tokens',null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class BlogOutline(models.Model):
+    blog_title = models.ForeignKey(Blogtitle, on_delete=models.CASCADE, related_name = 'blogoutline_title')
+    blog_outline = models.CharField(max_length = 200 , null=True, blank=True)
+    blog_outline_mt = models.CharField(max_length = 200 , null=True, blank=True)
+    tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='blog_tone',blank=True,null=True,default=1)
+    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogoutline_used_tokens',null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+
+class BlogArticle(models.Model):
+    blog_outline = models.ForeignKey(BlogOutline, on_delete=models.CASCADE, related_name = 'blogarticle_outline')
+    blog_article= models.CharField(max_length = 900 , null=True, blank=True)
+    blog_article_mt = models.CharField(max_length = 900 , null=True, blank=True)
+    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
+
+
+# class BlogGeneration(models.Model):
+#     blog_creation = 
 
 
 class TextgeneratedCreditDeduction(models.Model):
@@ -97,17 +143,6 @@ class AiPromptCustomize(models.Model):
     prompt_generated = models.TextField(null=True, blank=True)
     prompt_result = models.TextField(null=True, blank=True) 
     created_at = models.DateTimeField(auto_now_add=True)
-
-
-# class AiImage(models.Model):
-#     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-#     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
-#     prompt = models.TextField(null=True, blank=True)
-#     prompt_mt = models.TextField(null=True, blank=True)
-#     credits_used = models.IntegerField(null=True, blank=True)
-#     result_url = models.TextField(null=True, blank=True) 
-
- 
 
 
 def user_directory_path_image_gen_result(instance, filename):
@@ -145,4 +180,11 @@ class InstantTranslation(models.Model):
     
 
 
-   
+
+ 
+ 
+
+
+
+    
+    

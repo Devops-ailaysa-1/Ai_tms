@@ -12,6 +12,13 @@ from io import BytesIO
 from PIL import Image
 logger = logging.getLogger('django')
 import openai
+from googletrans import Translator
+
+detector = Translator()
+
+def lang_detect(user_text):
+    return detector.detect(user_text).lang
+
 openai.api_key = os.getenv('OPENAI_API_KEY')
 def ceil_round_off(token_len):
     import math
