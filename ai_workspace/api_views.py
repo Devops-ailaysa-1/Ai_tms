@@ -2697,7 +2697,7 @@ def seg_create(task_id,content):
         for l,k in enumerate(sents):
             ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=1)
 
-    for i in ExpressProjectSrcSegment.objects.filter(task_id=task_id):
+    for i in ExpressProjectSrcSegment.objects.filter(task_id=task_id,version=1):
         print(i.src_segment)
         tar = get_translation(mt_engine_id=express_obj.mt_engine_id,source_string = i.src_segment ,source_lang_code=i.task.job.source_language_code , target_lang_code=i.task.job.target_language_code,user_id=user.id)
         ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=express_obj.mt_engine_id)
@@ -2800,6 +2800,11 @@ def seg_get_new_mt(task,mt_engine_id,user,express_obj):
     exp_proj_save(task.id,True)
     print("MtChangeDone")
 
+def inst_create(obj,option):
+    customize = AiCustomize.objects.get(customize = option)
+    created_obj = ExpressProjectAIMT.objects.create(express_id=obj.id,source=obj.source_text,customize_id=customize.id,mt_engine_id=obj.mt_engine_id)
+    return created_obj
+
 import difflib
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -2820,10 +2825,14 @@ def task_segments_save(request):
         express_obj.save()
     elif simplified_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Simplify').last()
+        if not inst_cust_obj:
+            inst_cust_obj = inst_create(express_obj,'Simplify')
         inst_cust_obj.final_result = simplified_text
         inst_cust_obj.save()
     elif shortened_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Shorten').last()
+        if not inst_cust_obj:
+            inst_cust_obj = inst_create(express_obj,'Shorten')
         inst_cust_obj.final_result = shortened_text
         inst_cust_obj.save()
     elif ((source_text) or (source_text and mt_engine_id)):
@@ -3068,6 +3077,9 @@ def express_custom(request,exp_obj,option):
     from ai_openai.api_views import customize_response
     user = exp_obj.task.job.project.ai_user
     instant_text = exp_obj.source_text
+    if not instant_text:
+        with open(exp_obj.task.file.file.path, "r") as file:
+            instant_text = file.read()
     target_lang_code = exp_obj.task.job.target_language_code
     customize = AiCustomize.objects.get(customize = option)
     total_tokens = 0
@@ -3131,7 +3143,7 @@ def instant_translation_custom(request):
             if exp_obj.mt_engine_id == queryset.mt_engine_id:
                 serializer = ExpressProjectAIMTSerializer(queryset)
                 return Response(serializer.data)
-            else:
+            elif queryset.api_result:
                 input_src = queryset.api_result
                 txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = input_src,
                                 source_lang_code=exp_obj.task.job.source_language_code , target_lang_code=exp_obj.task.job.target_language_code,user_id=exp_obj.task.job.project.ai_user_id)
@@ -3140,6 +3152,10 @@ def instant_translation_custom(request):
                     serializer.save()
                     return Response(serializer.data)
                 return Response(serializer.errors)
+            else:
+                res = express_custom(request,exp_obj,option)
+                if res.get('msg'):return Response(res,status=400)
+                else:return Response(res)
         else:
             res = express_custom(request,exp_obj,option)
             if res.get('msg'):return Response(res,status=400)
