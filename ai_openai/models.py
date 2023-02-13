@@ -78,8 +78,6 @@ class BlogCreation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
- 
-    
     @property
     def user_language_code(self):
         return self.user_language.locale.first().locale_code
@@ -90,20 +88,18 @@ class BlogKeywordGenerate(models.Model):
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blog_creation_used_tokens',null=True, blank=True)
     selected_field = models.BooleanField()
     blog_keyword_mt = models.CharField(max_length = 200, null=True, blank=True)
-    
-
 
 class Blogtitle(models.Model):
-    blog_creation = models.ForeignKey(BlogKeywordGenerate, on_delete=models.CASCADE, related_name = 'blogtitle_keygen')
+    blog_keyword_gen = models.ForeignKey(BlogKeywordGenerate, on_delete=models.CASCADE, related_name = 'blogtitle_keygen')
     blog_title = models.CharField(max_length = 200 , null=True, blank=True)
     blog_title_mt =  models.CharField(max_length = 200 , null=True, blank=True)
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogtitle_used_tokens',null=True, blank=True)
+    selected_field = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-
 class BlogOutline(models.Model):
-    blog_title = models.ForeignKey(Blogtitle, on_delete=models.CASCADE, related_name = 'blogoutline_title')
+    blog_title_gen = models.ForeignKey(Blogtitle, on_delete=models.CASCADE, related_name = 'blogoutline_title')
     blog_outline = models.CharField(max_length = 200 , null=True, blank=True)
     blog_outline_mt = models.CharField(max_length = 200 , null=True, blank=True)
     tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='blog_tone',blank=True,null=True,default=1)
@@ -111,17 +107,11 @@ class BlogOutline(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-
 class BlogArticle(models.Model):
-    blog_outline = models.ForeignKey(BlogOutline, on_delete=models.CASCADE, related_name = 'blogarticle_outline')
+    blog_outline_gen = models.ForeignKey(BlogOutline, on_delete=models.CASCADE, related_name = 'blogarticle_outline')
     blog_article= models.CharField(max_length = 900 , null=True, blank=True)
     blog_article_mt = models.CharField(max_length = 900 , null=True, blank=True)
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
-
-
-# class BlogGeneration(models.Model):
-#     blog_creation = 
-
 
 class TextgeneratedCreditDeduction(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -129,7 +119,6 @@ class TextgeneratedCreditDeduction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-
 class AiPromptCustomize(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc')

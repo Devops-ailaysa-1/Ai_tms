@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution,BlogKeywordGenerate,BlogCreation )
+                    ImageGeneratorResolution,BlogKeywordGenerate,BlogCreation ,Blogtitle )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,PromptStartPhrases
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
@@ -257,49 +257,52 @@ def openai_token_usage(openai_response ):
                                 no_of_outcome=1)
 
 
+class BlogtitleSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Blogtitle
+        fields = ('id' , 'blog_keyword_gen' , 'blog_title' , 'blog_title_mt'
+                  , 'token_usage' ,  'selected_field' )
 
 
 class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
+    # blogtitle_keygen = BlogtitleSerializer(required=False,many=True)
     class Meta:
         model = BlogKeywordGenerate
-        fields = '__all__'
-    
-    
-    def update(self, instance, validated_data):
-        instance.selected_field = validated_data.get(True, instance.selected_field)
-        instance.save()
-        return instance
-    
+        fields = ('id','blog_creation','token_usage','selected_field','blog_keyword_mt',
+                  'blog_keyword' , 'blogtitle_keygen')
+ 
+
+
 class BlogCreationSerializer(serializers.ModelSerializer):
     blogcreate = BlogKeywordGenerateSerializer(required=False,many=True)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
     categories = serializers.PrimaryKeyRelatedField(queryset=PromptCategories.objects.all(),many=False,required=False)
     blog_key_gen = serializers.PrimaryKeyRelatedField(queryset=BlogKeywordGenerate.objects.all(),many=False,required=False)
+    
+    blogtitle_keygen = BlogtitleSerializer(required=False,many=True)
+    blog_title_gen = serializers.PrimaryKeyRelatedField(queryset=Blogtitle.objects.all(),many=False,required=False)
+    blog_title_create_boolean = serializers.BooleanField(required=False)
+    
     class Meta:
         model = BlogCreation
-        # fields = '__all__'
         fields = ('id','user_title' , 'categories' , 'sub_categories', 'user_language' , 'user_title_mt' , 
-                  'keywords_mt' , 'blogcreate','blog_key_gen')  
+                  'keywords_mt' , 'blogcreate','blog_key_gen' , 'blogtitle_keygen' ,'blog_title_gen'
+                  ,'blog_title_create_boolean'  )  
     
-    def validate(self, data ,request=None ):
-        if not request:
-            print("data" , data)
-            return data
-        else:
-            validated_data = super().validate(data)
-            user=self.context['request'].user
-            validated_data['user'] = user
-            return validated_data
+    def validate(self, data ,request=None):
+        validated_data = super().validate(data)
+        user=self.context.get('request' , None)
+        if user:
+            validated_data['user'] = user.user
+        return validated_data
       
     def create(self, validated_data):
         blog_available_langs = [17]
         user=self.context['request'].user
-        # sub_categories = validated_data.get('sub_categories' ,None)
         instance = BlogCreation.objects.create(**validated_data)
         blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
- 
         # BlogKeywordGenerate
-        
         if (instance.user_language_id not in blog_available_langs):
             instance.user_title_mt = get_translation(1, instance.user_title , instance.user_language_code,"en"  ,user_id=instance.user.id) if instance.user_title else None
             openai_response = get_prompt(blog_sub_phrase.start_phrase+ " " +instance.user_title_mt , OPENAI_MODEL,
@@ -322,12 +325,68 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                                                 blog_keyword_mt=None,token_usage=token_usage)
         instance.save()
         return instance
-        
+
     def update(self, instance, validated_data):
- 
-        blog_key_id = validated_data.pop('blog_key_gen')
-        blog_key_id.selected_field = True
-        blog_key_id.save()
+        blog_available_langs = [17]
+        if validated_data.get('blog_key_gen'):
+            blog_key_id = validated_data.pop('blog_key_gen')
+            blog_key_id.selected_field = True
+            blog_key_id.save()
+            #other fields blog_key_select_update selected_field
+            BlogKeywordGenerate.objects.filter(blog_creation = instance).exclude(id = blog_key_id.id).update(selected_field = False)
+             
+        if validated_data.get('blogcreate'):
+            blog_update_keyword = validated_data.get('blogcreate')
+            
+            for i in blog_update_keyword:
+                if i.get('blog_keyword'):
+                    print("blog_key_------------>>>")
+                    blog_keyword = i.get('blog_keyword')
+                    blog_key_gen_inst =  BlogKeywordGenerate.objects.filter(blog_creation = instance 
+                                            ,selected_field = True )
+                    blog_key_gen_inst.update(blog_keyword =blog_keyword)
+                    #if it contains mt content ,should call get_translate
+                    if blog_key_gen_inst.first().blog_keyword_mt:
+                        trans_text = blog_key_gen_inst.first().blog_keyword_mt
+                        trans_data = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id)           
+                        blog_key_gen_inst.update(blog_keyword_mt = trans_data )                                          
+             
+
+    ##blog_title_or_topic_create
+        if validated_data.get('blog_title_create_boolean'):
+            sub_categories = validated_data.get('sub_categories')
+            blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = sub_categories)
+            blog_title_gen_inst = BlogKeywordGenerate.objects.filter(blog_creation = instance ,selected_field = True ).first()
+            if blog_title_gen_inst.blog_keyword:
+                openai_response = get_prompt(blog_sub_phrase.start_phrase+ " " +blog_title_gen_inst.blog_keyword , OPENAI_MODEL,
+                                         blog_sub_phrase.max_token, n=3)
+                token_usage = openai_token_usage(openai_response)
+                
+                for i in range(len(openai_response["choices"])):
+                    blog_title = openai_response["choices"][i]['text']
+                    blog_title_mt = None
+                    if (instance.user_language_id not in blog_available_langs):
+                        blog_title_mt =  get_translation(1, blog_title , instance.user_language_code,"en" 
+                                                                                   ,user_id=instance.user.id)
+                    Blogtitle.objects.create(blog_keyword_gen = blog_title_gen_inst
+                                                , blog_title =blog_title, selected_field= False , 
+                                                blog_title_mt=blog_title_mt,token_usage=token_usage)
+        
+        
+        if validated_data.get('blog_title_gen'):
+            blog_title_gen = validated_data.get('blog_title_gen')
+            blog_title_gen.selected_field = True
+            blog_title_gen.save()
+            blog_key_gen_inst = blog_title_gen.blog_keyword_gen
+            Blogtitle.objects.filter(blog_keyword_gen = blog_key_gen_inst).exclude(id = blog_title_gen.id).update(selected_field = False)
+        
+        if validated_data.get('blogcreate'):
+            blog_update_title = validated_data.get('blog_title')
+            print("blog_update_title" , blog_update_title)
+            for i in blog_update_title:
+                if i.get('blog_keyword'):
+                    for j in i.get('blog_title'):
+                        print("---------->" ,i.get('blog_title') )
         return instance
 
 
