@@ -1250,14 +1250,11 @@ def TransactionSessionInfo(request):
         except Invoice.DoesNotExist:
              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         charge = invoice.charge
-
-
-
         #     return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=invoice.plan.id,type="Subscription")
 
-        if invoice.amount_paid == 0 and invoice.amount_due:
-            return JsonResponse({"email":None,"purchased_plan":pack.name,"paid_date":None,"currency":None,"amount":None,
+        if invoice.amount_paid == 0 and invoice.amount_due == 0:
+            return JsonResponse({"email":invoice.customer.email,"purchased_plan":pack.name,"paid_date":None,"currency":None,"amount":None,
                     "plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"plan_interval":invoice.subscription.plan.interval,
                     "paid":None,"payment_type":None,
                     "txn_id":None,"receipt_url":None},status=200,safe = False)
