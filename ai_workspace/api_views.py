@@ -72,7 +72,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     ExpressProjectDetail
 from .models import Task
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT
+                    ExpressProjectAIMT, WriterProject
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -84,7 +84,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
-                          ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer)
+                          ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
+                          WriterProjectSerializer)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
@@ -2976,10 +2977,11 @@ def translate_from_pdf(request,task_id):
 
 
 class MyDocFilter(django_filters.FilterSet):
-    doc_name = django_filters.CharFilter(lookup_expr='icontains')
+    #proj_name = django_filters.CharFilter(lookup_expr='icontains')
+    doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
     class Meta:
         model = MyDocuments
-        fields = ['doc_name']
+        fields = ['doc_name']#proj_name
 
 
 class MyDocumentsView(viewsets.ModelViewSet):
@@ -2987,12 +2989,14 @@ class MyDocumentsView(viewsets.ModelViewSet):
     serializer_class = MyDocumentSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
-    ordering_fields = ['doc_name','id']
+    ordering_fields = ['doc_name','id']#'proj_name',
     filterset_class = MyDocFilter
     paginator = PageNumberPagination()
     ordering = ('-id')
     paginator.page_size = 20
     # https://www.django-rest-framework.org/api-guide/filtering/
+
+
 
     def get_queryset(self):
         user = self.request.user
@@ -3011,6 +3015,23 @@ class MyDocumentsView(viewsets.ModelViewSet):
         response = self.get_paginated_response(serializer.data)
         return  response
 
+    # def get_queryset(self):
+    #     user = self.request.user
+    #     ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
+    #     return WriterProject.objects.filter(ai_user=user)#.order_by('-id')
+        
+
+    # def list(self, request, *args, **kwargs):
+    #     paginate = request.GET.get('pagination',True)
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     if paginate == 'False':
+    #         serializer = WriterProjectSerializer(queryset, many=True)
+    #         return Response(serializer.data)
+    #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+    #     serializer = WriterProjectSerializer(pagin_tc, many=True)
+    #     response = self.get_paginated_response(serializer.data)
+    #     return  response
+
     def retrieve(self, request, pk):
         queryset = self.get_queryset()
         ins = get_object_or_404(queryset, pk=pk)
@@ -3020,7 +3041,11 @@ class MyDocumentsView(viewsets.ModelViewSet):
     def create(self, request):
         file = request.FILES.get('file',None)
         ai_user = request.user.team.owner if request.user.team else request.user
-        ser = MyDocumentSerializer(data={**request.POST.dict(),'file':file,'ai_user':ai_user.id,'created_by':request.user.id})
+        writer_proj = request.POST.get('project',None)
+        if not writer_proj:
+            writer_obj = WriterProject.objects.create(ai_user_id = ai_user.id)
+            writer_proj = writer_obj.id
+        ser = MyDocumentSerializer(data={**request.POST.dict(),'project':writer_proj,'file':file,'ai_user':ai_user.id,'created_by':request.user.id})
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=201)
