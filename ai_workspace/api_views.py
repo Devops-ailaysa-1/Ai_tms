@@ -2721,7 +2721,12 @@ def seg_edit(express_obj,task_id,src_text):
     no_newlines = src_text.strip("\n")  # remove leading and trailing "\n"
     split_text = NEWLINES_RE.split(no_newlines)
     print("split_text-------------->",split_text)
-    vers = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
+    exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last()
+    if not exp_src_obj:
+        res = seg_create(task_id,src_text)
+        print("Created")
+        return None
+    vers = exp_src_obj.version
     for i,j  in enumerate(split_text):
         sents = nltk.sent_tokenize(j)
         for l,k in enumerate(sents):
@@ -2745,7 +2750,7 @@ def seg_edit(express_obj,task_id,src_text):
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
             tt = ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=express_obj.mt_engine_id)
     res = exp_proj_save(task_id,None)
-    print("Done")
+    print("Done Editing")
     return None
 
 
