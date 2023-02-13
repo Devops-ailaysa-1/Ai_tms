@@ -109,7 +109,7 @@ def customize_response(customize ,user_text,tone,used_tokens):
             prompt = customize.prompt+' {} tone : '.format(tone_)+user_text#+', in {} tone.'.format(tone_)
             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =150,n=1)
         else:
-            if customize.grouping == "Ask":
+            if customize.grouping == "Explore more":
                 prompt = customize.prompt+" "+user_text+"?"
             else:
                 prompt = customize.prompt+" "+user_text+"."
@@ -159,8 +159,12 @@ def customize_text_openai(request):
             return  Response({'msg':'Insufficient Credits'},status=400)
         
     else:##english
-        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-        result_txt = response['choices'][0]['text']
+        initial_credit = user.credit_balance.get("total_left")
+        if initial_credit == 0:
+            return  Response({'msg':'Insufficient Credits'},status=400)
+        else:
+            response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
+            result_txt = response['choices'][0]['text']
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
     print("TT---------->",prompt)
     data = {'document':document,'customize':customize_id,'user':request.user.id,\
