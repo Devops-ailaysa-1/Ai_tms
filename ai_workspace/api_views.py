@@ -2721,6 +2721,8 @@ def seg_edit(express_obj,task_id,src_text):
     no_newlines = src_text.strip("\n")  # remove leading and trailing "\n"
     split_text = NEWLINES_RE.split(no_newlines)
     print("split_text-------------->",split_text)
+    lang_code = obj.job.target_language_code
+    lang_list = ['hi','bn','or','ne','pa']
     exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last()
     if not exp_src_obj:
         res = seg_create(task_id,src_text)
@@ -2728,7 +2730,10 @@ def seg_edit(express_obj,task_id,src_text):
         return None
     vers = exp_src_obj.version
     for i,j  in enumerate(split_text):
-        sents = nltk.sent_tokenize(j)
+        if lang_code in lang_list:
+            sents = sentence_split(j, lang_code, delim_pat='auto')
+        else:
+            sents = nltk.sent_tokenize(j)
         for l,k in enumerate(sents):
             ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=vers+1)
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
