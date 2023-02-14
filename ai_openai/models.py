@@ -91,28 +91,32 @@ class BlogKeywordGenerate(models.Model):
 
 class Blogtitle(models.Model):
     blog_keyword_gen = models.ForeignKey(BlogKeywordGenerate, on_delete=models.CASCADE, related_name = 'blogtitle_keygen')
-    blog_title = models.CharField(max_length = 200 , null=True, blank=True)
-    blog_title_mt =  models.CharField(max_length = 200 , null=True, blank=True)
-    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogtitle_used_tokens',null=True, blank=True)
+    blog_title = models.CharField(max_length = 2000 , null=True, blank=True)
+    blog_title_mt =  models.CharField(max_length = 2000 , null=True, blank=True)
+    token_usage =  models.ForeignKey(to= TokenUsage, on_delete=models.CASCADE,related_name='blogtitle_used_tokens',null=True, blank=True)
     selected_field = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 class BlogOutline(models.Model):
     blog_title_gen = models.ForeignKey(Blogtitle, on_delete=models.CASCADE, related_name = 'blogoutline_title')
-    blog_outline = models.CharField(max_length = 200 , null=True, blank=True)
-    blog_outline_mt = models.CharField(max_length = 200 , null=True, blank=True)
+    blog_outline =  models.TextField()
+    blog_outline_mt =  models.TextField()
     tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='blog_tone',blank=True,null=True,default=1)
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogoutline_used_tokens',null=True, blank=True)
+    selected_field = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
 class BlogArticle(models.Model):
     blog_outline_gen = models.ForeignKey(BlogOutline, on_delete=models.CASCADE, related_name = 'blogarticle_outline')
-    blog_article= models.CharField(max_length = 900 , null=True, blank=True)
-    blog_article_mt = models.CharField(max_length = 900 , null=True, blank=True)
+    blog_article=  models.TextField()
+    blog_article_mt =  models.TextField()
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
-
+    selected_field = models.BooleanField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
 class TextgeneratedCreditDeduction(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     credit_to_deduce = models.IntegerField(default=0)
