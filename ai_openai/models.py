@@ -2,7 +2,7 @@ from django.db import models
 from ai_auth.models import AiUser
 import os
 from ai_workspace.models import MyDocuments
-from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
+from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,AilaysaSupportedMtpeEngines,
                               PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution)
 
 class TokenUsage(models.Model):
@@ -97,6 +97,17 @@ class AiPromptCustomize(models.Model):
     prompt_generated = models.TextField(null=True, blank=True)
     prompt_result = models.TextField(null=True, blank=True) 
     created_at = models.DateTimeField(auto_now_add=True)
+
+class TranslateCustomizeDetails(models.Model):
+    customization = models.ForeignKey(AiPromptCustomize, on_delete=models.CASCADE, null=True, blank=True,related_name = 'customization')
+    #source_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='source_lang')
+    target_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='target_lang')
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True, blank=True, \
+        on_delete=models.CASCADE, related_name="customization_mt_engine")
+    credits_used = models.IntegerField(null=True, blank=True)
+    result = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
 
 # class AiImage(models.Model):
