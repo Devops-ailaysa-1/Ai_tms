@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution )
+                    ImageGeneratorResolution,TranslateCustomizeDetails )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
@@ -206,14 +206,23 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
         fields = ('id' , 'customize')
 
 
+class TranslateCustomizeDetailSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TranslateCustomizeDetails
+		fields = "__all__"
+
+
+
 class AiPromptCustomizeSerializer(serializers.ModelSerializer):
     customize_name = serializers.ReadOnlyField(source='customize.customize')
     doc_name =  serializers.ReadOnlyField(source='document.doc_name')
+    customization = TranslateCustomizeDetailSerializer(required=False,many=True)
     class Meta:
         model = AiPromptCustomize
         fields = ('id','document','doc_name','customize','customize_name','user_text',\
                     'tone','api_result','prompt_result','user_text_lang','user',\
-                    'credits_used','prompt_generated','user_text_mt','created_at')
+                    'credits_used','prompt_generated','user_text_mt','created_at',\
+                    'customization',)
 
         extra_kwargs = {
             "user":{"write_only": True},
@@ -222,7 +231,8 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
             "user_text_mt": {"write_only": True},
         }
         
-        
+
+
 from django import core
 
 class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
