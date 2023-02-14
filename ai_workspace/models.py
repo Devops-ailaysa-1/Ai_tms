@@ -198,7 +198,7 @@ class Project(models.Model):
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
         allow_files=False)
-    created_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     ai_user = models.ForeignKey(AiUser, null=False, blank=False,
         on_delete=models.CASCADE)
     ai_project_id = models.TextField()
