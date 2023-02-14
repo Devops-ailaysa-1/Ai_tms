@@ -97,11 +97,13 @@ class Blogtitle(models.Model):
     selected_field = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    blog_intro = models.TextField(null=True, blank=True)
+    blog_intro_mt = models.TextField(null=True, blank=True)
+    
 class BlogOutline(models.Model):
     blog_title_gen = models.ForeignKey(Blogtitle, on_delete=models.CASCADE, related_name = 'blogoutline_title')
-    blog_outline =  models.TextField()
-    blog_outline_mt =  models.TextField()
+    blog_outline =  models.TextField(null=True, blank=True)
+    blog_outline_mt =  models.TextField(null=True, blank=True)
     tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='blog_tone',blank=True,null=True,default=1)
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogoutline_used_tokens',null=True, blank=True)
     selected_field = models.BooleanField()
@@ -110,8 +112,8 @@ class BlogOutline(models.Model):
     
 class BlogArticle(models.Model):
     blog_outline_gen = models.ForeignKey(BlogOutline, on_delete=models.CASCADE, related_name = 'blogarticle_outline')
-    blog_article=  models.TextField()
-    blog_article_mt =  models.TextField()
+    blog_article=  models.TextField(null=True, blank=True)
+    blog_article_mt =  models.TextField(null=True, blank=True)
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
     selected_field = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)

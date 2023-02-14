@@ -56,8 +56,9 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token_usage = openai_response.get('usage' ,None) 
         prompt_token = token_usage['prompt_tokens']
         total_tokens=token_usage['total_tokens']
-        completion_tokens=token_usage['completion_tokens']
-        print("CompletionTokens------->",completion_tokens)
+        completion_tokens=token_usage.get('completion_tokens' ,None)
+        if not completion_tokens:
+            raise serializers.ValidationError("empty ai completions output")
         no_of_outcome = instance.response_copies
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
@@ -66,7 +67,6 @@ class AiPromptSerializer(serializers.ModelSerializer):
         self.customize_token_deduction(instance , total_tokens)            
         
         if generated_text:
-            print("generated_text" , generated_text)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
                     defaults = {'prompt_generated':prompt,'start_phrase':start_phrase,\
                     'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip()}) for j,i in enumerate(generated_text)]
@@ -274,7 +274,7 @@ class BlogtitleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Blogtitle
         fields = ('id','blog_title','blog_title_mt','token_usage',
-                  'selected_field','blog_keyword_gen' ,'blogoutline_title')
+                  'selected_field','blog_keyword_gen' ,'blogoutline_title','blog_intro' , 'blog_intro_mt')
 
 
 class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
@@ -282,7 +282,7 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogKeywordGenerate
         fields = ('id','blog_creation','token_usage','selected_field','blog_keyword_mt',
-                  'blog_keyword' , 'blogtitle_keygen')
+                  'blog_keyword' , 'blogtitle_keygen' )
  
 
 
@@ -334,15 +334,13 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             token_usage = openai_token_usage(openai_response)
             for i in range(len(openai_response["choices"])):
                 blog_keyword = openai_response["choices"][i]['text']
-                BlogKeywordGenerate.objects.create(blog_creation = instance
-                                                , blog_keyword =blog_keyword, selected_field= False , 
+                BlogKeywordGenerate.objects.create(blog_creation = instance, blog_keyword =blog_keyword, selected_field= False , 
                                                 blog_keyword_mt=None,token_usage=token_usage)
         instance.save()
         return instance
 
     def update(self, instance, validated_data):
         blog_available_langs = [17]
-        print("validated_data" , validated_data)
         if validated_data.get('blog_key_gen'):
             blog_key_id = validated_data.pop('blog_key_gen')
             blog_key_id.selected_field = True
@@ -355,26 +353,26 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             
             for i in blog_update_keyword:
                 if i.get('blog_keyword'):
-                    print("blog_key_------------>>>")
                     blog_keyword = i.get('blog_keyword')
-                    blog_key_gen_inst =  BlogKeywordGenerate.objects.filter(blog_creation = instance 
-                                            ,selected_field = True )
+                    blog_key_gen_inst =  BlogKeywordGenerate.objects.filter(blog_creation = instance ,selected_field = True )
                     blog_key_gen_inst.update(blog_keyword =blog_keyword)
                     #if it contains mt content ,should call get_translate
                     if blog_key_gen_inst.first().blog_keyword_mt:
                         trans_text = blog_key_gen_inst.first().blog_keyword_mt
                         trans_data = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id)           
                         blog_key_gen_inst.update(blog_keyword_mt = trans_data )                                          
-             
-
+        
     ##blog_title_or_topic_create
         if validated_data.get('blog_title_create_boolean'):
             sub_categories = validated_data.get('sub_categories')
             blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = sub_categories)
             blog_title_gen_inst = BlogKeywordGenerate.objects.filter(blog_creation = instance ,selected_field = True ).first()
             if blog_title_gen_inst.blog_keyword:
-                openai_response = get_prompt(blog_sub_phrase.start_phrase+ " " +blog_title_gen_inst.blog_keyword , OPENAI_MODEL,
-                                         blog_sub_phrase.max_token, n=3)
+                prompt = blog_sub_phrase.start_phrase+ " " +blog_title_gen_inst.blog_keyword+" "+ blog_title_gen_inst.blog_creation.user_title
+                if blog_title_gen_inst.blog_creation.keywords:
+                    prompt =blog_sub_phrase.start_phrase+ " " +blog_title_gen_inst.blog_keyword+" "+ blog_title_gen_inst.blog_creation.keywords +" "+ blog_title_gen_inst.blog_creation.user_title 
+                openai_response = get_prompt(prompt
+                                ,OPENAI_MODEL,blog_sub_phrase.max_token, n=3)
                 token_usage = openai_token_usage(openai_response)
                 
                 for i in range(len(openai_response["choices"])):
@@ -393,8 +391,19 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             blog_title_gen.selected_field = True
             blog_title_gen.save()
             blog_key_gen_inst = blog_title_gen.blog_keyword_gen
-            Blogtitle.objects.filter(blog_keyword_gen=blog_key_gen_inst).exclude(id=blog_title_gen.id).update(selected_field = False)
-        
+            blog_inst = Blogtitle.objects.filter(blog_keyword_gen=blog_key_gen_inst).exclude(id=blog_title_gen.id).update(selected_field = False)
+            blog_sel_field_inst = Blogtitle.objects.filter(blog_keyword_gen=blog_key_gen_inst ,selected_field = True).first()
+            if not blog_sel_field_inst.blog_intro:
+                blog_intro_gen = get_prompt("create introduction for a title "+ blog_sel_field_inst.blog_title +"with the following keywords "+blog_sel_field_inst.blog_keyword_gen.blog_keyword,OPENAI_MODEL , 200, n=1)
+                blog_intro_gen = blog_intro_gen["choices"][0]['text']
+                blog_sel_field_inst.blog_intro = blog_intro_gen
+                blog_sel_field_inst.save()
+            if (instance.user_language_id not in blog_available_langs):
+                if blog_sel_field_inst.blog_intro:
+                    blog_sel_field_inst.blog_intro_mt = get_translation(1, blog_sel_field_inst.blog_intro ,"en",instance.user_language_code 
+                                            ,user_id=instance.user.id)
+                    blog_sel_field_inst.save()
+                    
         if validated_data.get('blog_outline_create_boolean'):
             sub_categories = validated_data.get('sub_categories')
             blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = sub_categories)
@@ -403,7 +412,6 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             if blog_title_gen_inst.blog_title:
                 openai_response = get_prompt(blog_sub_phrase.start_phrase+ " " +blog_title_gen_inst.blog_title +" "+"with keyword "+ blog_title_gen_inst.blog_keyword_gen.blog_keyword , OPENAI_MODEL,
                                             blog_sub_phrase.max_token, n=3)
-                
                 token_usage = openai_token_usage(openai_response)
                 for i in range(len(openai_response["choices"])):
                     blog_outline = openai_response["choices"][i]['text']
@@ -414,17 +422,13 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                     tone = PromptTones.objects.get(id = 1)
                     BlogOutline.objects.create(blog_title_gen=blog_title_gen_inst,blog_outline=blog_outline,
                                               blog_outline_mt =blog_outline_mt,tone=tone, token_usage=token_usage ,selected_field= False)   
-        
-        
         if validated_data.get('blog_outline_gen'):
             blog_outline_gen = validated_data.get('blog_outline_gen')
             blog_outline_gen.selected_field = True
             blog_outline_gen.save()
             blog_title_gen_inst = blog_outline_gen.blog_title_gen
             BlogOutline.objects.filter(blog_title_gen=blog_title_gen_inst).exclude(id=blog_outline_gen.id).update(selected_field = False)
-            
- 
-        
+             
         if  validated_data.get('blog_article_create_boolean'):
             blog_article_create_boolean = validated_data.get('blog_article_create_boolean')
             sub_categories = validated_data.get('sub_categories')
@@ -444,9 +448,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                                             ,user_id=instance.user.id)
                     BlogArticle.objects.create(blog_outline_gen = blog_outline_gen_inst
                                                     , blog_article =blog_article, selected_field= False , 
-                                                    blog_article_mt=blog_article_mt,token_usage=token_usage)
-               
-                           
+                                                    blog_article_mt=blog_article_mt,token_usage=token_usage)                        
         return instance
 
 
