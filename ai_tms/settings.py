@@ -751,3 +751,6 @@ SILKY_AUTHORISATION = True  # User must have permissions
 # DEBUG_TOOLBAR_CONFIG = {
 #     "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
 # }
+
+
+DBBACKUP_CLEANUP_KEEP_MEDIA = int(os.getenv("DBBACKUP_CLEANUP_KEEP_MEDIA"))

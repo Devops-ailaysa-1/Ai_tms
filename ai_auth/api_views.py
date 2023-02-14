@@ -1250,11 +1250,18 @@ def TransactionSessionInfo(request):
         except Invoice.DoesNotExist:
              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         charge = invoice.charge
-        # if invoice == None:
-
         #     return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=invoice.plan.id,type="Subscription")
-        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount,"plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"plan_interval":invoice.subscription.plan.interval,"paid":charge.paid,"payment_type":charge.payment_method.type,
+
+        if invoice.amount_paid == 0 and invoice.amount_due == 0:
+            return JsonResponse({"email":invoice.customer.email,"purchased_plan":pack.name,"paid_date":None,"currency":None,"amount":None,
+                    "plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"plan_interval":invoice.subscription.plan.interval,
+                    "paid":None,"payment_type":None,
+                    "txn_id":None,"receipt_url":None},status=200,safe = False)
+
+        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount,
+                            "plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"plan_interval":invoice.subscription.plan.interval,
+                            "paid":charge.paid,"payment_type":charge.payment_method.type,
                             "txn_id":charge.balance_transaction_id,"receipt_url":charge.receipt_url},status=200,safe = False)
 
     elif response.mode == "payment":

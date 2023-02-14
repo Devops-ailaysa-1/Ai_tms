@@ -72,7 +72,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     ExpressProjectDetail
 from .models import Task
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT
+                    ExpressProjectAIMT, WriterProject
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -84,7 +84,8 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           GetAssignToSerializer, TaskTranscriptDetailSerializer, InstructionfilesSerializer,
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
-                          ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer)
+                          ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
+                          WriterProjectSerializer)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
@@ -2720,7 +2721,12 @@ def seg_edit(express_obj,task_id,src_text):
     no_newlines = src_text.strip("\n")  # remove leading and trailing "\n"
     split_text = NEWLINES_RE.split(no_newlines)
     print("split_text-------------->",split_text)
-    vers = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
+    exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last()
+    if not exp_src_obj:
+        res = seg_create(task_id,src_text)
+        print("Created")
+        return None
+    vers = exp_src_obj.version
     for i,j  in enumerate(split_text):
         sents = nltk.sent_tokenize(j)
         for l,k in enumerate(sents):
@@ -2744,7 +2750,7 @@ def seg_edit(express_obj,task_id,src_text):
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
             tt = ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=express_obj.mt_engine_id)
     res = exp_proj_save(task_id,None)
-    print("Done")
+    print("Done Editing")
     return None
 
 
@@ -2976,10 +2982,11 @@ def translate_from_pdf(request,task_id):
 
 
 class MyDocFilter(django_filters.FilterSet):
-    doc_name = django_filters.CharFilter(lookup_expr='icontains')
+    #proj_name = django_filters.CharFilter(lookup_expr='icontains')
+    doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
     class Meta:
         model = MyDocuments
-        fields = ['doc_name']
+        fields = ['doc_name']#proj_name
 
 
 class MyDocumentsView(viewsets.ModelViewSet):
@@ -2987,12 +2994,14 @@ class MyDocumentsView(viewsets.ModelViewSet):
     serializer_class = MyDocumentSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
-    ordering_fields = ['doc_name','id']
+    ordering_fields = ['doc_name','id']#'proj_name',
     filterset_class = MyDocFilter
     paginator = PageNumberPagination()
     ordering = ('-id')
     paginator.page_size = 20
     # https://www.django-rest-framework.org/api-guide/filtering/
+
+
 
     def get_queryset(self):
         user = self.request.user
@@ -3011,6 +3020,23 @@ class MyDocumentsView(viewsets.ModelViewSet):
         response = self.get_paginated_response(serializer.data)
         return  response
 
+    # def get_queryset(self):
+    #     user = self.request.user
+    #     ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
+    #     return WriterProject.objects.filter(ai_user=user)#.order_by('-id')
+        
+
+    # def list(self, request, *args, **kwargs):
+    #     paginate = request.GET.get('pagination',True)
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     if paginate == 'False':
+    #         serializer = WriterProjectSerializer(queryset, many=True)
+    #         return Response(serializer.data)
+    #     pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+    #     serializer = WriterProjectSerializer(pagin_tc, many=True)
+    #     response = self.get_paginated_response(serializer.data)
+    #     return  response
+
     def retrieve(self, request, pk):
         queryset = self.get_queryset()
         ins = get_object_or_404(queryset, pk=pk)
@@ -3020,7 +3046,11 @@ class MyDocumentsView(viewsets.ModelViewSet):
     def create(self, request):
         file = request.FILES.get('file',None)
         ai_user = request.user.team.owner if request.user.team else request.user
-        ser = MyDocumentSerializer(data={**request.POST.dict(),'file':file,'ai_user':ai_user.id,'created_by':request.user.id})
+        writer_proj = request.POST.get('project',None)
+        if not writer_proj:
+            writer_obj = WriterProject.objects.create(ai_user_id = ai_user.id)
+            writer_proj = writer_obj.id
+        ser = MyDocumentSerializer(data={**request.POST.dict(),'project':writer_proj,'file':file,'ai_user':ai_user.id,'created_by':request.user.id})
         if ser.is_valid(raise_exception=True):
             ser.save()
             return Response(ser.data, status=201)

@@ -8,7 +8,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail,\
-		ExpressProjectAIMT#,TaskAssignRateInfo
+		ExpressProjectAIMT,WriterProject#,TaskAssignRateInfo
 import json,os
 import pickle,itertools
 from ai_workspace import forms as ws_forms
@@ -769,6 +769,12 @@ class MyDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyDocuments
         fields = "__all__"
+
+class WriterProjectSerializer(serializers.ModelSerializer):
+	related_docs = MyDocumentSerializer(required=False,many=True)
+	class Meta:
+		model = WriterProject
+		fields = ('id','proj_name','ai_user','created_at','updated_at','related_docs',)
 
 class TaskAssignSerializer(serializers.ModelSerializer):
 	task_info = TaskSerializer(required=False,many=True)

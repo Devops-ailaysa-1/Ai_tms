@@ -674,7 +674,7 @@ def check_test():
 @task
 def backup_media():
     if os.getenv('MEDIA_BACKUP')=='True':   
-        call_command('mediabackup')
+        call_command('mediabackup','--clean')
     logger.info("backeup of mediafiles successfull.")
     
 @task

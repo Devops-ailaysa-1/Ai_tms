@@ -127,8 +127,36 @@ def my_docs_upload_path(instance, filename):
     file_path = os.path.join(instance.user.uid,"MyDocuments", filename)
     return file_path
 
+class WriterProject(models.Model):
+    proj_name = models.CharField(max_length=1000, null=True, blank=True,)
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+      
+        if not self.proj_name:
+            self.proj_name = 'AiWriter-'+str(WriterProject.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
+            
+        if self.id:
+            proj_exact = WriterProject.objects.filter(proj_name=self.proj_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+        else:
+            proj_exact = WriterProject.objects.filter(proj_name=self.proj_name, \
+                            ai_user=self.ai_user,).count()
+        if proj_exact != 0:
+            if self.id:
+                proj_count = WriterProject.objects.filter(proj_name__icontains=self.proj_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+            else:
+                proj_count = WriterProject.objects.filter(proj_name__icontains=self.proj_name, \
+                            ai_user=self.ai_user,).count()
+            self.proj_name = self.proj_name + "(" + str(proj_count) + ")"
+
+        return super().save()
 
 class MyDocuments(models.Model):
+    project = models.ForeignKey(WriterProject, null=True, blank=True, on_delete=models.CASCADE,related_name = 'related_docs')
     file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
     word_count = models.IntegerField(null=True,blank=True)
