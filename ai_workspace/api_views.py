@@ -2917,7 +2917,7 @@ def express_task_download(request,task_id):###############permission need to be 
         shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
         if shorten_obj.exists():
             f.write("Shortened" + "\n")
-            f.write(obj.last().final_result)
+            f.write(shorten_obj.last().final_result)
         simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
         if simplified_obj.exists():
             f.write("Simplified" + "\n")
