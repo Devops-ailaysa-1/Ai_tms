@@ -2812,7 +2812,7 @@ def task_get_segments(request):
     print("Content--------------->",content)
     if express_obj.mt_raw == None and express_obj.target_text == None:
         initial_credit = user.credit_balance.get("total_left")
-        consumable_credits = get_consumable_credits_for_text(content,obj.job.source_language_code,obj.job.target_language_code)
+        consumable_credits = get_consumable_credits_for_text(content,source_lang=obj.job.source_language_code,target_lang=obj.job.target_language_code)
         print("InitialCredits---------------->",initial_credit)
         print("ConsumableCredits---------------->",consumable_credits)
         if initial_credit > consumable_credits:
@@ -2864,7 +2864,7 @@ def task_segments_save(request):
     shortened_text = request.POST.get('shortened_text')
     mt_engine_id = request.POST.get('mt_engine',None)
     source_text = request.POST.get('source_text')
-    apply_all = request.POST.get('apply_all')
+    apply_all = request.POST.get('apply_all',None)
     obj = Task.objects.get(id=task_id)
     user = obj.job.project.ai_user
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
@@ -3172,35 +3172,37 @@ def express_custom(request,exp_obj,option):
             instant_text = file.read()
     target_lang_code = exp_obj.task.job.target_language_code
     source_lang_code = exp_obj.task.job.source_language_code
-    print("Tar Lang--------->",target_lang_code)
     customize = AiCustomize.objects.get(customize = option)
     total_tokens = 0
     if source_lang_code != 'en':
-        print("Non English source")
         initial_credit = user.credit_balance.get("total_left")
-        consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=target_lang_code,target_lang='en')
+        print('InitialCredit---------->',initial_credit)
+        consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang='en')
         if initial_credit > consumable_credits_user_text:
-            user_insta_text_mt_en = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = instant_text,
-                            source_lang_code=target_lang_code , target_lang_code='en',user_id=user.id)
-            
-            total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
+            if target_lang_code!='en':
+                user_insta_text_mt_en = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = instant_text,
+                                source_lang_code=source_lang_code , target_lang_code='en',user_id=user.id)
+                
+                total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
+            else:
+                user_insta_text_mt_en = exp_obj.target_text
             response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
             result_txt = response['choices'][0]['text']
             print("Res from openai------------->",result_txt)
+           
             if target_lang_code != 'en':
                 txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
                             source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
                 total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
-            
+            print("Tokens---------->",total_tokens)
         else:
             return ({'msg':'Insufficient Credits'})
     
     else:##english
-        print("English Source")
-        print("Source----->",instant_text)
+        
         response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
-        print("Res from openai------------->",result_txt)
+        print("Tokens---------->",total_tokens)
         if target_lang_code != 'en':
             txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
                         source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
