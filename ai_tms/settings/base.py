@@ -25,7 +25,7 @@ from pathlib import Path
 # })
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(file2)), '..','..'))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..','..'))
 TEMPLATE_DIR = os.path.join(BASE_DIR,'ai_staff','templates')
 TEMPLATE_DIR_2 = os.path.join(BASE_DIR,'ai_vendor','templates')
 TEMPLATE_DIR_3 = os.path.join(BASE_DIR,'ai_marketplace','templates')
