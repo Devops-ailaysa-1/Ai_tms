@@ -3148,6 +3148,7 @@ def express_custom(request,exp_obj,option):
     user = exp_obj.task.job.project.ai_user
     instant_text = exp_obj.source_text
     tone=1
+    txt_generated = None
     if not instant_text:
         with open(exp_obj.task.file.file.path, "r") as file:
             instant_text = file.read()
