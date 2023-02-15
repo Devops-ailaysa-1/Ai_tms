@@ -2698,7 +2698,7 @@ def exp_proj_save(task_id,mt_change):
 def seg_create(task_id,content):
     from ai_workspace.models import ExpressProjectSrcSegment,ExpressProjectSrcMTRaw
     obj = Task.objects.get(id=task_id)
-    lang_code = obj.job.target_language_code
+    lang_code = obj.job.source_language_code
     user = obj.job.project.ai_user
     express_obj = ExpressProjectDetail.objects.get(task_id = task_id)
     express_obj.source_text = content
@@ -2709,12 +2709,17 @@ def seg_create(task_id,content):
     no_newlines = content.strip("\n")  # remove leading and trailing "\n"
     split_text = NEWLINES_RE.split(no_newlines)
     lang_list = ['hi','bn','or','ne','pa']
+    lang_list_2 = ['zh-Hans','zh-Hant','ja']
     for i,j  in enumerate(split_text):
-        if lang_code in lang_list:
+        if lang_code in lang_list_2:
+            sents = cust_split(j)
+
+        elif lang_code in lang_list:
             sents = sentence_split(j, lang_code, delim_pat='auto')
         else:
             sents = nltk.sent_tokenize(j)
         #sents = nltk.sent_tokenize(j)
+        print("Sents------->",len(sents))
         for l,k in enumerate(sents):
             ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=1)
 
@@ -2734,6 +2739,15 @@ def get_total_consumable_credits(source_lang,prompt_string_list):
             credit+=consumable_credit
     return credit
 
+def cust_split(text):
+    import re
+    tt = []
+    for sent in re.findall(u'[^!?。\.\!\?]+[!?。\.\!\?]?', text, flags=re.U):
+        tt.append(sent)
+    return tt
+
+
+
 def seg_edit(express_obj,task_id,src_text):
     obj = Task.objects.get(id=task_id)
     user = obj.job.project.ai_user
@@ -2741,8 +2755,9 @@ def seg_edit(express_obj,task_id,src_text):
     no_newlines = src_text.strip("\n")  # remove leading and trailing "\n"
     split_text = NEWLINES_RE.split(no_newlines)
     print("split_text-------------->",split_text)
-    lang_code = obj.job.target_language_code
+    lang_code = obj.job.source_language_code
     lang_list = ['hi','bn','or','ne','pa']
+    lang_list_2 = ['zh-Hans','zh-Hant','ja']
     exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last()
     if not exp_src_obj:
         res = seg_create(task_id,src_text)
@@ -2750,10 +2765,13 @@ def seg_edit(express_obj,task_id,src_text):
         return None
     vers = exp_src_obj.version
     for i,j  in enumerate(split_text):
-        if lang_code in lang_list:
+        if lang_code in lang_list_2:
+            sents = cust_split(j)
+        elif lang_code in lang_list:
             sents = sentence_split(j, lang_code, delim_pat='auto')
         else:
             sents = nltk.sent_tokenize(j)
+        print("Sents------>",len(sents))
         for l,k in enumerate(sents):
             ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=vers+1)
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
@@ -3153,9 +3171,12 @@ def express_custom(request,exp_obj,option):
         with open(exp_obj.task.file.file.path, "r") as file:
             instant_text = file.read()
     target_lang_code = exp_obj.task.job.target_language_code
+    source_lang_code = exp_obj.task.job.source_language_code
+    print("Tar Lang--------->",target_lang_code)
     customize = AiCustomize.objects.get(customize = option)
     total_tokens = 0
-    if target_lang_code != 'en':
+    if source_lang_code != 'en':
+        print("Non English source")
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=target_lang_code,target_lang='en')
         if initial_credit > consumable_credits_user_text:
@@ -3165,16 +3186,25 @@ def express_custom(request,exp_obj,option):
             total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
             result_txt = response['choices'][0]['text']
-            txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
+            print("Res from openai------------->",result_txt)
+            if target_lang_code != 'en':
+                txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
                             source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
-            total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
+                total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
             
         else:
             return ({'msg':'Insufficient Credits'})
     
     else:##english
+        print("English Source")
+        print("Source----->",instant_text)
         response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
+        print("Res from openai------------->",result_txt)
+        if target_lang_code != 'en':
+            txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
+                        source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
+            total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
     print("MT----->",exp_obj.mt_engine_id)
     inst_data = {'express':exp_obj.id,'source':instant_text, 'customize':customize.id,
