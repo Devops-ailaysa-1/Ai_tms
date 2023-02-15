@@ -3178,7 +3178,7 @@ def express_custom(request,exp_obj,option):
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
     print("MT----->",exp_obj.mt_engine_id)
     inst_data = {'express':exp_obj.id,'source':instant_text, 'customize':customize.id,
-                'api_result':result_txt.strip() if result_txt else None,'mt_engine':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else None}
+                'api_result':result_txt.strip() if result_txt else None,'mt_engine':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else result_txt.strip()}
     print("inst_data--->",inst_data)
     queryset = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize).last()
     if queryset:
