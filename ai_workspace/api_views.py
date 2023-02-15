@@ -3147,6 +3147,7 @@ def express_custom(request,exp_obj,option):
     from ai_openai.api_views import customize_response
     user = exp_obj.task.job.project.ai_user
     instant_text = exp_obj.source_text
+    tone=1
     if not instant_text:
         with open(exp_obj.task.file.file.path, "r") as file:
             instant_text = file.read()
@@ -3161,7 +3162,6 @@ def express_custom(request,exp_obj,option):
                             source_lang_code=target_lang_code , target_lang_code='en',user_id=user.id)
             
             total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
-            tone=1
             response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
             result_txt = response['choices'][0]['text']
             txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
