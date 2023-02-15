@@ -68,8 +68,8 @@ urlpatterns = [
 #    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
 
-if settings.MANAGEMENT:
-    urlpatterns += [path("management/", include("ai_management.urls"))]
+# if settings.MANAGEMENT:
+#     urlpatterns += [path("management/", include("ai_management.urls"))]
 # urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
