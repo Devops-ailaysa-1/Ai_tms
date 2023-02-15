@@ -1889,17 +1889,19 @@ def file_write(pr):
         if express_obj.target_text:
             #print("File Path--------------->",target_filepath)
             with open(target_filepath,'w') as f:
-                f.write("Target" + "\n")
+                f.write("Standard" + "\n")
                 f.write(express_obj.target_text)
+                f.write("\n")
                 shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
                 if shorten_obj.exists():
                     f.write("Shortened" + "\n")
                     f.write(shorten_obj.last().final_result)
+                    f.write("\n")
                 simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
                 if simplified_obj.exists():
                     f.write("Simplified" + "\n")
                     f.write(simplified_obj.last().final_result)
-
+                    f.write("\n")
 
 
 @api_view(["GET"])
@@ -1907,19 +1909,7 @@ def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
     if pr.project_type_id == 5:
         file_write(pr)
-        # for i in pr.get_tasks:
-        #     express_obj = ExpressProjectDetail.objects.filter(task=i).first()
-        #     if express_obj.target_text:
-        #         file_name,ext = os.path.splitext(i.file.filename)
-        #         target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
-        #         target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
-        #         print("File Path--------------->",target_filepath)
-        #         with open(target_filepath,'w') as f:
-        #             f.write(express_obj.target_text)
-        #         #print("File Written--------------->",target_filepath)
-        #     else:
-        #         pass
-
+        
     if pr.project_type_id not in [3,4,5]:
         for i in pr.get_tasks:
             if i.document:
@@ -2912,16 +2902,19 @@ def express_task_download(request,task_id):###############permission need to be 
     file_name,ext = os.path.splitext(obj.file.filename)
     target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
     with open(target_filename,'w') as f:
-        f.write("Target" + "\n")
+        f.write("Standard" + "\n")
         f.write(express_obj.target_text)
+        f.write('\n')
         shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
         if shorten_obj.exists():
             f.write("Shortened" + "\n")
             f.write(shorten_obj.last().final_result)
+            f.write("\n")
         simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
         if simplified_obj.exists():
             f.write("Simplified" + "\n")
             f.write(simplified_obj.last().final_result)
+            f.write("\n")
     print("File Written--------------->",target_filename)
     res = download_file(target_filename)
     os.remove(target_filename)
