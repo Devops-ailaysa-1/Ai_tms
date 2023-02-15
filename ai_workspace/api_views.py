@@ -3172,7 +3172,7 @@ def express_custom(request,exp_obj,option):
             return ({'msg':'Insufficient Credits'})
     
     else:##english
-        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
+        response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
     print("MT----->",exp_obj.mt_engine_id)
