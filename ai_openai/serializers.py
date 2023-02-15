@@ -2,9 +2,9 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution,BlogKeywordGenerate,BlogCreation ,Blogtitle ,BlogOutline,BlogArticle )
-from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale,
-                             PromptStartPhrases,PromptTones)
+                    ImageGeneratorResolution,TranslateCustomizeDetails ,BlogArticle ,
+                    BlogOutline,Blogtitle,BlogKeywordGenerate,BlogCreation)
+from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
 import math
@@ -192,14 +192,23 @@ class AiCustomizeSerializer(serializers.ModelSerializer):
         fields = ('id' , 'customize')
 
 
+class TranslateCustomizeDetailSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = TranslateCustomizeDetails
+		fields = "__all__"
+
+
+
 class AiPromptCustomizeSerializer(serializers.ModelSerializer):
     customize_name = serializers.ReadOnlyField(source='customize.customize')
     doc_name =  serializers.ReadOnlyField(source='document.doc_name')
+    customization = TranslateCustomizeDetailSerializer(required=False,many=True)
     class Meta:
         model = AiPromptCustomize
         fields = ('id','document','doc_name','customize','customize_name','user_text',\
                     'tone','api_result','prompt_result','user_text_lang','user',\
-                    'credits_used','prompt_generated','user_text_mt','created_at')
+                    'credits_used','prompt_generated','user_text_mt','created_at',\
+                    'customization',)
 
         extra_kwargs = {
             "user":{"write_only": True},
@@ -208,7 +217,8 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
             "user_text_mt": {"write_only": True},
         }
         
-        
+
+
 from django import core
 
 class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
@@ -261,7 +271,7 @@ def openai_token_usage(openai_response ):
 class BlogArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model=BlogArticle
-        fields = '__all__'       
+        fields = '__all__'        
 
 class BlogOutlineSerializer(serializers.ModelSerializer):
     blogarticle_outline = BlogArticleSerializer(required=False,many=True)
@@ -284,7 +294,10 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         fields = ('id','blog_creation','token_usage','selected_field','blog_keyword_mt',
                   'blog_keyword' , 'blogtitle_keygen' )
  
-
+    def update(self, instance, validated_data):
+        print("instance",instance)
+        print("val" , validated_data)
+        return super().update(instance, validated_data)
 
 class BlogCreationSerializer(serializers.ModelSerializer):
     blogcreate = BlogKeywordGenerateSerializer(required=False,many=True)
@@ -347,10 +360,16 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             blog_key_id.save()
             #other fields blog_key_select_update selected_field
             BlogKeywordGenerate.objects.filter(blog_creation = instance).exclude(id = blog_key_id.id).update(selected_field = False)
-             
+        
+        
+        ####updation
+        
         if validated_data.get('blogcreate'):
             blog_update_keyword = validated_data.get('blogcreate')
-            
+            print(blog_update_keyword)
+            key_gen_serializer = BlogKeywordGenerateSerializer(parent_model, data=parent_model_data, partial=True)
+            key_gen_serializer.is_valid(raise_exception=True)
+            key_gen_serializer.save()
             for i in blog_update_keyword:
                 if i.get('blog_keyword'):
                     blog_keyword = i.get('blog_keyword')
@@ -361,7 +380,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                         trans_text = blog_key_gen_inst.first().blog_keyword_mt
                         trans_data = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id)           
                         blog_key_gen_inst.update(blog_keyword_mt = trans_data )                                          
-        
+        ###updation end
     ##blog_title_or_topic_create
         if validated_data.get('blog_title_create_boolean'):
             sub_categories = validated_data.get('sub_categories')
@@ -371,8 +390,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                 prompt = blog_sub_phrase.start_phrase+ " " +blog_title_gen_inst.blog_keyword+" "+ blog_title_gen_inst.blog_creation.user_title
                 if blog_title_gen_inst.blog_creation.keywords:
                     prompt =blog_sub_phrase.start_phrase+ " " +blog_title_gen_inst.blog_keyword+" "+ blog_title_gen_inst.blog_creation.keywords +" "+ blog_title_gen_inst.blog_creation.user_title 
-                openai_response = get_prompt(prompt
-                                ,OPENAI_MODEL,blog_sub_phrase.max_token, n=3)
+                openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token, n=3)
                 token_usage = openai_token_usage(openai_response)
                 
                 for i in range(len(openai_response["choices"])):
@@ -384,7 +402,6 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                     Blogtitle.objects.create(blog_keyword_gen = blog_title_gen_inst
                                                 , blog_title =blog_title, selected_field= False , 
                                                 blog_title_mt=blog_title_mt,token_usage=token_usage)
-        
         
         if validated_data.get('blog_title_gen'):
             blog_title_gen = validated_data.get('blog_title_gen')

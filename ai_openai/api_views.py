@@ -5,8 +5,8 @@ from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
                                      AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                                     ImageGeneratorPromptSerializer ,BlogCreationSerializer ,
-                                     BlogKeywordGenerateSerializer)
+                                     ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer,
+                                     BlogCreationSerializer,BlogKeywordGenerateSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -18,7 +18,7 @@ from .utils import get_consumable_credits_for_openai_text_generator
 from ai_auth.models import UserCredits
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 from ai_workspace.models import Task
-from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale
+from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale, AilaysaSupportedMtpeEngines
 #from langdetect import detect
 #import langid
 from googletrans import Translator
@@ -123,7 +123,31 @@ def customize_response(customize ,user_text,tone,used_tokens):
         prompt = None
         response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
     return response,total_tokens,prompt
-    
+
+def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engine):
+    res = []
+    source_lang_code = Languages.objects.get(id=source_lang).locale.first().locale_code
+    for i in target_langs:
+        target_lang_code = Languages.objects.get(id=i).locale.first().locale_code
+        mt_engine_id = AilaysaSupportedMtpeEngines.objects.get(id=mt_engine).id
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang_code,target_lang_code)
+        if initial_credit >= consumable_credits_user_text:
+            translation = get_translation(mt_engine_id, user_text, source_lang_code,target_lang_code,user_id=user.id)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)
+            data = {'customization':customized_id,'target_language':i,
+                'mt_engine':mt_engine,'credits_used':consumable_credits_user_text,'result':translation}
+            ser = TranslateCustomizeDetailSerializer(data=data)
+            if ser.is_valid():
+                ser.save()
+                out = {'target_lang':i,'translation':ser.data}
+                res.append(out)
+            else:
+                print(ser.errors)
+        else:
+            out = {'target_lang':i,'translation':"insufficient credits"}
+            res.append(out)
+    return res
 
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
@@ -135,19 +159,41 @@ def customize_text_openai(request):
     tone = request.POST.get('tone',1)
     language =  request.POST.get('language',None)
     customize = AiCustomize.objects.get(id =customize_id)
-    # detector = Translator()
+    target_langs = request.POST.getlist('target_lang')
+    mt_engine = request.POST.get('mt_engine')
+    detector = Translator()
+
+    if language:lang = Languages.objects.get(id=language).locale.first().locale_code
+    else:lang = detector.detect(user_text).lang
+
+    initial_credit = user.credit_balance.get("total_left")
+    if initial_credit == 0:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+
+    if customize.customize == "Translate":
+        consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
+        if initial_credit < consumable_credits_user_text:
+           return  Response({'msg':'Insufficient Credits'},status=400) 
+        data = {'document':document,'customize':customize_id,'user':request.user.id,\
+            'user_text':user_text,'user_text_lang':language}
+        ser = AiPromptCustomizeSerializer(data=data)
+        if ser.is_valid():
+            ser.save()
+        print(ser.errors)
+        created_obj_id = ser.data.get('id') 
+        res = translate_text(created_obj_id,user,user_text,language,target_langs,mt_engine)
+        return Response(res)
+
+    
     total_tokens = 0
     user_text_mt_en,txt_generated = None,None
-    if language:
-        lang = Languages.objects.get(id=language).locale.first().locale_code
-    else:
-        lang = lang_detect(user_text)
-        # lang = detector.detect(user_text).lang
-    user_text_lang = LanguagesLocale.objects.filter(locale_code=lang).first().language.id
+    try:user_text_lang = LanguagesLocale.objects.filter(locale_code=lang).first().language.id
+    except:user_text_lang = 17
+
     if lang!= 'en':
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
-        if initial_credit > consumable_credits_user_text:
+        if initial_credit >= consumable_credits_user_text:
             user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
                                         source_lang_code=lang , target_lang_code='en',user_id=user.id)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
@@ -160,13 +206,9 @@ def customize_text_openai(request):
         else:
             return  Response({'msg':'Insufficient Credits'},status=400)
         
-    else:##english
-        initial_credit = user.credit_balance.get("total_left")
-        if initial_credit == 0:
-            return  Response({'msg':'Insufficient Credits'},status=400)
-        else:
-            response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-            result_txt = response['choices'][0]['text']
+    else:##english      
+        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
+        result_txt = response['choices'][0]['text']
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
     print("TT---------->",prompt)
     data = {'document':document,'customize':customize_id,'user':request.user.id,\
