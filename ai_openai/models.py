@@ -62,7 +62,24 @@ class AiPromptResult(models.Model):
     @property
     def result_lang_code(self):
         return self.result_lang.locale.first().locale_code
+    
+def user_directory_path_image_gen_result(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation_result",filename)
 
+ # document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
+class ImageGeneratorPrompt(models.Model):
+    prompt = models.TextField(null=True, blank=True)
+    prompt_mt = models.TextField(null=True, blank=True)
+    image_resolution = models.ForeignKey(ImageGeneratorResolution , on_delete= models.CASCADE)
+    credits_used = models.IntegerField(null=True, blank=True)
+    no_of_image = models.IntegerField(null=True, blank=True)
+ 
+class ImageGenerationPromptResponse(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    created_id = models.CharField(max_length = 50, null=True, blank=True)
+    generated_image =models.FileField(upload_to=user_directory_path_image_gen_result,blank=False, null=False)
+    image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt , on_delete= models.CASCADE,related_name='gen_img')
+    
 class BlogCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     user_title = models.CharField(max_length = 100, null=True, blank=True)
@@ -115,6 +132,8 @@ class BlogArticle(models.Model):
     selected_field = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
     
 class TextgeneratedCreditDeduction(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -148,22 +167,7 @@ class TranslateCustomizeDetails(models.Model):
 
 
 
-def user_directory_path_image_gen_result(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation_result",filename)
 
- # document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
-class ImageGeneratorPrompt(models.Model):
-    prompt = models.TextField(null=True, blank=True)
-    prompt_mt = models.TextField(null=True, blank=True)
-    image_resolution = models.ForeignKey(ImageGeneratorResolution , on_delete= models.CASCADE)
-    credits_used = models.IntegerField(null=True, blank=True)
-    no_of_image = models.IntegerField(null=True, blank=True)
- 
-class ImageGenerationPromptResponse(models.Model):
-    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    created_id = models.CharField(max_length = 50, null=True, blank=True)
-    generated_image =models.FileField(upload_to=user_directory_path_image_gen_result,blank=False, null=False)
-    image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt , on_delete= models.CASCADE,related_name='gen_img')
 
 
 

@@ -4,7 +4,8 @@ from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDedu
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
                     ImageGeneratorResolution,TranslateCustomizeDetails ,BlogArticle ,
                     BlogOutline,Blogtitle,BlogKeywordGenerate,BlogCreation)
-from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
+from ai_staff.models import (PromptCategories,PromptSubCategories,PromptStartPhrases ,AiCustomize,
+                             LanguagesLocale,PromptTones) 
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
 import math
@@ -294,10 +295,6 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         fields = ('id','blog_creation','token_usage','selected_field','blog_keyword_mt',
                   'blog_keyword' , 'blogtitle_keygen' )
  
-    def update(self, instance, validated_data):
-        print("instance",instance)
-        print("val" , validated_data)
-        return super().update(instance, validated_data)
 
 class BlogCreationSerializer(serializers.ModelSerializer):
     blogcreate = BlogKeywordGenerateSerializer(required=False,many=True)
@@ -360,26 +357,33 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             blog_key_id.save()
             #other fields blog_key_select_update selected_field
             BlogKeywordGenerate.objects.filter(blog_creation = instance).exclude(id = blog_key_id.id).update(selected_field = False)
-        
-        
+
         ####updation
-        
         if validated_data.get('blogcreate'):
             blog_update_keyword = validated_data.get('blogcreate')
-            print(blog_update_keyword)
-            key_gen_serializer = BlogKeywordGenerateSerializer(parent_model, data=parent_model_data, partial=True)
-            key_gen_serializer.is_valid(raise_exception=True)
-            key_gen_serializer.save()
             for i in blog_update_keyword:
+                updt_blog_keyword = i.get('blog_keyword')
+                blog_key_gen_inst =  BlogKeywordGenerate.objects.filter(blog_creation=instance,selected_field=True)
+                blog_for_key = blog_key_gen_inst.first()
                 if i.get('blog_keyword'):
-                    blog_keyword = i.get('blog_keyword')
-                    blog_key_gen_inst =  BlogKeywordGenerate.objects.filter(blog_creation = instance ,selected_field = True )
-                    blog_key_gen_inst.update(blog_keyword =blog_keyword)
+                    if (instance.user_language_id in blog_available_langs):
+                        keywords = blog_for_key.blog_keyword
+                        keywords = keywords+' \n '+updt_blog_keyword 
+                        blog_key_gen_inst.update(blog_keyword =keywords)
+                        # blog_key_gen_inst.save()
+                    else:
+                        keywords = blog_for_key.blog_keyword_mt
+                        keywords = keywords+' \n '+updt_blog_keyword
+                        blog_key_gen_inst.update(blog_keyword_mt =keywords)
+                        trans_data=get_translation(1, updt_blog_keyword ,instance.user_language_code,"en",user_id=instance.user.id)
+                        blog_for_key.blog_keyword = blog_for_key.blog_keyword +"\n "+trans_data
+                        blog_for_key.save()
                     #if it contains mt content ,should call get_translate
-                    if blog_key_gen_inst.first().blog_keyword_mt:
-                        trans_text = blog_key_gen_inst.first().blog_keyword_mt
-                        trans_data = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id)           
-                        blog_key_gen_inst.update(blog_keyword_mt = trans_data )                                          
+                    # if blog_key_gen_inst.first().blog_keyword_mt:
+                    #     trans_text = blog_key_gen_inst.first().blog_keyword_mt
+                    #     trans_data = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id)           
+                    #     blog_key_gen_inst.update(blog_keyword_mt=trans_data)    
+                                                            
         ###updation end
     ##blog_title_or_topic_create
         if validated_data.get('blog_title_create_boolean'):
