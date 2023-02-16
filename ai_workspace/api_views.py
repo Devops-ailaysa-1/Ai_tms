@@ -1874,24 +1874,44 @@ def previously_created_steps(request):
 #         return res
 #     else:
 #         return Response({'msg':'something went wrong'})
+def file_write(pr):
+    for i in pr.get_tasks:
+        express_obj = ExpressProjectDetail.objects.filter(task=i).first()
+        file_name,ext = os.path.splitext(i.file.filename)
+        target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
+        target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
+        source_filename = file_name + "_source" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
+        source_filepath = os.path.join(pr.project_dir_path,'source',source_filename)
+        print("SRC--------->",express_obj.source_text)
+        if express_obj.source_text:
+            with open(source_filepath,'w') as f:
+                f.write(express_obj.source_text)
+        if express_obj.target_text:
+            #print("File Path--------------->",target_filepath)
+            with open(target_filepath,'w') as f:
+                f.write("Standard:" + "\n")
+                f.write(express_obj.target_text)
+                f.write("\n")
+                f.write("---------" + "\n")
+                shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
+                if shorten_obj.exists():
+                    f.write("Shortened:" + "\n")
+                    f.write(shorten_obj.last().final_result)
+                    f.write("\n")
+                    f.write("---------" + "\n")
+                simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
+                if simplified_obj.exists():
+                    f.write("Simplified:" + "\n")
+                    f.write(simplified_obj.last().final_result)
+                    f.write("\n")
+                    f.write("---------" + "\n")
 
 
 @api_view(["GET"])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
     if pr.project_type_id == 5:
-        for i in pr.get_tasks:
-            express_obj = ExpressProjectDetail.objects.filter(task=i).first()
-            if express_obj.target_text:
-                file_name,ext = os.path.splitext(i.file.filename)
-                target_filename = file_name + "_out" +  "(" + i.job.source_language_code + "-" + i.job.target_language_code + ")" + ext
-                target_filepath = os.path.join(pr.project_dir_path,'source',target_filename)
-                print("File Path--------------->",target_filepath)
-                with open(target_filepath,'w') as f:
-                    f.write(express_obj.target_text)
-                #print("File Written--------------->",target_filepath)
-            else:
-                pass
+        file_write(pr)
 
     if pr.project_type_id not in [3,4,5]:
         for i in pr.get_tasks:
@@ -2632,8 +2652,9 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             pr = Project.objects.get(id=serializer.data.get('id'))
+            source_lang = pr.project_jobs_set.first().source_language_id
             res=[{'task_id':i.id,'target_lang_name':i.job.target_language.language,"target_lang_id":i.job.target_language.id} for i in pr.get_mtpe_tasks]
-            return Response({'Res':res})
+            return Response({'project_id':pr.id,'source_lang_id':source_lang,'Res':res})
         return Response(serializer.errors)
 
 
@@ -2678,7 +2699,7 @@ def exp_proj_save(task_id,mt_change):
 def seg_create(task_id,content):
     from ai_workspace.models import ExpressProjectSrcSegment,ExpressProjectSrcMTRaw
     obj = Task.objects.get(id=task_id)
-    lang_code = obj.job.target_language_code
+    lang_code = obj.job.source_language_code
     user = obj.job.project.ai_user
     express_obj = ExpressProjectDetail.objects.get(task_id = task_id)
     express_obj.source_text = content
@@ -2689,12 +2710,17 @@ def seg_create(task_id,content):
     no_newlines = content.strip("\n")  # remove leading and trailing "\n"
     split_text = NEWLINES_RE.split(no_newlines)
     lang_list = ['hi','bn','or','ne','pa']
+    lang_list_2 = ['zh-Hans','zh-Hant','ja']
     for i,j  in enumerate(split_text):
-        if lang_code in lang_list:
+        if lang_code in lang_list_2:
+            sents = cust_split(j)
+
+        elif lang_code in lang_list:
             sents = sentence_split(j, lang_code, delim_pat='auto')
         else:
             sents = nltk.sent_tokenize(j)
         #sents = nltk.sent_tokenize(j)
+        print("Sents------->",len(sents))
         for l,k in enumerate(sents):
             ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=1)
 
@@ -2714,6 +2740,15 @@ def get_total_consumable_credits(source_lang,prompt_string_list):
             credit+=consumable_credit
     return credit
 
+def cust_split(text):
+    import re
+    tt = []
+    for sent in re.findall(u'[^!?。\.\!\?]+[!?。\.\!\?]?', text, flags=re.U):
+        tt.append(sent)
+    return tt
+
+
+
 def seg_edit(express_obj,task_id,src_text):
     obj = Task.objects.get(id=task_id)
     user = obj.job.project.ai_user
@@ -2721,8 +2756,9 @@ def seg_edit(express_obj,task_id,src_text):
     no_newlines = src_text.strip("\n")  # remove leading and trailing "\n"
     split_text = NEWLINES_RE.split(no_newlines)
     print("split_text-------------->",split_text)
-    lang_code = obj.job.target_language_code
+    lang_code = obj.job.source_language_code
     lang_list = ['hi','bn','or','ne','pa']
+    lang_list_2 = ['zh-Hans','zh-Hant','ja']
     exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last()
     if not exp_src_obj:
         res = seg_create(task_id,src_text)
@@ -2730,10 +2766,13 @@ def seg_edit(express_obj,task_id,src_text):
         return None
     vers = exp_src_obj.version
     for i,j  in enumerate(split_text):
-        if lang_code in lang_list:
+        if lang_code in lang_list_2:
+            sents = cust_split(j)
+        elif lang_code in lang_list:
             sents = sentence_split(j, lang_code, delim_pat='auto')
         else:
             sents = nltk.sent_tokenize(j)
+        print("Sents------>",len(sents))
         for l,k in enumerate(sents):
             ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=vers+1)
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
@@ -2774,7 +2813,7 @@ def task_get_segments(request):
     print("Content--------------->",content)
     if express_obj.mt_raw == None and express_obj.target_text == None:
         initial_credit = user.credit_balance.get("total_left")
-        consumable_credits = get_consumable_credits_for_text(content,obj.job.source_language_code,obj.job.target_language_code)
+        consumable_credits = get_consumable_credits_for_text(content,source_lang=obj.job.source_language_code,target_lang=obj.job.target_language_code)
         print("InitialCredits---------------->",initial_credit)
         print("ConsumableCredits---------------->",consumable_credits)
         if initial_credit > consumable_credits:
@@ -2826,7 +2865,7 @@ def task_segments_save(request):
     shortened_text = request.POST.get('shortened_text')
     mt_engine_id = request.POST.get('mt_engine',None)
     source_text = request.POST.get('source_text')
-    apply_all = request.POST.get('apply_all')
+    apply_all = request.POST.get('apply_all',None)
     obj = Task.objects.get(id=task_id)
     user = obj.job.project.ai_user
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
@@ -2885,7 +2924,22 @@ def express_task_download(request,task_id):###############permission need to be 
     file_name,ext = os.path.splitext(obj.file.filename)
     target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
     with open(target_filename,'w') as f:
+        f.write("Standard:" + "\n")
         f.write(express_obj.target_text)
+        f.write('\n')
+        f.write("---------" + "\n")
+        shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
+        if shorten_obj.exists():
+            f.write("Shortened:" + "\n")
+            f.write(shorten_obj.last().final_result)
+            f.write("\n")
+            f.write("---------" + "\n")
+        simplified_obj = express_obj.express_src_text.filter(customize__customize='Simplify')
+        if simplified_obj.exists():
+            f.write("Simplified:" + "\n")
+            f.write(simplified_obj.last().final_result)
+            f.write("\n")
+            f.write("---------" + "\n")
     print("File Written--------------->",target_filename)
     res = download_file(target_filename)
     os.remove(target_filename)
@@ -3112,37 +3166,52 @@ def express_custom(request,exp_obj,option):
     from ai_openai.api_views import customize_response
     user = exp_obj.task.job.project.ai_user
     instant_text = exp_obj.source_text
+    tone=1
+    txt_generated = None
     if not instant_text:
         with open(exp_obj.task.file.file.path, "r") as file:
             instant_text = file.read()
     target_lang_code = exp_obj.task.job.target_language_code
+    source_lang_code = exp_obj.task.job.source_language_code
     customize = AiCustomize.objects.get(customize = option)
     total_tokens = 0
-    if target_lang_code != 'en':
+    if source_lang_code != 'en':
         initial_credit = user.credit_balance.get("total_left")
-        consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=target_lang_code,target_lang='en')
+        print('InitialCredit---------->',initial_credit)
+        consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang='en')
         if initial_credit > consumable_credits_user_text:
-            user_insta_text_mt_en = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = instant_text,
-                            source_lang_code=target_lang_code , target_lang_code='en',user_id=user.id)
-            
-            total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
-            tone=1
+            if target_lang_code!='en':
+                user_insta_text_mt_en = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = instant_text,
+                                source_lang_code=source_lang_code , target_lang_code='en',user_id=user.id)
+                
+                total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
+            else:
+                user_insta_text_mt_en = exp_obj.target_text
             response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
             result_txt = response['choices'][0]['text']
-            txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
+            print("Res from openai------------->",result_txt)
+           
+            if target_lang_code != 'en':
+                txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
                             source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
-            total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
-            
+                total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
+            print("Tokens---------->",total_tokens)
         else:
             return ({'msg':'Insufficient Credits'})
     
     else:##english
-        response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
+        
+        response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
+        print("Tokens---------->",total_tokens)
+        if target_lang_code != 'en':
+            txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
+                        source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
+            total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
     AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
     print("MT----->",exp_obj.mt_engine_id)
     inst_data = {'express':exp_obj.id,'source':instant_text, 'customize':customize.id,
-                'api_result':result_txt.strip() if result_txt else None,'mt_engine':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else None}
+                'api_result':result_txt.strip() if result_txt else None,'mt_engine':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else result_txt.strip()}
     print("inst_data--->",inst_data)
     queryset = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize).last()
     if queryset:
