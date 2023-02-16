@@ -200,7 +200,7 @@ def para_creation_from_ocr(texts):
 
 import PyPDF2
 from rest_framework import serializers
-def file_pdf_check(file_path,id):
+def file_pdf_check(file_path,id): 
     try:
         pdfdoc = PyPDF2.PdfReader(file_path)
         pdf_check = {0:'ocr',1:'text'}
@@ -208,7 +208,10 @@ def file_pdf_check(file_path,id):
         for i in tqdm(range(len(pdfdoc.pages))):
             current_page = pdfdoc.pages[i]
             if current_page.extract_text():
-                pdf_check_list.append(1)
+                if len(current_page.extract_text()) >=700:
+                    pdf_check_list.append(1)
+                else:
+                    pdf_check_list.append(0)
             else:
                 pdf_check_list.append(0)
         return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
