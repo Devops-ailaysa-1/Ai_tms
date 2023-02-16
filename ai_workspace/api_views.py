@@ -754,8 +754,10 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             serlzr = ser(data={**request.data,"files":[im_file],"from_text":['true']},context={"request": request})
             
         elif pdf_obj_id:
+            files_ = request.FILES.getlist('files')
             file_obj = get_file_from_pdf(pdf_obj_id,None)
-            serlzr = ser(data={**request.data,"files":[file_obj]},context={"request": request})    
+            files_.append(file_obj)
+            serlzr = ser(data={**request.data,"files":files_},context={"request": request})    
              
         else:
             serlzr = ser(data=\
