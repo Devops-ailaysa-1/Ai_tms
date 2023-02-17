@@ -206,6 +206,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
             doc_data = json.loads(doc_data)
 
+        if doc_data['total_word_count'] == 0:
+
+            return {'msg':'Empty File'}
+
         if doc_data['total_word_count'] >= 50000:
 
             #print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
@@ -336,7 +340,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 #print("params_data------------>",params_data)
                 if doc.status_code == 200:
                     doc_data = doc.json()
-                    print("doc_data--------------->",doc_data)
+                    if doc_data.get('total_word_count') == 0:
+                        return {'msg':'Empty File'}
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
 
