@@ -3,10 +3,14 @@ from django.utils.text import slugify
 from ai_auth.models import AiUser
 from ai_workspace.models import Task
 import os
+from django.core.files.storage import FileSystemStorage
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,
                               PromptSubCategories,PromptTones,ModelGPTName)
 
 def user_directory_path(instance, filename):
+    count = Ai_PdfUpload.objects.filter(file_name__contains=filename).count()
+    if count!=0:
+        filename = str(filename).split(".pdf")[0] + "_" + str(count) + ".pdf"
     return '{0}/{1}/{2}'.format(instance.user.uid, "pdf_file",filename)
 
 
@@ -28,9 +32,11 @@ def pdf_converted_file_path(instance, filename):
     file_path = os.path.join(instance.user.uid,"pdf_file", filename)
     return file_path
 
+
+
 class Ai_PdfUpload(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    pdf_file = models.FileField(upload_to=user_directory_path  , blank=False, null=False)
+    pdf_file = models.FileField(upload_to=user_directory_path,blank=False, null=False)#,storage=MyStorage())
     docx_url_field = models.URLField(null=True, blank=True)
     #docx_file = models.FileField(upload_to=pdf_converted_file_path,null=True,blank=True)
     pdf_file_name = models.CharField(max_length=200 , null=True, blank=True)
@@ -67,3 +73,17 @@ class Ai_PdfUpload(models.Model):
     #     return self.name
 
 
+# class MyStorage(FileSystemStorage):
+
+#     def get_available_name(self, name, max_length=None):
+#         if self.exists(name):
+#             print("Name------->",name)
+#             #count = Ai_PdfUpload.objects.filter(file_name__contains=name).count()
+#             #name = str(name).split(".pdf")[0] + "(" + str(count) + ").pdf"
+#             # dir_name, file_name = os.path.split(name)
+#             # file_root, file_ext = os.path.splitext(file_name)            
+
+#             # my_chars = 'abcde'  # The characters you want to append
+
+#             # name = os.path.join(dir_name, '{}_{}{}'.format(file_root, my_chars, file_ext))
+#         return name
