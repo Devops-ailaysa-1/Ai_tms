@@ -2283,6 +2283,17 @@ class UserDetailView(viewsets.ViewSet):
             return Response({'error':f'updation failed {str(e)}'},status=400)
 
 
+def get_lang_code(lang_code):
+    if lang_code == "zh-CN" or lang_code == "zh":
+        return "zh-Hans"
+    elif lang_code == "zh-TW":
+        return "zh-Hant"
+    else:
+        return lang_code
+
+
+
+
 from googletrans import Translator
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -2291,7 +2302,8 @@ def lang_detect(request):
     text = request.GET.get('text')
     detector = Translator()
     lang = detector.detect(text).lang
-    lang_obj = Languages.objects.filter(locale__locale_code = lang).first()
+    lang_code = get_lang_code(lang)
+    lang_obj = Languages.objects.filter(locale__locale_code = lang_code).first()
     return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
 
 
