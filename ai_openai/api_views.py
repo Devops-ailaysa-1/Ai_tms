@@ -172,6 +172,8 @@ def customize_text_openai(request):
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
         lang = detector.detect(user_text).lang
+        if isinstance(lang,list):
+            lang = lang[0]
         lang = get_lang_code(lang)
 
     initial_credit = user.credit_balance.get("total_left")
