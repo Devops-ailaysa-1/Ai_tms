@@ -2763,7 +2763,11 @@ def seg_edit(express_obj,task_id,src_text):
     lang_list_2 = ['zh-Hans','zh-Hant','ja']
     exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id).last()
     if not exp_src_obj:
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits = get_consumable_credits_for_text(src_text,source_lang=obj.job.source_language_code,target_lang=obj.job.target_language_code)
+        print("Consumable in seg_edit Create-------->".consumable_credits)
         res = seg_create(task_id,src_text)
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
         print("Created")
         return None
     vers = exp_src_obj.version
