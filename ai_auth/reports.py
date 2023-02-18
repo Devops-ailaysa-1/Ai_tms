@@ -107,10 +107,10 @@ class AilaysaReport:
     
     def langpairs_and_users(self,users):
         from collections import Counter
-
-        tot_langpairs,langpair=[],[]
+        tot_langpairs=[]
         pairs=dict()
         for user in users:
+            langpair=[]
             projs = Project.objects.filter(ai_user=user)
             for proj in projs:
                 jobs = proj.project_jobs_set.all()
@@ -167,8 +167,13 @@ class AilaysaReport:
                     sub = None
                     plan_name = None
                     status = None
+                
+            if user.country == None:
+                country_name = None
+            else:
+                country_name = user.country.name
 
-            df2 = {'UID':user.uid,'Email':user.email, 'Country': user.country.name, 'Projects Created': proj_count,'Intial Credits':user_credi_details.get('buy'),'Credits Left':user_credi_details.get('left'),
+            df2 = {'UID':user.uid,'Email':user.email, 'Country': country_name, 'Projects Created': proj_count,'Intial Credits':user_credi_details.get('buy'),'Credits Left':user_credi_details.get('left'),
                     'Plan':plan_name,'Subscription status':status,'Created':pd.to_datetime(user.date_joined.replace(tzinfo=None))}
             df = df.append(df2, ignore_index = True)
             # df.insert(loc=0, column='UID', value=player_vals)
