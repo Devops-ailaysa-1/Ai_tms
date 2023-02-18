@@ -3210,7 +3210,7 @@ def express_custom(request,exp_obj,option):
             txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
                         source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
             total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
-    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+    AiPromptSerializer().customize_token_deduction(instance = None,total_tokens= total_tokens,user=user)
     print("MT----->",exp_obj.mt_engine_id)
     inst_data = {'express':exp_obj.id,'source':instant_text, 'customize':customize.id,
                 'api_result':result_txt.strip() if result_txt else None,'mt_engine':exp_obj.mt_engine_id,'final_result':txt_generated if txt_generated else result_txt.strip()}
