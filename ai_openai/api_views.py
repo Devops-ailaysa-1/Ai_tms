@@ -102,6 +102,7 @@ class AiPromptResultViewset(generics.ListAPIView):
 
 
 def customize_response(customize ,user_text,tone,used_tokens):
+    #print("Initial------->",used_tokens)
     user_text = user_text.strip()
     if customize.prompt or customize.customize == "Text completion":
         if customize.customize == "Text completion":
@@ -109,18 +110,22 @@ def customize_response(customize ,user_text,tone,used_tokens):
             prompt = customize.prompt+' {} tone : '.format(tone_)+user_text#+', in {} tone.'.format(tone_)
             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =150,n=1)
         else:
-            if customize.grouping == "Explore more":
+            if customize.grouping == "Explore":
                 prompt = customize.prompt+" "+user_text+"?"
             else:
                 prompt = customize.prompt+" "+user_text+"."
             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         tokens = response['usage']['total_tokens']
+        tokens_ = response['usage']['total_tokens']
+        completion_tokens = response['usage']['completion_tokens']
+        prompt_tokens = response['usage']["prompt_tokens"]
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
         total_tokens += used_tokens
     else:
         total_tokens = 0
         prompt = None
         response = get_prompt_edit(input_text=user_text ,instruction=customize.instruct)
+    #print("Final----------->",total_tokens)
     return response,total_tokens,prompt
 
 def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engine):
