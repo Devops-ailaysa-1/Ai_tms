@@ -153,6 +153,8 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
             res.append(out)
     return res
 
+
+from ai_auth.api_views import get_lang_code
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def customize_text_openai(request):
@@ -168,7 +170,9 @@ def customize_text_openai(request):
     detector = Translator()
 
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
-    else:lang = detector.detect(user_text).lang
+    else:
+        lang = detector.detect(user_text).lang
+        lang = get_lang_code(lang)
 
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
