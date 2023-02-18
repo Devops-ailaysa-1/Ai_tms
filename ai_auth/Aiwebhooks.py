@@ -46,6 +46,21 @@ def check_campaign(user):
     else:
         return None
 
+def add_months(sourcedate, months):
+    month = sourcedate.month - 1 + months
+    year = sourcedate.year + month // 12
+    month = month % 12 + 1
+    day = min(sourcedate.day, calendar.monthrange(year,month)[1])
+    sourcedate=sourcedate.replace(year=year,month=month,day=day)
+    return sourcedate
+
+
+def calculate_addon_expiry(start_date,pack):
+    if pack.expires_at == None:
+        return None
+    else:
+        return add_months(start_date,pack.expires_at)
+
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
     carry = 0
     referral_credits = 0
@@ -74,8 +89,8 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
             credit.save()
 
     if pack.type=="Addon":
-        expiry = None
-
+        expiry = calculate_addon_expiry(timezone.now(),pack)
+        
     if pack.product.name == 'Pro - V':
         camp_credits= check_campaign(user)
     else:
@@ -489,15 +504,6 @@ def expiry_yearly_sub(sub):
 
 
 
-def add_months(sourcedate, months):
-    month = sourcedate.month - 1 + months
-    year = sourcedate.year + month // 12
-    month = month % 12 + 1
-    day = min(sourcedate.day, calendar.monthrange(year,month)[1])
-    sourcedate=sourcedate.replace(year=year,month=month,day=day)
-    return sourcedate
-
-
 def subscription_credit_carry(user,invoice):
 
     pass
@@ -546,16 +552,15 @@ def subscription_credit_carry(user,invoice):
 #     return response
  
 def renew_user_credits_yearly(subscription):
-    pack = models.CreditPack.objects.get(product=subscription.plan.product,type='Subscription')
-    prev_cp = models.UserCredits.objects.filter(user=subscription.customer.subscriber,credit_pack_type='Subscription',price_id=subscription.plan.id,ended_at=None).last()
-    expiry = expiry_yearly_sub(subscription)
-    creditsls= models.UserCredits.objects.filter(user=subscription.customer.subscriber).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
     try:
+        pack = models.CreditPack.objects.get(product=subscription.plan.product,type='Subscription')
+        prev_cp = models.UserCredits.objects.filter(user=subscription.customer.subscriber,credit_pack_type='Subscription',price_id=subscription.plan.id,ended_at=None).last()
+        expiry = expiry_yearly_sub(subscription)
+        creditsls= models.UserCredits.objects.filter(user=subscription.customer.subscriber).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
         with transaction.atomic():
             for credit in creditsls:
                 credit.ended_at=timezone.now()
                 credit.save()
-
             kwarg = {
             'user':subscription.customer.subscriber,
             'stripe_cust_id':subscription.customer,
@@ -563,11 +568,16 @@ def renew_user_credits_yearly(subscription):
             'buyed_credits':pack.credits,
             'credits_left':pack.credits,
             'expiry': expiry,
-            'paymentintent':prev_cp.paymentintent,
-            'invoice':prev_cp.invoice,
             'credit_pack_type': pack.type,
             'ended_at': None
             }
+            if prev_cp==None:
+                logger.warning("user has no intial year subscription credits")
+                kwarg['paymentintent']=None
+                kwarg['invoice']=None
+            else:
+                kwarg['paymentintent']=prev_cp.paymentintent
+                kwarg['invoice']=prev_cp.invoice
             us = models.UserCredits.objects.create(**kwarg)
     except Exception as e:
         logger.error('Failed to do something: ' + str(e))

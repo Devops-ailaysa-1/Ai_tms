@@ -38,6 +38,7 @@ from ai_workspace_okapi.utils import get_translation
 import pandas as pd
 from ai_staff.models import LanguageMetaDetails
 from django.db.models import Value, IntegerField, CharField
+from django_oso.auth import authorize
 # from ai_workspace.serializers import ProjectListSerializer
 
 # Create your views here.
@@ -384,6 +385,7 @@ def glossary_search(request):
     user_input = request.POST.get("user_input")
     doc_id = request.POST.get("doc_id")
     doc = Document.objects.get(id=doc_id)
+    authorize(request, resource=doc, actor=request.user, action="read")
     user = request.user.team.owner if request.user.team else request.user
     glossary_selected = GlossarySelected.objects.filter(project = doc.job.project).values('glossary_id')
     target_language = doc.job.target_language
@@ -441,7 +443,7 @@ class GetTranslation(APIView):#############Mt update need to work###############
         if credit_balance > word_count:
 
             # get translation
-            translation = get_translation(mt_engine_id, source, sl_code, tl_code)
+            translation = get_translation(mt_engine_id, source, sl_code, tl_code,user_id=user.id)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, word_count)
             tt = GlossaryMt.objects.create(task_id = task_id,source = source,target_mt = translation,mt_engine_id=mt_engine_id)
             return Response(GlossaryMtSerializer(tt).data,status=201)

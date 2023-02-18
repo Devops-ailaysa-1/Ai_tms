@@ -3,6 +3,9 @@ from django.db.models.fields import NullBooleanField
 from django.utils import timezone
 from django.db import models
 from django.db.models.query import QuerySet
+from django.apps import apps
+
+
 
 # Create your models here.
 
@@ -397,7 +400,93 @@ class SupportTopics(ParanoidModel):
     topic = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+class ModelGPTName(models.Model):
+    model_name = models.CharField(max_length=40, null=True, blank=True)
+    model_code = models.CharField(max_length=40, null=True, blank=True)
+    model_ability =models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
+    def __str__(self) -> str:
+        return self.model_name
+    
+class PromptCategories(models.Model):
+    category = models.CharField(max_length=1000, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.category 
+
+
+class PromptTones(models.Model):
+    tone = models.CharField(max_length=1000, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.tone 
+
+class PromptSubCategories(models.Model):
+    category = models.ForeignKey(PromptCategories,related_name='prompt_category',
+                                 on_delete = models.CASCADE,blank=True, null=True)
+    sub_category = models.CharField(max_length=1000, null=True, blank=True)
+    # fields = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.sub_category    
+    
+class PromptFields(models.Model):
+    prompt_sub_categories = models.ForeignKey(PromptSubCategories,related_name='sub_category_fields',
+                                 on_delete = models.CASCADE,blank=True, null=True)
+    fields = models.CharField(max_length=100, null=True, blank=True)
+    # optional_field =  models.BooleanField()
+    help_text = models.CharField(max_length=500, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.fields 
+
+
+class ImageGeneratorResolution(models.Model):
+    image_resolution = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.image_resolution 
+    
+    
+
+ 
+class PromptStartPhrases(models.Model):
+    sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
+                                 on_delete = models.CASCADE,blank=True, null=True)
+    start_phrase =  models.TextField(null=True, blank=True)   
+    punctuation = models.CharField(max_length=5 , null=True,blank=True)
+    max_token = models.CharField(max_length=10 , null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.start_phrase
+    
+class AiCustomize(models.Model):
+    # user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    customize = models.CharField(max_length =200, null=True, blank=True)  
+    prompt =   models.CharField(max_length =200, null=True, blank=True)
+    instruct = models.CharField(max_length =300, null=True, blank=True)
+    grouping = models.CharField(max_length =200, null=True, blank=True)  
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    def __str__(self) -> str:
+        return self.customize
+    
 
 class Role(ParanoidModel):
     name = models.CharField(max_length=100, null=True, blank=True)
@@ -484,18 +573,38 @@ class AiRoles(models.Model):
         return self.name
 
 class TaskRoleLevel(models.Model):
-    role = models.ForeignKey(AiRoles,related_name='task_roles',
+    # from ai_workspace.models import Steps
+    role = models.ForeignKey(AiRoles,related_name='task_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
+    step = models.CharField(max_length=300)
 
 class ProjectRoleLevel(models.Model):
-    role = models.ForeignKey(AiRoles,related_name='project_roles',
+    role = models.ForeignKey(AiRoles,related_name='project_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
 
 class TeamRoleLevel(models.Model):
-    role = models.ForeignKey(AiRoles,related_name='team_roles',
+    role = models.ForeignKey(AiRoles,related_name='team_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
-
 
 class OrganizationRoleLevel(models.Model):
-    role = models.ForeignKey(AiRoles,related_name='org_roles',
+    role = models.ForeignKey(AiRoles,related_name='org_roles_level',
         on_delete=models.CASCADE,blank=True, null=True)
+
+class ApiProvider(models.Model):
+    name = models.CharField(max_length=300)
+
+    def __str__(self):
+        return self.name
+
+class ApiService(models.Model):
+    name = models.CharField(max_length=500)
+
+    def __str__(self):
+        return self.name
+
+class ApiServiceList(models.Model):
+    provider = models.ForeignKey(ApiProvider,related_name ='provider_list', on_delete=models.CASCADE)
+    service = models.ForeignKey(ApiService,related_name = 'service_list', on_delete=models.CASCADE)
+
+
+

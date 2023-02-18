@@ -257,7 +257,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source)
         if initial_credit > consumable_credits:
             try:
-                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code)
+                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code,user_id=document.owner_pk)
                 if target_tags !='':
                     temp_target = mt + target_tags
                     target = mt + target_tags
@@ -444,7 +444,7 @@ class MT_RawSerializer(serializers.ModelSerializer):
         sl_code = doc.source_language_code
         tl_code = doc.target_language_code
 
-        validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code)
+        validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
         instance = MT_RawTranslation.objects.create(**validated_data)
         return instance
 

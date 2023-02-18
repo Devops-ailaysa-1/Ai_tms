@@ -1,10 +1,12 @@
 from django.contrib import admin
 
-from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeEngines, Spellcheckers,
+from .models import (AiUserType, Languages,AssetUsageTypes,AilaysaSupportedMtpeEngines, ProjectRoleLevel, Spellcheckers,
                     SpellcheckerLanguages,SubscriptionPricing,Currencies,SubscriptionPricingPrices,SubscriptionFeatures,
                     CreditsAddons,CreditAddonPrice,IndianStates,StripeTaxId,JobPositions, LanguagesLocale, LanguageScripts,
                     LanguageMetaDetails, Countries,Role, SubjectFields, Billingunits, ContentTypes, ServiceTypes, VendorLegalCategories,
-                    ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles)
+                    ServiceTypeunits,ProjectType,ProjectTypeDetail,MTLanguageSupport,MTLanguageLocaleVoiceSupport,AiRoles,
+                    TaskRoleLevel,ModelGPTName,PromptCategories,PromptTones,PromptSubCategories,PromptStartPhrases,AiCustomize,PromptFields,ApiServiceList,
+                    ApiProvider,ApiService ,ImageGeneratorResolution)
 # Register your models here.
 
 class LanguagesAdmin(admin.ModelAdmin):
@@ -54,6 +56,10 @@ class SubscriptionPricingPricesAdmin(admin.ModelAdmin):
 class SubscriptionPricingAdmin(admin.ModelAdmin):
    list_display = ('subscriptionplan','features','description','set_id','sequence_id')
 
+@admin.register(ApiServiceList)
+class ApiServiceListAdmin(admin.ModelAdmin):
+    list_display = ("provider","service")
+
 admin.site.register(AiUserType)
 admin.site.register(Languages,LanguagesAdmin)
 admin.site.register(AssetUsageTypes)
@@ -89,4 +95,17 @@ admin.site.register(ServiceTypes)
 admin.site.register(VendorLegalCategories)
 admin.site.register(ServiceTypeunits)
 admin.site.register(AiRoles)
+admin.site.register(TaskRoleLevel)
+admin.site.register(ProjectRoleLevel)
 
+admin.site.register(ApiProvider)
+admin.site.register(ApiService)
+
+admin.site.register(ModelGPTName)
+admin.site.register(PromptCategories)
+admin.site.register(PromptTones)
+admin.site.register(PromptSubCategories)
+admin.site.register(PromptStartPhrases)
+admin.site.register(AiCustomize)
+admin.site.register(PromptFields)
+admin.site.register(ImageGeneratorResolution)

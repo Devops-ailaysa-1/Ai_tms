@@ -14,7 +14,7 @@ from os.path import join
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from stripe.api_resources import subscription
-from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,TeamAccess
+# from ai_auth.access_policies import MemberCreationAccess,InternalTeamAccess,TeamAccess
 from ai_auth.serializers import (BillingAddressSerializer, BillingInfoSerializer,
                                 ProfessionalidentitySerializer,UserAttributeSerializer,
                                 UserProfileSerializer,CustomerSupportSerializer,ContactPricingSerializer,
@@ -85,6 +85,7 @@ from ai_auth.Aiwebhooks import update_user_credits
 from allauth.account.signals import email_confirmed
 from ai_auth.signals import send_campaign_email
 #from django_oso.decorators import authorize_request
+from django_oso.auth import authorize, authorize_model
 
 logger = logging.getLogger('django')
 
@@ -399,6 +400,7 @@ def send_email(subject,template,context):
 
 
 class TempPricingPreferenceCreateView(viewsets.ViewSet):
+    permission_classes = [AllowAny]
 
     def create(self,request):
         serializer = TempPricingPreferenceSerializer(data={**request.POST.dict()})
@@ -499,7 +501,7 @@ def create_checkout_session(user,price,customer=None,trial=False):
 
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=user.id,
-        success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        success_url=domain_url + 'success?ses={CHECKOUT_SESSION_ID}',
         cancel_url=domain_url + 'cancel/',
         payment_method_types=['card'],
         customer =customer.id,
@@ -653,7 +655,7 @@ def create_checkout_session_addon(price,Aicustomer,tax_rate,quantity=1):
     #     addr_collect= 'required'
     checkout_session = stripe.checkout.Session.create(
         client_reference_id=Aicustomer.subscriber,
-        success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        success_url=domain_url + 'success?ses={CHECKOUT_SESSION_ID}',
         cancel_url=domain_url + 'cancel/',
         payment_method_types=['card'],
         mode='payment',
@@ -1248,11 +1250,18 @@ def TransactionSessionInfo(request):
         except Invoice.DoesNotExist:
              return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         charge = invoice.charge
-        # if invoice == None:
-
         #     return JsonResponse({"msg":"unable to find related data"},status=204,safe = False)
         pack = CreditPack.objects.get(product__prices__id=invoice.plan.id,type="Subscription")
-        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount,"plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"plan_interval":invoice.subscription.plan.interval,"paid":charge.paid,"payment_type":charge.payment_method.type,
+
+        if invoice.amount_paid == 0 and invoice.amount_due == 0:
+            return JsonResponse({"email":invoice.customer.email,"purchased_plan":pack.name,"paid_date":None,"currency":None,"amount":None,
+                    "plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"plan_interval":invoice.subscription.plan.interval,
+                    "paid":None,"payment_type":None,
+                    "txn_id":None,"receipt_url":None},status=200,safe = False)
+
+        return JsonResponse({"email":charge.receipt_email,"purchased_plan":pack.name,"paid_date":charge.created,"currency":charge.currency,"amount":charge.amount,
+                            "plan_duration_start":invoice.subscription.current_period_start,"plan_duration_end":invoice.subscription.current_period_end,"plan_interval":invoice.subscription.plan.interval,
+                            "paid":charge.paid,"payment_type":charge.payment_method.type,
                             "txn_id":charge.balance_transaction_id,"receipt_url":charge.receipt_url},status=200,safe = False)
 
     elif response.mode == "payment":
@@ -2274,13 +2283,14 @@ class UserDetailView(viewsets.ViewSet):
             return Response({'error':f'updation failed {str(e)}'},status=400)
 
 
-
+from googletrans import Translator
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def lang_detect(request):
     from ai_staff.models import Languages
     text = request.GET.get('text')
-    lang = detect(text)
+    detector = Translator()
+    lang = detector.detect(text).lang
     lang_obj = Languages.objects.filter(locale__locale_code = lang).first()
     return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
 
@@ -2331,4 +2341,35 @@ def stripe_resync_instance(instance):
 @api_view(['GET'])
 #@authorize_request
 def oso_test(request):
+    from ai_workspace.models import Task
+    from ai_workspace_okapi.models import Document
+    usr_attr = UserAttribute.objects.get(user= request.user)
+    authorize(request, resource=usr_attr, actor=request.user, action="read")
+    print("authorized user attribute")
+    tsk = Task.objects.get(id=2867)
+    doc = Document.objects.get(id=1684)
+    authorize(request, resource=doc, actor=request.user, action="read")
     return JsonResponse({"msg":"sucess"},status=200)
+
+
+
+@api_view(['GET'])
+#@authorize_request
+def oso_test_querys(request):
+    from ai_workspace.models import Task
+    from ai_workspace_okapi.models import Document
+    usr_attr = UserAttribute.objects.get(user= request.user)
+    authorize(request, resource=usr_attr, actor=request.user, action="read")
+    print("authorized user attribute")
+    # tsk = Task.objects.get(id=2867)
+    #doc = Document.objects.filter(id=1684)
+    repo_filter = authorize_model(request, Project, action="read")
+    # fil = Document.objects.authorize(request, actor=request.user, action="read")
+    pros =  Project.objects.filter(repo_filter)
+    print("pros",pros)
+    print("test")
+    #Document.objects.authorize(request, actor=request.user, action="read")
+    # print(fil)
+    return JsonResponse({"msg":"sucess"},status=200)
+
+

@@ -14,6 +14,7 @@ from django.db import IntegrityError
 from ai_auth.vendor_onboard_list import users_list
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from ai_workspace_okapi.models import Document
+from django_oso.auth import authorize
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -235,11 +236,13 @@ def feature_availability(request):
     task_id = request.POST.get("task_id")
     if doc_id:
         doc = Document.objects.get(id=doc_id)
+        authorize(request, resource=doc, actor=request.user, action="read")
         lang_code = doc.target_language_code
         target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
         source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
     if task_id:
         task = Task.objects.get(id=task_id)
+        authorize(request, resource=task, actor=request.user, action="read")
         lang_code = task.job.target_language_code
         target_lang_id = task.job.target_language_id
         source_lang_id = task.job.source_language_id

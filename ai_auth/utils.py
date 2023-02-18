@@ -2,6 +2,13 @@ import random
 from djstripe.models import Customer,Subscription,Account
 from django.db.models import Q
 import time
+from django.core.exceptions import PermissionDenied
+from django_oso.auth import authorize
+import django_oso
+import logging
+logger = logging.getLogger('django')
+
+# from ai_auth.api_views import resync_instances
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -39,6 +46,7 @@ def get_unique_pid(klass, iter_count=1):
 
 
 def get_plan_name(user):
+	from ai_auth.api_views import resync_instances
 	try:
 		customer = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
 	except Customer.DoesNotExist:
@@ -54,3 +62,74 @@ def get_plan_name(user):
 
 def get_currency_based_on_country(user):
 	pass
+
+
+
+def filter_authorize(request,query,action,user):
+	auth_ids = [] 
+	for instance in query:
+		try:
+			authorize(request ,resource=instance, actor=user, action=action)
+			auth_ids.append(instance.id)
+		except PermissionDenied:
+			continue
+	return query.filter(id__in = auth_ids)
+
+def authorize_list(obj_list,action,user):
+	for instance in obj_list:
+		if not django_oso.oso.Oso.is_allowed(
+			actor=user, resource=instance, action=action):
+			obj_list.remove(instance)
+	return obj_list
+			
+
+	# 	try:
+	# 		obj_is_allowed()
+	# 		authorize(request ,resource=instance, actor=user, action=action)
+	# 		auth_ids.append(instance.id)
+	# 	except PermissionDenied:
+	# 		continue
+	# return query.filter(id__in = auth_ids)
+
+def obj_is_allowed(obj,action,user):
+	if not django_oso.oso.Oso.is_allowed(
+		actor=user, resource=obj, action=action
+	):
+		raise PermissionDenied
+
+def objls_is_allowed(obj_ls,action,user):
+	for obj in obj_ls:
+		if isinstance(obj, tuple):
+			obj = obj[0]
+		if not django_oso.oso.Oso.is_allowed(
+			actor=user, resource=obj, action=action
+		):
+			raise PermissionDenied	
+
+def unassign_task(user,role_name,task):
+	from ai_auth.models import TaskRoles
+	try:
+		obj = TaskRoles.objects.get(user=user,task_pk=task.id,role__role__name=role_name)
+		obj.delete()
+	except TaskRoles.DoesNotExist:
+		logger.info("User is not related to this Task")
+	
+
+def record_usage(provider,service,uid,email,usage):
+	from ai_auth.models import ApiUsage
+	from ai_staff.models import ApiServiceList
+	if uid == None and email == None:
+		uid = "Anonymous"
+		email= "Anonymous"
+	usage_obj = None
+	try:
+		service_obj = ApiServiceList.objects.get(provider__name=provider,service__name=service)
+		usage_obj = ApiUsage.objects.get(uid=uid,service=service_obj)
+	except ApiUsage.DoesNotExist:
+		usage_obj =	ApiUsage.objects.create(uid=uid,email=email,service = service_obj)
+	except ApiServiceList.DoesNotExist:
+		logger.error("Api servicelist not found")
+	if usage_obj != None:
+		usage_obj.usage = usage_obj.usage + usage
+		usage_obj.save()
+
