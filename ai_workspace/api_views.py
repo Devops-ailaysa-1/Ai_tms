@@ -1910,18 +1910,21 @@ def file_write(pr):
 
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
     if pr.project_type_id == 5:
         file_write(pr)
 
-    if pr.project_type_id not in [3,4,5]:
-        for i in pr.get_tasks:
+    if pr.project_type_id not in [3,5]:
+        for i in pr.get_mtpe_tasks:
             if i.document:
                 from ai_workspace_okapi.api_views import DocumentToFile
                 res_1 = DocumentToFile.document_data_to_file(request,i.document.id)
     if os.path.exists(os.path.join(pr.project_dir_path,'source')):
         shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+        if os.path.exists(os.path.join(pr.project_dir_path,'Audio')):
+            shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/Audio')
         res = download_file(pr.project_name+'.zip')
         os.remove(pr.project_name+'.zip')
         return res
