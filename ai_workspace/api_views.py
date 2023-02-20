@@ -1910,7 +1910,7 @@ def file_write(pr):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+#@permission_classes([AllowAny])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
     if pr.project_type_id == 5:
