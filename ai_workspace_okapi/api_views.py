@@ -379,8 +379,15 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
                 self.authorize_doc(document,action="read")
-                doc = DocumentSerializerV2(document).data               
-                return Response(doc, status=201)
+                try:
+                    doc = DocumentSerializerV2(document).data
+                    return Response(doc, status=201)
+                except:
+                    if document.get('doc')!= None:
+                        doc = DocumentSerializerV2(document.get('doc')).data
+                        return Response({'msg':document.get('msg'),'doc_data':doc}, status=201)
+                    else:
+                        return Response(document,status=400)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
                 self.authorize_doc(document,action="read")
