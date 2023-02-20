@@ -3215,7 +3215,10 @@ def express_custom(request,exp_obj,option):
             return ({'msg':'Insufficient Credits'})
     
     else:##english
-        
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang=target_lang_code)
+        if initial_credit < consumable_credits_user_text:
+            return ({'msg':'Insufficient Credits'})
         response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
         print("Tokens---------->",total_tokens)
