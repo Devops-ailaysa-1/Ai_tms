@@ -2288,6 +2288,8 @@ def get_lang_code(lang_code):
         return "zh-Hans"
     elif lang_code == "zh-TW":
         return "zh-Hant"
+    elif lang_code == "iw":
+        return "he"
     else:
         return lang_code
 
