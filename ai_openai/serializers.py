@@ -73,21 +73,25 @@ class AiPromptSerializer(serializers.ModelSerializer):
                     'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip()}) for j,i in enumerate(generated_text)]
         return None
 
-    def customize_token_deduction(self,instance ,total_tokens):
-        initial_credit = instance.user.credit_balance.get("total_left")
+    def customize_token_deduction(self,instance ,total_tokens,user=None):
+        print("Ins----------->",instance)
+        print("user-------------->",user)
+        if instance: user = instance.user
+        else : user = user
+        initial_credit = user.credit_balance.get("total_left")
         if initial_credit >=total_tokens:
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, total_tokens)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, total_tokens)
         else:
             token_deduction = total_tokens - initial_credit 
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, initial_credit)
-            deduction_update = TextgeneratedCreditDeduction.objects.filter(user=instance.user)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, initial_credit)
+            deduction_update = TextgeneratedCreditDeduction.objects.filter(user=user)
             if deduction_update.exists():
                 total_deduction = deduction_update.first().credit_to_deduce
                 total_deduction = total_deduction+token_deduction
                 deduction_update.update(credit_to_deduce = total_deduction)
                 # deduction_update.save()
             else:
-                TextgeneratedCreditDeduction.objects.create(user=instance.user,credit_to_deduce = token_deduction)
+                TextgeneratedCreditDeduction.objects.create(user=user,credit_to_deduce = token_deduction)
         
     def prompt_result_update(self,ins,obj,ai_langs,targets):
         instance = AiPrompt.objects.get(id=ins)

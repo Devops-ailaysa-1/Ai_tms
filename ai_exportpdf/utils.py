@@ -146,7 +146,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         doc = docx.Document()
         for i in tqdm(range(1,pdf_len+1)):
             with tempfile.TemporaryDirectory() as image:
-                image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800,800))[0]
+                image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)

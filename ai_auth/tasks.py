@@ -357,7 +357,11 @@ def mt_only(project_id,token):
         for i in pr.get_mtpe_tasks:
             print("i----->" , i)
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
-            doc = DocumentSerializerV2(document).data
+            #print("RES_doc------------->",document)
+            try:
+                if document.get('msg') != None:pass
+            except:pass
+            #doc = DocumentSerializerV2(document).data
             print("this is mt-only functions tasks")
             MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
     logger.info('mt-only')
