@@ -146,7 +146,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         doc = docx.Document()
         for i in tqdm(range(1,pdf_len+1)):
             with tempfile.TemporaryDirectory() as image:
-                image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=True ,first_page=i,last_page=i ,size=(500, 500) )[0]
+                image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800,800))[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
@@ -200,7 +200,7 @@ def para_creation_from_ocr(texts):
 
 import PyPDF2
 from rest_framework import serializers
-def file_pdf_check(file_path,id):
+def file_pdf_check(file_path,id): 
     try:
         pdfdoc = PyPDF2.PdfReader(file_path)
         pdf_check = {0:'ocr',1:'text'}
@@ -208,7 +208,10 @@ def file_pdf_check(file_path,id):
         for i in tqdm(range(len(pdfdoc.pages))):
             current_page = pdfdoc.pages[i]
             if current_page.extract_text():
-                pdf_check_list.append(1)
+                if len(current_page.extract_text()) >=700:
+                    pdf_check_list.append(1)
+                else:
+                    pdf_check_list.append(0)
             else:
                 pdf_check_list.append(0)
         return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
@@ -218,12 +221,8 @@ def file_pdf_check(file_path,id):
         raise serializers.ValidationError({'msg':'pdf_corrupted'}, 
                                           code =400)
     
-    
- 
-
-
 from ai_workspace.models import Task
-def pdf_conversion(id ):
+def pdf_conversion(id):
     file_details = Ai_PdfUpload.objects.get(id = id)
     lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
     pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
@@ -338,6 +337,11 @@ def remove_duplicate_new_line(text):
 #     doc.close()
 #     return ["text" if text_perc < 0.01 else "ocr" ,len_doc ]
 
-
+    # text = ""
+    # with open(file_path ,"rb") as f:
+    #     pdf = pdftotext.PDF(f)
+    # for page in range(len(pdf)):
+    #     text+=pdf[page]
+    # return ["text" if len(text)>=700 else "ocr" , len(pdf)]
 
 

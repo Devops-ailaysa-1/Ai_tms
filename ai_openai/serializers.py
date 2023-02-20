@@ -357,7 +357,6 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             blog_key_id.save()
             #other fields blog_key_select_update selected_field
             BlogKeywordGenerate.objects.filter(blog_creation = instance).exclude(id = blog_key_id.id).update(selected_field = False)
-
         ####updation
         if validated_data.get('blogcreate'):
             blog_update_keyword = validated_data.get('blogcreate')
