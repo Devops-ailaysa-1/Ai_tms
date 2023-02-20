@@ -3247,6 +3247,7 @@ def instant_translation_custom(request):
     option = request.POST.get('option')#Shorten#Simplify
     customize = AiCustomize.objects.get(customize = option)
     exp_obj = ExpressProjectDetail.objects.get(task_id = task)
+    user = exp_obj.task.job.project.ai_user
     queryset = ExpressProjectAIMT.objects.filter(express=exp_obj,customize=customize).last()
     if queryset:
         text1 = exp_obj.source_text.strip()
@@ -3261,13 +3262,19 @@ def instant_translation_custom(request):
                 return Response(serializer.data)
             elif queryset.api_result:
                 input_src = queryset.api_result
-                txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = input_src,
-                                source_lang_code=exp_obj.task.job.source_language_code , target_lang_code=exp_obj.task.job.target_language_code,user_id=exp_obj.task.job.project.ai_user_id)
-                serializer = ExpressProjectAIMTSerializer(queryset,data={'final_result':txt_generated,'mt_engine':exp_obj.mt_engine.id},partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(serializer.data)
-                return Response(serializer.errors)
+                initial_credit = user.credit_balance.get("total_left")
+                consumable_credit = get_consumable_credits_for_text(input_src,exp_obj.task.job.target_language_code,exp_obj.task.job.source_language_code)
+                if initial_credit > consumable_credit:
+                    txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = input_src,
+                                    source_lang_code=exp_obj.task.job.source_language_code , target_lang_code=exp_obj.task.job.target_language_code,user_id=exp_obj.task.job.project.ai_user_id)
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credit)
+                    serializer = ExpressProjectAIMTSerializer(queryset,data={'final_result':txt_generated,'mt_engine':exp_obj.mt_engine.id},partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        return Response(serializer.data)
+                    return Response(serializer.errors)
+                else:
+                    return Response({'msg':'Insufficient Credits'},status=400)
             else:
                 res = express_custom(request,exp_obj,option)
                 if res.get('msg'):return Response(res,status=400)
