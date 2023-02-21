@@ -587,3 +587,31 @@ class GlossaryListView(viewsets.ViewSet):
                     .filter(glossary_project__term__isnull=False).distinct().order_by('-id')
         serializer = GlossaryListSerializer(queryset, many=True)
         return Response(serializer.data)
+
+
+
+import io
+import xlsxwriter
+import pandas as pd
+from ai_glex.models import TermsModel
+@api_view(['GET',])
+def glossary_task_simple_download(request):
+    gloss_id = request.GET.get('gloss_id')
+    task_id  = request.GET.get('task')
+    task_obj = Task.objects.get(id=task_id)
+    term_model = TermsModel.objects.filter(glossary=gloss_id).filter(job_id = task_obj.job.id).values("sl_term","tl_term")
+    print("Tm-------->",term_model)
+    if term_model:
+        df = pd.DataFrame.from_records(term_model)
+        df.columns=['source_term','target_term']
+        output = io.BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+        writer.save()
+        response = HttpResponse(content_type='application/vnd.ms-excel')
+        response['Content-Disposition'] = 'attachment; filename=Glossary_simple.xlsx'
+        output.seek(0)
+        response.write(output.read())
+        return response
+    else:
+        return Response({'msg':'No terms'},status=400)

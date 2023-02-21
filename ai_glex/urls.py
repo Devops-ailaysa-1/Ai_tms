@@ -22,4 +22,5 @@ urlpatterns += [
     path('term_save/',api_views.adding_term_to_glossary_from_workspace,name='adding-term-to-glossary-from-workspace'),
     path('whole_glossary_term_search/',api_views.whole_glossary_term_search),
     path('glossaries_list/',api_views.GlossaryListView.as_view({'get': 'list'}),name='glossaries-list'),
+    path('gloss_task_simple_download/',api_views.glossary_task_simple_download, name="gloss-simple-xlsx-download" )
 ]
