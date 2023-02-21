@@ -2159,7 +2159,7 @@ def transcribe_file_get(request):
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     print("Main func Voice Name---------->",voice_name)
     final_name,ext =  os.path.splitext(file)
-    size_limit = 1000 if obj.job.target_language_code in ['ta','ja'] else 3500
+    size_limit = 4000 #if obj.job.target_language_code in ['ta','ja'] else 3500
     #final_audio = final_name + '.mp3'
     #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
     final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
@@ -2216,7 +2216,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
         os.mkdir(dir_1)
     count=0
     out_filename = final_name + '_out.txt'
-    size_limit = 1000 if obj.job.source_language_code in ['ta','ja'] else 3500
+    size_limit = 4000 #if obj.job.source_language_code in ['ta','ja'] else 3500
     with open(file) as infile, open(out_filename, 'w') as outfile:
         lines = infile.readlines()
         for line in lines:
@@ -2224,7 +2224,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
             else:sents = nltk.sent_tokenize(line)
             for i in sents:
                 outfile.write(i)
-                count = count+len(i)
+                count = count+len(i.encode("utf8"))
                 if count > size_limit:
                     outfile.write('\n')
                     count=0
@@ -2305,7 +2305,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     print("Consumable Credits--------------->",consumable_credits)
     print("Initial Credits---------------->",initial_credit)
     if initial_credit > consumable_credits:
-        if len(data)>4500:
+        if len(data.encode("utf8"))>4500:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
             print("State--------------->",state)
