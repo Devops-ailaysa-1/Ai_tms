@@ -2906,7 +2906,7 @@ def task_segments_save(request):
         else: tasks = Task.objects.filter(id=task_id)
         for i in tasks:
             express_obj = ExpressProjectDetail.objects.filter(task_id=i.id).first()
-            previous_stored_source = express_obj.source_text.strip()
+            previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
             output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
