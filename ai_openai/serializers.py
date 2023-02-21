@@ -7,6 +7,8 @@ from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, L
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
 from ai_workspace_okapi.utils import get_translation
 import math
+from googletrans import Translator
+from ai_auth.api_views import get_lang_code
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
 
 class AiPromptSerializer(serializers.ModelSerializer):
@@ -254,10 +256,32 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user=self.context['request'].user
         inst = ImageGeneratorPrompt.objects.create(**validated_data)
+        detector = Translator()
+        lang = detector.detect(inst.prompt).lang
+        if isinstance(lang,list):
+            lang = lang[0]
+        lang = get_lang_code(lang)
+        initial_credit = user.credit_balance.get("total_left")
         image_reso = ImageGeneratorResolution.objects.get(image_resolution =inst.image_resolution )
-        image_res = get_prompt_image_generations(inst.prompt,
-                                          image_reso.image_resolution,
-                                          inst.no_of_image)
+        if lang!= 'en':
+            consumable_credits_user_text =  get_consumable_credits_for_text(inst.prompt,lang,'en')
+            if initial_credit < consumable_credits_user_text:
+                raise  Response({'msg':'Insufficient Credits'},status=400)
+            eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
+                                        source_lang_code=lang , target_lang_code='en',user_id=user.id)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
+            print("Translated Prompt--------->",eng_prompt)
+            image_res = get_prompt_image_generations(eng_prompt,
+                                            image_reso.image_resolution,
+                                            inst.no_of_image)
+        else:
+            image_res = get_prompt_image_generations(inst.prompt,
+                                            image_reso.image_resolution,
+                                            inst.no_of_image)
+        # image_reso = ImageGeneratorResolution.objects.get(image_resolution =inst.image_resolution )
+        # image_res = get_prompt_image_generations(inst.prompt,
+        #                                   image_reso.image_resolution,
+        #                                   inst.no_of_image)
         data = image_res['data']     
         created_id = image_res["created"]  
         for i in range(inst.no_of_image):
