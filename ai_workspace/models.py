@@ -190,6 +190,14 @@ class MyDocuments(models.Model):
 
         return super().save()
 
+def my_doc_image_upload_path(instance, filename):
+    file_path = os.path.join(instance.document.ai_user.uid,"MyDocImages", filename)
+    return file_path
+
+class DocumentImages(models.Model):
+    document = models.ForeignKey(MyDocuments,on_delete=models.CASCADE,related_name = 'related_image')
+    image = models.FileField(upload_to=my_doc_image_upload_path,blank=False, null=False)
+
 ##########################Need to add project type################################
 class Project(models.Model):
     project_type = models.ForeignKey(ProjectType, null=False, blank=False,on_delete=models.CASCADE,default=1)

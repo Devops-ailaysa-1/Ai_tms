@@ -25,6 +25,7 @@ router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
 				basename="project-reference-files")
+router.register(r'doc_image',api_views.DocumentImageView,basename="doc-image")
 router.register(r'steps',api_views.StepsView,basename='steps')
 #router.register(r'tasks',api_views.TaskView,basename='tasks')
 router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')

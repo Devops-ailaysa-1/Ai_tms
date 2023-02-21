@@ -72,7 +72,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     ExpressProjectDetail
 from .models import Task
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT, WriterProject
+                    ExpressProjectAIMT, WriterProject,DocumentImages
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -85,7 +85,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer)
+                          WriterProjectSerializer,DocumentImagesSerializer)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
@@ -3450,3 +3450,40 @@ def instant_translation_custom(request):
             #         # mt_only.delay((serializer.data.get('id'), str(request.auth)), )
             #     return Response(serializer.data, status=201)
             # return Response(serializer.errors, status=409)
+
+
+
+class DocumentImageView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        doc = request.GET.get('document')
+        if not doc:
+            return Response({"msg":"document_id required"})
+        image = DocumentImages.objects.filter(document_id=doc).all()
+        serializer = DocumentImagesSerializer(image, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        #glossaries = request.POST.getlist('glossary')
+        doc = request.POST.get('document')
+        image = request.FILES.get('image')
+        serializer = DocumentImagesSerializer(data={**request.POST.dict(),'image':image})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        pass
+
+    def delete(self,request):
+        image_url = request.GET.get('image_url')
+        doc = request.GET.get('document')
+        queryset = DocumentImages.objects.filter(document_id=doc).all()
+        for i in queryset:
+            if i.image.url == image_url:
+                i.delete()
+            else:
+                print("No match")
+        return Response(status=status.HTTP_204_NO_CONTENT)
