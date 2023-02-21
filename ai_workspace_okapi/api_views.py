@@ -1090,8 +1090,9 @@ def long_text_process(consumable_credits,document_user,file_path,task,target_lan
     print(ser.errors)
     f2.close()
 
-class DocumentToFile(views.APIView):
 
+class DocumentToFile(views.APIView):
+   
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()
@@ -2197,7 +2198,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     print("Init------>",initial_credit)
     print("Cons----->",consumable_credits)
     if initial_credit > consumable_credits:
-        if len(data)>4500:
+        if len(data.encode("utf8"))>4500:
             celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
             MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
@@ -2238,7 +2239,7 @@ def segments_with_target(document_id):
     temp_name = filename + '.txt'
     counter = 0
     data = []
-    limit = 1000 if document.target_language_code in ['ta','ja'] else 3500
+    limit = 4000 #if document.target_language_code in ['ta','ja'] else 3500
 
     for i in segments_ser.data:
         # If the segment is merged
@@ -2263,7 +2264,7 @@ def segments_with_target(document_id):
 
     with open(temp_name, "w") as out:
         for i in data:
-            counter = counter + len(i)
+            counter = counter + len(i.encode("utf8"))
             out.write(' '+i)
             if counter>limit:
                 out.write('\n')
