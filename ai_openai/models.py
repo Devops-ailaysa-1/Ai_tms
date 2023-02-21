@@ -128,7 +128,7 @@ def user_directory_path_image_gen_result(instance, filename):
 class ImageGeneratorPrompt(models.Model):
     prompt = models.TextField(null=True, blank=True)
     prompt_mt = models.TextField(null=True, blank=True)
-    image_resolution = models.ForeignKey(ImageGeneratorResolution , on_delete= models.CASCADE)
+    image_resolution = models.ForeignKey(ImageGeneratorResolution , on_delete= models.CASCADE, default=1)
     credits_used = models.IntegerField(null=True, blank=True)
     no_of_image = models.IntegerField(null=True, blank=True)
  

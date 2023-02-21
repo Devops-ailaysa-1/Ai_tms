@@ -600,7 +600,6 @@ def glossary_task_simple_download(request):
     task_id  = request.GET.get('task')
     task_obj = Task.objects.get(id=task_id)
     term_model = TermsModel.objects.filter(glossary=gloss_id).filter(job_id = task_obj.job.id).values("sl_term","tl_term")
-    print("Tm-------->",term_model)
     if term_model:
         df = pd.DataFrame.from_records(term_model)
         df.columns=['source_term','target_term']
