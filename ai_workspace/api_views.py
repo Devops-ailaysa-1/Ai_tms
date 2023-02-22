@@ -64,7 +64,7 @@ from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document
-from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long
+from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long, get_res_path
 from ai_workspace_okapi.utils import get_translation
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
@@ -1301,10 +1301,11 @@ class ProjectAnalysisProperty(APIView):
                 ProjectAnalysisProperty.correct_fields(data)
                 # DocumentViewByTask.correct_fields(data)
                 params_data = {**data, "output_type": None}
-                res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                         "fprm_file_path": None,
-                         "use_spaces" : settings.USE_SPACES
-                         }
+                res_paths = get_res_path(params_data["source_language"])
+                # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+                #          "fprm_file_path": None,
+                #          "use_spaces" : settings.USE_SPACES
+                #          }
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
