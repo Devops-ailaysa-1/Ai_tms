@@ -194,9 +194,10 @@ def para_creation_from_ocr(texts):
                 for a in  k.words:
                     text_list.append(" ")
                     for b in a.symbols:
+                        # if b.text == ".":
                         text_list.append(b.text)
             para_text.append("".join(text_list))
-    return "\n".join(para_text)
+    return "\n".join(para_text).replace(" .", ".")
 
 import PyPDF2
 from rest_framework import serializers
