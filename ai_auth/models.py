@@ -21,6 +21,7 @@ from django.db.models import Q
 from datetime import datetime,date,timedelta
 from django.db.models.constraints import UniqueConstraint
 from simple_history.models import HistoricalRecords
+from ai_openai.signals import text_gen_credit_deduct
 
 class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add value for field 'currency_based_on_country' for existing users#####
     uid = models.CharField(max_length=25, null=False, blank=True)
@@ -349,6 +350,8 @@ class UserCredits(models.Model):
     @property
     def owner_pk(self):
         return self.user.id
+
+post_save.connect(text_gen_credit_deduct, sender=UserCredits)
 
 class CreditPack(models.Model):
     name = models.CharField(max_length=200)
