@@ -3458,10 +3458,8 @@ class DocumentImageView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self,request):
-        doc = request.GET.get('document')
-        if not doc:
-            return Response({"msg":"document_id required"})
-        image = DocumentImages.objects.filter(document_id=doc).all()
+        user = request.user
+        image = DocumentImages.objects.filter(ai_user_id=user.id).all()
         serializer = DocumentImagesSerializer(image, many=True)
         return Response(serializer.data)
 
@@ -3469,7 +3467,7 @@ class DocumentImageView(viewsets.ViewSet):
         #glossaries = request.POST.getlist('glossary')
         doc = request.POST.get('document')
         image = request.FILES.get('image')
-        serializer = DocumentImagesSerializer(data={**request.POST.dict(),'image':image})
+        serializer = DocumentImagesSerializer(data={**request.POST.dict(),'image':image,'ai_user':request.user.id})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data)
@@ -3477,11 +3475,33 @@ class DocumentImageView(viewsets.ViewSet):
 
     def update(self,request,pk):
         pass
+        # doc = MyDocuments.objects.get(id=pk)
+        # image = request.FILES.get('image')
+        # print("Image--------->",image)
+        # if image:
+        #     print("******")
+        #     serializer = DocumentImagesSerializer(doc,data={**request.POST.dict(),'image':image},partial=True)
+        # else:
+        #     print("&&&&&&&&&&")
+        #     serializer= DocumentImagesSerializer(doc,data={**request.POST.dict()},partial=True)
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data)
+        # else:
+        #     return Response(serializer.errors)
+
 
     def delete(self,request):
         image_url = request.GET.get('image_url')
         doc = request.GET.get('document')
-        queryset = DocumentImages.objects.filter(document_id=doc).all()
+        pdf = request.GET.get('pdf')
+        task = request.GET.get('task')
+        if doc:
+            queryset = DocumentImages.objects.filter(document_id=doc).all()
+        if pdf:
+            queryset = DocumentImages.objects.filter(pdf_id=pdf).all()
+        if task:
+            queryset = DocumentImages.objects.filter(task_id=task).all()
         for i in queryset:
             if i.image.url == image_url:
                 i.delete()
