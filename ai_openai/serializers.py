@@ -4,7 +4,9 @@ from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDedu
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
                     ImageGeneratorResolution,TranslateCustomizeDetails )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
-from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,get_prompt_freestyle ,get_prompt_image_generations ,get_img_content_from_openai_url
+from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
+                    get_prompt_freestyle ,get_prompt_image_generations ,\
+                    get_img_content_from_openai_url,get_consumable_credits_for_image_gen
 from ai_workspace_okapi.utils import get_translation
 import math
 from googletrans import Translator
@@ -280,7 +282,8 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
             image_res = get_prompt_image_generations(inst.prompt,
                                             image_reso.image_resolution,
                                             inst.no_of_image)
-        consumable_credits = get_consumable_credits_for_image_gen(image_reso.image_resolution,inst.no_of_image) 
+        consumable_credits = get_consumable_credits_for_image_gen(image_reso.id,inst.no_of_image) 
+        print("CC---------->",consumable_credits)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)                                                                                    
         # image_reso = ImageGeneratorResolution.objects.get(image_resolution =inst.image_resolution )
         # image_res = get_prompt_image_generations(inst.prompt,

@@ -93,6 +93,7 @@ urlpatterns += [
 	path('translate_from_pdf/<int:task_id>/',api_views.translate_from_pdf),
 	path('default_detail/',api_views.default_proj_detail),
 	path('instant_customize/',api_views.instant_translation_custom),
+	path('task_status/',api_views.get_task_status),
 ]
 # views urls adding for local testing
 urlpatterns += [

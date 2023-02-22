@@ -23,12 +23,14 @@ def get_consumable_credits_for_openai_text_generator(total_token):
     return total_consumable_token_credit
  
 def get_consumable_credits_for_image_gen(image_resolution,number_of_image):
-    if image_resolution == '1024 x 1024':
-        return number_of_image * 85
-    if image_resolution == '512 x 512':
-        return number_of_image * 75
-    if image_resolution == '256 x 256 ':
+    print("ImgRes------->",image_resolution)
+    print("No---------->",number_of_image)
+    if image_resolution == 1:
         return number_of_image * 70
+    if image_resolution == 2:
+        return number_of_image * 75
+    if image_resolution == 3:
+        return number_of_image * 85
 
 def openai_text_trim(text):
     reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
