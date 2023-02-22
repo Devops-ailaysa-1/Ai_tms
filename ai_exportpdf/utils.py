@@ -150,6 +150,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
+                print("Text after preprocess------------>",text)
                 doc.add_paragraph(text)
             end = time.time()
             no_of_page_processed_counting+=1
@@ -199,6 +200,7 @@ def para_creation_from_ocr(texts):
             para_text.append("".join(text_list))
     para_text = "\n".join(para_text)
     para_text = para_text.replace(" .", ".")
+    print("Para---------->",para_text)
     return para_text
 
 import PyPDF2
