@@ -324,6 +324,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             params_data = {**data, "output_type": None}
 
             res_paths = get_res_path(params_data["source_language"])
+            print("ResPath------------>",res_paths)
+            print("srclang------------>",params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             # For large files, json file is already written during word count
