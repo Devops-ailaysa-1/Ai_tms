@@ -17,6 +17,7 @@ from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
 from ai_staff.models import Languages
 from django.db.models import Q
 import math 
+import urllib
 logger = logging.getLogger('django')
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -30,7 +31,9 @@ def download_file(file_path):
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
 
-def direct_download_urlib_docx(url,filename):
+def direct_download_urlib_docx(url,filename): 
+    path , basename = os.path.split(url)
+    url = path+"/"+urllib.parse.quote(basename)
     x = urllib.request.urlretrieve(url=url , filename=filename)
 
 def remove_carraige_return(txt):
