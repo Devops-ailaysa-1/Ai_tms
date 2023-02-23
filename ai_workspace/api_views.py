@@ -832,8 +832,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
-            if instance.pre_translate == True:
-                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
+            # if instance.pre_translate == True:
+            #     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
@@ -2575,17 +2575,53 @@ def get_task_status(request):
     from ai_auth.tasks import pre_translate_update
     #from ai_tm.api_views import get_json_file_path
     project_id = request.GET.get('project')
-    pr = Project.objects.get(id=project_id)
-    if pr.pre_translate == True:
+    task_id = request.GET.get('task')
+    if project_id:
+        pr = Project.objects.get(id=project_id)
+        pre_t = pr.pre_translate
         tasks = pr.get_mtpe_tasks
+    elif task_id:
+        pre_t = Task.objects.get(id=task_id).job.project.pre_translate
+        tasks = Task.objects.filter(id=task_id)
+    if pre_t == True:
         res = []
         for i in tasks:
             msg = None
             document = i.document
+            # obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
+            # if document:
+            #     print("#####")
+            #     status = 'True'
+            # else:
+            #     print("!!!!!!!!!!!")
+            #     file_path = DocumentViewByTask.get_json_file_path(i)
+            #     doc_data = json.load(open(file_path))
+            #     if type(doc_data) == str:
+            #         doc_data = json.loads(doc_data)
+
+            #     if doc_data.get('total_word_count') == 0:
+            #         status = 'True'
+            #         msg = "Empty File"
+            #     else:
+            #         print("$$$$$$$$$")
+            #         if obj:
+            #             print("obj")
+            #             if obj.task_name == 'mt_only':
+            #                 state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+            #             elif obj.task_name == 'pre_translate_update':
+            #                 state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+            #             if state == 'STARTED':
+            #                 status = 'False'
+            #             else:
+            #                 status = 'True' 
+            #         else:
+            #             print("no obj")
+            #             status = 'True'
+                    
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
+            print("Obj------->",obj)
             if document:
-                task = Task.objects.filter(document=document).first()
-                obj = MTonlytaskCeleryStatus.objects.filter(task=task).last()
-                print("Obj------->",obj)
+                #task = Task.objects.filter(document=document).first()
                 if not obj or obj.status == 2:
                     print("Inside First")
                     status = 'True'
@@ -2613,8 +2649,19 @@ def get_task_status(request):
                     status = 'True'
                     msg = "Empty File"
                 else:
-                    print("$$$$$$$$")
-                    status = 'False'  
+                    print("$$$$$$$$Else")
+                    if obj:
+                        if obj.task_name == 'mt_only':
+                            state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                        elif obj.task_name == 'pre_translate_update':
+                            state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                        if state == 'STARTED':
+                            status = 'False'
+                        else:
+                            status = 'True' 
+                    else:
+                        status = 'True'
+                    #status = 'False'  
             res.append({'task':i.id,'open':status,'msg':msg})
         return Response({'res':res})
     else:
