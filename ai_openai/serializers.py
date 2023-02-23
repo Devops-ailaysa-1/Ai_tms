@@ -266,38 +266,42 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
         initial_credit = user.credit_balance.get("total_left")
         print("Initial--------->",initial_credit)
         image_reso = ImageGeneratorResolution.objects.get(image_resolution =inst.image_resolution )
-        if lang!= 'en':
-            consumable_credits_user_text =  get_consumable_credits_for_text(inst.prompt,lang,'en')
-            print("Consumable----->",consumable_credits_user_text)
-            if initial_credit < consumable_credits_user_text:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'})
-            eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
-                                        source_lang_code=lang , target_lang_code='en',user_id=user.id)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
-            print("Translated Prompt--------->",eng_prompt)
-            image_res = get_prompt_image_generations(eng_prompt,
-                                            image_reso.image_resolution,
-                                            inst.no_of_image)
+        consumable_credits = get_consumable_credits_for_image_gen(image_reso.id,inst.no_of_image)
+        if initial_credit > consumable_credits:
+            if lang!= 'en':
+                consumable_credits_user_text =  get_consumable_credits_for_text(inst.prompt,lang,'en')
+                print("Consumable----->",consumable_credits_user_text)
+                if initial_credit < consumable_credits_user_text:
+                    raise serializers.ValidationError({'msg':'Insufficient Credits'})
+                eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
+                                            source_lang_code=lang , target_lang_code='en',user_id=user.id)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
+                print("Translated Prompt--------->",eng_prompt)
+                image_res = get_prompt_image_generations(eng_prompt,
+                                                image_reso.image_resolution,
+                                                inst.no_of_image)
+            else:
+                image_res = get_prompt_image_generations(inst.prompt,
+                                                image_reso.image_resolution,
+                                                inst.no_of_image)
+            if 'data' in image_res:
+                consumable_credits = get_consumable_credits_for_image_gen(image_reso.id,inst.no_of_image) 
+                print("CC---------->",consumable_credits)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)                                                                                    
+                data = image_res['data']
+                print("Data------------>",image_res)     
+                created_id = image_res["created"]  
+                for i in range(inst.no_of_image):
+                    img_content = get_img_content_from_openai_url(data[i]['url'])
+                    image_file = core.files.File(core.files.base.ContentFile(img_content),"file.png")
+                    img_gen_Pmpt_res=ImageGenerationPromptResponse.objects.create(user =user,created_id = created_id ,
+                                                                generated_image = image_file,
+                                                                image_generator_prompt = inst)  
+                return inst
+            else:
+                raise serializers.ValidationError({'msg':image_res}, code=400) 
         else:
-            image_res = get_prompt_image_generations(inst.prompt,
-                                            image_reso.image_resolution,
-                                            inst.no_of_image)
-        if 'data' in image_res:
-            consumable_credits = get_consumable_credits_for_image_gen(image_reso.id,inst.no_of_image) 
-            print("CC---------->",consumable_credits)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)                                                                                    
-            data = image_res['data']
-            print("Data------------>",image_res)     
-            created_id = image_res["created"]  
-            for i in range(inst.no_of_image):
-                img_content = get_img_content_from_openai_url(data[i]['url'])
-                image_file = core.files.File(core.files.base.ContentFile(img_content),"file.png")
-                img_gen_Pmpt_res=ImageGenerationPromptResponse.objects.create(user =user,created_id = created_id ,
-                                                            generated_image = image_file,
-                                                            image_generator_prompt = inst)  
-            return inst
-        else:
-            raise serializers.ValidationError({'msg':image_res}, code=400) 
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
     
     
 # class InstantTranslationSerializer(serializers.ModelSerializer):
