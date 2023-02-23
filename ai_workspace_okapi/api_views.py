@@ -263,6 +263,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
         print("create_document_for_task_if_not_exists")
+        print("Tt------>",task.document)
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -300,6 +301,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
+            print("-----------Already Processed--------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
