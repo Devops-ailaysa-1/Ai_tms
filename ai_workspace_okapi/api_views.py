@@ -273,9 +273,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 if state == 'STARTED' or state == 'PENDING':
-                    # if get_empty_segments(task.document) == False:
-                    #     return task.document
-                    # else:
                     try:
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
                         return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
@@ -288,7 +285,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
                     if ins.error_type == "Insufficient Credits":
-                        cel_task = pre_translate_update.apply_async((task.id,),)
+                        initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
+                        seg = task.document.get_segments().filter(target='').first().source
+                        consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
+                        print("Consumable------->",consumable_credits)
+                        if initial_credit > consumable_credits:
+                            cel_task = pre_translate_update.apply_async((task.id,),)
+                            return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                         return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
                     else:
                         return task.document
