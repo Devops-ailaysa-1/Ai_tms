@@ -832,8 +832,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
-            if instance.pre_translate == True:
-                mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
+            # if instance.pre_translate == True:
+            #     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
