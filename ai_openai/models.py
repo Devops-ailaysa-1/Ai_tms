@@ -23,10 +23,10 @@ class AiPrompt(models.Model):
     description = models.TextField(null=True, blank=True)
     document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='prompt_doc')
     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE,related_name='gpt_model',default=1)
-    catagories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE ,blank=True,null=True )
-    sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE,blank=True,null=True)
+    catagories = models.ForeignKey(to= PromptCategories, on_delete = models.SET_NULL ,blank=True,null=True )
+    sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.SET_NULL,blank=True,null=True)
     source_prompt_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_lang')
-    Tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='prompt_tone',blank=True,null=True,default=1)
+    Tone = models.ForeignKey(PromptTones,on_delete = models.SET_NULL,related_name='prompt_tone',blank=True,null=True,default=1)
     response_copies = models.IntegerField(null=True, blank=True,default=1)
     product_name = models.CharField(max_length = 1000, null=True, blank=True)
     product_name_mt = models.CharField(max_length = 1000, null=True, blank=True)
@@ -47,11 +47,11 @@ class AiPrompt(models.Model):
 
 class AiPromptResult(models.Model):
     prompt = models.ForeignKey(AiPrompt, on_delete=models.CASCADE, related_name = 'ai_prompt')
-    start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.CASCADE,null=True, blank=True)
+    start_phrase =  models.ForeignKey(to= PromptStartPhrases, on_delete = models.SET_NULL,null=True, blank=True)
     response_id =  models.CharField(max_length = 50, null=True, blank=True)
     copy = models.IntegerField(null=True, blank=True)
-    result_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='prompt_result_lang_src',null=True, blank=True)  
-    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='used_tokens',null=True, blank=True)
+    result_lang = models.ForeignKey(Languages, on_delete = models.SET_NULL,related_name='prompt_result_lang_src',null=True, blank=True)  
+    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.SET_NULL,related_name='used_tokens',null=True, blank=True)
     response_created = models.CharField(max_length = 50, null=True, blank=True)
     prompt_generated = models.TextField(null=True, blank=True)
     api_result = models.TextField(null=True, blank=True) 
@@ -168,6 +168,25 @@ class TranslateCustomizeDetails(models.Model):
 
 
 
+ 
+
+
+def user_directory_path_image_gen_result(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_generation_result",filename)
+
+ # document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'img_doc')
+class ImageGeneratorPrompt(models.Model):
+    prompt = models.TextField(null=True, blank=True)
+    prompt_mt = models.TextField(null=True, blank=True)
+    image_resolution = models.ForeignKey(ImageGeneratorResolution , on_delete= models.CASCADE, default=1)
+    credits_used = models.IntegerField(null=True, blank=True)
+    no_of_image = models.IntegerField(null=True, blank=True)
+ 
+class ImageGenerationPromptResponse(models.Model):
+    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    created_id = models.CharField(max_length = 50, null=True, blank=True)
+    generated_image =models.FileField(upload_to=user_directory_path_image_gen_result,blank=False, null=False)
+    image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt , on_delete= models.CASCADE,related_name='gen_img')
 
 
 

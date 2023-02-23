@@ -355,6 +355,8 @@ class UserCredits(models.Model):
     
 post_save.connect(text_gen_credit_deduct, sender=UserCredits)
 
+post_save.connect(text_gen_credit_deduct, sender=UserCredits)
+
 class CreditPack(models.Model):
     name = models.CharField(max_length=200)
     #product = models.OneToOneField(Product, on_delete=models.CASCADE)

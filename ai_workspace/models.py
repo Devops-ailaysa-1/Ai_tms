@@ -54,6 +54,7 @@ from django.db.models.functions import Cast
 from django.db.models import CharField
 
 
+
 def set_pentm_dir(instance):
     path = os.path.join(instance.project.project_dir_path, ".pentm")
     create_dirs_if_not_exists(path)
@@ -189,6 +190,7 @@ class MyDocuments(models.Model):
             self.doc_name = self.doc_name + "(" + str(doc_count) + ")"
 
         return super().save()
+
 
 ##########################Need to add project type################################
 class Project(models.Model):
@@ -1114,6 +1116,17 @@ class Task(models.Model):
         return self
 
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
+
+def my_doc_image_upload_path(instance, filename):
+    file_path = os.path.join(instance.ai_user.uid,"MyDocImages", filename)
+    return file_path
+
+class DocumentImages(models.Model):
+    ai_user =  models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE)
+    document = models.ForeignKey(MyDocuments,null=True, blank=True,on_delete=models.CASCADE,related_name = 'related_image')
+    task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.CASCADE,related_name = 'related_img')
+    pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.CASCADE,related_name = 'retd_img')
+    image = models.FileField(upload_to=my_doc_image_upload_path,blank=True, null=True)
 
 
 def ref_file_upload_path(instance, filename):

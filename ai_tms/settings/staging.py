@@ -278,6 +278,15 @@ EMAIL_HOST_PASSWORD = os.getenv( "EMAIL_HOST_PASSWORD" )
 
 # USERPORTAL_URL = os.getenv("USERPORTAL_URL")
 
+REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+                'rest_framework.throttling.AnonRateThrottle',
+                'rest_framework.throttling.UserRateThrottle'
+                ]
+
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+                        'anon': '500/minute',
+                        'user': '1500/minute'}
+
 # REST_FRAMEWORK = {
 #     'DEFAULT_AUTHENTICATION_CLASSES': [
 #           'dj_rest_auth.jwt_auth.JWTCookieAuthentication',

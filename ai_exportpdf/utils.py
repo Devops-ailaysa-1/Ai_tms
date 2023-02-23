@@ -16,7 +16,8 @@ from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API ,O
 from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
 from ai_staff.models import Languages
 from django.db.models import Q
-import math
+import math 
+import urllib
 logger = logging.getLogger('django')
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -30,9 +31,10 @@ def download_file(file_path):
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
 
-import urllib.request
-import wget
-from urllib.request import urlopen
+def direct_download_urlib_docx(url,filename): 
+    path , basename = os.path.split(url)
+    url = path+"/"+urllib.parse.quote(basename)
+    x = urllib.request.urlretrieve(url=url , filename=filename)
 
 def direct_download_urlib_docx(url,filename): 
     path , basename = os.path.split(url)
@@ -159,7 +161,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
-                print("text preprocess======" ,text)
+                print("Text after preprocess------------>",text)
                 doc.add_paragraph(text)
             end = time.time()
             no_of_page_processed_counting+=1
@@ -207,6 +209,7 @@ def para_creation_from_ocr(texts):
             para_text.append("".join(text_list))
     para_text = "\n".join(para_text)
     para_text = para_text.replace(" .", ".")
+    print("Para---------->",para_text)
     return para_text
 
 import PyPDF2

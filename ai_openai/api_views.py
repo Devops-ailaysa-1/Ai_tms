@@ -257,8 +257,8 @@ def history_delete(request):
 @permission_classes([IsAuthenticated])
 def image_gen(request):
     prompt = request.POST.get('prompt')
-    img_resolution = request.POST.get('img_resolution')
-    res = get_prompt_image_generations(prompt=prompt.strip(),size=img_resolution,n=1)
+    img_resolution = request.POST.get('img_resolution',1)
+    res = get_prompt_image_generations(prompt=prompt.strip(),size=img_resolution,no_of_image=1)
     if 'data' in res:
         res_url = res["data"]
         return Response({'gen_image_url': res_url},status=200) 

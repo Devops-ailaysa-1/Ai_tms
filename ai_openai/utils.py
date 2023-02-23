@@ -28,11 +28,16 @@ def ceil_round_off(token_len):
 def get_consumable_credits_for_openai_text_generator(total_token):
     total_consumable_token_credit = math.ceil(total_token/12)     
     return total_consumable_token_credit
-
-def get_consumable_credits_for_image_generator(no_of_image):
-    pass 
-    
-    
+ 
+def get_consumable_credits_for_image_gen(image_resolution,number_of_image):
+    print("ImgRes------->",image_resolution)
+    print("No---------->",number_of_image)
+    if image_resolution == 1:
+        return number_of_image * 70
+    if image_resolution == 2:
+        return number_of_image * 75
+    if image_resolution == 3:
+        return number_of_image * 85
 
 def openai_text_trim(text):
     reg_text = re.search("(\s+)(?=\.[^.]+$)",text, re.MULTILINE)
@@ -97,9 +102,9 @@ def get_prompt_edit(input_text ,instruction ):
     except:
         raise serializers.ValidationError({'msg':'internal_error'},code=200)
 #DALLE
-def get_prompt_image_generations(prompt,image_resolution,no_of_image):
+def get_prompt_image_generations(prompt,size,no_of_image):
     try:
-        response = openai.Image.create(prompt=prompt,n=no_of_image,size=image_resolution) 
+        response = openai.Image.create(prompt=prompt,n=no_of_image,size=size) 
     except:
         response = {'error':"Your requested prompt was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system."}
     return response
