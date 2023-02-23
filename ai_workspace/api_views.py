@@ -1195,6 +1195,8 @@ class TaskView(APIView):
                 task.file.delete()
                 task.delete()
             else:
+                if task.document:
+                    task.document.delete()
                 task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
