@@ -355,18 +355,19 @@ def mt_only(project_id,token):
         print("this is mt-only functions projects")
         #[MTonlytaskCeleryStatus.objects.get_or_create(task_name = 'mt_only',task_id = i.id,status=1,defaults={'celery_task_id':mt_only.request.id}) for i in pr.get_mtpe_tasks]
         for i in pr.get_mtpe_tasks:
-            mt_obj,created = MTonlytaskCeleryStatus.objects.get_or_create(task_name = 'mt_only',task_id = i.id,status=1,defaults={'celery_task_id':mt_only.request.id})
-            print("i----->" , i)
-            print("RR------>",mt_obj)
-            print("Created------->",created)
-            if created == True:
-                print("@@@@@@@@@")
+            print("I------------->",i)
+            mt_obj = MTonlytaskCeleryStatus.objects.filter(task_name = 'mt_only',task_id = i.id).last()
+            if not mt_obj or mt_obj.status == 2:
+                print("New")
+                created = MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id = mt_only.request.id)
                 document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
-            #print("RES_doc------------->",document)
+            else:
+                print("Inside Else")
+                print("sts--->",mt_obj.status) 
+                print("doc-------->",mt_obj.task.document)
             try:
                 if document.get('msg') != None:pass
             except:pass
-            #doc = DocumentSerializerV2(document).data
             print("this is mt-only functions tasks")
             tt = MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
             print("TT------->",tt)
