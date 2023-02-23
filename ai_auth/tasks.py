@@ -363,7 +363,8 @@ def mt_only(project_id,token):
             except:pass
             #doc = DocumentSerializerV2(document).data
             print("this is mt-only functions tasks")
-            MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+            tt = MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+            print("TT------->",tt)
     logger.info('mt-only')
 # # @task
 # @shared_task(bind=True)
