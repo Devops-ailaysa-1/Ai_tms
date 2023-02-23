@@ -1196,6 +1196,7 @@ class TaskView(APIView):
                 task.delete()
             else:
                 if task.document:
+                    print("Yes Doc")
                     task.document.delete()
                 task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -2570,6 +2571,8 @@ def writer_save(request):
 @permission_classes([IsAuthenticated])
 def get_task_status(request):
     from ai_workspace_okapi.api_views import DocumentViewByTask
+    from ai_workspace.models import MTonlytaskCeleryStatus
+    from ai_auth.tasks import pre_translate_update
     #from ai_tm.api_views import get_json_file_path
     project_id = request.GET.get('project')
     pr = Project.objects.get(id=project_id)
@@ -2580,8 +2583,27 @@ def get_task_status(request):
             msg = None
             document = i.document
             if document:
-               status = 'True'
+                task = Task.objects.filter(document=document).first()
+                obj = MTonlytaskCeleryStatus.objects.filter(task=task).last()
+                print("Obj------->",obj)
+                if not obj or obj.status == 2:
+                    print("Inside First")
+                    status = 'True'
+                elif obj.status == 1 and obj.error_type == "Insufficient Credits":
+                    print("Inside First next")
+                    status = 'True'
+                else:
+                    print("######$$$$&&&&&&",obj.task_name)
+                    if obj.task_name == 'mt_only':
+                        state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                    elif obj.task_name == 'pre_translate_update':
+                        state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                    if state == 'STARTED':
+                        status = 'False'
+                    else:
+                        status = 'True' 
             else:
+                print("!!!!!!!!!!!")
                 file_path = DocumentViewByTask.get_json_file_path(i)
                 doc_data = json.load(open(file_path))
                 if type(doc_data) == str:
@@ -2591,6 +2613,7 @@ def get_task_status(request):
                     status = 'True'
                     msg = "Empty File"
                 else:
+                    print("$$$$$$$$")
                     status = 'False'  
             res.append({'task':i.id,'open':status,'msg':msg})
         return Response({'res':res})

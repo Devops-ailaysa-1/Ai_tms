@@ -289,18 +289,23 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source']) if seg['source']!='' else 0
                 if initial_credit > consumable_credits:
-                    mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code,document.owner_pk)
-                    if str(target_tags) != '':
-                        random_tags = json.loads(seg["random_tag_ids"])
-                        if random_tags == []:tags = str(target_tags)
-                        else:tags = remove_random_tags(str(target_tags),random_tags)
-                        seg['temp_target'] = mt + tags
-                        seg['target'] = mt + tags
-                    else:
-                        seg['temp_target'] = mt
-                        seg['target'] = mt
-                    status_id = TranslationStatus.objects.get(status_id=104).id
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    try:
+                        mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code,document.owner_pk)
+                        if str(target_tags) != '':
+                            random_tags = json.loads(seg["random_tag_ids"])
+                            if random_tags == []:tags = str(target_tags)
+                            else:tags = remove_random_tags(str(target_tags),random_tags)
+                            seg['temp_target'] = mt + tags
+                            seg['target'] = mt + tags
+                        else:
+                            seg['temp_target'] = mt
+                            seg['target'] = mt
+                        status_id = TranslationStatus.objects.get(status_id=104).id
+                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    except:
+                        seg['target']=""
+                        seg['temp_target']=""
+                        status_id=None
                 else:
                     seg['target']=""
                     seg['temp_target']=""
@@ -492,19 +497,24 @@ def pre_translate_update(task_id):
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
             if initial_credit > consumable_credits:
-                mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk)
-                tags = get_tags(seg)
-                if tags:
-                    seg.target = mt + tags
-                    seg.temp_target = mt + tags
-                else:
-                    seg.target = mt
-                    seg.temp_target = mt
-                seg.status_id = TranslationStatus.objects.get(status_id=104).id
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                if type(seg) is SplitSegment:
-                    mt_split_segments.append(seg)
-                else:mt_segments.append(seg)
+                try:
+                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk)
+                    tags = get_tags(seg)
+                    if tags:
+                        seg.target = mt + tags
+                        seg.temp_target = mt + tags
+                    else:
+                        seg.target = mt
+                        seg.temp_target = mt
+                    seg.status_id = TranslationStatus.objects.get(status_id=104).id
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    if type(seg) is SplitSegment:
+                        mt_split_segments.append(seg)
+                    else:mt_segments.append(seg)
+                except:
+                    seg.target = ''
+                    seg.temp_target = ''
+                    seg.status_id=None
             else:
                 MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
                 break
