@@ -1,6 +1,6 @@
 import base64
 import docx ,json,logging,mimetypes,os ,pdftotext
-import re,requests,time,urllib.request
+import re,requests,time,urllib 
 from io import BytesIO
 from PyPDF2 import PdfFileReader
 from celery import shared_task
@@ -16,7 +16,7 @@ from ai_tms.settings import GOOGLE_APPLICATION_CREDENTIALS_OCR, CONVERTIO_API ,O
 from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
 from ai_staff.models import Languages
 from django.db.models import Q
-import math 
+import math
 logger = logging.getLogger('django')
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -30,9 +30,16 @@ def download_file(file_path):
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
 
-def direct_download_urlib_docx(url,filename):
-    x = urllib.request.urlretrieve(url=url , filename=filename)
+import urllib.request
+import wget
+from urllib.request import urlopen
 
+def direct_download_urlib_docx(url,filename): 
+    path , basename = os.path.split(url)
+    url = path+"/"+urllib.parse.quote(basename)
+    x = urllib.request.urlretrieve(url=url , filename=filename)
+ 
+    
 def remove_carraige_return(txt):
     with open(f'1.txt', 'w' , encoding="utf-8",newline= '\r\n') as the_file:
             the_file.write(txt)
@@ -53,10 +60,12 @@ def image_ocr_google_cloud_vision(image , inpaint):
         image.save(buffer, format="PNG")
         image = vision_v1.types.Image(content=buffer.getvalue() )
         response = client.text_detection(image = image)
-        texts = response.full_text_annotation
+        # texts = response.full_text_annotation
+        texts = response.text_annotations
+         
         if texts:
-            texts = para_creation_from_ocr(texts)
-            return texts
+            # texts = para_creation_from_ocr(texts)
+            return texts[0].description
         else:
             return ""
 
@@ -146,10 +155,11 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         doc = docx.Document()
         for i in tqdm(range(1,pdf_len+1)):
             with tempfile.TemporaryDirectory() as image:
-                image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
+                image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=True ,first_page=i,last_page=i ,size=(800, 800) )[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
+                print("text preprocess======" ,text)
                 doc.add_paragraph(text)
             end = time.time()
             no_of_page_processed_counting+=1
@@ -157,7 +167,6 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
         logger.info('finished ocr and saved as docx ,file_name: ' )
- 
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
@@ -169,7 +178,6 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
- 
     except:
         end = time.time()
         txt_field_obj.status = "ERROR"
@@ -194,9 +202,12 @@ def para_creation_from_ocr(texts):
                 for a in  k.words:
                     text_list.append(" ")
                     for b in a.symbols:
+                        # if b.text == ".":
                         text_list.append(b.text)
             para_text.append("".join(text_list))
-    return "\n".join(para_text)
+    para_text = "\n".join(para_text)
+    para_text = para_text.replace(" .", ".")
+    return para_text
 
 import PyPDF2
 from rest_framework import serializers

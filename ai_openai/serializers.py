@@ -225,7 +225,8 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
 
 
 from django import core
-
+from googletrans import Translator
+detector = Translator()
 class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageGenerationPromptResponse
@@ -240,11 +241,31 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
         
     def create(self, validated_data):
         user=self.context['request'].user
+        initial_credit = instance.user.credit_balance.get("total_left")
+        
+        
         inst = ImageGeneratorPrompt.objects.create(**validated_data)
         image_reso = ImageGeneratorResolution.objects.get(image_resolution =inst.image_resolution )
-        image_res = get_prompt_image_generations(inst.prompt,
-                                          image_reso.image_resolution,
-                                          inst.no_of_image)
+        #####
+        
+        lang = detector.detect(inst.prompt).lang
+        if isinstance(lang,list):
+            lang = lang[0]
+        lang = get_lang_code(lang)
+        if lang!= 'en':
+            consumable_credits_user_text =  get_consumable_credits_for_text(inst.prompt,lang,'en')
+            if initial_credit < consumable_credits_user_text:
+                raise  Response({'msg':'Insufficient Credits'},status=400)
+            eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
+                                        source_lang_code=lang , target_lang_code='en',user_id=user.id)
+            image_res = get_prompt_image_generations(inst.prompt,
+                                            image_reso.image_resolution,
+                                            inst.no_of_image)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)
+        else:
+            image_res = get_prompt_image_generations(inst.prompt,
+                                            image_reso.image_resolution,
+                                            inst.no_of_image)
         data = image_res['data']     
         created_id = image_res["created"]  
         for i in range(inst.no_of_image):

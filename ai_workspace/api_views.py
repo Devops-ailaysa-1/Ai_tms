@@ -60,7 +60,7 @@ from ai_pay.api_views import po_modify
 from ai_staff.models import LanguagesLocale, AilaysaSupportedMtpeEngines,AiCustomize
 #from ai_tm.models import TmxFile
 from ai_workspace import forms as ws_forms
-from ai_workspace.excel_utils import WriteToExcel_lite
+from ai_workspace.excel_utils import WriteToExcel_lite  
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document
@@ -3290,6 +3290,28 @@ def instant_translation_custom(request):
         else:return Response(res)
         
 
+import io
+import xlsxwriter
+import pandas as pd
+from ai_glex.models import TermsModel
+@api_view(['GET',])
+def glossary_simple_src_trg_term(request):
+    gloss_id = request.POST.get('gloss_id')
+    term_model = TermsModel.objects.filter(glossary=gloss_id).values("sl_term","tl_term")
+    df = pd.DataFrame.from_records(term_model)
+    df.columns=['source_term','target_term']
+    output = io.BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df.to_excel(writer, index=False, sheet_name='Sheet1')
+    writer.save()
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=Glossary_simple.xlsx'
+    output.seek(0)
+    response.write(output.read())
+    return response
+    # xlsx_data = WriteToExcel_lite()
+     # response.write(xlsx_data)
+ 
 
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])

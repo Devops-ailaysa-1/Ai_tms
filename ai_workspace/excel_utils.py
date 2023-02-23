@@ -157,3 +157,10 @@ def WriteToExcel():
     workbook.close()
     xlsx_data = output.getvalue()
     return xlsx_data
+
+ 
+
+    
+    
+    
+    

@@ -92,6 +92,7 @@ urlpatterns += [
 	path('translate_from_pdf/<int:task_id>/',api_views.translate_from_pdf),
 	path('default_detail/',api_views.default_proj_detail),
 	path('instant_customize/',api_views.instant_translation_custom),
+	path('gloss_src_trg_term/',api_views.glossary_simple_src_trg_term, name="gloss-simple-xlsx-download" )
 ]
 # views urls adding for local testing
 urlpatterns += [
