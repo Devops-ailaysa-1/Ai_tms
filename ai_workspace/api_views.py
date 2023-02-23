@@ -2583,7 +2583,7 @@ def get_task_status(request):
                     doc_data = json.loads(doc_data)
 
                 if doc_data.get('total_word_count') == 0:
-                    status = 'False'
+                    status = 'True'
                     msg = "Empty File"
                 else:
                     status = 'False'  
