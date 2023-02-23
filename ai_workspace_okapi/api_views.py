@@ -285,7 +285,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     cel_task = pre_translate_update.apply_async((task.id,),)
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
-                    if ins.error_type == "Insufficient Credits":
+                    empty = task.document.get_segments().filter(target='').first()
+                    if ins.error_type == "Insufficient Credits" or empty:
                         initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
                         seg = task.document.get_segments().filter(target='').first().source
                         consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
