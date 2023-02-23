@@ -353,10 +353,15 @@ def mt_only(project_id,token):
         tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)
         print("this is mt-only functions projects")
-        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
+        #[MTonlytaskCeleryStatus.objects.get_or_create(task_name = 'mt_only',task_id = i.id,status=1,defaults={'celery_task_id':mt_only.request.id}) for i in pr.get_mtpe_tasks]
         for i in pr.get_mtpe_tasks:
+            mt_obj,created = MTonlytaskCeleryStatus.objects.get_or_create(task_name = 'mt_only',task_id = i.id,status=1,defaults={'celery_task_id':mt_only.request.id})
             print("i----->" , i)
-            document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
+            print("RR------>",mt_obj)
+            print("Created------->",created)
+            if created == True:
+                print("@@@@@@@@@")
+                document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             #print("RES_doc------------->",document)
             try:
                 if document.get('msg') != None:pass
