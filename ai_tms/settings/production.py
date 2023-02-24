@@ -88,7 +88,7 @@ newrelic.agent.initialize('newrelic.ini')
 #      'redirect',
 # ]
 
-CSRF_TRUSTED_ORIGINS =+ [
+CSRF_TRUSTED_ORIGINS += [
  "http://localhost:3000",  "http://localhost:4200"
 ]
 
@@ -305,7 +305,7 @@ LOGGING = {
         # },
 
         'django' : {
-            'handlers' : ['file_prod','newrelic'],
+            'handlers' : ['file_prod'],
             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
             'propogate' : True,
         },
