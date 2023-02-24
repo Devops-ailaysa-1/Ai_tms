@@ -1191,12 +1191,12 @@ class TaskView(APIView):
         else:
             if len(task.job.project.get_tasks) == 1:
                 task.job.project.delete()
-            elif os.path.splitext(task.file.filename)[1] == ".pdf":
-                task.file.delete()
+            elif task.file:
+                if os.path.splitext(task.file.filename)[1] == ".pdf":
+                    task.file.delete()
                 task.delete()
             else:
                 if task.document:
-                    print("Yes Doc")
                     task.document.delete()
                 task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
