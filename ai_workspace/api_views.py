@@ -2582,7 +2582,6 @@ def celery_check(obj):
 def get_task_status(request):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace.models import MTonlytaskCeleryStatus
-    #from ai_tm.api_views import get_json_file_path
     project_id = request.GET.get('project')
     task_id = request.GET.get('task')
     if project_id:
@@ -2595,22 +2594,17 @@ def get_task_status(request):
     if pre_t == True:
         res = []
         for i in tasks:
-            msg = None
+            msg,progress = None,None
             document = i.document                    
             obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
-            print("Obj------->",obj)
             if document:
                 if not obj or obj.status == 2:
-                    print("Inside First")
                     status = 'True'
                 elif obj.status == 1 and obj.error_type == "Insufficient Credits":
-                    print("Inside First next")
                     status = 'True'
                 else:
-                    print("######$$$$&&&&&&",obj.task_name)
                     status = celery_check(obj)
             else:
-                print("!!!!!!!!!!!")
                 file_path = DocumentViewByTask.get_json_file_path(i)
                 doc_data = json.load(open(file_path))
                 if type(doc_data) == str:
@@ -2620,12 +2614,13 @@ def get_task_status(request):
                     status = 'True'
                     msg = "Empty File"
                 else:
-                    print("$$$$$$$$Else")
                     if obj:
                         status = celery_check(obj)
                     else:
                         status = 'True' 
-            res.append({'task':i.id,'open':status,'msg':msg})
+            if status == 'True':
+                progress = i.get_progress
+            res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
         return Response({'res':res})
     else:
         return Response({'msg':'No Detail'})
