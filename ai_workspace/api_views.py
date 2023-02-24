@@ -2565,15 +2565,23 @@ def writer_save(request):
         return Response(ser1.data)
     return Response(ser1.errors)
 
-
+def celery_check(obj):
+    from ai_auth.tasks import pre_translate_update
+    if obj.task_name == 'mt_only':
+        state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+    elif obj.task_name == 'pre_translate_update':
+        state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+    if state == 'STARTED':
+        status = 'False'
+    else:
+        status = 'True'
+    return status
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_task_status(request):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace.models import MTonlytaskCeleryStatus
-    from ai_auth.tasks import pre_translate_update
-    #from ai_tm.api_views import get_json_file_path
     project_id = request.GET.get('project')
     task_id = request.GET.get('task')
     if project_id:
@@ -2586,8 +2594,39 @@ def get_task_status(request):
     if pre_t == True:
         res = []
         for i in tasks:
-            msg = None
-            document = i.document
+            msg,progress = None,None
+            document = i.document                    
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
+            if document:
+                if not obj or obj.status == 2:
+                    status = 'True'
+                elif obj.status == 1 and obj.error_type == "Insufficient Credits":
+                    status = 'True'
+                else:
+                    status = celery_check(obj)
+            else:
+                file_path = DocumentViewByTask.get_json_file_path(i)
+                doc_data = json.load(open(file_path))
+                if type(doc_data) == str:
+                    doc_data = json.loads(doc_data)
+
+                if doc_data.get('total_word_count') == 0:
+                    status = 'True'
+                    msg = "Empty File"
+                else:
+                    if obj:
+                        status = celery_check(obj)
+                    else:
+                        status = 'True' 
+            if status == 'True':
+                progress = i.get_progress
+            res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
+        return Response({'res':res})
+    else:
+        return Response({'msg':'No Detail'})
+
+    
+    
             # obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
             # if document:
             #     print("#####")
@@ -2617,59 +2656,6 @@ def get_task_status(request):
             #         else:
             #             print("no obj")
             #             status = 'True'
-                    
-            obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
-            print("Obj------->",obj)
-            if document:
-                #task = Task.objects.filter(document=document).first()
-                if not obj or obj.status == 2:
-                    print("Inside First")
-                    status = 'True'
-                elif obj.status == 1 and obj.error_type == "Insufficient Credits":
-                    print("Inside First next")
-                    status = 'True'
-                else:
-                    print("######$$$$&&&&&&",obj.task_name)
-                    if obj.task_name == 'mt_only':
-                        state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
-                    elif obj.task_name == 'pre_translate_update':
-                        state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
-                    if state == 'STARTED':
-                        status = 'False'
-                    else:
-                        status = 'True' 
-            else:
-                print("!!!!!!!!!!!")
-                file_path = DocumentViewByTask.get_json_file_path(i)
-                doc_data = json.load(open(file_path))
-                if type(doc_data) == str:
-                    doc_data = json.loads(doc_data)
-
-                if doc_data.get('total_word_count') == 0:
-                    status = 'True'
-                    msg = "Empty File"
-                else:
-                    print("$$$$$$$$Else")
-                    if obj:
-                        if obj.task_name == 'mt_only':
-                            state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
-                        elif obj.task_name == 'pre_translate_update':
-                            state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
-                        if state == 'STARTED':
-                            status = 'False'
-                        else:
-                            status = 'True' 
-                    else:
-                        status = 'True'
-                    #status = 'False'  
-            res.append({'task':i.id,'open':status,'msg':msg})
-        return Response({'res':res})
-    else:
-        return Response({'msg':'No Detail'})
-
-    
-    
-
 
 
 
