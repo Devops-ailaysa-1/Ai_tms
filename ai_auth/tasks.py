@@ -348,18 +348,22 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
 
 
 @task
-def mt_only(project_id,token):
+def mt_only(project_id,token,task_id=None):
     from ai_workspace.models import Project,Task
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
+    print("Task------->",task_id)
     print("celerytask-------->",mt_only.request.id)
     print("PRE TRANSLATE-------------->",pr.pre_translate)
     if pr.pre_translate == True:
-        tasks = pr.get_mtpe_tasks
+        if task_id:
+            tasks = Task.objects.filter(id=task_id)
+        else:
+            tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)
-        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
-        for i in pr.get_mtpe_tasks:
+        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in tasks]
+        for i in tasks:
             print("I------------->",i)
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
             try:
@@ -504,6 +508,7 @@ def pre_translate_update(task_id):
     from ai_workspace.api_views import UpdateTaskCreditStatus
     from ai_workspace_okapi.api_views import MT_RawAndTM_View,get_tags
     from ai_workspace_okapi.models import MergeSegment,SplitSegment
+    #from ai_workspace_okapi.api_views import DocumentViewByTask
     from itertools import chain
 
     task = Task.objects.get(id=task_id)
@@ -511,6 +516,8 @@ def pre_translate_update(task_id):
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    # if task.document == None:
+    #     document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
     segments = task.document.segments_for_find_and_replace
     merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
     split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
