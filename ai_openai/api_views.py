@@ -269,7 +269,7 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
     ordering_fields = ['id']
     ordering = ('-id')
     #filterset_class = PromptFilter
-    search_fields = ['user_text']
+    search_fields = ['user_text','customize__customize',]
     pagination_class = NoPagination
     page_size = None
 
