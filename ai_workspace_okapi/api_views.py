@@ -381,9 +381,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
-                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth)),)
+                # cel_task = pre_translate_update.apply_async((task.id,),)
+                # return Response({'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':cel_task.id},status=401)
                 ##need to authorize
-                return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
+                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
+                return Response({"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
                 self.authorize_doc(document,action="read")
