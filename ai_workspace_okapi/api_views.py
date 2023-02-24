@@ -263,6 +263,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
         print("create_document_for_task_if_not_exists")
+        print("Tt------>",task.document)
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -273,9 +274,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 if state == 'STARTED' or state == 'PENDING':
-                    # if get_empty_segments(task.document) == False:
-                    #     return task.document
-                    # else:
                     try:
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
                         return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
@@ -287,8 +285,15 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     cel_task = pre_translate_update.apply_async((task.id,),)
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
-                    if ins.error_type == "Insufficient Credits":
-                        cel_task = pre_translate_update.apply_async((task.id,),)
+                    empty = task.document.get_segments().filter(target='').first()
+                    if ins.error_type == "Insufficient Credits" or empty:
+                        initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
+                        seg = task.document.get_segments().filter(target='').first().source
+                        consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
+                        print("Consumable------->",consumable_credits)
+                        if initial_credit > consumable_credits:
+                            cel_task = pre_translate_update.apply_async((task.id,),)
+                            return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                         return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
                     else:
                         return task.document
@@ -297,6 +302,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
+            print("-----------Already Processed--------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -324,6 +330,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             params_data = {**data, "output_type": None}
 
             res_paths = get_res_path(params_data["source_language"])
+            print("ResPath------------>",res_paths)
+            print("srclang------------>",params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             # For large files, json file is already written during word count
@@ -1090,8 +1098,9 @@ def long_text_process(consumable_credits,document_user,file_path,task,target_lan
     print(ser.errors)
     f2.close()
 
-class DocumentToFile(views.APIView):
 
+class DocumentToFile(views.APIView):
+   
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()
@@ -2197,7 +2206,7 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     print("Init------>",initial_credit)
     print("Cons----->",consumable_credits)
     if initial_credit > consumable_credits:
-        if len(data)>4500:
+        if len(data.encode("utf8"))>4500:
             celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
             MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
@@ -2238,7 +2247,7 @@ def segments_with_target(document_id):
     temp_name = filename + '.txt'
     counter = 0
     data = []
-    limit = 1000 if document.target_language_code in ['ta','ja'] else 3500
+    limit = 4000 #if document.target_language_code in ['ta','ja'] else 3500
 
     for i in segments_ser.data:
         # If the segment is merged
@@ -2263,7 +2272,7 @@ def segments_with_target(document_id):
 
     with open(temp_name, "w") as out:
         for i in data:
-            counter = counter + len(i)
+            counter = counter + len(i.encode("utf8"))
             out.write(' '+i)
             if counter>limit:
                 out.write('\n')

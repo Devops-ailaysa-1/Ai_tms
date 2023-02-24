@@ -17,6 +17,7 @@ from ai_exportpdf.convertio_ocr_lang import lang_code ,lang_codes
 from ai_staff.models import Languages
 from django.db.models import Q
 import math 
+import urllib
 logger = logging.getLogger('django')
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
@@ -30,7 +31,9 @@ def download_file(file_path):
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
 
-def direct_download_urlib_docx(url,filename):
+def direct_download_urlib_docx(url,filename): 
+    path , basename = os.path.split(url)
+    url = path+"/"+urllib.parse.quote(basename)
     x = urllib.request.urlretrieve(url=url , filename=filename)
 
 def remove_carraige_return(txt):
@@ -86,6 +89,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
     response_status = requests.post(url='https://api.convertio.co/convert' , data=json.dumps(data)).json()
     if response_status['status'] == 'error':
         txt_field_obj.status = "ERROR"
+        txt_field_obj.pdf_api_use = "FileCorrupted"
         txt_field_obj.save()
         ###retain cred if error
         file_format,page_length =  file_pdf_check(fp,id)
@@ -121,6 +125,7 @@ def convertiopdf2docx(id ,language,ocr = None ):
             # end = time.time()
             else:
                 txt_field_obj.status = "ERROR"
+                txt_field_obj.pdf_api_use = "FileCorrupted"
                 txt_field_obj.save()
                 file_format,page_length =  file_pdf_check(fp,id)
                 # file_format,page_length = pdf_text_check(fp)
@@ -150,6 +155,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
+                print("Text after preprocess------------>",text)
                 doc.add_paragraph(text)
             end = time.time()
             no_of_page_processed_counting+=1
@@ -173,6 +179,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
     except:
         end = time.time()
         txt_field_obj.status = "ERROR"
+        txt_field_obj.pdf_api_use = "FileCorrupted"
         txt_field_obj.save()
         ###retain cred if error
         file_format,page_length =  file_pdf_check(fp , id ) 
@@ -189,18 +196,21 @@ def para_creation_from_ocr(texts):
     para_text = []
     for i in  texts.pages:
         for j in i.blocks:
+            text_list = []
             for k in j.paragraphs:
-                text_list = []
                 for a in  k.words:
                     text_list.append(" ")
                     for b in a.symbols:
+                        # if b.text == ".":
                         text_list.append(b.text)
             para_text.append("".join(text_list))
-    return "\n".join(para_text)
+    para_text = "\n".join(para_text)
+    para_text = para_text.replace(" .", ".")
+    return para_text
 
 import PyPDF2
 from rest_framework import serializers
-def file_pdf_check(file_path,id): 
+def file_pdf_check(file_path,pdf_id): 
     try:
         pdfdoc = PyPDF2.PdfReader(file_path)
         pdf_check = {0:'ocr',1:'text'}
@@ -216,10 +226,16 @@ def file_pdf_check(file_path,id):
                 pdf_check_list.append(0)
         return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
     except:
-        file_details = Ai_PdfUpload.objects.get(id = id)
-        file_details.delete()
-        raise serializers.ValidationError({'msg':'pdf_corrupted'}, 
-                                          code =400)
+        if pdf_id:
+            file_details = Ai_PdfUpload.objects.get(id = pdf_id)
+            file_details.delete()
+            # return None,None
+            # file_details.status = "FileCorrupted"
+            # file_details.save()
+            raise serializers.ValidationError({'msg':'pdf_corrupted'}, 
+                                            code =400)
+        else:
+            return None,None
     
     
  

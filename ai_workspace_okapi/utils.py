@@ -352,7 +352,7 @@ def get_res_path(source_lang):
 
     elif source_lang in ['ta']:
         print("-------------Inside Tamil SRX-----------------")
-        res_paths["srx_file_path"] = "okapi_resources/tamil001.srx"
+        res_paths["srx_file_path"] = "okapi_resources/tamil.srx"
         return res_paths
     elif source_lang in ['kn']:
         res_paths["srx_file_path"] = "okapi_resources/kannada.srx"

@@ -25,6 +25,7 @@ router.register(r"vendor/dashboard", api_views.VendorDashBoardView,\
 				basename="vendor-dashboard")
 router.register(r'project/reference/files', api_views.ReferenceFilesView,\
 				basename="project-reference-files")
+router.register(r'doc_image',api_views.DocumentImageView,basename="doc-image")
 router.register(r'steps',api_views.StepsView,basename='steps')
 #router.register(r'tasks',api_views.TaskView,basename='tasks')
 router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
@@ -92,6 +93,7 @@ urlpatterns += [
 	path('translate_from_pdf/<int:task_id>/',api_views.translate_from_pdf),
 	path('default_detail/',api_views.default_proj_detail),
 	path('instant_customize/',api_views.instant_translation_custom),
+	path('task_status/',api_views.get_task_status),
 ]
 # views urls adding for local testing
 urlpatterns += [

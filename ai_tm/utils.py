@@ -28,7 +28,8 @@ def get_languages(proj):
     sl = jobs[0].source_language.language
     tl = ""
     for job in jobs:
-        tl += job.target_language.language
+        if job.target_language:
+            tl += job.target_language.language
         if job != jobs[len(jobs) - 1]:
             tl += ", "
 

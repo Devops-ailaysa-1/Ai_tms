@@ -64,7 +64,7 @@ from ai_workspace.excel_utils import WriteToExcel_lite
 from ai_workspace.tbx_read import upload_template_data_to_db, user_tbx_write
 from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document
-from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long
+from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long, get_res_path
 from ai_workspace_okapi.utils import get_translation
 from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
@@ -72,7 +72,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     ExpressProjectDetail
 from .models import Task
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT, WriterProject
+                    ExpressProjectAIMT, WriterProject,DocumentImages
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -85,7 +85,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer)
+                          WriterProjectSerializer,DocumentImagesSerializer)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
@@ -832,6 +832,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
+            # if instance.pre_translate == True:
+            #     mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )    
             #mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
@@ -1189,7 +1191,13 @@ class TaskView(APIView):
         else:
             if len(task.job.project.get_tasks) == 1:
                 task.job.project.delete()
+            elif os.path.splitext(task.file.filename)[1] == ".pdf":
+                task.file.delete()
+                task.delete()
             else:
+                if task.document:
+                    print("Yes Doc")
+                    task.document.delete()
                 task.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1301,10 +1309,11 @@ class ProjectAnalysisProperty(APIView):
                 ProjectAnalysisProperty.correct_fields(data)
                 # DocumentViewByTask.correct_fields(data)
                 params_data = {**data, "output_type": None}
-                res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                         "fprm_file_path": None,
-                         "use_spaces" : settings.USE_SPACES
-                         }
+                res_paths = get_res_path(params_data["source_language"])
+                # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
+                #          "fprm_file_path": None,
+                #          "use_spaces" : settings.USE_SPACES
+                #          }
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
@@ -1910,18 +1919,21 @@ def file_write(pr):
 
 
 @api_view(["GET"])
+#@permission_classes([AllowAny])
 def project_download(request,project_id):
     pr = Project.objects.get(id=project_id)
     if pr.project_type_id == 5:
         file_write(pr)
 
-    if pr.project_type_id not in [3,4,5]:
-        for i in pr.get_tasks:
+    if pr.project_type_id not in [3,5]:
+        for i in pr.get_mtpe_tasks:
             if i.document:
                 from ai_workspace_okapi.api_views import DocumentToFile
                 res_1 = DocumentToFile.document_data_to_file(request,i.document.id)
     if os.path.exists(os.path.join(pr.project_dir_path,'source')):
         shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
+        if os.path.exists(os.path.join(pr.project_dir_path,'Audio')):
+            shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/Audio')
         res = download_file(pr.project_name+'.zip')
         os.remove(pr.project_name+'.zip')
         return res
@@ -2156,7 +2168,7 @@ def transcribe_file_get(request):
 def google_long_text_file_process(file,obj,language,gender,voice_name):
     print("Main func Voice Name---------->",voice_name)
     final_name,ext =  os.path.splitext(file)
-    size_limit = 1000 if obj.job.target_language_code in ['ta','ja'] else 3500
+    size_limit = 4000 #if obj.job.target_language_code in ['ta','ja'] else 3500
     #final_audio = final_name + '.mp3'
     #final_audio = final_name + "_" + obj.ai_taskid + "[" + obj.job.source_language_code + "-" + obj.job.target_language_code + "]" + ".mp3"
     final_audio = final_name  + "_" + obj.job.source_language_code + "-" + obj.job.target_language_code  + ".mp3"
@@ -2213,7 +2225,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
         os.mkdir(dir_1)
     count=0
     out_filename = final_name + '_out.txt'
-    size_limit = 1000 if obj.job.source_language_code in ['ta','ja'] else 3500
+    size_limit = 4000 #if obj.job.source_language_code in ['ta','ja'] else 3500
     with open(file) as infile, open(out_filename, 'w') as outfile:
         lines = infile.readlines()
         for line in lines:
@@ -2221,7 +2233,7 @@ def google_long_text_source_file_process(file,obj,language,gender,voice_name):
             else:sents = nltk.sent_tokenize(line)
             for i in sents:
                 outfile.write(i)
-                count = count+len(i)
+                count = count+len(i.encode("utf8"))
                 if count > size_limit:
                     outfile.write('\n')
                     count=0
@@ -2302,7 +2314,7 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     print("Consumable Credits--------------->",consumable_credits)
     print("Initial Credits---------------->",initial_credit)
     if initial_credit > consumable_credits:
-        if len(data)>4500:
+        if len(data.encode("utf8"))>4500:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()
             state = text_to_speech_long_celery.AsyncResult(ins.celery_task_id).state if ins else None
             print("State--------------->",state)
@@ -2555,9 +2567,108 @@ def writer_save(request):
 
 
 
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_task_status(request):
+    from ai_workspace_okapi.api_views import DocumentViewByTask
+    from ai_workspace.models import MTonlytaskCeleryStatus
+    from ai_auth.tasks import pre_translate_update
+    #from ai_tm.api_views import get_json_file_path
+    project_id = request.GET.get('project')
+    task_id = request.GET.get('task')
+    if project_id:
+        pr = Project.objects.get(id=project_id)
+        pre_t = pr.pre_translate
+        tasks = pr.get_mtpe_tasks
+    elif task_id:
+        pre_t = Task.objects.get(id=task_id).job.project.pre_translate
+        tasks = Task.objects.filter(id=task_id)
+    if pre_t == True:
+        res = []
+        for i in tasks:
+            msg = None
+            document = i.document
+            # obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
+            # if document:
+            #     print("#####")
+            #     status = 'True'
+            # else:
+            #     print("!!!!!!!!!!!")
+            #     file_path = DocumentViewByTask.get_json_file_path(i)
+            #     doc_data = json.load(open(file_path))
+            #     if type(doc_data) == str:
+            #         doc_data = json.loads(doc_data)
 
+            #     if doc_data.get('total_word_count') == 0:
+            #         status = 'True'
+            #         msg = "Empty File"
+            #     else:
+            #         print("$$$$$$$$$")
+            #         if obj:
+            #             print("obj")
+            #             if obj.task_name == 'mt_only':
+            #                 state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+            #             elif obj.task_name == 'pre_translate_update':
+            #                 state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+            #             if state == 'STARTED':
+            #                 status = 'False'
+            #             else:
+            #                 status = 'True' 
+            #         else:
+            #             print("no obj")
+            #             status = 'True'
+                    
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
+            print("Obj------->",obj)
+            if document:
+                #task = Task.objects.filter(document=document).first()
+                if not obj or obj.status == 2:
+                    print("Inside First")
+                    status = 'True'
+                elif obj.status == 1 and obj.error_type == "Insufficient Credits":
+                    print("Inside First next")
+                    status = 'True'
+                else:
+                    print("######$$$$&&&&&&",obj.task_name)
+                    if obj.task_name == 'mt_only':
+                        state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                    elif obj.task_name == 'pre_translate_update':
+                        state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                    if state == 'STARTED':
+                        status = 'False'
+                    else:
+                        status = 'True' 
+            else:
+                print("!!!!!!!!!!!")
+                file_path = DocumentViewByTask.get_json_file_path(i)
+                doc_data = json.load(open(file_path))
+                if type(doc_data) == str:
+                    doc_data = json.loads(doc_data)
 
+                if doc_data.get('total_word_count') == 0:
+                    status = 'True'
+                    msg = "Empty File"
+                else:
+                    print("$$$$$$$$Else")
+                    if obj:
+                        if obj.task_name == 'mt_only':
+                            state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                        elif obj.task_name == 'pre_translate_update':
+                            state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                        if state == 'STARTED':
+                            status = 'False'
+                        else:
+                            status = 'True' 
+                    else:
+                        status = 'True'
+                    #status = 'False'  
+            res.append({'task':i.id,'open':status,'msg':msg})
+        return Response({'res':res})
+    else:
+        return Response({'msg':'No Detail'})
 
+    
+    
 
 
 
@@ -2903,7 +3014,7 @@ def task_segments_save(request):
         else: tasks = Task.objects.filter(id=task_id)
         for i in tasks:
             express_obj = ExpressProjectDetail.objects.filter(task_id=i.id).first()
-            previous_stored_source = express_obj.source_text.strip()
+            previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
             output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
@@ -3212,7 +3323,10 @@ def express_custom(request,exp_obj,option):
             return ({'msg':'Insufficient Credits'})
     
     else:##english
-        
+        initial_credit = user.credit_balance.get("total_left")
+        consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang=target_lang_code)
+        if initial_credit < consumable_credits_user_text:
+            return ({'msg':'Insufficient Credits'})
         response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
         print("Tokens---------->",total_tokens)
@@ -3444,3 +3558,57 @@ def instant_translation_custom(request):
             #         # mt_only.delay((serializer.data.get('id'), str(request.auth)), )
             #     return Response(serializer.data, status=201)
             # return Response(serializer.errors, status=409)
+
+
+
+class DocumentImageView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self,request):
+        user = request.user
+        image = DocumentImages.objects.filter(ai_user_id=user.id).all()
+        serializer = DocumentImagesSerializer(image, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        #glossaries = request.POST.getlist('glossary')
+        doc = request.POST.get('document')
+        image = request.FILES.get('image')
+        serializer = DocumentImagesSerializer(data={**request.POST.dict(),'image':image,'ai_user':request.user.id})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        pass
+        # doc = MyDocuments.objects.get(id=pk)
+        # image = request.FILES.get('image')
+        # print("Image--------->",image)
+        # if image:
+        #     print("******")
+        #     serializer = DocumentImagesSerializer(doc,data={**request.POST.dict(),'image':image},partial=True)
+        # else:
+        #     print("&&&&&&&&&&")
+        #     serializer= DocumentImagesSerializer(doc,data={**request.POST.dict()},partial=True)
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data)
+        # else:
+        #     return Response(serializer.errors)
+
+
+    def delete(self,request):
+        image_url = request.GET.get('image_url')
+        doc = request.GET.get('document')
+        pdf = request.GET.get('pdf')
+        task = request.GET.get('task')
+        if doc:queryset = DocumentImages.objects.filter(document_id=doc).all()
+        if pdf:queryset = DocumentImages.objects.filter(pdf_id=pdf).all()
+        if task:queryset = DocumentImages.objects.filter(task_id=task).all()
+        for i in queryset:
+            if i.image.url == image_url:
+                i.delete()
+            else:
+                print("No match")
+        return Response(status=status.HTTP_204_NO_CONTENT)
