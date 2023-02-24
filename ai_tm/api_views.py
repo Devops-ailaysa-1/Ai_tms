@@ -195,6 +195,7 @@ def check(uploaded_file,job):
     else:return False
 
 def get_tm_analysis(doc_data,job):
+        #[list(result) for key, result  in groupby(tasks, key=lambda item: item.job)]
         #print("DocData-------------->",doc_data)
         #doc_data = json.loads(doc_data)
         text_data = doc_data.get("text")

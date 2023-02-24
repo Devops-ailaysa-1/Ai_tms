@@ -89,6 +89,9 @@ from os.path import exists
 from .serializers import (VerbSerializer)
 from .utils import SpacesService, text_to_speech
 from .utils import download_file, bl_title_format, bl_cell_format, get_res_path, get_translation, split_check
+from django_oso.auth import authorize
+from ai_auth.utils import filter_authorize
+from django.db import transaction
 from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
@@ -203,6 +206,10 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
             doc_data = json.loads(doc_data)
 
+        if doc_data['total_word_count'] == 0:
+
+            return {'msg':'Empty File'}
+
         if doc_data['total_word_count'] >= 50000:
 
             #print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
@@ -240,12 +247,23 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task.save()
 
         return document
+    
+    def authorize_doc(self,doc,action):
+        if  dict == type(doc):
+            try:
+                doc =doc.get('doc')
+                if doc ==None:
+                    return False 
+            except:
+                return False 
+        authorize(self.request, resource=doc, actor=self.request.user, action=action)
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
-
+        print("create_document_for_task_if_not_exists")
+        print("Tt------>",task.document)
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -256,9 +274,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 if state == 'STARTED' or state == 'PENDING':
-                    # if get_empty_segments(task.document) == False:
-                    #     return task.document
-                    # else:
                     try:
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
                         return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
@@ -270,8 +285,15 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     cel_task = pre_translate_update.apply_async((task.id,),)
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
-                    if ins.error_type == "Insufficient Credits":
-                        cel_task = pre_translate_update.apply_async((task.id,),)
+                    empty = task.document.get_segments().filter(target='').first()
+                    if ins.error_type == "Insufficient Credits" or empty:
+                        initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
+                        seg = task.document.get_segments().filter(target='').first().source
+                        consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
+                        print("Consumable------->",consumable_credits)
+                        if initial_credit > consumable_credits:
+                            cel_task = pre_translate_update.apply_async((task.id,),)
+                            return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                         return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
                     else:
                         return task.document
@@ -280,6 +302,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
+            print("-----------Already Processed--------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -307,20 +330,26 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             params_data = {**data, "output_type": None}
 
             res_paths = get_res_path(params_data["source_language"])
+            print("ResPath------------>",res_paths)
+            print("srclang------------>",params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
-
+                #print("params_data exists------------>",params_data)
+                #print("data---->" ,data)
+                
             else:
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params": json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-
+                #print("params_data------------>",params_data)
                 if doc.status_code == 200:
                     doc_data = doc.json()
+                    if doc_data.get('total_word_count') == 0:
+                        return {'msg':'Empty File'}
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
 
@@ -348,21 +377,35 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
                 else:
                     document = self.create_document_for_task_if_not_exists(task)
+                    self.authorize_doc(document,action="read")
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
-                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth)),)
-                return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
+                # cel_task = pre_translate_update.apply_async((task.id,),)
+                # return Response({'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':cel_task.id},status=401)
+                ##need to authorize
+                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
+                return Response({"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
-                doc = DocumentSerializerV2(document).data
-                return Response(doc, status=201)
+                self.authorize_doc(document,action="read")
+                try:
+                    doc = DocumentSerializerV2(document).data
+                    return Response(doc, status=201)
+                except:
+                    if document.get('doc')!= None:
+                        doc = DocumentSerializerV2(document.get('doc')).data
+                        return Response({'msg':document.get('msg'),'doc_data':doc}, status=201)
+                    else:
+                        return Response(document,status=400)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
+                self.authorize_doc(document,action="read")
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
-            document = self.create_document_for_task_if_not_exists(task)
+            document = self.create_document_for_task_if_not_exists(task)   
+            self.authorize_doc(document,action="read")        
             try:
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
@@ -387,16 +430,17 @@ class DocumentViewByDocumentId(views.APIView):
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
         try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
         except:managers =[]
-        if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
-            dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
-            dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
-            document = self.get_object(document_id)
-            data = DocumentSerializerV2(document).data
-            data.update(dict)
-            data.update(dict_1)
-            return Response(data, status=200)
-        else:
-            return Response({"msg" : "Unauthorised"}, status=401)
+        # if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
+        dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
+        dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
+        document = self.get_object(document_id)
+        authorize(request, resource=document, actor=request.user, action="read")
+        data = DocumentSerializerV2(document).data
+        data.update(dict)
+        data.update(dict_1)
+        return Response(data, status=200)
+        # else:
+        #     return Response({"msg" : "Unauthorised"}, status=401)
 
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
@@ -404,6 +448,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
     def get_object(self, document_id):
         document = get_object_or_404(\
             Document.objects.all(), id=document_id)
+        authorize(self.request, resource=document, actor=self.request.user, action="read")
         return document
 
 
@@ -554,6 +599,7 @@ class SourceTMXFilesCreate(views.APIView):
 class SegmentsUpdateView(viewsets.ViewSet):
     def get_object(self, segment_id):
         qs = Segment.objects.all()
+        #qs = filter_authorize(self.request, qs,self.request.user,"read")
 
         if split_check(segment_id):
             segment = get_object_or_404(qs, id=segment_id)
@@ -612,6 +658,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
 
     def update(self, request, segment_id):
         segment = self.get_object(segment_id)
+        authorize(request, resource=segment, actor=request.user, action="read")
         edit_allow = self.edit_allowed_check(segment)
         if edit_allow == False:
             return Response({"msg": "Someone is working already.."}, status=400)
@@ -635,11 +682,11 @@ class MT_RawAndTM_View(views.APIView):
         hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
 
         # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
-        if get_plan_name(debit_user) != "Business" or 'Business-PAYG':
+        if get_plan_name(debit_user) != "Business" or 'Pay-As-You-Go':
             return {}, 424, "cannot_translate"
 
         elif (request.user.is_internal_member or request.user.id in hired_editors) and \
-            (get_plan_name(debit_user) == "Business" or 'Business-PAYG') and \
+            (get_plan_name(debit_user) == "Business" or 'Pay-As-You-Go') and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
             return {}, 424, "cannot_translate"
@@ -658,7 +705,6 @@ class MT_RawAndTM_View(views.APIView):
                     }
         res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
                             data={"segmentWordCountdata": json.dumps(seg_data)})
-
         if res.status_code == 200:
             return res.json()
         else:
@@ -714,6 +760,7 @@ class MT_RawAndTM_View(views.APIView):
 
         # If raw translation is already available and Proj & Task MT engines are same
         if mt_raw:
+            # authorize(request, resource=mt_raw, actor=request.user, action="read")
             if mt_raw.mt_engine == task_assign_mt_engine:
                 return MT_RawSerializer(mt_raw).data, 200, "available"
 
@@ -737,7 +784,7 @@ class MT_RawAndTM_View(views.APIView):
 
                 #############   Update   ############
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                              doc.source_language_code, doc.target_language_code)
+                                              doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk)
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
@@ -796,7 +843,7 @@ class MT_RawAndTM_View(views.APIView):
             # Updating raw translation of split segments
             if mt_raw_split:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code)
+                                              doc.target_language_code,user_id=doc.owner_pk)
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
@@ -804,7 +851,7 @@ class MT_RawAndTM_View(views.APIView):
             # Creating new MT raw for split segment
             else:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code)
+                                              doc.target_language_code,user_id=doc.owner_pk)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
@@ -904,6 +951,17 @@ class MT_RawAndTM_View(views.APIView):
 
             # Getting MT params
             mt_params = self.get_segment_MT_params(segment_id)
+            
+            if split_check(segment_id):
+                seg = Segment.objects.get(id=segment_id)
+                authorize(request, resource=seg, actor=request.user, action="read")
+            else:
+                seg_id = SplitSegment.objects.get(id=segment_id).get_parent_seg_id
+                seg = Segment.objects.get(id=seg_id)
+                print("entered split check")
+                authorize(request, resource=seg, actor=request.user, action="read")
+                print("pass")
+
 
             # For normal and merged segments
             if split_check(segment_id):
@@ -1042,8 +1100,9 @@ def long_text_process(consumable_credits,document_user,file_path,task,target_lan
     print(ser.errors)
     f2.close()
 
-class DocumentToFile(views.APIView):
 
+class DocumentToFile(views.APIView):
+   
     @staticmethod
     def get_object(document_id):
         qs = Document.objects.all()
@@ -1160,7 +1219,8 @@ class DocumentToFile(views.APIView):
 
 
     def get(self, request, document_id):
-
+        doc = DocumentToFile.get_object(document_id)
+        authorize(request, resource=doc, actor=request.user, action="download")
         # Incomplete segments in db
         segment_count = Segment.objects.filter(text_unit__document=document_id).count()
         if Document.objects.get(id=document_id).total_segment_count != segment_count:
@@ -1510,6 +1570,7 @@ class ProgressView(views.APIView):
 
     def get(self, request, document_id):
         document = self.get_object(document_id)
+        authorize(request, resource=document, actor=request.user, action="read")
         total_segment_count, segments_confirmed_count = self.get_progress(document)
         return JsonResponse(
             dict(total_segment_count=total_segment_count,
@@ -1522,6 +1583,7 @@ class FontSizeView(views.APIView):
     @staticmethod
     def get_object(data, request):
         obj = FontSize.objects.filter(ai_user_id=request.user.id, language_id=data.get("language", None)).first()
+        ## need to add authorize if non owner user use this  
         return  obj
 
     def post(self, request):
@@ -1569,7 +1631,7 @@ class CommentView(viewsets.ViewSet):
         if by=="segment":
             if split_check(id):
                 print("normal")
-                segment = get_object_or_404(Segment.objects.all(), id=id)
+                segment = get_object_or_404(Segment.objects.all(), id=id)                
                 return segment.segment_comments_set.all()
             else:
                 print("split")
@@ -1597,6 +1659,9 @@ class CommentView(viewsets.ViewSet):
 
     def list(self, request):
         objs = self.get_list_of_objects(request)
+        print("user",request.user)
+        objs = filter_authorize(request, objs, user=request.user, action="read")
+        print("objs",objs)
         ser = CommentSerializer(objs, many=True)
         return Response(ser.data, status=200)
 
@@ -1609,7 +1674,9 @@ class CommentView(viewsets.ViewSet):
             segment = SplitSegment.objects.filter(id=seg).first().segment_id
             ser = CommentSerializer(data={'segment':segment,'comment':comment,'split_segment':seg})
         if ser.is_valid(raise_exception=True):
-            ser.save()
+            with transaction.atomic():
+                ser.save()
+                authorize(request, resource=ser.instance, actor=request.user, action="create")
             return Response(ser.data, status=201)
 
     def retrieve(self, request, pk=None):
@@ -1618,13 +1685,15 @@ class CommentView(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
+        authorize(request, resource=obj, actor=request.user, action="update")
         ser = CommentSerializer(obj, data=request.POST.dict(), partial=True)
         if ser.is_valid(raise_exception=True):
-            ser.save()
+            ser.save()    
             return Response(ser.data, status=202)
 
     def destroy(self, request, pk=None):
         obj = self.get_object(comment_id=pk)
+        authorize(request, resource=obj, actor=request.user, action="delete")
         obj.delete()
         return  Response({},204)
 
@@ -2078,6 +2147,9 @@ def get_word_api(request):
 #             url = f"http://localhost:8089/workspace_okapi/document/{i.id}"
 #             res = requests.request("GET", url, headers=headers)
 #     print("doc--->",res.text)
+
+
+
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def download_audio_output_file(request):
@@ -2086,11 +2158,20 @@ def download_audio_output_file(request):
     document_id = request.GET.get('document_id')
     doc = Document.objects.get(id=document_id)
     task = doc.task_set.first()
+    user_credit = UserCredits.objects.get(Q(user=doc.doc_credit_debit_user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     cel_task = MTonlytaskCeleryStatus.objects.filter(task = doc.task_set.first()).last()
     state = google_long_text_file_process_cel.AsyncResult(cel_task.celery_task_id).state
     if state == 'SUCCESS':
         return download_file(task.task_transcript_details.last().translated_audio_file.path)
     elif state == 'FAILURE':
+        source_file_path = File.objects.get(file_document_set=doc).get_source_file_path
+        filename, ext = os.path.splitext(source_file_path.split('source/')[1])
+        temp_name = filename + '.txt'
+        text_file = open(temp_name, "r")
+        data = text_file.read()
+        consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
+        user_credit.credits_left = user_credit.credits_left + consumable_credits
+        user_credit.save()
         return Response({'msg':'Failure'},status=400)
     else:
         return Response({'msg':'Pending'},status=400)
@@ -2124,19 +2205,23 @@ def process_audio_file(document_user,document_id,voice_gender,language_locale,vo
     print(len(data))
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
     initial_credit = document_user.credit_balance.get("total_left")#########need to update owner account######
+    print("Init------>",initial_credit)
+    print("Cons----->",consumable_credits)
     if initial_credit > consumable_credits:
-        if len(data)>5000:
+        if len(data.encode("utf8"))>4500:
             celery_task = google_long_text_file_process_cel.apply_async((consumable_credits,document_user.id,file_path,task.id,target_language,voice_gender,voice_name), )
             MTonlytaskCeleryStatus.objects.create(task_id=task.id,task_name='google_long_text_file_process_cel',celery_task_id=celery_task.id)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
             return {'msg':'Conversion is going on.Please wait',"celery_id":celery_task.id}
             #celery_task = google_long_text_file_process_cel(file_path,task.id,target_language,voice_gender,voice_name)
             #res1,f2 = google_long_text_file_process(file_path,task,target_language,voice_gender,voice_name)
         else:
             filename_ = filename + "_"+ task.ai_taskid+ "_out" + "_" + source_lang + "-" + target_language + ".mp3"
             res1,f2 = text_to_speech(file_path,target_language,filename_,voice_gender,voice_name)
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
             os.remove(filename_)
             os.remove(temp_name)
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(document_user, consumable_credits)
+        
         if task.task_transcript_details.first()==None:
             ser = TaskTranscriptDetailSerializer(data={"translated_audio_file":res1,"task":task.id})
         else:
@@ -2164,6 +2249,7 @@ def segments_with_target(document_id):
     temp_name = filename + '.txt'
     counter = 0
     data = []
+    limit = 4000 #if document.target_language_code in ['ta','ja'] else 3500
 
     for i in segments_ser.data:
         # If the segment is merged
@@ -2188,9 +2274,9 @@ def segments_with_target(document_id):
 
     with open(temp_name, "w") as out:
         for i in data:
-            counter = counter + len(i)
+            counter = counter + len(i.encode("utf8"))
             out.write(' '+i)
-            if counter>3500:
+            if counter>limit:
                 out.write('\n')
                 counter = 0
 

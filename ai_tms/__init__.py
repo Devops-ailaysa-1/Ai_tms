@@ -6,5 +6,5 @@ import nltk
 __all__ = ('celery_app',)
 
 
-nltk.download('stopwords')
-nltk.download('punkt')
+# nltk.download('stopwords')
+# nltk.download('punkt')

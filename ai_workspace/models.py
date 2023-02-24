@@ -25,9 +25,18 @@ from django.utils.functional import cached_property
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
-    Currencies, ProjectTypeDetail
+    Currencies, ProjectTypeDetail,AiRoles,AiCustomize
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
 from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
+from .manager import AilzaManager
+from .utils import create_dirs_if_not_exists, create_task_id
+from ai_workspace_okapi.utils import SpacesService
+from .signals import (create_allocated_dirs, create_project_dir, \
+    create_pentm_dir_of_project,set_pentm_dir_of_project, \
+    check_job_file_version_has_same_project)
+from .manager import ProjectManager, FileManager, JobManager,\
+    TaskManager,TaskAssignManager,ProjectSubjectFieldManager,ProjectContentTypeManager,ProjectStepsManager
+from django.db.models.fields import Field
 # from integerations.github_.models import ContentFile
 # from integerations.base.utils import DjRestUtils
 from ai_workspace.utils import create_ai_project_id_if_not_exists
@@ -41,6 +50,9 @@ from .signals import (create_project_dir, delete_project_dir,\
 from .utils import create_dirs_if_not_exists, create_task_id
 
 from ai_workspace_okapi.models import SplitSegment
+from django.db.models.functions import Cast
+from django.db.models import CharField
+
 
 
 def set_pentm_dir(instance):
@@ -82,6 +94,9 @@ class PenseiveTM(models.Model):
 
     # class Meta:
     #     managed = False
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
 
 pre_save.connect(set_pentm_dir_of_project, sender=PenseiveTM)
 
@@ -102,8 +117,80 @@ class Workflows(models.Model):
     standard = models.BooleanField(default=False)
     user = models.ForeignKey(AiUser,on_delete=models.CASCADE,blank=True,null=True,related_name='user_workflow')
 
+    @property
+    def owner_pk(self):
+        return self.user.id
+
     def __str__(self):
         return self.name
+
+def my_docs_upload_path(instance, filename):
+    file_path = os.path.join(instance.user.uid,"MyDocuments", filename)
+    return file_path
+
+class WriterProject(models.Model):
+    proj_name = models.CharField(max_length=1000, null=True, blank=True,)
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+      
+        if not self.proj_name:
+            self.proj_name = 'AiWriter-'+str(WriterProject.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
+            
+        if self.id:
+            proj_exact = WriterProject.objects.filter(proj_name=self.proj_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+        else:
+            proj_exact = WriterProject.objects.filter(proj_name=self.proj_name, \
+                            ai_user=self.ai_user,).count()
+        if proj_exact != 0:
+            if self.id:
+                proj_count = WriterProject.objects.filter(proj_name__icontains=self.proj_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+            else:
+                proj_count = WriterProject.objects.filter(proj_name__icontains=self.proj_name, \
+                            ai_user=self.ai_user,).count()
+            self.proj_name = self.proj_name + "(" + str(proj_count) + ")"
+
+        return super().save()
+
+class MyDocuments(models.Model):
+    project = models.ForeignKey(WriterProject, null=True, blank=True, on_delete=models.CASCADE,related_name = 'related_docs')
+    file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
+    doc_name = models.CharField(max_length=1000, null=True, blank=True,)
+    word_count = models.IntegerField(null=True,blank=True)
+    html_data = models.TextField(null=True,blank=True)
+    created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'doc_created_by')
+    ai_user = models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE,related_name = 'credit_debit_user')
+    source_language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE, related_name="doc_source_lang")
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    
+    
+    def save(self, *args, **kwargs):
+      
+        if not self.doc_name:
+            self.doc_name = 'Document-'+str(MyDocuments.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
+            
+        if self.id:
+            doc_exact = MyDocuments.objects.filter(doc_name=self.doc_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+        else:
+            doc_exact = MyDocuments.objects.filter(doc_name=self.doc_name, \
+                            ai_user=self.ai_user,).count()
+        if doc_exact != 0:
+            if self.id:
+                doc_count = MyDocuments.objects.filter(doc_name__icontains=self.doc_name, \
+                            ai_user=self.ai_user).exclude(id=self.id).count()
+            else:
+                doc_count = MyDocuments.objects.filter(doc_name__icontains=self.doc_name, \
+                            ai_user=self.ai_user,).count()
+            self.doc_name = self.doc_name + "(" + str(doc_count) + ")"
+
+        return super().save()
+
 
 ##########################Need to add project type################################
 class Project(models.Model):
@@ -113,7 +200,7 @@ class Project(models.Model):
     project_dir_path = models.FilePathField(max_length=1000, null=True,\
         path=settings.MEDIA_ROOT, blank=True, allow_folders=True,
         allow_files=False)
-    created_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     ai_user = models.ForeignKey(AiUser, null=False, blank=False,
         on_delete=models.CASCADE)
     ai_project_id = models.TextField()
@@ -151,26 +238,23 @@ class Project(models.Model):
         if not self.ai_project_id:
             self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
-        # if not self.ai_project_id:
-        #     # self.ai_user shoould be set before save
-        #     self.ai_project_id = self.ai_user.uid+"p"+str(Project.\
-        #     objects.filter(ai_user=self.ai_user).count()+1)
-
         if not self.project_name:
-
-            #self.project_name = self.ai_project_id
             self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
-        # print("Project_name---->",self.project_name)
+
         if self.id:
-            project_count = Project.objects.filter(project_name__icontains=self.project_name, \
+            project_count = Project.objects.filter(project_name=self.project_name, \
                             ai_user=self.ai_user).exclude(id=self.id).count()
         else:
-            project_count = Project.objects.filter(project_name__icontains=self.project_name, \
-                            ai_user=self.ai_user,).count()
-        # print("ProjectCount------>",project_count)
+            project_count = Project.objects.filter(project_name=self.project_name, \
+                            ai_user=self.ai_user).count()
         if project_count != 0:
-            self.project_name = self.project_name + "(" + str(project_count) + ")"
-
+            if self.id:
+                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                                ai_user=self.ai_user).exclude(id=self.id).count()
+            else:
+                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                                ai_user=self.ai_user).count()
+            self.project_name = self.project_name + "(" + str(count_num) + ")"
         return super().save()
 
     @property
@@ -377,6 +461,14 @@ class Project(models.Model):
                     return False
             return True
 
+    # @property
+    # def assigned_date(self):
+    #     assigned = TaskAssignInfo.objects.filter(task_assign__task__job__project=self).order_by('-created_at')[0].created_at
+    #     if assigned > self.created_at:
+    #         return assigned
+    #     else:
+    #         return self.created_at
+
 
     @property
     def tmx_files_path(self):
@@ -462,7 +554,18 @@ class Project(models.Model):
                 else:return False
             else:return False
         else:return None
-
+    
+    @property
+    def owner_pk(self):
+        return self.ai_user.id
+    
+    @property
+    def proj_obj(self):
+        return self
+    
+    @property
+    def get_tasks_pk(self):
+        return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
     def project_analysis(self,tasks):
         if self.is_proj_analysed == True:
@@ -507,6 +610,13 @@ class ProjectFilesCreateType(models.Model):
     project = models.OneToOneField(Project, on_delete=models.CASCADE,
         related_name="project_file_create_type")
 
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+    @property
+    def proj_obj(self):
+        return self.project
+
 
 class ProjectSteps(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
@@ -517,6 +627,14 @@ class ProjectSteps(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
     objects = ProjectStepsManager()
+
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+
+    @property
+    def proj_obj(self):
+        return self.project
 
 def get_audio_file_upload_path(instance, filename):
     file_path = os.path.join(instance.voice_project.project.ai_user.uid,instance.voice_project.project.ai_project_id,\
@@ -532,6 +650,9 @@ class VoiceProjectDetail(models.Model):
     # has_male = models.BooleanField(blank=True,null=True)
     # has_female = models.BooleanField(blank=True,null=True)
 
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
 
 
 class ProjectContentType(models.Model):
@@ -542,6 +663,14 @@ class ProjectContentType(models.Model):
 
     objects = ProjectContentTypeManager()
 
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+
+    @property
+    def proj_obj(self):
+        return self.project
+
 class ProjectSubjectField(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
                         related_name="proj_subject")
@@ -549,6 +678,14 @@ class ProjectSubjectField(models.Model):
                         related_name="proj_sub_name")
 
     objects = ProjectSubjectFieldManager()
+
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+    
+    @property
+    def proj_obj(self):
+        return self.project
 
 class Job(models.Model):
     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.CASCADE,\
@@ -640,6 +777,14 @@ class Job(models.Model):
         #print("called every time!!!")
         # return self.target_language.locale.first().language
         return  self.target_language_code
+
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+   
+    @property
+    def proj_obj(self):
+        return self.project
 
     def __str__(self):
         try:
@@ -738,7 +883,11 @@ class File(models.Model):
 
     @property
     def owner(self):
-        return self.project.ai_user # created by
+        return self.project.ai_user
+    
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk # created by
 
     @property
     def get_source_file_path(self):
@@ -950,11 +1099,34 @@ class Task(models.Model):
             source_words = self.job.term_job.filter(Q(sl_term__isnull=False)).exclude(sl_term='').count()
             return {"source_words":source_words,\
                     "target_words":target_words}
+    @property
+    def owner_pk(self):
+        return self.job.project.owner_pk
+
+    @property
+    def proj_obj(self):
+        return self.job.project
+
 
     def __str__(self):
         return "file=> "+ str(self.file) + ", job=> "+ str(self.job)
 
+    @property
+    def task_obj(self):
+        return self
+
 pre_save.connect(check_job_file_version_has_same_project, sender=Task)
+
+def my_doc_image_upload_path(instance, filename):
+    file_path = os.path.join(instance.ai_user.uid,"MyDocImages", filename)
+    return file_path
+
+class DocumentImages(models.Model):
+    ai_user =  models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE)
+    document = models.ForeignKey(MyDocuments,null=True, blank=True,on_delete=models.CASCADE,related_name = 'related_image')
+    task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.CASCADE,related_name = 'related_img')
+    pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.CASCADE,related_name = 'retd_img')
+    image = models.FileField(upload_to=my_doc_image_upload_path,blank=True, null=True)
 
 
 def ref_file_upload_path(instance, filename):
@@ -964,11 +1136,18 @@ def ref_file_upload_path(instance, filename):
 
 class ExpressProjectDetail(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_task_detail")
+    source_text = models.TextField(null=True,blank=True)
     target_text = models.TextField(null=True,blank=True)
     mt_raw =models.TextField(null=True,blank=True)
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_detail")
 
+    @property
+    def owner_pk(self):
+        return self.task.owner_pk
 
+    @property
+    def task_obj(self):
+        return self.task
 
 class MTonlytaskCeleryStatus(models.Model):
     IN_PROGRESS = 1
@@ -984,7 +1163,13 @@ class MTonlytaskCeleryStatus(models.Model):
     task_name = models.TextField(blank=True, null=True)
     error_type = models.TextField(blank=True, null=True)
 
-
+    @property
+    def owner_pk(self):
+        return self.task.owner_pk
+        
+    @property
+    def task_obj(self):
+        return self.task
 
 class TaskAssign(models.Model):
     YET_TO_START = 1
@@ -1009,6 +1194,15 @@ class TaskAssign(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
 
     objects = TaskAssignManager()
+
+    @property
+    def owner_pk(self):
+        return self.task.owner_pk
+
+    @property
+    def task_obj(self):
+        return self.task
+
 
     # task_assign_obj = TaskAssign.objects.filter(
     #     Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
@@ -1045,6 +1239,17 @@ class TaskAssignInfo(models.Model):
             self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
         super().save()
 
+    @property
+    def owner_pk(self):
+        return self.task_assign.owner_pk
+
+    @property
+    def task_obj(self):
+        return self.task_assign.task_obj
+
+
+# post_save.connect(assign_object_task, sender=TaskAssignInfo)
+
 # class TaskAssignBillDetail(models.Model):
 #     task_assign = models.OneToOneField(TaskAssign,on_delete=models.CASCADE, null=False, blank=False,
 #                     related_name="task_assign_word_info")
@@ -1076,6 +1281,10 @@ class Instructionfiles(models.Model):
             return  os.path.basename(self.instruction_file.file.name)
         except:
             return None
+
+    @property
+    def owner_pk(self):
+        return self.task_assign_info.owner_pk
 # post_save.connect(generate_client_po, sender=TaskAssignInfo)
 
 class TaskAssignHistory(models.Model):
@@ -1086,12 +1295,20 @@ class TaskAssignHistory(models.Model):
     unassigned_by = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True, related_name='unassigned_by')
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
+    @property
+    def owner_pk(self):
+        return self.task_assign.owner_pk
+
 class TaskDetails(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="task_details")
     task_word_count = models.IntegerField(null=True, blank=True)
     task_char_count = models.IntegerField(null=True, blank=True)
     task_seg_count = models.IntegerField(null=True, blank=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="task_project")
+
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
 
     def __str__(self):
         return "file=> "+ str(self.task.file) + ", job=> "+ str(self.task.job)
@@ -1114,12 +1331,17 @@ class TaskTranscriptDetails(models.Model):
     translated_audio_file = models.FileField(upload_to=audio_file_path,null=True,blank=True)
     transcripted_file_writer = models.FileField(upload_to=edited_file_path,null=True,blank=True)
     quill_data =  models.TextField(null=True,blank=True)
+    html_data = models.TextField(null=True,blank=True)
     audio_file_length = models.IntegerField(null=True,blank=True)
     user = models.ForeignKey(AiUser, on_delete = models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     writer_project_updated_count = models.IntegerField(null=True,blank=True)
     writer_filename = models.CharField(max_length=200, null=True, blank=True)
+
+    @property
+    def owner_pk(self):
+        return self.task.owner_pk
 
     # @property
     # def writer_filename(self):
@@ -1152,6 +1374,10 @@ class TmxFile(models.Model):
     def filename(self):
         return  os.path.basename(self.tmx_file.file.name)
 
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+
 def tbx_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,"tbx",filename)
     return file_path
@@ -1162,6 +1388,10 @@ class Tbxfiles(models.Model):
             blank=False, max_length=1000)  # Common for a project
     project = models.ForeignKey("Project", null=False, blank=False,\
             on_delete=models.CASCADE)
+
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
 
 def reference_file_upload_path(instance, filename):
     file_path = os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id,\
@@ -1177,6 +1407,10 @@ class ReferenceFiles(models.Model):
     @property
     def filename(self):
         return  os.path.basename(self.ref_files.file.name)
+
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
 
 def tbx_file_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx", filename)
@@ -1194,6 +1428,10 @@ class TbxFile(models.Model):
     def filename(self):
         return  os.path.basename(self.tbx_file.file.name)
 
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+
 def tbx_template_file_upload_path(instance, filename):
     return os.path.join(instance.project.ai_user.uid,instance.project.ai_project_id, "tbx_template", filename)
 
@@ -1208,6 +1446,10 @@ class TbxTemplateFiles(models.Model):
     def filename(self):
         return  os.path.basename(self.tbx_template_file.file.name)
 
+    @property
+    def owner_pk(self):
+        return self.project.owner_pk
+
 class TemplateTermsModel(models.Model):
 
     file = models.ForeignKey(TbxTemplateFiles, on_delete=models.CASCADE ,null=False, blank=False)
@@ -1218,12 +1460,18 @@ class TemplateTermsModel(models.Model):
     def __str__(self):
         return self.sl_term
 
+    @property
+    def owner_pk(self):
+        return self.job.owner_pk
+
 class TaskCreditStatus(models.Model):
     task = models.ForeignKey(Task, null=False, blank=False, on_delete=models.CASCADE)
     allocated_credits = models.IntegerField()
     actual_used_credits = models.IntegerField()
     word_char_ratio = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-
+    @property
+    def owner_pk(self):
+        return self.task.owner_pk
 
 class TempFiles(models.Model):
     temp_proj = models.ForeignKey(TempProject, on_delete=models.CASCADE,
@@ -1255,7 +1503,9 @@ class WorkflowSteps(models.Model):
     def __str__(self):
         return self.workflow.name + "-" + self.steps.name
 
-
+    @property
+    def owner_pk(self):
+        return self.workflow.owner_pk
 
 # class TempAudioFiles(models.model):
 #     user = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name="user")
@@ -1263,3 +1513,57 @@ class WorkflowSteps(models.Model):
 #         null=False, blank=False, max_length=1000)
 #     text_file = models.FileField(upload_to=get_temp_file_upload_path,\
 #         null=False, blank=False, max_length=1000)
+
+
+class AiRoleandStep(models.Model):
+    role = models.ForeignKey(AiRoles,related_name='step_role',
+        on_delete=models.CASCADE,blank=True, null=True)
+    step = models.ForeignKey(Steps, on_delete=models.CASCADE,
+                        related_name="step_role")
+
+
+
+# class ExpressProjectSrcTextUnit(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_src_text_unit")
+#     seq_id=models.IntegerField()
+
+# class ExpressProjectTarTextUnit(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_tar_text_unit")
+#     src_text_unit = models.ForeignKey(ExpressProjectSrcTextUnit,null=True,blank=True,on_delete=models.CASCADE,related_name="exp_tar_text_unit")
+#     seq_id=models.IntegerField()
+
+
+# class ExpressProjectDetail(models.Model):
+#     task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_task_detail")
+#     source_text = models.TextField(null=True,blank=True)
+#     target_text = models.TextField(null=True,blank=True)
+#     mt_raw =models.TextField(null=True,blank=True)
+#     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_detail")
+
+class ExpressProjectSrcSegment(models.Model):
+    #src_text_unit = models.ForeignKey(ExpressProjectSrcTextUnit, on_delete=models.CASCADE,related_name="exp_src_seg")
+    task = models.ForeignKey(Task, on_delete=models.CASCADE,related_name="express_src_text_unit")
+    src_text_unit = models.IntegerField()
+    src_segment = models.TextField(null=True,blank=True)
+    #tar_segment = models.TextField(null=True,blank=True)
+    seq_id=models.IntegerField()
+    version = models.IntegerField()
+
+class ExpressProjectSrcMTRaw(models.Model):
+    src_seg = models.ForeignKey(ExpressProjectSrcSegment,on_delete=models.CASCADE,related_name="express_src_mt")
+    mt_raw =models.TextField(null=True,blank=True)
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_raw")
+
+
+class ExpressProjectAIMT(models.Model):
+    express = models.ForeignKey(ExpressProjectDetail, on_delete=models.CASCADE,related_name="express_src_text")
+    source = models.TextField(null=True,blank=True)
+    customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'insta_cust')
+    mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt")
+    api_result = models.TextField(null=True,blank=True)
+    final_result = models.TextField(null=True,blank=True)
+# class ExpressProjectTarSegment(models.Model):
+#     src_seg = models.ForeignKey(ExpressProjectSrcSegment,null=True,blank=True,on_delete=models.CASCADE,related_name="exp_src_seg")
+#     tar_text_unit = models.IntegerField()
+#     tar_text = models.TextField(null=True,blank=True)
+#     seq_id=models.IntegerField()

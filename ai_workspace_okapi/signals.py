@@ -1,6 +1,7 @@
 
 from .utils import set_ref_tags_to_runs, get_runs_and_ref_ids, get_translation
 from django.apps import apps
+from django.db.models import Q
 
 
 def set_segment_tags_in_source_and_target(sender, instance, created, *args, **kwargs):
@@ -35,6 +36,7 @@ def translate_segments(sender, instance, created, *args, **kwargs):
                 instance.source,
                 instance.text_unit.document.source_language_code,
                 instance.text_unit.document.target_language_code,
-            )
+                user_id = instance.owner_pk
+                )
             instance.target = target
             instance.save()

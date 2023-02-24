@@ -82,5 +82,19 @@ def roundup(x):
 def get_consumable_credits_for_text_to_speech(total_chars):
     return round(total_chars/20)
 
-def get_consumable_credits_for_speech_to_text(total_seconds):#######Minimum billable 15 seconds Need to update##########
+def get_consumable_credits_for_speech_to_text(total_seconds):#######Minimum billable 15 seconds##########
     return round(roundup(total_seconds)/3)
+
+def task_assing_role_ls(task_assign_info_ls):
+	from ai_auth.signals import assign_object
+	from ai_workspace.models import TaskAssignInfo
+	from ai_workspace.models import AiRoleandStep
+	objs = TaskAssignInfo.objects.filter(id__in=task_assign_info_ls)
+	for instance in objs:
+		role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
+		assign_object.send(
+			sender=TaskAssignInfo,
+			instance = instance,
+			user=instance.task_assign.assign_to,
+			role = role
+		)

@@ -35,7 +35,6 @@ def create_allocated_dirs(sender, instance, *args, **kwargs):
         instance.allocated_dir = create_dirs_if_not_exists(instance.allocated_dir)
 
 
-
 def  vendor_status_send_email(sender, instance, *args, **kwargs):
     from ai_auth.api_views import subscribe_vendor
     print("status----->",instance.get_status_display())
@@ -269,3 +268,17 @@ send_campaign_email= Signal()
 def campaign_send_email(sender,instance,user, *args, **kwargs):
     if instance.subscribed == True:
         auth_forms.send_campaign_welcome_mail(user)
+
+assign_object= Signal()
+
+@receiver(assign_object)
+def assign_object_task(sender, instance,user,role,*args, **kwargs):
+    from ai_auth.models import TaskRoles
+    from ai_staff.models import TaskRoleLevel
+    # instance.step = 
+    # role_name = {1:''Project owner'}  
+    # tsk.task_assign.task.job.project.project_manager
+    role = TaskRoleLevel.objects.get(role__name=role)
+    TaskRoles.objects.create(user=user,task_pk=instance.task_assign.task.id,role=role,proj_pk=instance.task_obj.proj_obj.id)
+    print("task created")
+    

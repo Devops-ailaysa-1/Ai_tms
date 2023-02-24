@@ -25,6 +25,14 @@ class TextUnit(models.Model):
     def text_unit_segment_set_exclude_merge_dummies(self):
         return self.text_unit_segment_set.exclude(Q(is_merged=True)&Q(is_merge_start=False))
 
+    @property
+    def owner_pk(self):
+        return self.document.owner_pk
+
+    @property
+    def task_obj(self):
+        return self.document.task_obj
+
 class MT_Engine(models.Model):
     engine_name = models.CharField(max_length=25,)
 
@@ -116,6 +124,13 @@ class BaseSegment(models.Model):
     def coded_target(self):
         return  set_runs_to_ref_tags( self.coded_source, self.target, get_runs_and_ref_ids(\
                 self.coded_brace_pattern, self.coded_ids_aslist ) )
+    @property
+    def owner_pk(self):
+        return self.text_unit.owner_pk
+
+    @property
+    def task_obj(self):
+        return self.text_unit.task_obj
 
     def save(self, *args, **kwargs):
         return super(BaseSegment, self).save(*args, **kwargs)
@@ -274,6 +289,15 @@ class MT_RawTranslation(models.Model):
     @property
     def target_language(self):
         return self.get_segment.text_unit.document.job.target_language_code
+    
+    @property
+    def owner_pk(self):
+        return self.segment.owner_pk
+
+    @property
+    def task_obj(self):
+        return self.segment.task_obj
+
 class MtRawSplitSegment(models.Model):
     split_segment = models.ForeignKey(SplitSegment, related_name = "mt_raw_split_segment", \
                                       on_delete = models.CASCADE, null=True)
@@ -285,6 +309,14 @@ class Comment(models.Model):
     split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, \
                     related_name="split_segment_comments_set")
     #user = models.ForeignKey(AiUser, on_delete=models.SET_NULL, related_name = 'comment_user')
+
+    @property
+    def owner_pk(self):
+        return self.segment.owner_pk
+
+    @property
+    def task_obj(self):
+        return self.segment.task_obj
 
 class Document(models.Model):
     file = models.ForeignKey("ai_workspace.File", on_delete=models.CASCADE,
@@ -495,6 +527,14 @@ class Document(models.Model):
         if mt_enable:return True
         else:return False
 
+    @property
+    def owner_pk(self):
+        return self.job.project.owner_pk
+
+    @property
+    def task_obj(self):
+        return self.task_set.last()
+
 
 
 class FontSize(models.Model):
@@ -503,6 +543,11 @@ class FontSize(models.Model):
     font_size = models.IntegerField()
     language = models.ForeignKey(Languages, on_delete=models.CASCADE,
                                  related_name="language_font_size_set")
+    
+    @property
+    def owner_pk(self):
+        return self.ai_user.id
+    
 class SegmentHistory(models.Model):
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
     target = models.TextField(null=True, blank=True)

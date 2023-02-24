@@ -6,7 +6,8 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     AiUserType,ServiceTypeunits,SupportType,SubscriptionPricing,
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
-                    ProjectTypeDetail,ProjectType)
+                    ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
+                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -125,12 +126,16 @@ class TimezonesSerializer(serializers.ModelSerializer):
         return t_zone
 
 class LanguagesSerializer(serializers.ModelSerializer):
+    locale_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Languages
 
-        fields = ('id', 'language','created_at','updated_at')
+        fields = ('id', 'language','locale_code','created_at','updated_at')
         read_only_fields = ('id','created_at','updated_at')
+
+    def get_locale_code(self,obj):
+        return obj.locale.first().locale_code
 
     def create(self, validated_data):
         request = self.context['request']
@@ -345,3 +350,54 @@ class LanguagesSerializerNew(serializers.ModelSerializer):
 
     def get_locale_code(self,obj):
         return obj.locale.first().locale_code
+
+
+class PromptStartPhrasesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromptStartPhrases
+        fields = '__all__'
+
+class PromptFieldsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromptFields
+        fields = '__all__'
+
+class PromptSubCategoriesSerializer(serializers.ModelSerializer):
+    sub_category_fields = PromptFieldsSerializer(many=True)
+    class Meta:
+        model = PromptSubCategories
+        fields = ('id','category','sub_category','sub_category_fields',)
+
+class PromptCategoriesSerializer(serializers.ModelSerializer):
+    prompt_category = PromptSubCategoriesSerializer(many=True )
+    class Meta:
+        model = PromptCategories
+        fields = ('id','category','prompt_category',)
+        
+        
+class PromptTonesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromptTones
+        fields = ('id','tone')
+    
+class AiCustomizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiCustomize
+        fields = ('id' , 'customize',)
+
+class AiCustomizeGroupingSerializer(serializers.ModelSerializer):
+    results = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AiCustomize
+        fields = ('results',)
+
+    def get_results(self,obj):
+        result_dict ={}
+        #queryset = AiCustomize.objects.all().distinct('grouping')
+        results =['Edit','Explore','Convert']
+        for i in results:
+            rr = AiCustomize.objects.filter(grouping=i).exclude(customize='Text completion').order_by('id')
+            result_dict[i] = AiCustomizeSerializer(rr,many=True).data
+        return result_dict
+        

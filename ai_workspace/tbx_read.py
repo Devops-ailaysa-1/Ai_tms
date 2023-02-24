@@ -16,7 +16,7 @@ from nltk import word_tokenize
 from nltk.util import ngrams
 from django.db.models import F, Q
 from tablib import Dataset
-
+from django_oso.auth import authorize
 
 def remove_namespace(doc, namespace):
     """Remove namespace in the passed document in place."""
@@ -86,6 +86,8 @@ def TermSearch(request):
     four_words=list(" ".join(i) for i in fourgrams)
     doc_id = data.get("doc_id")
     doc = Document.objects.get(id = doc_id)
+    if doc != None:
+        authorize(request, resource=doc, actor=request.user, action="read")
     # LangName = getLanguageName(doc_id)
     codesrc = doc.source_language_code
     code = doc.target_language_code

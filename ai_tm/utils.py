@@ -28,7 +28,8 @@ def get_languages(proj):
     sl = jobs[0].source_language.language
     tl = ""
     for job in jobs:
-        tl += job.target_language.language
+        if job.target_language:
+            tl += job.target_language.language
         if job != jobs[len(jobs) - 1]:
             tl += ", "
 
@@ -231,6 +232,7 @@ def tmx_read_with_target(files,job):
     tl = job.target_language_code
     tm_lists = []
     out = None
+    source = None
     for file in files:
         tree = ET.parse(file.tmx_file.path)
         root=tree.getroot()
@@ -251,7 +253,8 @@ def tmx_read_with_target(files,job):
                         for item in node.iter('seg'):
                             text =  (''.join(item.itertext()))
                             target = remove_tags(text)
-                        out = {'source':source,'target':target}
+                        if source:
+                            out = {'source':source,'target':target}
             if out:
                 tm_lists.append(out)
     return tm_lists

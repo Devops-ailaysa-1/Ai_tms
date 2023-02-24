@@ -5,10 +5,11 @@ from ai_staff.models import AilaysaSupportedMtpeEngines, SubjectFields, ProjectT
 from rest_framework import serializers
 from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ProjectSubjectField, TempFiles, TempProject, Templangpair, Task, TmxFile,\
-		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,\
+		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
-		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail#,TaskAssignRateInfo
-import json
+		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail,\
+		ExpressProjectAIMT,WriterProject,DocumentImages#,TaskAssignRateInfo
+import json,os
 import pickle,itertools
 from ai_workspace import forms as ws_forms
 from notifications.signals import notify
@@ -28,6 +29,8 @@ from django.db.models import OuterRef, Subquery
 from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.db import transaction
 from notifications.signals import notify
+from ai_auth.utils import obj_is_allowed,authorize_list,objls_is_allowed
+from ai_workspace.utils import task_assing_role_ls
 
 logger = logging.getLogger('django')
 
@@ -154,11 +157,33 @@ class VoiceProjectDetailSerializer(serializers.ModelSerializer):
 		fields = ("id","project","source_language", "project_type_sub_category")
 		read_only_fields = ("id","project",)
 
+class ExpressProjectAIMTSerializer(serializers.ModelSerializer):
+	customize_name = serializers.ReadOnlyField(source='customize.customize')
+	class Meta:
+			model = ExpressProjectAIMT
+			fields = ("id",'express','source','customize','mt_engine','api_result','final_result','customize_name')
+		# 	extra_kwargs = {
+        #     "id":{"write_only": True},
+        #     "express": {"write_only": True},
+        #     "source": {"write_only": True},
+        #     "customize": {"write_only": True},
+		# 	"mt_engine":{"write_only": True},
+        #     "api_result": {"write_only": True},
+        # }
 
 class ExpressProjectDetailSerializer(serializers.ModelSerializer):
+	express_src_text = ExpressProjectAIMTSerializer(required=False,many=True,read_only=True)
+	project_id = serializers.ReadOnlyField(source='task.job.project.id')
+	project_name = serializers.ReadOnlyField(source='task.job.project.project_name')
+	target_lang_name = serializers.ReadOnlyField(source='task.job.target_language.language')
+	job_id = serializers.ReadOnlyField(source='task.job.id')
+	target_lang_id = serializers.ReadOnlyField(source='task.job.target_language.id')
+	source_lang_id = serializers.ReadOnlyField(source='task.job.source_language.id')
 	class Meta:
 		model = ExpressProjectDetail
-		fields = "__all__"
+		fields = ('id','task','source_text','target_text','mt_engine','mt_raw',
+					"project_id","project_name","target_lang_name","job_id",
+					"target_lang_id","source_lang_id",'express_src_text',)
 		# extra_kwargs = {
 		# 	"audio_file":{
 		# 		"required": False
@@ -472,8 +497,8 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		model = Project
 		fields = ("id", "project_name","assigned","text_to_speech_source_download", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable",\
-					"pre_translate","copy_paste_enable","assigned", "jobs","assign_enable","files","files_jobs_choice_url","workflow_id",\
-					"team_exist","mt_engine_id","project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at","from_text",)
+					"pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id","project_type_id",\
+					"voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at","from_text",)
 
 
 	def run_validation(self,data):
@@ -577,9 +602,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		if self.context.get("request")!=None:
 			created_by = self.context.get("request", None).user
 			create_type = validated_data.pop('from_text',None)
+			user = created_by
 		else:
 			created_by = self.context.get("ai_user", None)
 			create_type = True
+			user = created_by
 		if created_by.team:ai_user = created_by.team.owner
 		else:ai_user = created_by
 		team = created_by.team if created_by.team else None
@@ -591,41 +618,56 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		proj_subject = validated_data.pop("proj_subject",[])
 		proj_steps = validated_data.pop("proj_steps",[])
 		proj_content_type = validated_data.pop("proj_content_type",[])
-		with transaction.atomic():
-			project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
-				validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
-				f_klass=File,j_klass=Job, ai_user=ai_user,\
-				team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
-			if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
-				ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
-			else:ProjectFilesCreateType.objects.create(project=project)
-			if proj_subject:
-				[project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
-			if proj_content_type:
-				[project.proj_content_type.create(**content_data) for content_data in proj_content_type]
-			if proj_steps:
-				[project.proj_steps.create(**steps_data) for steps_data in proj_steps]
+		try:
+			with transaction.atomic():
+				project, files, jobs = Project.objects.create_and_jobs_files_bulk_create(
+					validated_data, files_key="project_files_set", jobs_key="project_jobs_set", \
+					f_klass=File,j_klass=Job, ai_user=ai_user,\
+					team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
+				obj_is_allowed(project,"create",user)
+				objls_is_allowed(files,"create",user)
+				objls_is_allowed(jobs,"create",user)
+				if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
+					pro_fil = ProjectFilesCreateType.objects.create(project=project,file_create_type=ProjectFilesCreateType.FileType.from_text)
+					obj_is_allowed(pro_fil,"create",user)
+				else:
+					pro_fil = ProjectFilesCreateType.objects.create(project=project)
+					obj_is_allowed(pro_fil,"create",user)
+				if proj_subject:
+					proj_subj_ls = [project.proj_subject.create(**sub_data) for sub_data in  proj_subject]
+					objls_is_allowed(proj_subj_ls,"create",user)
+				if proj_content_type:
+					proj_content_ls = [project.proj_content_type.create(**content_data) for content_data in proj_content_type]
+					objls_is_allowed(proj_content_ls,"create",user)
+				if proj_steps:
+					proj_steps_ls = [project.proj_steps.create(**steps_data) for steps_data in proj_steps]
+					objls_is_allowed(proj_steps_ls,"create",user)
 
-			if project_type == 1 or project_type == 2 or project_type == 5:
-				tasks = Task.objects.create_tasks_of_files_and_jobs(
-					files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
-
-			if voice_proj_detail:
-				voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
-				if voice_project.project_type_sub_category.id == 1 or 2 : #1--->speech-to-text #2--->text-to-speech
-					rr = voice_project.project.project_jobs_set.filter(~Q(target_language = None))
-					if voice_project.project_type_sub_category.id == 2 and rr:
-						tasks = Task.objects.create_tasks_of_files_and_jobs(
-							files=files, jobs=jobs, project=project, klass=Task)
-					else:
-						tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
-			if project_type == 5:
-				ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
-			# tasks = Task.objects.create_tasks_of_files_and_jobs(
-			# 	files=files, jobs=jobs, project=project, klass=Task)
-			task_assign = TaskAssign.objects.assign_task(project=project)
-			#tt = mt_only(project,self.context.get('request'))
-			#print(tt)
+				if project_type == 1 or project_type == 2 or project_type == 5:
+					tasks = Task.objects.create_tasks_of_files_and_jobs(
+						files=files, jobs=jobs, project=project,klass=Task)  # For self assign quick setup run)
+					objls_is_allowed(tasks,"create",user)
+				if voice_proj_detail:
+					voice_project = VoiceProjectDetail.objects.create(**voice_proj_detail,project=project)
+					if voice_project.project_type_sub_category.id == 1 or 2 : #1--->speech-to-text #2--->text-to-speech
+						rr = voice_project.project.project_jobs_set.filter(~Q(target_language = None))
+						if voice_project.project_type_sub_category.id == 2 and rr:
+							tasks = Task.objects.create_tasks_of_files_and_jobs(
+								files=files, jobs=jobs, project=project, klass=Task)
+							objls_is_allowed(tasks,"create",user)
+						else:
+							tasks = Task.objects.create_tasks_of_audio_files(files=files,jobs=jobs,project=project, klass=Task)
+							objls_is_allowed(tasks,"create",user)
+				if project_type == 5:
+					ex = [ExpressProjectDetail.objects.create(task = i[0]) for i in tasks]
+				# tasks = Task.objects.create_tasks_of_files_and_jobs(
+				# 	files=files, jobs=jobs, project=project, klass=Task)
+				task_assign = TaskAssign.objects.assign_task(project=project)
+				objls_is_allowed(task_assign,"create",user)
+				#tt = mt_only(project,self.context.get('request'))
+				#print(tt)
+		except BaseException as e:
+			logger.warning(f"project creation failed {user.uid} : {str(e)}")
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
@@ -722,6 +764,17 @@ class InstructionfilesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Instructionfiles
         fields = "__all__"
+        
+class MyDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyDocuments
+        fields = "__all__"
+
+class WriterProjectSerializer(serializers.ModelSerializer):
+	related_docs = MyDocumentSerializer(required=False,many=True)
+	class Meta:
+		model = WriterProject
+		fields = ('id','proj_name','ai_user','created_at','updated_at','related_docs',)
 
 class TaskAssignSerializer(serializers.ModelSerializer):
 	task_info = TaskSerializer(required=False,many=True)
@@ -852,6 +905,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step)) for task in task_list]
         with transaction.atomic():
             task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
+            objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
             for i in task_assign_info:
                 try:total_word_count = i.task_assign.task.document.total_word_count
                 except:
@@ -868,6 +922,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         if user1.is_internal_member == False:
           print("task_assing id",[i.task_assign.assign_to for i in task_assign_info])
           generate_client_po([i.id for i in task_assign_info])
+        else:
+          task_assing_role_ls([i.id for i in task_assign_info])
         return task_assign_info
 
 
@@ -916,6 +972,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	open_in =  serializers.SerializerMethodField()
 	transcribed = serializers.SerializerMethodField()
 	text_to_speech_convert_enable = serializers.SerializerMethodField()
+	converted = serializers.SerializerMethodField()
+	is_task_translated = serializers.SerializerMethodField()
 	# can_open = serializers.SerializerMethodField()
 	# task_word_count = serializers.SerializerMethodField(source = "get_task_word_count")
 	# task_word_count = serializers.IntegerField(read_only=True, source ="task_details.first().task_word_count")
@@ -925,9 +983,39 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		model = Task
 		fields = \
 			("id", "filename", "download_audio_source_file", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open")
+			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',)
 
+	def get_converted(self,obj):
+		if obj.job.project.project_type_id == 4 :
+				if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+					if obj.task_transcript_details.filter(~Q(transcripted_text__isnull = True)).exists():
+						return True
+					else:return False
+				elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+					if obj.job.target_language==None:
+						if obj.task_transcript_details.exists():
+							return True
+						else:return False
+					else:return None
+				else:return None
+		elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+				if obj.pdf_task.all().exists() == True:
+					return True
+				else:return False
+			else:return None
+		else:return None
 
+	def get_is_task_translated(self,obj):
+		if obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+			if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+				if obj.pdf_task.all().exists() == True and obj.pdf_task.first().translation_task_created == True:
+					return True
+				else:return False
+			else:return None
+		else:return None
+
+     
 	def get_transcribed(self,obj):
 		if obj.job.project.project_type_id == 4 :
 			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
@@ -948,19 +1036,26 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			else:return None
 		else:return None
 
+
 	def get_open_in(self,obj):
 		try:
 			if obj.job.project.project_type_id == 5:
 				return "ExpressEditor"
-			if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
-				if obj.job.target_language==None:
-					return "Ailaysa Writer or Text Editor"
-				else:
-					return "Transeditor"
-			elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
-				if obj.job.target_language==None:
-					return "Download"
-				else:return "Transeditor"
+			elif obj.job.project.project_type_id == 4:
+				if  obj.job.project.voice_proj_detail.project_type_sub_category_id == 1:
+					if obj.job.target_language==None:
+						return "Ailaysa Writer or Text Editor"
+					else:
+						return "Transeditor"
+				elif  obj.job.project.voice_proj_detail.project_type_sub_category_id == 2:
+					if obj.job.target_language==None:
+						return "Download"
+					else:return "Transeditor"
+			elif obj.job.project.project_type_id == 1 or obj.job.project.project_type_id == 2:
+				if obj.job.target_language==None and os.path.splitext(obj.file.file.path)[1] == '.pdf':
+					try:return obj.pdf_task.last().pdf_api_use
+					except:return None
+				else:return "Transeditor"	
 			else:return "Transeditor"
 		except:
 			try:
@@ -1381,3 +1476,9 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		if 'files' in data:
 			[Instructionfiles.objects.create(**instruction_file,task_assign_info = instance.task_assign_info) for instruction_file in data['files']]
 		return data
+
+
+class DocumentImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DocumentImages
+        fields = "__all__"

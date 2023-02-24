@@ -2,7 +2,8 @@ from django.contrib import admin
 from .models import (AiUser, UserAttribute,
                     TempPricingPreference,CreditPack,UserCredits,
                     BillingAddress,UserTaxInfo,Team,InternalMember, 
-                    VendorOnboarding,ExistingVendorOnboardingCheck,CampaignUsers,AilaysaCampaigns)
+                    VendorOnboarding,ExistingVendorOnboardingCheck,CampaignUsers,
+                    AilaysaCampaigns,TaskRoles,ProjectRoles,ApiUsage)
 from ai_vendor.models import VendorOnboardingInfo,VendorLanguagePair
 from django.contrib.auth.models import Permission
 from django.contrib.admin import AdminSite
@@ -183,6 +184,12 @@ class UserCreditsAdmin(admin.ModelAdmin):
     list_display = ("id","user","stripe_cust_id","buyed_credits","credits_left","expiry","ended_at")
     list_filter = ('user__email',)
 
+@admin.register(ApiUsage)
+class ApiUsageAdmin(admin.ModelAdmin):
+    list_display = ("uid","email","service","usage")
+    list_filter = ("email",)
+
+
 # Custom Admin Page  #
 
 # Register your models here.
@@ -197,5 +204,7 @@ admin.site.register(UserTaxInfo)
 admin.site.register(Team)
 admin.site.register(InternalMember)
 admin.site.register(AilaysaCampaigns)
+admin.site.register(TaskRoles)
+admin.site.register(ProjectRoles)
 
 #admin.site.register(PersonalInformation)
