@@ -2583,7 +2583,7 @@ def celery_check(obj):
 def get_task_status(request):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace.models import MTonlytaskCeleryStatus
-    from ai_tm.models import get_json_file_path
+    from ai_tm.api_views import get_json_file_path
     project_id = request.GET.get('project')
     task_id = request.GET.get('task')
     if project_id:
