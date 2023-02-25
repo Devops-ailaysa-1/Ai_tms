@@ -2567,6 +2567,7 @@ def writer_save(request):
 
 def celery_check(obj):
     from ai_auth.tasks import pre_translate_update
+    state = None
     if obj.task_name == 'mt_only':
         state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
     elif obj.task_name == 'pre_translate_update':
@@ -2582,6 +2583,7 @@ def celery_check(obj):
 def get_task_status(request):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace.models import MTonlytaskCeleryStatus
+    from ai_tm.models import get_json_file_path
     project_id = request.GET.get('project')
     task_id = request.GET.get('task')
     if project_id:
@@ -2605,7 +2607,7 @@ def get_task_status(request):
                 else:
                     status = celery_check(obj)
             else:
-                file_path = DocumentViewByTask.get_json_file_path(i)
+                file_path = get_json_file_path(i)
                 doc_data = json.load(open(file_path))
                 if type(doc_data) == str:
                     doc_data = json.loads(doc_data)
