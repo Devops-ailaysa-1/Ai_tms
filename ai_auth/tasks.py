@@ -289,18 +289,23 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 initial_credit = user.credit_balance.get("total_left")
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source']) if seg['source']!='' else 0
                 if initial_credit > consumable_credits:
-                    mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code,document.owner_pk)
-                    if str(target_tags) != '':
-                        random_tags = json.loads(seg["random_tag_ids"])
-                        if random_tags == []:tags = str(target_tags)
-                        else:tags = remove_random_tags(str(target_tags),random_tags)
-                        seg['temp_target'] = mt + tags
-                        seg['target'] = mt + tags
-                    else:
-                        seg['temp_target'] = mt
-                        seg['target'] = mt
-                    status_id = TranslationStatus.objects.get(status_id=104).id
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    try:
+                        mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code,document.owner_pk)
+                        if str(target_tags) != '':
+                            random_tags = json.loads(seg["random_tag_ids"])
+                            if random_tags == []:tags = str(target_tags)
+                            else:tags = remove_random_tags(str(target_tags),random_tags)
+                            seg['temp_target'] = mt + tags
+                            seg['target'] = mt + tags
+                        else:
+                            seg['temp_target'] = mt
+                            seg['target'] = mt
+                        status_id = TranslationStatus.objects.get(status_id=104).id
+                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    except:
+                        seg['target']=""
+                        seg['temp_target']=""
+                        status_id=None
                 else:
                     seg['target']=""
                     seg['temp_target']=""
@@ -341,30 +346,70 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 cursor.execute(mt_raw_sql, mt_params)
     logger.info("mt_raw wrriting completed")
 
+
 @task
-def mt_only(project_id,token):
+def mt_only(project_id,token,task_id=None):
     from ai_workspace.models import Project,Task
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace_okapi.serializers import DocumentSerializerV2
     pr = Project.objects.get(id=project_id)
+    print("Task------->",task_id)
     print("celerytask-------->",mt_only.request.id)
     print("PRE TRANSLATE-------------->",pr.pre_translate)
     if pr.pre_translate == True:
-        tasks = pr.get_mtpe_tasks
+        if task_id:
+            tasks = Task.objects.filter(id=task_id)
+        else:
+            tasks = pr.get_mtpe_tasks
         print("TASKS Inside CELERY----->",tasks)
-        print("this is mt-only functions projects")
-        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in pr.get_mtpe_tasks]
-        for i in pr.get_mtpe_tasks:
-            print("i----->" , i)
+        [MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id=mt_only.request.id) for i in tasks]
+        for i in tasks:
+            print("I------------->",i)
             document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
-            #print("RES_doc------------->",document)
             try:
                 if document.get('msg') != None:pass
             except:pass
-            #doc = DocumentSerializerV2(document).data
             print("this is mt-only functions tasks")
-            MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+            # doc = DocumentSerializerV2(document).data
+            # print(doc)
+            tt = MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+            print("TT------->",tt)
     logger.info('mt-only')
+
+
+
+
+# @task
+# def mt_only(project_id,token):
+#     from ai_workspace.models import Project,Task
+#     from ai_workspace_okapi.api_views import DocumentViewByTask
+#     from ai_workspace_okapi.serializers import DocumentSerializerV2
+#     pr = Project.objects.get(id=project_id)
+#     print("celerytask-------->",mt_only.request.id)
+#     print("PRE TRANSLATE-------------->",pr.pre_translate)
+#     if pr.pre_translate == True:
+#         tasks = pr.get_mtpe_tasks
+#         print("TASKS Inside CELERY----->",tasks)
+#         print("this is mt-only functions projects")
+#         #[MTonlytaskCeleryStatus.objects.get_or_create(task_name = 'mt_only',task_id = i.id,status=1,defaults={'celery_task_id':mt_only.request.id}) for i in pr.get_mtpe_tasks]
+#         for i in pr.get_mtpe_tasks:
+#             print("I------------->",i)
+#             mt_obj = MTonlytaskCeleryStatus.objects.filter(task_name = 'mt_only',task_id = i.id).last()
+#             if not mt_obj or mt_obj.status == 2:
+#                 print("New")
+#                 created = MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=1,celery_task_id = mt_only.request.id)
+#                 document = DocumentViewByTask.create_document_for_task_if_not_exists(i)
+#             else:
+#                 print("Inside Else")
+#                 print("sts--->",mt_obj.status) 
+#                 print("doc-------->",mt_obj.task.document)
+#             try:
+#                 if document.get('msg') != None:pass
+#             except:pass
+#             print("this is mt-only functions tasks")
+#             tt = MTonlytaskCeleryStatus.objects.create(task_name = 'mt_only',task_id = i.id,status=2,celery_task_id=mt_only.request.id)
+#             print("TT------->",tt)
+#     logger.info('mt-only')
 # # @task
 # @shared_task(bind=True)
 # def mt_only(self, project_id,token):
@@ -463,6 +508,7 @@ def pre_translate_update(task_id):
     from ai_workspace.api_views import UpdateTaskCreditStatus
     from ai_workspace_okapi.api_views import MT_RawAndTM_View,get_tags
     from ai_workspace_okapi.models import MergeSegment,SplitSegment
+    #from ai_workspace_okapi.api_views import DocumentViewByTask
     from itertools import chain
 
     task = Task.objects.get(id=task_id)
@@ -470,6 +516,8 @@ def pre_translate_update(task_id):
     user = task.job.project.ai_user
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    # if task.document == None:
+    #     document = DocumentViewByTask.create_document_for_task_if_not_exists(task)
     segments = task.document.segments_for_find_and_replace
     merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
     split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
@@ -485,19 +533,24 @@ def pre_translate_update(task_id):
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
             if initial_credit > consumable_credits:
-                mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk)
-                tags = get_tags(seg)
-                if tags:
-                    seg.target = mt + tags
-                    seg.temp_target = mt + tags
-                else:
-                    seg.target = mt
-                    seg.temp_target = mt
-                seg.status_id = TranslationStatus.objects.get(status_id=104).id
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-                if type(seg) is SplitSegment:
-                    mt_split_segments.append(seg)
-                else:mt_segments.append(seg)
+                try:
+                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk)
+                    tags = get_tags(seg)
+                    if tags:
+                        seg.target = mt + tags
+                        seg.temp_target = mt + tags
+                    else:
+                        seg.target = mt
+                        seg.temp_target = mt
+                    seg.status_id = TranslationStatus.objects.get(status_id=104).id
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    if type(seg) is SplitSegment:
+                        mt_split_segments.append(seg)
+                    else:mt_segments.append(seg)
+                except:
+                    seg.target = ''
+                    seg.temp_target = ''
+                    seg.status_id=None
             else:
                 MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='pre_translate_update',status=1,celery_task_id=pre_translate_update.request.id,error_type="Insufficient Credits")
                 break

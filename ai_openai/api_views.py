@@ -117,9 +117,6 @@ def customize_response(customize ,user_text,tone,used_tokens):
                 prompt = customize.prompt+" "+user_text+"."
             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         tokens = response['usage']['total_tokens']
-        tokens_ = response['usage']['total_tokens']
-        completion_tokens = response['usage']['completion_tokens']
-        prompt_tokens = response['usage']["prompt_tokens"]
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
         total_tokens += used_tokens
     else:
@@ -273,7 +270,7 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
     ordering_fields = ['id']
     ordering = ('-id')
     #filterset_class = PromptFilter
-    search_fields = ['user_text']
+    search_fields = ['user_text','customize__customize',]
     pagination_class = NoPagination
     page_size = None
 

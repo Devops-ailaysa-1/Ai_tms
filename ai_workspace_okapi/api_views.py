@@ -267,6 +267,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
         print("create_document_for_task_if_not_exists")
+        print("Tt------>",task.document)
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -277,9 +278,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task.id) & Q(task_name = 'pre_translate_update')).last()
                 state = pre_translate_update.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
                 if state == 'STARTED' or state == 'PENDING':
-                    # if get_empty_segments(task.document) == False:
-                    #     return task.document
-                    # else:
                     try:
                         cel = TaskResult.objects.get(task_id=ins.celery_task_id)
                         return {'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':ins.celery_task_id}
@@ -291,8 +289,15 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     cel_task = pre_translate_update.apply_async((task.id,),)
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
-                    if ins.error_type == "Insufficient Credits":
-                        cel_task = pre_translate_update.apply_async((task.id,),)
+                    empty = task.document.get_segments().filter(target='').first()
+                    if ins.error_type == "Insufficient Credits" or empty:
+                        initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
+                        seg = task.document.get_segments().filter(target='').first().source
+                        consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
+                        print("Consumable------->",consumable_credits)
+                        if initial_credit > consumable_credits:
+                            cel_task = pre_translate_update.apply_async((task.id,),)
+                            return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                         return {"doc":task.document,"msg":"Pre Translation may be incomplete due to insufficient credit"}
                     else:
                         return task.document
@@ -301,6 +306,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         # If file for the task is already processed
         elif Document.objects.filter(file_id=task.file_id).exists():
+            print("-----------Already Processed--------------")
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             if exists(json_file_path):
@@ -379,9 +385,11 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
-                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth)),)
+                # cel_task = pre_translate_update.apply_async((task.id,),)
+                # return Response({'msg':'Pre Translation Ongoing. Please wait a little while.Hit refresh and try again','celery_id':cel_task.id},status=401)
                 ##need to authorize
-                return Response({"msg": "Mt only Ongoing. Please wait ",'celery_id':cel_task.id},status=401)
+                cel_task = mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
+                return Response({"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
                 self.authorize_doc(document,action="read")
