@@ -2,7 +2,8 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution,TranslateCustomizeDetails )
+                    ImageGeneratorResolution,TranslateCustomizeDetails ,BlogArticle,
+                    BlogCreation,BlogKeywordGenerate,BlogOutline,Blogtitle )
 from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
                     get_prompt_freestyle ,get_prompt_image_generations ,\

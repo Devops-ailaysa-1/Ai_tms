@@ -31,10 +31,7 @@ def download_file(file_path):
     response['Content-Disposition'] = "attachment; filename=%s" % filename
     return response
 
-def direct_download_urlib_docx(url,filename): 
-    path , basename = os.path.split(url)
-    url = path+"/"+urllib.parse.quote(basename)
-    x = urllib.request.urlretrieve(url=url , filename=filename)
+
 
 def direct_download_urlib_docx(url,filename): 
     path , basename = os.path.split(url)
@@ -199,8 +196,8 @@ def para_creation_from_ocr(texts):
     para_text = []
     for i in  texts.pages:
         for j in i.blocks:
+            text_list = []
             for k in j.paragraphs:
-                text_list = []
                 for a in  k.words:
                     text_list.append(" ")
                     for b in a.symbols:
@@ -209,7 +206,6 @@ def para_creation_from_ocr(texts):
             para_text.append("".join(text_list))
     para_text = "\n".join(para_text)
     para_text = para_text.replace(" .", ".")
-    print("Para---------->",para_text)
     return para_text
 
 import PyPDF2
