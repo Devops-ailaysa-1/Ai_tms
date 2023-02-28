@@ -2605,19 +2605,19 @@ def get_task_status(request):
                 else:
                     status = celery_check(obj)
             else:
-                file_path = DocumentViewByTask.get_json_file_path(i)
-                doc_data = json.load(open(file_path))
-                if type(doc_data) == str:
-                    doc_data = json.loads(doc_data)
+                # file_path = DocumentViewByTask.get_json_file_path(i)
+                # doc_data = json.load(open(file_path))
+                # if type(doc_data) == str:
+                #     doc_data = json.loads(doc_data)
 
-                if doc_data.get('total_word_count') == 0:
-                    status = 'True'
-                    msg = "Empty File"
+                # if doc_data.get('total_word_count') == 0:
+                #     status = 'True'
+                #     msg = "Empty File"
+                # else:
+                if obj:
+                    status = celery_check(obj)
                 else:
-                    if obj:
-                        status = celery_check(obj)
-                    else:
-                        status = 'True' 
+                    status = 'True' 
             if status == 'True':
                 progress = i.get_progress
             res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
