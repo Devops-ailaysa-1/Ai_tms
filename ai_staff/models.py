@@ -441,7 +441,7 @@ class PromptSubCategories(models.Model):
     
 class PromptFields(models.Model):
     prompt_sub_categories = models.ForeignKey(PromptSubCategories,related_name='sub_category_fields',
-                                 on_delete = models.CASCADE,blank=True, null=True)
+                                 on_delete = models.SET_NULL,blank=True, null=True)
     fields = models.CharField(max_length=100, null=True, blank=True)
     # optional_field =  models.BooleanField()
     help_text = models.CharField(max_length=500, null=True, blank=True)
