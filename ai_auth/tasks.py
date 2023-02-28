@@ -575,7 +575,7 @@ def pre_translate_update(task_id):
             for i in mt_segments
         ]
 
-    MT_RawTranslation.objects.bulk_create(instances)
+    MT_RawTranslation.objects.bulk_create(instances, ignore_conflicts=True)
 
     instances_1 = [
             MtRawSplitSegment(
@@ -584,7 +584,7 @@ def pre_translate_update(task_id):
             )
             for i in mt_split_segments
         ]
-    MtRawSplitSegment.objects.bulk_create(instances_1)
+    MtRawSplitSegment.objects.bulk_create(instances_1, ignore_conflicts=True)
     #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
     logger.info("pre_translate_update")
 
