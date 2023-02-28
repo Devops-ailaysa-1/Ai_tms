@@ -126,6 +126,10 @@ def get_empty_segments(doc):
     else:
         return False
 
+import string 
+def special_character_check(s):
+    return all(i in string.punctuation for i in s)
+
 
 class DocumentViewByTask(views.APIView, PageNumberPagination):
     permission_classes = [IsAuthenticated]
@@ -778,10 +782,20 @@ class MT_RawAndTM_View(views.APIView):
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
         # initial_credit = 1000000
-
-        if initial_credit > consumable_credits :
+        if split_seg.source.isdigit() or special_character_check(split_seg.source):
             if mt_raw:
-
+                MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = split_seg.source, \
+                                       mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
+                obj = MT_RawTranslation.objects.filter(segment_id=segment_id).first()
+                return MT_RawSerializer(obj).data, 200, "available"
+            else:
+                mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},context={"request": request})
+                if mt_raw_serlzr.is_valid(raise_exception=True):
+                    mt_raw_serlzr.save()
+                    return mt_raw_serlzr.data, 201, "available"
+        
+        elif initial_credit > consumable_credits :
+            if mt_raw:
                 #############   Update   ############
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
                                               doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk)

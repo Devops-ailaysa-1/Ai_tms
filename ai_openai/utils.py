@@ -7,17 +7,22 @@ from ai_tms.settings import OPENAI_API_KEY ,OPENAI_MODEL
 from ai_staff.models import Languages
 from django.db.models import Q
 import math
+from rest_framework import serializers
 import requests
 from io import BytesIO
 from PIL import Image
 logger = logging.getLogger('django')
 import openai
+from googletrans import Translator
+detector = Translator()
+
+def lang_detect(user_text):
+    return detector.detect(user_text).lang
+
 openai.api_key = os.getenv('OPENAI_API_KEY')
 def ceil_round_off(token_len):
-    import math
     return math.ceil(len(token_len)/4)
-    
-    
+
 def get_consumable_credits_for_openai_text_generator(total_token):
     total_consumable_token_credit = math.ceil(total_token/12)     
     return total_consumable_token_credit
@@ -41,13 +46,11 @@ def openai_text_trim(text):
 import backoff
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError)
 def get_prompt(prompt ,model_name , max_token ,n ):
-
     #max_token = 256
     temperature=0.7
     frequency_penalty = 1
     presence_penalty = 1
     top_p = 1
-
     response = openai.Completion.create(
                 model=model_name, 
                 prompt=prompt.strip(),
@@ -64,31 +67,36 @@ def get_prompt(prompt ,model_name , max_token ,n ):
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError)
 def get_prompt_freestyle(prompt):
-    response = openai.Completion.create(
-                model="text-curie-001",
-                prompt=prompt.strip(),
-                temperature=0.7,
-                max_tokens=300,
-                top_p=1,
-                frequency_penalty=1,
-                presence_penalty=1,
-                n=1,
-                #logit_bias = {"50256": -100}
-                )
-    return response
-
+    try:
+        response = openai.Completion.create(
+                    model="text-curie-001",
+                    prompt=prompt.strip(),
+                    temperature=0.7,
+                    max_tokens=300,
+                    top_p=1,
+                    frequency_penalty=1,
+                    presence_penalty=1,
+                    n=1,
+                    #logit_bias = {"50256": -100}
+                    )
+        return response
+    except:
+        raise serializers.ValidationError({'msg':'internal_error'},code=200) 
 model_edit = os.getenv('OPENAI_EDIT_MODEL')
 
+@backoff.on_exception(backoff.expo, openai.error.RateLimitError)
 def get_prompt_edit(input_text ,instruction ):
-    response = openai.Edit.create(
-                model=model_edit, 
-                input=input_text.strip(),
-                instruction=instruction,
-                # temperature=0.7,
-                # top_p=1,
-                )
-    return response
-    
+    try:
+        response = openai.Edit.create(
+                    model=model_edit, 
+                    input=input_text.strip(),
+                    instruction=instruction,
+                    # temperature=0.7,
+                    # top_p=1,
+                    )
+        return response
+    except:
+        raise serializers.ValidationError({'msg':'internal_error'},code=200)
 #DALLE
 def get_prompt_image_generations(prompt,size,no_of_image):
     try:
@@ -97,7 +105,6 @@ def get_prompt_image_generations(prompt,size,no_of_image):
         response = {'error':"Your requested prompt was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system."}
     return response
 
-
 def get_img_content_from_openai_url(image_url):
     r = requests.get(image_url)
     pil_img = Image.open(BytesIO(r.content))
@@ -105,3 +112,4 @@ def get_img_content_from_openai_url(image_url):
     pil_img.save(img_byte_arr, format='PNG')
     img_byte_arr = img_byte_arr.getvalue()
     return img_byte_arr
+
