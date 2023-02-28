@@ -486,15 +486,7 @@ class AiCustomize(models.Model):
     
     def __str__(self) -> str:
         return self.customize
-
-
-# class BlogGeneratorPrompt(models.Model):
-#     blog_prompt = models.CharField(max_length =200, null=True, blank=True)  
-#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
-#     def __str__(self) -> str:
-#         return self.blog_prompt
 
 class Role(ParanoidModel):
     name = models.CharField(max_length=100, null=True, blank=True)
