@@ -1,12 +1,11 @@
-from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt ,BlogCreation ,BlogKeywordGenerate
+from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
                                      AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                                     ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer,
-                                     BlogCreationSerializer,BlogKeywordGenerateSerializer)
+                                     ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -22,7 +21,7 @@ from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale
 #from langdetect import detect
 #import langid
 from googletrans import Translator
-from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations ,lang_detect
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
@@ -277,55 +276,7 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
     def get_queryset(self):
         queryset = AiPromptCustomize.objects.filter(user=self.request.user)
         return queryset
-
-
-class BlogCreationViewset(viewsets.ViewSet):
-    model = BlogCreation
-    def get(self, request):
-        query_set = BlogCreation.objects.all()
-        serializer = BlogCreationSerializer(query_set ,many =True)
-        return Response(serializer.data)
     
-    def create(self,request):
-        serializer = BlogCreationSerializer(data= request.POST.dict(),context={'request':request}) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
-
-    def update(self,request,pk):
-        query_set = BlogCreation.objects.get(id = pk)
-        serializer = BlogCreationSerializer(query_set,data=request.data ,partial=True  )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors)
-
-
-class BlogKeywordGenerateViewset(viewsets.ViewSet):
- 
-    def get(self, request):
-        query_set = BlogKeywordGenerate.objects.all()
-        serializer = BlogKeywordGenerateSerializer(query_set ,many =True)
-        return Response(serializer.data)
-    
-    def create(self,request):
-        serializer = BlogKeywordGenerateSerializer(data={**request.POST.dict(),'user':self.request.user.id }) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
-
-    def update(self,request,pk):
-        query_set = BlogKeywordGenerate.objects.get(id = pk)
-        serializer = BlogKeywordGenerateSerializer(query_set,data=request.data ,partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors)
-
     
 # @api_view(['POST',])
 # @permission_classes([IsAuthenticated])
@@ -356,25 +307,6 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
 #         else:
 #             return  Response({'msg':'Insufficient Credits'},status=400)
     
-    # else:##english
-    #     response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-    #     result_txt = response['choices'][0]['text']
-    # AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
-    # inst_data = {'user':request.user.id ,'instant_text':instant_text, 'source_lang':source_lang,
-    #              'target_lang':target_lang , 'customize':customize_id ,'insta_usage':total_tokens,
-    #              'instant_result':result_txt}
-    # print("inst_data--->",inst_data)
-    # serializer = InstantTranslationSerializer(data=inst_data)
-    # if serializer.is_valid():
-    #     serializer.save()
-    #     return Response(serializer.data)
-    # return Response(serializer.errors)
-
-
-
-
-
-      
 #     else:##english
 #         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
 #         result_txt = response['choices'][0]['text']
