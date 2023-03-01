@@ -1925,12 +1925,16 @@ def project_download(request,project_id):
     if pr.project_type_id == 5:
         file_write(pr)
 
-    if pr.project_type_id not in [3,5]:
+    elif pr.project_type_id not in [3,5]:
+        print("Tasks--------->",pr.get_mtpe_tasks)
         for i in pr.get_mtpe_tasks:
             if i.document:
+                print("DOC---------->",i.document.id)
                 from ai_workspace_okapi.api_views import DocumentToFile
                 res_1 = DocumentToFile.document_data_to_file(request,i.document.id)
+                print("Res----------->",res1)
     if os.path.exists(os.path.join(pr.project_dir_path,'source')):
+        print("path Exists--------->",os.path.join(pr.project_dir_path,'source'))
         shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
         if os.path.exists(os.path.join(pr.project_dir_path,'Audio')):
             shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/Audio')
