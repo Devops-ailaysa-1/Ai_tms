@@ -1932,7 +1932,7 @@ def project_download(request,project_id):
                 print("DOC---------->",i.document.id)
                 from ai_workspace_okapi.api_views import DocumentToFile
                 res_1 = DocumentToFile.document_data_to_file(request,i.document.id)
-                print("Res----------->",res1)
+                print("Res----------->",res_1)
     if os.path.exists(os.path.join(pr.project_dir_path,'source')):
         print("path Exists--------->",os.path.join(pr.project_dir_path,'source'))
         shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
