@@ -257,7 +257,8 @@ def feature_availability(request):
         # show_ime = True
 
     # CHECK FOR IME
-    show_ime = True if LanguageMetaDetails.objects.get(language_id=target_lang_id).ime == True else False
+    lang_meta = LanguageMetaDetails.objects.filter(language_id=target_lang_id)
+    show_ime = True if lang_meta and lang_meta.ime == True else False
 
     #Check for paraphrase and grammercheck
     show_paraphrase_and_grammercheck = True if lang_code == 'en' else False
