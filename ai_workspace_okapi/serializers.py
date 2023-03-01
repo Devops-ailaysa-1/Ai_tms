@@ -255,9 +255,10 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
         from .api_views import MT_RawAndTM_View
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,source) if source else 0
+        print("Consum Credits------------>",consumable_credits)
         if initial_credit > consumable_credits:
             try:
-                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code,user_id=document.owner_pk)
+                mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code,user_id=document.owner_pk,cc=consumable_credits)
                 if target_tags !='':
                     temp_target = mt + target_tags
                     target = mt + target_tags
@@ -265,7 +266,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                     temp_target = mt
                     target = mt
                 status_id = TranslationStatus.objects.get(status_id=104).id
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return target,temp_target,status_id
             except:
                 target=""
