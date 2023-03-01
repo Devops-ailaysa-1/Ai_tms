@@ -1993,7 +1993,7 @@ class ShowMTChoices(APIView):
                     consumable_credits =  get_consumable_credits_for_text(text_1,source_lang=self.get_lang_code(sl_code),target_lang=self.get_lang_code(tl))
                     #print("Before Deduction","Initial--->",initial_credit,"Consumable---->",consumable_credits)
                     if initial_credit > consumable_credits:
-                        mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
+                        mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl),user_id=user.id)
                         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     else:
                         mt_responses[mt_engine.name] = 'Insufficient Credits'
