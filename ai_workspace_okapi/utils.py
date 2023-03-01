@@ -8,6 +8,10 @@ from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
 
+import string 
+def special_character_check(s): 
+    return all(i in string.punctuation or i.isdigit() for i in s.strip())
+
 
 
 client = translate.Client()
@@ -263,7 +267,11 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
     r = requests.post(url, headers=headers, json=data)
     return r.json()["result"]
 
-def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_code,user_id=None):
+def get_translation(mt_engine_id, source_string, source_lang_code, 
+                    target_lang_code, user_id=None, cc=None, from_open_ai = None):
+    from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
+    mt_called = True
+    print("From openai-------->",from_open_ai)
     from ai_auth.tasks import record_api_usage
     if user_id==None:
         uid = None
@@ -272,27 +280,45 @@ def get_translation(mt_engine_id, source_string, source_lang_code, target_lang_c
         user = AiUser.objects.get(id=user_id)
         uid = user.uid
         email= user.email
+
+    if cc == None:
+        cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
+
+    if special_character_check(source_string):
+        print("Inside--->")
+        mt_called = False
+        translate = source_string
     
     # FOR GOOGLE TRANSLATE
-    if mt_engine_id == 1:
+    elif mt_engine_id == 1:
         record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)))
-        return client.translate(source_string,
+        translate = client.translate(source_string,
                                 target_language=target_lang_code,
                                 format_="text").get("translatedText")
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         record_api_usage.apply_async(("AZURE","Machine Translation",uid,email,len(source_string)))
-        return ms_translation(source_string, source_lang_code, target_lang_code)
+        translate = ms_translation(source_string, source_lang_code, target_lang_code)
 
     # AMAZON TRANSLATE
     elif mt_engine_id == 3:
         record_api_usage.apply_async(("AWS","Machine Translation",uid,email,len(source_string)))
-        return aws_translate(source_string, source_lang_code, target_lang_code)
+        translate = aws_translate(source_string, source_lang_code, target_lang_code)
 
     # LINGVANEX TRANSLATE
     elif mt_engine_id == 4:
         record_api_usage.apply_async(("LINGVANEX","Machine Translation",uid,email,len(source_string)))
-        return lingvanex(source_string, source_lang_code, target_lang_code)
+        translate = lingvanex(source_string, source_lang_code, target_lang_code)
+
+    print("Mt called------->",mt_called)
+    if mt_called == True and from_open_ai == None:
+        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, cc)
+        print("Debited---------------------->",cc)
+    else:
+        print('Not debited in this func')
+
+    return translate
+    
 
 
 def text_to_speech(ssml_file,target_language,filename,voice_gender,voice_name):
@@ -409,3 +435,6 @@ def split_check(segment_id):
             return True
     else:
         return True
+
+
+
