@@ -272,8 +272,8 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     print("From openai-------->",from_open_ai)
     from ai_auth.tasks import record_api_usage
     if user_id==None:
-        uid = None
-        email= None
+        user,uid,email = None,None,None
+
     else:
         user = AiUser.objects.get(id=user_id)
         uid = user.uid
@@ -310,8 +310,9 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
 
     print("Mt called------->",mt_called)
     if mt_called == True and from_open_ai == None:
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, cc)
-        print("Debited---------------------->",cc)
+        if user:
+            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, cc)
+            print("Debited---------------------->",cc)
     else:
         print('Not debited in this func')
 
