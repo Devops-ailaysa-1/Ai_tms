@@ -14,7 +14,6 @@ import math
 from googletrans import Translator
 from ai_auth.api_views import get_lang_code
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
-from ai_tms.settings import  OPENAI_MODEL
 
 class AiPromptSerializer(serializers.ModelSerializer):
     targets = serializers.ListField(allow_null=True,required=False)
@@ -24,6 +23,21 @@ class AiPromptSerializer(serializers.ModelSerializer):
         fields = ('id','user','prompt_string','description','document','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
             'response_charecter_limit','targets')
+
+    
+    # def to_internal_value(self, data):
+    #     print("to_internal_value")
+    #     print("before",type(data['catagories']))
+    #     data = super().to_internal_value(data)
+    # #     data['model_gpt_name'] = int(data['model_gpt_name'])
+    #     data['catagories'] = int(data['catagories'])
+    #     print("after",data)
+    # #     data['sub_catagories'] = int(data['sub_catagories'])
+    # #     data['source_prompt_lang'] = int(data['source_prompt_lang'])
+    # #     data['Tone'] = int(data['Tone'])
+    # #     data['response_copies'] = int(data['response_copies'])
+    #     return data
+
   
     def prompt_generation(self,ins,obj,ai_langs,targets):
         instance = AiPrompt.objects.get(id=ins)
@@ -61,9 +75,8 @@ class AiPromptSerializer(serializers.ModelSerializer):
         token_usage = openai_response.get('usage' ,None) 
         prompt_token = token_usage['prompt_tokens']
         total_tokens=token_usage['total_tokens']
-        completion_tokens=token_usage.get('completion_tokens' ,None)
-        if not completion_tokens:
-            raise serializers.ValidationError("empty ai completions output")
+        completion_tokens=token_usage['completion_tokens']
+        print("CompletionTokens------->",completion_tokens)
         no_of_outcome = instance.response_copies
         token_usage=TokenUsage.objects.create(user_input_token=instance.response_charecter_limit,prompt_tokens=prompt_token,
                                     total_tokens=total_tokens , completion_tokens=completion_tokens,  
@@ -72,6 +85,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         self.customize_token_deduction(instance , total_tokens)            
         
         if generated_text:
+            print("generated_text" , generated_text)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
                     defaults = {'prompt_generated':prompt,'start_phrase':start_phrase,\
                     'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip()}) for j,i in enumerate(generated_text)]
@@ -85,6 +99,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         initial_credit = user.credit_balance.get("total_left")
         if initial_credit >=total_tokens:
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, total_tokens)
+            print("Debited inside customize detection-------->",total_tokens)
         else:
             token_deduction = total_tokens - initial_credit 
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, initial_credit)
@@ -108,7 +123,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
             for i in queryset:
                 if i.copy==j.copy:
                     content = j.api_result
-                    trans = get_translation(1, content , j.result_lang_code, i.result_lang_code,user_id = instance.user.id) if content else None
+                    trans = get_translation(1, content , j.result_lang_code, i.result_lang_code,user_id = instance.user.id,from_open_ai=True) if content else None
                     i.translated_prompt_result = trans
                     i.save()
                     word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
@@ -123,6 +138,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         return credit
 
     def create(self, validated_data):
+        
         openai_available_langs = [17]
         targets = validated_data.pop('targets',None)
         instance = AiPrompt.objects.create(**validated_data)
@@ -131,10 +147,10 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.source_prompt_lang_id not in openai_available_langs:
             string_list = [instance.description,instance.keywords,instance.prompt_string,instance.product_name]
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17,copy=0)
-            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id) if instance.description else None
-            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id) if instance.keywords else None
-            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id) if instance.prompt_string else None
-            product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id) if instance.product_name else None
+            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id,from_open_ai=True) if instance.description else None
+            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id,from_open_ai=True) if instance.keywords else None
+            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id,from_open_ai=True) if instance.prompt_string else None
+            product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id,from_open_ai=True) if instance.product_name else None
             AiPrompt.objects.filter(id=instance.id).update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt,product_name_mt=product_name_mt)
             consumed_credits = self.get_total_consumable_credits(instance.source_prompt_lang_code,string_list)
             print("cons---------->",consumed_credits)
@@ -229,8 +245,7 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
 
 
 from django import core
-from googletrans import Translator
-detector = Translator()
+
 class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageGenerationPromptResponse
@@ -245,9 +260,6 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
         
     def create(self, validated_data):
         user=self.context['request'].user
-        initial_credit = instance.user.credit_balance.get("total_left")
-        
-        
         inst = ImageGeneratorPrompt.objects.create(**validated_data)
         detector = Translator()
         lang = detector.detect(inst.prompt).lang
@@ -266,7 +278,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({'msg':'Insufficient Credits'})
                 eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
                                             source_lang_code=lang , target_lang_code='en',user_id=user.id)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
                 print("Translated Prompt--------->",eng_prompt)
                 image_res = get_prompt_image_generations(eng_prompt,
                                                 image_reso.image_resolution,
@@ -571,4 +583,4 @@ class BlogCreationSerializer(serializers.ModelSerializer):
 
         
  
-        
+ 

@@ -346,14 +346,10 @@ class UserCredits(models.Model):
     credit_pack_type = models.CharField(max_length=200, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-     
-     
 
     @property
     def owner_pk(self):
         return self.user.id
-    
-post_save.connect(text_gen_credit_deduct, sender=UserCredits)
 
 post_save.connect(text_gen_credit_deduct, sender=UserCredits)
 
