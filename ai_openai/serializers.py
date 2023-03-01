@@ -337,7 +337,9 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         model = BlogKeywordGenerate
         fields = ('id','blog_creation','token_usage','selected_field','blog_keyword_mt',
                   'blog_keyword' , 'blogtitle_keygen' )
- 
+    def update(self, instance, validated_data):
+        print("update-->" ,validated_data) 
+        return super().update(instance, validated_data)
 
 class BlogCreationSerializer(serializers.ModelSerializer):
     blogcreate = BlogKeywordGenerateSerializer(required=False,many=True)
@@ -363,16 +365,14 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         if user:
             validated_data['user'] = user.user
         return validated_data
-      
+
     def create(self, validated_data):
         print("validated_data" , validated_data)
         blog_available_langs = [17]
         user=self.context['request'].user
         instance = BlogCreation.objects.create(**validated_data)
         blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
-        # BlogKeywordGenerate
- 
-        
+        # BlogKeywordGenerate        
         if (instance.user_language_id not in blog_available_langs):
             instance.user_title_mt = get_translation(1, instance.user_title , instance.user_language_code,"en"  ,user_id=instance.user.id) if instance.user_title else None
             openai_response = get_prompt(blog_sub_phrase.start_phrase+ " " +instance.user_title_mt , OPENAI_MODEL,
@@ -385,9 +385,6 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                                                 , blog_keyword =blog_keyword, selected_field= False , 
                                                 blog_keyword_mt=blog_keyword_mt,token_usage=token_usage)
         else:
- 
- 
-            
             openai_response = get_prompt(blog_sub_phrase.start_phrase+ " " +instance.user_title , OPENAI_MODEL,blog_sub_phrase.max_token, n=3)
             token_usage = openai_token_usage(openai_response)
             for i in range(len(openai_response["choices"])):
@@ -399,27 +396,25 @@ class BlogCreationSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         blog_available_langs = [17]
-        
-        print("validated_data" ,validated_data)
         if validated_data.get('blog_key_gen'):
             blog_key_id = validated_data.pop('blog_key_gen')
             blog_key_id.selected_field = True
             blog_key_id.save()
-            #other fields blog_key_select_update selected_field
             BlogKeywordGenerate.objects.filter(blog_creation = instance).exclude(id = blog_key_id.id).update(selected_field = False)
         ####updation
         if validated_data.get('blogcreate'):
             blog_update_keyword = validated_data.get('blogcreate')
             for i in blog_update_keyword:
-                updt_blog_keyword = i.get('blog_keyword')
+                print("validated_data----->>>" ,validated_data)
                 blog_key_gen_inst =  BlogKeywordGenerate.objects.filter(blog_creation=instance,selected_field=True)
                 blog_for_key = blog_key_gen_inst.first()
                 if i.get('blog_keyword'):
+                    print("to update keyword")
+                    updt_blog_keyword = i.get('blog_keyword')
                     if (instance.user_language_id in blog_available_langs):
                         keywords = blog_for_key.blog_keyword
                         keywords = keywords+' \n '+updt_blog_keyword 
                         blog_key_gen_inst.update(blog_keyword =keywords)
-                        # blog_key_gen_inst.save()
                     else:
                         keywords = blog_for_key.blog_keyword_mt
                         keywords = keywords+' \n '+updt_blog_keyword
@@ -433,6 +428,13 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                     #     trans_data = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id)           
                     #     blog_key_gen_inst.update(blog_keyword_mt=trans_data)                                            
                 ###updation end
+                # if i.get('blogtitle_keygen'):
+                #     BlogKeywordGenerateSerializer(blog_for_key , validated_data )
+                      
+                    # blog_title_to_update = i.get('blogtitle_keygen')
+                    # print("blog_title_dir-->", i.get('blogtitle_keygen'))
+                    
+                    
              ##blog_title_or_topic_create
         if validated_data.get('blog_title_create_boolean'):
             sub_categories = validated_data.get('sub_categories')
