@@ -253,7 +253,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
     gen_img = ImageGenerationPromptResponseSerializer(many=True,required=False)
     class Meta:
         model = ImageGeneratorPrompt
-        fields = ('id','prompt','prompt_mt','image_resolution','no_of_image','gen_img' )
+        fields = ('id','prompt','prompt_mt','image_resolution','no_of_image','gen_img','created_at', )
         
         
     def create(self, validated_data):
