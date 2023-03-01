@@ -97,6 +97,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         initial_credit = user.credit_balance.get("total_left")
         if initial_credit >=total_tokens:
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, total_tokens)
+            print("Debited inside customize detection-------->",total_tokens)
         else:
             token_deduction = total_tokens - initial_credit 
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, initial_credit)
@@ -120,7 +121,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
             for i in queryset:
                 if i.copy==j.copy:
                     content = j.api_result
-                    trans = get_translation(1, content , j.result_lang_code, i.result_lang_code,user_id = instance.user.id) if content else None
+                    trans = get_translation(1, content , j.result_lang_code, i.result_lang_code,user_id = instance.user.id,from_open_ai=True) if content else None
                     i.translated_prompt_result = trans
                     i.save()
                     word_count = get_consumable_credits_for_text(content,source_lang=j.result_lang_code,target_lang=i.result_lang_code)
@@ -144,10 +145,10 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if instance.source_prompt_lang_id not in openai_available_langs:
             string_list = [instance.description,instance.keywords,instance.prompt_string,instance.product_name]
             prmt_res = AiPromptResult.objects.create(prompt=instance,result_lang_id=17,copy=0)
-            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id) if instance.description else None
-            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id) if instance.keywords else None
-            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id) if instance.prompt_string else None
-            product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id) if instance.product_name else None
+            description_mt = get_translation(1, instance.description , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id,from_open_ai=True) if instance.description else None
+            keywords_mt = get_translation(1, instance.keywords , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id,from_open_ai=True) if instance.keywords else None
+            prompt_string_mt = get_translation(1, instance.prompt_string , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id,from_open_ai=True) if instance.prompt_string else None
+            product_name_mt = get_translation(1, instance.product_name , instance.source_prompt_lang_code, prmt_res.result_lang_code,user_id=user.id,from_open_ai=True) if instance.product_name else None
             AiPrompt.objects.filter(id=instance.id).update(description_mt = description_mt,keywords_mt=keywords_mt,prompt_string_mt=prompt_string_mt,product_name_mt=product_name_mt)
             consumed_credits = self.get_total_consumable_credits(instance.source_prompt_lang_code,string_list)
             print("cons---------->",consumed_credits)
@@ -275,7 +276,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({'msg':'Insufficient Credits'})
                 eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
                                             source_lang_code=lang , target_lang_code='en',user_id=user.id)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
                 print("Translated Prompt--------->",eng_prompt)
                 image_res = get_prompt_image_generations(eng_prompt,
                                                 image_reso.image_resolution,
