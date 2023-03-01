@@ -126,10 +126,6 @@ def get_empty_segments(doc):
     else:
         return False
 
-import string 
-def special_character_check(s):
-    return all(i in string.punctuation for i in s)
-
 
 class DocumentViewByTask(views.APIView, PageNumberPagination):
     permission_classes = [IsAuthenticated]
@@ -781,7 +777,13 @@ class MT_RawAndTM_View(views.APIView):
 
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
+        print("Consumable_credits---------------->",consumable_credits)
+
         # initial_credit = 1000000
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/v4-merged-production
         # if split_seg.source.isdigit() or special_character_check(split_seg.source):
         #     if mt_raw:
         #         MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = split_seg.source, \
@@ -793,13 +795,17 @@ class MT_RawAndTM_View(views.APIView):
         #         if mt_raw_serlzr.is_valid(raise_exception=True):
         #             mt_raw_serlzr.save()
         #             return mt_raw_serlzr.data, 201, "available"
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> origin/v4-merged-production
         if initial_credit > consumable_credits :
             if mt_raw:
                 #############   Update   ############
                 translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                              doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                                              doc.source_language_code, doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
 
                 MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = translation, \
                                        mt_engine = task_assign_mt_engine, task_mt_engine=task_assign_mt_engine)
@@ -808,11 +814,12 @@ class MT_RawAndTM_View(views.APIView):
             else:
 
                 #########   Create   #######
+                print("#########   Create   #######")
                 mt_raw_serlzr = MT_RawSerializer(data = {"segment": segment_id},\
                                 context={"request": request})
                 if mt_raw_serlzr.is_valid(raise_exception=True):
                     mt_raw_serlzr.save()
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     return mt_raw_serlzr.data, 201, "available"
         else:
             return {}, 424, "unavailable"
@@ -857,17 +864,18 @@ class MT_RawAndTM_View(views.APIView):
             # Updating raw translation of split segments
             if mt_raw_split:
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code,user_id=doc.owner_pk)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                                              doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 MtRawSplitSegment.objects.filter(split_segment_id=segment_id).update(mt_raw=translation,)
                 return {"mt_raw": mt_raw_split.mt_raw, "segment": split_seg.id}, 200, "available"
 
             # Creating new MT raw for split segment
             else:
+                print("Creating new MT raw for split segment")
                 translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                              doc.target_language_code,user_id=doc.owner_pk)
+                                              doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
                 MtRawSplitSegment.objects.create(**{"mt_raw" : translation, "split_segment_id" : segment_id})
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return {"mt_raw": translation, "segment": split_seg.id}, 200, "available"
 
         else:

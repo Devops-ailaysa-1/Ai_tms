@@ -290,7 +290,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(document,None,seg['source']) if seg['source']!='' else 0
                 if initial_credit > consumable_credits:
                     try:
-                        mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code,document.owner_pk)
+                        mt = get_translation(mt_engine,str(seg["source"]),document.source_language_code,document.target_language_code,document.owner_pk,cc=consumable_credits)
                         if str(target_tags) != '':
                             random_tags = json.loads(seg["random_tag_ids"])
                             if random_tags == []:tags = str(target_tags)
@@ -301,7 +301,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                             seg['temp_target'] = mt
                             seg['target'] = mt
                         status_id = TranslationStatus.objects.get(status_id=104).id
-                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                        #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     except:
                         seg['target']=""
                         seg['temp_target']=""
@@ -534,7 +534,7 @@ def pre_translate_update(task_id):
             consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
             if initial_credit > consumable_credits:
                 try:
-                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk)
+                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                     tags = get_tags(seg)
                     if tags:
                         seg.target = mt + tags
@@ -543,7 +543,7 @@ def pre_translate_update(task_id):
                         seg.target = mt
                         seg.temp_target = mt
                     seg.status_id = TranslationStatus.objects.get(status_id=104).id
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append(seg)
                     else:mt_segments.append(seg)
@@ -575,7 +575,7 @@ def pre_translate_update(task_id):
             for i in mt_segments
         ]
 
-    MT_RawTranslation.objects.bulk_create(instances)
+    MT_RawTranslation.objects.bulk_create(instances, ignore_conflicts=True)
 
     instances_1 = [
             MtRawSplitSegment(
@@ -584,7 +584,7 @@ def pre_translate_update(task_id):
             )
             for i in mt_split_segments
         ]
-    MtRawSplitSegment.objects.bulk_create(instances_1)
+    MtRawSplitSegment.objects.bulk_create(instances_1, ignore_conflicts=True)
     #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
     logger.info("pre_translate_update")
 

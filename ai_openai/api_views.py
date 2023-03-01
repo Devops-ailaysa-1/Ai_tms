@@ -1,13 +1,11 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt,
-                     BlogCreation ,BlogKeywordGenerate)
+from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt ,BlogCreation ,BlogKeywordGenerate
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
                                      AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                                     ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer,
-                                     BlogCreationSerializer,BlogKeywordGenerateSerializer)
+                                     ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -23,7 +21,7 @@ from ai_staff.models import AiCustomize ,Languages, PromptTones, LanguagesLocale
 #from langdetect import detect
 #import langid
 from googletrans import Translator
-from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations ,lang_detect
+from .utils import get_prompt ,get_prompt_edit,get_prompt_image_generations
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
@@ -137,7 +135,7 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang_code,target_lang_code)
         if initial_credit >= consumable_credits_user_text:
             translation = get_translation(mt_engine_id, user_text, source_lang_code,target_lang_code,user_id=user.id)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)
             data = {'customization':customized_id,'target_language':i,
                 'mt_engine':mt_engine,'credits_used':consumable_credits_user_text,'result':translation}
             ser = TranslateCustomizeDetailSerializer(data=data)
@@ -204,12 +202,12 @@ def customize_text_openai(request):
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
         if initial_credit >= consumable_credits_user_text:
             user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
-                                        source_lang_code=lang , target_lang_code='en',user_id=user.id)
+                                        source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
             result_txt = response['choices'][0]['text']
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
-                                        source_lang_code='en' , target_lang_code=lang,user_id=user.id)
+                                        source_lang_code='en' , target_lang_code=lang,user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
             #AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
         else:
@@ -288,7 +286,6 @@ class BlogCreationViewset(viewsets.ViewSet):
         return Response(serializer.data)
     
     def create(self,request):
-        print("request.POST.dict()" , request.POST.dict())
         serializer = BlogCreationSerializer(data= request.POST.dict(),context={'request':request}) 
         if serializer.is_valid():
             serializer.save()
@@ -358,25 +355,6 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
 #         else:
 #             return  Response({'msg':'Insufficient Credits'},status=400)
     
-    # else:##english
-    #     response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
-    #     result_txt = response['choices'][0]['text']
-    # AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
-    # inst_data = {'user':request.user.id ,'instant_text':instant_text, 'source_lang':source_lang,
-    #              'target_lang':target_lang , 'customize':customize_id ,'insta_usage':total_tokens,
-    #              'instant_result':result_txt}
-    # print("inst_data--->",inst_data)
-    # serializer = InstantTranslationSerializer(data=inst_data)
-    # if serializer.is_valid():
-    #     serializer.save()
-    #     return Response(serializer.data)
-    # return Response(serializer.errors)
-
-
-
-
-
-      
 #     else:##english
 #         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
 #         result_txt = response['choices'][0]['text']
