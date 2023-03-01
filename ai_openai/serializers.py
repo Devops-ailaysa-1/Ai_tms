@@ -259,6 +259,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user=self.context['request'].user
         inst = ImageGeneratorPrompt.objects.create(**validated_data)
+        print("Inst--------->",inst)
         detector = Translator()
         lang = detector.detect(inst.prompt).lang
         if isinstance(lang,list):
@@ -276,6 +277,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({'msg':'Insufficient Credits'})
                 eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
                                             source_lang_code=lang , target_lang_code='en',user_id=user.id)
+                ImageGeneratorPrompt.objects.filter(id=inst.id).update(prompt_mt=eng_prompt)
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
                 print("Translated Prompt--------->",eng_prompt)
                 image_res = get_prompt_image_generations(eng_prompt,
