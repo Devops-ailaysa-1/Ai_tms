@@ -777,6 +777,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         task_id=request.POST.get('task_id',None)
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
+        team = request.POST.get('team',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -812,7 +813,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=subject_delete_ids)
         
-        team = True if instance.team else False
+        if not team:
+            team = True if instance.team else False
         
         if task_id:
             file_obj = update_project_from_writer(task_id)
@@ -827,7 +829,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             
         else:
             serlzr = ser(instance, data=\
-                {**request.data, "files": request.FILES.getlist("files")},
+                {**request.data, "files": request.FILES.getlist("files"),"team":[team]},
                 context={"request": request}, partial=True)
 
         if serlzr.is_valid(raise_exception=True):

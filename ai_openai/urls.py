@@ -13,6 +13,7 @@ urlpatterns += [
     path("history/",api_views.history_delete),
     path("prompt_image_generations/" ,api_views.image_gen),
     path('customize_history/',api_views.AiPromptCustomizeViewset.as_view()),
+    path('image_history/',api_views.AiImageHistoryViewset.as_view()),
     path('image/',api_views.image_gen),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]

@@ -276,6 +276,21 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
     def get_queryset(self):
         queryset = AiPromptCustomize.objects.filter(user=self.request.user)
         return queryset
+
+class AiImageHistoryViewset(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ImageGeneratorPromptSerializer
+    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
+    ordering_fields = ['id']
+    ordering = ('-id')
+    #filterset_class = PromptFilter
+    search_fields = ['prompt',]
+    pagination_class = NoPagination
+    page_size = None
+
+    def get_queryset(self):
+        queryset = ImageGeneratorPrompt.objects.filter(gen_img__user=self.request.user)
+        return queryset
     
     
 # @api_view(['POST',])
