@@ -329,6 +329,7 @@ class TempPricingPreference(models.Model):
     product_id = models.CharField(max_length=200)
     price_id = models.CharField(max_length=200)
     email = models.EmailField()
+    is_subscribed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
 
