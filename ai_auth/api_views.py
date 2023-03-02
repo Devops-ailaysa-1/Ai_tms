@@ -1063,10 +1063,11 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
                 print('price>>',price)
                 
-                if price.name == os.environ.get("PLAN_PAYG"):
-                    response=subscribe_trial(price,customer)
-                else:
+                if price.product.name == os.environ.get("PLAN_PAYG"):
                     response=subscribe(price,customer)
+                else:
+                    response=subscribe_trial(price,customer)
+
                 print(response)
                 #customer.subscribe(price=price)
                 return Response({'msg':'User Successfully created','subscription':price.product.name+"_Trial"}, status=201)
