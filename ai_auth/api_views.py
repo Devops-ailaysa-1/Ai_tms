@@ -86,6 +86,7 @@ from allauth.account.signals import email_confirmed
 from ai_auth.signals import send_campaign_email
 #from django_oso.decorators import authorize_request
 from django_oso.auth import authorize, authorize_model
+import os
 
 logger = logging.getLogger('django')
 
@@ -1061,8 +1062,11 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
                 print('price>>',price)
-
-                response=subscribe_trial(price,customer)
+                
+                if price.name == os.environ.get("PLAN_PAYG"):
+                    response=subscribe_trial(price,customer)
+                else:
+                    response=subscribe(price,customer)
                 print(response)
                 #customer.subscribe(price=price)
                 return Response({'msg':'User Successfully created','subscription':price.product.name+"_Trial"}, status=201)
