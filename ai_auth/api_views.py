@@ -2307,7 +2307,8 @@ def lang_detect(request):
     if isinstance(lang,list):
         lang = lang[0]
     lang_code = get_lang_code(lang)
-    lang_obj = Languages.objects.filter(locale__locale_code = lang_code).first()
+    try:lang_obj = Languages.objects.get(locale__locale_code = lang_code)
+    except:lang_obj = Languages.objects.get(locale__locale_code = 'en')
     return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
 
 
