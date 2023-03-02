@@ -26,6 +26,7 @@ from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
 from string import punctuation
+from django.db.models import Q
 
 
 class AiPromptViewset(viewsets.ViewSet):
@@ -96,7 +97,9 @@ class AiPromptResultViewset(generics.ListAPIView):
         if prmp_id:
             queryset = AiPrompt.objects.filter(id=prmp_id)
         else:
-            queryset = AiPrompt.objects.filter(user=self.request.user)
+            queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(user=self.request.user)\
+                        .exclude(ai_prompt__id__in=AiPromptResult.objects.filter(Q(api_result__isnull = True)\
+                         & Q(translated_prompt_result__isnull = True)).values('id'))
         return queryset
 
 
@@ -135,7 +138,7 @@ def translate_text(customized_id,user,user_text,source_lang,target_langs,mt_engi
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang_code,target_lang_code)
         if initial_credit >= consumable_credits_user_text:
             translation = get_translation(mt_engine_id, user_text, source_lang_code,target_lang_code,user_id=user.id)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)
             data = {'customization':customized_id,'target_language':i,
                 'mt_engine':mt_engine,'credits_used':consumable_credits_user_text,'result':translation}
             ser = TranslateCustomizeDetailSerializer(data=data)
@@ -202,12 +205,12 @@ def customize_text_openai(request):
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,source_lang=lang,target_lang='en')
         if initial_credit >= consumable_credits_user_text:
             user_text_mt_en = get_translation(mt_engine_id=1 , source_string = user_text,
-                                        source_lang_code=lang , target_lang_code='en',user_id=user.id)
+                                        source_lang_code=lang , target_lang_code='en',user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(user_text_mt_en,source_lang=lang,target_lang='en')
             response,total_tokens,prompt = customize_response(customize,user_text_mt_en,tone,total_tokens)
             result_txt = response['choices'][0]['text']
             txt_generated = get_translation(mt_engine_id=1 , source_string = result_txt.strip(),
-                                        source_lang_code='en' , target_lang_code=lang,user_id=user.id)
+                                        source_lang_code='en' , target_lang_code=lang,user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(txt_generated,source_lang='en',target_lang=lang)
             #AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
         else:
@@ -275,6 +278,21 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = AiPromptCustomize.objects.filter(user=self.request.user)
+        return queryset
+
+class AiImageHistoryViewset(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ImageGeneratorPromptSerializer
+    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
+    ordering_fields = ['id']
+    ordering = ('-id')
+    #filterset_class = PromptFilter
+    search_fields = ['prompt',]
+    pagination_class = NoPagination
+    page_size = None
+
+    def get_queryset(self):
+        queryset = ImageGeneratorPrompt.objects.filter(gen_img__user=self.request.user)
         return queryset
     
     
