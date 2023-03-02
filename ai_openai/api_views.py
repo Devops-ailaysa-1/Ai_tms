@@ -26,6 +26,7 @@ from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 logger = logging.getLogger('django')
 from string import punctuation
+from django.db.models import Q
 
 
 class AiPromptViewset(viewsets.ViewSet):
@@ -96,7 +97,9 @@ class AiPromptResultViewset(generics.ListAPIView):
         if prmp_id:
             queryset = AiPrompt.objects.filter(id=prmp_id)
         else:
-            queryset = AiPrompt.objects.filter(user=self.request.user)
+            queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(user=self.request.user)\
+                        .exclude(ai_prompt__id__in=AiPromptResult.objects.filter(Q(api_result__isnull = True)\
+                         & Q(translated_prompt_result__isnull = True)).values('id'))
         return queryset
 
 
