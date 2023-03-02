@@ -9,6 +9,7 @@ from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen
 from ai_workspace_okapi.utils import get_translation
 import math
+from django.db.models import Q
 from googletrans import Translator
 from ai_auth.api_views import get_lang_code
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
