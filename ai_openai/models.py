@@ -131,6 +131,7 @@ class ImageGeneratorPrompt(models.Model):
     image_resolution = models.ForeignKey(ImageGeneratorResolution , on_delete= models.CASCADE, default=1)
     credits_used = models.IntegerField(null=True, blank=True)
     no_of_image = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
  
 class ImageGenerationPromptResponse(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)

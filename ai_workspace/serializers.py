@@ -1203,11 +1203,15 @@ class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
        return True if sp else False
 
 class ProjectListSerializer(serializers.ModelSerializer):
-
+	jobs = serializers.SerializerMethodField()
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","files_jobs_choice_url",)
+		fields = ("id", "project_name","jobs",)
 
+	def get_jobs(self,obj):
+		source_lang = obj.project_jobs_set.first().source_language_id
+		target_lang = [i.target_language_id for i in obj.project_jobs_set.exclude(target_language=None)]
+		return {'source':source_lang,'target':target_lang}
 
 
 class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):

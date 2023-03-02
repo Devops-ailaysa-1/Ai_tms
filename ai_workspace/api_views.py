@@ -777,6 +777,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         task_id=request.POST.get('task_id',None)
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
+        team = request.POST.get('team',None)
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
 
@@ -812,7 +813,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             subject_res = ProjectSubjectView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=subject_delete_ids)
         
-        team = True if instance.team else False
+        if not team:
+            team = True if instance.team else False
         
         if task_id:
             file_obj = update_project_from_writer(task_id)
@@ -827,7 +829,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             
         else:
             serlzr = ser(instance, data=\
-                {**request.data, "files": request.FILES.getlist("files")},
+                {**request.data, "files": request.FILES.getlist("files"),"team":[team]},
                 context={"request": request}, partial=True)
 
         if serlzr.is_valid(raise_exception=True):
@@ -1671,7 +1673,7 @@ def get_file_project_list(request):
                     |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
     serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
     data = serializer.data
-    return  Response(serializer.data)
+    return Response(serializer.data)
 
 
 
@@ -1925,12 +1927,16 @@ def project_download(request,project_id):
     if pr.project_type_id == 5:
         file_write(pr)
 
-    if pr.project_type_id not in [3,5]:
+    elif pr.project_type_id not in [3,5]:
+        print("Tasks--------->",pr.get_mtpe_tasks)
         for i in pr.get_mtpe_tasks:
             if i.document:
+                print("DOC---------->",i.document.id)
                 from ai_workspace_okapi.api_views import DocumentToFile
                 res_1 = DocumentToFile.document_data_to_file(request,i.document.id)
+                print("Res----------->",res_1)
     if os.path.exists(os.path.join(pr.project_dir_path,'source')):
+        print("path Exists--------->",os.path.join(pr.project_dir_path,'source'))
         shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/source')
         if os.path.exists(os.path.join(pr.project_dir_path,'Audio')):
             shutil.make_archive(pr.project_name, 'zip', pr.project_dir_path + '/Audio')
@@ -1989,8 +1995,8 @@ class ShowMTChoices(APIView):
                     consumable_credits =  get_consumable_credits_for_text(text_1,source_lang=self.get_lang_code(sl_code),target_lang=self.get_lang_code(tl))
                     #print("Before Deduction","Initial--->",initial_credit,"Consumable---->",consumable_credits)
                     if initial_credit > consumable_credits:
-                        mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl))
-                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                        mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl),user_id=user.id)
+                        #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     else:
                         mt_responses[mt_engine.name] = 'Insufficient Credits'
                     #print("After Deduction","Initial--->",initial_credit)
@@ -2567,6 +2573,7 @@ def writer_save(request):
 
 def celery_check(obj):
     from ai_auth.tasks import pre_translate_update
+    state = None
     if obj.task_name == 'mt_only':
         state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
     elif obj.task_name == 'pre_translate_update':
@@ -2582,6 +2589,7 @@ def celery_check(obj):
 def get_task_status(request):
     from ai_workspace_okapi.api_views import DocumentViewByTask
     from ai_workspace.models import MTonlytaskCeleryStatus
+    from ai_tm.api_views import get_json_file_path
     project_id = request.GET.get('project')
     task_id = request.GET.get('task')
     if project_id:
@@ -2605,19 +2613,23 @@ def get_task_status(request):
                 else:
                     status = celery_check(obj)
             else:
-                file_path = DocumentViewByTask.get_json_file_path(i)
-                doc_data = json.load(open(file_path))
-                if type(doc_data) == str:
-                    doc_data = json.loads(doc_data)
-
-                if doc_data.get('total_word_count') == 0:
-                    status = 'True'
-                    msg = "Empty File"
+                if obj:
+                    status = celery_check(obj)
                 else:
-                    if obj:
-                        status = celery_check(obj)
-                    else:
-                        status = 'True' 
+                    status = 'True' 
+                # file_path = get_json_file_path(i)
+                # doc_data = json.load(open(file_path))
+                # if type(doc_data) == str:
+                #     doc_data = json.loads(doc_data)
+
+                # if doc_data.get('total_word_count') == 0:
+                #     status = 'True'
+                #     msg = "Empty File"
+                # else:
+                #     if obj:
+                #         status = celery_check(obj)
+                #     else:
+                #         status = 'True' 
             if status == 'True':
                 progress = i.get_progress
             res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
@@ -2864,7 +2876,7 @@ def seg_edit(express_obj,task_id,src_text):
         consumable_credits = get_consumable_credits_for_text(src_text,source_lang=obj.job.source_language_code,target_lang=obj.job.target_language_code)
         print("Consumable in seg_edit Create-------->",consumable_credits)
         res = seg_create(task_id,src_text)
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+        #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
         print("Created")
         return None
     vers = exp_src_obj.version
@@ -2890,13 +2902,13 @@ def seg_edit(express_obj,task_id,src_text):
                 print("MT only Change")
                 consumed = get_consumable_credits_for_text(i.src_segment,None,obj.job.source_language_code)
                 tar = get_translation(mt_engine_id=express_obj.mt_engine_id,source_string = i.src_segment ,source_lang_code=i.task.job.source_language_code , target_lang_code=i.task.job.target_language_code,user_id=user.id)
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed)
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed)
                 ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=express_obj.mt_engine_id)
         else:
             print("New MT")
             consumable = get_consumable_credits_for_text(i.src_segment,None,obj.job.source_language_code)
             tar = get_translation(mt_engine_id=express_obj.mt_engine_id,source_string = i.src_segment ,source_lang_code=i.task.job.source_language_code , target_lang_code=i.task.job.target_language_code,user_id=user.id)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
             tt = ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=express_obj.mt_engine_id)
     res = exp_proj_save(task_id,None)
     print("Done Editing")
@@ -2923,7 +2935,7 @@ def task_get_segments(request):
         print("ConsumableCredits---------------->",consumable_credits)
         if initial_credit > consumable_credits:
             res = seg_create(task_id,content)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
             express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
             ser = ExpressProjectDetailSerializer(express_obj)
             return Response({'Res':ser.data})
@@ -2952,7 +2964,7 @@ def seg_get_new_mt(task,mt_engine_id,user,express_obj):
             consumable_credit = get_consumable_credits_for_text(i.src_segment,None,task.job.source_language_code)
             print("Consum---------->",consumable_credit)
             tar = get_translation(express_obj.mt_engine.id,i.src_segment ,i.task.job.source_language_code,i.task.job.target_language_code,i.task.job.project.ai_user.id)
-            debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credit)
+            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credit)
             ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=mt_engine_id)
     exp_proj_save(task.id,True)
     print("MtChangeDone")
@@ -3291,7 +3303,7 @@ def express_custom(request,exp_obj,option):
         if initial_credit > consumable_credits_user_text:
             if target_lang_code!='en':
                 user_insta_text_mt_en = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = instant_text,
-                                source_lang_code=source_lang_code , target_lang_code='en',user_id=user.id)
+                                source_lang_code=source_lang_code , target_lang_code='en',user_id=user.id,from_open_ai=True)
                 
                 total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
             else:
@@ -3302,7 +3314,7 @@ def express_custom(request,exp_obj,option):
            
             if target_lang_code != 'en':
                 txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
-                            source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
+                            source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id,from_open_ai=True)
                 total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
             print("Tokens---------->",total_tokens)
         else:
@@ -3318,7 +3330,7 @@ def express_custom(request,exp_obj,option):
         print("Tokens---------->",total_tokens)
         if target_lang_code != 'en':
             txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
-                        source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id)
+                        source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id,from_open_ai=True)
             total_tokens += get_consumable_credits_for_text(result_txt,source_lang='en',target_lang=target_lang_code)
     AiPromptSerializer().customize_token_deduction(instance = None,total_tokens= total_tokens,user=user)
     print("MT----->",exp_obj.mt_engine_id)
@@ -3367,7 +3379,7 @@ def instant_translation_custom(request):
                 if initial_credit > consumable_credit:
                     txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = input_src,
                                     source_lang_code=exp_obj.task.job.source_language_code , target_lang_code=exp_obj.task.job.target_language_code,user_id=exp_obj.task.job.project.ai_user_id)
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credit)
+                    #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credit)
                     serializer = ExpressProjectAIMTSerializer(queryset,data={'final_result':txt_generated,'mt_engine':exp_obj.mt_engine.id},partial=True)
                     if serializer.is_valid():
                         serializer.save()
