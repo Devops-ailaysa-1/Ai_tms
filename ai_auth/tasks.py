@@ -32,6 +32,7 @@ from django.db.models import DurationField, F, ExpressionWrapper,Q
 from celery_progress.backend import ProgressRecorder
 from time import sleep
 from django.core.management import call_command
+import calendar
 
 
 extend_mail_sent= 0
@@ -99,12 +100,17 @@ def sync_invoices_and_charges(days):
             diff=ExpressionWrapper(timezone.now() - F('djstripe_updated'), output_field=DurationField())
             ).filter(diff__gt=timedelta(days))
     resync_instances(queryset)
-
+    
 @task
 def renewal_list():
-    cycle_date = timezone.now()
-    subs =Subscription.objects.filter(billing_cycle_anchor__day=cycle_date.day,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=cycle_date.month)).filter(~Q(current_period_end__year=cycle_date.year ,
-                        current_period_end__month=cycle_date.month,current_period_end__day=cycle_date.day))
+    today = timezone.now()
+    last_day = calendar.monthrange(today.year,today.month)[1]
+    if last_day == today.day:
+        cycle_dates = [x for x in range(today.day,32)]
+    else:
+        cycle_dates = [today.day]
+    subs =Subscription.objects.filter(billing_cycle_anchor__day__in =cycle_dates,status='active',plan__interval='year').filter(~Q(billing_cycle_anchor__month=today.month)).filter(~Q(current_period_end__year=today.year ,
+                    current_period_end__month=today.month,current_period_end__day__in=cycle_dates))
     logger.info(f"renewal list count {subs.count}")
     for sub in subs:
         renew_user_credits.apply_async((sub.djstripe_id,),eta=sub.billing_cycle_anchor)
