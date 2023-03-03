@@ -2801,7 +2801,7 @@ def exp_proj_save(task_id,mt_change):
         for i in rr:
             tar_1 = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first().mt_raw #ExpressProjectSrcMTRaw.objects.get(src_seg = i).mt_raw
             tar = tar + tar_1 if tar_1 else ''
-        tar = tar + '\n'
+        tar = tar + '\n\n'
     express_obj.mt_raw = tar.strip('\n')
     express_obj.target_text = tar.strip('\n')
     express_obj.save()
@@ -3312,7 +3312,7 @@ def express_custom(request,exp_obj,option):
                 total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
             else:
                 user_insta_text_mt_en = exp_obj.target_text
-            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
+            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en.replace('\n','').replace('\r',''),tone,total_tokens)
             result_txt = response['choices'][0]['text']
             print("Res from openai------------->",result_txt)
            
@@ -3329,7 +3329,7 @@ def express_custom(request,exp_obj,option):
         consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang=target_lang_code)
         if initial_credit < consumable_credits_user_text:
             return ({'msg':'Insufficient Credits'})
-        response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
+        response,total_tokens,prompt = customize_response(customize,instant_text.replace('\n','').replace('\r',''),tone,total_tokens)
         result_txt = response['choices'][0]['text']
         print("Tokens---------->",total_tokens)
         if target_lang_code != 'en':
@@ -3368,7 +3368,10 @@ def instant_translation_custom(request):
     if queryset:
         text1 = exp_obj.source_text.strip()
         text2 = queryset.source.strip()
-        output_list = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+']
+        print("Text1-------->",text1)
+        print("Text2---------->",text2)
+        output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
+        output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
         print("OL------>",output_list)
         print("Mt------>",exp_obj.mt_engine_id) 
         print("Custom------>",queryset.mt_engine_id)
