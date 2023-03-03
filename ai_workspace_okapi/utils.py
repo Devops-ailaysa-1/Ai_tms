@@ -273,20 +273,30 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     mt_called = True
 
     if user_id==None:
-        user,uid,email = None,None,None
+        user,uid,email,initial_credit = None,None,None,None
 
     else:
         user = AiUser.objects.get(id=user_id)
         uid = user.uid
         email= user.email
+        initial_credit = user.credit_balance.get("total_left")
 
     if cc == None:
         cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
 
+    print("Init-------->",initial_credit)
+    print("cc-------->",cc)
+    print("from_open_ai---------->",from_open_ai)
+    print("source----------->",source_string)
+    
     if special_character_check(source_string):
         print("Inside--->")
         mt_called = False
         translate = source_string
+
+    elif user and not from_open_ai and initial_credit < cc:
+            print("Insufficient")
+            translate = ''
     
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
@@ -308,15 +318,15 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     elif mt_engine_id == 4:
         record_api_usage.apply_async(("LINGVANEX","Machine Translation",uid,email,len(source_string)))
         translate = lingvanex(source_string, source_lang_code, target_lang_code)
-
+    
     print("Mt called------->",mt_called)
     if mt_called == True and from_open_ai == None:
         if user:
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, cc)
-            print("Debited---------------------->",cc)
+            print("status_code---------->",status_code)
     else:
         print('Not debited in this func')
-
+    print("Translate---------->",translate)
     return translate
     
 
