@@ -432,7 +432,7 @@ class PromptSubCategories(models.Model):
     category = models.ForeignKey(PromptCategories,related_name='prompt_category',
                                  on_delete = models.CASCADE,blank=True, null=True)
     sub_category = models.CharField(max_length=1000, null=True, blank=True)
-    fields = models.CharField(max_length=100, null=True, blank=True)
+    # fields = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
@@ -441,7 +441,7 @@ class PromptSubCategories(models.Model):
     
 class PromptFields(models.Model):
     prompt_sub_categories = models.ForeignKey(PromptSubCategories,related_name='sub_category_fields',
-                                 on_delete = models.SET_NULL,blank=True, null=True)
+                                 on_delete = models.CASCADE,blank=True, null=True)
     fields = models.CharField(max_length=100, null=True, blank=True)
     # optional_field =  models.BooleanField()
     help_text = models.CharField(max_length=500, null=True, blank=True)
