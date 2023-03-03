@@ -10,6 +10,7 @@ from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen
 from ai_workspace_okapi.utils import get_translation
 import math
+from django.db.models import Q
 from googletrans import Translator
 from ai_auth.api_views import get_lang_code
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
@@ -254,12 +255,13 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
     gen_img = ImageGenerationPromptResponseSerializer(many=True,required=False)
     class Meta:
         model = ImageGeneratorPrompt
-        fields = ('id','prompt','prompt_mt','image_resolution','no_of_image','gen_img' )
+        fields = ('id','prompt','prompt_mt','image_resolution','no_of_image','gen_img','created_at', )
         
         
     def create(self, validated_data):
         user=self.context['request'].user
         inst = ImageGeneratorPrompt.objects.create(**validated_data)
+        print("Inst--------->",inst)
         detector = Translator()
         lang = detector.detect(inst.prompt).lang
         if isinstance(lang,list):
@@ -277,6 +279,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({'msg':'Insufficient Credits'})
                 eng_prompt = get_translation(mt_engine_id=1 , source_string = inst.prompt,
                                             source_lang_code=lang , target_lang_code='en',user_id=user.id)
+                ImageGeneratorPrompt.objects.filter(id=inst.id).update(prompt_mt=eng_prompt)
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits_user_text)    
                 print("Translated Prompt--------->",eng_prompt)
                 image_res = get_prompt_image_generations(eng_prompt,

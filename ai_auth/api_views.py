@@ -86,6 +86,7 @@ from allauth.account.signals import email_confirmed
 from ai_auth.signals import send_campaign_email
 #from django_oso.decorators import authorize_request
 from django_oso.auth import authorize, authorize_model
+import os
 
 logger = logging.getLogger('django')
 
@@ -1061,8 +1062,12 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
                 print('price>>',price)
+                
+                if price.product.name == os.environ.get("PLAN_PAYG"):
+                    response=subscribe(price,customer)
+                else:
+                    response=subscribe_trial(price,customer)
 
-                response=subscribe_trial(price,customer)
                 print(response)
                 #customer.subscribe(price=price)
                 return Response({'msg':'User Successfully created','subscription':price.product.name+"_Trial"}, status=201)
@@ -2307,7 +2312,8 @@ def lang_detect(request):
     if isinstance(lang,list):
         lang = lang[0]
     lang_code = get_lang_code(lang)
-    lang_obj = Languages.objects.filter(locale__locale_code = lang_code).first()
+    try:lang_obj = Languages.objects.get(locale__locale_code = lang_code)
+    except:lang_obj = Languages.objects.get(locale__locale_code = 'en')
     return Response({'lang_id':lang_obj.id,'language':lang_obj.language})
 
 
