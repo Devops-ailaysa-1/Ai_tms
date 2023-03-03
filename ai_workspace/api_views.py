@@ -2801,7 +2801,7 @@ def exp_proj_save(task_id,mt_change):
         for i in rr:
             tar_1 = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first().mt_raw #ExpressProjectSrcMTRaw.objects.get(src_seg = i).mt_raw
             tar = tar + tar_1 if tar_1 else ''
-        tar = tar + '\n'
+        tar = tar + '\n\n'
     express_obj.mt_raw = tar.strip('\n')
     express_obj.target_text = tar.strip('\n')
     express_obj.save()
@@ -3368,7 +3368,10 @@ def instant_translation_custom(request):
     if queryset:
         text1 = exp_obj.source_text.strip()
         text2 = queryset.source.strip()
-        output_list = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+']
+        print("Text1-------->",text1)
+        print("Text2---------->",text2)
+        output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
+        output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
         print("OL------>",output_list)
         print("Mt------>",exp_obj.mt_engine_id) 
         print("Custom------>",queryset.mt_engine_id)
