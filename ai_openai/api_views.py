@@ -282,6 +282,25 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
         queryset = AiPromptCustomize.objects.filter(user=self.request.user)
         return queryset
 
+    
+class AiImageHistoryViewset(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ImageGeneratorPromptSerializer
+    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
+    ordering_fields = ['id']
+    ordering = ('-id')
+    #filterset_class = PromptFilter
+    search_fields = ['prompt',]
+    pagination_class = NoPagination
+    page_size = None
+
+    def get_queryset(self):
+        queryset = ImageGeneratorPrompt.objects.filter(gen_img__user=self.request.user)
+        return queryset
+
+
+
+class BlogCreationViewset(viewsets.ViewSet):
     def create(self,request):
         serializer = BlogCreationSerializer(data= request.POST.dict(),context={'request':request}) 
         if serializer.is_valid():
@@ -297,21 +316,6 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
-        
-class AiImageHistoryViewset(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = ImageGeneratorPromptSerializer
-    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
-    ordering_fields = ['id']
-    ordering = ('-id')
-    #filterset_class = PromptFilter
-    search_fields = ['prompt',]
-    pagination_class = NoPagination
-    page_size = None
-
-    def get_queryset(self):
-        queryset = ImageGeneratorPrompt.objects.filter(gen_img__user=self.request.user)
-        return queryset
 
 class BlogKeywordGenerateViewset(viewsets.ViewSet):
  
