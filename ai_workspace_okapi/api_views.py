@@ -778,6 +778,7 @@ class MT_RawAndTM_View(views.APIView):
         consumable_credits = MT_RawAndTM_View.get_consumable_credits(doc, segment_id, None)
 
         print("Consumable_credits---------------->",consumable_credits)
+<<<<<<< HEAD
 
         # initial_credit = 1000000
         # if split_seg.source.isdigit() or special_character_check(split_seg.source):
@@ -791,6 +792,9 @@ class MT_RawAndTM_View(views.APIView):
         #         if mt_raw_serlzr.is_valid(raise_exception=True):
         #             mt_raw_serlzr.save()
         #             return mt_raw_serlzr.data, 201, "available"
+=======
+        
+>>>>>>> origin/openai
         if initial_credit > consumable_credits :
             if mt_raw:
                 #############   Update   ############

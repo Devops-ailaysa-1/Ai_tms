@@ -1,4 +1,6 @@
-from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt ,BlogCreation ,BlogKeywordGenerate
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt,
+                     BlogCreation ,BlogKeywordGenerate)
+ 
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
@@ -280,29 +282,6 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
         queryset = AiPromptCustomize.objects.filter(user=self.request.user)
         return queryset
 
-
-class BlogCreationViewset(viewsets.ViewSet):
-    model = BlogCreation
-    def get(self, request):
-        query_set = BlogCreation.objects.all()
-        serializer = BlogCreationSerializer(query_set ,many =True)
-        return Response(serializer.data)
-    
-class AiImageHistoryViewset(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = ImageGeneratorPromptSerializer
-    filter_backends = [DjangoFilterBackend ,SearchFilter,OrderingFilter]
-    ordering_fields = ['id']
-    ordering = ('-id')
-    #filterset_class = PromptFilter
-    search_fields = ['prompt',]
-    pagination_class = NoPagination
-    page_size = None
-
-    def get_queryset(self):
-        queryset = ImageGeneratorPrompt.objects.filter(gen_img__user=self.request.user)
-        return queryset
-    
     def create(self,request):
         serializer = BlogCreationSerializer(data= request.POST.dict(),context={'request':request}) 
         if serializer.is_valid():

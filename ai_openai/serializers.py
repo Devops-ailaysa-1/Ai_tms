@@ -2,9 +2,11 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from .models import (AiPrompt ,AiPromptResult,TokenUsage,TextgeneratedCreditDeduction,
                     AiPromptCustomize ,ImageGeneratorPrompt ,ImageGenerationPromptResponse ,
-                    ImageGeneratorResolution,TranslateCustomizeDetails ,BlogArticle,
-                    BlogCreation,BlogKeywordGenerate,BlogOutline,Blogtitle )
-from ai_staff.models import PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale 
+                    ImageGeneratorResolution,TranslateCustomizeDetails
+                    ,BlogArticle,BlogCreation,BlogKeywordGenerate,BlogOutline,Blogtitle )
+
+from ai_staff.models import (PromptCategories,PromptSubCategories ,AiCustomize, LanguagesLocale ,
+                            PromptStartPhrases ,PromptTones)
 from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,\
                     get_prompt_freestyle ,get_prompt_image_generations ,\
                     get_img_content_from_openai_url,get_consumable_credits_for_image_gen
