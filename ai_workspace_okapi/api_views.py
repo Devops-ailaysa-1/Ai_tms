@@ -39,6 +39,7 @@ from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import APIException
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from spellchecker import SpellChecker
 from django.http import  FileResponse
 from rest_framework.views import APIView
 from django.db.models import Q

@@ -246,7 +246,7 @@ def feature_availability(request):
         lang_code = task.job.target_language_code
         target_lang_id = task.job.target_language_id
         source_lang_id = task.job.source_language_id
-
+    print("Targetlang--------->",target_lang_id)
     # CHECK FOR SPELLCHECKER AVAILABILITY
     try:
         spellchecker_id = SpellcheckerLanguages.objects.get(language_id=target_lang_id).spellchecker.id
