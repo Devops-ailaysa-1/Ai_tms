@@ -2943,6 +2943,7 @@ def task_get_segments(request):
             # return Response({'Res':out})
         else:
             express_obj.source_text = content
+            express_obj.mt_engine = obj.job.project.mt_engine
             express_obj.save()
             ser = ExpressProjectDetailSerializer(express_obj)
             out = ser.data

@@ -268,9 +268,10 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
 def get_translation(mt_engine_id, source_string, source_lang_code, 
                     target_lang_code, user_id=None, cc=None, from_open_ai = None):
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
-    mt_called = True
-    print("From openai-------->",from_open_ai)
     from ai_auth.tasks import record_api_usage
+
+    mt_called = True
+
     if user_id==None:
         user,uid,email = None,None,None
 
