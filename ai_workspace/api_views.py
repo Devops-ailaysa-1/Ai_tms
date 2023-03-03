@@ -1995,7 +1995,10 @@ class ShowMTChoices(APIView):
                     consumable_credits =  get_consumable_credits_for_text(text_1,source_lang=self.get_lang_code(sl_code),target_lang=self.get_lang_code(tl))
                     #print("Before Deduction","Initial--->",initial_credit,"Consumable---->",consumable_credits)
                     if initial_credit > consumable_credits:
-                        mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl),user_id=user.id)
+                        try:
+                            mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl),user_id=user.id)
+                        except:
+                            mt_responses[mt_engine.name] = None
                         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     else:
                         mt_responses[mt_engine.name] = 'Insufficient Credits'
@@ -2943,6 +2946,7 @@ def task_get_segments(request):
             # return Response({'Res':out})
         else:
             express_obj.source_text = content
+            express_obj.mt_engine = obj.job.project.mt_engine
             express_obj.save()
             ser = ExpressProjectDetailSerializer(express_obj)
             out = ser.data
