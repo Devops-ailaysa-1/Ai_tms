@@ -5,6 +5,9 @@ router = DefaultRouter()
 router.register(r'aiprompt',api_views.AiPromptViewset,basename='ai_prompt')
 router.register(r'ai_image_gen',api_views.ImageGeneratorPromptViewset,basename='ai_image_gen')
 
+router.register(r'blogcreation',api_views.BlogCreationViewset ,basename='ai_blog')
+
+# router.register(r'blogkeygen',api_views.BlogCreationViewset ,basename='ai_keygen')
 urlpatterns = router.urls
 
 urlpatterns += [

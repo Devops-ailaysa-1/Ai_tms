@@ -780,10 +780,6 @@ class MT_RawAndTM_View(views.APIView):
         print("Consumable_credits---------------->",consumable_credits)
 
         # initial_credit = 1000000
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/v4-merged-production
         # if split_seg.source.isdigit() or special_character_check(split_seg.source):
         #     if mt_raw:
         #         MT_RawTranslation.objects.filter(segment_id=segment_id).update(mt_raw = split_seg.source, \
@@ -795,11 +791,6 @@ class MT_RawAndTM_View(views.APIView):
         #         if mt_raw_serlzr.is_valid(raise_exception=True):
         #             mt_raw_serlzr.save()
         #             return mt_raw_serlzr.data, 201, "available"
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> origin/v4-merged-production
         if initial_credit > consumable_credits :
             if mt_raw:
                 #############   Update   ############
