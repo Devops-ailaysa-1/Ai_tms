@@ -3312,7 +3312,7 @@ def express_custom(request,exp_obj,option):
                 total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
             else:
                 user_insta_text_mt_en = exp_obj.target_text
-            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
+            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en.replace('\n','').replace('\r',''),tone,total_tokens)
             result_txt = response['choices'][0]['text']
             print("Res from openai------------->",result_txt)
            
@@ -3329,7 +3329,7 @@ def express_custom(request,exp_obj,option):
         consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang=target_lang_code)
         if initial_credit < consumable_credits_user_text:
             return ({'msg':'Insufficient Credits'})
-        response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
+        response,total_tokens,prompt = customize_response(customize,instant_text.replace('\n','').replace('\r',''),tone,total_tokens)
         result_txt = response['choices'][0]['text']
         print("Tokens---------->",total_tokens)
         if target_lang_code != 'en':
