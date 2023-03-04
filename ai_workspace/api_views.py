@@ -2994,7 +2994,7 @@ def task_segments_save(request):
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     #previous_stored_source = express_obj.source_text
     if target_text:
-        express_obj.target_text = target_text
+        express_obj.target_text = target_text.replace('\r','')
         express_obj.save()
     elif simplified_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Simplify').last()
