@@ -2760,6 +2760,7 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
     def create(self, request):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         text_data=request.POST.get('text_data')
+        text_data = text_data.replace('\r','')
         name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
         im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
         serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['5']},context={"request": request})
@@ -3009,6 +3010,7 @@ def task_segments_save(request):
         inst_cust_obj.final_result = shortened_text
         inst_cust_obj.save()
     elif ((source_text) or (source_text and mt_engine_id)):
+        source_text = source_text.replace('\r','')
         if mt_engine_id:
             express_obj.mt_engine_id = mt_engine_id
             express_obj.save()
@@ -3018,6 +3020,7 @@ def task_segments_save(request):
             express_obj = ExpressProjectDetail.objects.filter(task_id=i.id).first()
             previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
             output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
+            print("Outlist--------->",output_list)
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
             print("Cons-------->",consumable_credits)
