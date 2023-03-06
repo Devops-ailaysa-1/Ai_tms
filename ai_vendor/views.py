@@ -15,6 +15,7 @@ from ai_auth.vendor_onboard_list import users_list
 from ai_workspace.models import Job,Project,ProjectContentType,ProjectSubjectField
 from ai_workspace_okapi.models import Document
 from django_oso.auth import authorize
+from django.http import Http404
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
@@ -235,13 +236,20 @@ def feature_availability(request):
     doc_id= request.POST.get("doc_id")
     task_id = request.POST.get("task_id")
     if doc_id:
-        doc = Document.objects.get(id=doc_id)
+        try:
+            doc = Document.objects.get(id=doc_id)
+        except Document.DoesNotExist:
+            raise Http404
+        # doc = Document.objects.get(id=doc_id)
         authorize(request, resource=doc, actor=request.user, action="read")
         lang_code = doc.target_language_code
         target_lang_id = Job.objects.get(file_job_set=doc_id).target_language_id
         source_lang_id = Job.objects.get(file_job_set=doc_id).source_language_id
     if task_id:
-        task = Task.objects.get(id=task_id)
+        try:
+            task = Task.objects.get(id=task_id)
+        except Task.DoesNotExist:
+            raise Http404
         authorize(request, resource=task, actor=request.user, action="read")
         lang_code = task.job.target_language_code
         target_lang_id = task.job.target_language_id
