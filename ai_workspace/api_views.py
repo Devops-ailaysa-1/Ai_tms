@@ -2801,7 +2801,7 @@ def exp_proj_save(task_id,mt_change):
         rr = exp_obj.filter(src_text_unit=i.src_text_unit)
         for i in rr:
             tar_1 = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first().mt_raw #ExpressProjectSrcMTRaw.objects.get(src_seg = i).mt_raw
-            tar = tar + tar_1 if tar_1 else ''
+            tar = tar +' '+tar_1 if tar_1 else ''
         tar = tar + '\n\n'
     express_obj.mt_raw = tar.strip('\n')
     express_obj.target_text = tar.strip('\n')
