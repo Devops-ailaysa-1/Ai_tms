@@ -8,7 +8,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail,\
-		ExpressProjectAIMT,WriterProject,DocumentImages#,TaskAssignRateInfo
+		ExpressProjectAIMT,WriterProject,DocumentImages,ExpressTaskHistory#,TaskAssignRateInfo
 import json,os
 import pickle,itertools
 from ai_workspace import forms as ws_forms
@@ -156,6 +156,14 @@ class VoiceProjectDetailSerializer(serializers.ModelSerializer):
 		model = VoiceProjectDetail
 		fields = ("id","project","source_language", "project_type_sub_category")
 		read_only_fields = ("id","project",)
+
+class ExpressTaskHistorySerializer(serializers.ModelSerializer):
+	class Meta:
+		model = ExpressTaskHistory
+		fields = ("id","task","source_text", "target_text",'created_at',)
+		
+
+
 
 class ExpressProjectAIMTSerializer(serializers.ModelSerializer):
 	customize_name = serializers.ReadOnlyField(source='customize.customize')
