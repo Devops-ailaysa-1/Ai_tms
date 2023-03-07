@@ -1995,7 +1995,10 @@ class ShowMTChoices(APIView):
                     consumable_credits =  get_consumable_credits_for_text(text_1,source_lang=self.get_lang_code(sl_code),target_lang=self.get_lang_code(tl))
                     #print("Before Deduction","Initial--->",initial_credit,"Consumable---->",consumable_credits)
                     if initial_credit > consumable_credits:
-                        mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl),user_id=user.id)
+                        try:
+                            mt_responses[mt_engine.name] = get_translation(mt_engine.id, text_1, ShowMTChoices.get_lang_code(sl_code), ShowMTChoices.get_lang_code(tl),user_id=user.id)
+                        except:
+                            mt_responses[mt_engine.name] = None
                         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     else:
                         mt_responses[mt_engine.name] = 'Insufficient Credits'
@@ -2757,6 +2760,7 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
     def create(self, request):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
         text_data=request.POST.get('text_data')
+        text_data = text_data.replace('\r','')
         name =  text_data.split()[0].strip(punctuation)+ ".txt" if len(text_data.split()[0])<=15 else text_data[:5].strip(punctuation)+ ".txt"
         im_file= DjRestUtils.convert_content_to_inmemoryfile(filecontent = text_data.encode(),file_name=name)
         serializer =ProjectQuickSetupSerializer(data={**request.data,"files":[im_file],"project_type":['5']},context={"request": request})
@@ -2798,7 +2802,7 @@ def exp_proj_save(task_id,mt_change):
         for i in rr:
             tar_1 = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first().mt_raw #ExpressProjectSrcMTRaw.objects.get(src_seg = i).mt_raw
             tar = tar + tar_1 if tar_1 else ''
-        tar = tar + '\n'
+        tar = tar + '\n\n'
     express_obj.mt_raw = tar.strip('\n')
     express_obj.target_text = tar.strip('\n')
     express_obj.save()
@@ -2991,7 +2995,7 @@ def task_segments_save(request):
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
     #previous_stored_source = express_obj.source_text
     if target_text:
-        express_obj.target_text = target_text
+        express_obj.target_text = target_text.replace('\r','')
         express_obj.save()
     elif simplified_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Simplify').last()
@@ -3006,6 +3010,7 @@ def task_segments_save(request):
         inst_cust_obj.final_result = shortened_text
         inst_cust_obj.save()
     elif ((source_text) or (source_text and mt_engine_id)):
+        source_text = source_text.replace('\r','')
         if mt_engine_id:
             express_obj.mt_engine_id = mt_engine_id
             express_obj.save()
@@ -3015,6 +3020,7 @@ def task_segments_save(request):
             express_obj = ExpressProjectDetail.objects.filter(task_id=i.id).first()
             previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
             output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
+            print("Outlist--------->",output_list)
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
             print("Cons-------->",consumable_credits)
@@ -3309,7 +3315,7 @@ def express_custom(request,exp_obj,option):
                 total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
             else:
                 user_insta_text_mt_en = exp_obj.target_text
-            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en,tone,total_tokens)
+            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en.replace('\n','').replace('\r',''),tone,total_tokens)
             result_txt = response['choices'][0]['text']
             print("Res from openai------------->",result_txt)
            
@@ -3326,7 +3332,7 @@ def express_custom(request,exp_obj,option):
         consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang=target_lang_code)
         if initial_credit < consumable_credits_user_text:
             return ({'msg':'Insufficient Credits'})
-        response,total_tokens,prompt = customize_response(customize,instant_text,tone,total_tokens)
+        response,total_tokens,prompt = customize_response(customize,instant_text.replace('\n','').replace('\r',''),tone,total_tokens)
         result_txt = response['choices'][0]['text']
         print("Tokens---------->",total_tokens)
         if target_lang_code != 'en':
@@ -3365,7 +3371,10 @@ def instant_translation_custom(request):
     if queryset:
         text1 = exp_obj.source_text.strip()
         text2 = queryset.source.strip()
-        output_list = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+']
+        print("Text1-------->",text1)
+        print("Text2---------->",text2)
+        output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
+        output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
         print("OL------>",output_list)
         print("Mt------>",exp_obj.mt_engine_id) 
         print("Custom------>",queryset.mt_engine_id)
