@@ -2811,15 +2811,16 @@ def exp_proj_save(task_id,mt_change):
     return express_obj
 
 
-def seg_create(task_id,content):
+def seg_create(task_id,content,from_mt_edit=None):
     from ai_workspace.models import ExpressProjectSrcSegment,ExpressProjectSrcMTRaw
     obj = Task.objects.get(id=task_id)
     lang_code = obj.job.source_language_code
     user = obj.job.project.ai_user
     express_obj = ExpressProjectDetail.objects.get(task_id = task_id)
-    express_obj.source_text = content
-    express_obj.mt_engine = obj.job.project.mt_engine
-    express_obj.save()
+    if from_mt_edit == None:
+        express_obj.source_text = content
+        express_obj.mt_engine = obj.job.project.mt_engine
+        express_obj.save()
     print("exp----->",express_obj.mt_engine)
     NEWLINES_RE = re.compile(r"\n{1,}")
     no_newlines = content.strip("\n")  # remove leading and trailing "\n"
@@ -2864,7 +2865,7 @@ def cust_split(text):
 
 
 
-def seg_edit(express_obj,task_id,src_text):
+def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
     obj = Task.objects.get(id=task_id)
     user = obj.job.project.ai_user
     NEWLINES_RE = re.compile(r"\n{1,}")
@@ -2879,7 +2880,7 @@ def seg_edit(express_obj,task_id,src_text):
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_text(src_text,source_lang=obj.job.source_language_code,target_lang=obj.job.target_language_code)
         print("Consumable in seg_edit Create-------->",consumable_credits)
-        res = seg_create(task_id,src_text)
+        res = seg_create(task_id,src_text,from_mt_edit)
         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
         print("Created")
         return None
@@ -2961,18 +2962,24 @@ def task_get_segments(request):
 
 
 def seg_get_new_mt(task,mt_engine_id,user,express_obj):
-    latest =  ExpressProjectSrcSegment.objects.filter(task=task).last().version
-    for i in ExpressProjectSrcSegment.objects.filter(task=task,version=latest):
-        mt_obj = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first() 
-        if not mt_obj:
-            print("Inside New")
-            consumable_credit = get_consumable_credits_for_text(i.src_segment,None,task.job.source_language_code)
-            print("Consum---------->",consumable_credit)
-            tar = get_translation(express_obj.mt_engine.id,i.src_segment ,i.task.job.source_language_code,i.task.job.target_language_code,i.task.job.project.ai_user.id)
-            #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credit)
-            ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=mt_engine_id)
-    exp_proj_save(task.id,True)
-    print("MtChangeDone")
+    exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task.id).last()
+    if not exp_src_obj:
+        seg_create(task.id,express_obj.source_text,True)
+        print("SEg Created and MTChangeDone")
+        return None
+    else:
+        latest =  ExpressProjectSrcSegment.objects.filter(task=task).last().version
+        for i in ExpressProjectSrcSegment.objects.filter(task=task,version=latest):
+            mt_obj = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first() 
+            if not mt_obj:
+                print("Inside New")
+                consumable_credit = get_consumable_credits_for_text(i.src_segment,None,task.job.source_language_code)
+                print("Consum---------->",consumable_credit)
+                tar = get_translation(express_obj.mt_engine.id,i.src_segment ,i.task.job.source_language_code,i.task.job.target_language_code,i.task.job.project.ai_user.id)
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credit)
+                ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = tar,mt_engine_id=mt_engine_id)
+        exp_proj_save(task.id,True)
+        print("MtChangeDone")
 
 def inst_create(obj,option):
     customize = AiCustomize.objects.get(customize = option)
@@ -2984,6 +2991,9 @@ import difflib
 @permission_classes([IsAuthenticated])
 def task_segments_save(request):
     task_id = request.POST.get('task_id')
+    if not task_id:
+        return Response({'msg':'task_id required'},status=400)
+    from_history = request.POST.get('from_history',None)
     target_text = request.POST.get('target_text')
     simplified_text = request.POST.get('simplified_text')
     shortened_text = request.POST.get('shortened_text')
@@ -2993,22 +3003,34 @@ def task_segments_save(request):
     obj = Task.objects.get(id=task_id)
     user = obj.job.project.ai_user
     express_obj = ExpressProjectDetail.objects.filter(task_id=task_id).first()
+
+    if from_history:
+        task_hist_obj = ExpressTaskHistory.objects.get(id = from_history)
+        express_obj.source_text = task_hist_obj.source_text
+        express_obj.target_text = task_hist_obj.target_text
+        express_obj.mt_raw = ''
+        express_obj.save()
+        ExpressProjectSrcSegment.objects.filter(task_id = task_id).delete()
+
     #previous_stored_source = express_obj.source_text
-    if target_text:
+    elif target_text:
         express_obj.target_text = target_text.replace('\r','')
         express_obj.save()
+
     elif simplified_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Simplify').last()
         if not inst_cust_obj:
             inst_cust_obj = inst_create(express_obj,'Simplify')
         inst_cust_obj.final_result = simplified_text
         inst_cust_obj.save()
+
     elif shortened_text:
         inst_cust_obj = express_obj.express_src_text.filter(customize__customize='Shorten').last()
         if not inst_cust_obj:
             inst_cust_obj = inst_create(express_obj,'Shorten')
         inst_cust_obj.final_result = shortened_text
         inst_cust_obj.save()
+
     elif ((source_text) or (source_text and mt_engine_id)):
         source_text = source_text.replace('\r','')
         if mt_engine_id:
@@ -3018,18 +3040,27 @@ def task_segments_save(request):
         else: tasks = Task.objects.filter(id=task_id)
         for i in tasks:
             express_obj = ExpressProjectDetail.objects.filter(task_id=i.id).first()
+            exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id)
             previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
             output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
             initial_credit = user.credit_balance.get("total_left")
-            consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
-            print("Cons-------->",consumable_credits)
+            if exp_src_obj:
+                consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
+            else:
+                consumable_credits = get_consumable_credits_for_text(source_text,None,i.job.source_language_code)
+            print("Cons12212-------->",consumable_credits)
             if initial_credit < consumable_credits:
                 return  Response({'msg':'Insufficient Credits'},status=400) 
             else:
                 express_obj = i.express_task_detail.first()
                 express_obj.source_text = source_text
                 express_obj.save()
-                seg_edit(express_obj,i.id,source_text)
+                if i.id == json.loads(task_id) and mt_engine_id:
+                    seg_edit(express_obj,i.id,source_text,True)
+                else:
+                    seg_edit(express_obj,i.id,source_text)
+
+
     elif mt_engine_id:
         initial_credit = user.credit_balance.get("total_left")
         consumable_credits = get_consumable_credits_for_text(express_obj.source_text,target_lang=None,source_lang=obj.job.source_language_code)
