@@ -1902,9 +1902,15 @@ def file_write(pr):
         if express_obj.target_text:
             #print("File Path--------------->",target_filepath)
             with open(target_filepath,'w') as f:
+                f.write("Source:" + "\n")
+                f.write(express_obj.source_text) 
+                f.write('\n')
+                f.write("---------" + "\n")
+                f.write("Target:" + "\n\n")
                 f.write("Standard:" + "\n")
-                f.write(express_obj.target_text)
-                f.write("\n")
+                target = express_obj.target_text if express_obj.target_text else ''
+                f.write(target)
+                f.write('\n')
                 f.write("---------" + "\n")
                 shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
                 if shorten_obj.exists():
@@ -3082,8 +3088,14 @@ def express_task_download(request,task_id):###############permission need to be 
     file_name,ext = os.path.splitext(obj.file.filename)
     target_filename = file_name + "_out" +  "(" + obj.job.source_language_code + "-" + obj.job.target_language_code + ")" + ext
     with open(target_filename,'w') as f:
+        f.write("Source:" + "\n")
+        f.write(express_obj.source_text) 
+        f.write('\n')
+        f.write("---------" + "\n")
+        f.write("Target:" + "\n\n")
         f.write("Standard:" + "\n")
-        f.write(express_obj.target_text)
+        target = express_obj.target_text if express_obj.target_text else ''
+        f.write(target)
         f.write('\n')
         f.write("---------" + "\n")
         shorten_obj =express_obj.express_src_text.filter(customize__customize='Shorten')
