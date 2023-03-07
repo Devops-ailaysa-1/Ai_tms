@@ -72,7 +72,7 @@ from .models import AiRoleandStep, Project, Job, File, ProjectContentType, Proje
     ExpressProjectDetail
 from .models import Task
 from .models import TbxFile, Instructionfiles, MyDocuments, ExpressProjectSrcSegment, ExpressProjectSrcMTRaw,\
-                    ExpressProjectAIMT, WriterProject,DocumentImages
+                    ExpressProjectAIMT, WriterProject,DocumentImages,ExpressTaskHistory
 from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerializer, \
                           ProjectSerializer, JobSerializer, FileSerializer, \
                           ProjectSetupSerializer, ProjectSubjectSerializer, TempProjectSetupSerializer, \
@@ -85,7 +85,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer,DocumentImagesSerializer)
+                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
@@ -3020,7 +3020,6 @@ def task_segments_save(request):
             express_obj = ExpressProjectDetail.objects.filter(task_id=i.id).first()
             previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
             output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
-            print("Outlist--------->",output_list)
             initial_credit = user.credit_balance.get("total_left")
             consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
             print("Cons-------->",consumable_credits)
@@ -3413,6 +3412,7 @@ def instant_translation_custom(request):
         
 
 
+
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 # def get_vendor_rates(request):
@@ -3620,3 +3620,39 @@ class DocumentImageView(viewsets.ViewSet):
             else:
                 print("No match")
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+
+class ExpressTaskHistoryView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    # def get_queryset(self):
+    #     queryset=ExpressTaskHistory.objects.filter(id=self.id).all()
+    #     return queryset
+
+    def list(self,request):
+        task_id = request.GET.get('task')
+        queryset = ExpressTaskHistory.objects.filter(task_id=task_id).all().order_by('-id')
+        print("QR----------->",queryset)
+        serializer = ExpressTaskHistorySerializer(queryset,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        source = request.POST.get('source_text')
+        target = request.POST.get('target_text')
+        task = request.POST.get('task')
+        serializer = ExpressTaskHistorySerializer(data={'source_text':source.replace('\r',''),'target_text':target.replace('\r',''),'task':task})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        pass
+
+    def delete(self,request,pk):
+        obj = ExpressTaskHistory.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
