@@ -5,9 +5,9 @@ from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
-from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
-                                     AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                                     ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer)
+from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,BlogKeywordGenerateSerializer,
+                          AiPromptGetSerializer,AiPromptCustomizeSerializer,
+                        ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,BlogCreationSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -340,7 +340,19 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
+
+
+# class BlogKeywordGenerateViewset(viewsets.ViewSet):
+
+#     def 
+
+ 
     
+    
+    
+    
+
+
 # @api_view(['POST',])
 # @permission_classes([IsAuthenticated])
 # def instant_translation_custom(request):
