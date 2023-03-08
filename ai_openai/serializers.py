@@ -332,8 +332,8 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
 import re 
 class BlogCreationSerializer(serializers.ModelSerializer):
     blog_key_create = BlogKeywordGenerateSerializer(many=True,required=False)
-    # sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
-    # categories = serializers.PrimaryKeyRelatedField(queryset=PromptCategories.objects.all(),many=False,required=False)
+    sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),many=False,required=False)
+    categories = serializers.PrimaryKeyRelatedField(queryset=PromptCategories.objects.all(),many=False,required=False)
     class Meta:
         model =BlogCreation
         fields = '__all__'
@@ -353,7 +353,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token, instance.response_copies_keyword)
             token_usage = openai_token_usage(openai_response)
             keywords = openai_response['choices'][0]['text']
-            keywords = [re.sub(r'\d+.','',i) for i in keywords.split('\n') if i.strip()]
+            # keywords = [re.sub(r'\d+.','',i) for i in keywords.split('\n') if i.strip()]
             for blog_keyword in keywords.split('\n'):
                 if blog_keyword.strip():
                     blog_keyword = blog_keyword.strip()

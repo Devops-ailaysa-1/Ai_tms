@@ -302,7 +302,7 @@ class AiImageHistoryViewset(generics.ListAPIView):
 
 class BlogCreationViewset(viewsets.ViewSet):
     def create(self,request):
-        serializer = BlogCreationSerializer(data={**request.POST.dict(),'user':request.user} ) 
+        serializer = BlogCreationSerializer(data={**request.POST.dict(),'user':request.user.id} ) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
