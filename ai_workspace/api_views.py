@@ -3018,8 +3018,8 @@ def task_segments_save(request):
         express_obj.save()
         ExpressProjectSrcSegment.objects.filter(task_id = task_id).delete()
 
-    #previous_stored_source = express_obj.source_text
-    elif target_text or target_text!=None:
+    
+    elif target_text:# or target_text!=None:
         express_obj.target_text = target_text.replace('\r','')
         express_obj.save()
 
