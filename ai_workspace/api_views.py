@@ -2809,7 +2809,7 @@ def exp_proj_save(task_id,mt_change):
             tar_1 = i.express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first().mt_raw #ExpressProjectSrcMTRaw.objects.get(src_seg = i).mt_raw
             tar = tar +' '+tar_1 if tar_1 else ''
         tar = tar + '\n\n'
-    express_obj.mt_raw = tar.strip('\n')
+    express_obj.mt_raw = tar.strip().strip('\n')
     express_obj.target_text = tar.strip('\n')
     express_obj.save()
     if mt_change == None:
@@ -3000,7 +3000,7 @@ def task_segments_save(request):
     if not task_id:
         return Response({'msg':'task_id required'},status=400)
     from_history = request.POST.get('from_history',None)
-    target_text = request.POST.get('target_text')
+    target_text = request.POST.get('target_text',None)
     simplified_text = request.POST.get('simplified_text')
     shortened_text = request.POST.get('shortened_text')
     mt_engine_id = request.POST.get('mt_engine',None)
@@ -3019,7 +3019,7 @@ def task_segments_save(request):
         ExpressProjectSrcSegment.objects.filter(task_id = task_id).delete()
 
     #previous_stored_source = express_obj.source_text
-    elif target_text:
+    elif target_text or target_text!=None:
         express_obj.target_text = target_text.replace('\r','')
         express_obj.save()
 
@@ -3049,6 +3049,7 @@ def task_segments_save(request):
             exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id)
             previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
             output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
+            print("OL----------->",output_list)
             initial_credit = user.credit_balance.get("total_left")
             if exp_src_obj:
                 consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
@@ -3686,7 +3687,8 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
         source = request.POST.get('source_text')
         target = request.POST.get('target_text')
         task = request.POST.get('task')
-        serializer = ExpressTaskHistorySerializer(data={'source_text':source.replace('\r',''),'target_text':target.replace('\r',''),'task':task})
+        action = request.POST.get('action')
+        serializer = ExpressTaskHistorySerializer(data={'source_text':source.replace('\r',''),'target_text':target.replace('\r',''),'action':action,'task':task})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
