@@ -5,9 +5,9 @@ from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
-from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,BlogKeywordGenerateSerializer,
+from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
                           AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                        ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,BlogCreationSerializer)
+                        ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,BlogCreationSerializer )
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -302,7 +302,7 @@ class AiImageHistoryViewset(generics.ListAPIView):
 
 class BlogCreationViewset(viewsets.ViewSet):
     def create(self,request):
-        serializer = BlogCreationSerializer(data= request.POST.dict(),context={'request':request}) 
+        serializer = BlogCreationSerializer(data={**request.POST.dict(),'user':request.user} ) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -317,28 +317,28 @@ class BlogCreationViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
-class BlogKeywordGenerateViewset(viewsets.ViewSet):
+# class BlogKeywordGenerateViewset(viewsets.ViewSet):
  
-    def get(self, request):
-        query_set = BlogKeywordGenerate.objects.all()
-        serializer = BlogKeywordGenerateSerializer(query_set ,many =True)
-        return Response(serializer.data)
+#     def get(self, request):
+#         query_set = BlogKeywordGenerate.objects.all()
+#         serializer = BlogKeywordGenerateSerializer(query_set ,many =True)
+#         return Response(serializer.data)
     
-    def create(self,request):
-        serializer = BlogKeywordGenerateSerializer(data={**request.POST.dict(),'user':self.request.user.id }) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+#     def create(self,request):
+#         serializer = BlogKeywordGenerateSerializer(data={**request.POST.dict(),'user':self.request.user.id }) 
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
 
-    def update(self,request,pk):
-        query_set = BlogKeywordGenerate.objects.get(id = pk)
-        serializer = BlogKeywordGenerateSerializer(query_set,data=request.data ,partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors)
+#     def update(self,request,pk):
+#         query_set = BlogKeywordGenerate.objects.get(id = pk)
+#         serializer = BlogKeywordGenerateSerializer(query_set,data=request.data ,partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         else:
+#             return Response(serializer.errors)
 
 
 
