@@ -1153,6 +1153,7 @@ class ExpressTaskHistory(models.Model):
     task = models.ForeignKey(Task,on_delete=models.CASCADE,related_name="express_task_history")
     source_text = models.TextField(null=True,blank=True)
     target_text = models.TextField(null=True,blank=True)
+    action = models.TextField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
 class MTonlytaskCeleryStatus(models.Model):
