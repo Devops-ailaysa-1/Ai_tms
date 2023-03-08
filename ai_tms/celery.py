@@ -62,6 +62,11 @@ app.conf.beat_schedule = {
     'schedule': crontab(hour=23, minute=40),
     'args': (),
     },
+    'run-daily': {
+        'task': 'ai_auth.tasks.delete_express_task_history',
+        'schedule': crontab(hour=6, minute=30),#crontab(hour=1, minute=15),
+        'args': (),
+    },
    # 'send-mail-30-minutes': {
    #  'task': 'ai_auth.tasks.email_send_subscription_extension',
    #  'schedule': crontab(minute='*/30'),

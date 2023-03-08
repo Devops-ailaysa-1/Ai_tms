@@ -30,6 +30,7 @@ router.register(r'steps',api_views.StepsView,basename='steps')
 #router.register(r'tasks',api_views.TaskView,basename='tasks')
 router.register(r'workflow',api_views.CustomWorkflowCreateView,basename='workflow')
 router.register(r'mydocuments',api_views.MyDocumentsView,basename='mydocuments')
+router.register(r'express_task_history',api_views.ExpressTaskHistoryView,basename='exp-task-history')
 # router.register(r'project-list', api_views.IncompleteProjectListView,basename="project-list")
 urlpatterns = router.urls
 
