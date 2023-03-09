@@ -2844,7 +2844,7 @@ def seg_create(task_id,content,from_mt_edit=None):
         #sents = nltk.sent_tokenize(j)
         print("Sents------->",len(sents))
         for l,k in enumerate(sents):
-            ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=1)
+            ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k.strip(),seq_id=l,version=1)
 
     for i in ExpressProjectSrcSegment.objects.filter(task_id=task_id,version=1):
         print(i.src_segment)
@@ -2867,7 +2867,9 @@ def cust_split(text):
     tt = []
     for sent in re.findall(u'[^!?。\.\!\?]+[!?。\.\!\?]?', text, flags=re.U):
         tt.append(sent)
-    return tt
+    final = [i for i in tt if i.strip()]
+    print("Final inside CustSplit-------->",final)
+    return final
 
 
 
@@ -2900,7 +2902,8 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
             sents = nltk.sent_tokenize(j)
         print("Sents------>",len(sents))
         for l,k in enumerate(sents):
-            ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=vers+1)
+            print("K---------->",k)
+            ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k.strip(),seq_id=l,version=vers+1)
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
     for i in ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest):
         tt = ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest-1).filter(src_segment__exact = i.src_segment)
