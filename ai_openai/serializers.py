@@ -356,6 +356,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             # keywords = [re.sub(r'\d+.','',i) for i in keywords.split('\n') if i.strip()]
             for blog_keyword in keywords.split('\n'):
                 if blog_keyword.strip():
+                    blog_keyword = re.sub(r'\d+.','',blog_keyword)
                     blog_keyword = blog_keyword.strip()
                     blog_keyword_mt = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id) if instance.user_title else None
                     BlogKeywordGenerate.objects.create(blog_creation = instance,blog_keyword =blog_keyword, selected_field= False , 
