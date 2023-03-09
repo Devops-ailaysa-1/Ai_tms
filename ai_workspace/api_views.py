@@ -3013,6 +3013,7 @@ def inst_create(obj,option):
 #     return cc
 
 def sent_tokenize(text,lang_code):
+    print("Text Inside Tokenise--------->",text)
     lang_list = ['hi','bn','or','ne','pa']
     lang_list_2 = ['zh-Hans','zh-Hant','ja']
     NEWLINES_RE = re.compile(r"\n{1,}")
@@ -3028,6 +3029,7 @@ def sent_tokenize(text,lang_code):
             sents = nltk.sent_tokenize(j)
         print("Sents------>",len(sents))
     out.extend(sents)
+    print("Out--------->",out)
     return out
 
 
@@ -3078,6 +3080,7 @@ def task_segments_save(request):
 
     elif ((source_text) or (source_text and mt_engine_id)):
         source_text = source_text.replace('\r','')
+        print("Content--------------->",source_text)
         if mt_engine_id:
             express_obj.mt_engine_id = mt_engine_id
             express_obj.save()
