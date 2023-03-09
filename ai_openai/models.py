@@ -101,17 +101,18 @@ class BlogKeywordGenerate(models.Model):
     blog_keyword = models.CharField(max_length=200,null=True,blank=True)
     blog_keyword_mt = models.CharField(max_length=200,null=True,blank=True)
     token_usage =  models.ForeignKey(to= TokenUsage,on_delete=models.CASCADE,related_name='blog_creation_used_tokens',null=True, blank=True)
-    selected_field = models.BooleanField()
+    selected_field = models.BooleanField(null=True,blank=True)
  
 
 class Blogtitle(models.Model):
-    blog_keyword_gen = models.ForeignKey(BlogCreation,on_delete=models.CASCADE,related_name='blog_title_create')
+    blog_creation_gen = models.ForeignKey(BlogCreation,on_delete=models.CASCADE,related_name='blog_title_create')
+    sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='blog_title_sub_categories')
     blog_title = models.TextField(null=True,blank=True) 
     blog_title_mt =  models.TextField(null=True,blank=True)  
     token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='blogtitle_used_tokens',null=True, blank=True)
-    selected_field = models.BooleanField()
+    selected_field = models.BooleanField(null=True,blank=True)
     response_copies = models.IntegerField(null=True, blank=True,default=3)
- 
+    
     
 class BlogOutline(models.Model):
     blog_title_gen = models.ForeignKey(Blogtitle,on_delete=models.CASCADE,related_name='blogoutline_title')
@@ -119,7 +120,7 @@ class BlogOutline(models.Model):
     blog_outline_mt =  models.TextField(null=True,blank=True)
     token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogoutline_used_tokens',null=True, blank=True)
     selected_field = models.BooleanField()
-    response_copies = models.IntegerField(null=True,blank=True,default=3)
+    response_copies = models.IntegerField(null=True,blank=True,default=1)
  
 class BlogArticle(models.Model):
     blog_outline_gen = models.ForeignKey(BlogOutline, on_delete=models.CASCADE, related_name = 'blogarticle_outline')
