@@ -2992,6 +2992,21 @@ def inst_create(obj,option):
     created_obj = ExpressProjectAIMT.objects.create(express_id=obj.id,source=obj.source_text,customize_id=customize.id,mt_engine_id=obj.mt_engine_id)
     return created_obj
 
+def get_credits(lang_code,text1,text2):
+    lang_lists = ['zh-Hans','zh-Hant','lo','km','my','th','ja']#lang_lists_without_spaces
+    if lang_code not in lang_lists:
+        output_list = [li for li in difflib.ndiff(text1.split(), text2.strip().split()) if li[0]=='+' if li[-1].strip()]
+        print("Ol--------->",output_list)
+        cc = len(output_list)
+    else:
+        output_list_1 = [li for li in difflib.ndiff(text1.replace('\n',''), text2.strip().replace('\n','')) if li[0]=='+' if li[-1].strip()]
+        output_list = [i.strip("+") for i in output_list_1 if i.strip("+").strip()]
+        print('oll------------->',output_list)
+        src = ''.join(output_list)
+        cc = get_consumable_credits_for_text(src,None,lang_code)
+    return cc
+
+
 import difflib
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -3048,11 +3063,11 @@ def task_segments_save(request):
             express_obj = ExpressProjectDetail.objects.filter(task_id=i.id).first()
             exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id)
             previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
-            output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
-            print("OL----------->",output_list)
+            #output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
+            #print("OL----------->",output_list)
             initial_credit = user.credit_balance.get("total_left")
             if exp_src_obj:
-                consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
+                consumable_credits = get_credits(obj.job.source_language_code,previous_stored_source,source_text.strip())#get_total_consumable_credits(obj.job.source_language_code,output_list)
             else:
                 consumable_credits = get_consumable_credits_for_text(source_text,None,i.job.source_language_code)
             print("Cons12212-------->",consumable_credits)
@@ -3416,8 +3431,9 @@ def instant_translation_custom(request):
         text2 = queryset.source.strip()
         print("Text1-------->",text1)
         print("Text2---------->",text2)
-        output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
-        output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
+        output_list = [li for li in difflib.ndiff(text1.replace('\n',''), text2.replace('\n','')) if li[0]=='+' or li[0]=='-' if li[-1].strip()]
+        #output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
+        #output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
         print("OL------>",output_list)
         print("Mt------>",exp_obj.mt_engine_id) 
         print("Custom------>",queryset.mt_engine_id)
