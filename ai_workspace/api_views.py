@@ -2844,7 +2844,7 @@ def seg_create(task_id,content,from_mt_edit=None):
         #sents = nltk.sent_tokenize(j)
         print("Sents------->",len(sents))
         for l,k in enumerate(sents):
-            ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=1)
+            ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k.strip(),seq_id=l,version=1)
 
     for i in ExpressProjectSrcSegment.objects.filter(task_id=task_id,version=1):
         print(i.src_segment)
@@ -2867,8 +2867,9 @@ def cust_split(text):
     tt = []
     for sent in re.findall(u'[^!?。\.\!\?]+[!?。\.\!\?]?', text, flags=re.U):
         tt.append(sent)
-    return tt
-
+    final = [i for i in tt if i.strip()]
+    print("Final inside CustSplit-------->",final)
+    return final
 
 
 def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
@@ -2900,15 +2901,20 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
             sents = nltk.sent_tokenize(j)
         print("Sents------>",len(sents))
         for l,k in enumerate(sents):
-            ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k,seq_id=l,version=vers+1)
+            ExpressProjectSrcSegment.objects.create(task_id=task_id,src_text_unit=i,src_segment=k.strip(),seq_id=l,version=vers+1)
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
     for i in ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest):
+        print(i.src_segment)
         tt = ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest-1).filter(src_segment__exact = i.src_segment)
         if tt:
             mt_obj = tt.first().express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first()
             if mt_obj: 
-                mt_obj.src_seg = i
-                mt_obj.save()
+                ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = mt_obj.mt_raw,mt_engine_id=express_obj.mt_engine_id)
+                # mt_obj.src_seg = i
+                # mt_obj.save()
+                # ex_obj = ExpressProjectSrcSegment.objects.get(id=tt.first().id)
+                # ex_obj.src_segment =''
+                # ex_obj.save()
             else:
                 print("MT only Change")
                 consumed = get_consumable_credits_for_text(i.src_segment,None,obj.job.source_language_code)
@@ -2992,6 +2998,39 @@ def inst_create(obj,option):
     created_obj = ExpressProjectAIMT.objects.create(express_id=obj.id,source=obj.source_text,customize_id=customize.id,mt_engine_id=obj.mt_engine_id)
     return created_obj
 
+# def get_credits(lang_code,text1,text2):
+#     lang_lists = ['zh-Hans','zh-Hant','lo','km','my','th','ja']#lang_lists_without_spaces
+#     if lang_code not in lang_lists:
+#         output_list = [li for li in difflib.ndiff(text1.split(), text2.strip().split()) if li[0]=='+' if li[-1].strip()]
+#         print("Ol--------->",output_list)
+#         cc = len(output_list)
+#     else:
+#         output_list_1 = [li for li in difflib.ndiff(text1.replace('\n',''), text2.strip().replace('\n','')) if li[0]=='+' if li[-1].strip()]
+#         output_list = [i.strip("+") for i in output_list_1 if i.strip("+").strip()]
+#         print('oll------------->',output_list)
+#         src = ''.join(output_list)
+#         cc = get_consumable_credits_for_text(src,None,lang_code)
+#     return cc
+
+def sent_tokenize(text,lang_code):
+    lang_list = ['hi','bn','or','ne','pa']
+    lang_list_2 = ['zh-Hans','zh-Hant','ja']
+    NEWLINES_RE = re.compile(r"\n{1,}")
+    no_newlines = text.strip("\n")  # remove leading and trailing "\n"
+    split_text = NEWLINES_RE.split(no_newlines)
+    out = []
+    for i,j  in enumerate(split_text):
+        if lang_code in lang_list_2:
+            sents = cust_split(j)
+        elif lang_code in lang_list:
+            sents = sentence_split(j, lang_code, delim_pat='auto')
+        else:
+            sents = nltk.sent_tokenize(j)
+        print("Sents------>",len(sents))
+    out.extend(sents)
+    return out
+
+
 import difflib
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -3048,13 +3087,18 @@ def task_segments_save(request):
             express_obj = ExpressProjectDetail.objects.filter(task_id=i.id).first()
             exp_src_obj = ExpressProjectSrcSegment.objects.filter(task_id=task_id)
             previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
-            output_list = [li for li in difflib.ndiff(previous_stored_source.splitlines(keepends=False), source_text.strip().splitlines(keepends=False)) if li[0] == '+']
+            text1 = sent_tokenize(previous_stored_source,i.job.source_language_code)
+            text2 = sent_tokenize(source_text.strip(),i.job.source_language_code)
+            print("previous---------->",text1)
+            print("current---------->",text2)
+            output_list = [li for li in difflib.ndiff(text1,text2) if li[0] == '+']
             print("OL----------->",output_list)
             initial_credit = user.credit_balance.get("total_left")
             if exp_src_obj:
-                consumable_credits = get_total_consumable_credits(obj.job.source_language_code,output_list)
+                consumable_credits = get_total_consumable_credits(i.job.source_language_code,output_list)
             else:
                 consumable_credits = get_consumable_credits_for_text(source_text,None,i.job.source_language_code)
+            print("Inial---------->",initial_credit)
             print("Cons12212-------->",consumable_credits)
             if initial_credit < consumable_credits:
                 return  Response({'msg':'Insufficient Credits'},status=400) 
@@ -3416,8 +3460,9 @@ def instant_translation_custom(request):
         text2 = queryset.source.strip()
         print("Text1-------->",text1)
         print("Text2---------->",text2)
-        output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
-        output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
+        output_list = [li for li in difflib.ndiff(text1.replace('\n',''), text2.replace('\n','')) if li[0]=='+' or li[0]=='-' if li[-1].strip()]
+        #output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
+        #output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
         print("OL------>",output_list)
         print("Mt------>",exp_obj.mt_engine_id) 
         print("Custom------>",queryset.mt_engine_id)
