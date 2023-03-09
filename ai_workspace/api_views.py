@@ -3028,7 +3028,7 @@ def sent_tokenize(text,lang_code):
         else:
             sents = nltk.sent_tokenize(j)
         print("Sents------>",len(sents))
-    out.extend(sents)
+        out.extend(sents)
     print("Out--------->",out)
     return out
 
