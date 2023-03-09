@@ -3089,6 +3089,8 @@ def task_segments_save(request):
             previous_stored_source = express_obj.source_text.strip() if express_obj.source_text else ''
             text1 = sent_tokenize(previous_stored_source,i.job.source_language_code)
             text2 = sent_tokenize(source_text.strip(),i.job.source_language_code)
+            print("previous---------->",text1)
+            print("current---------->",text2)
             output_list = [li for li in difflib.ndiff(text1,text2) if li[0] == '+']
             print("OL----------->",output_list)
             initial_credit = user.credit_balance.get("total_left")
