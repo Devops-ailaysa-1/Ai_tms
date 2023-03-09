@@ -2909,11 +2909,12 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
         if tt:
             mt_obj = tt.first().express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first()
             if mt_obj: 
-                mt_obj.src_seg = i
-                mt_obj.save()
-                ex_obj = ExpressProjectSrcSegment.objects.get(id=tt.first().id)
-                ex_obj.src_segment =''
-                ex_obj.save()
+                ExpressProjectSrcMTRaw.objects.create(src_seg = i,mt_raw = mt_obj.mt_raw,mt_engine_id=express_obj.mt_engine_id)
+                # mt_obj.src_seg = i
+                # mt_obj.save()
+                # ex_obj = ExpressProjectSrcSegment.objects.get(id=tt.first().id)
+                # ex_obj.src_segment =''
+                # ex_obj.save()
             else:
                 print("MT only Change")
                 consumed = get_consumable_credits_for_text(i.src_segment,None,obj.job.source_language_code)
