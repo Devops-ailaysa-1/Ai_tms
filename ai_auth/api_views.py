@@ -2303,7 +2303,8 @@ def get_lang_code(lang_code):
 
 from googletrans import Translator
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def lang_detect(request):
     from ai_staff.models import Languages
     text = request.GET.get('text')
