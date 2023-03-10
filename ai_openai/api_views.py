@@ -104,6 +104,29 @@ class AiPromptResultViewset(generics.ListAPIView):
 
 
 
+def instant_customize_response(customize ,user_text,used_tokens):
+    print("Initial----------->",used_tokens)
+    import re
+    NEWLINES_RE = re.compile(r"\n{1,}")
+    no_newlines = user_text.strip("\n")  # remove leading and trailing "\n"
+    split_text = NEWLINES_RE.split(no_newlines)
+    final = ''
+    cust_tokens = 0
+    for text in split_text:
+        prompt = customize.prompt+" "+text+"."
+        response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
+        final = final + response['choices'][0]['text']
+        tokens = response['usage']['total_tokens']
+        print("Tokens from openai------------------>", tokens)
+        total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
+        print("Calculated_token--------------->",total_tokens)
+        cust_tokens = cust_tokens + total_tokens
+    print("Cust tokens---------->",cust_tokens)
+    cust_tokens += used_tokens
+    print("Final----------->",cust_tokens)
+    return final,cust_tokens
+
+
 def customize_response(customize ,user_text,tone,used_tokens):
     #print("Initial------->",used_tokens)
     user_text = user_text.strip()
