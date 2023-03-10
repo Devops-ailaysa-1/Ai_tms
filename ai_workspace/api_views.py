@@ -3381,7 +3381,7 @@ def default_proj_detail(request):
 
 def express_custom(request,exp_obj,option):
     from ai_openai.serializers import AiPromptSerializer
-    from ai_openai.api_views import customize_response
+    from ai_openai.api_views import instant_customize_response
     user = exp_obj.task.job.project.ai_user
     instant_text = exp_obj.source_text
     tone=1
@@ -3405,9 +3405,9 @@ def express_custom(request,exp_obj,option):
                 total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
             else:
                 user_insta_text_mt_en = exp_obj.target_text
-            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en.replace('\n','').replace('\r',''),tone,total_tokens)
-            result_txt = response['choices'][0]['text']
-            print("Res from openai------------->",result_txt)
+            result_txt,total_tokens = instant_customize_response(customize,user_insta_text_mt_en.replace('\r',''),total_tokens)
+            #result_txt = response['choices'][0]['text']
+            #print("Res from openai------------->",result_txt)
            
             if target_lang_code != 'en':
                 txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
@@ -3422,9 +3422,10 @@ def express_custom(request,exp_obj,option):
         consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang=target_lang_code)
         if initial_credit < consumable_credits_user_text:
             return ({'msg':'Insufficient Credits'})
-        response,total_tokens,prompt = customize_response(customize,instant_text.replace('\n','').replace('\r',''),tone,total_tokens)
-        result_txt = response['choices'][0]['text']
+        result_txt,total_tokens = instant_customize_response(customize,instant_text.replace('\r',''),total_tokens)
+        #result_txt = response['choices'][0]['text']
         print("Tokens---------->",total_tokens)
+        #print("Res from openai------------->",result_txt)
         if target_lang_code != 'en':
             txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
                         source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id,from_open_ai=True)
