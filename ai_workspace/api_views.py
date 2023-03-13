@@ -3733,7 +3733,7 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
 
     def list(self,request):
         task_id = request.GET.get('task')
-        queryset = ExpressTaskHistory.objects.filter(task_id=task_id).all().order_by('-id')
+        queryset = ExpressTaskHistory.objects.filter(task_id=task_id).exclude(target_text=None).all().order_by('-id')
         print("QR----------->",queryset)
         serializer = ExpressTaskHistorySerializer(queryset,many=True)
         return Response(serializer.data)
