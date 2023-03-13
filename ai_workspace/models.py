@@ -562,12 +562,14 @@ class Project(models.Model):
     @property
     def proj_obj(self):
         return self
-    
+
+                
     @property
     def get_tasks_pk(self):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
     def project_analysis(self,tasks):
+
         if self.is_proj_analysed == True:
             task_words = []
             if self.is_all_doc_opened:
@@ -1141,6 +1143,7 @@ class ExpressProjectDetail(models.Model):
     mt_raw =models.TextField(null=True,blank=True)
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines,null=True,blank=True,on_delete=models.CASCADE,related_name="express_proj_mt_detail")
 
+
     @property
     def owner_pk(self):
         return self.task.owner_pk
@@ -1148,6 +1151,13 @@ class ExpressProjectDetail(models.Model):
     @property
     def task_obj(self):
         return self.task
+
+class ExpressTaskHistory(models.Model):
+    task = models.ForeignKey(Task,on_delete=models.CASCADE,related_name="express_task_history")
+    source_text = models.TextField(null=True,blank=True)
+    target_text = models.TextField(null=True,blank=True)
+    action = models.TextField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 
 class MTonlytaskCeleryStatus(models.Model):
     IN_PROGRESS = 1

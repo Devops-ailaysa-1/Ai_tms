@@ -33,6 +33,7 @@ from celery_progress.backend import ProgressRecorder
 from time import sleep
 from django.core.management import call_command
 import calendar
+from ai_workspace.models import ExpressTaskHistory
 
 
 extend_mail_sent= 0
@@ -131,6 +132,15 @@ def delete_inactive_user_account():
         # os.system("rm -r " +dir)
         # i.delete()
     logger.info("Delete Inactive User")
+
+@task
+def delete_express_task_history(): #30days
+    queryset = ExpressTaskHistory.objects.annotate(
+            diff=ExpressionWrapper(timezone.now() - F('created_at'), output_field=DurationField())
+            ).filter(diff__gt=timedelta(30))
+    queryset.delete()
+    logger.info("Task History Deleted")
+
 
 # @task
 # def find_renewals():
