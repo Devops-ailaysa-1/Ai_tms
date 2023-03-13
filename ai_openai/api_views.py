@@ -114,6 +114,7 @@ def instant_customize_response(customize ,user_text,used_tokens):
     cust_tokens = 0
     for text in split_text:
         prompt = customize.prompt+" "+text+"."
+        print("Prompt------------------->",prompt)
         response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         final = final + response['choices'][0]['text']
         tokens = response['usage']['total_tokens']

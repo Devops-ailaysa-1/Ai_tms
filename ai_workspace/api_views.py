@@ -2812,6 +2812,12 @@ def exp_proj_save(task_id,mt_change):
     express_obj.mt_raw = tar.strip().strip('\n')
     express_obj.target_text = tar.strip('\n')
     express_obj.save()
+    try:wc = get_consumable_credits_for_text(express_obj.source_text,None,obj.job.source_language_code)
+    except:wc = 0
+    td = TaskDetails.objects.update_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc,"task_char_count":len(express_obj.source_text)})
+    print("Td--------------->",td)
+    #express_obj.total_word_count = get_consumable_credits_for_text(express_obj.source_text,None,express_obj.task.job.source_language_code)
+    #express_obj.total_char_count = len(express_obj.source_text)
     if mt_change == None:
         ExpressProjectSrcSegment.objects.filter(task_id = task_id).exclude(version = vers).delete()
     return express_obj
