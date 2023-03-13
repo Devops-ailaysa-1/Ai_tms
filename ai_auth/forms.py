@@ -319,7 +319,7 @@ def unread_notification_mail(email_list):
         email = i.get('email')
         msg_html = render_to_string("notification_email.html",context)
         send_mail(
-            'Notification from ailaysa',None,
+            'Notification from Ailaysa',None,
             settings.DEFAULT_FROM_EMAIL,
             [email],
             html_message=msg_html,

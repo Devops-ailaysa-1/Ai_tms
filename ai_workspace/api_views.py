@@ -3473,7 +3473,7 @@ def instant_translation_custom(request):
         output_list = [li for li in difflib.ndiff(text1.replace('\n',''), text2.replace('\n','')) if li[0]=='+' or li[0]=='-' if li[-1].strip()]
         #output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
         #output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
-        print("OL------>",output_list)
+        #print("OL------>",output_list)
         print("Mt------>",exp_obj.mt_engine_id) 
         print("Custom------>",queryset.mt_engine_id)
         if output_list == []:
