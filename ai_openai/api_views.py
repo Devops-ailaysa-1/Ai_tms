@@ -106,10 +106,14 @@ class AiPromptResultViewset(generics.ListAPIView):
 
 def instant_customize_response(customize ,user_text,used_tokens):
     print("Initial----------->",used_tokens)
-    import re
-    NEWLINES_RE = re.compile(r"\n{1,}")
-    no_newlines = user_text.strip("\n")  # remove leading and trailing "\n"
-    split_text = NEWLINES_RE.split(no_newlines)
+    if customize.customize == 'Simplify':
+        import re
+        NEWLINES_RE = re.compile(r"\n{1,}")
+        no_newlines = user_text.strip("\n")  # remove leading and trailing "\n"
+        split_text = NEWLINES_RE.split(no_newlines)
+    else:
+        split_text = [user_text.replace('\n','')]
+    print("Text inside customize------------------->",split_text)
     final = ''
     cust_tokens = 0
     for text in split_text:
