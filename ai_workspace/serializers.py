@@ -8,7 +8,7 @@ from .models import Project, Job, File, ProjectContentType, Tbxfiles,\
 		ReferenceFiles, TbxFile, TbxTemplateFiles, TaskCreditStatus,TaskAssignInfo,MyDocuments,\
 		TaskAssignHistory,TaskDetails,TaskAssign,Instructionfiles,Workflows, Steps, WorkflowSteps,\
 		ProjectFilesCreateType,ProjectSteps,VoiceProjectDetail,TaskTranscriptDetails,ExpressProjectDetail,\
-		ExpressProjectAIMT,WriterProject,DocumentImages#,TaskAssignRateInfo
+		ExpressProjectAIMT,WriterProject,DocumentImages,ExpressTaskHistory#,TaskAssignRateInfo
 import json,os
 import pickle,itertools
 from ai_workspace import forms as ws_forms
@@ -157,6 +157,14 @@ class VoiceProjectDetailSerializer(serializers.ModelSerializer):
 		fields = ("id","project","source_language", "project_type_sub_category")
 		read_only_fields = ("id","project",)
 
+class ExpressTaskHistorySerializer(serializers.ModelSerializer):
+	class Meta:
+		model = ExpressTaskHistory
+		fields = ("id","task","source_text", "target_text",'action','created_at',)
+		
+
+
+
 class ExpressProjectAIMTSerializer(serializers.ModelSerializer):
 	customize_name = serializers.ReadOnlyField(source='customize.customize')
 	class Meta:
@@ -179,11 +187,15 @@ class ExpressProjectDetailSerializer(serializers.ModelSerializer):
 	job_id = serializers.ReadOnlyField(source='task.job.id')
 	target_lang_id = serializers.ReadOnlyField(source='task.job.target_language.id')
 	source_lang_id = serializers.ReadOnlyField(source='task.job.source_language.id')
+	number_of_tasks = serializers.SerializerMethodField()
 	class Meta:
 		model = ExpressProjectDetail
 		fields = ('id','task','source_text','target_text','mt_engine','mt_raw',
 					"project_id","project_name","target_lang_name","job_id",
-					"target_lang_id","source_lang_id",'express_src_text',)
+					"target_lang_id","source_lang_id",'express_src_text','number_of_tasks',)
+
+	def get_number_of_tasks(self,obj):
+		return len(obj.task.job.project.get_tasks)
 		# extra_kwargs = {
 		# 	"audio_file":{
 		# 		"required": False

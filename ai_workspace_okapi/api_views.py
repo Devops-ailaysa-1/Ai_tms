@@ -425,6 +425,7 @@ class DocumentViewByDocumentId(views.APIView):
         return  document
 
     def get(self, request, document_id):
+        document = self.get_object(document_id)
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
@@ -434,7 +435,6 @@ class DocumentViewByDocumentId(views.APIView):
         # if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
         dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
         dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
-        document = self.get_object(document_id)
         authorize(request, resource=document, actor=request.user, action="read")
         data = DocumentSerializerV2(document).data
         data.update(dict)
