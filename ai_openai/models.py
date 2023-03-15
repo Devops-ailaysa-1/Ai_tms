@@ -112,30 +112,40 @@ class Blogtitle(models.Model):
     token_usage =  models.ForeignKey(to=TokenUsage, on_delete=models.CASCADE,related_name='blogtitle_used_tokens',null=True, blank=True)
     selected_field = models.BooleanField(null=True,blank=True)
     response_copies = models.IntegerField(null=True, blank=True,default=3)
-    
-    
+
 class BlogOutline(models.Model):
     blog_title_gen = models.ForeignKey(Blogtitle,on_delete=models.CASCADE,related_name='blogoutline_title')
+    user_selected_title = models.TextField(null=True,blank=True)
+    user_selected_title_mt = models.TextField(null=True,blank=True)
+    sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='blog_outline_sub_categories')
+    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogoutline_used_tokens',null=True, blank=True)
+    selected_group_num = models.IntegerField(null=True,blank=True)
+    response_copies = models.IntegerField(null=True,blank=True,default=2)
+    # blog_outline_json=models.JSONField(null=True,blank=True)
+    # blog_outline_json_mt=models.JSONField(null=True,blank=True)
+ 
+
+
+class BlogOutlineSession(models.Model):
+    blog_outline_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE,related_name='blog_outline_session')
     blog_outline =  models.TextField(null=True,blank=True)
     blog_outline_mt =  models.TextField(null=True,blank=True)
-    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogoutline_used_tokens',null=True, blank=True)
-    selected_field = models.BooleanField()
-    response_copies = models.IntegerField(null=True,blank=True,default=1)
- 
+    selected_field = models.BooleanField(null=True,blank=True,default=False)
+    group = models.IntegerField(null=True,blank=True)
+
 class BlogArticle(models.Model):
-    blog_outline_gen = models.ForeignKey(BlogOutline, on_delete=models.CASCADE, related_name = 'blogarticle_outline')
+    blog_outline_article_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE, related_name = 'blogarticle_outline')
     blog_article=  models.TextField(null=True, blank=True)
     blog_article_mt =  models.TextField(null=True, blank=True)
-    token_usage =  models.ForeignKey(to= TokenUsage, on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
-    selected_field = models.BooleanField()
+    token_usage =  models.ForeignKey(to= TokenUsage,on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
+    # selected_field = models.BooleanField()
+    sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='blog_article_sub_categories')
     blog_intro = models.TextField(null=True, blank=True)
     blog_intro_mt = models.TextField(null=True, blank=True)
     blog_conclusion = models.TextField(null=True, blank=True)
     blog_conclusion_mt=models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-
 
 
 class TextgeneratedCreditDeduction(models.Model):

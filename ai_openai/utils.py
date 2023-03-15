@@ -105,3 +105,14 @@ def get_img_content_from_openai_url(image_url):
     pil_img.save(img_byte_arr, format='PNG')
     img_byte_arr = img_byte_arr.getvalue()
     return img_byte_arr
+
+
+@backoff.on_exception(backoff.expo, openai.error.RateLimitError)
+def get_prompt_chatgpt_turbo(prompt,n):
+    completion = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "user", "content": prompt}
+    ],n=n
+    )
+    return completion.choices
