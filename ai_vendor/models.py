@@ -37,6 +37,11 @@ class VendorsInfo(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
+    @property
+    def cv_file_url(self):
+        if self.cv_file and hasattr(self.cv_file, 'url'):
+            return self.cv_file.url
+
 
 class VendorOnboardingInfo(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='vendor_onboard_info')
