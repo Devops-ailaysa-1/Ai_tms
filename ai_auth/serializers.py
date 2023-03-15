@@ -1,7 +1,7 @@
 from django.db.models import query
 from ai_auth.forms import SendInviteForm
 from django.core.validators import FileExtensionValidator
-from ai_staff.models import AiUserType, Countries, SubjectFields, Timezones,SupportType
+from ai_staff.models import AiUserType, Countries, SubjectFields, Timezones,SupportType,IndianStates
 from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.validators import UniqueValidator
@@ -341,12 +341,35 @@ class TempPricingPreferenceSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class BillingAddressSerializer(serializers.ModelSerializer):
-   # user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+    # country = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
     class Meta:
         model = BillingAddress
         #fields  = "__all__"
         #read_only_fields = ('id','created_at','updated_at')
         exclude = ['user']
+
+
+    def validate(self, data):
+        print("validated data",data)
+        print("request context ",self.context.get('request').method)
+
+        if self.context.get('request').method == 'POST':
+            if data.get('line1',None) == '' or data.get('line1',None) == None:
+                raise serializers.ValidationError("address line 1 required")
+            
+            if data.get('line2',None) == '' or data.get('line2',None) == None:
+                raise serializers.ValidationError("address line 2 required")
+
+            # if data['city'] == None:
+            #     raise serializers.ValidationError("address city required")
+            
+            if data['country'].id == 101:
+                try:
+                    IndianStates.objects.get(state_name=data['state'])              
+                except:
+                    raise serializers.ValidationError("state not found")
+        return data
+
 
 
     def save(self,*args,**kwargs):

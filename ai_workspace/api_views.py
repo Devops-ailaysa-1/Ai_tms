@@ -2812,6 +2812,12 @@ def exp_proj_save(task_id,mt_change):
     express_obj.mt_raw = tar.strip().strip('\n')
     express_obj.target_text = tar.strip('\n')
     express_obj.save()
+    try:wc = get_consumable_credits_for_text(express_obj.source_text,None,obj.job.source_language_code)
+    except:wc = 0
+    td = TaskDetails.objects.update_or_create(task = obj,project = obj.job.project,defaults = {"task_word_count": wc,"task_char_count":len(express_obj.source_text)})
+    print("Td--------------->",td)
+    #express_obj.total_word_count = get_consumable_credits_for_text(express_obj.source_text,None,express_obj.task.job.source_language_code)
+    #express_obj.total_char_count = len(express_obj.source_text)
     if mt_change == None:
         ExpressProjectSrcSegment.objects.filter(task_id = task_id).exclude(version = vers).delete()
     return express_obj
@@ -3013,6 +3019,7 @@ def inst_create(obj,option):
 #     return cc
 
 def sent_tokenize(text,lang_code):
+    print("Text Inside Tokenise--------->",text)
     lang_list = ['hi','bn','or','ne','pa']
     lang_list_2 = ['zh-Hans','zh-Hant','ja']
     NEWLINES_RE = re.compile(r"\n{1,}")
@@ -3027,7 +3034,8 @@ def sent_tokenize(text,lang_code):
         else:
             sents = nltk.sent_tokenize(j)
         print("Sents------>",len(sents))
-    out.extend(sents)
+        out.extend(sents)
+    print("Out--------->",out)
     return out
 
 
@@ -3078,6 +3086,7 @@ def task_segments_save(request):
 
     elif ((source_text) or (source_text and mt_engine_id)):
         source_text = source_text.replace('\r','')
+        print("Content--------------->",source_text)
         if mt_engine_id:
             express_obj.mt_engine_id = mt_engine_id
             express_obj.save()
@@ -3378,7 +3387,7 @@ def default_proj_detail(request):
 
 def express_custom(request,exp_obj,option):
     from ai_openai.serializers import AiPromptSerializer
-    from ai_openai.api_views import customize_response
+    from ai_openai.api_views import instant_customize_response
     user = exp_obj.task.job.project.ai_user
     instant_text = exp_obj.source_text
     tone=1
@@ -3402,9 +3411,9 @@ def express_custom(request,exp_obj,option):
                 total_tokens += get_consumable_credits_for_text(user_insta_text_mt_en,source_lang=target_lang_code,target_lang='en')
             else:
                 user_insta_text_mt_en = exp_obj.target_text
-            response,total_tokens,prompt = customize_response(customize,user_insta_text_mt_en.replace('\n','').replace('\r',''),tone,total_tokens)
-            result_txt = response['choices'][0]['text']
-            print("Res from openai------------->",result_txt)
+            result_txt,total_tokens = instant_customize_response(customize,user_insta_text_mt_en.replace('\r',''),total_tokens)
+            #result_txt = response['choices'][0]['text']
+            #print("Res from openai------------->",result_txt)
            
             if target_lang_code != 'en':
                 txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
@@ -3419,9 +3428,10 @@ def express_custom(request,exp_obj,option):
         consumable_credits_user_text =  get_consumable_credits_for_text(instant_text,source_lang=source_lang_code,target_lang=target_lang_code)
         if initial_credit < consumable_credits_user_text:
             return ({'msg':'Insufficient Credits'})
-        response,total_tokens,prompt = customize_response(customize,instant_text.replace('\n','').replace('\r',''),tone,total_tokens)
-        result_txt = response['choices'][0]['text']
+        result_txt,total_tokens = instant_customize_response(customize,instant_text.replace('\r',''),total_tokens)
+        #result_txt = response['choices'][0]['text']
         print("Tokens---------->",total_tokens)
+        #print("Res from openai------------->",result_txt)
         if target_lang_code != 'en':
             txt_generated = get_translation(mt_engine_id=exp_obj.mt_engine_id , source_string = result_txt.strip(),
                         source_lang_code='en' , target_lang_code=target_lang_code,user_id=user.id,from_open_ai=True)
@@ -3463,7 +3473,7 @@ def instant_translation_custom(request):
         output_list = [li for li in difflib.ndiff(text1.replace('\n',''), text2.replace('\n','')) if li[0]=='+' or li[0]=='-' if li[-1].strip()]
         #output_list_1 = [li for li in difflib.ndiff(text1.splitlines(keepends=False), text2.splitlines(keepends=False)) if li[0] == '+' or li[0] == '-']
         #output_list = [i.strip("+-") for i in output_list_1 if i.strip("+-").strip()]
-        print("OL------>",output_list)
+        #print("OL------>",output_list)
         print("Mt------>",exp_obj.mt_engine_id) 
         print("Custom------>",queryset.mt_engine_id)
         if output_list == []:
@@ -3723,7 +3733,7 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
 
     def list(self,request):
         task_id = request.GET.get('task')
-        queryset = ExpressTaskHistory.objects.filter(task_id=task_id).all().order_by('-id')
+        queryset = ExpressTaskHistory.objects.filter(task_id=task_id).exclude(target_text=None).all().order_by('-id')
         print("QR----------->",queryset)
         serializer = ExpressTaskHistorySerializer(queryset,many=True)
         return Response(serializer.data)
