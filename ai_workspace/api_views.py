@@ -2593,6 +2593,37 @@ def celery_check(obj):
         status = 'True'
     return status
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_voice_task_status(request):
+    from ai_workspace.models import MTonlytaskCeleryStatus
+    from ai_auth.tasks import transcribe_long_file_cel,google_long_text_file_process_cel
+    project_id = request.GET.get('project')
+    sub_category = request.GET.get('sub_category')
+    pr = Project.objects.get(id=project_id)
+    res= []
+    if pr.project_type_id == 4:
+        tasks = pr.get_source_only_tasks
+        for i in tasks:
+            obj = MTonlytaskCeleryStatus.objects.filter(Q(task=i) and (Q(task_name = 'transcribe_long_file_cel') or Q(task_name = 'google_long_text_file_process_cel'))).last()
+            if obj:
+                if obj.task_name == 'transcribe_long_file_cel':
+                    state = transcribe_long_file_cel.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                elif obj.task_name == 'google_long_text_file_process_cel':
+                    state = google_long_text_file_process_cel.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                if state == 'STARTED':
+                    status = 'False'
+                else:
+                    status = 'True'
+            else:
+                status = 'True'
+            res.append({'task':i.id,'open':status})
+        return Response({'res':res})
+    else:
+        return Response({'msg':'No Detail'})
+
+
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def get_task_status(request):
@@ -2613,7 +2644,7 @@ def get_task_status(request):
         for i in tasks:
             msg,progress = None,None
             document = i.document                    
-            obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
+            obj = MTonlytaskCeleryStatus.objects.filter(Q(task=i) and (Q(task_name = 'mt_only') or Q(task_name = 'pre_translate_update'))).last()
             if document:
                 if not obj or obj.status == 2:
                     status = 'True'
@@ -2626,19 +2657,6 @@ def get_task_status(request):
                     status = celery_check(obj)
                 else:
                     status = 'True' 
-                # file_path = get_json_file_path(i)
-                # doc_data = json.load(open(file_path))
-                # if type(doc_data) == str:
-                #     doc_data = json.loads(doc_data)
-
-                # if doc_data.get('total_word_count') == 0:
-                #     status = 'True'
-                #     msg = "Empty File"
-                # else:
-                #     if obj:
-                #         status = celery_check(obj)
-                #     else:
-                #         status = 'True' 
             if status == 'True':
                 progress = i.get_progress
             res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
