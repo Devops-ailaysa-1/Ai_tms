@@ -82,6 +82,7 @@ class ImageGenerationPromptResponse(models.Model):
     
 class BlogCreation(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='blog_doc')
     user_title = models.CharField(max_length=100,null=True,blank=True)
     user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
     keywords = models.CharField(max_length=200,null=True,blank=True)
@@ -91,6 +92,7 @@ class BlogCreation(models.Model):
     user_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='user_test_lang_src',null=True, blank=True)  
     tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='blog_tone',blank=True,null=True,default=1)
     response_copies_keyword = models.IntegerField(null=True, blank=True,default=10)
+    steps =  models.CharField(max_length=50, null=True, blank=True)
     
     @property
     def user_language_code(self):
@@ -125,7 +127,6 @@ class BlogOutline(models.Model):
     # blog_outline_json_mt=models.JSONField(null=True,blank=True)
  
 
-
 class BlogOutlineSession(models.Model):
     blog_outline_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE,related_name='blog_outline_session')
     blog_outline =  models.TextField(null=True,blank=True)
@@ -146,6 +147,7 @@ class BlogArticle(models.Model):
     blog_conclusion_mt=models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc_blog')
 
 
 class TextgeneratedCreditDeduction(models.Model):

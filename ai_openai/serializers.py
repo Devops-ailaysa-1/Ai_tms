@@ -326,8 +326,6 @@ def openai_token_usage(openai_response ):
     completion_tokens=token_usage['completion_tokens']
     return TokenUsage.objects.create(user_input_token=150,prompt_tokens=prompt_token,total_tokens=total_tokens,
                                     completion_tokens=completion_tokens, no_of_outcome=1)
-
-
 class BlogArticleSerializer(serializers.ModelSerializer):
     blog_outline_article_gen = serializers.PrimaryKeyRelatedField(queryset=BlogOutline.objects.all(),required=True)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),
@@ -366,9 +364,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         # print("selected_outline_section_list",selected_outline_section_list)  #outline list
  
         prompt = blog_article_start_phrase.format(user_title,user_keyword,selected_outline_section_list)
-        print("prompt--->" ,prompt)
         prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)[0].message['content']
-        print("prompt_response--->",prompt_response)
         if blog_create_inst.user_language_id not in blog_available_langs:
             blog_article_trans = get_translation(1,prompt_response,"en",blog_create_inst.user_language_code,
                                                  user_id=blog_create_inst.user.id)  
@@ -401,7 +397,6 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
             if data['group'] not in group_ins:
                 raise serializers.ValidationError("group should be in {}".format(group_ins))
         return data
-    
     
     def create(self, validated_data):
         blog_available_langs =[17]
@@ -439,11 +434,9 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
                 session_id.selected_field = False
                 session_id.save()
         return instance
-    
-
 
 class BlogOutlineSerializer(serializers.ModelSerializer):
-    blog_outline_session = BlogOutlineSessionSerializer(many=True,required=False)
+    # blog_outline_session = BlogOutlineSessionSerializer(many=True,required=False)
     blog_title_gen = serializers.PrimaryKeyRelatedField(queryset=Blogtitle.objects.all(),many=False) 
     select_group = serializers.IntegerField(required=False)
 
@@ -457,8 +450,13 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         blog_available_langs =[17]
         blog_title_gen_inst = validated_data.get('blog_title_gen')
-        if blog_title_gen_inst.selected_field != True:
-            return serializers.ValidationError("Choose title")
+        # if blog_title_gen_inst.selected_field != True:
+        #     return serializers.ValidationError("Choose title")
+
+        # if blog_title_gen_inst.get('blog_title_gen',None):
+        #     blog_title_gen_inst.selected_field = True
+        #     blog_title_gen_inst.save()
+
         instance = BlogOutline.objects.create(**validated_data)
         blog_outline_start_phrase = PromptStartPhrases.objects.get(sub_category=instance.sub_categories)
         if (blog_title_gen_inst.blog_creation_gen.user_language_id not in blog_available_langs):
@@ -495,6 +493,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
 
 
 class BlogtitleSerializer(serializers.ModelSerializer):
+    blogoutline_title = BlogOutlineSerializer(many=True,required=False)
     selected_title = serializers.PrimaryKeyRelatedField(queryset=Blogtitle.objects.all(),many=False,required=False) 
     unselected_title = serializers.PrimaryKeyRelatedField(queryset=Blogtitle.objects.all(),many=False,required=False) 
     class Meta:
