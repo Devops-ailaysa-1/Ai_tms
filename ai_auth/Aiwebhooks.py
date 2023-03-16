@@ -65,6 +65,7 @@ def calculate_addon_expiry(start_date,pack):
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
     carry = 0
     referral_credits = 0
+     payg_credits = 0
     if pack.type=="Subscription" and pack.name != os.environ.get("PLAN_PAYG"):
         if subscription.plan.interval=='year':
             expiry = expiry_yearly_sub(subscription)
@@ -117,7 +118,7 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     if camp_credits != None:
         buyed_credits = camp_credits
     elif pack.name == os.environ.get("PLAN_PAYG"):
-        buyed_credits = 0
+        buyed_credits =  payg_credits
     else:
         buyed_credits = ((pack.credits*quants)+referral_credits)
     
