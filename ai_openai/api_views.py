@@ -1,4 +1,4 @@
-from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt
+from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, TranslateCustomizeDetails
 from django.http import   JsonResponse
 import logging ,os
 from rest_framework import viewsets,generics
@@ -291,6 +291,21 @@ def image_gen(request):
         return Response({'gen_image_url': res_url},status=200) 
     else:
         return Response({'gen_image_url':res}, status=400 )
+
+
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def user_preffered_langs(request):
+    queryset = TranslateCustomizeDetails.objects.filter(customization__user = request.user)
+    if queryset:
+        target = queryset.last().target_language_id
+        source = queryset.last().customization.user_text_lang_id
+        return Response({'src':source,'tar':target})
+    else:
+        return Response({'src':None,'tar':None})
+
+
 
 
 class AiPromptCustomizeViewset(generics.ListAPIView):
