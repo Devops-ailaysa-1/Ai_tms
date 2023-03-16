@@ -15,6 +15,7 @@ urlpatterns += [
     path('customize_history/',api_views.AiPromptCustomizeViewset.as_view()),
     path('image_history/',api_views.AiImageHistoryViewset.as_view()),
     path('image/',api_views.image_gen),
+    path('default_langs/',api_views.user_preffered_langs),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 
