@@ -767,6 +767,7 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
                 annotate(sltl=Count('project_jobs_set__source_language__language')).order_by('-sltl')[:5]
         query = AiUser.objects.none()
         res ={}
+        users = []
         for i in sltl_list:
             source_lang = i.get('project_jobs_set__source_language')
             target_lang = i.get('project_jobs_set__target_language')
@@ -774,9 +775,10 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
             target_lang_name = Languages.objects.get(id=target_lang).language if target_lang != None else None
             queryset = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                         .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
-                        .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
+                        .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False).exclude(id__in=users)
             if queryset:
                 ser = GetVendorListBasedonProjectSerializer(queryset.first(),many=False,context={'request':request,'sl':source_lang,'tl':target_lang})
+                users.append(queryset.first().id)
                 tt = str(source_lang_name) + '---->' + str(target_lang_name)
                 res[tt] = [ser.data]
         return Response(res)
