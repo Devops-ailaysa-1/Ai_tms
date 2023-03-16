@@ -13,6 +13,7 @@ from django.db import transaction
 import logging
 import calendar
 from ai_auth.signals import send_campaign_email
+import os
 
 logger = logging.getLogger('django')
 try:
@@ -64,11 +65,14 @@ def calculate_addon_expiry(start_date,pack):
 def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription=None,trial=None):
     carry = 0
     referral_credits = 0
-    if pack.type=="Subscription":
+    payg_credits = 0
+    if pack.type=="Subscription" and pack.name != os.environ.get("PLAN_PAYG"):
         if subscription.plan.interval=='year':
             expiry = expiry_yearly_sub(subscription)
         else:
             expiry = subscription.current_period_end
+        # if pack.name != os.environ.get("PLAN_PAYG"):
+        
         creditsls= models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial')).filter(~Q(invoice=invoice.id))
         for credit in creditsls:
             #check the previous subscription record has unused credits before expiry
@@ -76,6 +80,25 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
                 carry = credit.credits_left
             credit.ended_at=timezone.now()
             credit.save()
+
+    elif pack.type=="Subscription" and pack.name == os.environ.get("PLAN_PAYG"): 
+        user_credits = models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
+        if user_credits.count() == 0: 
+            expiry = subscription.current_period_end
+            camp = models.CampaignUsers.objects.filter(user=user,subscribed=False)
+            if camp.count() > 0:
+                payg_credits = 0
+            else:
+                payg_credits = pack.credits
+        else:
+            creditsls= user_credits.filter(~Q(invoice=invoice.id))
+            for credit in creditsls:
+                if credit.ended_at==None and (credit.expiry > timezone.now()):
+                    carry = credit.credits_left
+                    credit.ended_at=timezone.now()
+                    credit.save()
+                
+
 
     if pack.type=="Subscription_Trial":
         expiry = subscription.trial_end
@@ -98,6 +121,8 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
 
     if camp_credits != None:
         buyed_credits = camp_credits
+    elif pack.name == os.environ.get("PLAN_PAYG"):
+        buyed_credits =  payg_credits
     else:
         buyed_credits = ((pack.credits*quants)+referral_credits)
     
@@ -114,6 +139,7 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
     'credit_pack_type': pack.type,
     'ended_at': None
     }
+
     us = models.UserCredits.objects.create(**kwarg)
     print(us)
  
