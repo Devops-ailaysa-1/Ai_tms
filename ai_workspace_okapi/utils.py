@@ -8,7 +8,7 @@ from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
 
-import string 
+import string ,backoff
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
 client = translate.Client()
@@ -264,6 +264,8 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
     r = requests.post(url, headers=headers, json=data)
     return r.json()["result"]
 
+
+@backoff.on_exception(backoff.expo, (requests.exceptions.RequestException,  ),max_tries=5,)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
                     target_lang_code, user_id=None, cc=None, from_open_ai = None):
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus

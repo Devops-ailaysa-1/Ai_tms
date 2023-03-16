@@ -13,9 +13,8 @@ class TokenUsage(models.Model):
     no_of_outcome = models.CharField(max_length=10, null=True, blank=True)
 
     def __str__(self) -> str:
-        return self.user_input_token+"--"+self.completion_tokens
-# class ContentCatagories(models.Model):
-#     pass
+        return str(self.user_input_token)+"--"+str(self.completion_tokens)
+
 
 class AiPrompt(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -87,12 +86,15 @@ class BlogCreation(models.Model):
     user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
     keywords = models.CharField(max_length=200,null=True,blank=True)
     keywords_mt = models.CharField(max_length = 200, null=True, blank=True)
+    prompt_user_title_mt = models.CharField(max_length = 200, null=True, blank=True)
+    prompt_keyword_mt = models.CharField(max_length = 200, null=True, blank=True)
     categories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE,related_name = 'blog_categories' ,blank=True,null=True )
     sub_categories = models.ForeignKey(to= PromptSubCategories, on_delete = models.CASCADE,related_name = 'blog_sub_categories',blank=True,null=True)
     user_language = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='user_test_lang_src',null=True, blank=True)  
     tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='blog_tone',blank=True,null=True,default=1)
     response_copies_keyword = models.IntegerField(null=True, blank=True,default=10)
     steps =  models.CharField(max_length=50, null=True, blank=True)
+
     
     @property
     def user_language_code(self):

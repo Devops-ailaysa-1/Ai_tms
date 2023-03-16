@@ -115,4 +115,4 @@ def get_prompt_chatgpt_turbo(prompt,n):
         {"role": "user", "content": prompt}
     ],n=n
     )
-    return completion.choices
+    return completion
