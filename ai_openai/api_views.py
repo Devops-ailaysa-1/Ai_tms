@@ -301,9 +301,10 @@ def user_preffered_langs(request):
     if queryset:
         target = queryset.last().target_language_id
         source = queryset.last().customization.user_text_lang_id
-        return Response({'src':source,'tar':target})
+        mt_engine = queryset.last().mt_engine_id
+        return Response({'src':source,'tar':target,'mt_engine':mt_engine})
     else:
-        return Response({'src':None,'tar':None})
+        return Response({'src':None,'tar':None,'mt_engine':None})
 
 
 
