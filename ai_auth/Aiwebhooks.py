@@ -84,6 +84,7 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
         user_credits = models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
         if user_credits.count() == 0: 
             expiry = None
+            payg_credits = pack.credits
         else:
             creditsls= user_credits.filter(~Q(invoice=invoice.id))
             for credit in creditsls:
