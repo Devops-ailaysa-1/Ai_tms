@@ -29,7 +29,7 @@ class VendorsInfo(models.Model):
     skype = models.CharField(max_length=191, blank=True, null=True)
     proz_link = models.CharField(max_length=191, blank=True, null=True)
     cv_file = models.FileField(upload_to=vendor_directory_path, blank=True, null=True)
-    cv_file_display = models.BooleanField(default=False)
+    cv_file_display = models.BooleanField(default=True)
     native_lang = models.ForeignKey(Languages,blank=True, null=True, related_name='native_lang', on_delete=models.CASCADE)
     year_of_experience = models.DecimalField(max_digits=5,decimal_places=1 , blank=True, null=True)
     rating = models.IntegerField(blank=True, null=True)

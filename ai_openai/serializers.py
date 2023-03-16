@@ -313,8 +313,5 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = InstantTranslation
 #         fields = '__all__'
-        
- 
-        
- 
+
  

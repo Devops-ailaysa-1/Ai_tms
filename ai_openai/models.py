@@ -17,8 +17,6 @@ class TokenUsage(models.Model):
 # class ContentCatagories(models.Model):
 #     pass
 
-
-
 class AiPrompt(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     prompt_string = models.TextField(null=True, blank=True)
