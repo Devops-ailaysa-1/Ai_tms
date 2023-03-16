@@ -442,9 +442,10 @@ class IncompleteProjectListView(viewsets.ModelViewSet):
     filterset_class = IncompleteProjectListFilter
 
     def get_queryset(self):
+        queryset_2 = Project.objects.select_related('voice_proj_detail').filter(voice_proj_detail__project_type_sub_category_id=2).filter(project_jobs_set__target_language=None).values('id')
         queryset=Project.objects.filter(Q(ai_user=self.request.user)\
                     |Q(team__owner = self.request.user)|Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).\
-                    exclude(Q(proj_detail__deleted_at=None) and Q(proj_detail__customer=self.request.user)).order_by('-id').distinct()
+                    exclude(Q(proj_detail__deleted_at=None) and Q(proj_detail__customer=self.request.user)).exclude(id__in=queryset_2).order_by('-id').distinct()
         return queryset
 
 
@@ -774,15 +775,18 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
             queryset = AiUser.objects.select_related('ai_profile_info','vendor_info','professional_identity_info')\
                         .filter(Q(vendor_lang_pair__source_lang_id=source_lang) & Q(vendor_lang_pair__target_lang_id=target_lang) & Q(vendor_lang_pair__deleted_at=None))\
                         .distinct().exclude(id = user.id).exclude(is_internal_member=True).exclude(is_vendor=False)
-            ser = GetVendorListBasedonProjectSerializer(queryset,many=True,context={'request':request,'sl':source_lang,'tl':target_lang})
-            if ser.data != []:
+            if queryset:
+                ser = GetVendorListBasedonProjectSerializer(queryset.first(),many=False,context={'request':request,'sl':source_lang,'tl':target_lang})
                 tt = str(source_lang_name) + '---->' + str(target_lang_name)
-                res[tt] = ser.data
-        print("RES-------->",len(res))
-        if len(res)>=3:return Response(self.dt(res,1))
-        elif len(res)==2:return Response(self.dt(res,2))
-        elif len(res)==1:return Response(self.dt(res,3))
-        else:return Response([])
+                res[tt] = [ser.data]
+        return Response(res)
+        #print("Res-------------->",res)
+        # print("Len of RES-------->",len(res))
+        # return Response(res)
+        # if len(res)>=3:return Response(self.dt(res,1))
+        # elif len(res)==2:return Response(self.dt(res,2))
+        # elif len(res)==1:return Response(self.dt(res,3))
+        # else:return Response([])
 
 
 

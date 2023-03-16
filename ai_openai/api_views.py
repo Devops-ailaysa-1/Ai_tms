@@ -296,6 +296,22 @@ def image_gen(request):
         return Response({'gen_image_url':res}, status=400 )
 
 
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def user_preffered_langs(request):
+    queryset = TranslateCustomizeDetails.objects.filter(customization__user = request.user)
+    if queryset:
+        target = queryset.last().target_language_id
+        source = queryset.last().customization.user_text_lang_id
+        mt_engine = queryset.last().mt_engine_id
+        return Response({'src':source,'tar':target,'mt_engine':mt_engine})
+    else:
+        return Response({'src':None,'tar':None,'mt_engine':None})
+
+
+
+
 class AiPromptCustomizeViewset(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AiPromptCustomizeSerializer
