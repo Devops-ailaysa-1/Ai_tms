@@ -2559,6 +2559,17 @@ def get_quill_data(request):
     return Response({'data':res})
 
 
+def update_task_assign(task_obj,user):
+    try:
+        obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
+        if obj.status != 2:
+            obj.status = 2
+            obj.save()
+            print("Changed to Inprogress")
+    except:pass
+
+
+
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def writer_save(request):
@@ -2577,6 +2588,7 @@ def writer_save(request):
         ser1 = TaskTranscriptDetailSerializer(data=data1,partial=True)#"transcripted_file_writer":file_obj,
     if ser1.is_valid():
         ser1.save()
+        update_task_assign(task_obj,request.user)
         return Response(ser1.data)
     return Response(ser1.errors)
 
