@@ -510,7 +510,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		fields = ("id", "project_name","assigned","text_to_speech_source_download", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable",\
 					"pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id","project_type_id",\
-					"voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at","from_text",'get_assignable_tasks_exists',)
+					"voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at","from_text",)
 
 
 	def run_validation(self,data):
