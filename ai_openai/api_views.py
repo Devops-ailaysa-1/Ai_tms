@@ -1,5 +1,5 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt,
-                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession)
+                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
 from django.core import serializers
 import logging ,os ,json
 from rest_framework import viewsets,generics
@@ -404,8 +404,6 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
-
-
 
 class BlogtitleViewset(viewsets.ViewSet):
     def create(self,request):
