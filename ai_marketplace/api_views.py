@@ -634,7 +634,7 @@ class GetVendorListViewNew(generics.ListAPIView):
     serializer_class = GetVendorListSerializer
     filter_backends = [DjangoFilterBackend ,filters.SearchFilter,filters.OrderingFilter]
     filterset_class = VendorFilterNew
-    pagination.PageNumberPagination.page_size = None#settings.REST_FRAMEWORK["PAGE_SIZE"]
+    pagination.PageNumberPagination.page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]#None
 
     def validate(self):
         data = self.request.GET
