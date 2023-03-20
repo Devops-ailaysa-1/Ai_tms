@@ -186,8 +186,12 @@ from ai_auth.api_views import get_lang_code
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def customize_text_openai(request):
-    user = request.user
+    from ai_exportpdf.models import Ai_PdfUpload
+    #user = request.user
+    print("Request-------------->",request)
     document = request.POST.get('document_id')
+    task = request.POST.get('task',None)
+    pdf = request.POST.get('pdf',None)
     customize_id = request.POST.get('customize_id')
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
@@ -196,6 +200,15 @@ def customize_text_openai(request):
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine')
     detector = Translator()
+
+    if task != None:
+        obj = Task.objects.get(id=task)
+        user = obj.job.project.ai_user
+    elif pdf != None:
+        obj = Ai_PdfUpload.objects.get(id=pdf)
+        user = obj.user
+    else:    
+        user = request.user 
 
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
@@ -212,7 +225,7 @@ def customize_text_openai(request):
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
         if initial_credit < consumable_credits_user_text:
            return  Response({'msg':'Insufficient Credits'},status=400) 
-        data = {'document':document,'customize':customize_id,'user':request.user.id,\
+        data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'user':request.user.id,\
             'user_text':user_text,'user_text_lang':language}
         ser = AiPromptCustomizeSerializer(data=data)
         if ser.is_valid():
@@ -247,9 +260,9 @@ def customize_text_openai(request):
     else:##english      
         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
-    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
     print("TT---------->",prompt)
-    data = {'document':document,'customize':customize_id,'user':request.user.id,\
+    data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'user':request.user.id,\
             'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
             'api_result':result_txt.strip() if result_txt else None,'prompt_result':txt_generated}
