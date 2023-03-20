@@ -16,7 +16,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
 from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
 from ai_auth.models import UserCredits
-from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
+from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text, update_task_assign
 from django.core.files.base import ContentFile
 from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
@@ -95,6 +95,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
             serializer = PdfFileSerializer(ins,data={**request.POST.dict()},partial=True) 
         if serializer.is_valid():
             serializer.save()
+            update_task_assign(task_obj,request.user) if tt == 'task' else None
             return Response(serializer.data)
         return Response(serializer.errors)
 

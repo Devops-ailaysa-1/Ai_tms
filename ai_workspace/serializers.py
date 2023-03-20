@@ -18,7 +18,7 @@ from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
 from ai_auth.models import AiUser,Team,HiredEditors
-from ai_auth.validators import project_file_size
+from ai_auth.validators import project_file_size, file_size
 from collections import OrderedDict
 from django.db.models import Q
 from django.db import transaction
@@ -773,9 +773,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 
 class InstructionfilesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Instructionfiles
-        fields = "__all__"
+	instruction_file = serializers.FileField(allow_null=True,validators=[file_size])
+	class Meta:
+		model = Instructionfiles
+		fields = "__all__"
         
 class MyDocumentSerializer(serializers.ModelSerializer):
     class Meta:
