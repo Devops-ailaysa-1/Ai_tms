@@ -1372,6 +1372,7 @@ def msg_send_vendor_accept(task_assign,input):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     #print("Thread--->",thread_id)
+    print("Details----------->",task_assign.task.ai_taskid,task_assign.assign_to.fullname,task_assign.task.job.project.project_name)
     if input == 'task_accepted':
        message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
     elif input == 'change_request':
@@ -1463,7 +1464,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			task_detail = data.get('task_assign_info')
 			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail) or ('estimated_hours' in task_detail) or ('mtpe_count_unit' in task_detail)):
 				if instance.task_assign_info.task_ven_status == "change_request":
-					msg_send_customer_rate_change(instance)
+					try:msg_send_customer_rate_change(instance)
+					except:pass
 					# editing po
 					print("inside accepted rate")
 					po_update.append('accepted_rate')
@@ -1475,7 +1477,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				if data.get('task_assign_info').get('task_ven_status') == 'task_accepted':
 					po_update.append("accepted")
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
-				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
+				try:msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
+				except:pass
 			task_assign_info_data = data.get('task_assign_info')
 			try:
 				task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)
