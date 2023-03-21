@@ -196,6 +196,20 @@ res in [ai_workspace::Task,ai_workspace::Document,ai_auth::Team];
 # }
 
 
+resource ai_workspace::File{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner","Reviewer"];
+
+    "read" if "Editor";
+    "create" if "Project owner";
+    "update" if "Project owner";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+}
+
+
 resource ai_workspace::Job{
     permissions = ["read", "create","update","delete"];
     roles = ["Editor", "Project owner","Reviewer"];
