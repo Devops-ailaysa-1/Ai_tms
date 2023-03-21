@@ -117,7 +117,9 @@ def instant_customize_response(customize ,user_text,used_tokens):
     final = ''
     cust_tokens = 0
     for text in split_text:
-        prompt = customize.prompt+" "+text+"."
+        text = text + '.'
+        prompt = customize.prompt +' "{}"'.format(text)
+        #prompt = customize.prompt+" "+text+"."
         print("Prompt------------------->",prompt)
         response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         final = final + response['choices'][0]['text']
@@ -144,7 +146,10 @@ def customize_response(customize ,user_text,tone,used_tokens):
             if customize.grouping == "Explore":
                 prompt = customize.prompt+" "+user_text+"?"
             else:
-                prompt = customize.prompt+" "+user_text+"."
+                user_text = user_text + '.'
+                prompt = customize.prompt +' "{}"'.format(user_text)
+                #prompt = customize.prompt+" "+user_text+"."
+            print("Pr-------->",prompt)
             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         tokens = response['usage']['total_tokens']
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
