@@ -92,6 +92,7 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
                 payg_credits = pack.credits
         else:
             creditsls= user_credits.filter(~Q(invoice=invoice.id))
+            expiry = subscription.current_period_end
             for credit in creditsls:
                 if credit.ended_at==None and (credit.expiry > timezone.now()):
                     carry = credit.credits_left
