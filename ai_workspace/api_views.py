@@ -3322,8 +3322,11 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
-        return MyDocuments.objects.filter(ai_user=user)#.order_by('-id')
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
+        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
+        return queryset
         
 
     def list(self, request, *args, **kwargs):
