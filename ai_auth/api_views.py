@@ -848,12 +848,12 @@ def subscriptin_modify_default_tax_rate(customer,addr=None):
     # else:
     #     tax_rates=None
     tax_rate=find_taxrate(customer.subscriber)
-    if tax_rate != None:
+    subscriptions = customer.subscriptions.filter(status="active")
+    if tax_rate != None and subscriptions.count() > 0 :
         response = stripe.Subscription.modify(
-        customer.subscriptions.last().id,
+        subscriptions.last().id,
         default_tax_rates=tax_rate
         )
-        print(response)
 
 
 @api_view(['GET'])
