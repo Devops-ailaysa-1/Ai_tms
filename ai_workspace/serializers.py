@@ -637,6 +637,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					f_klass=File,j_klass=Job, ai_user=ai_user,\
 					team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
 				obj_is_allowed(project,"create",user)
+				# print("files---",files[0].id)
 				objls_is_allowed(files,"create",user)
 				objls_is_allowed(jobs,"create",user)
 				if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
@@ -680,6 +681,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				#print(tt)
 		except BaseException as e:
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
+			raise serializers.ValidationError({"error": f"project creation failed {user.uid}"})
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
