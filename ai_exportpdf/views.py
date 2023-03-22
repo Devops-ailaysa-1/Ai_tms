@@ -52,7 +52,9 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
             serializer = PdfFileSerializer(queryset)
             return Response(serializer.data)
         else:
-            query_filter = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user))\
+            project_managers = user.team.get_project_manager if user.team else []
+            owner = user.team.owner if user.team  else user
+            query_filter = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
                             .filter(task_id=None).order_by('-id') 
             queryset = self.filter_queryset(query_filter)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)

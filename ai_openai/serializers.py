@@ -21,7 +21,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         model = AiPrompt
         fields = ('id','user','prompt_string','description','document','task','pdf','model_gpt_name','catagories','sub_catagories',
             'source_prompt_lang','Tone' ,'response_copies','product_name','keywords',
-            'response_charecter_limit','targets')
+            'response_charecter_limit','targets','created_by',)
 
     
     # def to_internal_value(self, data):
@@ -150,7 +150,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         elif instance.pdf != None:
             user = instance.pdf.user
         else:    
-            user = instance.user 
+            user = instance.user.team.owner if instance.user.team else instance.user
         initial_credit = user.credit_balance.get("total_left")
         if instance.source_prompt_lang_id not in openai_available_langs:
             string_list = [instance.description,instance.keywords,instance.prompt_string,instance.product_name]
@@ -196,7 +196,7 @@ class AiPromptGetSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiPrompt
         fields = ('id','user','prompt_string','doc_name','document','source_prompt_lang','target_langs','description','catagories','sub_catagories','Tone',
-                    'product_name','keywords','created_at','prompt_results',)#,'ai_prompt'
+                    'product_name','keywords','created_at','prompt_results','created_by',)#,'ai_prompt'
         
         extra_kwargs = {
             "prompt_string": {"write_only": True},
@@ -241,10 +241,11 @@ class AiPromptCustomizeSerializer(serializers.ModelSerializer):
         fields = ('id','document','task','pdf','doc_name','customize','customize_name','user_text',\
                     'tone','api_result','prompt_result','user_text_lang','user',\
                     'credits_used','prompt_generated','user_text_mt','created_at',\
-                    'customization',)
+                    'customization','created_by')
 
         extra_kwargs = {
             "user":{"write_only": True},
+            'created_by':{'write_only':True},
             "prompt_generated": {"write_only": True},
             "credits_used": {"write_only": True},
             "user_text_mt": {"write_only": True},
@@ -257,7 +258,11 @@ from django import core
 class ImageGenerationPromptResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageGenerationPromptResponse
-        fields = ('id' , 'generated_image')
+        fields = ('id','generated_image')#,'created_by','created_id',)
+        # extra_kwargs = {
+        #     "created_id":{"write_only": True},
+        #     'created_by':{'write_only':True},
+        # }
 
 class ImageGeneratorPromptSerializer(serializers.ModelSerializer):  
     gen_img = ImageGenerationPromptResponseSerializer(many=True,required=False)
@@ -267,7 +272,9 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
         
         
     def create(self, validated_data):
-        user=self.context['request'].user
+        request_user=self.context['request'].user
+        user = request_user.team.owner if request_user.team else request_user
+        print("User-------------->",user)
         inst = ImageGeneratorPrompt.objects.create(**validated_data)
         print("Inst--------->",inst)
         detector = Translator()
@@ -309,7 +316,7 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
                     image_file = core.files.File(core.files.base.ContentFile(img_content),"file.png")
                     img_gen_Pmpt_res=ImageGenerationPromptResponse.objects.create(user =user,created_id = created_id ,
                                                                 generated_image = image_file,
-                                                                image_generator_prompt = inst)  
+                                                                image_generator_prompt = inst,created_by = request_user)  
                 return inst
             else:
                 raise serializers.ValidationError({'msg':image_res}, code=400) 

@@ -37,6 +37,7 @@ class AiPrompt(models.Model):
     keywords_mt = models.TextField(null=True, blank=True)
     prompt_string_mt = models.TextField(null=True, blank=True)
     response_charecter_limit =  models.IntegerField(null=True, blank=True)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='prompt_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -98,6 +99,7 @@ class AiPromptCustomize(models.Model):
     user_text_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='text_lang')
     prompt_generated = models.TextField(null=True, blank=True)
     prompt_result = models.TextField(null=True, blank=True) 
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL , related_name='customize_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
 
 class TranslateCustomizeDetails(models.Model):
@@ -137,6 +139,7 @@ class ImageGeneratorPrompt(models.Model):
  
 class ImageGenerationPromptResponse(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL, related_name='img_created_by')
     created_id = models.CharField(max_length = 50, null=True, blank=True)
     generated_image =models.FileField(upload_to=user_directory_path_image_gen_result,blank=False, null=False)
     image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt , on_delete= models.CASCADE,related_name='gen_img')
