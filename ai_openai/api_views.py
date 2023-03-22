@@ -99,7 +99,7 @@ class AiPromptResultViewset(generics.ListAPIView):
         else:
             project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
             owner = self.request.user.team.owner if self.request.user.team  else self.request.user
-            queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(Q(user=self.request.user)|Q(created_by=user)|Q(created_by__in=proj_managers)|Q(user=owner))\
+            queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                         .exclude(ai_prompt__id__in=AiPromptResult.objects.filter(Q(api_result__isnull = True)\
                          & Q(translated_prompt_result__isnull = True)).values('id'))
         return queryset
@@ -362,7 +362,7 @@ class AiImageHistoryViewset(generics.ListAPIView):
     def get_queryset(self):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
-        queryset = ImageGeneratorPrompt.objects.filter(Q(gen_img__user=self.request.user)|Q(gen_img__created_by=self.request.user)|Q(gen_image__created_by__in=project_managers)|Q(gen_image__user=owner))
+        queryset = ImageGeneratorPrompt.objects.filter(Q(gen_img__user=self.request.user)|Q(gen_img__created_by=self.request.user)|Q(gen_img__created_by__in=project_managers)|Q(gen_img__user=owner))
         return queryset
     
     
