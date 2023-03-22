@@ -2592,19 +2592,6 @@ def writer_save(request):
         return Response(ser1.data)
     return Response(ser1.errors)
 
-def celery_check(obj):
-    from ai_auth.tasks import pre_translate_update
-    state = None
-    if obj.task_name == 'mt_only':
-        state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
-    elif obj.task_name == 'pre_translate_update':
-        state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
-    if state == 'STARTED':
-        status = 'False'
-    else:
-        status = 'True'
-    return status
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -2618,7 +2605,7 @@ def get_voice_task_status(request):
     if pr.project_type_id == 4:
         tasks = pr.get_source_only_tasks
         for i in tasks:
-            obj = MTonlytaskCeleryStatus.objects.filter(Q(task=i) and (Q(task_name = 'transcribe_long_file_cel') or Q(task_name = 'google_long_text_file_process_cel'))).last()
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).filter(Q(task_name = 'transcribe_long_file_cel') or Q(task_name = 'google_long_text_file_process_cel')).last()
             if obj:
                 if obj.task_name == 'transcribe_long_file_cel':
                     state = transcribe_long_file_cel.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
@@ -2634,6 +2621,23 @@ def get_voice_task_status(request):
         return Response({'res':res})
     else:
         return Response({'msg':'No Detail'})
+
+
+
+def celery_check(obj):
+    from ai_auth.tasks import pre_translate_update
+    state = None
+    if obj.task_name == 'mt_only':
+        state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+    elif obj.task_name == 'pre_translate_update':
+        state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+    if state == 'STARTED':
+        status = 'False'
+    else:
+        status = 'True'
+    return status
+
+
 
 
 @api_view(['GET',])
@@ -2656,7 +2660,7 @@ def get_task_status(request):
         for i in tasks:
             msg,progress = None,None
             document = i.document                    
-            obj = MTonlytaskCeleryStatus.objects.filter(Q(task=i) and (Q(task_name = 'mt_only') or Q(task_name = 'pre_translate_update'))).last()
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).filter(Q(task_name = 'mt_only') or Q(task_name = 'pre_translate_update')).last()
             if document:
                 if not obj or obj.status == 2:
                     status = 'True'
