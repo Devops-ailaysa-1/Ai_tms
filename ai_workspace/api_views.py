@@ -1389,8 +1389,6 @@ class ProjectAnalysis(APIView):
 
 
 
-
-
 def msg_send(sender,receiver,task):
     obj = Task.objects.get(id=task)
     proj = obj.job.project.project_name
@@ -3401,7 +3399,7 @@ from django.db.models import Subquery
 def default_proj_detail(request):
     last_pr = Project.objects.filter(ai_user = request.user).last()
     if last_pr:
-        query =  Project.objects.filter(ai_user=request.user).exclude(project_jobs_set__target_language=None).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gt = 1)[:20]
+        query =  Project.objects.filter(ai_user=request.user).exclude(project_jobs_set__target_language=None).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gte = 1)[:20]
         out = []
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
