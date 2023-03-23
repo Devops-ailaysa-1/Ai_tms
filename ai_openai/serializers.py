@@ -88,7 +88,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
             print("generated_text" , generated_text)
             rr = [AiPromptResult.objects.update_or_create(prompt=instance,result_lang=obj.result_lang,copy=j,\
                     defaults = {'prompt_generated':prompt,'start_phrase':start_phrase,\
-                    'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip()}) for j,i in enumerate(generated_text)]
+                    'response_id':response_id,'token_usage':token_usage,'api_result':i['text'].strip('\"').strip()}) for j,i in enumerate(generated_text)]
         return None
 
     def customize_token_deduction(self,instance ,total_tokens,user=None):
