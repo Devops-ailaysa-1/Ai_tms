@@ -1057,7 +1057,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 if price_id:
                     price = Plan.objects.get(id=price_id)
                     if (price.currency != currency) or (price.interval != 'month'):
-                        price = Plan.objects.get(product=price.product,interval='month',currency=currency,livemode=livemode)
+                        price = Plan.objects.get(product=price.product,interval='month',currency=currency,interval_count=1,livemode=livemode)
 
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()
