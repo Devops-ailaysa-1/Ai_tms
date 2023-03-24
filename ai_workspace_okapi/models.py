@@ -499,8 +499,12 @@ class Document(models.Model):
 
     @property
     def doc_credit_check_open_alert(self):
+        from ai_workspace_okapi.api_views import get_empty_segments
         total_credit_left = self.created_by.credit_balance.get("total_left")
-        open_alert = False if (self.total_word_count < total_credit_left) else True
+        if get_empty_segments(self) == True:
+            open_alert = False if (self.total_word_count < total_credit_left) else True
+        else:
+            open_alert = False
         return open_alert
 
     @property
