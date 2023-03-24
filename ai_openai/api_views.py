@@ -115,7 +115,6 @@ def instant_customize_response(customize ,user_text,used_tokens):
         split_text = NEWLINES_RE.split(no_newlines)
     else:
         split_text = [user_text.replace('\n','')]
-    print("Text inside customize------------------->",split_text)
     final = ''
     cust_tokens = 0
     for text_ in split_text:
@@ -125,8 +124,8 @@ def instant_customize_response(customize ,user_text,used_tokens):
         print("Prompt------------------->",prompt)
         response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         text = response['choices'][0]['text']
-        text = text.strip('\"')
-        final = final + text
+        text = text.strip('\n').strip('\"')
+        final = final + "\n\n" + text
         tokens = response['usage']['total_tokens']
         print("Tokens from openai------------------>", tokens)
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
@@ -135,6 +134,7 @@ def instant_customize_response(customize ,user_text,used_tokens):
     print("Cust tokens---------->",cust_tokens)
     cust_tokens += used_tokens
     print("Final----------->",cust_tokens)
+    final = final.strip('\n')
     return final,cust_tokens
 
 
