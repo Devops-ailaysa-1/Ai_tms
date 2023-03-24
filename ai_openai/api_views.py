@@ -118,13 +118,14 @@ def instant_customize_response(customize ,user_text,used_tokens):
     print("Text inside customize------------------->",split_text)
     final = ''
     cust_tokens = 0
-    for text in split_text:
-        text = text + '.'
-        prompt = customize.prompt +' "{}"'.format(text)
+    for text_ in split_text:
+        text_ = text_ + '.'
+        prompt = customize.prompt +' "{}"'.format(text_)
         #prompt = customize.prompt+" "+text+"."
         print("Prompt------------------->",prompt)
         response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         text = response['choices'][0]['text']
+        text = text.strip('\"')
         final = final + text
         tokens = response['usage']['total_tokens']
         print("Tokens from openai------------------>", tokens)
@@ -195,8 +196,6 @@ from ai_auth.api_views import get_lang_code
 @permission_classes([IsAuthenticated])
 def customize_text_openai(request):
     from ai_exportpdf.models import Ai_PdfUpload
-    #user = request.user
-    #print("Request-------------->",request)
     document = request.POST.get('document_id')
     task = request.POST.get('task',None)
     pdf = request.POST.get('pdf',None)
