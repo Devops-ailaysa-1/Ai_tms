@@ -869,8 +869,8 @@ def customer_portal_session(request):
         subscriptin_modify_default_tax_rate(customer)
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
-    # except BillingAddress.DoesNotExist:
-    #     return Response({'Error':'Billing Address Not Found'}, status=412)
+    except BillingAddress.DoesNotExist:
+        return Response({'Error':'Billing Address Not Found'}, status=400)
     # except Subscription:
     #     customer.
     return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
