@@ -3397,9 +3397,9 @@ from django.db.models import Subquery
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def default_proj_detail(request):
-    last_pr = Project.objects.filter(ai_user = request.user).last()
+    last_pr = Project.objects.filter(Q(ai_user=request.user)|Q(created_by=request.user)).last()
     if last_pr:
-        query =  Project.objects.filter(ai_user=request.user).exclude(project_jobs_set__target_language=None).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gte = 1)[:20]
+        query =  Project.objects.filter(Q(ai_user=request.user)|Q(created_by=request.user)).exclude(project_jobs_set__target_language=None).exclude(project_type_id=3).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gte = 1)[:20]
         out = []
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
