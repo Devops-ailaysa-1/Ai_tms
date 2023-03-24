@@ -3404,7 +3404,8 @@ def default_proj_detail(request):
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
             res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
-            out.append(res)
+            if res not in out:
+                out.append(res)
         # langs = query.filter(pk__in=Subquery(query.distinct('target_language').values("id"))).\
         #         values_list("source_language","target_language").order_by('-project__created_at')
         # langs = Job.objects.filter(project__ai_user_id = request.user).exclude(target_language=None).\
