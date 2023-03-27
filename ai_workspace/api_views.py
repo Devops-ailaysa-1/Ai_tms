@@ -3798,7 +3798,7 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
 @permission_classes([IsAuthenticated])
 def docx_convertor(request):
     from docx import Document
-    from htmldocx import HtmlToDocx
+    from ai_workspace.html2docx_custom import HtmlToDocx
     import re
     html = request.POST.get('html')
     name = request.POST.get('name')
@@ -3820,7 +3820,8 @@ def docx_convertor(request):
 
     updatedHtml = replace_hex_colors_with_rgb(html)  
     htmlupdates = updatedHtml.replace('<br />', '')
-    new_parser.add_html_to_document(htmlupdates, document)
+    try:new_parser.add_html_to_document(htmlupdates, document)
+    except:return Response({'msg':"Unsupported formatting"}, status=400)
     document.save(target_filename)
     res = download_file(target_filename)
     os.remove(target_filename)
