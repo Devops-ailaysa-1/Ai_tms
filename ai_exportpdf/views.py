@@ -124,14 +124,18 @@ class ConversionPortableDoc(APIView):
         for id in ids:
             pdf_path = Ai_PdfUpload.objects.get(id = int(id)).pdf_file.path
             file_format,page_length = file_pdf_check(pdf_path,id)
+            if page_length:
             #pdf consuming credits
-            consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
-            if initial_credit > consumable_credits:
-                task_id = pdf_conversion(int(id))
-                celery_task[int(id)] = task_id
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+                if initial_credit > consumable_credits:
+                    task_id = pdf_conversion(int(id))
+                    print("TaskId---------->",task_id)
+                    celery_task[int(id)] = task_id
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                else:
+                    return Response({'msg':'Insufficient Credits'},status=400)
             else:
-                return Response({'msg':'Insufficient Credits'},status=400)
+                celery_task[int(id)] = 'pdf corrupted'
         return Response(celery_task)
 
 
