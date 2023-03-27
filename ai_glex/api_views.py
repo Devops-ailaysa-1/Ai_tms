@@ -201,7 +201,7 @@ class TermUploadView(viewsets.ModelViewSet):
         task = request.GET.get('task')
         job = Task.objects.get(id=task).job
         project_name = job.project.project_name
-        queryset = self.filter_queryset(TermsModel.objects.filter(job = job))
+        queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
         source_language = str(job.source_language)
         try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
         except:target_language = None
