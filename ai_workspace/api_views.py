@@ -3792,3 +3792,36 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
         obj = ExpressTaskHistory.objects.get(id=pk)
         obj.delete()
         return Response(status=204)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def docx_convertor(request):
+    from docx import Document
+    from htmldocx import HtmlToDocx
+    import re
+    html = request.POST.get('html')
+    name = request.POST.get('name')
+    document = Document()
+    new_parser = HtmlToDocx()
+    new_parser.table_style = 'TableGrid'
+    target_filename = name + '.docx'
+
+    def replace_hex_color(match):
+        hex_color = match.group(1)
+        red, green, blue = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        rgb_color = f"rgb({red}, {green}, {blue})"
+        return rgb_color
+
+    def replace_hex_colors_with_rgb(html):
+        hex_color_regex = re.compile("'#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})'")
+        html = hex_color_regex.sub(replace_hex_color, html)
+        return html
+
+    updatedHtml = replace_hex_colors_with_rgb("html_file")  
+    htmlupdates = updatedHtml.replace('<br />', '')
+    new_parser.add_html_to_document(htmlupdates, document)
+    document.save(target_filename)
+    res = download_file(target_filename)
+    os.remove(target_filename)
+    return res
