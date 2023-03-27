@@ -22,6 +22,7 @@ from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages
 from langdetect import detect
+from django.db.models import Q
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 
@@ -51,7 +52,10 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
             serializer = PdfFileSerializer(queryset)
             return Response(serializer.data)
         else:
-            query_filter = Ai_PdfUpload.objects.filter(user = user).filter(task_id=None).order_by('-id') 
+            project_managers = user.team.get_project_manager if user.team else []
+            owner = user.team.owner if user.team  else user
+            query_filter = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
+                            .filter(task_id=None).order_by('-id') 
             queryset = self.filter_queryset(query_filter)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = PdfFileSerializer(pagin_tc,many=True ,context={'request':request})
@@ -67,8 +71,9 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
     def create(self,request):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
-        user = request.user.id
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,'pdf_file_name' : pdf_file_list._get_name() ,
+        user = request.user.team.owner if request.user.team else request.user
+        created_by = request.user
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user,'created_by':created_by ,'pdf_file_name' : pdf_file_list._get_name() ,
                  'file_name':pdf_file_list._get_name() ,'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():

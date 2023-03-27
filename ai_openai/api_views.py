@@ -45,8 +45,8 @@ class AiPromptViewset(viewsets.ViewSet):
         targets = request.POST.getlist('get_result_in')
         description = request.POST.get('description').rstrip(punctuation)
         char_limit = request.POST.get('response_charecter_limit',256)
-     
-        serializer = AiPromptSerializer(data={**request.POST.dict(),'description':description,'user':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = AiPromptSerializer(data={**request.POST.dict(),'user':user.id,'description':description,'created_by':self.request.user.id,'targets':targets,'response_charecter_limit':char_limit})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -100,7 +100,9 @@ class AiPromptResultViewset(generics.ListAPIView):
         if prmp_id:
             queryset = AiPrompt.objects.filter(id=prmp_id)
         else:
-            queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(user=self.request.user)\
+            project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+            owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+            queryset = AiPrompt.objects.prefetch_related('ai_prompt').filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))\
                         .exclude(ai_prompt__id__in=AiPromptResult.objects.filter(Q(api_result__isnull = True)\
                          & Q(translated_prompt_result__isnull = True)).values('id'))
         return queryset
@@ -116,14 +118,17 @@ def instant_customize_response(customize ,user_text,used_tokens):
         split_text = NEWLINES_RE.split(no_newlines)
     else:
         split_text = [user_text.replace('\n','')]
-    print("Text inside customize------------------->",split_text)
     final = ''
     cust_tokens = 0
-    for text in split_text:
-        prompt = customize.prompt+" "+text+"."
+    for text_ in split_text:
+        text_ = text_ + '.'
+        prompt = customize.prompt +' "{}"'.format(text_)
+        #prompt = customize.prompt+" "+text+"."
         print("Prompt------------------->",prompt)
         response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
-        final = final + response['choices'][0]['text']
+        text = response['choices'][0]['text']
+        text = text.strip('\n').strip('\"')
+        final = final + "\n\n" + text
         tokens = response['usage']['total_tokens']
         print("Tokens from openai------------------>", tokens)
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
@@ -132,6 +137,7 @@ def instant_customize_response(customize ,user_text,used_tokens):
     print("Cust tokens---------->",cust_tokens)
     cust_tokens += used_tokens
     print("Final----------->",cust_tokens)
+    final = final.strip('\n')
     return final,cust_tokens
 
 
@@ -147,7 +153,10 @@ def customize_response(customize ,user_text,tone,used_tokens):
             if customize.grouping == "Explore":
                 prompt = customize.prompt+" "+user_text+"?"
             else:
-                prompt = customize.prompt+" "+user_text+"."
+                user_text = user_text + '.'
+                prompt = customize.prompt +' "{}"'.format(user_text)
+                #prompt = customize.prompt+" "+user_text+"."
+            print("Pr-------->",prompt)
             response = get_prompt(prompt=prompt,model_name=openai_model,max_token =256,n=1)
         tokens = response['usage']['total_tokens']
         total_tokens = get_consumable_credits_for_openai_text_generator(tokens)
@@ -189,8 +198,10 @@ from ai_auth.api_views import get_lang_code
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def customize_text_openai(request):
-    user = request.user
+    from ai_exportpdf.models import Ai_PdfUpload
     document = request.POST.get('document_id')
+    task = request.POST.get('task',None)
+    pdf = request.POST.get('pdf',None)
     customize_id = request.POST.get('customize_id')
     user_text = request.POST.get('user_text')
     tone = request.POST.get('tone',1)
@@ -199,6 +210,17 @@ def customize_text_openai(request):
     target_langs = request.POST.getlist('target_lang')
     mt_engine = request.POST.get('mt_engine')
     detector = Translator()
+
+    if task != None:
+        obj = Task.objects.get(id=task)
+        user = obj.job.project.ai_user
+    elif pdf != None:
+        obj = Ai_PdfUpload.objects.get(id=pdf)
+        user = obj.user
+    else:    
+        user = request.user.team.owner if request.user.team else request.user
+    print("User---------->",user)
+        #project.team.owner if project.team else project.ai_user
 
     if language:lang = Languages.objects.get(id=language).locale.first().locale_code
     else:
@@ -215,8 +237,8 @@ def customize_text_openai(request):
         consumable_credits_user_text =  get_consumable_credits_for_text(user_text,lang,'en')
         if initial_credit < consumable_credits_user_text:
            return  Response({'msg':'Insufficient Credits'},status=400) 
-        data = {'document':document,'customize':customize_id,'user':request.user.id,\
-            'user_text':user_text,'user_text_lang':language}
+        data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
+            'user':user.id,'user_text':user_text,'user_text_lang':language}
         ser = AiPromptCustomizeSerializer(data=data)
         if ser.is_valid():
             ser.save()
@@ -250,12 +272,12 @@ def customize_text_openai(request):
     else:##english      
         response,total_tokens,prompt = customize_response(customize,user_text,tone,total_tokens)
         result_txt = response['choices'][0]['text']
-    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens)
+    AiPromptSerializer().customize_token_deduction(instance = request,total_tokens= total_tokens,user = user)
     print("TT---------->",prompt)
-    data = {'document':document,'customize':customize_id,'user':request.user.id,\
-            'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
+    data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
+            'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
-            'api_result':result_txt.strip() if result_txt else None,'prompt_result':txt_generated}
+            'api_result':result_txt.strip('\"').strip() if result_txt else None,'prompt_result':txt_generated}
     ser = AiPromptCustomizeSerializer(data=data)
     if ser.is_valid():
         ser.save()
@@ -324,7 +346,9 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
     page_size = None
 
     def get_queryset(self):
-        queryset = AiPromptCustomize.objects.filter(user=self.request.user)
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        queryset = AiPromptCustomize.objects.filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))
         return queryset
 
     
@@ -340,7 +364,9 @@ class AiImageHistoryViewset(generics.ListAPIView):
     page_size = None
 
     def get_queryset(self):
-        queryset = ImageGeneratorPrompt.objects.filter(gen_img__user=self.request.user)
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        queryset = ImageGeneratorPrompt.objects.filter(Q(gen_img__user=self.request.user)|Q(gen_img__created_by=self.request.user)|Q(gen_img__created_by__in=project_managers)|Q(gen_img__user=owner))
         return queryset
 
 

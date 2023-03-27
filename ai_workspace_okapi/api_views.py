@@ -1455,8 +1455,8 @@ class TargetSegmentsListAndUpdateView(SourceSegmentsListView):
             if match_case:
                 regex = re.compile(f'(?<!\w){search_word}(?!\w)')
             else:
-                # regex = re.compile(f'(?<!\w)(?i){search_word}(?!\w)')
-                regex = re.compile(f'(?i)[^\w]{search_word}[^\w]')  # temp regex
+                regex = re.compile(f'(?i)(?<!\w){search_word}(?!\w)')
+                #regex = re.compile(f'(?i)[^\w]{search_word}[^\w]')  # temp regex
         else:
             if match_case:
                 regex = re.compile(search_word)

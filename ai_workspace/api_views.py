@@ -1389,8 +1389,6 @@ class ProjectAnalysis(APIView):
 
 
 
-
-
 def msg_send(sender,receiver,task):
     obj = Task.objects.get(id=task)
     proj = obj.job.project.project_name
@@ -2592,19 +2590,6 @@ def writer_save(request):
         return Response(ser1.data)
     return Response(ser1.errors)
 
-def celery_check(obj):
-    from ai_auth.tasks import pre_translate_update
-    state = None
-    if obj.task_name == 'mt_only':
-        state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
-    elif obj.task_name == 'pre_translate_update':
-        state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
-    if state == 'STARTED':
-        status = 'False'
-    else:
-        status = 'True'
-    return status
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -2618,7 +2603,7 @@ def get_voice_task_status(request):
     if pr.project_type_id == 4:
         tasks = pr.get_source_only_tasks
         for i in tasks:
-            obj = MTonlytaskCeleryStatus.objects.filter(Q(task=i) and (Q(task_name = 'transcribe_long_file_cel') or Q(task_name = 'google_long_text_file_process_cel'))).last()
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).filter(Q(task_name = 'transcribe_long_file_cel') | Q(task_name = 'google_long_text_file_process_cel')).last()
             if obj:
                 if obj.task_name == 'transcribe_long_file_cel':
                     state = transcribe_long_file_cel.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
@@ -2634,6 +2619,23 @@ def get_voice_task_status(request):
         return Response({'res':res})
     else:
         return Response({'msg':'No Detail'})
+
+
+
+def celery_check(obj):
+    from ai_auth.tasks import pre_translate_update
+    state = None
+    if obj.task_name == 'mt_only':
+        state = mt_only.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+    elif obj.task_name == 'pre_translate_update':
+        state = pre_translate_update.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+    if state == 'STARTED':
+        status = 'False'
+    else:
+        status = 'True'
+    return status
+
+
 
 
 @api_view(['GET',])
@@ -2656,7 +2658,7 @@ def get_task_status(request):
         for i in tasks:
             msg,progress = None,None
             document = i.document                    
-            obj = MTonlytaskCeleryStatus.objects.filter(Q(task=i) and (Q(task_name = 'mt_only') or Q(task_name = 'pre_translate_update'))).last()
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).filter(Q(task_name = 'mt_only') | Q(task_name = 'pre_translate_update')).last()
             if document:
                 if not obj or obj.status == 2:
                     status = 'True'
@@ -3318,8 +3320,11 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
-        return MyDocuments.objects.filter(ai_user=user)#.order_by('-id')
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
+        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
+        return queryset
         
 
     def list(self, request, *args, **kwargs):
@@ -3392,14 +3397,15 @@ from django.db.models import Subquery
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def default_proj_detail(request):
-    last_pr = Project.objects.filter(ai_user = request.user).last()
+    last_pr = Project.objects.filter(Q(ai_user=request.user)|Q(created_by=request.user)).last()
     if last_pr:
-        query =  Project.objects.filter(ai_user=request.user).exclude(project_jobs_set__target_language=None).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gt = 1)[:20]
+        query =  Project.objects.filter(Q(ai_user=request.user)|Q(created_by=request.user)).exclude(project_jobs_set__target_language=None).exclude(project_type_id=3).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gte = 1)[:20]
         out = []
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
             res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
-            out.append(res)
+            if res not in out:
+                out.append(res)
         # langs = query.filter(pk__in=Subquery(query.distinct('target_language').values("id"))).\
         #         values_list("source_language","target_language").order_by('-project__created_at')
         # langs = Job.objects.filter(project__ai_user_id = request.user).exclude(target_language=None).\

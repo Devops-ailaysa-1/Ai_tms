@@ -275,12 +275,12 @@ class Project(models.Model):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
             terms = self.glossary_project.term.all()
-            if len(terms) == 0:
+            if terms.count() == 0:
                 return "Yet to start"
-            elif len(terms) == len(terms.filter(Q(tl_term='') | Q(tl_term__isnull = True))):
+            elif terms.count() == terms.filter(Q(tl_term='') | Q(tl_term__isnull = True)).count():
                 return "Yet to start"
             else:
-                if len(terms) == len(terms.filter(tl_term__isnull = False).exclude(tl_term='')):
+                if terms.count() == terms.filter(tl_term__isnull = False).exclude(tl_term='').count():
                     return "Completed"
                 else:
                     return "In Progress"

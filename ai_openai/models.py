@@ -1,7 +1,7 @@
 from django.db import models
 from ai_auth.models import AiUser
 import os
-from ai_workspace.models import MyDocuments
+from ai_workspace.models import MyDocuments,Task
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,AilaysaSupportedMtpeEngines,
                               PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution)
 
@@ -21,6 +21,8 @@ class AiPrompt(models.Model):
     prompt_string = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='prompt_doc')
+    task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'prompt_task')
+    pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.SET_NULL,related_name = 'prompt_pdf')
     model_gpt_name = models.ForeignKey(to= ModelGPTName, on_delete = models.CASCADE,related_name='gpt_model',default=1)
     catagories = models.ForeignKey(to= PromptCategories, on_delete = models.SET_NULL ,blank=True,null=True )
     sub_catagories = models.ForeignKey(to= PromptSubCategories, on_delete = models.SET_NULL,blank=True,null=True)
@@ -34,6 +36,7 @@ class AiPrompt(models.Model):
     keywords_mt = models.TextField(null=True, blank=True)
     prompt_string_mt = models.TextField(null=True, blank=True)
     response_charecter_limit =  models.IntegerField(null=True, blank=True)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL,related_name='prompt_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -161,6 +164,8 @@ class TextgeneratedCreditDeduction(models.Model):
 class AiPromptCustomize(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc')
+    task = models.ForeignKey(Task,null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_task')
+    pdf = models.ForeignKey("ai_exportpdf.Ai_PdfUpload",null=True, blank=True,on_delete=models.SET_NULL,related_name = 'ai_pdf')
     customize = models.ForeignKey(AiCustomize, on_delete=models.CASCADE, related_name = 'ai_cust')
     user_text = models.TextField(null=True, blank=True)
     tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='customize_tone',blank=True,null=True,default=1)
@@ -170,6 +175,7 @@ class AiPromptCustomize(models.Model):
     user_text_lang = models.ForeignKey(Languages, on_delete = models.CASCADE,related_name='text_lang')
     prompt_generated = models.TextField(null=True, blank=True)
     prompt_result = models.TextField(null=True, blank=True) 
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL , related_name='customize_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
 
 class TranslateCustomizeDetails(models.Model):
@@ -197,6 +203,7 @@ class ImageGeneratorPrompt(models.Model):
  
 class ImageGenerationPromptResponse(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(AiUser,null=True, blank=True, on_delete=models.SET_NULL, related_name='img_created_by')
     created_id = models.CharField(max_length = 50, null=True, blank=True)
     generated_image =models.FileField(upload_to=user_directory_path_image_gen_result,blank=False, null=False)
     image_generator_prompt = models.ForeignKey(ImageGeneratorPrompt,on_delete= models.CASCADE,related_name='gen_img')

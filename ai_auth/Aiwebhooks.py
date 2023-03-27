@@ -85,12 +85,13 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
         user_credits = models.UserCredits.objects.filter(user=user).filter(Q(credit_pack_type='Subscription')|Q(credit_pack_type='Subscription_Trial'))
         if user_credits.count() == 0: 
             expiry = subscription.current_period_end
-            camp = models.CampaignUsers.objects.filter(user=user,subscribed=False)
+            camp = models.CampaignUsers.objects.filter(user=user)
             if camp.count() > 0:
                 payg_credits = 0
             else:
                 payg_credits = pack.credits
         else:
+            expiry = subscription.current_period_end
             creditsls= user_credits.filter(~Q(invoice=invoice.id))
             for credit in creditsls:
                 if credit.ended_at==None and (credit.expiry > timezone.now()):
@@ -142,8 +143,6 @@ def update_user_credits(user,cust,price,quants,invoice,payment,pack,subscription
 
     us = models.UserCredits.objects.create(**kwarg)
     print(us)
- 
-
 @webhooks.handler("payment_intent.succeeded")
 def my_handler(event, **kwargs):
     print(event)
