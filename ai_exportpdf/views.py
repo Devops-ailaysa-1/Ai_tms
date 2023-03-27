@@ -16,12 +16,13 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from ai_workspace_okapi.utils import download_file
 from ai_exportpdf.utils import get_consumable_credits_for_pdf_to_docx ,file_pdf_check
 from ai_auth.models import UserCredits
-from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
+from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text, update_task_assign
 from django.core.files.base import ContentFile
 from .utils import ai_export_pdf,convertiopdf2docx
 from ai_workspace.models import Task
 from ai_staff.models import AiCustomize ,Languages
 from langdetect import detect
+from django.db.models import Q
 from ai_workspace_okapi.utils import get_translation
 openai_model = os.getenv('OPENAI_MODEL')
 
@@ -51,7 +52,10 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
             serializer = PdfFileSerializer(queryset)
             return Response(serializer.data)
         else:
-            query_filter = Ai_PdfUpload.objects.filter(user = user).filter(task_id=None).order_by('-id') 
+            project_managers = user.team.get_project_manager if user.team else []
+            owner = user.team.owner if user.team  else user
+            query_filter = Ai_PdfUpload.objects.filter(Q(user = user) |Q(created_by=user)|Q(created_by__in=project_managers)|Q(user=owner))\
+                            .filter(task_id=None).order_by('-id') 
             queryset = self.filter_queryset(query_filter)
             pagin_tc = self.paginate_queryset(queryset, request , view=self)
             serializer = PdfFileSerializer(pagin_tc,many=True ,context={'request':request})
@@ -67,8 +71,9 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
     def create(self,request):
         pdf_request_file = request.FILES.getlist('pdf_request_file')
         file_language = request.POST.get('file_language')
-        user = request.user.id
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user ,'pdf_file_name' : pdf_file_list._get_name() ,
+        user = request.user.team.owner if request.user.team else request.user
+        created_by = request.user
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user.id,'created_by':created_by.id ,'pdf_file_name' : pdf_file_list._get_name() ,
                  'file_name':pdf_file_list._get_name() ,'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
@@ -95,6 +100,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
             serializer = PdfFileSerializer(ins,data={**request.POST.dict()},partial=True) 
         if serializer.is_valid():
             serializer.save()
+            update_task_assign(task_obj,request.user) if tt == 'task' else None
             return Response(serializer.data)
         return Response(serializer.errors)
 
@@ -118,14 +124,18 @@ class ConversionPortableDoc(APIView):
         for id in ids:
             pdf_path = Ai_PdfUpload.objects.get(id = int(id)).pdf_file.path
             file_format,page_length = file_pdf_check(pdf_path,id)
+            if page_length:
             #pdf consuming credits
-            consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
-            if initial_credit > consumable_credits:
-                task_id = pdf_conversion(int(id))
-                celery_task[int(id)] = task_id
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+                if initial_credit > consumable_credits:
+                    task_id = pdf_conversion(int(id))
+                    print("TaskId---------->",task_id)
+                    celery_task[int(id)] = task_id
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                else:
+                    return Response({'msg':'Insufficient Credits'},status=400)
             else:
-                return Response({'msg':'Insufficient Credits'},status=400)
+                celery_task[int(id)] = 'pdf corrupted'
         return Response(celery_task)
 
 

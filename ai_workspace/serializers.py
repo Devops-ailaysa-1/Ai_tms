@@ -18,7 +18,7 @@ from ai_marketplace.serializers import ProjectPostJobDetailSerializer
 from django.shortcuts import reverse
 from rest_framework.validators import UniqueTogetherValidator
 from ai_auth.models import AiUser,Team,HiredEditors
-from ai_auth.validators import project_file_size
+from ai_auth.validators import project_file_size, file_size
 from collections import OrderedDict
 from django.db.models import Q
 from django.db import transaction
@@ -510,7 +510,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 		fields = ("id", "project_name","assigned","text_to_speech_source_download", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
 		 			"progress", "files_count", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable",\
 					"pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id","project_type_id",\
-					"voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at","from_text",)
+					"voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at","from_text",'get_assignable_tasks_exists',)
 
 
 	def run_validation(self,data):
@@ -637,6 +637,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					f_klass=File,j_klass=Job, ai_user=ai_user,\
 					team=team,project_manager=project_manager,created_by=created_by)#,team=team,project_manager=project_manager)
 				obj_is_allowed(project,"create",user)
+				# print("files---",files[0].id)
 				objls_is_allowed(files,"create",user)
 				objls_is_allowed(jobs,"create",user)
 				if ((create_type == True) and ((project_type == 1) or (project_type == 2))):
@@ -680,6 +681,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				#print(tt)
 		except BaseException as e:
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
+			raise serializers.ValidationError({"error": f"project creation failed {user.uid}"})
 		return  project
 
 	def update(self, instance, validated_data):#No update for project_type
@@ -773,9 +775,10 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 
 class InstructionfilesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Instructionfiles
-        fields = "__all__"
+	instruction_file = serializers.FileField(allow_null=True,validators=[file_size])
+	class Meta:
+		model = Instructionfiles
+		fields = "__all__"
         
 class MyDocumentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -1371,6 +1374,7 @@ def msg_send_vendor_accept(task_assign,input):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     #print("Thread--->",thread_id)
+    print("Details----------->",task_assign.task.ai_taskid,task_assign.assign_to.fullname,task_assign.task.job.project.project_name)
     if input == 'task_accepted':
        message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
     elif input == 'change_request':
@@ -1462,7 +1466,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			task_detail = data.get('task_assign_info')
 			if (('currency' in task_detail) or ('mtpe_rate' in task_detail) or ('mtpe_hourly_rate' in task_detail) or ('estimated_hours' in task_detail) or ('mtpe_count_unit' in task_detail)):
 				if instance.task_assign_info.task_ven_status == "change_request":
-					msg_send_customer_rate_change(instance)
+					try:msg_send_customer_rate_change(instance)
+					except:pass
 					# editing po
 					print("inside accepted rate")
 					po_update.append('accepted_rate')
@@ -1474,7 +1479,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				if data.get('task_assign_info').get('task_ven_status') == 'task_accepted':
 					po_update.append("accepted")
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
-				msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
+				try:msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
+				except:pass
 			task_assign_info_data = data.get('task_assign_info')
 			try:
 				task_assign_info_serializer.update(instance.task_assign_info,task_assign_info_data)

@@ -14,6 +14,9 @@ from ai_auth import forms as auth_forms
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.models import Group
 from django.db.models import Q
+from django.db import IntegrityError
+import logging
+logger = logging.getLogger('django')
 
 try:
     default_djstripe_owner=Account.get_default_account()
@@ -279,6 +282,9 @@ def assign_object_task(sender, instance,user,role,*args, **kwargs):
     # role_name = {1:''Project owner'}  
     # tsk.task_assign.task.job.project.project_manager
     role = TaskRoleLevel.objects.get(role__name=role)
-    TaskRoles.objects.create(user=user,task_pk=instance.task_assign.task.id,role=role,proj_pk=instance.task_obj.proj_obj.id)
+    try:
+        TaskRoles.objects.create(user=user,task_pk=instance.task_assign.task.id,role=role,proj_pk=instance.task_obj.proj_obj.id)
+    except IntegrityError as e: 
+         logger.warning("task_role already exist {instance.task_assign.task.id},{user.uid}")    
     print("task created")
     
