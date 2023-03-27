@@ -73,7 +73,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         file_language = request.POST.get('file_language')
         user = request.user.team.owner if request.user.team else request.user
         created_by = request.user
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user_id':user.id,'created_by_id':created_by.id ,'pdf_file_name' : pdf_file_list._get_name() ,
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user.id,'created_by':created_by.id ,'pdf_file_name' : pdf_file_list._get_name() ,
                  'file_name':pdf_file_list._get_name() ,'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
