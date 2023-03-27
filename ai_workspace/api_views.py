@@ -1653,8 +1653,8 @@ class ProjectListView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
-                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        queryset = Project.objects.prefetch_related('project_jobs_set','project_jobs_set__job_tasks_set__task_info').filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id').only('id','project_name')
         return queryset
 
 
@@ -3820,6 +3820,7 @@ def docx_convertor(request):
 
     updatedHtml = replace_hex_colors_with_rgb(html)  
     htmlupdates = updatedHtml.replace('<br />', '')
+    #new_parser.add_html_to_document(htmlupdates, document)
     try:new_parser.add_html_to_document(htmlupdates, document)
     except:return Response({'msg':"Unsupported formatting"}, status=400)
     document.save(target_filename)
