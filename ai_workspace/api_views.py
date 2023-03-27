@@ -3818,7 +3818,7 @@ def docx_convertor(request):
         html = hex_color_regex.sub(replace_hex_color, html)
         return html
 
-    updatedHtml = replace_hex_colors_with_rgb("html_file")  
+    updatedHtml = replace_hex_colors_with_rgb(html)  
     htmlupdates = updatedHtml.replace('<br />', '')
     new_parser.add_html_to_document(htmlupdates, document)
     document.save(target_filename)
