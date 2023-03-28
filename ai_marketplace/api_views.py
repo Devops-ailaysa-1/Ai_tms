@@ -258,7 +258,7 @@ class BidPostInfoCreateView(viewsets.ViewSet):
             try:
                 print(request.user.id)
                 id = request.GET.get('id')
-                queryset = BidPropasalDetails.objects.filter(Q(vendor=request.user.id)).distinct().order_by('-id').all()
+                queryset = BidPropasalDetails.objects.select_related('vendor').filter(Q(vendor=request.user.id)).distinct().order_by('-id').all()
                 serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
                 return Response(serializer.data)
             except:

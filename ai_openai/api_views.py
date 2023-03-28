@@ -274,7 +274,7 @@ def customize_text_openai(request):
     data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
-            'api_result':result_txt.strip('\"').strip() if result_txt else None,'prompt_result':txt_generated}
+            'api_result':result_txt.strip().strip('\"') if result_txt else None,'prompt_result':txt_generated}
     ser = AiPromptCustomizeSerializer(data=data)
     if ser.is_valid():
         ser.save()
