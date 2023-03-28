@@ -226,9 +226,10 @@ def file_pdf_check(file_path,pdf_id):
                 pdf_check_list.append(0)
         return [pdf_check.get(max(pdf_check_list)) , len(pdfdoc.pages)]
     except:
-        # if pdf_id:
-        #     file_details = Ai_PdfUpload.objects.get(id = pdf_id)
-        #     file_details.delete()
+        if pdf_id:
+            file_details = Ai_PdfUpload.objects.get(id = pdf_id)
+            file_details.status = "FileCorrupted"
+            file_details.save()
         #     # return None,None
         #     # file_details.status = "FileCorrupted"
         #     # file_details.save()
