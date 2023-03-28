@@ -848,12 +848,12 @@ def subscriptin_modify_default_tax_rate(customer,addr=None):
     # else:
     #     tax_rates=None
     tax_rate=find_taxrate(customer.subscriber)
-    if tax_rate != None:
+    subscriptions = customer.subscriptions.filter(status="active")
+    if tax_rate != None and subscriptions.count() > 0 :
         response = stripe.Subscription.modify(
-        customer.subscriptions.last().id,
+        subscriptions.last().id,
         default_tax_rates=tax_rate
         )
-        print(response)
 
 
 @api_view(['GET'])
@@ -869,8 +869,8 @@ def customer_portal_session(request):
         subscriptin_modify_default_tax_rate(customer)
     except Customer.DoesNotExist:
         return Response({'msg':'Unable to Generate Customer Portal Session'}, status=400)
-    # except BillingAddress.DoesNotExist:
-    #     return Response({'Error':'Billing Address Not Found'}, status=412)
+    except BillingAddress.DoesNotExist:
+        return Response({'Error':'Billing Address Not Found'}, status=400)
     # except Subscription:
     #     customer.
     return Response({'msg':'Customer Portal Session Generated','stripe_session_url':session.url,'strip_session_id':session.id}, status=307)
@@ -1057,7 +1057,7 @@ class UserSubscriptionCreateView(viewsets.ViewSet):
                 if price_id:
                     price = Plan.objects.get(id=price_id)
                     if (price.currency != currency) or (price.interval != 'month'):
-                        price = Plan.objects.get(product=price.product,interval='month',currency=currency,livemode=livemode)
+                        price = Plan.objects.get(product=price.product,interval='month',currency=currency,interval_count=1,livemode=livemode)
 
                 else:
                     price = Plan.objects.filter(product_id=pro.product,currency=currency,interval='month',livemode=livemode).last()

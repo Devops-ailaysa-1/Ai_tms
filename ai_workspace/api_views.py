@@ -1389,8 +1389,6 @@ class ProjectAnalysis(APIView):
 
 
 
-
-
 def msg_send(sender,receiver,task):
     obj = Task.objects.get(id=task)
     proj = obj.job.project.project_name
@@ -1655,8 +1653,8 @@ class ProjectListView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
-                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        queryset = Project.objects.prefetch_related('project_jobs_set','project_jobs_set__job_tasks_set__task_info').filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id').only('id','project_name')
         return queryset
 
 
@@ -2559,6 +2557,17 @@ def get_quill_data(request):
     return Response({'data':res})
 
 
+def update_task_assign(task_obj,user):
+    try:
+        obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
+        if obj.status != 2:
+            obj.status = 2
+            obj.save()
+            print("Changed to Inprogress")
+    except:pass
+
+
+
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def writer_save(request):
@@ -2577,8 +2586,41 @@ def writer_save(request):
         ser1 = TaskTranscriptDetailSerializer(data=data1,partial=True)#"transcripted_file_writer":file_obj,
     if ser1.is_valid():
         ser1.save()
+        update_task_assign(task_obj,request.user)
         return Response(ser1.data)
     return Response(ser1.errors)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_voice_task_status(request):
+    from ai_workspace.models import MTonlytaskCeleryStatus
+    from ai_auth.tasks import transcribe_long_file_cel,google_long_text_file_process_cel
+    project_id = request.GET.get('project')
+    sub_category = request.GET.get('sub_category')
+    pr = Project.objects.get(id=project_id)
+    res= []
+    if pr.project_type_id == 4:
+        tasks = pr.get_source_only_tasks
+        for i in tasks:
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).filter(Q(task_name = 'transcribe_long_file_cel') | Q(task_name = 'google_long_text_file_process_cel')).last()
+            if obj:
+                if obj.task_name == 'transcribe_long_file_cel':
+                    state = transcribe_long_file_cel.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                elif obj.task_name == 'google_long_text_file_process_cel':
+                    state = google_long_text_file_process_cel.AsyncResult(obj.celery_task_id).state if obj and obj.celery_task_id else None
+                if state == 'STARTED':
+                    status = 'False'
+                else:
+                    status = 'True'
+            else:
+                status = 'True'
+            res.append({'task':i.id,'open':status})
+        return Response({'res':res})
+    else:
+        return Response({'msg':'No Detail'})
+
+
 
 def celery_check(obj):
     from ai_auth.tasks import pre_translate_update
@@ -2592,6 +2634,9 @@ def celery_check(obj):
     else:
         status = 'True'
     return status
+
+
+
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
@@ -2613,7 +2658,7 @@ def get_task_status(request):
         for i in tasks:
             msg,progress = None,None
             document = i.document                    
-            obj = MTonlytaskCeleryStatus.objects.filter(task=i).last()
+            obj = MTonlytaskCeleryStatus.objects.filter(task=i).filter(Q(task_name = 'mt_only') | Q(task_name = 'pre_translate_update')).last()
             if document:
                 if not obj or obj.status == 2:
                     status = 'True'
@@ -2626,19 +2671,6 @@ def get_task_status(request):
                     status = celery_check(obj)
                 else:
                     status = 'True' 
-                # file_path = get_json_file_path(i)
-                # doc_data = json.load(open(file_path))
-                # if type(doc_data) == str:
-                #     doc_data = json.loads(doc_data)
-
-                # if doc_data.get('total_word_count') == 0:
-                #     status = 'True'
-                #     msg = "Empty File"
-                # else:
-                #     if obj:
-                #         status = celery_check(obj)
-                #     else:
-                #         status = 'True' 
             if status == 'True':
                 progress = i.get_progress
             res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
@@ -3288,8 +3320,11 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
-        return MyDocuments.objects.filter(ai_user=user)#.order_by('-id')
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
+        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
+        return queryset
         
 
     def list(self, request, *args, **kwargs):
@@ -3362,14 +3397,15 @@ from django.db.models import Subquery
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def default_proj_detail(request):
-    last_pr = Project.objects.filter(ai_user = request.user).last()
+    last_pr = Project.objects.filter(Q(ai_user=request.user)|Q(created_by=request.user)).last()
     if last_pr:
-        query =  Project.objects.filter(ai_user=request.user).exclude(project_jobs_set__target_language=None).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gt = 1)[:20]
+        query =  Project.objects.filter(Q(ai_user=request.user)|Q(created_by=request.user)).exclude(project_jobs_set__target_language=None).exclude(project_type_id=3).order_by('-id').annotate(target_count = Count('project_jobs_set__target_language')).filter(target_count__gte = 1)[:20]
         out = []
         for i in query:
             res={'src':i.project_jobs_set.first().source_language.id}
             res['tar']=[j.target_language.id for j in i.project_jobs_set.all()]
-            out.append(res)
+            if res not in out:
+                out.append(res)
         # langs = query.filter(pk__in=Subquery(query.distinct('target_language').values("id"))).\
         #         values_list("source_language","target_language").order_by('-project__created_at')
         # langs = Job.objects.filter(project__ai_user_id = request.user).exclude(target_language=None).\
@@ -3756,3 +3792,38 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
         obj = ExpressTaskHistory.objects.get(id=pk)
         obj.delete()
         return Response(status=204)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def docx_convertor(request):
+    from docx import Document
+    from ai_workspace.html2docx_custom import HtmlToDocx
+    import re
+    html = request.POST.get('html')
+    name = request.POST.get('name')
+    document = Document()
+    new_parser = HtmlToDocx()
+    new_parser.table_style = 'TableGrid'
+    target_filename = name + '.docx'
+
+    def replace_hex_color(match):
+        hex_color = match.group(1)
+        red, green, blue = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        rgb_color = f"rgb({red}, {green}, {blue})"
+        return rgb_color
+
+    def replace_hex_colors_with_rgb(html):
+        hex_color_regex = re.compile("'#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})'")
+        html = hex_color_regex.sub(replace_hex_color, html)
+        return html
+
+    updatedHtml = replace_hex_colors_with_rgb(html)  
+    htmlupdates = updatedHtml.replace('<br />', '')
+    #new_parser.add_html_to_document(htmlupdates, document)
+    try:new_parser.add_html_to_document(htmlupdates, document)
+    except:return Response({'msg':"Unsupported formatting"}, status=400)
+    document.save(target_filename)
+    res = download_file(target_filename)
+    os.remove(target_filename)
+    return res

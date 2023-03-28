@@ -20,6 +20,7 @@ from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFiel
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
 from  django.utils import timezone
 from ai_auth.tasks import check_dict
+from ai_auth.validators import file_size
 
 class SimpleProjectSerializer(serializers.ModelSerializer):
     # project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
@@ -96,6 +97,7 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
     bidpostjob_name = serializers.ReadOnlyField(source = 'bidpostjob.source_target_pair_names')
     professional_identity= serializers.ReadOnlyField(source='vendor.professional_identity_info.avatar_url')
     # projectpost_status = serializers.SerializerMethodField()
+    sample_file = serializers.FileField(allow_null=True,validators=[file_size])
     current_status = serializers.SerializerMethodField()#ReadOnlyField(source='status.status')
 
     class Meta:
@@ -248,6 +250,9 @@ class GetVendorDetailSerializer(serializers.Serializer):
     location = serializers.ReadOnlyField(source = 'vendor_info.location')
     native_lang = serializers.ReadOnlyField(source = 'vendor_info.native_lang.language')
     year_of_experience = serializers.ReadOnlyField(source = 'vendor_info.year_of_experience')
+    bio = serializers.ReadOnlyField(source = 'vendor_info.bio')
+    cv_file = serializers.ReadOnlyField(source = 'vendor_info.cv_file_url')
+    cv_file_display = serializers.ReadOnlyField(source = 'vendor_info.cv_file_display')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     vendor_subject = VendorSubjectFieldSerializer(read_only=True,many=True)
     vendor_contentype = VendorContentTypeSerializer(read_only=True,many=True)

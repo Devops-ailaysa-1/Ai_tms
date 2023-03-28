@@ -304,6 +304,9 @@ def po_generate_pdf(po):
         pos = PurchaseOrder.objects.filter(assignment=po.assignment,po_status='void')
         if not pos.count() > 0:
             tasks = po.assignment.assignment_po.all()
+            if tasks.count() == 0:
+                logger.warning(f"no tasks were found for po :{po.poid}")
+                return False
     project_id=tasks.last().projectid
     project_name=tasks.last().project_name
     context={'client': po.client,'seller':po.seller,'poid':po.poid,
@@ -315,6 +318,7 @@ def po_generate_pdf(po):
     # print('po_res',po_res)
     po.po_file = SimpleUploadedFile( po.poid +'.pdf', po_res, content_type='application/pdf')
     po.save()
+    return True
     #po_generate()
 
     # fs = FileSystemStorage('/tmp')
@@ -716,7 +720,8 @@ def po_pdf_get(request):
             else:
                 raise ValueError('multiple po returned for assignment')
         except ValueError as e:
-            logger.error(f"for assignmentid: {assignmentid} {str(e)}")
+            logger.error(f" assignmentid: {assignmentid} {str(e)}")
+            return JsonResponse({'error':'multiple po returned for assignment'},status=400)
     else:
         return JsonResponse({'error':'poid_or_assignmenid_field_is_required'},status=400)
     if not po.po_file:
