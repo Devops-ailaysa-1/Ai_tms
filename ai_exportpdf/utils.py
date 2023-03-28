@@ -228,7 +228,7 @@ def file_pdf_check(file_path,pdf_id):
     except:
         if pdf_id:
             file_details = Ai_PdfUpload.objects.get(id = pdf_id)
-            file_details.status = "FileCorrupted"
+            file_details.status = "ERROR"
             file_details.save()
         #     # return None,None
         #     # file_details.status = "FileCorrupted"
