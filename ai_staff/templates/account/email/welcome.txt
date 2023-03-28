@@ -1,7 +1,7 @@
-Hi {{user.fullname}},
-I am delighted that you have joined us at Ailaysa, the AI translation and human editing platform. I know you will love it once you start using it to make your products, content, and communication more global.
-We built Ailaysa to help organizations easily translate and localize their products like apps, websites,  marketing stuff, customer communications, even a document or a social media message in over 100 languages.
-To accomplish this, we use cutting-edge machine translation tools to instantaneously translate your content. To make it truly useful, we added 1000s of human professional editors to refine the automatic output to meet your specific requirements.
-And, using Ailaysa is as easy as 1-2-3.
-I hope you will allow us to send a few more emails in the coming weeks to assist you in getting the most out of Ailaysa. You are always welcome to speak with us. You can assist us in improving the app by sharing fresh ideas, requesting new features, and so on. After all, the platform has been developed for you!
-Start your global journey now. All the best!
+Hi {User name},
+I'm delighted you've joined the people who have already started to use Ailaysa, the AI language platform. For over 100 languages, Ailaysa includes AI writing, AI translation, AI voice, and AI image features. I hope you enjoy using it to globalise your products, content, and communication.
+We created Ailaysa to help you leverage cutting-edge AI language technology to create multilingual content, as well as translate and localise your products, apps, websites, marketing content, customer communications, and even a document or a social media message.
+It's also as simple as 1-2-3 to use Ailaysa. You are beginning your multilingual journey with us by taking full advantage of the free trial period.
+I hope you will allow us to send a few more emails to help you get the most out of Ailaysa in the coming weeks. You are always welcome to communicate with us. We provide customer service via email, chat, and phone.
+Start your global journey right now. 
+Best wishes!
