@@ -251,16 +251,22 @@ def addingthread(request):
 
 
 
-class BidPostInfoCreateView(viewsets.ViewSet):
+class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated]
+    page_size = 20
+
     def get(self, request):
         if self.request.user.is_vendor == True:
             try:
                 print(request.user.id)
                 id = request.GET.get('id')
                 queryset = BidPropasalDetails.objects.select_related('vendor').filter(Q(vendor=request.user.id)).distinct().order_by('-id').all()
-                serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
-                return Response(serializer.data)
+                pagin_tc = self.paginate_queryset(queryset, request , view=self)
+                serializer = BidPropasalDetailSerializer(pagin_tc,many=True,context={'request':request})
+                response = self.get_paginated_response(serializer.data)
+                return response
+                # serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
+                # return Response(serializer.data)
             except:
                 return Response(status=status.HTTP_204_NO_CONTENT)
         else:
