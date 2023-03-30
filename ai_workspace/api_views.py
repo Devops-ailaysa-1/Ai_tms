@@ -2819,7 +2819,7 @@ def get_consumable_credits_for_text(source,target_lang,source_lang):
                  "extension":".txt"
                  }
     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-        data={"segmentWordCountdata":json.dumps(seg_data)})
+        data={"segmentWordCountdata":json.dumps(seg_data)},timeout=3)
 
     if res.status_code == 200:
         print("Word count of the segment--->", res.json())
@@ -2943,7 +2943,7 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
     for i in ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest):
         print(i.src_segment)
-        tt = ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest-1).filter(src_segment__exact = i.src_segment)
+        tt = ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest-1).filter(src_segment__iexact = i.src_segment)
         if tt:
             mt_obj = tt.first().express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first()
             if mt_obj: 
