@@ -56,7 +56,7 @@ resource ai_workspace::Project{
 # For models with task obj
 has_role(actor: ai_auth::AiUser, role_name: String,resource:Resource) if
 resource.__class__ in [ai_workspace::Task,ai_workspace::TaskAssign,ai_workspace::TaskAssignInfo,ai_workspace_okapi::Document,
-    ai_workspace_okapi::Segment,ai_workspace_okapi::Comment]
+    ai_workspace_okapi::Segment,,ai_workspace_okapi::SplitSegment,ai_workspace_okapi::MergeSegment,ai_workspace_okapi::Comment]
 and ai_auth::TaskRoles.objects.filter(user:actor,task_pk:resource.task_obj.id ,role__role__name:role_name).count() != 0;
 
 # has_role(actor: ai_auth::AiUser, role_name: String, resource : ai_workspace::Project,ai_workspace::ProjectContentType,ai_workspace::ProjectFilesCreateType,
