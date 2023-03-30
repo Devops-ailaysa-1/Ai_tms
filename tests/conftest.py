@@ -61,10 +61,10 @@ def db_no_rollback(request, django_db_setup, django_db_blocker):
     django_db_blocker.unblock()
     request.addfinalizer(django_db_blocker.restore)
 
-@pytest.fixture(name= "")
-def django_db_setup(django_db_setup, django_db_blocker):
-    with django_db_blocker.unblock():
-        call_command('loaddata', 'fixtures/aistaff.json')
+# @pytest.fixture(name= "")
+# def django_db_setup(django_db_setup, django_db_blocker):
+#     with django_db_blocker.unblock():
+#         call_command('loaddata', 'fixtures/aistaff.json')
 
 
 @pytest.fixture(scope='session')
@@ -77,30 +77,39 @@ def django_db_setup(django_db_setup, django_db_blocker):
         call_command('loaddata', 'fixtures/emailaddress.json')
         call_command('loaddata', 'fixtures/steps.json')
         call_command('loaddata', 'fixtures/user_credits.json')
-        call_command('loaddata', 'fixtures/prompt_categories.json')
-        call_command('loaddata', 'fixtures/prompt_sub_categories.json')
-        call_command('loaddata', 'fixtures/prompt_start_phrases.json')
-        call_command('loaddata', 'fixtures/prompt_tone.json')
-        call_command('loaddata', 'fixtures/ai_customize.json')
+        call_command('loaddata', 'fixtures/Account.json')
+        call_command('loaddata', 'fixtures/Product.json')
+        call_command('loaddata', 'fixtures/Plan.json')
+        call_command('loaddata', 'fixtures/Price.json')
+        call_command('loaddata', 'fixtures/AilaysaCampaigns.json')
+        # call_command('loaddata', 'fixtures/prompt_categories.json')
+        # call_command('loaddata', 'fixtures/prompt_sub_categories.json')
+        # call_command('loaddata', 'fixtures/prompt_start_phrases.json')
+        # call_command('loaddata', 'fixtures/prompt_tone.json')
+        # call_command('loaddata', 'fixtures/ai_customize.json')
+
+        from djstripe.models import Account
+        default_djstripe_owner=Account.objects.first()
         
+
 
         
 # @pytest.fixture
 # def test_create():     
 #     create_user("stephenlangtest@gmail.com","stephenlangtest@gmail.com",101,'test@123#')
 
-def create_user(name,email,country,password):
-    #password = AiUser.objects.make_random_password()
-    hashed = make_password(password)
-    print("randowm pass",password)
-    try:
-        user = AiUser.objects.create(fullname =name,email = email,country_id=country,password = hashed)
-        UserAttribute.objects.create(user=user)
-        EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
-    except IntegrityError as e:
-        print("Intergrity error",str(e))
-        return None
-    return user,password
+# def create_user(name,email,country,password):
+#     #password = AiUser.objects.make_random_password()
+#     hashed = make_password(password)
+#     print("randowm pass",password)
+#     try:
+#         user = AiUser.objects.create(fullname =name,email = email,country_id=country,password = hashed)
+#         UserAttribute.objects.create(user=user)
+#         EmailAddress.objects.create(email = email, verified = True, primary = True, user = user)
+#     except IntegrityError as e:
+#         print("Intergrity error",str(e))
+#         return None
+#     return user,password
 
 
 
@@ -113,8 +122,14 @@ def create_user(name,email,country,password):
 
 
 
-@pytest.fixture
-def user_create_data(django_db_setup, django_db_blocker):  
-    with django_db_blocker.unblock():
-        call_command('loaddata', get_fixture_path("aiuser_re.json"))
+# @pytest.fixture
+# def user_create_data(django_db_setup, django_db_blocker):  
+#     with django_db_blocker.unblock():
+#         call_command('loaddata', get_fixture_path("aiuser_re.json"))
 
+
+
+@pytest.fixture(scope="class")
+def load_djstipe_acc(db):
+    from djstripe.models import Account
+    default_djstripe_owner=Account.objects.first()
