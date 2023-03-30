@@ -275,6 +275,33 @@ resource ai_workspace_okapi::Segment{
 
 }
 
+resource ai_workspace_okapi::SplitSegment{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner","Reviewer"];
+
+    "read" if "Editor";
+    "create" if "Editor";
+    "update" if "Editor";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+}
+
+resource ai_workspace_okapi::MergeSegment{
+    permissions = ["read", "create","update","delete"];
+    roles = ["Editor", "Project owner","Reviewer"];
+
+    "read" if "Editor";
+    "create" if "Editor";
+    "update" if "Editor";
+    "delete" if "Project owner";
+    "Editor" if "Project owner";
+    "Editor" if "Reviewer";
+
+}
+
+
 resource ai_workspace_okapi::Document{
     permissions = ["read", "create","update","delete","download"];
     roles = ["Editor", "Project owner","Reviewer"];
