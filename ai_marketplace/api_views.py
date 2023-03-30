@@ -217,12 +217,22 @@ def user_projectpost_list(request):
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
 def project_post_template_options(request):
-    query = ProjectboardTemplateDetails.objects.filter(Q(customer=request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1)))
+    query = ProjectboardTemplateDetails.objects.filter(Q(customer=request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).distinct()
     out = []
     for i in query:
         res = {'id':i.id,'template_name':i.template_name,}
         out.append(res)
     return Response(out)
+
+
+@api_view(['DELETE',])
+@permission_classes([IsAuthenticated])
+def project_post_template_delete(request,id):
+    obj = ProjectboardTemplateDetails.objects.filter(Q(customer=request.user)\
+         | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(Q(id = id))
+    if obj:
+        obj.last().delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
@@ -251,16 +261,22 @@ def addingthread(request):
 
 
 
-class BidPostInfoCreateView(viewsets.ViewSet):
+class BidPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     permission_classes = [IsAuthenticated]
+    page_size = 20
+
     def get(self, request):
         if self.request.user.is_vendor == True:
             try:
                 print(request.user.id)
                 id = request.GET.get('id')
                 queryset = BidPropasalDetails.objects.select_related('vendor').filter(Q(vendor=request.user.id)).distinct().order_by('-id').all()
-                serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
-                return Response(serializer.data)
+                pagin_tc = self.paginate_queryset(queryset, request , view=self)
+                serializer = BidPropasalDetailSerializer(pagin_tc,many=True,context={'request':request})
+                response = self.get_paginated_response(serializer.data)
+                return response
+                # serializer = BidPropasalDetailSerializer(queryset,many=True,context={'request':request})
+                # return Response(serializer.data)
             except:
                 return Response(status=status.HTTP_204_NO_CONTENT)
         else:
