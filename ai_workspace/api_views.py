@@ -1649,6 +1649,9 @@ class ProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    search_fields = ['project_name','id']
     #filterset_class = ProjectListFilter
 
     def get_queryset(self):
@@ -1659,10 +1662,17 @@ class ProjectListView(viewsets.ModelViewSet):
 
 
     def list(self,request):
-        queryset = self.get_queryset()
-        filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
-        serializer = ProjectListSerializer(filtered, many=True, context={'request': request})
-        return  Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        filtered = [pr for pr in queryset if pr.get_assignable_tasks_exists == True]
+        pagin_tc = self.paginator.paginate_queryset(filtered, request , view=self)
+        serializer = ProjectListSerializer(pagin_tc, many=True, context={'request': request})
+        response = self.get_paginated_response(serializer.data)
+        return response
+        # filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
+        # serializer = ProjectListSerializer(filtered, many=True, context={'request': request})
+        # return  Response(serializer.data)
+
+        
 
 @permission_classes([IsAuthenticated])
 @api_view(['GET',])
