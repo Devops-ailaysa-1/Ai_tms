@@ -1562,7 +1562,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 po_modify(obj.id,['unassigned',])
             except BaseException as e:
                 logger.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
-            self.history(obj)
+            try:self.history(obj)
+            except:pass
             user = obj.task_assign.task.job.project.ai_user
             with transaction.atomic():
                 assigned_user = obj.task_assign.assign_to
@@ -1662,15 +1663,16 @@ class ProjectListView(viewsets.ModelViewSet):
 
 
     def list(self,request):
-        queryset = self.filter_queryset(self.get_queryset())
-        filtered = [pr for pr in queryset if pr.get_assignable_tasks_exists == True]
-        pagin_tc = self.paginator.paginate_queryset(filtered, request , view=self)
-        serializer = ProjectListSerializer(pagin_tc, many=True, context={'request': request})
-        response = self.get_paginated_response(serializer.data)
-        return response
-        # filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
-        # serializer = ProjectListSerializer(filtered, many=True, context={'request': request})
-        # return  Response(serializer.data)
+        # queryset = self.filter_queryset(self.get_queryset())
+        # filtered = [pr for pr in queryset if pr.get_assignable_tasks_exists == True]
+        # pagin_tc = self.paginator.paginate_queryset(filtered, request , view=self)
+        # serializer = ProjectListSerializer(pagin_tc, many=True, context={'request': request})
+        # response = self.get_paginated_response(serializer.data)
+        # return response
+        queryset = self.get_queryset()
+        filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
+        serializer = ProjectListSerializer(filtered, many=True, context={'request': request})
+        return  Response(serializer.data)
 
         
 
