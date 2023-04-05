@@ -220,3 +220,4 @@ django-simple-history==3.2.0
 django-cacheops==6.1
 newrelic
 backoff==2.2.1
+quickemailverification
