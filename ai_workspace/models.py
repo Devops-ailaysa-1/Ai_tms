@@ -568,6 +568,7 @@ class Project(models.Model):
     def get_tasks_pk(self):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
+
     def project_analysis(self,tasks):
 
         if self.is_proj_analysed == True:
