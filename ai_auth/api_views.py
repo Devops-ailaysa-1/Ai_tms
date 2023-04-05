@@ -1987,7 +1987,7 @@ def get_user(request):
     print("RR------------->",email_str)
     if email_str.split('+')[0] not in company_list:
         if "+" in email_str:
-            return Response({"msg":"Invalid Email contains +"})
+            return Response({"msg":"Invalid"})
         queryset = AiUser.objects.filter(Q(email__contains = email)|Q(email__icontains=email.split('+')[0]))
         if queryset:
             return Response({'user_exist':True})
