@@ -1664,10 +1664,11 @@ class ProjectListView(viewsets.ModelViewSet):
 
     def list(self,request):
         queryset = self.filter_queryset(self.get_queryset())
-        filtered = [pr for pr in queryset if pr.get_assignable_tasks_exists == True]
-        pagin_tc = self.paginator.paginate_queryset(filtered, request , view=self)
+        #filtered = [pr for pr in queryset if pr.get_assignable_tasks_exists == True]
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectListSerializer(pagin_tc, many=True, context={'request': request})
-        response = self.get_paginated_response(serializer.data)
+        data_1 = [i for i in serializer.data if i.get('assignable')==True ]
+        response = self.get_paginated_response(data_1)
         return response
         # queryset = self.get_queryset()
         # filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
