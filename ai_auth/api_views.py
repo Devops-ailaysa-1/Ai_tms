@@ -1980,6 +1980,14 @@ def vendor_onboard_complete(request):#######while using social signups##########
 @permission_classes([AllowAny])
 def get_user(request):
     email = request.POST.get('email')
+    # queryset = AiUser.objects.filter(Q(email__contains = email)|Q(email__icontains=email.split('+')[0])).filter(email__contains='+')
+    # if queryset:
+    #     return Response({'user_exist':True})
+    # else:
+    #     email_str = email.split('@')[0]
+    #     if "+" in email_str:
+    #         return Response({"msg":"Invalid Email"})
+    #     return Response({'user_exist':False})
     try:
         user = AiUser.objects.get(email=email)
         return Response({'user_exist':True})
