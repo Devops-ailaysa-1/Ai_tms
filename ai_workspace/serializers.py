@@ -1219,14 +1219,23 @@ class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
 
 class ProjectListSerializer(serializers.ModelSerializer):
 	jobs = serializers.SerializerMethodField()
+	assignable = serializers.SerializerMethodField()
+
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","jobs",)
+		fields = ("id", "project_name","jobs","assignable",)
 
 	def get_jobs(self,obj):
 		source_lang = obj.project_jobs_set.first().source_language_id
 		target_lang = [i.target_language_id for i in obj.project_jobs_set.exclude(target_language=None)]
 		return {'source':source_lang,'target':target_lang}
+
+	def get_assignable(self, data):
+		data_1 = data.get_assignable_tasks_exists
+		if data_1: return True
+		else: return False
+
+	
 
 
 class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
