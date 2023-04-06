@@ -474,7 +474,17 @@ class PromptStartPhrases(models.Model):
     
     def __str__(self) -> str:
         return self.start_phrase
-    
+
+class DocumentType(models.Model):
+    type = models.CharField(max_length=30, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+
+    def __str__(self) -> str:
+        return  self.type
+
+ 
+
 class AiCustomize(models.Model):
     # user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     customize = models.CharField(max_length =200, null=True, blank=True)  

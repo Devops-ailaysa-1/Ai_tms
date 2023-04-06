@@ -4,7 +4,12 @@ from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register(r'aiprompt',api_views.AiPromptViewset,basename='ai_prompt')
 router.register(r'ai_image_gen',api_views.ImageGeneratorPromptViewset,basename='ai_image_gen')
-
+router.register(r'blogcreation',api_views.BlogCreationViewset ,basename='ai_blog')
+router.register(r'blogkeyword',api_views.BlogKeywordGenerateViewset ,basename='ai_keyword_gen')
+router.register(r'blogtitle',api_views.BlogtitleViewset ,basename='ai_title_gen')
+router.register(r'blogoutline',api_views.BlogOutlineViewset ,basename='ai_outline_gen')
+router.register(r'blogoutlinesession',api_views.BlogOutlineSessionViewset ,basename='ai_outline_session_gen')
+router.register(r'blogarticle',api_views.BlogArticleViewset ,basename='ai_article_gen')
 urlpatterns = router.urls
 
 urlpatterns += [
