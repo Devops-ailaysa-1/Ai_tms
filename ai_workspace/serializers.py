@@ -692,6 +692,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				#tt = mt_only(project,self.context.get('request'))
 				#print(tt)
 		except BaseException as e:
+			print("Exception---------->",e)
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
 			raise serializers.ValidationError({"error": f"project creation failed {user.uid}"})
 		return  project

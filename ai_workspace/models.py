@@ -52,6 +52,7 @@ from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.models import SplitSegment
 from django.db.models.functions import Cast
 from django.db.models import CharField
+from django.core.cache import cache
 
 
 
@@ -256,6 +257,9 @@ class Project(models.Model):
                 count_num = Project.objects.filter(project_name__icontains=self.project_name, \
                                 ai_user=self.ai_user).count()
             self.project_name = self.project_name + "(" + str(count_num) + ")"
+
+        cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
+        cache.delete(cache_key)
         return super().save()
 
     @property
@@ -270,7 +274,7 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-    @property
+    @cached_property
     def progress(self):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
