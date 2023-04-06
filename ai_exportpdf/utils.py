@@ -19,8 +19,8 @@ from django.db.models import Q
 import math 
 import urllib
 logger = logging.getLogger('django')
-credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
-client = vision.ImageAnnotatorClient(credentials=credentials)
+# credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS_OCR)
+client = vision.ImageAnnotatorClient()
 google_ocr_indian_language = ['bengali','hindi','kannada','malayalam','marathi','punjabi','tamil','telugu']
 
 def download_file(file_path):
@@ -71,6 +71,8 @@ def convertiopdf2docx(id ,language,ocr = None ):
     pdf_len = pdf.getNumPages()
     pdf_file_name = fp.split("/")[-1].split(".pdf")[0]+'.docx'    ## file_name for pdf to sent to convertio
     user_credit = UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+    # user_credit =UserCredits.objects.filter(Q(user_id=80) & Q(ended_at=None)).filter(Q(credit_pack_type__icontains="Addon") or Q(credit_pack_type__icontains="Subscription"))[0]
+    
     with open(fp, "rb") as pdf_path:
         encoded_string = base64.b64encode(pdf_path.read())
     data = {'apikey': CONVERTIO_API ,'input': 'base64', 'file': encoded_string.decode('utf-8'),'filename':   pdf_file_name,'outputformat': 'docx' }

@@ -1,11 +1,14 @@
-from .models import AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, TranslateCustomizeDetails
-from django.http import   JsonResponse
-import logging ,os
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt,
+                     BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
+from django.core import serializers
+import logging ,os ,json
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
-from .serializers import (AiPromptSerializer ,AiPromptResultSerializer,
-                                     AiPromptGetSerializer,AiPromptCustomizeSerializer,
-                                     ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer)
+from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
+                          AiPromptGetSerializer,AiPromptCustomizeSerializer,
+                        ImageGeneratorPromptSerializer,TranslateCustomizeDetailSerializer ,
+                        BlogCreationSerializer,BlogKeywordGenerateSerializer,BlogtitleSerializer,
+                        BlogOutlineSerializer,BlogOutlineSessionSerializer,BlogArticleSerializer)
 from rest_framework.views import  Response
 from rest_framework.decorators import permission_classes ,api_view
 from rest_framework.permissions  import IsAuthenticated
@@ -348,6 +351,7 @@ class AiPromptCustomizeViewset(generics.ListAPIView):
         queryset = AiPromptCustomize.objects.filter(Q(user=self.request.user)|Q(created_by=self.request.user)|Q(created_by__in=project_managers)|Q(user=owner))
         return queryset
 
+    
 class AiImageHistoryViewset(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ImageGeneratorPromptSerializer
@@ -364,8 +368,208 @@ class AiImageHistoryViewset(generics.ListAPIView):
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
         queryset = ImageGeneratorPrompt.objects.filter(Q(gen_img__user=self.request.user)|Q(gen_img__created_by=self.request.user)|Q(gen_img__created_by__in=project_managers)|Q(gen_img__user=owner))
         return queryset
+
+
+
+class BlogCreationViewset(viewsets.ViewSet):
+
+    def retrieve(self, request,pk=None):
+        query_set = BlogCreation.objects.get(id=pk)
+        serializer = BlogCreationSerializer(query_set )
+        return Response(serializer.data)
+
+    def list(self,request):
+        query_set = BlogCreation.objects.all()
+        serializer = BlogCreationSerializer(query_set,many=True)
+        return Response(serializer.data)
     
+    def create(self,request):
+        serializer = BlogCreationSerializer(data={**request.POST.dict(),'user':request.user.id} ) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def update(self,request,pk):
+        selected_keywords_list= request.POST.getlist('selected_keywords_list',None)
+        unselected_keywords_list=request.POST.getlist('unselected_keywords_list',None)
+        query_set = BlogCreation.objects.get(id = pk)
+        serializer = BlogCreationSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+ 
+class BlogKeywordGenerateViewset(viewsets.ViewSet):
+ 
+    def retrieve(self, request,pk=None):
+        query_set = BlogKeywordGenerate.objects.get(id=pk)
+        serializer = BlogKeywordGenerateSerializer(query_set )
+        return Response(serializer.data)
     
+    def list(self, request):
+        query_set=BlogKeywordGenerate.objects.all()
+        serializer=BlogKeywordGenerateSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def create(self,request):
+        serializer = BlogKeywordGenerateSerializer(data=request.POST.dict()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def update(self,request,pk):
+        query_set = BlogKeywordGenerate.objects.get(id = pk)
+        serializer = BlogKeywordGenerateSerializer(query_set,data=request.data,partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+class BlogtitleViewset(viewsets.ViewSet):
+    def create(self,request):
+        blog_inst = request.POST.get('blog_creation_gen',None)
+        serializer = BlogtitleSerializer(data=request.POST.dict())  
+        if serializer.is_valid():
+            serializer.save()
+            blog_creation=BlogCreation.objects.filter(id=blog_inst).last()
+            blog_title_ins=Blogtitle.objects.filter(blog_creation_gen=blog_creation)
+            ser = BlogtitleSerializer(blog_title_ins,many=True)
+            return Response(ser.data)
+        return Response(serializer.errors)
+
+    def list(self, request):
+        query_set=Blogtitle.objects.all()
+        serializer=BlogtitleSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request,pk=None):
+        query_set = Blogtitle.objects.get(id=pk)
+        serializer=BlogtitleSerializer(query_set )
+        return Response(serializer.data)
+    
+    def update(self,request,pk):
+        selected_title= request.POST.get('selected_title',None)
+        unselected_title=request.POST.get('unselected_title',None)
+        query_set = Blogtitle.objects.get(id = pk)
+        serializer = BlogtitleSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+    
+
+class BlogOutlineViewset(viewsets.ViewSet):
+
+    def create(self,request):
+        serializer = BlogOutlineSerializer(data=request.POST.dict()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def list(self, request):
+        query_set=BlogOutline.objects.all()
+        serializer=BlogOutlineSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request,pk=None):
+        query_set = BlogOutline.objects.get(id=pk)
+        serializer=BlogOutlineSerializer(query_set )
+        return Response(serializer.data)
+
+
+    def update(self,request,pk):
+        select_group=request.POST.get('select_group',None)
+        query_set = BlogOutline.objects.get(id = pk)
+        serializer = BlogOutlineSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+
+
+class BlogOutlineSessionViewset(viewsets.ViewSet):
+    def create(self,request):
+        serializer = BlogOutlineSessionSerializer(data=request.POST.dict()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    def list(self, request):
+        blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
+        group = request.POST.get('group',None)
+        
+        if blog_outline_gen_id and group:
+            blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_outline_gen = blog_out_ins,group=group)
+            serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
+
+        elif blog_outline_gen_id:
+            blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_outline_gen = blog_out_ins)
+            serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
+            
+        else:
+            query_set=BlogOutlineSession.objects.all()
+            serializer=BlogOutlineSessionSerializer(query_set,many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request,pk=None):
+        query_set = BlogOutlineSession.objects.get(id=pk)
+        serializer=BlogOutlineSessionSerializer(query_set )
+        return Response(serializer.data)
+
+    def update(self,request,pk):
+        select_session_list = request.POST.get('select_session_list')
+        unselect_session_list = request.POST.get('unselect_session_list')
+        query_set = BlogOutlineSession.objects.get(id = pk)
+        serializer = BlogOutlineSessionSerializer(query_set,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
+class BlogArticleViewset(viewsets.ViewSet):
+    def create(self,request):
+        outline_section_list = request.POST.getlist('outline_section_list')
+        serializer = BlogArticleSerializer(data=request.data) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+    # def list(self, request):
+    #     query_set=BlogOutlineSession.objects.all()
+    #     serializer=BlogOutlineSessionSerializer(query_set,many=True)
+    #     return Response(serializer.data)
+
+    # def retrieve(self, request,pk=None):
+    #     query_set = BlogOutlineSession.objects.get(id=pk)
+    #     serializer=BlogOutlineSessionSerializer(query_set )
+    #     return Response(serializer.data)
+
+    # def update(self,request,pk):
+    #     select_session_list = request.POST.get('select_session_list')
+    #     unselect_session_list = request.POST.get('unselect_session_list')
+    #     query_set = BlogOutlineSession.objects.get(id = pk)
+    #     serializer = BlogOutlineSessionSerializer(query_set,data=request.data,partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     else:
+    #         return Response(serializer.errors)
+        
 # @api_view(['POST',])
 # @permission_classes([IsAuthenticated])
 # def instant_translation_custom(request):

@@ -170,7 +170,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'ai_tms.urls'
 AUTH_USER_MODEL="ai_auth.AiUser"
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
