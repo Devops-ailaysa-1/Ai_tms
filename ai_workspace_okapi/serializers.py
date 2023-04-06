@@ -13,7 +13,7 @@ from django.db import connection
 from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
-from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment
+from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment, SegmentPageSize
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 from .utils import split_check
@@ -475,6 +475,11 @@ class TranslationStatusSerializer(serializers.ModelSerializer):
 class FontSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FontSize
+        fields = "__all__"
+
+class SegmentPageSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SegmentPageSize
         fields = "__all__"
 
 class CommentSerializer(serializers.ModelSerializer):

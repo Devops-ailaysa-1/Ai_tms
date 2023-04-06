@@ -1,6 +1,6 @@
 from .serializers import (DocumentSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, CommentSerializer,
-                          TM_FetchSerializer, VerbSerializer)
+                          TM_FetchSerializer, VerbSerializer,SegmentPageSizeSerializer)
 from ai_workspace.serializers import TaskCreditStatusSerializer, TaskTranscriptDetailSerializer
 from rest_framework import views
 import json, logging,os,re,urllib.parse,xlsxwriter
@@ -32,6 +32,7 @@ from django_celery_results.models import TaskResult
 from django.shortcuts import get_object_or_404
 from nltk.tokenize import TweetTokenizer
 from rest_framework import permissions
+from rest_framework import status
 from rest_framework import views
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
@@ -60,7 +61,7 @@ from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
 from ai_workspace.serializers import TaskTranscriptDetailSerializer
 from ai_workspace.utils import get_consumable_credits_for_text_to_speech
-from ai_workspace_okapi.models import SplitSegment
+from ai_workspace_okapi.models import SplitSegment,SegmentPageSize
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment, \
     MtRawSplitSegment
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
@@ -443,8 +444,36 @@ class DocumentViewByDocumentId(views.APIView):
         # else:
         #     return Response({"msg" : "Unauthorised"}, status=401)
 
+
+# from rest_framework import pagination
+
+# class CustomPageNumberPagination(pagination.PageNumberPagination):
+#     """Custom page number pagination."""
+
+#     page_size = 20
+#     max_page_size = 50
+#     page_size_query_param = 'page_size'
+
+#     def get_page_size(self, request):
+#         """Get page size."""
+#         # On certain pages, force custom/max page size.
+#         try:
+#             user = request.user
+#             Print("User-------->",user)
+#             size = SegmentPageSize.objects.get(user=user).page_size
+#             return size
+#         except:
+#             return self.page_size
+
+#         return super(CustomPageNumberPagination, self).get_page_size(request)
+
+
+
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
+    max_page_size = 50
+    page_size_query_param = 'page_size'
+    #pagination_class = CustomPageNumberPagination
 
     def get_object(self, document_id):
         document = get_object_or_404(\
@@ -1592,6 +1621,60 @@ class ProgressView(views.APIView):
             dict(total_segment_count=total_segment_count,
                  segments_confirmed_count=segments_confirmed_count), safe=False
         )
+
+
+# class SegmentSizeView(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated]
+    
+#     def list(self, request):
+#         print("$$$$")
+#         obj = SegmentPageSize.objects.filter(ai_user_id = request.user.id)
+#         ser = FontSizeSerializer(obj, many=True)
+#         return Response(ser.data, status=200)
+
+#     def create(self,request):
+        # obj = SegmentPageSize.objects.filter(ai_user_id = request.user.id)
+        # if obj is not None:
+        #     obj.update({'page_size':request.POST.get('page_size')})
+        # else:
+        #     ser = SegmentPageSizeSerializer(data={**request.POST.dict(), "ai_user": request.user.id})
+        #     if ser.is_valid(raise_exception=True):
+        #         ser.save()
+        #         return Response(ser.data)
+        #     return Response(ser.errors)
+        # return Response({'page_size':obj.page_size})
+
+class SegmentSizeView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        try:
+            queryset = SegmentPageSize.objects.filter(ai_user_id = request.user.id)
+            serializer = SegmentPageSizeSerializer(queryset,many=True)
+            return Response(serializer.data)
+        except:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def create(self,request):
+        obj = SegmentPageSize.objects.filter(ai_user_id = request.user.id)
+        if obj:
+            obj.update(page_size = request.POST.get('size'))
+        else:
+            ser = SegmentPageSizeSerializer(data={'page_size':request.POST.get('size'), "ai_user": request.user.id})
+            if ser.is_valid(raise_exception=True):
+                ser.save()
+                return Response(ser.data)
+            return Response(ser.errors)
+        return Response({'page_size':obj.last().page_size})
+
+    def update(self,request,pk):
+        pass
+
+    def delete(self,request,pk):
+        pass
+
+
+
+
 
 class FontSizeView(views.APIView):
     permission_classes = [IsAuthenticated]
