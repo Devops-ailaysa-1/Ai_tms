@@ -27,7 +27,7 @@ from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
     Currencies, ProjectTypeDetail,AiRoles,AiCustomize
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
-from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
+from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType,DocumentType
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.utils import SpacesService
@@ -158,6 +158,7 @@ class WriterProject(models.Model):
 
 class MyDocuments(models.Model):
     project = models.ForeignKey(WriterProject, null=True, blank=True, on_delete=models.CASCADE,related_name = 'related_docs')
+    writer_project_type = models.ForeignKey(DocumentType, null=False, blank=False,on_delete=models.CASCADE,default=1)
     file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
     word_count = models.IntegerField(null=True,blank=True)
