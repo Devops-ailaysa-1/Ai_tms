@@ -2130,15 +2130,15 @@ def paraphrasing(request):
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence with 5 output :"+clean_sentence,n=1)
-        para_sentence = result_prompt["choices"][0]["message"]["content"].split('\n')
+        result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence :"+clean_sentence,n=1)
+        para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         # openai_token_usage(result_prompt)
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        for i in range(len(para_sentence)):
-            para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
+        # for i in range(len(para_sentence)):
+        #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
         if any(tag_names):
             for i in range(len(list(tag_names))):
                 tag_names[i] = '<'+tag_names[i]+'>'
