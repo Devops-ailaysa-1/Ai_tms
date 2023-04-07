@@ -21,7 +21,7 @@ from django.db.models.fields.files import FileField
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.shortcuts import reverse
 from django.utils.functional import cached_property
-
+from django.db import transaction
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
