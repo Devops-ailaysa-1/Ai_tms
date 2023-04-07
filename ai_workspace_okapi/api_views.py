@@ -2264,7 +2264,7 @@ def get_word_api(request):
 #             res = requests.request("GET", url, headers=headers)
 #     print("doc--->",res.text)
 
-
+#################################################################################################################################
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
