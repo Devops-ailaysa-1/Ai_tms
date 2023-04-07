@@ -61,7 +61,7 @@ from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
-from ai_auth.utils import get_plan_name
+from ai_auth.utils import get_plan_name,company_members_list
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
 from ai_vendor.models import VendorsInfo,VendorLanguagePair
 from django.db import transaction
@@ -1972,19 +1972,57 @@ def vendor_onboard_complete(request):#######while using social signups##########
     return JsonResponse({"msg": "Onboarding completed successfully"})
 
 
-
-
-
+import quickemailverification
+API_KEY = os.getenv('API_KEY')
+client = quickemailverification.Client(API_KEY)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def get_user(request):
     email = request.POST.get('email')
-    try:
-        user = AiUser.objects.get(email=email)
-        return Response({'user_exist':True})
-    except:
-        return Response({'user_exist':False})
+    email_str = email.split('@')[0]
+    print("RR------------->",email_str)
+    if email_str.split('+')[0] not in company_members_list:
+        if "+" in email_str:
+            return Response({"msg":"Invalid"})
+        queryset = AiUser.objects.filter(Q(email__contains = email)|Q(email__icontains=email.split('+')[0]))
+        if queryset:
+            return Response({'user_exist':True})
+        elif queryset.filter(email__contains='+'):
+            return Response({'user_exist':True})
+        else:
+            quickemailverification = client.quickemailverification()
+            try:
+                response = quickemailverification.verify(email)
+                print(response.body)
+                if response.code == 200:
+                    if response.body.get('result') == "invalid" or response.body.get('disposable') == 'true':
+                        return Response({'msg':'Invalid'})
+                    else:
+                        return Response({'user_exist':False})
+                else:
+                    print(response.code)
+                    return Response({'user_exist':False})
+            except:
+                return Response({'user_exist':False})
+    else:
+        try:
+            user = AiUser.objects.get(email=email)
+            return Response({'user_exist':True})
+        except:
+            return Response({'user_exist':False})
+
+
+
+# @api_view(['POST'])
+# @permission_classes([AllowAny])
+# def get_user(request):
+#     email = request.POST.get('email')
+#     try:
+#         user = AiUser.objects.get(email=email)
+#         return Response({'user_exist':True})
+#     except:
+#         return Response({'user_exist':False})
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
