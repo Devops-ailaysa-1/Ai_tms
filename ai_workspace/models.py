@@ -259,8 +259,8 @@ class Project(models.Model):
                                     ai_user=self.ai_user).count()
                 self.project_name = self.project_name + "(" + str(count_num) + ")"
 
-            # cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
-            # cache.delete(cache_key)
+            cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
+            cache.delete(cache_key)
             return super().save()
 
     @property
@@ -275,8 +275,8 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-    #@cached_property
-    @property
+    @cached_property
+    #@property
     def progress(self):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
