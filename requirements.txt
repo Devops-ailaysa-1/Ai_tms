@@ -213,7 +213,7 @@ rapidfuzz
 pyyaml
 django-silk
 django-oso
-openai==0.25.0
+openai
 pypandoc==1.10
 googletrans==3.1.0a0
 django-simple-history==3.2.0
