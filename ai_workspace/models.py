@@ -235,32 +235,33 @@ class Project(models.Model):
     penseive_tm_klass = PenseiveTM
 
     def save(self, *args, **kwargs):
-        ''' try except block created for logging the exception '''
+        
+        with transaction.atomic():
 
-        if not self.ai_project_id:
-            self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
+            if not self.ai_project_id:
+                self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
-        if not self.project_name:
-            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
+            if not self.project_name:
+                self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
 
-        if self.id:
-            project_count = Project.objects.filter(project_name=self.project_name, \
-                            ai_user=self.ai_user).exclude(id=self.id).count()
-        else:
-            project_count = Project.objects.filter(project_name=self.project_name, \
-                            ai_user=self.ai_user).count()
-        if project_count != 0:
             if self.id:
-                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                project_count = Project.objects.filter(project_name=self.project_name, \
                                 ai_user=self.ai_user).exclude(id=self.id).count()
             else:
-                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                project_count = Project.objects.filter(project_name=self.project_name, \
                                 ai_user=self.ai_user).count()
-            self.project_name = self.project_name + "(" + str(count_num) + ")"
+            if project_count != 0:
+                if self.id:
+                    count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                                    ai_user=self.ai_user).exclude(id=self.id).count()
+                else:
+                    count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                                    ai_user=self.ai_user).count()
+                self.project_name = self.project_name + "(" + str(count_num) + ")"
 
-        cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
-        cache.delete(cache_key)
-        return super().save()
+            # cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
+            # cache.delete(cache_key)
+            return super().save()
 
     @property
     def ref_files(self):
@@ -274,7 +275,8 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-    @cached_property
+    #@cached_property
+    @property
     def progress(self):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
