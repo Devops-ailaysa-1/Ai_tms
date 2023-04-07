@@ -108,7 +108,7 @@ def get_img_content_from_openai_url(image_url):
     return img_byte_arr
 
 
-@backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=60)
+@backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30)
 def get_prompt_chatgpt_turbo(prompt,n):
     completion = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",

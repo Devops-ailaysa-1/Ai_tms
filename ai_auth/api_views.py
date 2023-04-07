@@ -61,7 +61,7 @@ from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
-from ai_auth.utils import get_plan_name,company_list
+from ai_auth.utils import get_plan_name,company_members_list
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
 from ai_vendor.models import VendorsInfo,VendorLanguagePair
 from django.db import transaction
@@ -1985,7 +1985,7 @@ def get_user(request):
     email = request.POST.get('email')
     email_str = email.split('@')[0]
     print("RR------------->",email_str)
-    if email_str.split('+')[0] not in company_list:
+    if email_str.split('+')[0] not in company_members_list:
         if "+" in email_str:
             return Response({"msg":"Invalid"})
         queryset = AiUser.objects.filter(Q(email__contains = email)|Q(email__icontains=email.split('+')[0]))
