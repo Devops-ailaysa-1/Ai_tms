@@ -2143,7 +2143,7 @@ def paraphrasing(request):
             for i in range(len(list(tag_names))):
                 tag_names[i] = '<'+tag_names[i]+'>'
         print("tag-->",tag_names)
-        return Response({'paraphrase':para_sentence ,'tag':tag_names})
+        return Response({'paraphrase':[para_sentence] ,'tag':tag_names})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
 
