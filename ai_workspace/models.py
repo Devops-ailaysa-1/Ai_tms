@@ -246,17 +246,17 @@ class Project(models.Model):
 
             if self.id:
                 project_count = Project.objects.filter(project_name=self.project_name, \
-                                ai_user=self.ai_user).exclude(id=self.id).count()
+                                ai_user=self.ai_user).exclude(id=self.id).select_for_update().count()
             else:
                 project_count = Project.objects.filter(project_name=self.project_name, \
-                                ai_user=self.ai_user).count()
+                                ai_user=self.ai_user).select_for_update().count()
             if project_count != 0:
                 if self.id:
                     count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                                    ai_user=self.ai_user).exclude(id=self.id).count()
+                                    ai_user=self.ai_user).exclude(id=self.id).select_for_update().count()
                 else:
                     count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                                    ai_user=self.ai_user).count()
+                                    ai_user=self.ai_user).select_for_update().count()
                 self.project_name = self.project_name + "(" + str(count_num) + ")"
 
             cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
