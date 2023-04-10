@@ -343,25 +343,29 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 #print("data---->" ,data)
                 
             else:
-                doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-                    "doc_req_params": json.dumps(params_data),
-                    "doc_req_res_params": json.dumps(res_paths)
-                })
-                #print("params_data------------>",params_data)
-                if doc.status_code == 200:
-                    doc_data = doc.json()
-                    if doc_data.get('total_word_count') == 0:
-                        return {'msg':'Empty File'}
-                    serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                             "file": task.file.id, "job": task.job.id, }, ))
+                try:
+                    doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+                        "doc_req_params": json.dumps(params_data),
+                        "doc_req_res_params": json.dumps(res_paths)
+                    },timeout=3)
+                    #print("params_data------------>",params_data)
+                    if doc.status_code == 200:
+                        doc_data = doc.json()
+                        if doc_data.get('total_word_count') == 0:
+                            return {'msg':'Empty File'}
+                        serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                                "file": task.file.id, "job": task.job.id, }, ))
 
-                    if serializer.is_valid(raise_exception=True):
-                        document = serializer.save()
-                        task.document = document
-                        task.save()
-                else:
-                    logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
-                    raise ValueError("Sorry! Something went wrong with file processing.")
+                        if serializer.is_valid(raise_exception=True):
+                            document = serializer.save()
+                            task.document = document
+                            task.save()
+                    else:
+                        logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
+                        raise ValueError("Sorry! Something went wrong with file processing.")
+                except:
+                    logger.info(">>>>>>>> Read TimeOut Error <<<<<<<<<")
+                    raise ValueError("Sorry! File Reading Process takes too long.")
 
         return document
 
