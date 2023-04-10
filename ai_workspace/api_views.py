@@ -1328,10 +1328,6 @@ class ProjectAnalysisProperty(APIView):
                 # DocumentViewByTask.correct_fields(data)
                 params_data = {**data, "output_type": None}
                 res_paths = get_res_path(params_data["source_language"])
-                # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                #          "fprm_file_path": None,
-                #          "use_spaces" : settings.USE_SPACES
-                #          }
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
