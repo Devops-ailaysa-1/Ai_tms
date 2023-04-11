@@ -8,6 +8,7 @@ app_name = "ws_okapi"
 router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
+router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
 
 urlpatterns = router.urls
 
@@ -42,6 +43,7 @@ urlpatterns+=[
     #     {"put":"put"}), name="seg-find-&-replace"),
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
+    #path("page_size", api_views.SegmentSizeView.as_view(), name='default-page-size'),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
     path("segment/get/page/filter/<int:document_id>/<int:segment_id>", api_views
          .GetPageIndexWithFilterApplied.as_view(), name="get-page-id-of-segment-on-apply-filter"),

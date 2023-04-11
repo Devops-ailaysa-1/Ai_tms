@@ -136,7 +136,7 @@ def record_usage(provider,service,uid,email,usage):
 
 
 
-company_list = [
+company_members_list = [
 'thenmozhivijay20',
 'hemanthmurugan21',
 'stephenlangtest',
@@ -149,4 +149,5 @@ company_list = [
 'quiet.lifeafter',
 'kdinesh2911',
 'dinesh',
+'acilangoven'
 ]

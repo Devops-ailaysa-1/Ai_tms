@@ -21,13 +21,13 @@ from django.db.models.fields.files import FileField
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.shortcuts import reverse
 from django.utils.functional import cached_property
-
+from django.db import transaction
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
     Currencies, ProjectTypeDetail,AiRoles,AiCustomize
 from ai_staff.models import Billingunits, MTLanguageLocaleVoiceSupport
-from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType
+from ai_staff.models import ContentTypes, Languages, SubjectFields, ProjectType,DocumentType
 from .manager import AilzaManager
 from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.utils import SpacesService
@@ -52,6 +52,7 @@ from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.models import SplitSegment
 from django.db.models.functions import Cast
 from django.db.models import CharField
+from django.core.cache import cache
 
 
 
@@ -158,6 +159,7 @@ class WriterProject(models.Model):
 
 class MyDocuments(models.Model):
     project = models.ForeignKey(WriterProject, null=True, blank=True, on_delete=models.CASCADE,related_name = 'related_docs')
+    writer_project_type = models.ForeignKey(DocumentType, null=False, blank=False,on_delete=models.CASCADE,default=1)
     file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
     word_count = models.IntegerField(null=True,blank=True)
@@ -233,29 +235,33 @@ class Project(models.Model):
     penseive_tm_klass = PenseiveTM
 
     def save(self, *args, **kwargs):
-        ''' try except block created for logging the exception '''
+        
+        with transaction.atomic():
 
-        if not self.ai_project_id:
-            self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
+            if not self.ai_project_id:
+                self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
-        if not self.project_name:
-            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
+            if not self.project_name:
+                self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
 
-        if self.id:
-            project_count = Project.objects.filter(project_name=self.project_name, \
-                            ai_user=self.ai_user).exclude(id=self.id).count()
-        else:
-            project_count = Project.objects.filter(project_name=self.project_name, \
-                            ai_user=self.ai_user).count()
-        if project_count != 0:
             if self.id:
-                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                                ai_user=self.ai_user).exclude(id=self.id).count()
+                project_count = Project.objects.filter(project_name=self.project_name, \
+                                ai_user=self.ai_user).exclude(id=self.id).select_for_update().count()
             else:
-                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                                ai_user=self.ai_user).count()
-            self.project_name = self.project_name + "(" + str(count_num) + ")"
-        return super().save()
+                project_count = Project.objects.filter(project_name=self.project_name, \
+                                ai_user=self.ai_user).select_for_update().count()
+            if project_count != 0:
+                if self.id:
+                    count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                                    ai_user=self.ai_user).exclude(id=self.id).select_for_update().count()
+                else:
+                    count_num = Project.objects.filter(project_name__icontains=self.project_name, \
+                                    ai_user=self.ai_user).select_for_update().count()
+                self.project_name = self.project_name + "(" + str(count_num) + ")"
+
+            cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
+            cache.delete(cache_key)
+            return super().save()
 
     @property
     def ref_files(self):
@@ -269,7 +275,8 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-    @property
+    @cached_property
+    #@property
     def progress(self):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:

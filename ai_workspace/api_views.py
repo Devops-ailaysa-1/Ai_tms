@@ -91,6 +91,10 @@ from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
+from django.db.models import Case, When, F, Value, DateTimeField
+from django.db.models.functions import Coalesce
+from django.db.models.query import QuerySet
+
 
 class IsCustomer(permissions.BasePermission):
 
@@ -728,8 +732,20 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     .filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        # parent_queryset = queryset.annotate(
+        #                     sorted_datetime=Coalesce(
+        #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
+        #                     Case(
+        #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
+        #                         default=F('created_at'),
+        #                         output_field=DateTimeField(),
+        #                     ),
+        #                     Value(datetime.min),
+        #                     )
+        #                     ).order_by('-sorted_datetime')
+
         #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
-        return queryset
+        return queryset#parent_queryset
 
 
     def list(self, request, *args, **kwargs):
@@ -1312,10 +1328,6 @@ class ProjectAnalysisProperty(APIView):
                 # DocumentViewByTask.correct_fields(data)
                 params_data = {**data, "output_type": None}
                 res_paths = get_res_path(params_data["source_language"])
-                # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                #          "fprm_file_path": None,
-                #          "use_spaces" : settings.USE_SPACES
-                #          }
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
