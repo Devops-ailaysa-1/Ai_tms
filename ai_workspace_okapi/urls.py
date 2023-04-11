@@ -56,7 +56,6 @@ urlpatterns+=[
     path('download_audio_file/',api_views.download_audio_output_file),
     path('download_converted_audio_file/',api_views.download_converted_audio_file),
 ]
-
 urlpatterns+=[
     path("document_list/dj", views.DocumentListView.as_view(), name="document-list"),
     path("segment_list/dj/<int:document_id>", views.SegmentListView.as_view(), name="segments-list"),

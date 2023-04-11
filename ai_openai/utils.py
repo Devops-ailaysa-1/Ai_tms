@@ -41,13 +41,11 @@ def openai_text_trim(text):
 import backoff
 @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt(prompt ,model_name , max_token ,n ):
-
     #max_token = 256
     temperature=0.7
     frequency_penalty = 1
     presence_penalty = 1
     top_p = 1
-
     response = openai.Completion.create(
                 model=model_name, 
                 prompt=prompt.strip(),
@@ -80,10 +78,7 @@ def get_prompt_freestyle(prompt):
 model_edit = os.getenv('OPENAI_EDIT_MODEL')
 
 def get_prompt_edit(input_text ,instruction ):
-    response = openai.Edit.create(
-                model=model_edit, 
-                input=input_text.strip(),
-                instruction=instruction,
+    response = openai.Edit.create(model=model_edit, input=input_text.strip(),instruction=instruction,
                 # temperature=0.7,
                 # top_p=1,
                 )
@@ -106,3 +101,14 @@ def get_img_content_from_openai_url(image_url):
     pil_img.save(img_byte_arr, format='PNG')
     img_byte_arr = img_byte_arr.getvalue()
     return img_byte_arr
+
+
+@backoff.on_exception(backoff.expo, openai.error.RateLimitError)
+def get_prompt_chatgpt_turbo(prompt,n):
+    completion = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "user", "content": prompt}
+    ],n=n
+    )
+    return completion

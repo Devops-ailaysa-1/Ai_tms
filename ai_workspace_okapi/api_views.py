@@ -2047,17 +2047,37 @@ def get_segment_history(request):
         return Response({'msg':'Not found'}, status=404)
 ####################################################### Hemanth #########################################################
 
+from ai_workspace.api_views import get_consumable_credits_for_text
+from ai_openai.utils import get_prompt_chatgpt_turbo
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
     sentence = request.POST.get('sentence')
-    try:
-        text = {}
-        text['sentence'] = sentence
-        end_pts = settings.END_POINT +"paraphrase/"
-        data = requests.post(end_pts , text)
-        return JsonResponse(data.json())
-    except:
-        return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
+    user = request.user
+    initial_credit = user.credit_balance.get("total_left")
+    if initial_credit == 0:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+    
+    tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
+    clean_sentence = re.sub('<[^<]+?>', '', sentence)
+    consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,'en')
+    if initial_credit >= consumable_credits_user_text:
+        result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence with 5 output :"+clean_sentence)
+        # print("result-->",result_prompt)
+        if any(tag_names):
+            for i in range(len(list(tag_names))):
+                tag_names[i] = '<'+tag_names[i]+'>'
+    else:
+        return  Response({'msg':'Insufficient Credits'},status=400)
+
+
+
+        # text = {}
+        # text['sentence'] = sentence
+        # end_pts = settings.END_POINT +"paraphrase/"
+        # data = requests.post(end_pts , text)
+    #     return JsonResponse(data.json())
+    # except:
+    #     return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
 
 
 
