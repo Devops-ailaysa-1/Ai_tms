@@ -50,6 +50,10 @@ CURRENT_SUPPORT_FILE_EXTENSIONS_LIST = [
     ".php", ".yaml", ".yml", ".epub",'.pdf',
 ]#".dotx" -> file processing pending
 
+EMPTY_SEGMENT_CHARACTERS = [
+    "\xa0", "\n", "\ufeff",
+]
+
 LINGVANEX_LANGUAGE_MAPPER ={
 ('af',):'af_ZA',
 ('sq',):'sq_AL',

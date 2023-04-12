@@ -214,8 +214,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         if doc_data['total_word_count'] >= 50000:
 
-            #print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
-
             doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
             serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
@@ -239,7 +237,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task_write_data = json.dumps(validated_data, default=str)
                 write_segments_to_db.apply_async((task_write_data, document.id), )
         else:
-            #print("NOT USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
             serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
                                                      }, ))
@@ -265,7 +262,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
         print("create_document_for_task_if_not_exists")
-        print("Tt------>",task.document)
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -292,7 +288,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
                         seg = task.document.get_segments().filter(target='').first().source
                         consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
-                        print("Consumable------->",consumable_credits)
                         if initial_credit > consumable_credits:
                             cel_task = pre_translate_update.apply_async((task.id,),)
                             return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
@@ -332,29 +327,24 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             params_data = {**data, "output_type": None}
 
             res_paths = get_res_path(params_data["source_language"])
-            print("ResPath------------>",res_paths)
-            print("srclang------------>",params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
-                #print("params_data exists------------>",params_data)
-                #print("data---->" ,data)
                 
             else:
-                try:
-                    doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
-                        "doc_req_params": json.dumps(params_data),
-                        "doc_req_res_params": json.dumps(res_paths)
-                    },timeout=3)
-                    #print("params_data------------>",params_data)
-                    if doc.status_code == 200:
-                        doc_data = doc.json()
-                        if doc_data.get('total_word_count') == 0:
-                            return {'msg':'Empty File'}
-                        serializer = (DocumentSerializerV2(data={**doc_data, \
-                                                                "file": task.file.id, "job": task.job.id, }, ))
+                doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
+                    "doc_req_params": json.dumps(params_data),
+                    "doc_req_res_params": json.dumps(res_paths)
+                })
+
+                if doc.status_code == 200:
+                    doc_data = doc.json()
+                    if doc_data.get('total_word_count') == 0:
+                        return {'msg':'Empty File'}
+                    serializer = (DocumentSerializerV2(data={**doc_data, \
+                                                             "file": task.file.id, "job": task.job.id, }, ))
 
                         if serializer.is_valid(raise_exception=True):
                             document = serializer.save()
@@ -377,7 +367,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-            print("State------------------>",state)
+
             if state == 'STARTED' or state == 'PENDING':
                 if ins.status == 1:
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
