@@ -7,7 +7,7 @@ from .models import (AilaysaSupportedMtpeEngines, ContentTypes, Countries, India
                     SubscriptionFeatures,CreditsAddons,SubscriptionPricingPrices,
                     CreditAddonPrice,SupportTopics,JobPositions,Role,MTLanguageSupport,
                     ProjectTypeDetail,ProjectType , PromptCategories ,PromptSubCategories ,
-                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields)
+                    PromptStartPhrases,PromptTones,AiCustomize,PromptFields,FontLanguage,FontFamily,FontData,SocialMediaSize)
 import json
 from itertools import groupby
 from drf_writable_nested import WritableNestedModelSerializer
@@ -401,3 +401,25 @@ class AiCustomizeGroupingSerializer(serializers.ModelSerializer):
             result_dict[i] = AiCustomizeSerializer(rr,many=True).data
         return result_dict
         
+
+class FontLanguageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =  FontLanguage
+        fields = ("id",'name')
+
+class FontFamilySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FontFamily
+        fields = ('font_family_name',)
+
+class FontDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FontData
+        fields = ('id','font_family')#,'font_data_family' )
+        depth = 1
+
+
+class SocialMediaSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SocialMediaSize
+        fields='__all__'
