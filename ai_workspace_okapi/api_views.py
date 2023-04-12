@@ -1789,6 +1789,8 @@ class GetPageIndexWithFilterApplied(views.APIView):
 
     def post(self, request, document_id, segment_id):
         status_list = request.data.get("status_list", [])
+        page_size = SegmentPageSize.objects.filter(ai_user_id = self.request.user.id).last().page_size
+        page_size = page_size if page_size else 20
         doc = get_object_or_404(Document.objects.all(), id=document_id)
         segs = doc.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
@@ -1802,9 +1804,8 @@ class GetPageIndexWithFilterApplied(views.APIView):
         ids = [
             segment.id for segment in segments
         ]
-
         try:
-            res = ({"page_id": (ids.index(segment_id)//20)+1}, 200)
+            res = ({"page_id": (ids.index(segment_id)//page_size)+1}, 200)
         except:
             res = ({"page_id": None}, 404)
         return  Response(*res)
