@@ -1335,11 +1335,9 @@ class ProjectAnalysisProperty(APIView):
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
-                },timeout=3)
-                
+                })
+
                 try:
-                    print("Inside Try")
-                    print("DCC-------->",doc.status_code)
                     if doc.status_code == 200 :
                         doc_data = doc.json()
                         print("Doc Data---------------->",doc_data)

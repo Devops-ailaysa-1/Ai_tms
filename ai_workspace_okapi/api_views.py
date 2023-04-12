@@ -476,7 +476,7 @@ class DocumentViewByDocumentId(views.APIView):
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
     max_page_size = 50
-    page_size_query_param = 'page_size'
+    page_size_query_param = 'page_size'#self.get_page_size()
     #pagination_class = CustomPageNumberPagination
 
     def get_object(self, document_id):
@@ -485,6 +485,9 @@ class SegmentsView(views.APIView, PageNumberPagination):
         authorize(self.request, resource=document, actor=self.request.user, action="read")
         return document
 
+    # def get_page_size(self):
+    #     page_size = SegmentPageSize.objects.filter(ai_user_id = self.request.user.id).last().page_size
+    #     return page_size
 
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
@@ -1367,6 +1370,7 @@ class TranslationStatusList(views.APIView):
 class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     PAGE_SIZE = page_size = 20
     lookup_field = "source"
+    page_size_query_param = 'page_size'
 
     @staticmethod
     def prepare_data(data):
