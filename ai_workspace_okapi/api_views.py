@@ -346,16 +346,13 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     serializer = (DocumentSerializerV2(data={**doc_data, \
                                                              "file": task.file.id, "job": task.job.id, }, ))
 
-                        if serializer.is_valid(raise_exception=True):
-                            document = serializer.save()
-                            task.document = document
-                            task.save()
-                    else:
-                        logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
-                        raise ValueError("Sorry! Something went wrong with file processing.")
-                except:
-                    logger.info(">>>>>>>> Read TimeOut Error <<<<<<<<<")
-                    raise ValueError("Sorry! File Reading Process takes too long.")
+                    if serializer.is_valid(raise_exception=True):
+                        document = serializer.save()
+                        task.document = document
+                        task.save()
+                else:
+                    logger.info(">>>>>>>> Something went wrong with file reading <<<<<<<<<")
+                    raise ValueError("Sorry! Something went wrong with file processing.")
 
         return document
 
