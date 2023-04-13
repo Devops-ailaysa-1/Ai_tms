@@ -242,28 +242,27 @@ class Project(models.Model):
                 self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
             if not self.project_name:
-                self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
-        
+                count = self.get_count_for_project_name_safely()
+                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+                print("Pr Name--------->",self.project_name)
+
             project_count = self.get_queryset_count_safely()
-            # if self.id:
-            #     project_count = Project.objects.filter(project_name=self.project_name, \
-            #                     ai_user=self.ai_user).exclude(id=self.id).select_for_update().count()
-            # else:
-            #     project_count = Project.objects.filter(project_name=self.project_name, \
-            #                     ai_user=self.ai_user).select_for_update().count()
+            
             if project_count != 0:
                 count_num = self.get_count_num_safely()
-                # if self.id:
-                #     count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                #                     ai_user=self.ai_user).exclude(id=self.id).select_for_update().count()
-                # else:
-                #     count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                #                     ai_user=self.ai_user).select_for_update().count()
                 self.project_name = self.project_name + "(" + str(count_num) + ")"
-
+                print("Name---------->",self.project_name)
             cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
             cache.delete(cache_key)
             return super().save()
+
+    @transaction.atomic
+    def get_count_for_project_name_safely(self):
+        query = Project.objects.filter(ai_user=self.ai_user)
+        queryset = query.select_for_update()
+        count = queryset.count()
+        print("Count------------>",count)
+        return count
 
     @transaction.atomic
     def get_queryset_count_safely(self):
@@ -273,8 +272,9 @@ class Project(models.Model):
             queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user)
         queryset = queryset.select_for_update()
         count = queryset.count()
+        print("Count---------->",count)
         return count
-        
+
     @transaction.atomic
     def get_count_num_safely(self):
         if self.id:
@@ -285,6 +285,7 @@ class Project(models.Model):
                             ai_user=self.ai_user)
         queryset = queryset.select_for_update()
         count_num = queryset.count()
+        print("Count_num------------>",count_num)
         return count_num
 
     @property
