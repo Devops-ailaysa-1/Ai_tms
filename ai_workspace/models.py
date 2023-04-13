@@ -237,58 +237,81 @@ class Project(models.Model):
     def save(self, *args, **kwargs):
         
         with transaction.atomic():
-
+            queryset = Project.objects.select_for_update().filter(ai_user=self.ai_user)
             if not self.ai_project_id:
                 self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
             if not self.project_name:
-                count = self.get_count_for_project_name_safely()
-                print("Count for pr name-------->",count)
-                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) +')'
-                print("Pr Name--------->",self.project_name)
-           
-            project_count = self.get_queryset_count_safely()
-            print("Pr Count if exists---------->",project_count)
+                count = queryset.count()
+                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+
+            if self.id:
+                project_count = queryset.filter(project_name=self.project_name).exclude(id=self.id).count()
+            else:
+                project_count = queryset.filter(project_name=self.project_name).count()
             if project_count != 0:
-                count_num = self.get_count_num_safely()
-                print("Already Exists Count_num--------->",count_num)
+                if self.id:
+                    count_num = queryset.filter(project_name__icontains=self.project_name, \
+                                    ai_user=self.ai_user).exclude(id=self.id).count()
+                else:
+                    count_num = queryset.filter(project_name__icontains=self.project_name, \
+                                    ai_user=self.ai_user).count()
                 self.project_name = self.project_name + "(" + str(count_num) + ")"
-                print("Name---------->",self.project_name)
-            cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
-            cache.delete(cache_key)
             return super().save()
 
-    @transaction.atomic
-    def get_count_for_project_name_safely(self):
-        query = Project.objects.filter(ai_user=self.ai_user)
-        queryset = query.select_for_update()
-        count = queryset.count()
-        #print("Count------------>",count)
-        return count
 
-    @transaction.atomic
-    def get_queryset_count_safely(self):
-        if self.id:
-            queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user).exclude(id=self.id)
-        else:
-            queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user)
-        queryset = queryset.select_for_update()
-        count = queryset.count()
-        #print("Count1---------->",count)
-        return count
+            # if not self.ai_project_id:
+            #     self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
-    @transaction.atomic
-    def get_count_num_safely(self):
-        if self.id:
-            queryset = Project.objects.filter(project_name__icontains=self.project_name, \
-                            ai_user=self.ai_user).exclude(id=self.id)
-        else:
-            queryset = Project.objects.filter(project_name__icontains=self.project_name, \
-                            ai_user=self.ai_user)
-        queryset = queryset.select_for_update()
-        count_num = queryset.count()
-        #print("Count_num------------>",count_num)
-        return count_num
+            # if not self.project_name:
+            #     queryset = Project.objects.select_for_update().filter(ai_user=self.ai_user)
+            #     count = queryset.count()
+            #     print("Count for pr name-------->",count)
+            #     self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) +')'
+            #     print("Pr Name--------->",self.project_name)
+           
+            # project_count = self.get_queryset_count_safely()
+            # print("Pr Count if exists---------->",project_count)
+            # if project_count != 0:
+            #     count_num = self.get_count_num_safely()
+            #     print("Already Exists Count_num--------->",count_num)
+            #     self.project_name = self.project_name + "(" + str(count_num) + ")"
+            #     print("Name---------->",self.project_name)
+            # cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
+            # cache.delete(cache_key)
+            # return super().save()
+
+    # @transaction.atomic
+    # def get_count_for_project_name_safely(self):
+    #     query = Project.objects.filter(ai_user=self.ai_user)
+    #     queryset = query.select_for_update()
+    #     count = queryset.count()
+    #     #print("Count------------>",count)
+    #     return count
+
+    # @transaction.atomic
+    # def get_queryset_count_safely(self):
+    #     if self.id:
+    #         queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user).exclude(id=self.id)
+    #     else:
+    #         queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user)
+    #     queryset = queryset.select_for_update()
+    #     count = queryset.count()
+    #     #print("Count1---------->",count)
+    #     return count
+
+    # @transaction.atomic
+    # def get_count_num_safely(self):
+    #     if self.id:
+    #         queryset = Project.objects.filter(project_name__icontains=self.project_name, \
+    #                         ai_user=self.ai_user).exclude(id=self.id)
+    #     else:
+    #         queryset = Project.objects.filter(project_name__icontains=self.project_name, \
+    #                         ai_user=self.ai_user)
+    #     queryset = queryset.select_for_update()
+    #     count_num = queryset.count()
+    #     #print("Count_num------------>",count_num)
+    #     return count_num
 
     @property
     def ref_files(self):
