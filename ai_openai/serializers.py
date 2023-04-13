@@ -584,6 +584,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         if validated_data.get('select_group',None):
             instance.selected_group_num = validated_data.get('select_group')
+            BlogOutlineSession.objects.filter(group=validated_data.get('select_group')).update(selected_field=True)
         instance.save()
         return instance
 
@@ -709,7 +710,7 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
                 if trans == True:
                     blog_keyword_trans = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id) if instance.user_title else None
                 else:
-                    blo_keyword_trans = None
+                    blog_keyword_trans = None
                 BlogKeywordGenerate.objects.create(blog_creation = instance,blog_keyword =blog_keyword_trans, selected_field= False , 
                                     blog_keyword_mt=blog_keyword,token_usage=token_usage)
 

@@ -384,7 +384,9 @@ class BlogCreationViewset(viewsets.ViewSet):
         return Response(serializer.data)
     
     def create(self,request):
-        serializer = BlogCreationSerializer(data={**request.POST.dict(),'user':request.user.id} ) 
+        categories = 10
+        sub_categories = 61
+        serializer = BlogCreationSerializer(data={**request.POST.dict(),'categories':categories,'sub_categories':sub_categories,'user':request.user.id} ) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -434,7 +436,8 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
 class BlogtitleViewset(viewsets.ViewSet):
     def create(self,request):
         blog_inst = request.POST.get('blog_creation_gen',None)
-        serializer = BlogtitleSerializer(data=request.POST.dict())  
+        sub_categories = 62
+        serializer = BlogtitleSerializer(data={**request.POST.dict(),'sub_categories':sub_categories})  
         if serializer.is_valid():
             serializer.save()
             blog_creation=BlogCreation.objects.filter(id=blog_inst).last()
@@ -469,7 +472,8 @@ class BlogtitleViewset(viewsets.ViewSet):
 class BlogOutlineViewset(viewsets.ViewSet):
 
     def create(self,request):
-        serializer = BlogOutlineSerializer(data=request.POST.dict()) 
+        sub_categories = 63
+        serializer = BlogOutlineSerializer(data={**request.POST.dict(),'sub_categories':sub_categories}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -542,8 +546,9 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         
 class BlogArticleViewset(viewsets.ViewSet):
     def create(self,request):
+        sub_categories = 64
         outline_section_list = request.POST.getlist('outline_section_list')
-        serializer = BlogArticleSerializer(data=request.data) 
+        serializer = BlogArticleSerializer(data={**request.POST.dict(),'sub_categories':sub_categories}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
