@@ -115,10 +115,10 @@ class TemplatePage(models.Model):
         ]
 
 def user_directory_path_canvas_mytemplatedesign_thumbnails(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.my_template_page.user.uid, "canvas/mytemplatedesign/canva_thumbnails_target/thumbnails/",filename)
+    return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "canvas/mytemplatedesign/canva_thumbnails_target/thumbnails/",filename)
 
 def user_directory_path_canvas_mytemplatedesign_exports(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.my_template_page.user.uid, "canvas/mytemplatedesign/canva_exports_target/exports/",filename)
+    return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "canvas/mytemplatedesign/canva_exports_target/exports/",filename)
 
 class MyTemplateDesign(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
@@ -140,7 +140,7 @@ class MyTemplateDesignPage(models.Model):
         ]
 
 def user_directory_path_canvas_source_image_assets(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.canvas_design_image_assets.user.uid, "canvas/assets/sourceimage/",filename)
+    return '{0}/{1}/{2}'.format(instance.canvas_design_img.user.uid, "canvas/assets/sourceimage/",filename)
 
 
 class SourceImageAssetsCanvasTranslate(models.Model):

@@ -283,14 +283,20 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         initial_credit = user.credit_balance.get("total_left")
 
     if cc == None:
-        cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
+        if isinstance(source_string,list):
+            for src_text in source_string:
+                cc=0
+                cc+= get_consumable_credits_for_text(src_text,target_lang_code,source_lang_code)
+        else:
+            cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
 
     print("Init-------->",initial_credit)
     print("cc-------->",cc)
     print("from_open_ai---------->",from_open_ai)
     print("source----------->",source_string)
     
-    if special_character_check(source_string):
+    
+    if isinstance(source_string,str) and special_character_check(source_string)  :
         print("Inside--->")
         mt_called = False
         translate = source_string
@@ -301,10 +307,17 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
-        record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)))
-        translate = client.translate(source_string,
-                                target_language=target_lang_code,
-                                format_="text").get("translatedText")
+        if isinstance(source_string,list):
+            for src_text in source_string:
+                record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(src_text)))
+            source_string_list= client.translate(source_string,target_language=target_lang_code,format_="text")
+            translate =  [translated_text['translatedText'] for translated_text in source_string_list]
+        else:
+            record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)))
+            translate = client.translate(source_string,
+                                    target_language=target_lang_code,
+                                    format_="text").get("translatedText")
+        
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         record_api_usage.apply_async(("AZURE","Machine Translation",uid,email,len(source_string)))

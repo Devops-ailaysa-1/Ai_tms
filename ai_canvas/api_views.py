@@ -3,13 +3,21 @@ from rest_framework import viewsets  ,generics
 from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
-                              CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage)
+                              CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
-                                   TemplateGlobalDesignSerializer ,TemplateGlobalDesignRetrieveSerializer)
+                                   TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer)
 from django.http import Http404 
-from ai_canvas.pagination import CanvasDesignListViewsetPagination ,TemplateGlobalPagination
+from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from rest_framework.pagination import PageNumberPagination 
+from rest_framework.decorators import api_view,permission_classes
+from django.conf import settings
+import os ,zipfile,requests
+from django.http import Http404,JsonResponse
+from ai_workspace_okapi.utils import get_translation
+
+free_pix_api_key = os.getenv('FREE_PIK_API')
+pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
 
 class LanguagesViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
@@ -232,3 +240,144 @@ class TemplateGlobalDesignRetrieveViewset(generics.RetrieveAPIView):
     queryset = TemplateGlobalDesign.objects.all()
     serializer_class = TemplateGlobalDesignRetrieveSerializer
     lookup_field = 'id'
+
+
+class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
+    pagination_class = MyTemplateDesignPagination
+     
+    def list(self,request):
+        queryset = MyTemplateDesign.objects.all()
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+    
+    def create(self,request):
+        template_global_id = request.POST.get('template_global_id')
+        serializer = MyTemplateDesignSerializer(data =request.data , context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def destroy(self,request,pk):
+        MyTemplateDesign.objects.get(id=pk).delete()
+        return Response({'msg':'deleted'})
+    
+
+class MyTemplateDesignRetrieveViewset(generics.RetrieveAPIView):
+    queryset = MyTemplateDesign.objects.all()
+    serializer_class = MyTemplateDesignRetrieveSerializer
+    lookup_field = 'id'
+
+
+######################################################canvas______download################################
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def canvas_download(request):
+    ## need to add authorization for requested user
+    design_id = request.GET.get('design_id')
+    canvas_translation_id = request.GET.get('canvas_translation_id',None)
+
+    design = CanvasDesign.objects.get(id=design_id)
+    zip_path = f'{settings.MEDIA_ROOT}/temp/{design.file_name}.zip'
+
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+   
+        ## Getting Source
+        json_src = design.canvas_json_src.all()
+        src_lang_code=design.canvas_translate.first().source_language.locale_code
+        for src in json_src :
+            if canvas_translation_id:
+                break
+            try:
+                source_path = src.thumbnail.path
+            except:
+                print("no thumbnail",src.id)
+            name = os.path.basename(src.thumbnail.name)
+            destination = f"/source/{name}" 
+            zipf.write(source_path, destination)
+
+        ## Getting Translated
+        if canvas_translation_id:
+            json_tranlated = design.canvas_translate.filter(id=canvas_translation_id)
+        else:
+            json_tranlated = design.canvas_translate.all()
+
+        for tar_json in json_tranlated:
+            tar_pages= tar_json.canvas_json_tar.all()
+            tar_lang_code = tar_json.target_language.locale_code
+            for tar in tar_pages :
+                try:
+                    source_path = tar.thumbnail.path
+                except:
+                    print("no thumbnail",tar.id)
+                name = os.path.basename(tar.thumbnail.name)
+                destination = f"/{tar_lang_code}/{name}"
+                zipf.write(source_path, destination)
+        download_path = f'{settings.MEDIA_URL}temp/{design.file_name}.zip'
+    return JsonResponse({"url":download_path},status=200)
+
+
+###############################################################################
+
+####free_____pix
+
+@api_view(['GET'])
+def free_pix_api(request):
+    # subject_search= request.POST.get('subject_search')
+    # page_no = request.POST.get('page_no')
+    url = "https://api.freepik.com/v1/resources"
+    headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
+    'Accept-Language': 'en-GB',
+    'X-Freepik-API-Key': free_pix_api_key,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    }
+    response = requests.get(url, params=request.GET.dict(),headers=headers)
+    print(response.json())
+    if response.status_code == 200:
+        return Response(response.json(),status=200)
+    else:
+        return Response({'error':'something went wrong'},status=response.status_code)
+
+
+################################################################
+
+
+@api_view(['GET'])
+def pixabay_api(request):
+    url = 'https://pixabay.com/api/'
+    headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    }
+    params = {**request.GET.dict(),'key':pixa_bay_api_key}
+    response = requests.get(url, params=params,headers=headers)
+    if response.status_code == 200:
+        return Response(response.json(),status=200)
+    else:
+        return Response({'error':'something went wrong'},status=response.status_code)
+    
+
+#################################################################
+
+
+
+@api_view(['POST'])
+def instant_canvas_translation(request):
+    text_list = request.POST.getlist('text')
+    src_lang_id = request.POST.get('src_lang_id',None)
+    tar_lang_id = request.POST.get('tar_lang_id')
+    if src_lang_id:
+        src_lang_code = Languages.objects.get(id=src_lang_id).locale.first().locale_code
+    tar_lang_code = Languages.objects.get(id=tar_lang_id).locale.first().locale_code
+    text_translation = get_translation(1,text_list,'en',tar_lang_code)
+    return Response({'translated_text_list':text_translation})
+
+
+##################################

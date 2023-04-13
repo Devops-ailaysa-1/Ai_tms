@@ -120,3 +120,4 @@ req_ilango.txt
 *.dockerfile
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
+lama_model/lama_q_int8_jit.pt

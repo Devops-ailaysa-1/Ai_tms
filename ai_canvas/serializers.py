@@ -126,7 +126,6 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        
         req_host = self.context.get('request', HttpRequest()).get_host()
         canvas_translation_tar_lang=validated_data.get('canvas_translation_tar_lang')
         canvas_translation_tar_thumb=validated_data.get('canvas_translation_tar_thumb',None)
@@ -141,12 +140,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         tar_page = validated_data.get('tar_page',None)
         target_json_file = validated_data.get('target_json_file',None)
         target_canvas_json = validated_data.get('target_canvas_json',None)
-
         if tar_page and canvas_translation and target_canvas_json:
             # print("create target page")
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
-
         if canvas_translation_tar_lang and src_lang:
             for tar_lang in canvas_translation_tar_lang:
                 trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),
@@ -239,6 +236,7 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if hasattr(instance.canvas_json_src.first(),'thumbnail'):
+            # if 'thumbnail_src' in data.keys():
             data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
 
         if instance.canvas_translate.all():
@@ -364,12 +362,13 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
         template_global_id = validated_data.pop('template_global_id',None)
         canvas_design_id = validated_data.pop('canvas_design_id',None)
         canvas_trans_id = validated_data.pop('canvas_trans_id',None)
+        user = self.context['request'].user
         if template_global_id:
             file_name=template_global_id.file_name
             width=template_global_id.width
             height=template_global_id.height
             template_globl_pag_inst = template_global_id.template_globl_pag.all()
-            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height)
+            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user)
             if any(template_globl_pag_inst):
                 for glob_pag in template_globl_pag_inst:
                     my_template_thumbnail = glob_pag.thumbnail_page

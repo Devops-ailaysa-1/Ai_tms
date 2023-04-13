@@ -1,5 +1,5 @@
 
- 
+from django.urls import path
 from ai_canvas import api_views
 from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
@@ -12,7 +12,16 @@ router.register(r'canvas-user-images',api_views.CanvasUserImageAssetsViewset,bas
 router.register(r'canvas-design-list' ,api_views.CanvasDesignListViewset,basename='canvasdesignlist')
 router.register(r'canvas-designs',api_views.CanvasDesignViewset,basename='canvas_designs')
 router.register(r'template-design',api_views.TemplateGlobalDesignViewset ,basename='templatedesign')
+router.register(r'mytemplate-design',api_views.MyTemplateDesignViewset ,basename='mytemplatedesign')
+
 urlpatterns = router.urls
 urlpatterns += [
-    
+    path('template-design-get/<int:id>/', api_views.TemplateGlobalDesignRetrieveViewset.as_view(), name='templatedesignget'),     
+    path('mytemplate-design-get/<int:id>', api_views.MyTemplateDesignRetrieveViewset.as_view(), name='mytemplatedesignget'),
+    path('canvas-download/',api_views.canvas_download,name="canvas_download"),
+
+    path('image-term/',api_views.free_pix_api , name='freepixapi'),
+    path('instane-translate/',api_views.instant_canvas_translation,name='instant_canvas_translation'),
+    path('images/',api_views.pixabay_api , name='pixabayapi'),
+
 ]
