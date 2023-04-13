@@ -1,0 +1,170 @@
+from .models import *
+import cv2, numpy as np ,io #,torch
+from PIL import Image
+from google.cloud import vision_v1 , vision
+from google.oauth2 import service_account
+import extcolors 
+from ai_imagetranslation.lamamodel_process import inpaint_image
+from torch.utils.data._utils.collate import default_collate
+from django.conf import settings
+credentials = service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
+client = vision.ImageAnnotatorClient(credentials=credentials)
+
+
+# jit_model = torch.jit.load(settings.LAMA_MODEL,map_location="cpu")
+# print(settings.LAMA_MODEL)
+ 
+def image_ocr_google_cloud_vision(image_path , inpaint):
+    if inpaint:
+        with io.open(image_path, 'rb') as image_file:
+            content = image_file.read()
+        image = vision_v1.types.Image(content=content)
+        response = client.text_detection(image = image)
+        texts = response.full_text_annotation
+        return texts
+
+def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
+    if w<x:x,w = w,x
+    if h<y:h,y = y,h
+    t= 15
+    x = x-t
+    y = y-t
+    w = w+t
+    h = h+t
+    cropped_img = pillow_image_to_extract_color.crop([x,y,w,h])
+    extracted_color = extcolors.extract_from_image(cropped_img ,limit=2)
+    # final_color = extracted_color[0][1][0] if len(extracted_color[0]) >=2  else (extracted_color[0][0][0] if len(extracted_color[0]) <=1 else 0)
+    return [i[0] for i in extracted_color[0]][::-1]
+
+def creating_image_bounding_box(image_path):
+    poly_line = []
+    pillow_image_to_extract_color =  Image.open(image_path) 
+    texts = image_ocr_google_cloud_vision(image_path,inpaint = True)  
+    text_and_bounding_results = {}
+    no_of_segments = 0
+    text_list = []
+    for i in  texts.pages:
+        for j in i.blocks:
+            x,y,w,h = j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y ,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
+            vertex = j.bounding_box.vertices
+            poly_line.append([[vertex[0].x ,vertex[0].y] , [vertex[1].x,vertex[1].y] ,[vertex[2].x ,vertex[2].y] ,[vertex[3].x,vertex[3].y]])
+            final_color = color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
+            for k in j.paragraphs:
+                # text_list = [] 
+                for a in  k.words:
+                    text_list.append(" ") 
+                    font_size = []
+                    font_size2 = []  
+                    for b in a.symbols:
+                        text_list.append(b.text)
+                        fx,fy,fw,fh  = b.bounding_box.vertices[0].x,b.bounding_box.vertices[1].y ,b.bounding_box.vertices[2].x,b.bounding_box.vertices[3].y
+                        font_size.append(fh-fy)  
+                        font_size2.append(fw-fx)
+            text_and_bounding_results[no_of_segments] = {"text":"".join(text_list),
+            "bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),"fontsize2":sum(font_size2)//len(font_size2),"color1":final_color ,"poly_line":poly_line}
+            no_of_segments+=1
+            text_list = []
+    return text_and_bounding_results 
+ 
+
+def image_content(image_numpy):
+    _, encoded_image = cv2.imencode('.png', image_numpy)
+    content = encoded_image.tobytes()
+    return content
+
+# def get_config(strategy, **kwargs):
+#     data = dict(
+#         ldm_steps=1,
+#         ldm_sampler=LDMSampler.plms,
+#         hd_strategy=strategy,
+#         hd_strategy_crop_margin=32,
+#         hd_strategy_crop_trigger_size=200,
+#         hd_strategy_resize_limit=200,
+#     )
+#     data.update(**kwargs)
+#     return Config(**data)
+
+# ###main#####
+# model = ModelManager(name="lama", device="cpu")
+from django import core
+def inpaint_image_creation(image_details):
+    # print("image_details" , image_details.mask)
+    img = cv2.imread(image_details.image.path  )
+    if image_details.mask:
+        # print("mask_present")
+        mask = cv2.imread(image_details.mask.path )
+        image_to_extract_text = np.bitwise_and(mask ,img)
+        content = image_content(image_to_extract_text)
+        inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
+        image_details.create_inpaint_pixel_location = inpaint_image_file
+        image_details.save()
+        image_text_details = creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        img = cv2.cvtColor(img ,  cv2.COLOR_BGR2RGB)
+ 
+        # output = model(img, mask , get_config(HDStrategy.ORIGINAL))
+        output = inpaint_image(img, mask)
+    else:
+        # print("NO mask_present")
+        image_text_details = creating_image_bounding_box(image_details.image.path)
+        mask_out_to_inpaint  = np.zeros((img.shape[0] , img.shape[1] ,3) , np.uint8)
+        # mask_out_to_inpaint = np.zeros((*img.shape[:-1],1) , np.uint8)
+        for i in image_text_details.values():
+            bbox =  i['bbox']
+            cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
+        # output = cv2.inpaint(img , mask_out_to_inpaint  ,3, cv2.INPAINT_NS)
+        # cv2.imwrite("mask_out_to_inpaint.png" ,mask_out_to_inpaint)
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+        mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
+ 
+        # mask = cv2.cvtColor(mask_out_to_inpaint, cv2.IMREAD_GRAYSCALE)
+        # output = model(img, mask , get_config(HDStrategy.ORIGINAL))
+        output = inpaint_image(img, mask)
+        # output = lama_inpaint_prediction(img , mask_out_to_inpaint ) 
+    return output ,image_text_details
+
+
+# def lama_inpaint_prediction(image , mask):
+#     img_shape  = image.shape[:2][::-1]
+#     print("image_shape" , img_shape)
+#     image = load_image(image , mode='RGB')
+#     mask = load_image(mask , mode='L')
+#     result = dict(image=image, mask=mask[None, ...])
+#     batch = default_collate([result])
+#     batch = move_to_device(batch, "cpu")
+#     batch['mask'] = (batch['mask'] > 0) * 1
+#     print("predict")
+#     # print(img_shape ,"---->" , )
+#     with torch.no_grad():
+#         jit_output = jit_model(batch['image'],batch['mask']) 
+#     print("done")
+#     print("check2")  
+#     r =  torch.squeeze(jit_output)
+#     r = r.permute(1, 2, 0).detach().cpu().numpy()
+#     # r2 = cv2.cvtColor(cv2.resize(r, img_shape), cv2.COLOR_BGR2RGB ) 
+#     r2 = cv2.cvtColor(r, cv2.COLOR_BGR2RGB ) 
+#     cv2.imwrite("r2.png" , r2)
+#     return r2
+
+
+# def load_image(fname , mode):
+#     if mode == "L":
+#         # img = cv2.resize(fname, (200,200)) 
+#         img = fname
+#     else:
+#         # fname = cv2.resize(fname, (200,200))
+#         img = np.transpose(fname, (2, 0, 1))
+#     out_img = img.astype('float32') / 255
+#     return out_img   
+
+
+# def move_to_device(obj, device):
+#     if isinstance(obj, torch.nn.Module):
+#         return obj.to(device)
+#     if torch.is_tensor(obj):
+#         return obj.to(device)
+#     if isinstance(obj, (tuple, list)):
+#         return [move_to_device(el, device) for el in obj]
+#     if isinstance(obj, dict):
+#         return {name: move_to_device(val, device) for name, val in obj.items()}
+#     raise ValueError(f'Unexpected type {type(obj)}')
