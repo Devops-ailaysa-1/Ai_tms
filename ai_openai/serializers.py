@@ -711,8 +711,8 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
                     blog_keyword_trans = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id) if instance.user_title else None
                 else:
                     blog_keyword_trans = None
-                BlogKeywordGenerate.objects.create(blog_creation = instance,blog_keyword =blog_keyword_trans, selected_field= False , 
-                                    blog_keyword_mt=blog_keyword,token_usage=token_usage)
+                BlogKeywordGenerate.objects.create(blog_creation = instance,blog_keyword =blog_keyword, selected_field= False , 
+                                    blog_keyword_mt=blog_keyword_trans,token_usage=token_usage)
 
     print("Keyword processed and stored")
     return token_usage
@@ -728,6 +728,7 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         blog = validated_data.get('blog_creation')
         print("Blog------------>",blog)
         instance = blog
+        consumable_credits = 0
         blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
         keyword_start_phrase = blog_sub_phrase.start_phrase.format(instance.response_copies_keyword)
         initial_credit = instance.user.credit_balance.get("total_left")
@@ -738,7 +739,7 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             token_usage = keyword_process(keyword_start_phrase,instance.user_title_mt,instance,trans=True)
         else:
-           token_usage = keyword_process(keyword_start_phrase,user_title,instance,trans=False)
+           token_usage = keyword_process(keyword_start_phrase,instance.user_title,instance,trans=False)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                 
         total_usage = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
         print("total_usage_openai----->>>>>>>>>>>>>>>>",total_usage)
@@ -795,10 +796,9 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         
     def create(self, validated_data):
         blog_available_langs = [17]
-
         instance = BlogCreation.objects.create(**validated_data)
         initial_credit = instance.user.credit_balance.get("total_left")
-
+        total_usage = 0
         if initial_credit < 1400:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
 
@@ -813,7 +813,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             
             instance.user_title_mt = get_translation(1, instance.user_title , instance.user_language_code,"en",user_id=instance.user.id) if instance.user_title else None
-            token_usage = keyword_process(keyword_start_phrase,instance.user_title_mt,instance,trans=True)
+            #token_usage = keyword_process(keyword_start_phrase,instance.user_title_mt,instance,trans=True)
         else:
             lang_detect_user_title_key = lang_detector(prmt_check) 
             if lang_detect_user_title_key !='en':
@@ -831,12 +831,12 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             else:
                 consumable_credits = 0
                 user_title = instance.prompt_user_title_mt
-            token_usage = keyword_process(keyword_start_phrase,user_title,instance,trans=False)
+            #token_usage = keyword_process(keyword_start_phrase,user_title,instance,trans=False)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                 
-        total_usage = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
-        print("total_usage_openai----->>>>>>>>>>>>>>>>",total_usage)
+        #total_usage = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
+        #print("total_usage_openai----->>>>>>>>>>>>>>>>",total_usage)
         print("trans---->>>>>>>>>>>>>>>>>>>",consumable_credits)
-        AiPromptSerializer().customize_token_deduction(instance,total_usage)
+        #AiPromptSerializer().customize_token_deduction(instance,total_usage)
         instance.save()
         return instance
         

@@ -412,7 +412,8 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
         return Response(serializer.data)
     
     def list(self, request):
-        query_set=BlogKeywordGenerate.objects.all()
+        blog_creation = request.GET.get('blog')
+        query_set=BlogKeywordGenerate.objects.filter(blog_creation=blog_creation).order_by('-id')
         serializer=BlogKeywordGenerateSerializer(query_set,many=True)
         return Response(serializer.data)
 
@@ -420,7 +421,10 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
         serializer = BlogKeywordGenerateSerializer(data=request.POST.dict()) 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            ins = serializer.data.get('blog_creation')
+            queryset = BlogKeywordGenerate.objects.filter(blog_creation = ins).order_by('-id')
+            ser2=BlogKeywordGenerateSerializer(queryset,many=True)
+            return Response(ser2.data)
         return Response(serializer.errors)
 
     def update(self,request,pk):
