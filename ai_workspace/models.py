@@ -248,7 +248,7 @@ class Project(models.Model):
                 print("Pr Name--------->",self.project_name)
            
             project_count = self.get_queryset_count_safely()
-            print("Pr Count if exists---------->",)
+            print("Pr Count if exists---------->",project_count)
             if project_count != 0:
                 count_num = self.get_count_num_safely()
                 print("Already Exists Count_num--------->",count_num)
