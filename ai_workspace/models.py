@@ -244,7 +244,7 @@ class Project(models.Model):
             if not self.project_name:
                 count = self.get_count_for_project_name_safely()
                 print("Count for pr name-------->",count)
-                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) +')'
                 print("Pr Name--------->",self.project_name)
            
             project_count = self.get_queryset_count_safely()
