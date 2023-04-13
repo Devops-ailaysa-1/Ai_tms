@@ -619,6 +619,15 @@ def update_forbidden_words(forbidden_file_id):
     ForbiddenWords.objects.filter(file_id = forbidden_file_id).update(job=file.job)
     logger.info("forbidden words updated")
 
+@task
+def project_analysis_property(project_id):
+    from ai_workspace.api_views import ProjectAnalysisProperty
+    from ai_workspace.models import Project
+    proj = Project.objects.get(id=project_id)
+    task = proj.get_mtpe_tasks[0]
+    MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=1,task_name='project_analysis_property',celery_task_id=project_analysis_property.request.id)
+    ProjectAnalysisProperty.get(project_id)
+    logger.info("analysis property called")
 
 
 

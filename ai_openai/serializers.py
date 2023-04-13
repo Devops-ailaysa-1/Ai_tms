@@ -408,7 +408,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             instance.blog_article = blog_article_trans
             consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
                                                                                  blog_create_inst.user_language_code,'en')
-            tot_tok =  total_token+consumable_credits_for_article_gen
+            tot_tok =  token_usage+consumable_credits_for_article_gen
             AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
                                                            ,tot_tok)
             instance.blog_article_mt=prompt_response_article_resp
@@ -481,7 +481,7 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
             if instance.blog_outline_mt:
                 instance.blog_outline_mt = get_translation(1,instance.blog_outline,lang_code,"en",
                                            user_id=user_id) if instance.blog_outline else None
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_outline_mt,consumable_credit_section)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_creation_gen.user,consumable_credit_section)
              
             lang_detect_user_outline =  lang_detector(instance.blog_outline) 
 
@@ -571,7 +571,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
                                                         user_id=blog_title_gen_inst.blog_creation_gen.user.id) 
                             BlogOutlineSession.objects.create(blog_outline_gen=instance,blog_outline=blog_outline,
                                                           blog_outline_mt=session,group=group)
-                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(blog_outline,consumable_credits_to_translate_section)
+                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                         else:
                             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     else:

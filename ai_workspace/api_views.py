@@ -50,7 +50,7 @@ from django.db import models
 from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
-from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel
+from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel, project_analysis_property
 from ai_auth.tasks import write_doc_json_file
 from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
 from ai_marketplace.models import ChatMessage
@@ -782,6 +782,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
             pr = Project.objects.get(id=serlzr.data.get('id'))
+            project_analysis_property.apply_async((serlzr.data.get('id'),), )
             if pr.pre_translate == True:
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data, status=201)
@@ -3852,3 +3853,60 @@ def docx_convertor(request):
     res = download_file(target_filename)
     os.remove(target_filename)
     return res
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def project_word_char_count(request):
+    from .api_views import ProjectAnalysisProperty
+    from .models import MTonlytaskCeleryStatus
+    prs = request.GET.getlist('project_id')
+    final =[]
+    for pr in prs:
+        pr_obj = Project.objects.get(id=pr)
+        task = pr_obj.get_mtpe_tasks[0]
+        print("tt_id-------->",task.id)
+        obj = MTonlytaskCeleryStatus.objects.filter(task_id = task.id).filter(task_name = 'project_analysis_property').last()
+        state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
+        if state == 'STARTED':
+            res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
+        elif state == 'PENDING' or state =='None' or state == 'FAILURE':
+            celery_task = project_analysis_property.apply_async((pr_obj_id), )
+            res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+        elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
+            task_words = []
+            tasks = pr_obj.get_mtpe_tasks
+            if pr_obj.is_all_doc_opened:
+
+                [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
+                out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
+                    Sum('total_char_count'),Sum('total_segment_count'))
+
+                res = ({"proj": pr_obj.id, "proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+                    "proj_seg_count":out.get('total_segment_count__sum'),\
+                                    "task_words" : task_words })
+            else:
+                out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+                task_words = []
+                [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+
+                res = ({"proj":pr_obj.id, "proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+                    "proj_seg_count":out.get('task_seg_count__sum'),
+                                "task_words":task_words})
+        else:
+            #from .api_views import ProjectAnalysisProperty
+            try:
+                # task = pr_obj.get_tasks[0]
+                # obj = MTonlytaskCeleryStatus.object.filter(task_id = task.id).filter(task_name = 'project_analysis_property').last()
+                # state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
+                # if state == 'STARTED':
+                #     return Response({'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id},status=400)
+                # elif state == 'PENDING' or state =='None' or state == 'FAILURE':
+                celery_task = project_analysis_property.apply_async((pr_obj_id,), )
+                res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+                #return ProjectAnalysisProperty.get(pr_obj_id)
+
+            except:
+                res = ({"proj_word_count": 0, "proj_char_count": 0, \
+                    "proj_seg_count": 0, "task_words":[]})
+        final.append(res)
+    return Response({'out':final})
