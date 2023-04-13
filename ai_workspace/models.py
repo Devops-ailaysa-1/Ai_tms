@@ -242,26 +242,53 @@ class Project(models.Model):
                 self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
             if not self.project_name:
-                self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
-
-            if self.id:
-                project_count = Project.objects.filter(project_name=self.project_name, \
-                                ai_user=self.ai_user).exclude(id=self.id).select_for_update().count()
-            else:
-                project_count = Project.objects.filter(project_name=self.project_name, \
-                                ai_user=self.ai_user).select_for_update().count()
+                count = self.get_count_for_project_name_safely()
+                print("Count for pr name-------->",count)
+                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) +')'
+                print("Pr Name--------->",self.project_name)
+           
+            project_count = self.get_queryset_count_safely()
+            print("Pr Count if exists---------->",project_count)
             if project_count != 0:
-                if self.id:
-                    count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                                    ai_user=self.ai_user).exclude(id=self.id).select_for_update().count()
-                else:
-                    count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                                    ai_user=self.ai_user).select_for_update().count()
+                count_num = self.get_count_num_safely()
+                print("Already Exists Count_num--------->",count_num)
                 self.project_name = self.project_name + "(" + str(count_num) + ")"
-
+                print("Name---------->",self.project_name)
             cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
             cache.delete(cache_key)
             return super().save()
+
+    @transaction.atomic
+    def get_count_for_project_name_safely(self):
+        query = Project.objects.filter(ai_user=self.ai_user)
+        queryset = query.select_for_update()
+        count = queryset.count()
+        #print("Count------------>",count)
+        return count
+
+    @transaction.atomic
+    def get_queryset_count_safely(self):
+        if self.id:
+            queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user).exclude(id=self.id)
+        else:
+            queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user)
+        queryset = queryset.select_for_update()
+        count = queryset.count()
+        #print("Count1---------->",count)
+        return count
+
+    @transaction.atomic
+    def get_count_num_safely(self):
+        if self.id:
+            queryset = Project.objects.filter(project_name__icontains=self.project_name, \
+                            ai_user=self.ai_user).exclude(id=self.id)
+        else:
+            queryset = Project.objects.filter(project_name__icontains=self.project_name, \
+                            ai_user=self.ai_user)
+        queryset = queryset.select_for_update()
+        count_num = queryset.count()
+        #print("Count_num------------>",count_num)
+        return count_num
 
     @property
     def ref_files(self):
@@ -577,8 +604,19 @@ class Project(models.Model):
 
 
     def project_analysis(self,tasks):
-
-        if self.is_proj_analysed == True:
+        from .api_views import ProjectAnalysisProperty
+        from .models import MTonlytaskCeleryStatus
+        from ai_auth.tasks import project_analysis_property
+        obj = MTonlytaskCeleryStatus.objects.filter(task_id__in = tasks).filter(task_name = 'project_analysis_property').last()
+        #print("Obj---------->",obj)
+        state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
+        #print("State------------>",state)
+        if state == 'STARTED':
+            return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
+        elif state == 'PENDING' or state =='None' or state == 'FAILURE':
+            celery_task = project_analysis_property.apply_async((self.id,), )
+            return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+        elif state == "SUCCESS" or self.is_proj_analysed == True:
             task_words = []
             if self.is_all_doc_opened:
 
@@ -598,12 +636,12 @@ class Project(models.Model):
                     "proj_seg_count":out.get('task_seg_count__sum'),
                                 "task_words":task_words}
         else:
-            from .api_views import ProjectAnalysisProperty
-            try:
-                return ProjectAnalysisProperty.get(self.id)
-            except:
-                return {"proj_word_count": 0, "proj_char_count": 0, \
-                    "proj_seg_count": 0, "task_words":[]}
+            # from .api_views import ProjectAnalysisProperty
+            # try:
+            #     return ProjectAnalysisProperty.get(self.id)
+            # except:
+            return {"proj_word_count": 0, "proj_char_count": 0, \
+                "proj_seg_count": 0, "task_words":[]}
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)

@@ -31,6 +31,7 @@ def update_words_from_template(sender, instance, *args, **kwargs):
                 #print("ID----------->",value.id)
     else:
         for data in imported_data:
+            print("Data in else------->",data)
             if data[2]:
                     value = glex_model.TermsModel(
                             # data[0],          #Blank column
