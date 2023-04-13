@@ -243,13 +243,15 @@ class Project(models.Model):
 
             if not self.project_name:
                 count = self.get_count_for_project_name_safely()
+                print("Count for pr name-------->",count)
                 self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
                 print("Pr Name--------->",self.project_name)
-
+           
             project_count = self.get_queryset_count_safely()
-            
+            print("Pr Count if exists---------->",)
             if project_count != 0:
                 count_num = self.get_count_num_safely()
+                print("Already Exists Count_num--------->",count_num)
                 self.project_name = self.project_name + "(" + str(count_num) + ")"
                 print("Name---------->",self.project_name)
             cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
@@ -261,7 +263,7 @@ class Project(models.Model):
         query = Project.objects.filter(ai_user=self.ai_user)
         queryset = query.select_for_update()
         count = queryset.count()
-        print("Count------------>",count)
+        #print("Count------------>",count)
         return count
 
     @transaction.atomic
@@ -272,7 +274,7 @@ class Project(models.Model):
             queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user)
         queryset = queryset.select_for_update()
         count = queryset.count()
-        print("Count---------->",count)
+        #print("Count1---------->",count)
         return count
 
     @transaction.atomic
@@ -285,7 +287,7 @@ class Project(models.Model):
                             ai_user=self.ai_user)
         queryset = queryset.select_for_update()
         count_num = queryset.count()
-        print("Count_num------------>",count_num)
+        #print("Count_num------------>",count_num)
         return count_num
 
     @property
@@ -606,9 +608,9 @@ class Project(models.Model):
         from .models import MTonlytaskCeleryStatus
         from ai_auth.tasks import project_analysis_property
         obj = MTonlytaskCeleryStatus.objects.filter(task_id__in = tasks).filter(task_name = 'project_analysis_property').last()
-        print("Obj---------->",obj)
+        #print("Obj---------->",obj)
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
-        print("State------------>",state)
+        #print("State------------>",state)
         if state == 'STARTED':
             return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
         elif state == 'PENDING' or state =='None' or state == 'FAILURE':
