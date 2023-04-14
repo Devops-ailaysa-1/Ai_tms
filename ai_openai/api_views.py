@@ -538,9 +538,10 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         return Response(serializer.data)
 
     def update(self,request,pk):
-        select_session_list = request.POST.get('select_session_list')
-        unselect_session_list = request.POST.get('unselect_session_list')
+        selected = request.POST.getlist('selected')
+        unselected = request.POST.getlist('unselected')
         query_set = BlogOutlineSession.objects.get(id = pk)
+        print('qs------->',query_set)
         serializer = BlogOutlineSessionSerializer(query_set,data=request.data,partial=True)
         if serializer.is_valid():
             serializer.save()

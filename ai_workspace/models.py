@@ -12,7 +12,7 @@ from django.db.models.base import Model
 from django.utils.text import slugify
 from datetime import datetime, date
 from enum import Enum
-
+from django.db import models, transaction, connection
 from django.contrib.auth import settings
 from django.core.validators import FileExtensionValidator
 from django.db import models
@@ -237,7 +237,10 @@ class Project(models.Model):
     def save(self, *args, **kwargs):
         
         with transaction.atomic():
+            #transaction.set_isolation_level(transaction.ISOLATION_SERIALIZABLE)
+
             queryset = Project.objects.select_for_update().filter(ai_user=self.ai_user)
+
             if not self.ai_project_id:
                 self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 

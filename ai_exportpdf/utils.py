@@ -158,7 +158,13 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
                 print("Text after preprocess------------>",text)
-                doc.add_paragraph(text)
+                if i == 1:
+                    all_text = doc.add_paragraph(text)
+                    print("---->",i)
+                else:
+                    all_text.add_run(text)
+                # doc.add_paragraph(text)
+
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
