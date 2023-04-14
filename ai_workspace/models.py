@@ -243,7 +243,7 @@ class Project(models.Model):
 
             if not self.project_name:
                 count = queryset.count()
-                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(datetime.now()) +')'
 
             if self.id:
                 project_count = queryset.filter(project_name=self.project_name).exclude(id=self.id).count()
