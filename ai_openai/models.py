@@ -140,9 +140,13 @@ class BlogOutlineSession(models.Model):
     group = models.IntegerField(null=True,blank=True)
 
 class BlogArticle(models.Model):
-    blog_outline_article_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE, related_name = 'blogarticle_outline')
+    blog_outline_article_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE, related_name = 'blogarticle_outline',null=True,blank=True)
     blog_article=  models.TextField(null=True, blank=True)
     blog_article_mt =  models.TextField(null=True, blank=True)
+    blog_title=  models.TextField(null=True, blank=True)
+    blog_keyword =  models.TextField(null=True, blank=True)
+    blog_outlines = models.TextField(null=True, blank=True)
+    tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='article_tone',blank=True,null=True,default=1)
     token_usage =  models.ForeignKey(to= TokenUsage,on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
     # selected_field = models.BooleanField()
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='blog_article_sub_categories')
