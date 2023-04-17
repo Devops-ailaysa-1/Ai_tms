@@ -634,11 +634,47 @@ class Project(models.Model):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
 
+    # def project_analysis(self,tasks):
+
+    #     if self.is_proj_analysed == True:
+    #         print("inside if analyse")
+    #         task_words = []
+    #         if self.is_all_doc_opened:
+    #             print("Doc opened")
+    #             [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
+    #             out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
+    #                 Sum('total_char_count'),Sum('total_segment_count'))
+
+    #             return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+    #                 "proj_seg_count":out.get('total_segment_count__sum'),\
+    #                               "task_words" : task_words }
+    #         else:
+    #             print("Not Doc Opened")
+    #             out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+    #             task_words = []
+    #             [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+
+    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+    #                 "proj_seg_count":out.get('task_seg_count__sum'),
+    #                             "task_words":task_words}
+    #     else:
+    #         print("Not Analysed")
+    #         from .api_views import ProjectAnalysisProperty
+    #         try:
+    #             print("Inside Try")
+    #             return ProjectAnalysisProperty.get(self.id)
+    #         except:
+    #             print("Inside Except")
+    #             return {"proj_word_count": 0, "proj_char_count": 0, \
+    #                 "proj_seg_count": 0, "task_words":[]}
+
+
     def project_analysis(self,tasks):
         from .api_views import ProjectAnalysisProperty
         from .models import MTonlytaskCeleryStatus
         from ai_auth.tasks import project_analysis_property
         print("Model---------->",tasks)
+        print("Proj--------->",self.id)
         obj = MTonlytaskCeleryStatus.objects.filter(task_id__in = tasks).filter(task_name = 'project_analysis_property').last()
         print("Obj---------->",obj)
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
@@ -649,9 +685,10 @@ class Project(models.Model):
         #     celery_task = project_analysis_property.apply_async((self.id,), )
         #     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or self.is_proj_analysed == True:
+            print("inside if analyse")
             task_words = []
             if self.is_all_doc_opened:
-
+                print("Doc opened")
                 [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
                 out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
                     Sum('total_char_count'),Sum('total_segment_count'))
@@ -660,6 +697,7 @@ class Project(models.Model):
                     "proj_seg_count":out.get('total_segment_count__sum'),\
                                   "task_words" : task_words }
             else:
+                print("Not Doc Opened")
                 out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
                 task_words = []
                 [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
@@ -668,12 +706,15 @@ class Project(models.Model):
                     "proj_seg_count":out.get('task_seg_count__sum'),
                                 "task_words":task_words}
         else:
+            print("Not Analysed")
             from .api_views import ProjectAnalysisProperty
             try:
+                print("Inside Try")
                 celery_task = project_analysis_property.apply_async((self.id,), )
                 return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
                 #return ProjectAnalysisProperty.get(self.id)
             except:
+                print("Inside Except")
                 return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]}
 
