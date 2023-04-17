@@ -253,13 +253,18 @@ class Project(models.Model):
             else:
                 project_count = queryset.filter(project_name=self.project_name).count()
             if project_count != 0:
-                if self.id:
-                    count_num = queryset.filter(project_name__icontains=self.project_name, \
-                                    ai_user=self.ai_user).exclude(id=self.id).count()
-                else:
-                    count_num = queryset.filter(project_name__icontains=self.project_name, \
-                                    ai_user=self.ai_user).count()
-                self.project_name = self.project_name + "(" + str(count_num) + ")"
+                while True:
+                    try:
+                        if self.id:
+                            count_num = queryset.filter(project_name__icontains=self.project_name).exclude(id=self.id).count()
+                        else:
+                            count_num = queryset.filter(project_name__icontains=self.project_name).count()
+                        self.project_name = self.project_name + "(" + str(count_num) + ")"
+                        super().save()
+                        break
+                    except:
+                        count_num = count_num+1
+                        self.project_name = self.project_name + "(" + str(count_num) + ")"
             return super().save()
 
 
@@ -639,9 +644,9 @@ class Project(models.Model):
         #print("State------------>",state)
         if state == 'STARTED':
             return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
-        elif state == 'PENDING' or state =='None' or state == 'FAILURE':
-            celery_task = project_analysis_property.apply_async((self.id,), )
-            return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+        # elif state == 'PENDING' or state =='None' or state == 'FAILURE':
+        #     celery_task = project_analysis_property.apply_async((self.id,), )
+        #     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or self.is_proj_analysed == True:
             task_words = []
             if self.is_all_doc_opened:
@@ -662,11 +667,13 @@ class Project(models.Model):
                     "proj_seg_count":out.get('task_seg_count__sum'),
                                 "task_words":task_words}
         else:
-            # from .api_views import ProjectAnalysisProperty
-            # try:
-            #     return ProjectAnalysisProperty.get(self.id)
-            # except:
-            return {"proj_word_count": 0, "proj_char_count": 0, \
+            from .api_views import ProjectAnalysisProperty
+            try:
+                celery_task = project_analysis_property.apply_async((self.id,), )
+                return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+                #return ProjectAnalysisProperty.get(self.id)
+            except:
+                return {"proj_word_count": 0, "proj_char_count": 0, \
                 "proj_seg_count": 0, "task_words":[]}
 
 pre_save.connect(create_project_dir, sender=Project)
