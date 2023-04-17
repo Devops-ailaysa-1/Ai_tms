@@ -675,9 +675,10 @@ class Project(models.Model):
         from ai_auth.tasks import project_analysis_property
         print("Model---------->",tasks)
         print("Proj--------->",self.id)
-        obj = MTonlytaskCeleryStatus.objects.filter(task_id__in = tasks).filter(task_name = 'project_analysis_property').last()
+        obj = MTonlytaskCeleryStatus.objects.filter(project_id = self.id).filter(task_name = 'project_analysis_property').last()
         print("Obj---------->",obj)
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
+        print("Called in model")
         #print("State------------>",state)
         if state == 'STARTED':
             return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
@@ -1293,6 +1294,8 @@ class MTonlytaskCeleryStatus(models.Model):
     celery_task_id = models.CharField(max_length=255, blank=True, null=True)
     task_name = models.TextField(blank=True, null=True)
     error_type = models.TextField(blank=True, null=True)
+    project = models.ForeignKey(Project,on_delete=models.CASCADE, null=True, blank=True,
+            related_name="mt_only_project_status")
 
     @property
     def owner_pk(self):
