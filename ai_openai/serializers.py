@@ -592,6 +592,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         blog_available_langs =[17]
         blog_title_gen_inst = validated_data.get('blog_title_gen')
+        Blogtitle.objects.filter(id=blog_title_gen_inst.id).update(selected_field = True)
         instance = BlogOutline.objects.create(**validated_data)
         initial_credit = instance.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
         if initial_credit <150:
