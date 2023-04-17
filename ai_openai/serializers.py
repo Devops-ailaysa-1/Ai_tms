@@ -746,10 +746,12 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
     prompt = keyword_start_phrase+ " " +user_title
     prompt+=', in {} tone'.format(instance.tone.tone)
     print("Prompt------------>",prompt)
+    print("Trans----------->",trans)
     openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token, instance.response_copies_keyword)
     token_usage = openai_token_usage(openai_response)
     keywords = openai_response['choices'][0]['text']
     print("From openai-------->",keywords)
+    print("RR---------->",instance.user_language_code)
     for blog_keyword in keywords.split('\n'):
         if blog_keyword.strip():
             blog_keyword = re.sub(r'\d+.','',blog_keyword)
@@ -759,8 +761,11 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
             else:
                 blog_keyword = replace_punctuation(blog_keyword)
                 if trans == True:
+                    print("Inside True")
                     blog_keyword_trans = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id) if instance.user_title else None
+                    print("BKT---------->",blog_keyword_trans)
                 else:
+                    print("Inide False")
                     blog_keyword_trans = None
                 BlogKeywordGenerate.objects.create(blog_creation = instance,blog_keyword =blog_keyword, selected_field= False , 
                                     blog_keyword_mt=blog_keyword_trans,token_usage=token_usage)
@@ -783,14 +788,19 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
         keyword_start_phrase = blog_sub_phrase.start_phrase.format(instance.response_copies_keyword)
         initial_credit = instance.user.credit_balance.get("total_left")
+        lang_detect_user_title_key = lang_detector(instance.user_title) 
+        print('detected--------->',lang_detect_user_title_key)
+        #if lang_detect_user_title_key !='en':
         if (instance.user_language_id not in blog_available_langs):
             consumable_credits = get_consumable_credits_for_text(instance.user_title,instance.user_language_code,'en')
 
             if initial_credit < consumable_credits:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-            token_usage = keyword_process(keyword_start_phrase,instance.user_title_mt,instance,trans=True)
+            title = instance.user_title_mt if lang_detect_user_title_key !='en' else instance.user_title
+            token_usage = keyword_process(keyword_start_phrase,title,instance,trans=True)
         else:
-           token_usage = keyword_process(keyword_start_phrase,instance.user_title,instance,trans=False)
+            title = instance.user_title_mt if lang_detect_user_title_key !='en' else instance.user_title
+            token_usage = keyword_process(keyword_start_phrase,instance.user_title,instance,trans=False)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                 
         total_usage = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
         print("total_usage_openai----->>>>>>>>>>>>>>>>",total_usage)
