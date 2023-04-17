@@ -638,8 +638,9 @@ class Project(models.Model):
         from .api_views import ProjectAnalysisProperty
         from .models import MTonlytaskCeleryStatus
         from ai_auth.tasks import project_analysis_property
+        print("Model---------->",tasks)
         obj = MTonlytaskCeleryStatus.objects.filter(task_id__in = tasks).filter(task_name = 'project_analysis_property').last()
-        #print("Obj---------->",obj)
+        print("Obj---------->",obj)
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
         #print("State------------>",state)
         if state == 'STARTED':
