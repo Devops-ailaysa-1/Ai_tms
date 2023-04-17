@@ -626,8 +626,9 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
     proj = Project.objects.get(id=project_id)
     task = proj.get_tasks[0]
     try:
+        obj = MTonlytaskCeleryStatus.objects.create(task_id=task.id, project_id=proj.id,status=1,task_name='project_analysis_property',celery_task_id=project_analysis_property.request.id)
+        print("GG------->",obj)
         ProjectAnalysisProperty.get(project_id)
-        MTonlytaskCeleryStatus.objects.create(task_id=task.id, project_id=proj.id,status=1,task_name='project_analysis_property',celery_task_id=project_analysis_property.request.id)
         logger.info("analysis property called")
     except Exception as e:
         print(f'Error in task: {e}')
