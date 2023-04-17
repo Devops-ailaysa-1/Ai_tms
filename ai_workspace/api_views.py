@@ -1335,9 +1335,10 @@ class ProjectAnalysisProperty(APIView):
                 })
 
                 try:
+                    print("status----->",doc.status_code)
                     if doc.status_code == 200 :
                         doc_data = doc.json()
-                        print("Doc Data---------------->",doc_data)
+                        #print("Doc Data---------------->",doc_data)
                         #if doc_data["total_word_count"] >= 50000:
 
                         task_write_data = json.dumps(doc_data, default=str)
@@ -3870,7 +3871,7 @@ def project_word_char_count(request):
         if state == 'STARTED':
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
         elif state == 'PENDING' or state =='None' or state == 'FAILURE':
-            celery_task = project_analysis_property.apply_async((pr_obj_id), )
+            celery_task = project_analysis_property.apply_async((pr_obj.id,), )
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
             task_words = []
