@@ -4,6 +4,7 @@ import os
 from ai_workspace.models import MyDocuments,Task
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,AilaysaSupportedMtpeEngines,
                               PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution)
+from django.contrib.postgres.fields import ArrayField
 
 class TokenUsage(models.Model):
     user_input_token = models.CharField(max_length=10, null=True, blank=True)
@@ -145,7 +146,7 @@ class BlogArticle(models.Model):
     blog_article_mt =  models.TextField(null=True, blank=True)
     blog_title=  models.TextField(null=True, blank=True)
     blog_keyword =  models.TextField(null=True, blank=True)
-    blog_outlines = models.TextField(null=True, blank=True)
+    blog_outlines = ArrayField(models.TextField(), blank=True, null=True)
     tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='article_tone',blank=True,null=True,default=1)
     token_usage =  models.ForeignKey(to= TokenUsage,on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
     # selected_field = models.BooleanField()

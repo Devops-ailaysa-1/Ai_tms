@@ -34,7 +34,7 @@ from time import sleep
 from django.core.management import call_command
 import calendar
 from ai_workspace.models import ExpressTaskHistory
-
+from celery.exceptions import MaxRetriesExceededError
 
 extend_mail_sent= 0
 
@@ -620,14 +620,22 @@ def update_forbidden_words(forbidden_file_id):
     logger.info("forbidden words updated")
 
 @task
-def project_analysis_property(project_id):
+def project_analysis_property(project_id, retries=0, max_retries=3):
     from ai_workspace.api_views import ProjectAnalysisProperty
     from ai_workspace.models import Project
     proj = Project.objects.get(id=project_id)
     task = proj.get_mtpe_tasks[0]
     MTonlytaskCeleryStatus.objects.create(task_id=task.id,status=1,task_name='project_analysis_property',celery_task_id=project_analysis_property.request.id)
-    ProjectAnalysisProperty.get(project_id)
-    logger.info("analysis property called")
+    try:
+        ProjectAnalysisProperty.get(project_id)
+        logger.info("analysis property called")
+    except Exception as e:
+        print(f'Error in task: {e}')
+        retries += 1
+        print("Retry Count--------->",retries)
+        if retries > max_retries:
+            raise MaxRetriesExceededError("Maximum retries reached.") from e
+            logger.info("retries exceeded")
 
 
 

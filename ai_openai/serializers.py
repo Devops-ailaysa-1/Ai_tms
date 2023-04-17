@@ -350,7 +350,8 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
 
 
 class BlogArticleSerializer(serializers.ModelSerializer):
-    blog_outline_article_gen = serializers.PrimaryKeyRelatedField(queryset=BlogOutline.objects.all(),required=True)
+
+    blog_creation_gen = serializers.PrimaryKeyRelatedField(queryset=BlogCreation.objects.all(),required=True)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),
                                                         many=False,required=False)
     outline_section_list = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
@@ -358,10 +359,10 @@ class BlogArticleSerializer(serializers.ModelSerializer):
     class Meta:
 
         model=BlogArticle
-        fields=('id','blog_outline_article_gen','blog_article','blog_article_mt',
-                'token_usage','sub_categories','blog_intro','blog_intro_mt','outline_section_list',
+        fields=('id','blog_article','blog_article_mt','blog_title','blog_keyword','blog_outlines','tone',
+                'token_usage','sub_categories','blog_intro','blog_intro_mt','blog_creation_gen',
                 'blog_conclusion','blog_conclusion_mt','created_at','updated_at')
-        # extra_kwargs = {'outline_section_list':{'required':True}}
+        # extra_kwargs = {'outline_section_list':{'required':True}}'blog_outline_article_gen','outline_section_list',
 
     def create(self, validated_data): #prompt, Blog Title, keywords, outline 
         blog_available_langs =[17]
@@ -408,7 +409,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             instance.blog_article = blog_article_trans
             consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
                                                                                  blog_create_inst.user_language_code,'en')
-            tot_tok =  token_usage+consumable_credits_for_article_gen
+            tot_tok =  total_token+consumable_credits_for_article_gen
             AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
                                                            ,tot_tok)
             instance.blog_article_mt=prompt_response_article_resp
@@ -418,6 +419,66 @@ class BlogArticleSerializer(serializers.ModelSerializer):
                                                            ,token_usage)
         instance.save()
         return instance
+
+    #     blog_available_langs =[17]
+    #     #outline_section_list = validated_data.pop('outline_section_list')
+    #     instance = BlogArticle.objects.create(**validated_data)
+    #     initial_credit = instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
+    #     if initial_credit < 700:
+    #         raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+    #     blog_article_start_phrase = instance.sub_categories.prompt_sub_category.first().start_phrase
+    #     detected_lang = lang_detector(instance.blog_title)
+    #     if detected_lang != 'en':
+    #         if blog_creation_gen.user_title == instance.blog_title:
+    #             pass
+            
+    # #    # blog_outline_article_gen = validated_data.get('blog_outline_article_gen')
+
+    # #     #blog_create_inst = blog_outline_article_gen.blog_title_gen.blog_creation_gen
+
+    # #     if blog_create_inst.prompt_user_title_mt:
+    # #         user_title = blog_create_inst.prompt_user_title_mt
+    # #         user_keyword = blog_create_inst.prompt_keyword_mt if blog_create_inst.prompt_keyword_mt else ""
+    # #         if blog_create_inst.user_language_id not in blog_available_langs:
+    # #             selected_outline_section_list = [section.blog_outline_mt for section in outline_section_list]
+    # #         else:
+    # #             selected_outline_section_list = [section.blog_outline for section in outline_section_list]
+
+    # #     elif blog_create_inst.user_language_id not in blog_available_langs:
+    # #         user_title = blog_create_inst.user_title_mt
+    # #         user_keyword = blog_create_inst.keywords_mt
+    # #         selected_outline_section_list = [section.blog_outline_mt for section in outline_section_list]
+    # #     else:
+    # #         user_title = blog_create_inst.user_title
+    # #         user_keyword = blog_create_inst.keywords
+    # #         selected_outline_section_list = [section.blog_outline for section in outline_section_list]
+    # #     selected_outline_section_list = ",".join(selected_outline_section_list)
+    #     prompt = blog_article_start_phrase.format(user_title,user_keyword,selected_outline_section_list)
+    #     print("prompt____article--->>>>",prompt)
+    #     # if isinstance(prompt,list):
+    #     prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
+    #     print("prot_resp--->>>>>>>>>>>",prompt_response)
+    #     prompt_response_article_resp = prompt_response['choices'][0].message['content']
+    #     total_token = openai_token_usage(prompt_response)
+    #     token_usage = get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
+    #     print("token_usage---->>",token_usage)
+
+    #     if blog_create_inst.user_language_id not in blog_available_langs:
+    #         blog_article_trans = get_translation(1,prompt_response_article_resp,"en",blog_create_inst.user_language_code,
+    #                                              user_id=blog_create_inst.user.id)  
+    #         instance.blog_article = blog_article_trans
+    #         consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
+    #                                                                              blog_create_inst.user_language_code,'en')
+    #         tot_tok =  token_usage+consumable_credits_for_article_gen
+    #         AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
+    #                                                        ,tot_tok)
+    #         instance.blog_article_mt=prompt_response_article_resp
+    #     else:
+    #         instance.blog_article = prompt_response_article_resp 
+    #         AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
+    #                                                        ,token_usage)
+    #     instance.save()
+    #     return instance
 
 
 class BlogOutlineSessionSerializer(serializers.ModelSerializer):
@@ -546,12 +607,13 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
 
 
         # if instance.blog_title_gen.blog_creation_gen.prompt_user_title_mt:
-        title = instance.blog_title_gen.blog_creation_gen.user_title if instance.blog_title_gen.blog_creation_gen.user_title else instance.blog_title_gen.blog_creation_gen.user_title_mt
+        title = instance.blog_title_gen.blog_title if instance.blog_title_gen.blog_title else instance.blog_title_gen.blog_title_mt
         keywords = instance.blog_title_gen.blog_creation_gen.keywords if instance.blog_title_gen.blog_creation_gen.keywords else instance.blog_title_gen.blog_creation_gen.keywords_mt
         print("TT------>",title)
         print("KK------->",keywords)
         prompt = blog_outline_start_phrase.start_phrase.format(title,keywords)
         prompt+=', in {} tone'.format(instance.blog_title_gen.blog_creation_gen.tone.tone)
+        print("PR------------->",prompt)
         prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=2)
         prompt_response = prompt_response_gpt.choices
         total_token = prompt_response_gpt['usage']['total_tokens']
