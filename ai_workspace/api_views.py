@@ -782,7 +782,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
             pr = Project.objects.get(id=serlzr.data.get('id'))
-            project_analysis_property.apply_async((serlzr.data.get('id'),), )
+            #project_analysis_property.apply_async((serlzr.data.get('id'),), )
             if pr.pre_translate == True:
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data, status=201)
@@ -3867,9 +3867,7 @@ def project_word_char_count(request):
     for pr in prs:
         pr_obj = Project.objects.get(id=pr)
         print("Tasks--------->",pr_obj.get_tasks)
-        task_tk = pr_obj.get_tasks[0]
-        print("tt_id-------->",task_tk.id)
-        obj = MTonlytaskCeleryStatus.objects.filter(task_id = task_tk.id).filter(task_name = 'project_analysis_property').last()
+        obj = MTonlytaskCeleryStatus.objects.filter(project_id = pr).filter(task_name = 'project_analysis_property').last()
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
         if state == 'STARTED':
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
