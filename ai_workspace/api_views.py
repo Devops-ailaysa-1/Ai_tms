@@ -3865,9 +3865,9 @@ def project_word_char_count(request):
     for pr in prs:
         pr_obj = Project.objects.get(id=pr)
         print("Tasks--------->",pr_obj.get_mtpe_tasks)
-        task = pr_obj.get_mtpe_tasks[0]
-        print("tt_id-------->",task.id)
-        obj = MTonlytaskCeleryStatus.objects.filter(task_id = task.id).filter(task_name = 'project_analysis_property').last()
+        task_tk = pr_obj.get_mtpe_tasks[0]
+        print("tt_id-------->",task_tk.id)
+        obj = MTonlytaskCeleryStatus.objects.filter(task_id = task_tk.id).filter(task_name = 'project_analysis_property').last()
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
         if state == 'STARTED':
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
