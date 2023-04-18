@@ -514,21 +514,22 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         return Response(serializer.errors)
     
     def list(self, request):
-        blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
-        group = request.POST.get('group',None)
+        #blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
+        group = request.GET.get('group',None)
+        title = request.GET.get('blog_title',None)
         
-        if blog_outline_gen_id and group:
-            blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_outline_gen = blog_out_ins,group=group)
+        if title and group:
+            #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title,group=group).order_by('custom_order')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
 
-        elif blog_outline_gen_id:
-            blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_outline_gen = blog_out_ins)
+        elif title:
+            #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title).order_by('custom_order')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
             
         else:
-            query_set=BlogOutlineSession.objects.all()
+            query_set=BlogOutlineSession.objects.all().order_by('id')
             serializer=BlogOutlineSessionSerializer(query_set,many=True)
         return Response(serializer.data)
 
@@ -540,6 +541,7 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
     def update(self,request,pk):
         selected = request.POST.getlist('selected')
         unselected = request.POST.getlist('unselected')
+        order_list = request.POST.get('order_list')
         query_set = BlogOutlineSession.objects.get(id = pk)
         print('qs------->',query_set)
         serializer = BlogOutlineSessionSerializer(query_set,data=request.data,partial=True)
