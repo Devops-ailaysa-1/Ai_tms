@@ -1210,6 +1210,11 @@ class DocumentToFile(views.APIView):
             return download_file(task.task_transcript_details.last().translated_audio_file.path)
 
 
+    # #FOR DOWNLOADING MTONLY FILE
+    # def download_mt_only_file(self,document_id):
+    #     pass
+
+
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
         if string!=None:
@@ -1344,7 +1349,7 @@ class DocumentToFile(views.APIView):
         task = document.task_set.first()
         ser = TaskSerializer(task)
         task_data = ser.data
-
+        print("TT------------->",task_data)
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 

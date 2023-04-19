@@ -3913,3 +3913,10 @@ def project_word_char_count(request):
                     "proj_seg_count": 0, "task_words":[]})
         final.append(res)
     return Response({'out':final})
+
+
+
+# def task_download(task_id):
+#     tt = Task.objects.get(id=task_id)
+#     mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
+    
