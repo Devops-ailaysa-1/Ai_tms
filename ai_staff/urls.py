@@ -23,7 +23,7 @@ router.register(r'prompt-categories-list',api_views.PromptCategoriesViewset,base
 router.register(r'prompt-tone',api_views.PromptTonesViewset,basename='prompt-tone')
 router.register(r'font-family',api_views.FontFamilyViewset ,basename='fontfamily')
 router.register(r'font-data',api_views.FontDataViewset ,basename='fontdata')
-
+router.register(r'font-language',api_views.FontLanguageViewset,basename='fontlanguage')
 urlpatterns = router.urls
 
 urlpatterns += [

@@ -2,6 +2,8 @@
 from django.urls import path
 from ai_canvas import api_views
 from rest_framework.routers import DefaultRouter
+from django.conf import settings
+from django.conf.urls.static import static
 router = DefaultRouter()
 
 
@@ -24,4 +26,4 @@ urlpatterns += [
     path('instane-translate/',api_views.instant_canvas_translation,name='instant_canvas_translation'),
     path('images/',api_views.pixabay_api , name='pixabayapi'),
 
-]
+]+ static(settings.FONT_THUMBNAIL_URL, document_root=settings.FONT_THUMBNAIL_ROOT) 
