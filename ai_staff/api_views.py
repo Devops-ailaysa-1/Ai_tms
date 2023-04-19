@@ -23,7 +23,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
-                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontDataSerializer,FontFamilySerializer,SocialMediaSizeSerializer)
+                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,SocialMediaSizeSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -922,6 +922,14 @@ class SocialMediaSizeViewset(viewsets.ViewSet):
     def list(self,request):
         queryset = SocialMediaSize.objects.all()
         serializer = SocialMediaSizeSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class FontLanguageViewset(viewsets.ViewSet):
+
+    def list(self, request):
+        queryset = FontLanguage.objects.all()
+        serializer = FontLanguageSerializer(queryset,many=True)
         return Response(serializer.data)
 
 class  FontFamilyViewset(viewsets.ViewSet):

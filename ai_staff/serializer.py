@@ -407,6 +407,12 @@ class FontLanguageSerializer(serializers.ModelSerializer):
         model =  FontLanguage
         fields = ("id",'name')
 
+
+class FontLanguageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =  FontLanguage
+        fields = ("id",'name')
+
 class FontFamilySerializer(serializers.ModelSerializer):
     class Meta:
         model = FontFamily
