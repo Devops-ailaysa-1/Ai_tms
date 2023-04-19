@@ -20,6 +20,11 @@ from ai_workspace_okapi.utils import special_character_check
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 import string
+from django.db.models import Case, IntegerField, When, Value
+from django.db.models.functions import Coalesce
+from django.db.models import Case, ExpressionWrapper, F
+from django.db import IntegrityError
+from django.db import models, transaction
 
 def replace_punctuation(text):
     for punctuation_mark in string.punctuation:
@@ -350,49 +355,46 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
 
 
 class BlogArticleSerializer(serializers.ModelSerializer):
-    blog_outline_article_gen = serializers.PrimaryKeyRelatedField(queryset=BlogOutline.objects.all(),required=True)
+
+    blog_creation = serializers.PrimaryKeyRelatedField(queryset=BlogCreation.objects.all(),required=True)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),
                                                         many=False,required=False)
-    outline_section_list = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
-                                                                                     many=False),write_only=True,required=True)
+    #outline_section_list = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
+                                                                                    # many=False),write_only=True,required=True)
     class Meta:
 
         model=BlogArticle
-        fields=('id','blog_outline_article_gen','blog_article','blog_article_mt',
-                'token_usage','sub_categories','blog_intro','blog_intro_mt','outline_section_list',
-                'blog_conclusion','blog_conclusion_mt','created_at','updated_at')
-        # extra_kwargs = {'outline_section_list':{'required':True}}
+        fields=('id','blog_article','blog_article_mt','blog_creation',
+                'token_usage','sub_categories','created_at','updated_at')
+        # extra_kwargs = {'outline_section_list':{'required':True}}'blog_outline_article_gen','outline_section_list',
 
     def create(self, validated_data): #prompt, Blog Title, keywords, outline 
         blog_available_langs =[17]
-        outline_section_list = validated_data.pop('outline_section_list')
+        #outline_section_list = validated_data.pop('outline_section_list')
         instance = BlogArticle.objects.create(**validated_data)
-        initial_credit = instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
+        initial_credit = instance.blog_creation.user.credit_balance.get("total_left")
         if initial_credit < 700:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         blog_article_start_phrase = instance.sub_categories.prompt_sub_category.first().start_phrase
-        blog_outline_article_gen = validated_data.get('blog_outline_article_gen')
-
-        blog_create_inst = blog_outline_article_gen.blog_title_gen.blog_creation_gen
-
-        if blog_create_inst.prompt_user_title_mt:
-            user_title = blog_create_inst.prompt_user_title_mt
-            user_keyword = blog_create_inst.prompt_keyword_mt if blog_create_inst.prompt_keyword_mt else ""
-            if blog_create_inst.user_language_id not in blog_available_langs:
-                selected_outline_section_list = [section.blog_outline_mt for section in outline_section_list]
-            else:
-                selected_outline_section_list = [section.blog_outline for section in outline_section_list]
-
-        elif blog_create_inst.user_language_id not in blog_available_langs:
-            user_title = blog_create_inst.user_title_mt
-            user_keyword = blog_create_inst.keywords_mt
-            selected_outline_section_list = [section.blog_outline_mt for section in outline_section_list]
+        title = instance.blog_creation.user_title if instance.blog_creation.user_title else instance.blog_creation.user_title_mt
+        keyword = instance.blog_creation.keywords if instance.blog_creation.keywords else instance.blog_creation.keywords_mt
+        detected_lang = lang_detector(title)
+        queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
+        queryset_new = qrs.annotate(
+                        order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
+                        ).order_by(ExpressionWrapper(Case(
+                        When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
+                        default=F('order_new'),  # Use 'custom_order' field for ordering
+                        output_field=IntegerField()),
+                    output_field=IntegerField()
+                    ))
+        if detected_lang!='en':
+            outlines = [i.blog_outline_mt for i in queryset_new ]
         else:
-            user_title = blog_create_inst.user_title
-            user_keyword = blog_create_inst.keywords
-            selected_outline_section_list = [section.blog_outline for section in outline_section_list]
-        selected_outline_section_list = ",".join(selected_outline_section_list)
-        prompt = blog_article_start_phrase.format(user_title,user_keyword,selected_outline_section_list)
+            outlines = [i.blog_outline for i in queryset_new]
+        selected_outline_section_list = ",".join(outlines)
+        prompt = blog_article_start_phrase.format(title,keyword,selected_outline_section_list)
+        prompt+=', in {} tone'.format(instance.blog_creation.tone.tone)
         print("prompt____article--->>>>",prompt)
         # if isinstance(prompt,list):
         prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
@@ -402,36 +404,99 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         token_usage = get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
         print("token_usage---->>",token_usage)
 
-        if blog_create_inst.user_language_id not in blog_available_langs:
-            blog_article_trans = get_translation(1,prompt_response_article_resp,"en",blog_create_inst.user_language_code,
-                                                 user_id=blog_create_inst.user.id)  
+        if instance.blog_creation.user_language_id not in blog_available_langs:
+            blog_article_trans = get_translation(1,prompt_response_article_resp,"en",instance.blog_creation.user_language_code,
+                                                 user_id=instance.blog_creation.user.id)  
             instance.blog_article = blog_article_trans
             consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
-                                                                                 blog_create_inst.user_language_code,'en')
-            tot_tok =  token_usage+consumable_credits_for_article_gen
+                                                                                 instance.blog_creation.user_language_code,'en')
+            tot_tok =  total_token+consumable_credits_for_article_gen
             AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
                                                            ,tot_tok)
             instance.blog_article_mt=prompt_response_article_resp
         else:
             instance.blog_article = prompt_response_article_resp 
-            AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
+            AiPromptSerializer().customize_token_deduction(instance.blog_creation
                                                            ,token_usage)
         instance.save()
         return instance
 
+    #     blog_available_langs =[17]
+    #     #outline_section_list = validated_data.pop('outline_section_list')
+    #     instance = BlogArticle.objects.create(**validated_data)
+    #     initial_credit = instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
+    #     if initial_credit < 700:
+    #         raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+    #     blog_article_start_phrase = instance.sub_categories.prompt_sub_category.first().start_phrase
+    #     detected_lang = lang_detector(instance.blog_title)
+    #     if detected_lang != 'en':
+    #         if blog_creation_gen.user_title == instance.blog_title:
+    #             pass
+            
+    # #    # blog_outline_article_gen = validated_data.get('blog_outline_article_gen')
+
+    # #     #blog_create_inst = blog_outline_article_gen.blog_title_gen.blog_creation_gen
+
+    # #     if blog_create_inst.prompt_user_title_mt:
+    # #         user_title = blog_create_inst.prompt_user_title_mt
+    # #         user_keyword = blog_create_inst.prompt_keyword_mt if blog_create_inst.prompt_keyword_mt else ""
+    # #         if blog_create_inst.user_language_id not in blog_available_langs:
+    # #             selected_outline_section_list = [section.blog_outline_mt for section in outline_section_list]
+    # #         else:
+    # #             selected_outline_section_list = [section.blog_outline for section in outline_section_list]
+
+    # #     elif blog_create_inst.user_language_id not in blog_available_langs:
+    # #         user_title = blog_create_inst.user_title_mt
+    # #         user_keyword = blog_create_inst.keywords_mt
+    # #         selected_outline_section_list = [section.blog_outline_mt for section in outline_section_list]
+    # #     else:
+    # #         user_title = blog_create_inst.user_title
+    # #         user_keyword = blog_create_inst.keywords
+    # #         selected_outline_section_list = [section.blog_outline for section in outline_section_list]
+    # #     selected_outline_section_list = ",".join(selected_outline_section_list)
+    #     prompt = blog_article_start_phrase.format(user_title,user_keyword,selected_outline_section_list)
+    #     print("prompt____article--->>>>",prompt)
+    #     # if isinstance(prompt,list):
+    #     prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
+    #     print("prot_resp--->>>>>>>>>>>",prompt_response)
+    #     prompt_response_article_resp = prompt_response['choices'][0].message['content']
+    #     total_token = openai_token_usage(prompt_response)
+    #     token_usage = get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
+    #     print("token_usage---->>",token_usage)
+
+    #     if blog_create_inst.user_language_id not in blog_available_langs:
+    #         blog_article_trans = get_translation(1,prompt_response_article_resp,"en",blog_create_inst.user_language_code,
+    #                                              user_id=blog_create_inst.user.id)  
+    #         instance.blog_article = blog_article_trans
+    #         consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
+    #                                                                              blog_create_inst.user_language_code,'en')
+    #         tot_tok =  token_usage+consumable_credits_for_article_gen
+    #         AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
+    #                                                        ,tot_tok)
+    #         instance.blog_article_mt=prompt_response_article_resp
+    #     else:
+    #         instance.blog_article = prompt_response_article_resp 
+    #         AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
+    #                                                        ,token_usage)
+    #     instance.save()
+    #     return instance
+
 
 class BlogOutlineSessionSerializer(serializers.ModelSerializer):
+    blog_title = serializers.PrimaryKeyRelatedField(queryset=Blogtitle.objects.all(),many=False) 
     blog_outline_gen = serializers.PrimaryKeyRelatedField(queryset=BlogOutline.objects.all(),many=False) 
-    select_session_list = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
+    selected = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
                                                                     many=False,required=False),required=False)
-    unselect_session_list = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
+    unselected = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
                                                              many=False,required=False),required=False)
     group = serializers.IntegerField()
+    selected_group = serializers.IntegerField(required=False)
+    order_list = serializers.CharField(required=False)
     class Meta:
         model = BlogOutlineSession
-        fields = '__all__'
-        extra_kwargs = {'blog_outline_gen': {'required': True},'select_session_list':{'required':False},
-                        'group':{'required':True},'unselect_session_list':{'required':False}}
+        fields = ('id','blog_title','blog_outline_gen','unselected','selected','blog_outline','custom_order','temp_order','blog_outline_mt','selected_field','group','selected_group','order_list',)
+        extra_kwargs = {'blog_outline_gen': {'required': True},'selected':{'required':False},
+                        'group':{'required':True},'unselected':{'required':False},'order_list':{'required':False}}
 
     def validate(self, data):
         if data.get('group',None) and data.get('blog_outline_gen',None):
@@ -444,11 +509,15 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         blog_available_langs =[17]
+        count = BlogOutlineSession.objects.filter(group=validated_data.get('group'),blog_title=validated_data.get('blog_title')).count()
+        print("Count------->",count)
         instance = BlogOutlineSession.objects.create(**validated_data)
-        initial_credit = instance.blog_outline_gen.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
-        user_lang = instance.blog_outline_gen.blog_title_gen.blog_creation_gen.user_language_id
-        lang_code =instance.blog_outline_gen.blog_title_gen.blog_creation_gen.user_language_code
-        user_id = instance.blog_outline_gen.blog_title_gen.blog_creation_gen.user.id
+        instance.custom_order = count+1
+        instance.temp_order = count+1
+        initial_credit = instance.blog_title.blog_creation_gen.user.credit_balance.get("total_left")
+        user_lang = instance.blog_title.blog_creation_gen.user_language_id
+        lang_code =instance.blog_title.blog_creation_gen.user_language_code
+        user_id = instance.blog_title.blog_creation_gen.user.id
         consumable_credit = get_consumable_credits_for_text(instance.blog_outline,'en',lang_code)
         if (user_lang not in blog_available_langs):
             instance.selected_field =True
@@ -469,11 +538,12 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
         return instance
     
     def update(self, instance, validated_data):
-        lang_code =instance.blog_outline_gen.blog_title_gen.blog_creation_gen.user_language_code
-        user_id = instance.blog_outline_gen.blog_title_gen.blog_creation_gen.user.id
+        print("ValiData----------->",validated_data)
+        lang_code =instance.blog_title.blog_creation_gen.user_language_code
+        user_id = instance.blog_title.blog_creation_gen.user.id
         if validated_data.get('blog_outline',None):
             instance.blog_outline = validated_data.get('blog_outline',instance.blog_outline)
-            initial_credit = instance.blog_outline_gen.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
+            initial_credit = instance.blog_title.blog_creation_gen.user.credit_balance.get("total_left")
             consumable_credit_section = get_consumable_credits_for_text(instance.blog_outline ,'en',lang_code)
             if initial_credit < consumable_credit_section:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'},code=400)
@@ -481,30 +551,57 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
             if instance.blog_outline_mt:
                 instance.blog_outline_mt = get_translation(1,instance.blog_outline,lang_code,"en",
                                            user_id=user_id) if instance.blog_outline else None
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_creation_gen.user,consumable_credit_section)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title.blog_creation_gen.user,consumable_credit_section)
              
             lang_detect_user_outline =  lang_detector(instance.blog_outline) 
 
             if lang_detect_user_outline !='en':
                 instance.blog_outline_mt =get_translation(1,instance.blog_outline,lang_detect_user_outline,"en",user_id=instance.blog_creation_gen.user.id,from_open_ai=True)  
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_creation_gen.user, consumable_credit_section)
+                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title.blog_creation_gen.user, consumable_credit_section)
         instance.save() 
 
+        if 'selected_group' in validated_data:
+            print("selected_gr------->",validated_data.get('selected_group'))
+            instance.blog_outline_gen.selected_group_num = validated_data.get('selected_group')
+            instance.blog_outline_gen.save()
+            print("gg-------->",instance.blog_outline_gen)
+            BlogOutlineSession.objects.filter(group=validated_data.get('selected_group'),blog_outline_gen=instance.blog_outline_gen).update(selected_field=True)
+            BlogOutlineSession.objects.filter(blog_title=instance.blog_title).exclude(group=validated_data.get('selected_group')).update(selected_field=False)
 
         if validated_data.get('group',None):
             instance.group = validated_data.get('group',instance.group)
   
-        if validated_data.get('select_session_list',None):
-            session_ids = validated_data.get('select_session_list')
+        if validated_data.get('selected',None):
+            session_ids = validated_data.get('selected')
+            print("ss--------->",session_ids)
             for session_id in session_ids:
                 session_id.selected_field = True
                 session_id.save()
 
-        if validated_data.get('unselect_session_list',None):
-            session_ids = validated_data.get('unselect_session_list')
+        if validated_data.get('unselected',None):
+            session_ids = validated_data.get('unselected')
             for session_id in session_ids:
                 session_id.selected_field = False
                 session_id.save()
+
+        if validated_data.get('order_list',None):
+            order_list = validated_data.get('order_list')
+            group = validated_data.get('group')
+            order_list = list(map(int, order_list.split(',')))
+            for index, order in enumerate(order_list, 1):
+                BlogOutlineSession.objects.filter(temp_order=index).filter(blog_title=instance.blog_title).filter(group=group).update(custom_order=order)
+
+
+            # for index, order in enumerate(ls, start=1):
+            #     try:
+            #         my_model = BlogOutlineSession.objects.filter(group=group).get(custom_order=order)  # Get the instance from the database
+            #         my_model.custom_order = index  # Update the 'order' field with the new value
+            #         my_model.save()
+            #     except BlogOutlineSession.MultipleObjectsReturned:
+            #         pass
+            #     except IntegrityError as e:
+            #         print("Exception----------->",e)
+            #         pass
         return instance
 
 class BlogOutlineSerializer(serializers.ModelSerializer):
@@ -522,19 +619,15 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         blog_available_langs =[17]
         blog_title_gen_inst = validated_data.get('blog_title_gen')
-        # if blog_title_gen_inst.selected_field != True:
-        #     return serializers.ValidationError("Choose title")
-
-        # if blog_title_gen_inst.get('blog_title_gen',None):
-        #     blog_title_gen_inst.selected_field = True
-        #     blog_title_gen_inst.save()
-
+        print("BB----------->",blog_title_gen_inst.id)
+        blg_tit = Blogtitle.objects.filter(id=blog_title_gen_inst.id).update(selected_field = True)
+        Blogtitle.objects.filter(blog_creation_gen=blog_title_gen_inst.blog_creation_gen).exclude(id = blog_title_gen_inst.id).update(selected_field=False)
         instance = BlogOutline.objects.create(**validated_data)
         initial_credit = instance.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
         if initial_credit <150:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         blog_outline_start_phrase = PromptStartPhrases.objects.get(sub_category=instance.sub_categories)
-
+        print("sSR-------->",blog_outline_start_phrase)
         if (blog_title_gen_inst.blog_creation_gen.user_language_id not in blog_available_langs):
             instance.user_selected_title = instance.blog_title_gen.blog_title
             instance.user_selected_title_mt = instance.blog_title_gen.blog_title_mt
@@ -543,24 +636,25 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         instance.save()
 
 
-        if instance.blog_title_gen.blog_creation_gen.prompt_user_title_mt:
-            prompt = blog_outline_start_phrase.start_phrase.format(instance.blog_title_gen.blog_creation_gen.prompt_user_title_mt)
-            prompt+="with keywords "+instance.blog_title_gen.blog_creation_gen.prompt_keyword_mt if instance.blog_title_gen.blog_creation_gen.prompt_keyword_mt else ""
- 
-
-        elif (blog_title_gen_inst.blog_creation_gen.user_language_id not in blog_available_langs):
-            prompt = blog_outline_start_phrase.start_phrase.format(instance.user_selected_title_mt,instance.blog_title_gen.blog_creation_gen.keywords_mt)
-        else:
-            prompt = blog_outline_start_phrase.start_phrase.format(instance.user_selected_title,instance.blog_title_gen.blog_creation_gen.keywords)  
-
+        # if instance.blog_title_gen.blog_creation_gen.prompt_user_title_mt:
+        title = instance.blog_title_gen.blog_title if instance.blog_title_gen.blog_title else instance.blog_title_gen.blog_title_mt
+        keywords = instance.blog_title_gen.blog_creation_gen.keywords if instance.blog_title_gen.blog_creation_gen.keywords else instance.blog_title_gen.blog_creation_gen.keywords_mt
+        print("TT------>",title)
+        print("KK------->",keywords)
+        prompt = blog_outline_start_phrase.start_phrase.format(title,keywords)
+        prompt+=', in {} tone'.format(instance.blog_title_gen.blog_creation_gen.tone.tone)
+        print("PR------------->",prompt)
         prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=2)
         prompt_response = prompt_response_gpt.choices
         total_token = prompt_response_gpt['usage']['total_tokens']
         total_token = get_consumable_credits_for_openai_text_generator(total_token)
         AiPromptSerializer().customize_token_deduction(instance.blog_title_gen.blog_creation_gen,total_token)
-        for group,outline_res in enumerate(prompt_response):
+        queryset = BlogOutlineSession.objects.filter(blog_title=instance.blog_title_gen).distinct('group')
+        if queryset: start = queryset.count()
+        else: start = 0
+        for group,outline_res in enumerate(prompt_response,start=start):
             outline = outline_res.message['content'].split('\n')
-            for session in outline:
+            for order,session in enumerate(outline,start=1):
                 if session:
                     session = re.sub(r'\d+.','',session).strip()
                     if (blog_title_gen_inst.blog_creation_gen.user_language_id not in blog_available_langs):
@@ -569,13 +663,13 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
                         if initial_credit > consumable_credits_to_translate_section:
                             blog_outline=get_translation(1,session,'en',blog_title_gen_inst.blog_creation_gen.user_language_code,
                                                         user_id=blog_title_gen_inst.blog_creation_gen.user.id) 
-                            BlogOutlineSession.objects.create(blog_outline_gen=instance,blog_outline=blog_outline,
-                                                          blog_outline_mt=session,group=group)
-                            debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
+                            BlogOutlineSession.objects.create(blog_outline_gen=instance,blog_outline=blog_outline,custom_order=order,temp_order=order,
+                                                          blog_outline_mt=session,group=group,blog_title =instance.blog_title_gen )
+                            # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                         else:
                             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     else:
-                        BlogOutlineSession.objects.create(blog_outline_gen=instance,blog_outline=session,group=group) 
+                        BlogOutlineSession.objects.create(blog_outline_gen=instance,blog_outline=session,group=group,temp_order=order,custom_order=order,blog_title =instance.blog_title_gen ) 
         token_usage = openai_token_usage(prompt_response_gpt)
         instance.token_usage = token_usage
         instance.save()
@@ -586,7 +680,9 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
             instance.selected_group_num = validated_data.get('select_group')
             BlogOutlineSession.objects.filter(group=validated_data.get('select_group')).update(selected_field=True)
         instance.save()
-        return instance
+
+        # if validated_data.get('blog_outline_selected_list'):
+            
 
 
 class BlogtitleSerializer(serializers.ModelSerializer):
@@ -605,19 +701,9 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         title_start_phrase = PromptStartPhrases.objects.get(sub_category=sub_categories)
         #prompt creation
         initial_credit = blog_create_instance.user.credit_balance.get("total_left")
-
-
-        if blog_create_instance.prompt_user_title_mt:
-            prompt = title_start_phrase.start_phrase.format(blog_create_instance.prompt_user_title_mt)
-            prompt+=' with keywords '+blog_create_instance.prompt_keyword_mt if blog_create_instance.prompt_keyword_mt else ""
-        elif (blog_create_instance.user_language_id not in blog_available_langs):
-            print("------>>>>>>>>>>>>>>>>>>>>>>>")
-            prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title_mt)
-            prompt+=' with keywords '+blog_create_instance.keywords_mt if blog_create_instance.keywords_mt else ""
-
-        else:
-            prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title)
-            prompt+=' with keywords '+blog_create_instance.keywords if blog_create_instance.keywords else ""
+        prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title if blog_create_instance.user_title else blog_create_instance.user_title_mt)
+        prompt+=' with keywords '+blog_create_instance.keywords if blog_create_instance.keywords else blog_create_instance.keywords_mt
+        prompt+=', in {} tone'.format(blog_create_instance.tone.tone)
         consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
 
         if initial_credit < consumable_credits:
@@ -659,22 +745,18 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         user_lang = instance.blog_creation_gen.user_language_code
         if validated_data.get('blog_title' , None):
             instance.blog_title = validated_data.get('blog_title' ,instance.blog_title)
+            lang_detect_user_title = lang_detector(instance.blog_title) 
             initial_credit = instance.blog_creation_gen.user.credit_balance.get("total_left")
-            consumable_credits_to_translate_update_title = get_consumable_credits_for_text(instance.blog_title,instance.blog_creation_gen.user_language_code,'en')
-            if initial_credit < consumable_credits_to_translate_update_title:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-            if instance.blog_title_mt:
+            if lang_detect_user_title !='en':
                 consumable_credits_to_translate_update_title = get_consumable_credits_for_text(instance.blog_title,instance.blog_creation_gen.user_language_code,'en')
+                if initial_credit < consumable_credits_to_translate_update_title:
+                    raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                 instance.blog_title_mt = get_translation(1,instance.blog_title,user_lang,"en",
                                                     user_id=instance.blog_creation_gen.user.id) if instance.blog_title else None
-                
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_creation_gen.user, consumable_credits_to_translate_update_title)
-            lang_detect_user_title = lang_detector(instance.blog_title) 
-
-            if lang_detect_user_title !='en':
-                instance.blog_title_mt =get_translation(1,instance.blog_title,lang_detect_user_title,"en",user_id=instance.blog_creation_gen.user.id,from_open_ai=True)  
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_creation_gen.user, consumable_credits_to_translate_update_title)
+            else:
+                instance.blog_title_mt = None 
             instance.save()
+
 ###########################################
         if validated_data.get('selected_title',None):
             Blogtitle.objects.filter(blog_creation_gen=instance.blog_creation_gen).update(selected_field=False)
@@ -694,11 +776,15 @@ class BlogtitleSerializer(serializers.ModelSerializer):
 
 def keyword_process(keyword_start_phrase,user_title,instance,trans):
     blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
-    prompt = keyword_start_phrase+ " " +user_title 
+    prompt = keyword_start_phrase+ " " +user_title
+    prompt+=', in {} tone'.format(instance.tone.tone)
+    print("Prompt------------>",prompt)
+    print("Trans----------->",trans)
     openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token, instance.response_copies_keyword)
     token_usage = openai_token_usage(openai_response)
     keywords = openai_response['choices'][0]['text']
     print("From openai-------->",keywords)
+    print("RR---------->",instance.user_language_code)
     for blog_keyword in keywords.split('\n'):
         if blog_keyword.strip():
             blog_keyword = re.sub(r'\d+.','',blog_keyword)
@@ -708,11 +794,14 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
             else:
                 blog_keyword = replace_punctuation(blog_keyword)
                 if trans == True:
+                    print("Inside True")
                     blog_keyword_trans = get_translation(1, blog_keyword ,"en",instance.user_language_code,user_id=instance.user.id) if instance.user_title else None
+                    print("BKT---------->",blog_keyword_trans)
                 else:
+                    print("Inide False")
                     blog_keyword_trans = None
-                BlogKeywordGenerate.objects.create(blog_creation = instance,blog_keyword =blog_keyword_trans, selected_field= False , 
-                                    blog_keyword_mt=blog_keyword,token_usage=token_usage)
+                BlogKeywordGenerate.objects.create(blog_creation = instance,blog_keyword =blog_keyword, selected_field= False , 
+                                    blog_keyword_mt=blog_keyword_trans,token_usage=token_usage)
 
     print("Keyword processed and stored")
     return token_usage
@@ -728,17 +817,23 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         blog = validated_data.get('blog_creation')
         print("Blog------------>",blog)
         instance = blog
+        consumable_credits = 0
         blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
         keyword_start_phrase = blog_sub_phrase.start_phrase.format(instance.response_copies_keyword)
         initial_credit = instance.user.credit_balance.get("total_left")
+        lang_detect_user_title_key = lang_detector(instance.user_title) 
+        print('detected--------->',lang_detect_user_title_key)
+        #if lang_detect_user_title_key !='en':
         if (instance.user_language_id not in blog_available_langs):
             consumable_credits = get_consumable_credits_for_text(instance.user_title,instance.user_language_code,'en')
 
             if initial_credit < consumable_credits:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-            token_usage = keyword_process(keyword_start_phrase,instance.user_title_mt,instance,trans=True)
+            title = instance.user_title_mt if lang_detect_user_title_key !='en' else instance.user_title
+            token_usage = keyword_process(keyword_start_phrase,title,instance,trans=True)
         else:
-           token_usage = keyword_process(keyword_start_phrase,user_title,instance,trans=False)
+            title = instance.user_title_mt if lang_detect_user_title_key !='en' else instance.user_title
+            token_usage = keyword_process(keyword_start_phrase,instance.user_title,instance,trans=False)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                 
         total_usage = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
         print("total_usage_openai----->>>>>>>>>>>>>>>>",total_usage)
@@ -795,48 +890,32 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         
     def create(self, validated_data):
         blog_available_langs = [17]
-
         instance = BlogCreation.objects.create(**validated_data)
         initial_credit = instance.user.credit_balance.get("total_left")
-
+        total_usage = 0
         if initial_credit < 1400:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
 
-        blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
-        keyword_start_phrase = blog_sub_phrase.start_phrase.format(instance.response_copies_keyword)
-        prmt_check = instance.user_title
-        prmt_check+= instance.keywords if instance.keywords else ""
-        if (instance.user_language_id not in blog_available_langs):
-            consumable_credits = get_consumable_credits_for_text(prmt_check,instance.user_language_code,'en')
+        lang_detect_user_title_key = lang_detector(instance.user_title) 
+        if lang_detect_user_title_key !='en':
+            consumable_credits = get_consumable_credits_for_text(instance.user_title,instance.user_language_code,'en')
 
             if initial_credit < consumable_credits:
                 raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             
-            instance.user_title_mt = get_translation(1, instance.user_title , instance.user_language_code,"en",user_id=instance.user.id) if instance.user_title else None
-            token_usage = keyword_process(keyword_start_phrase,instance.user_title_mt,instance,trans=True)
-        else:
-            lang_detect_user_title_key = lang_detector(prmt_check) 
-            if lang_detect_user_title_key !='en':
-                consumable_credits = get_consumable_credits_for_text(prmt_check,instance.user_language_code,'en')
+            instance.user_title_mt=get_translation(1,instance.user_title,lang_detect_user_title_key,"en",user_id=instance.user.id) if instance.user_title else None
+            instance.save()
 
-                if initial_credit < consumable_credits:
-                    raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-                
-                instance.prompt_user_title_mt=get_translation(1,instance.user_title,lang_detect_user_title_key,"en",user_id=instance.user.id,from_open_ai=True) if instance.user_title else None
-                instance.save()
-                user_title = instance.prompt_user_title_mt
-            elif not instance.prompt_user_title_mt:
-                consumable_credits = 0
-                user_title = instance.user_title
-            else:
-                consumable_credits = 0
-                user_title = instance.prompt_user_title_mt
-            token_usage = keyword_process(keyword_start_phrase,user_title,instance,trans=False)
-        debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                 
-        total_usage = get_consumable_credits_for_openai_text_generator(token_usage.total_tokens)
-        print("total_usage_openai----->>>>>>>>>>>>>>>>",total_usage)
-        print("trans---->>>>>>>>>>>>>>>>>>>",consumable_credits)
-        AiPromptSerializer().customize_token_deduction(instance,total_usage)
+        detected_lang = lang_detector(instance.keywords)
+        if detected_lang !='en':
+            consumable_credits = get_consumable_credits_for_text(instance.keywords,instance.user_language_code,'en')
+
+            if initial_credit < consumable_credits:
+                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+            
+            instance.keywords_mt=get_translation(1,instance.keywords,detected_lang,"en",user_id=instance.user.id) if instance.user_title else None
+            instance.save() 
+        #debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                
         instance.save()
         return instance
         
@@ -845,58 +924,45 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         user_lang = instance.user_language_code
         initial_credit = instance.user.credit_balance.get("total_left")
 
-        if validated_data.get('selected_keywords_list',None):
-            select_keyword_ids = validated_data.get('selected_keywords_list')
-            for select_keyword_id in select_keyword_ids:
-                select_keyword_id.selected_field=True
-                select_keyword_id.save()
+        # if validated_data.get('selected_keywords_list',None):
+        #     select_keyword_ids = validated_data.get('selected_keywords_list')
+        #     for select_keyword_id in select_keyword_ids:
+        #         select_keyword_id.selected_field=True
+        #         select_keyword_id.save()
 
-        if validated_data.get('unselected_keywords_list',None):
-            unselect_keyword_ids = validated_data.get('unselected_keywords_list')
-            for unselect_keyword_id in unselect_keyword_ids:
-                unselect_keyword_id.selected_field=False
-                unselect_keyword_id.save()
+        # if validated_data.get('unselected_keywords_list',None):
+        #     unselect_keyword_ids = validated_data.get('unselected_keywords_list')
+        #     for unselect_keyword_id in unselect_keyword_ids:
+        #         unselect_keyword_id.selected_field=False
+        #         unselect_keyword_id.save()
 
         if validated_data.get('user_title',None):
             instance.user_title = validated_data.get('user_title',instance.user_title)
-            if (instance.user_title_mt and (instance.user_language_id not in blog_available_langs)):
+            #if (instance.user_title_mt and (instance.user_language_id not in blog_available_langs)):
+            lang_detect_user_blog_title = lang_detector(instance.user_title) 
+            if lang_detect_user_blog_title !='en':
                 consumable_credits = get_consumable_credits_for_text(instance.user_title,instance.user_language_code,'en')
                 if initial_credit < consumable_credits:
                     raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                 instance.user_title_mt = get_translation(1,instance.user_title,user_lang,"en",user_id=instance.user.id)  
-                instance.save()
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)
-
-            if instance.prompt_user_title_mt:
-                lang_detect_user_blog_title = lang_detector(instance.user_title) 
-                if lang_detect_user_blog_title !='en':
-                    consumable_credits = get_consumable_credits_for_text(instance.user_title,instance.user_language_code,'en')
-                    if initial_credit < consumable_credits:
-                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-                    instance.prompt_user_title_mt = get_translation(1,instance.user_title,user_lang,"en",user_id=instance.user.id)  
-                    instance.save()
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)
-
+            else:
+                instance.user_title_mt = None
+            instance.save()
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)
 
         if validated_data.get('keywords',None):
             instance.keywords = validated_data.get('keywords',instance.keywords)
-            if (instance.user_language_id not in blog_available_langs):
+            detected_lang = lang_detector(instance.keywords)
+            if detected_lang != 'en':
                 consumable_credits = get_consumable_credits_for_text(instance.keywords,instance.user_language_code,'en')
                 if initial_credit < consumable_credits:
                     raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                 instance.keywords_mt = get_translation(1,instance.keywords,user_lang,"en",user_id=instance.user.id) 
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)
+            else:
+                instance.keywords_mt = None
+                #debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)
             instance.save()
 
-            if instance.prompt_keyword_mt:
-                lang_detect_user_blog_title = lang_detector(instance.keywords) 
-                if lang_detect_user_blog_title !='en':
-                    consumable_credits = get_consumable_credits_for_text(instance.keywords,instance.user_language_code,'en')
-                    if initial_credit < consumable_credits:
-                        raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
-                    instance.prompt_keyword_mt = get_translation(1,instance.keywords,user_lang,"en",user_id=instance.user.id)  
-                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)
-            instance.save()
         return super().update(instance, validated_data)
  
 # class BlogArticleSerializer(serializers.ModelSerializer):

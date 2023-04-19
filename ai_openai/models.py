@@ -4,6 +4,7 @@ import os
 from ai_workspace.models import MyDocuments,Task
 from ai_staff.models import ( Languages,PromptCategories,PromptStartPhrases,AilaysaSupportedMtpeEngines,
                               PromptSubCategories,PromptTones,ModelGPTName,AiCustomize,ImageGeneratorResolution)
+from django.contrib.postgres.fields import ArrayField
 
 class TokenUsage(models.Model):
     user_input_token = models.CharField(max_length=10, null=True, blank=True)
@@ -133,26 +134,42 @@ class BlogOutline(models.Model):
  
 
 class BlogOutlineSession(models.Model):
+    blog_title = models.ForeignKey(Blogtitle,on_delete=models.CASCADE,related_name='blogoutlinesession_title')
     blog_outline_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE,related_name='blog_outline_session')
     blog_outline =  models.TextField(null=True,blank=True)
     blog_outline_mt =  models.TextField(null=True,blank=True)
     selected_field = models.BooleanField(null=True,blank=True,default=False)
+    custom_order = models.IntegerField(null=True,blank=True) 
+    temp_order = models.IntegerField(null=True,blank=True) 
     group = models.IntegerField(null=True,blank=True)
 
+    # class Meta:
+    #     unique_together = ('group', 'custom_order',)
+    def save(self, *args, **kwargs):
+        
+        self.order = self.temp_order
+        super().save()
+
 class BlogArticle(models.Model):
-    blog_outline_article_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE, related_name = 'blogarticle_outline')
+    blog_creation =  models.ForeignKey(BlogCreation, on_delete=models.CASCADE, related_name='blog_article_create')
     blog_article=  models.TextField(null=True, blank=True)
     blog_article_mt =  models.TextField(null=True, blank=True)
     token_usage =  models.ForeignKey(to= TokenUsage,on_delete = models.CASCADE,related_name='blogarticle_used_tokens',null=True, blank=True)
-    # selected_field = models.BooleanField()
     sub_categories = models.ForeignKey(PromptSubCategories,on_delete=models.CASCADE,related_name='blog_article_sub_categories')
-    blog_intro = models.TextField(null=True, blank=True)
-    blog_intro_mt = models.TextField(null=True, blank=True)
-    blog_conclusion = models.TextField(null=True, blank=True)
-    blog_conclusion_mt=models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     document = models.ForeignKey(MyDocuments, on_delete=models.SET_NULL, null=True, blank=True,related_name = 'ai_doc_blog')
+    # blog_intro = models.TextField(null=True, blank=True)
+    # blog_intro_mt = models.TextField(null=True, blank=True)
+    # blog_conclusion = models.TextField(null=True, blank=True)
+    # blog_conclusion_mt=models.TextField(null=True, blank=True)
+    #blog_outline_article_gen = models.ForeignKey(BlogOutline,on_delete=models.CASCADE, related_name = 'blogarticle_outline',null=True,blank=True)
+    # blog_title=  models.TextField(null=True, blank=True)
+    # selected_field = models.BooleanField()
+    # blog_keyword =  models.TextField(null=True, blank=True)
+    # blog_outlines = ArrayField(models.TextField(), blank=True, null=True)
+    # tone = models.ForeignKey(PromptTones,on_delete = models.CASCADE,related_name='article_tone',blank=True,null=True,default=1)
+
 
 
 class TextgeneratedCreditDeduction(models.Model):

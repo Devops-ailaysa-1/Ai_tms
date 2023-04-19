@@ -680,7 +680,44 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment.save()
         return Response(SegmentSerializerV2(segment).data, status=201)
 
-    def update(self, request, segment_id):
+    def partial_update(self, request, *args, **kwargs):
+        # Get a list of PKs to update
+        data={}
+        pks = request.data.getlist('pks')
+        status = request.data.get('status')
+        print("RTR---------->",pks)
+        
+        for segment_id in pks:
+            segment = self.get_object(segment_id)
+            if segment.temp_target != '':
+                print("Inside partial upd")
+                data['target'] = segment.temp_target
+                data['status'] = status
+            else:
+                data={}
+            authorize(request, resource=segment, actor=request.user, action="read")
+            edit_allow = self.edit_allowed_check(segment)
+            if edit_allow == False:
+                return Response({"msg": "Someone is working already.."}, status=400)
+
+            # Segment update for a Split segment
+            if segment.is_split == True:
+                return self.split_update(data, segment)
+            segment_serlzr = self.get_update(segment, data, request)
+        return Response({'message': 'Objects updated successfully'})
+        # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
+        # return Response(segment_serlzr.data, status=201)
+        
+        # # Get the objects to update
+        # queryset = Segment.objects.filter(pk__in=pks)
+        
+        # # Update each object with the request data
+        # for obj in queryset:
+        #     serializer = self.serializer_class(obj, data=request.data, partial=True)
+        #     serializer.is_valid(raise_exception=True)
+        #     serializer.save()
+    def update(self, request, pk=None):
+        segment_id  = request.POST.get('segment')
         segment = self.get_object(segment_id)
         authorize(request, resource=segment, actor=request.user, action="read")
         edit_allow = self.edit_allowed_check(segment)

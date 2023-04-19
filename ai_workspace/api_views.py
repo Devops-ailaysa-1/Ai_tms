@@ -782,7 +782,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
             pr = Project.objects.get(id=serlzr.data.get('id'))
-            project_analysis_property.apply_async((serlzr.data.get('id'),), )
+            #project_analysis_property.apply_async((serlzr.data.get('id'),), )
             if pr.pre_translate == True:
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data, status=201)
@@ -1313,6 +1313,7 @@ class ProjectAnalysisProperty(APIView):
     def analyse_project(project_id):
         project = Project.objects.get(id=project_id)
         project_tasks = Project.objects.get(id=project_id).get_mtpe_tasks
+        print("ProjectTasks----------->",project_tasks)
         tasks = []
         for _task in project_tasks:
             if _task.task_details.first() == None:
@@ -1322,7 +1323,7 @@ class ProjectAnalysisProperty(APIView):
 
         for task in tasks:
             if task.file_id not in file_ids:
-
+                print("Inside api_views If")
                 ser = TaskSerializer(task)
                 data = ser.data
                 ProjectAnalysisProperty.correct_fields(data)
@@ -1335,9 +1336,10 @@ class ProjectAnalysisProperty(APIView):
                 })
 
                 try:
+                    print("status----->",doc.status_code)
                     if doc.status_code == 200 :
                         doc_data = doc.json()
-                        print("Doc Data---------------->",doc_data)
+                        #print("Doc Data---------------->",doc_data)
                         #if doc_data["total_word_count"] >= 50000:
 
                         task_write_data = json.dumps(doc_data, default=str)
@@ -1371,6 +1373,7 @@ class ProjectAnalysisProperty(APIView):
 
         [task_words.append({task.id : task.task_details.first().task_word_count})for task in project.get_mtpe_tasks]
         out = TaskDetails.objects.filter(project_id=project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+        print("Out--------->",out)
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
                         "task_words":task_words}
@@ -3863,18 +3866,18 @@ def project_word_char_count(request):
     final =[]
     for pr in prs:
         pr_obj = Project.objects.get(id=pr)
-        task = pr_obj.get_mtpe_tasks[0]
-        print("tt_id-------->",task.id)
-        obj = MTonlytaskCeleryStatus.objects.filter(task_id = task.id).filter(task_name = 'project_analysis_property').last()
+        print("Tasks--------->",pr_obj.get_tasks)
+        obj = MTonlytaskCeleryStatus.objects.filter(project_id = pr).filter(task_name = 'project_analysis_property').last()
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
+        print("State-------->",state)
         if state == 'STARTED':
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
         elif state == 'PENDING' or state =='None' or state == 'FAILURE':
-            celery_task = project_analysis_property.apply_async((pr_obj_id), )
+            celery_task = project_analysis_property.apply_async((pr_obj.id,), )
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
             task_words = []
-            tasks = pr_obj.get_mtpe_tasks
+            tasks = pr_obj.get_tasks
             if pr_obj.is_all_doc_opened:
 
                 [task_words.append({i.id:i.document.total_word_count}) for i in tasks]

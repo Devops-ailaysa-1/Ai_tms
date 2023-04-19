@@ -12,6 +12,11 @@ router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-s
 
 urlpatterns = router.urls
 
+myobject_detail = api_views.SegmentsUpdateView.as_view({
+    'put': 'update',
+    'patch': 'partial_update',
+})
+
 urlpatterns+=[
     # path("task/", TaskView.as_view(), name = "tasks"),
     path("document/<int:task_id>/", api_views.DocumentViewByTask.as_view(), name="document"),
@@ -21,7 +26,7 @@ urlpatterns+=[
 
     # Segment related endpoints
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
-    path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put": "update"}), \
+    path("segment/update/", myobject_detail, \
          name="segment-update"),
     path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment'),
     path("segment/restore/<int:pk>", api_views.MergeSegmentDeleteView.as_view({"delete": "destroy"}), \

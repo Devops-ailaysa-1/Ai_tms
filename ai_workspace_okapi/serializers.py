@@ -114,12 +114,26 @@ class SegmentSerializerV2(SegmentSerializer):
         except:pass
 
     def update(self, instance, validated_data):
+        print("VD----------->",validated_data)
+        print("Ins-------->",instance)
+        from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
+            if instance.target == '':
+                if instance.text_unit.document.job.project.mt_enable == False:
+                    user = instance.text_unit.document.doc_credit_debit_user
+                    initial_credit = user.credit_balance.get("total_left")
+                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+                    consumable = round(consumable_credits/3)
+                    if initial_credit < consumable:
+                        raise serializers.ValidationError("Insufficient Credits")
+                    else:
+                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
+                        print("Credit Debited",status_code)
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
