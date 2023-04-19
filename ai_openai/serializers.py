@@ -556,7 +556,7 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
             lang_detect_user_outline =  lang_detector(instance.blog_outline) 
 
             if lang_detect_user_outline !='en':
-                instance.blog_outline_mt =get_translation(1,instance.blog_outline,lang_detect_user_outline,"en",user_id=instance.blog_creation_gen.user.id,from_open_ai=True)  
+                instance.blog_outline_mt =get_translation(1,instance.blog_outline,lang_detect_user_outline,"en",user_id=instance.blog_title.blog_creation_gen.user.id,from_open_ai=True)  
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title.blog_creation_gen.user, consumable_credit_section)
         instance.save() 
 
@@ -884,7 +884,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                                                                                              many=False,required=False),required=False)
     class Meta:
         model = BlogCreation
-        fields = ('id','user_title','user_title_mt','keywords','keywords_mt','prompt_user_title_mt','prompt_keyword_mt',
+        fields = ('id','user_title','steps','user_title_mt','keywords','keywords_mt','prompt_user_title_mt','prompt_keyword_mt',
                   'categories','sub_categories','user_language','tone','response_copies_keyword','selected_keywords_list',
                   'unselected_keywords_list','blog_key_create','user','blog_title_create')
         
