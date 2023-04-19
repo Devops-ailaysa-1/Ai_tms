@@ -383,14 +383,11 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         queryset_new = qrs.annotate(
                         order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
                         ).order_by(ExpressionWrapper(Case(
-        When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
-        default=F('order_new'),  # Use 'custom_order' field for ordering
-        output_field=IntegerField()),
-    output_field=IntegerField()
-    )
-)
-
-
+                        When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
+                        default=F('order_new'),  # Use 'custom_order' field for ordering
+                        output_field=IntegerField()),
+                    output_field=IntegerField()
+                    ))
         if detected_lang!='en':
             outlines = [i.blog_outline_mt for i in queryset_new ]
         else:
@@ -652,7 +649,10 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         total_token = prompt_response_gpt['usage']['total_tokens']
         total_token = get_consumable_credits_for_openai_text_generator(total_token)
         AiPromptSerializer().customize_token_deduction(instance.blog_title_gen.blog_creation_gen,total_token)
-        for group,outline_res in enumerate(prompt_response):
+        queryset = BlogOutlineSession.objects.filter(blog_title=instance.blog_title_gen).distinct('group')
+        if queryset: start = queryset.count()
+        else: start = 0
+        for group,outline_res in enumerate(prompt_response,start=start):
             outline = outline_res.message['content'].split('\n')
             for order,session in enumerate(outline,start=1):
                 if session:
