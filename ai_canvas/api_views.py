@@ -3,10 +3,13 @@ from rest_framework import viewsets  ,generics
 from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
-                              CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign)
+                              CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
+                              TemplateKeyword,TextTemplate)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
-                                   TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer)
+                                   TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
+                                   TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
+                                   TextTemplateSerializer,TemplateKeywordSerializer)
 from django.http import Http404 
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from rest_framework.pagination import PageNumberPagination 
@@ -381,3 +384,52 @@ def instant_canvas_translation(request):
 
 
 ##################################
+
+
+class TextTemplateViewset(viewsets.ViewSet):
+
+    def get(self, request):
+        query_set = TextTemplate.objects.all()
+        serializer = self.serializer(query_set ,many =True)
+        return Response(serializer.data)
+
+    def retrieve(self,request,pk):
+        query_set = TextTemplate.objects.get(id = pk)
+        serializer = TextTemplateSerializer(query_set )
+        return Response(serializer.data)
+        
+    def create(self,request):
+        text_thumbnail = request.FILES.get('text_thumbnail' ,None)
+        text_keywords= request.POST.getlist('text_keywords' , None)
+        serializer = TextTemplateSerializer(data=request.data)
+                                        #    'text_keywords':text_keywords , 'text_thumbnail':text_thumbnail })
+        if serializer.is_valid():
+            serializer.save()
+            # data = [TemplateKeyword.objects.create(**{'text_template':serializer.instance , 'text_keywords':text_key}) for text_key in text_keywords]
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+    
+    def update(self,request,pk):
+        query_set = self.model.objects.get(id = pk)
+        text_thumbnail = request.FILES.get('text_thumbnail' ,None)
+        text_keywords= request.POST.getlist('text_keywords' , None)
+        serializer = TextTemplateSerializer(query_set, data=request.data ,partial = True)
+                                # 'text_keywords':text_keywords , 'text_thumbnail':text_thumbnail },partial = True)
+        if serializer.is_valid():
+            serializer.save()
+            # print(serializer.data)
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+            
+    def delete(self,request,pk):
+        query_set = self.model.objects.get(id = pk)
+        query_set.delete()
+        return Response(status=204)
+        
+class TemplateKeywordViewset(viewsets.ViewSet):
+    def get(self, request):
+        query_set = TemplateKeyword.objects.all()
+        serializer = TemplateKeywordSerializer(query_set ,many =True)
+        return Response(serializer.data) 

@@ -148,4 +148,11 @@ class SourceImageAssetsCanvasTranslate(models.Model):
     img = models.FileField(upload_to=user_directory_path_canvas_source_image_assets,blank=True,null=True)
 
 
- 
+
+class TextTemplate(models.Model):
+    text_thumbnail = models.FileField(upload_to = 'text_template' ,blank = True , null = True)
+    text_template_json = models.JSONField(blank = True , null = True)
+
+class TemplateKeyword(models.Model):
+    text_template= models.ForeignKey(to =TextTemplate, on_delete = models.CASCADE ,related_name= 'txt_temp')
+    text_keywords = models.CharField(max_length=100)

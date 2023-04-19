@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,
                             CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
-                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage)
+                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword)
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn
@@ -410,3 +410,82 @@ class MyTemplateDesignRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyTemplateDesign
         fields = ('id','width','height','my_template_page',)
+
+
+
+
+class TemplateKeywordSerializer(serializers.ModelSerializer):
+    # id = serializers.RelatedField(source = 'text_template.id',read_only=True)
+    # text_thumbnail = serializers.RelatedField(source = 'text_template.text_thumbnail.path',read_only=True)
+    # text_template_json = serializers.RelatedField(source = 'text_template.text_template_json',read_only=True)
+    class Meta:
+        model = TemplateKeyword
+        fields = ('id' ,'text_template', 'text_keywords', )
+        read_only_fields = ('id','text_template',)
+       
+
+class TextTemplateSerializer(serializers.ModelSerializer):
+    text_template_json = serializers.JSONField(required = False)
+    txt_keywords = TemplateKeywordSerializer(many=True,read_only=True,required=False,source='txt_temp') ##nested serializer
+    # keywords = serializers.SerializerMethodField()
+    text_keywords = serializers.ListField(required = True,write_only = True)
+    class Meta:
+        model = TextTemplate
+        fields = ['id','text_thumbnail','text_template_json' ,'txt_keywords' ,'text_keywords']
+        
+    
+    # def get_keywords(self,obj):
+    #     print("get_keywords-->" , obj.txt_temp.all())
+    #     return [i.text_keywords for i in obj.txt_temp.all()]
+    
+    
+    def to_internal_value(self, data):
+        # print("data---->>" ,data)
+        # if data['text_keywords']:
+        #     data['txt_keywords'] = [{'text_keywords': key} for key in data.get('text_keywords')]
+         
+        return super().to_internal_value(data)
+    
+    def create(self, validated_data):
+
+        # print("validated_data text_keywords-->" , validated_data.get('text_keywords'))
+        text_keywords = validated_data.pop('text_keywords')
+        # print("validated_data-->" , validated_data)
+        text_temp = TextTemplate.objects.create(**validated_data)
+        if text_keywords:
+            for keyword in text_keywords:
+                TemplateKeyword.objects.create(text_template = text_temp ,text_keywords =keyword  )
+                # print("key-->" , keyword)
+        # data = super().create(validated_data)
+        # if validated_data['txt_temp']:
+        #     txt_temp = validated_data.pop('txt_temp')
+        #     print("txt_temp--->" ,txt_temp)
+        #     text_temp = TextTemplate.objects.create(**validated_data)
+        #     [text_temp.txt_temp.create(**key) for key in  txt_temp]
+        # print(validated_data)
+        return text_temp
+    
+    def update(self, instance, validated_data):
+        # print("instance-->" , instance)
+        # print("validated_data-->" ,validated_data)
+        template_keyword =  TemplateKeywordSerializer()
+        if validated_data.get('text_thumbnail'):
+            instance.text_thumbnail = validated_data.get('text_thumbnail')
+            instance.save()
+        if validated_data.get('text_template_json'):
+            instance.text_template_json = validated_data.get('text_template_json')
+            instance.save()
+        if validated_data.get('text_keywords'):
+            txt_temp = validated_data.pop('text_keywords')
+            
+            [TemplateKeyword.objects.create(text_template = instance , text_keywords = key) for key in  txt_temp]
+            # instance.tx
+            #temp_data = TemplateKeyword.objects.filter(text_template = instance)
+            
+            # temp_data.update(text_template=)
+        #     print(type(txt_temp))
+            # print("txt_temp-->" , [i for i in txt_temp['text_keywords'][i]])
+            
+            # TemplateKeyword.objects.filter(text_template = instance).update(text_keywords = txt_temp['text_keywords'])
+        return instance
+    
