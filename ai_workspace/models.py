@@ -159,7 +159,7 @@ class WriterProject(models.Model):
 
 class MyDocuments(models.Model):
     project = models.ForeignKey(WriterProject, null=True, blank=True, on_delete=models.CASCADE,related_name = 'related_docs')
-    writer_project_type = models.ForeignKey(DocumentType, null=False, blank=False,on_delete=models.CASCADE,default=1)
+    document_type = models.ForeignKey(DocumentType, null=False, blank=False,on_delete=models.CASCADE,default=1)
     file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
     word_count = models.IntegerField(null=True,blank=True)
