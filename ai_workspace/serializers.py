@@ -1531,3 +1531,13 @@ class DocumentImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentImages
         fields = "__all__"
+
+
+
+class MyDocumentSerializerNew(serializers.Serializer):
+	id = serializers.IntegerField(read_only=True)
+	word_count = serializers.IntegerField(read_only=True)
+	doc_name = serializers.CharField(read_only=True)
+	open_as = serializers.CharField(read_only=True)
+	document_type__type = serializers.CharField(read_only=True)
+	created_at = serializers.DateTimeField(read_only=True)
