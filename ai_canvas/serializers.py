@@ -171,7 +171,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         
         if canvas_translation_target and tar_page:
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
-            canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.canvas_trans_json,
+            canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.json,
                                         formats='png',multiplierValue=1)
             # thumbnail should be update if json file is updated
             canvas_trans.thumbnail=canvas_translation_tar_thumb
