@@ -387,8 +387,9 @@ class BlogArticleSerializer(serializers.ModelSerializer):
                         output_field=IntegerField()),
                     output_field=IntegerField()
                     ))
-        qr = queryset_new[0] if queryset_new else raise serializers.ValidationError({'msg':'No Outlines Selected'}, code=400)
-        detected_lang = lang_detector(qr.blog_outline)
+        if queryset_new:
+            detected_lang = lang_detector(queryset[0].blog_outline)
+        else: raise serializers.ValidationError({'msg':'No Outlines Selected'}, code=400)
         if detected_lang!='en':
             outlines = [i.blog_outline_mt for i in queryset_new if i.blog_outline_mt ]
         else:
