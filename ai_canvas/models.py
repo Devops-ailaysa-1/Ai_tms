@@ -156,3 +156,5 @@ class TextTemplate(models.Model):
 class TemplateKeyword(models.Model):
     text_template= models.ForeignKey(to =TextTemplate, on_delete = models.CASCADE ,related_name= 'txt_temp')
     text_keywords = models.CharField(max_length=100)
+
+

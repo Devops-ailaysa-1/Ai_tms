@@ -145,7 +145,7 @@ class CanvasDesignViewset(viewsets.ViewSet):
         return Response(serializer.errors)
     
     def list(self, request):
-        queryset = CanvasDesign.objects.all()
+        queryset = CanvasDesign.objects.filter(user=request.user.id)
         serializer = CanvasDesignSerializer(queryset,many=True)
         return Response(serializer.data)
 
@@ -181,9 +181,9 @@ class CanvasDesignViewset(viewsets.ViewSet):
 
 class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CanvasDesignListViewsetPagination
-
+    permission_classes = [IsAuthenticated,]
     def list(self,request):
-        queryset = CanvasDesign.objects.all().order_by('-updated_at')
+        queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = CanvasDesignListSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -193,7 +193,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
 
 class TemplateGlobalDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     pagination_class = TemplateGlobalPagination 
- 
+    permission_classes = [IsAuthenticated,]
     def list(self,request):
         queryset = TemplateGlobalDesign.objects.all().order_by('-updated_at')
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
@@ -247,9 +247,9 @@ class TemplateGlobalDesignRetrieveViewset(generics.RetrieveAPIView):
 
 class MyTemplateDesignViewset(viewsets.ViewSet ,PageNumberPagination):
     pagination_class = MyTemplateDesignPagination
-     
+    permission_classes = [IsAuthenticated,]
     def list(self,request):
-        queryset = MyTemplateDesign.objects.all()
+        queryset = MyTemplateDesign.objects.filter(user=request.user.id)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = MyTemplateDesignSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
@@ -329,6 +329,7 @@ def canvas_download(request):
 ####free_____pix
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def free_pix_api(request):
     # subject_search= request.POST.get('subject_search')
     # page_no = request.POST.get('page_no')
@@ -352,6 +353,7 @@ def free_pix_api(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def pixabay_api(request):
     url = 'https://pixabay.com/api/'
     headers = {
@@ -372,6 +374,7 @@ def pixabay_api(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def instant_canvas_translation(request):
     text_list = request.POST.getlist('text')
     src_lang_id = request.POST.get('src_lang_id',None)
@@ -387,9 +390,9 @@ def instant_canvas_translation(request):
 
 
 class TextTemplateViewset(viewsets.ViewSet):
-
+    permission_classes = [IsAuthenticated,]
     def get(self, request):
-        query_set = TextTemplate.objects.all()
+        query_set = TextTemplate.objects.filter(user=request.user.id)
         serializer = self.serializer(query_set ,many =True)
         return Response(serializer.data)
 
@@ -402,10 +405,9 @@ class TextTemplateViewset(viewsets.ViewSet):
         text_thumbnail = request.FILES.get('text_thumbnail' ,None)
         text_keywords= request.POST.getlist('text_keywords' , None)
         serializer = TextTemplateSerializer(data=request.data)
-                                        #    'text_keywords':text_keywords , 'text_thumbnail':text_thumbnail })
+                                        
         if serializer.is_valid():
             serializer.save()
-            # data = [TemplateKeyword.objects.create(**{'text_template':serializer.instance , 'text_keywords':text_key}) for text_key in text_keywords]
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
@@ -429,6 +431,7 @@ class TextTemplateViewset(viewsets.ViewSet):
         return Response(status=204)
         
 class TemplateKeywordViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
     def get(self, request):
         query_set = TemplateKeyword.objects.all()
         serializer = TemplateKeywordSerializer(query_set ,many =True)

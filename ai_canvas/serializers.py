@@ -4,8 +4,8 @@ from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets
                             TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword)
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
-from ai_canvas.utils import json_src_change ,canvas_translate_json_fn
- 
+from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create
+from django.core.files.base import ContentFile
 
 
 class LocaleSerializer(serializers.ModelSerializer):
@@ -13,7 +13,6 @@ class LocaleSerializer(serializers.ModelSerializer):
         model = LanguagesLocale
         fields = ('id','language_id','language_locale_name','locale_code')
  
-
 class LanguagesSerializer(serializers.ModelSerializer):
     code = serializers.CharField(required=False)
     class Meta:
@@ -111,6 +110,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'src_lang':{'write_only':True}
         }
 
+
+    def thumb_create(self,json_str,formats,multiplierValue):
+        thumb_image_content= thumbnail_create(json_str=json_str,formats=formats,multiplierValue=multiplierValue)
+        thumb_name = self.instance.file_name+'_thumbnail.png' if self.instance and self.instance.file_name else 'thumbnail.png'
+        thumbnail_src = ContentFile(thumb_image_content, thumb_name)
+        return thumbnail_src
+
     def create(self,validated_data):
         req_host = self.context.get('request', HttpRequest()).get_host()
         source_json_file = validated_data.pop('source_json_file',None)
@@ -119,8 +125,10 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         data = {**validated_data ,'user':user}
         instance = CanvasDesign.objects.create(**data)
+        self.instance = instance
         if source_json_file:
             source_json_file = json_src_change(source_json_file,req_host,instance)
+            thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1) 
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = source_json_file,
                                                  page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
         return instance
@@ -141,7 +149,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         target_json_file = validated_data.get('target_json_file',None)
         target_canvas_json = validated_data.get('target_canvas_json',None)
         if tar_page and canvas_translation and target_canvas_json:
-            # print("create target page")
+
+            canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,
+                                                             formats='png',multiplierValue=1) 
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
         if canvas_translation_tar_lang and src_lang:
@@ -161,8 +171,9 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         
         if canvas_translation_target and tar_page:
             canvas_trans = canvas_translation_target.canvas_json_tar.get(page_no=tar_page)
+            canvas_translation_tar_thumb=self.thumb_create(json_str=canvas_trans.canvas_trans_json,
+                                        formats='png',multiplierValue=1)
             # thumbnail should be update if json file is updated
-            thumbnail_page_path = canvas_trans.thumbnail.path if canvas_trans.thumbnail else ""
             canvas_trans.thumbnail=canvas_translation_tar_thumb
             canvas_trans.export_file=canvas_translation_tar_export
             if target_json_file:
@@ -179,11 +190,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             canva_source = CanvasSourceJsonFiles.objects.get_or_create(canvas_design=instance,page_no=src_page)[0]
             source_json_file = json_src_change(source_json_file,req_host,instance)
             canva_source.json = source_json_file
-            thumbnail_page_path = canva_source.thumbnail.path if canva_source.thumbnail else ""
+            thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
+            # thumbnail_page_path = canva_source.thumbnail.path if canva_source.thumbnail else ""
             # print("thumbnail_page_path------>",thumbnail_page_path)
             # print('path exist',os.path.exists(thumbnail_page_path))
             canva_source.thumbnail = thumbnail_src
-            canva_source.export_file = export_img_src
+            canva_source.export_file = thumbnail_src ###   export_img_src same as thumbnail_src
             canva_source.save()
             # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
             #     os.remove(thumbnail_page_path)
@@ -191,11 +203,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
         elif thumbnail_src and src_page:
             canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
-            thumbnail_page_path = canva_source.thumbnail.path if canva_source.thumbnail else ""
+            # thumbnail_page_path = canva_source.thumbnail.path if canva_source.thumbnail else ""
             # print("thumbnail_page_path------>",thumbnail_page_path)
             # print('path exist',os.path.exists(thumbnail_page_path))
+            thumbnail_src = self.thumb_create(json_str=canva_source.json,formats='png',multiplierValue=1)
             canva_source.thumbnail = thumbnail_src
-            canva_source.export_file = export_img_src
+            canva_source.export_file = thumbnail_src  ##export_img_src same as thumbnail_src
             canva_source.save()   
             # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
             #     os.remove(thumbnail_page_path)
@@ -210,6 +223,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                 export_page = temp_page.export_page
                 json_page = temp_page.json_page
                 page_len+=1
+                # thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
                 CanvasSourceJsonFiles.objects.create(canvas_design=instance,thumbnail=thumbnail_page,
                                                      export_file=export_page,json=json_page,page_no=page_len)
         if validated_data.get('my_temp',None):
@@ -284,14 +298,25 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
                 data['thumbnail_page'] = None
         return data
 
+    def thumb_create(self,json_str,formats,multiplierValue):
+        thumb_image_content= thumbnail_create(json_str=json_str,formats=formats,multiplierValue=multiplierValue)
+        thumb_name = self.instance.file_name+'_thumbnail.png' if self.instance and self.instance.file_name else 'thumbnail.png'
+        thumbnail_src = ContentFile(thumb_image_content, thumb_name)
+        return thumbnail_src
+
+
     def create(self, validated_data):
         thumbnail_page = validated_data.pop('thumbnail_page',None)
         export_page = validated_data.pop('export_page',None)
         json_page = validated_data.pop('json_page',None)
         instance = TemplateGlobalDesign.objects.create(**validated_data)
+        self.instance = instance
+        
         if json_page:
+            thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
             TemplatePage.objects.create(template_page=instance,thumbnail_page=thumbnail_page,export_page=export_page,
                                         json_page=json_page,page_no=1)
+            
         return instance
 
 
@@ -307,13 +332,14 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
             if TemplatePage.objects.filter(page_no=page_no).exists():
                 template_page_update=TemplatePage.objects.get(template_page=instance,page_no=page_no)
                 if json_page:
+                    thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
                     template_page_update.json_page = json_page
-                if thumbnail_page:
                     template_page_update.thumbnail_page = thumbnail_page
                 if export_page:
                     template_page_update.export_page = export_page
                 template_page_update.save()
             else:
+                thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
                 TemplatePage.objects.create(template_page=instance,thumbnail_page=thumbnail_page,export_page=export_page,
                                         json_page=json_page,page_no=page_no)
         if validated_data.get('template_global_id',None):
@@ -375,6 +401,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                     my_template_export=glob_pag.export_page
                     my_template_json=glob_pag.json_page
                     page_no=glob_pag.page_no
+                     
                     MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                         my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
              
@@ -412,62 +439,33 @@ class MyTemplateDesignRetrieveSerializer(serializers.ModelSerializer):
         fields = ('id','width','height','my_template_page',)
 
 
-
-
 class TemplateKeywordSerializer(serializers.ModelSerializer):
-    # id = serializers.RelatedField(source = 'text_template.id',read_only=True)
-    # text_thumbnail = serializers.RelatedField(source = 'text_template.text_thumbnail.path',read_only=True)
-    # text_template_json = serializers.RelatedField(source = 'text_template.text_template_json',read_only=True)
+
     class Meta:
         model = TemplateKeyword
         fields = ('id' ,'text_template', 'text_keywords', )
         read_only_fields = ('id','text_template',)
-       
-
+   
 class TextTemplateSerializer(serializers.ModelSerializer):
     text_template_json = serializers.JSONField(required = False)
     txt_keywords = TemplateKeywordSerializer(many=True,read_only=True,required=False,source='txt_temp') ##nested serializer
-    # keywords = serializers.SerializerMethodField()
+ 
     text_keywords = serializers.ListField(required = True,write_only = True)
     class Meta:
         model = TextTemplate
         fields = ['id','text_thumbnail','text_template_json' ,'txt_keywords' ,'text_keywords']
         
-    
-    # def get_keywords(self,obj):
-    #     print("get_keywords-->" , obj.txt_temp.all())
-    #     return [i.text_keywords for i in obj.txt_temp.all()]
-    
-    
-    def to_internal_value(self, data):
-        # print("data---->>" ,data)
-        # if data['text_keywords']:
-        #     data['txt_keywords'] = [{'text_keywords': key} for key in data.get('text_keywords')]
-         
-        return super().to_internal_value(data)
-    
     def create(self, validated_data):
-
-        # print("validated_data text_keywords-->" , validated_data.get('text_keywords'))
-        text_keywords = validated_data.pop('text_keywords')
-        # print("validated_data-->" , validated_data)
+        text_keywords = validated_data.pop('text_keywords') 
         text_temp = TextTemplate.objects.create(**validated_data)
         if text_keywords:
             for keyword in text_keywords:
                 TemplateKeyword.objects.create(text_template = text_temp ,text_keywords =keyword  )
-                # print("key-->" , keyword)
-        # data = super().create(validated_data)
-        # if validated_data['txt_temp']:
-        #     txt_temp = validated_data.pop('txt_temp')
-        #     print("txt_temp--->" ,txt_temp)
-        #     text_temp = TextTemplate.objects.create(**validated_data)
-        #     [text_temp.txt_temp.create(**key) for key in  txt_temp]
-        # print(validated_data)
+ 
         return text_temp
     
     def update(self, instance, validated_data):
-        # print("instance-->" , instance)
-        # print("validated_data-->" ,validated_data)
+
         template_keyword =  TemplateKeywordSerializer()
         if validated_data.get('text_thumbnail'):
             instance.text_thumbnail = validated_data.get('text_thumbnail')
@@ -477,15 +475,6 @@ class TextTemplateSerializer(serializers.ModelSerializer):
             instance.save()
         if validated_data.get('text_keywords'):
             txt_temp = validated_data.pop('text_keywords')
-            
             [TemplateKeyword.objects.create(text_template = instance , text_keywords = key) for key in  txt_temp]
-            # instance.tx
-            #temp_data = TemplateKeyword.objects.filter(text_template = instance)
-            
-            # temp_data.update(text_template=)
-        #     print(type(txt_temp))
-            # print("txt_temp-->" , [i for i in txt_temp['text_keywords'][i]])
-            
-            # TemplateKeyword.objects.filter(text_template = instance).update(text_keywords = txt_temp['text_keywords'])
         return instance
     

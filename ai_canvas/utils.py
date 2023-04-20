@@ -2,6 +2,9 @@ import requests
 from ai_canvas.models import SourceImageAssetsCanvasTranslate
 from django import core
 from ai_workspace_okapi.utils import get_translation
+import os
+from django.core.exceptions import ValidationError
+IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
 
 # from google.cloud import translate_v2 as translate
 
@@ -72,3 +75,15 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
                         canva_group(i['objects'])
         canvas_result[lang] = canvas_json_copy
     return canvas_result
+
+
+import json
+def thumbnail_create(json_str,formats,multiplierValue):
+    json_ = json.dumps(json_str)
+    data = {'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
+    thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
+    print("status",thumb_image.status_code)
+    if thumb_image.status_code ==200:
+        return thumb_image.content
+    else:
+        return ValidationError("error in node server")
