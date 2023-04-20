@@ -523,12 +523,12 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         
         if title and group:
             #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title,group=group).order_by('temp_order')
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title,group=group).order_by('custom_order')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
 
         elif title:
             #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title).order_by('temp_order')
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title).order_by('custom_order')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
             
         else:
