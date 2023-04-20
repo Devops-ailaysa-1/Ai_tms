@@ -98,7 +98,7 @@ class CanvasUserImageAssetsViewset(viewsets.ViewSet):
         return Response(serializer.errors)
     
     def list(self, request):
-        queryset = CanvasUserImageAssets.objects.all()
+        queryset = CanvasUserImageAssets.objects.filter(user=request.user.id)
         serializer = CanvasUserImageAssetsSerializer(queryset,many=True)
         return Response(serializer.data)
     

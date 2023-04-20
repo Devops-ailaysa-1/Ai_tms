@@ -6,7 +6,7 @@ from ai_staff.models import Languages,LanguagesLocale
 from django.http import HttpRequest
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create
 from django.core.files.base import ContentFile
-
+from django import core
 
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -114,7 +114,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     def thumb_create(self,json_str,formats,multiplierValue):
         thumb_image_content= thumbnail_create(json_str=json_str,formats=formats,multiplierValue=multiplierValue)
         thumb_name = self.instance.file_name+'_thumbnail.png' if self.instance and self.instance.file_name else 'thumbnail.png'
-        thumbnail_src = ContentFile(thumb_image_content, thumb_name)
+        thumbnail_src = core.files.File(core.files.base.ContentFile(thumb_image_content),thumb_name)
         return thumbnail_src
 
     def create(self,validated_data):
@@ -252,7 +252,6 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
         if hasattr(instance.canvas_json_src.first(),'thumbnail'):
             # if 'thumbnail_src' in data.keys():
             data['thumbnail_src']= instance.canvas_json_src.first().thumbnail.url
-
         if instance.canvas_translate.all():
             data['translate_available'] = True
         return data
@@ -301,7 +300,7 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
     def thumb_create(self,json_str,formats,multiplierValue):
         thumb_image_content= thumbnail_create(json_str=json_str,formats=formats,multiplierValue=multiplierValue)
         thumb_name = self.instance.file_name+'_thumbnail.png' if self.instance and self.instance.file_name else 'thumbnail.png'
-        thumbnail_src = ContentFile(thumb_image_content, thumb_name)
+        thumbnail_src = thumbnail_src = core.files.File(core.files.base.ContentFile(thumb_image_content),thumb_name)
         return thumbnail_src
 
 
@@ -401,7 +400,6 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
                     my_template_export=glob_pag.export_page
                     my_template_json=glob_pag.json_page
                     page_no=glob_pag.page_no
-                     
                     MyTemplateDesignPage.objects.create(my_template_design=my_temp_design,my_template_thumbnail=my_template_thumbnail,
                                                         my_template_export=my_template_export,my_template_json=my_template_json,page_no=page_no)
              
@@ -410,7 +408,7 @@ class MyTemplateDesignSerializer(serializers.ModelSerializer):
             width=canvas_design_id.width
             height=canvas_design_id.height
             canvas_translate_json_inst = canvas_design_id.canvas_translate
-            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height)
+            my_temp_design = MyTemplateDesign.objects.create(file_name=file_name,width=width,height=height,user=user)
             if canvas_trans_id:
                 can_trans_ins = canvas_translate_json_inst.get(id=canvas_trans_id.id)
                                                 #canvas_translate__source_language=canvas_translate_json_inst.canvas_translate.last().source_language,
