@@ -378,7 +378,6 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         blog_article_start_phrase = instance.sub_categories.prompt_sub_category.first().start_phrase
         title = instance.blog_creation.user_title if instance.blog_creation.user_title else instance.blog_creation.user_title_mt
         keyword = instance.blog_creation.keywords if instance.blog_creation.keywords else instance.blog_creation.keywords_mt
-        detected_lang = lang_detector(title)
         queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
         queryset_new = queryset.annotate(
                         order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
@@ -388,8 +387,10 @@ class BlogArticleSerializer(serializers.ModelSerializer):
                         output_field=IntegerField()),
                     output_field=IntegerField()
                     ))
+        qr = queryset_new[0] if queryset_new else raise serializers.ValidationError({'msg':'No Outlines Selected'}, code=400)
+        detected_lang = lang_detector(qr.blog_outline)
         if detected_lang!='en':
-            outlines = [i.blog_outline_mt for i in queryset_new ]
+            outlines = [i.blog_outline_mt for i in queryset_new if i.blog_outline_mt ]
         else:
             outlines = [i.blog_outline for i in queryset_new]
         selected_outline_section_list = ",".join(outlines)
