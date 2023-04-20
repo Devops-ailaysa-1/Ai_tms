@@ -611,7 +611,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BlogOutline
-        fields = ('id','user_selected_title','user_selected_title_mt','blog_title_gen','sub_categories',
+        fields = ('id','user_selected_title','selected_group_num','user_selected_title_mt','blog_title_gen','sub_categories',
                   'token_usage','response_copies','select_group','blog_outline_session')
         extra_kwargs = {'blog_title_gen': {'required': True},'selected_field':{'required': False},
                         'select_group':{'required': False}}
