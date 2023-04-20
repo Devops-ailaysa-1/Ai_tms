@@ -685,7 +685,11 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
 
         # if validated_data.get('blog_outline_selected_list'):
             
-
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        sessions = instance.blog_outline_session.order_by('custom_order')
+        representation['blog_outline_session'] = BlogOutlineSessionSerializer(sessions, many=True).data
+        return representation
 
 class BlogtitleSerializer(serializers.ModelSerializer):
     blogoutline_title = BlogOutlineSerializer(many=True,required=False)
