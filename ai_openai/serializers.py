@@ -380,7 +380,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         keyword = instance.blog_creation.keywords if instance.blog_creation.keywords else instance.blog_creation.keywords_mt
         detected_lang = lang_detector(title)
         queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
-        queryset_new = qrs.annotate(
+        queryset_new = queryset.annotate(
                         order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
                         ).order_by(ExpressionWrapper(Case(
                         When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
@@ -589,7 +589,7 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
             group = validated_data.get('group')
             order_list = list(map(int, order_list.split(',')))
             for index, order in enumerate(order_list, 1):
-                BlogOutlineSession.objects.filter(temp_order=index).filter(blog_title=instance.blog_title).filter(group=group).update(custom_order=order)
+                BlogOutlineSession.objects.filter(temp_order=order).filter(blog_title=instance.blog_title).filter(group=group).update(custom_order=index)
 
 
             # for index, order in enumerate(ls, start=1):
