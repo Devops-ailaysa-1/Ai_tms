@@ -352,10 +352,9 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
 
 
-
+from ai_workspace.models import MyDocuments
 
 class BlogArticleSerializer(serializers.ModelSerializer):
-
     blog_creation = serializers.PrimaryKeyRelatedField(queryset=BlogCreation.objects.all(),required=True)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),
                                                         many=False,required=False)
@@ -412,14 +411,19 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             instance.blog_article = blog_article_trans
             consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
                                                                                  instance.blog_creation.user_language_code,'en')
-            tot_tok =  total_token+consumable_credits_for_article_gen
-            AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
+            tot_tok =  token_usage+consumable_credits_for_article_gen
+            AiPromptSerializer().customize_token_deduction(instance.blog_creation
                                                            ,tot_tok)
             instance.blog_article_mt=prompt_response_article_resp
         else:
             instance.blog_article = prompt_response_article_resp 
             AiPromptSerializer().customize_token_deduction(instance.blog_creation
                                                            ,token_usage)
+        instance.save()
+        article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
+        tt = MyDocuments.objects.create(doc_name=title,html_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+        print("Doc--------->",tt)
+        instance.document = tt
         instance.save()
         return instance
 
