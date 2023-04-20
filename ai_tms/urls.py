@@ -57,7 +57,7 @@ urlpatterns = [
     # path("integerations/", include("integerations.gitlab_.urls")),
     path("nlp/", include("ai_nlp.urls")),
     path("tm/", include("ai_tm.urls")),
-
+    path('ai-image-translation/' ,include('ai_imagetranslation.urls')),
     path("aipay/", include("ai_pay.urls")),
     path('exportpdf/',include("ai_exportpdf.urls")),
     path("qa/", include("ai_qa.urls")),

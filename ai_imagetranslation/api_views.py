@@ -21,7 +21,7 @@ class ImageloadViewset(viewsets.ViewSet):
         file_name = str(image)
         types = file_name.split(".")[-1]
         serializer = ImageloadSerializer(data={**request.POST.dict() ,'image':image,'height':height,"width":width,
-                                           'file_name':file_name ,'types':types  })
+                                           'file_name':file_name ,'types':types,'user':request.user.id}  )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

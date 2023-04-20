@@ -459,9 +459,6 @@ class ImageGeneratorResolution(models.Model):
     
     def __str__(self) -> str:
         return self.image_resolution 
-    
-    
-
  
 class PromptStartPhrases(models.Model):
     sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',

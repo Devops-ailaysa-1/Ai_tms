@@ -446,12 +446,11 @@ class TemplateKeywordSerializer(serializers.ModelSerializer):
    
 class TextTemplateSerializer(serializers.ModelSerializer):
     text_template_json = serializers.JSONField(required = False)
-    txt_keywords = TemplateKeywordSerializer(many=True,read_only=True,required=False,source='txt_temp') ##nested serializer
- 
+    txt_keywords = TemplateKeywordSerializer(many=True,read_only=True,required=False,source='txt_temp') 
     text_keywords = serializers.ListField(required = True,write_only = True)
     class Meta:
         model = TextTemplate
-        fields = ['id','text_thumbnail','text_template_json' ,'txt_keywords' ,'text_keywords']
+        fields = ('id','text_thumbnail','text_template_json' ,'txt_keywords' ,'text_keywords')
         
     def create(self, validated_data):
         text_keywords = validated_data.pop('text_keywords') 
@@ -459,11 +458,9 @@ class TextTemplateSerializer(serializers.ModelSerializer):
         if text_keywords:
             for keyword in text_keywords:
                 TemplateKeyword.objects.create(text_template = text_temp ,text_keywords =keyword  )
- 
         return text_temp
     
     def update(self, instance, validated_data):
-
         template_keyword =  TemplateKeywordSerializer()
         if validated_data.get('text_thumbnail'):
             instance.text_thumbnail = validated_data.get('text_thumbnail')
@@ -473,6 +470,6 @@ class TextTemplateSerializer(serializers.ModelSerializer):
             instance.save()
         if validated_data.get('text_keywords'):
             txt_temp = validated_data.pop('text_keywords')
-            [TemplateKeyword.objects.create(text_template = instance , text_keywords = key) for key in  txt_temp]
+            [TemplateKeyword.objects.create(text_template=instance , text_keywords = key) for key in  txt_temp]
         return instance
     

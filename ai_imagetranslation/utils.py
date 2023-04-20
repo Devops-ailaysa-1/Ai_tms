@@ -1,5 +1,6 @@
 from .models import *
-import cv2, numpy as np ,io #,torch
+import cv2 ,io #,torch
+import numpy as np
 from PIL import Image
 from google.cloud import vision_v1 , vision
 from google.oauth2 import service_account
@@ -72,26 +73,13 @@ def image_content(image_numpy):
     content = encoded_image.tobytes()
     return content
 
-# def get_config(strategy, **kwargs):
-#     data = dict(
-#         ldm_steps=1,
-#         ldm_sampler=LDMSampler.plms,
-#         hd_strategy=strategy,
-#         hd_strategy_crop_margin=32,
-#         hd_strategy_crop_trigger_size=200,
-#         hd_strategy_resize_limit=200,
-#     )
-#     data.update(**kwargs)
-#     return Config(**data)
-
-# ###main#####
-# model = ModelManager(name="lama", device="cpu")
 from django import core
 def inpaint_image_creation(image_details):
-    # print("image_details" , image_details.mask)
     img = cv2.imread(image_details.image.path  )
+    img_path=image_details.image.path
+    mask_path=image_details.mask.path
+
     if image_details.mask:
-        # print("mask_present")
         mask = cv2.imread(image_details.mask.path )
         image_to_extract_text = np.bitwise_and(mask ,img)
         content = image_content(image_to_extract_text)
@@ -101,50 +89,27 @@ def inpaint_image_creation(image_details):
         image_text_details = creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         img = cv2.cvtColor(img ,  cv2.COLOR_BGR2RGB)
- 
-        # output = model(img, mask , get_config(HDStrategy.ORIGINAL))
-        output = inpaint_image(img, mask)
+        output = inpaint_image(img_path, mask_path)
+        output = np.reshape(output, img.shape)    
     else:
-        # print("NO mask_present")
         image_text_details = creating_image_bounding_box(image_details.image.path)
         mask_out_to_inpaint  = np.zeros((img.shape[0] , img.shape[1] ,3) , np.uint8)
-        # mask_out_to_inpaint = np.zeros((*img.shape[:-1],1) , np.uint8)
+
         for i in image_text_details.values():
             bbox =  i['bbox']
             cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
         # output = cv2.inpaint(img , mask_out_to_inpaint  ,3, cv2.INPAINT_NS)
-        # cv2.imwrite("mask_out_to_inpaint.png" ,mask_out_to_inpaint)
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
         mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
- 
         # mask = cv2.cvtColor(mask_out_to_inpaint, cv2.IMREAD_GRAYSCALE)
-        # output = model(img, mask , get_config(HDStrategy.ORIGINAL))
-        output = inpaint_image(img, mask)
-        # output = lama_inpaint_prediction(img , mask_out_to_inpaint ) 
+ 
+        output = inpaint_image(img_path, mask_path)
+        output = np.reshape(output, img.shape) 
+ 
     return output ,image_text_details
 
 
-# def lama_inpaint_prediction(image , mask):
-#     img_shape  = image.shape[:2][::-1]
-#     print("image_shape" , img_shape)
-#     image = load_image(image , mode='RGB')
-#     mask = load_image(mask , mode='L')
-#     result = dict(image=image, mask=mask[None, ...])
-#     batch = default_collate([result])
-#     batch = move_to_device(batch, "cpu")
-#     batch['mask'] = (batch['mask'] > 0) * 1
-#     print("predict")
-#     # print(img_shape ,"---->" , )
-#     with torch.no_grad():
-#         jit_output = jit_model(batch['image'],batch['mask']) 
-#     print("done")
-#     print("check2")  
-#     r =  torch.squeeze(jit_output)
-#     r = r.permute(1, 2, 0).detach().cpu().numpy()
-#     # r2 = cv2.cvtColor(cv2.resize(r, img_shape), cv2.COLOR_BGR2RGB ) 
-#     r2 = cv2.cvtColor(r, cv2.COLOR_BGR2RGB ) 
-#     cv2.imwrite("r2.png" , r2)
-#     return r2
+ 
 
 
 # def load_image(fname , mode):

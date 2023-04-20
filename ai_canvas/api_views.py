@@ -392,8 +392,8 @@ def instant_canvas_translation(request):
 class TextTemplateViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     def get(self, request):
-        query_set = TextTemplate.objects.filter(user=request.user.id)
-        serializer = self.serializer(query_set ,many =True)
+        query_set = TextTemplate.objects.all()
+        serializer = TextTemplateSerializer(query_set ,many =True)
         return Response(serializer.data)
 
     def retrieve(self,request,pk):

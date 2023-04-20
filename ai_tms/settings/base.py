@@ -148,6 +148,7 @@ INSTALLED_APPS = [
     'ai_openai',
     'simple_history',
     'ai_canvas',
+    'ai_imagetranslation',
 ]
 
 
