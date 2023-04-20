@@ -6,7 +6,7 @@ from google.cloud import vision_v1 , vision
 from google.oauth2 import service_account
 import extcolors 
 from ai_imagetranslation.lamamodel_process import inpaint_image
-from torch.utils.data._utils.collate import default_collate
+# from torch.utils.data._utils.collate import default_collate
 from django.conf import settings
 credentials = service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
