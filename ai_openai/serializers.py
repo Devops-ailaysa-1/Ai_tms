@@ -622,7 +622,9 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         print("BB----------->",blog_title_gen_inst.id)
         blg_tit = Blogtitle.objects.filter(id=blog_title_gen_inst.id).update(selected_field = True)
         Blogtitle.objects.filter(blog_creation_gen=blog_title_gen_inst.blog_creation_gen).exclude(id = blog_title_gen_inst.id).update(selected_field=False)
-        instance = BlogOutline.objects.create(**validated_data)
+        queryset = BlogOutlineSession.objects.filter(blog_title=blog_title_gen_inst)
+        if queryset:instance = BlogOutline.objects.get(blog_title_gen=blog_title_gen_inst)
+        else:instance = BlogOutline.objects.create(**validated_data)
         initial_credit = instance.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
         if initial_credit <150:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
