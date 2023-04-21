@@ -1,4 +1,4 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt,
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
                      BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
 from django.core import serializers
 import logging ,os ,json
@@ -572,10 +572,20 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         return Response(status=204)
         
 class BlogArticleViewset(viewsets.ViewSet):
+
+    def list(self,request):
+        blog_creation = request.GET.get('blog_creation')
+        query_set=BlogArticle.objects.filter(blog_creation_id = blog_creation).last()
+        serializer=BlogArticleSerializer(query_set)
+        return Response(serializer.data)
+
     def create(self,request):
         sub_categories = 64
-        outline_section_list = request.POST.getlist('outline_section_list')
-        serializer = BlogArticleSerializer(data={**request.POST.dict(),'sub_categories':sub_categories}) 
+        outline_list = request.POST.get('outline_section_list')
+        blog_creation = request.POST.get('blog_creation')
+        outline_section_list = list(map(int, outline_list.split(',')))
+        print("outline_section_list------------>",outline_section_list)
+        serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
