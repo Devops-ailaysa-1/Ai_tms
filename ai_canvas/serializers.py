@@ -33,8 +33,8 @@ class CanvasTargetJsonFilesSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.thumbnail:
-            thumbnail =  "/".join(instance.thumbnail.path.split("/")[2:])
-            data['thumbnail'] = thumbnail
+            # thumbnail =  "/".join(instance.thumbnail.path.split("/")[2:])
+            data['thumbnail'] = "media/"+instance.thumbnail.name
         else:
             data['thumbnail'] = None
         return data

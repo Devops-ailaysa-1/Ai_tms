@@ -29,4 +29,4 @@ urlpatterns += [
     
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-urlpatterns +=static(settings.FONT_THUMBNAIL_URL, document_root=settings.FONT_THUMBNAIL_ROOT) 
+# urlpatterns +=static(settings.FONT_THUMBNAIL_URL, document_root=settings.FONT_THUMBNAIL_ROOT) 

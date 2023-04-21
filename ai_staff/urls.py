@@ -76,4 +76,4 @@ urlpatterns += [
 
 ]
 
-urlpatterns +=static(settings.FONT_THUMBNAIL_URL, document_root=settings.FONT_THUMBNAIL_ROOT) 
+ 
