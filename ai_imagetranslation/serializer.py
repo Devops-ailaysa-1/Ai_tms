@@ -1,4 +1,4 @@
-from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageUpload)
+from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -8,12 +8,28 @@ from django import core
 
 class ImageloadSerializer(serializers.ModelSerializer):
     # image = serializers.FileField(required = True)
-    
     class Meta:
         model = Imageload
         fields = ('id','image','file_name','types','height','width')
         
     
+    def create(self, validated_data):
+        from PIL import Image
+        user =  self.context['request'].user
+        data = {**validated_data ,'user':user}
+        instance =  Imageload.objects.create(**data)
+        file_name = instance.image.name.split('/')[-1]
+        types = file_name.split(".")[-1]
+        instance.file_name = file_name
+        instance.types = types
+        im = Image.open(instance.image.path)
+        width, height = im.size
+        instance.height = height
+        instance.width = width
+        instance.save()
+        return instance
+
+
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -25,13 +41,11 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
         if representation.get('target_language' ,None):
             representation['target_language'] = instance.target_language.language.id
         return representation
-    
 
-
-class ImageUploadSerializer(serializers.ModelSerializer):  
+class ImageTranslateSerializer(serializers.ModelSerializer):  
     image_inpaint_creation = ImageInpaintCreationSerializer(source= 's_im' ,many=True,read_only=True)
-    inpaint_creation_target_lang = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all())
-                            ,required=False,write_only=True)
+    inpaint_creation_target_lang = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),
+                                                        required=False,write_only=True)
     bounding_box_target_update = serializers.JSONField( required = False)
     bounding_box_source_update = serializers.JSONField( required = False)
     target_update_id = serializers.IntegerField(required = False)
@@ -41,15 +55,16 @@ class ImageUploadSerializer(serializers.ModelSerializer):
     export = serializers.FileField(required = False)
     source_language = serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all() ,required= False)
     image_to_translate_id = serializers.ListField(required = False,write_only = True )
-    
+    # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
     
     class Meta:
-        model = ImageUpload
+        model = ImageTranslate
         fields = ("id",'image','project_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id',
             'created_at','updated_at')
+        #,'image_id')
         
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -63,19 +78,17 @@ class ImageUploadSerializer(serializers.ModelSerializer):
         width, height = im.size
         return width,height
     
-    def to_internal_value(self, data):
-        # print("data-->" , data)
-        return super().to_internal_value(data)
-    
     def create(self, validated_data):
-        if validated_data.get('image'):
-            image = validated_data['image']
-            width , height = self.image_shape(image)
-            validated_data['width'] = width
-            validated_data['height'] = height
-            validated_data['types']=  str(validated_data.get('image')).split('.')[-1]
-        instance = ImageUpload.objects.create(**validated_data)
-        return instance
+        user =  self.context['request'].user
+        data = {**validated_data ,'user':user}
+        if validated_data.get('image',None):
+            instance=ImageTranslate.objects.create(**data)
+            width,height = self.image_shape(instance.image.path)
+            instance.width=width
+            instance.height=height
+            instance.types=str(validated_data.get('image')).split('.')[-1]
+            instance.save()
+            return instance
             
     def update(self, instance, validated_data):
         if validated_data.get('image'):
@@ -94,7 +107,6 @@ class ImageUploadSerializer(serializers.ModelSerializer):
             
         if validated_data.get('project_name' ,None):
             instance.project_name = validated_data.get('project_name')
-            # print("project_name-->" , instance.project_name)
             instance.save()
             
         if validated_data.get('mask'):
@@ -106,7 +118,7 @@ class ImageUploadSerializer(serializers.ModelSerializer):
             instance.save()
             
         if inpaint_creation_target_lang and src_lang and image_to_translate_id: ##check target lang and source lang
-            im_details = ImageUpload.objects.filter(id__in = image_to_translate_id)
+            im_details = ImageTranslate.objects.filter(id__in = image_to_translate_id)
             for im in im_details:
                 inpaint_out_image , source_bounding_box = inpaint_image_creation(im)
                 im.source_bounding_box = source_bounding_box

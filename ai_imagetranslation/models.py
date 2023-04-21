@@ -4,12 +4,24 @@ from ai_staff.models import Languages ,LanguagesLocale
 from ai_auth.models import AiUser
 
 
+def user_directory_path_image_load(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_translate/image_load/",filename)
 
+
+def user_directory_path_image_translate_image(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_translate/image_upload/image_translate/image",filename)
+
+
+def user_directory_path_image_translate_process(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_translate/image_upload/image_translate/mask",filename)
+
+def user_directory_path_image_translate_result(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "image_translate/image_upload/image_translate/inpaint_res",filename)
 
 
 class Imageload(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    image = models.FileField(upload_to='media/image' , blank=True ,null=True)
+    image = models.FileField(upload_to=user_directory_path_image_load, blank=True ,null=True)
     file_name = models.CharField(max_length=200 , blank=True,null=True)
     types = models.CharField(max_length=10 , blank=True,null=True)
     height = models.CharField(max_length=10,blank=True,null=True)
@@ -18,33 +30,37 @@ class Imageload(models.Model):
     updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
     
     
-class ImageUpload(models.Model):
-    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    image = models.FileField(upload_to='media/inpaint' , blank=True ,null=True)
+class ImageTranslate(models.Model):
+    user = models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    image = models.FileField(upload_to=user_directory_path_image_translate_image,blank=True ,null=True)
     project_name = models.CharField(max_length=200 , blank=True,null=True)
     types = models.CharField(max_length=10 , blank=True,null=True)
     height = models.CharField(max_length=10,blank=True,null=True)
     width = models.CharField(max_length=10,blank=True,null=True)
-    mask = models.FileField(upload_to = 'inpaint' ,blank = True , null = True)
-    mask_json = models.JSONField(blank = True , null = True)
-    inpaint_image = models.FileField(upload_to = 'inpaint' ,blank = True , null = True)
-
-    create_inpaint_pixel_location = models.FileField(upload_to = 'inpaint' ,blank = True , null = True)
-    source_canvas_json =  models.JSONField(blank = True , null = True)
-    source_bounding_box = models.JSONField(blank = True , null = True)
-    source_language = models.ForeignKey(to=LanguagesLocale , on_delete=models.CASCADE,blank=True ,null=True, related_name='s_lang')
+    mask = models.FileField(upload_to = user_directory_path_image_translate_process,blank = True , null = True)
+    mask_json = models.JSONField(blank=True,null=True)
+    inpaint_image = models.FileField(upload_to=user_directory_path_image_translate_result,blank = True , null = True)
+    create_inpaint_pixel_location = models.FileField(upload_to =user_directory_path_image_translate_process,blank = True , null = True)
+    source_canvas_json =  models.JSONField(blank=True ,null=True)
+    source_bounding_box = models.JSONField(blank=True,null=True)
+    source_language = models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
  
     
- 
+def user_directory_path_image_translate_thumbnail(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.source_image.user.uid, "image_translate/thumbnail",filename) 
+
+
+def user_directory_path_image_translate_export(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.source_image.user.uid, "image_translate/export",filename) 
 
 class ImageInpaintCreation(models.Model):
-    source_image=models.ForeignKey(to=ImageUpload, blank=True,null=True,on_delete=models.CASCADE,related_name='s_im')
+    source_image=models.ForeignKey(to=ImageTranslate, blank=True,null=True,on_delete=models.CASCADE,related_name='s_im')
     target_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,related_name='t_lang')
     target_canvas_json=models.JSONField(blank=True,null=True)
     target_bounding_box=models.JSONField(blank = True , null = True)
-    thumbnail=models.FileField(upload_to = 'inpaint/thumbnail' ,blank = True , null = True )
-    export=models.FileField(upload_to = 'inpaint/export' ,blank = True , null = True ) 
+    thumbnail=models.FileField(upload_to=user_directory_path_image_translate_thumbnail,blank = True , null = True )
+    export=models.FileField(upload_to=user_directory_path_image_translate_export,blank = True , null = True ) 
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models .DateTimeField(auto_now=True,null=True,blank=True)
