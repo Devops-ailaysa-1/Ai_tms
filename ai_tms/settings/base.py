@@ -475,7 +475,7 @@ OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 
-FONT_THUMBNAIL_ROOT = os.path.join(STATIC_ROOT, 'font-thumnail')
+FONT_THUMBNAIL_ROOT = os.path.join(STATIC_ROOT, 'canvas-assets/font-thumnail')
 FONT_THUMBNAIL_URL = '/font-thumnail/'
 #######
 INPAINT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'inpaint_image')
