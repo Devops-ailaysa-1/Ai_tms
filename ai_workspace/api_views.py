@@ -3362,6 +3362,13 @@ class MyDocumentsView(viewsets.ModelViewSet):
         final_queryset = q3.order_by('-created_at')
         return final_queryset
         
+    
+    def get_queryset_new(self):
+        user = self.request.user
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).order_by('-id')
+        return queryset
 
     def list(self, request, *args, **kwargs):
         paginate = request.GET.get('pagination',True)
@@ -3392,7 +3399,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
     #     return  response
 
     def retrieve(self, request, pk):
-        queryset = self.get_queryset()
+        queryset = self.get_queryset_new()
         ins = get_object_or_404(queryset, pk=pk)
         serializer = MyDocumentSerializer(ins)
         return Response(serializer.data)
