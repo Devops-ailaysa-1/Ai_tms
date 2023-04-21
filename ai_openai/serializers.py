@@ -363,7 +363,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
     class Meta:
 
         model=BlogArticle
-        fields=('id','blog_article','blog_article_mt','blog_creation',
+        fields=('id','blog_article','blog_article_mt','blog_creation','document',
                 'token_usage','sub_categories','created_at','updated_at')
         # extra_kwargs = {'outline_section_list':{'required':True}}'blog_outline_article_gen','outline_section_list',
 

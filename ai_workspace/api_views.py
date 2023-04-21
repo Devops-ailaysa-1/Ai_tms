@@ -3335,6 +3335,7 @@ class MyDocFilter(django_filters.FilterSet):
 
 from django.db.models import Value, CharField, IntegerField
 from ai_openai.models import BlogCreation
+
 class MyDocumentsView(viewsets.ModelViewSet):
 
     serializer_class = MyDocumentSerializerNew
