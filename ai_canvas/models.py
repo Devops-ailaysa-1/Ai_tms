@@ -66,8 +66,7 @@ class CanvasSourceJsonFiles(models.Model):
     undo_hide_src = models.BooleanField(default=False)
     class Meta:
         constraints = [
-        models.UniqueConstraint(fields=['canvas_design', 'page_no'], name="%(app_label)s_%(class)s_unique")
-        ]
+        models.UniqueConstraint(fields=['canvas_design', 'page_no'], name="%(app_label)s_%(class)s_unique")]
 
 class CanvasTranslatedJson(models.Model):
     canvas_design = models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)

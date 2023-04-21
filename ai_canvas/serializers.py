@@ -150,23 +150,24 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         target_canvas_json = validated_data.get('target_canvas_json',None)
         if tar_page and canvas_translation and target_canvas_json:
 
-            canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,
-                                                             formats='png',multiplierValue=1) 
+            canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,formats='png',multiplierValue=1) 
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
         if canvas_translation_tar_lang and src_lang:
             for tar_lang in canvas_translation_tar_lang:
+
                 trans_json=CanvasTranslatedJson.objects.create(canvas_design=instance,source_language=src_lang.locale.first(),
                                                                target_language=tar_lang.locale.first())
                 source_json_files_all=trans_json.canvas_design.canvas_json_src.all()
                 for src_json_file in source_json_files_all:
                     src_json_file.json = json_src_change(src_json_file.json,req_host,instance)
                     src_json_file.save()
-                    res = canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,
-                                           tar_lang.locale.first().locale_code)
+                    res = canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
                     if res[tar_lang.locale.first().locale_code]:
+                        tar_json_form=res[tar_lang.locale.first().locale_code]
+                        tar_json_form=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1) 
                         CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,
-                                                json=res[tar_lang.locale.first().locale_code],page_no=src_json_file.page_no)
+                                                json=tar_json_form,page_no=src_json_file.page_no)
 
         
         if canvas_translation_target and tar_page:
@@ -303,14 +304,12 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
         thumbnail_src = thumbnail_src = core.files.File(core.files.base.ContentFile(thumb_image_content),thumb_name)
         return thumbnail_src
 
-
     def create(self, validated_data):
         thumbnail_page = validated_data.pop('thumbnail_page',None)
         export_page = validated_data.pop('export_page',None)
         json_page = validated_data.pop('json_page',None)
         instance = TemplateGlobalDesign.objects.create(**validated_data)
         self.instance = instance
-        
         if json_page:
             thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
             TemplatePage.objects.create(template_page=instance,thumbnail_page=thumbnail_page,export_page=export_page,

@@ -27,7 +27,6 @@ urlpatterns += [
     path('instane-translate/',api_views.instant_canvas_translation,name='instant_canvas_translation'),
     path('images/',api_views.pixabay_api , name='pixabayapi'),
     
-
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns +=static(settings.FONT_THUMBNAIL_URL, document_root=settings.FONT_THUMBNAIL_ROOT) 

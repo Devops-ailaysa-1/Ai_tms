@@ -3,6 +3,10 @@ from ai_staff.models import Languages ,LanguagesLocale
 
 from ai_auth.models import AiUser
 
+
+
+
+
 class Imageload(models.Model):
     user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
     image = models.FileField(upload_to='media/image' , blank=True ,null=True)
@@ -24,6 +28,7 @@ class ImageUpload(models.Model):
     mask = models.FileField(upload_to = 'inpaint' ,blank = True , null = True)
     mask_json = models.JSONField(blank = True , null = True)
     inpaint_image = models.FileField(upload_to = 'inpaint' ,blank = True , null = True)
+
     create_inpaint_pixel_location = models.FileField(upload_to = 'inpaint' ,blank = True , null = True)
     source_canvas_json =  models.JSONField(blank = True , null = True)
     source_bounding_box = models.JSONField(blank = True , null = True)
