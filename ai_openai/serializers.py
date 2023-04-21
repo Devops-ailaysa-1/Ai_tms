@@ -423,7 +423,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
                                                            ,token_usage)
         instance.save()
         article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
-        tt = MyDocuments.objects.create(doc_name=title,html_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+        tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
         print("Doc--------->",tt)
         instance.document = tt
         instance.save()

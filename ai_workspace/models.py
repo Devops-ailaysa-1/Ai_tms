@@ -164,6 +164,7 @@ class MyDocuments(models.Model):
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
     word_count = models.IntegerField(null=True,blank=True)
     html_data = models.TextField(null=True,blank=True)
+    blog_data = models.TextField(null=True,blank=True)
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'doc_created_by')
     ai_user = models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE,related_name = 'credit_debit_user')
     source_language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE, related_name="doc_source_lang")
