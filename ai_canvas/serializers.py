@@ -258,7 +258,7 @@ class CanvasDesignListSerializer(serializers.ModelSerializer):
         if instance.canvas_translate.all():
             data['translate_available'] = True
         return data
-
+from PIL import Image
 class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
     image = serializers.FileField(required=False)
     class Meta:
@@ -266,9 +266,35 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
         fields = ("id","image_name","image")
 
     def create(self, validated_data):
+        from io import BytesIO
+        from django.core.files.base import ContentFile
+        import cv2
+        from ai_imagetranslation.utils import image_content
         user =  self.context['request'].user
         data = {**validated_data ,'user':user}
+        #min([300 /width, 300 / height])
+
+            ##################################################################################
+
         instance = CanvasUserImageAssets.objects.create(**data)
+        if validated_data.get('image',None):
+            extension=instance.image.path.split('.')[-1]
+            if extension=='jpg':
+                extension='jpeg'
+            im = cv2.imread(instance.image.path)
+            width, height,channel = im.shape
+            if any([True if i>2048 else False for i in [width, height]]):
+                scale_val = min([2048/width, 2048/ height])
+                new_width = round(scale_val*width)
+                new_height = round(scale_val*height)
+                im = cv2.resize(im , (new_height,new_width))
+                content= image_content(im)
+                im = core.files.base.ContentFile(content,name=instance.image.name.split('/')[-1])
+                instance.image = im
+                instance.save()
+                
+
+            
         return instance
     
 ####################################################################################################

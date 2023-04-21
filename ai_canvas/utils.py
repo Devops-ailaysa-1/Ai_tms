@@ -83,14 +83,14 @@ def thumbnail_create(json_str,formats,multiplierValue):
     width = json_str['backgroundImage']['width']
     height=   json_str['backgroundImage']['height']
 
-    if any([width,height]) >2048:
-        multiplierValue=min([300 /width, 300 / height])
-    else:
-        multiplierValue=1
+    # if any([width,height]) >2048:
+    multiplierValue=min([300 /width, 300 / height])
+    # else:
+        # multiplierValue=1
     json_ = json.dumps(json_str)
     data = {'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
-    
+
     if thumb_image.status_code ==200:
         split_text_base64 = thumb_image.text.split(",")[-1]
         b64_bytes = base64.b64decode(split_text_base64)
