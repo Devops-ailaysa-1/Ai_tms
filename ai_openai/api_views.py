@@ -403,6 +403,12 @@ class BlogCreationViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
+    def delete(self,request,pk):
+        obj = BlogCreation.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
+
+
  
 class BlogKeywordGenerateViewset(viewsets.ViewSet):
  
@@ -471,7 +477,10 @@ class BlogtitleViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
-    
+    def delete(self,request,pk):
+        obj = Blogtitle.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
 
 class BlogOutlineViewset(viewsets.ViewSet):
 
@@ -506,13 +515,7 @@ class BlogOutlineViewset(viewsets.ViewSet):
 
 
 class BlogOutlineSessionViewset(viewsets.ViewSet):
-    def create(self,request):
-        serializer = BlogOutlineSessionSerializer(data=request.POST.dict()) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
-    
+
     def list(self, request):
         #blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
         group = request.GET.get('group',None)
@@ -538,6 +541,13 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         serializer=BlogOutlineSessionSerializer(query_set )
         return Response(serializer.data)
 
+    def create(self,request):
+        serializer = BlogOutlineSessionSerializer(data=request.POST.dict()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
     def update(self,request,pk):
         selected = request.POST.getlist('selected')
         unselected = request.POST.getlist('unselected')
@@ -550,6 +560,16 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        
+    def delete(self,request,pk=None):
+        group = request.GET.get('group')
+        title = request.GET.get('blog_title')
+        if pk:
+            obj = BlogOutlineSession.objects.get(id=pk)
+            obj.delete()
+        else:
+            queryset = BlogOutlineSession.objects.filter(blog_title = title).filter(group=group).delete()
+        return Response(status=204)
         
 class BlogArticleViewset(viewsets.ViewSet):
     def create(self,request):

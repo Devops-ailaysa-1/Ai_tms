@@ -352,10 +352,9 @@ class ImageGeneratorPromptSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400) 
 
 
-
+from ai_workspace.models import MyDocuments
 
 class BlogArticleSerializer(serializers.ModelSerializer):
-
     blog_creation = serializers.PrimaryKeyRelatedField(queryset=BlogCreation.objects.all(),required=True)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),
                                                         many=False,required=False)
@@ -378,9 +377,8 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         blog_article_start_phrase = instance.sub_categories.prompt_sub_category.first().start_phrase
         title = instance.blog_creation.user_title if instance.blog_creation.user_title else instance.blog_creation.user_title_mt
         keyword = instance.blog_creation.keywords if instance.blog_creation.keywords else instance.blog_creation.keywords_mt
-        detected_lang = lang_detector(title)
         queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
-        queryset_new = qrs.annotate(
+        queryset_new = queryset.annotate(
                         order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
                         ).order_by(ExpressionWrapper(Case(
                         When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
@@ -388,8 +386,11 @@ class BlogArticleSerializer(serializers.ModelSerializer):
                         output_field=IntegerField()),
                     output_field=IntegerField()
                     ))
+        if queryset_new:
+            detected_lang = lang_detector(queryset[0].blog_outline)
+        else: raise serializers.ValidationError({'msg':'No Outlines Selected'}, code=400)
         if detected_lang!='en':
-            outlines = [i.blog_outline_mt for i in queryset_new ]
+            outlines = [i.blog_outline_mt for i in queryset_new if i.blog_outline_mt ]
         else:
             outlines = [i.blog_outline for i in queryset_new]
         selected_outline_section_list = ",".join(outlines)
@@ -410,14 +411,19 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             instance.blog_article = blog_article_trans
             consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
                                                                                  instance.blog_creation.user_language_code,'en')
-            tot_tok =  total_token+consumable_credits_for_article_gen
-            AiPromptSerializer().customize_token_deduction(instance.blog_outline_article_gen.blog_title_gen.blog_creation_gen
+            tot_tok =  token_usage+consumable_credits_for_article_gen
+            AiPromptSerializer().customize_token_deduction(instance.blog_creation
                                                            ,tot_tok)
             instance.blog_article_mt=prompt_response_article_resp
         else:
             instance.blog_article = prompt_response_article_resp 
             AiPromptSerializer().customize_token_deduction(instance.blog_creation
                                                            ,token_usage)
+        instance.save()
+        article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
+        tt = MyDocuments.objects.create(doc_name=title,html_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+        print("Doc--------->",tt)
+        instance.document = tt
         instance.save()
         return instance
 
@@ -556,7 +562,7 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
             lang_detect_user_outline =  lang_detector(instance.blog_outline) 
 
             if lang_detect_user_outline !='en':
-                instance.blog_outline_mt =get_translation(1,instance.blog_outline,lang_detect_user_outline,"en",user_id=instance.blog_creation_gen.user.id,from_open_ai=True)  
+                instance.blog_outline_mt =get_translation(1,instance.blog_outline,lang_detect_user_outline,"en",user_id=instance.blog_title.blog_creation_gen.user.id,from_open_ai=True)  
                 debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title.blog_creation_gen.user, consumable_credit_section)
         instance.save() 
 
@@ -589,7 +595,7 @@ class BlogOutlineSessionSerializer(serializers.ModelSerializer):
             group = validated_data.get('group')
             order_list = list(map(int, order_list.split(',')))
             for index, order in enumerate(order_list, 1):
-                BlogOutlineSession.objects.filter(temp_order=index).filter(blog_title=instance.blog_title).filter(group=group).update(custom_order=order)
+                BlogOutlineSession.objects.filter(temp_order=order).filter(blog_title=instance.blog_title).filter(group=group).update(custom_order=index)
 
 
             # for index, order in enumerate(ls, start=1):
@@ -611,7 +617,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BlogOutline
-        fields = ('id','user_selected_title','user_selected_title_mt','blog_title_gen','sub_categories',
+        fields = ('id','user_selected_title','selected_group_num','user_selected_title_mt','blog_title_gen','sub_categories',
                   'token_usage','response_copies','select_group','blog_outline_session')
         extra_kwargs = {'blog_title_gen': {'required': True},'selected_field':{'required': False},
                         'select_group':{'required': False}}
@@ -622,7 +628,9 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         print("BB----------->",blog_title_gen_inst.id)
         blg_tit = Blogtitle.objects.filter(id=blog_title_gen_inst.id).update(selected_field = True)
         Blogtitle.objects.filter(blog_creation_gen=blog_title_gen_inst.blog_creation_gen).exclude(id = blog_title_gen_inst.id).update(selected_field=False)
-        instance = BlogOutline.objects.create(**validated_data)
+        queryset = BlogOutlineSession.objects.filter(blog_title=blog_title_gen_inst)
+        if queryset:instance = BlogOutline.objects.get(blog_title_gen=blog_title_gen_inst)
+        else:instance = BlogOutline.objects.create(**validated_data)
         initial_credit = instance.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
         if initial_credit <150:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
@@ -683,7 +691,11 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
 
         # if validated_data.get('blog_outline_selected_list'):
             
-
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        sessions = instance.blog_outline_session.order_by('custom_order')
+        representation['blog_outline_session'] = BlogOutlineSessionSerializer(sessions, many=True).data
+        return representation
 
 class BlogtitleSerializer(serializers.ModelSerializer):
     blogoutline_title = BlogOutlineSerializer(many=True,required=False)
@@ -884,7 +896,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
                                                                                              many=False,required=False),required=False)
     class Meta:
         model = BlogCreation
-        fields = ('id','user_title','user_title_mt','keywords','keywords_mt','prompt_user_title_mt','prompt_keyword_mt',
+        fields = ('id','user_title','steps','user_title_mt','keywords','keywords_mt','prompt_user_title_mt','prompt_keyword_mt',
                   'categories','sub_categories','user_language','tone','response_copies_keyword','selected_keywords_list',
                   'unselected_keywords_list','blog_key_create','user','blog_title_create')
         

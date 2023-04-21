@@ -85,7 +85,7 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer)
+                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
@@ -3325,6 +3325,7 @@ def translate_from_pdf(request,task_id):
     return Response(serlzr.errors)
 
 
+
 class MyDocFilter(django_filters.FilterSet):
     #proj_name = django_filters.CharFilter(lookup_expr='icontains')
     doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
@@ -3332,16 +3333,17 @@ class MyDocFilter(django_filters.FilterSet):
         model = MyDocuments
         fields = ['doc_name']#proj_name
 
-
+from django.db.models import Value, CharField, IntegerField
+from ai_openai.models import BlogCreation
 class MyDocumentsView(viewsets.ModelViewSet):
 
-    serializer_class = MyDocumentSerializer
+    serializer_class = MyDocumentSerializerNew
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['doc_name','id']#'proj_name',
     filterset_class = MyDocFilter
     paginator = PageNumberPagination()
-    ordering = ('-id')
+    #ordering = ('-id')
     paginator.page_size = 20
     # https://www.django-rest-framework.org/api-guide/filtering/
 
@@ -3353,17 +3355,21 @@ class MyDocumentsView(viewsets.ModelViewSet):
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
         #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
-        return queryset
+        q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
+        q2 = BlogCreation.objects.filter(user = user).filter(document=None).annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
+        q3 = q1.union(q2)
+        final_queryset = q3.order_by('-created_at')
+        return final_queryset
         
 
     def list(self, request, *args, **kwargs):
         paginate = request.GET.get('pagination',True)
         queryset = self.filter_queryset(self.get_queryset())
         if paginate == 'False':
-            serializer = MyDocumentSerializer(queryset, many=True)
+            serializer = MyDocumentSerializerNew(queryset, many=True)
             return Response(serializer.data)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = MyDocumentSerializer(pagin_tc, many=True)
+        serializer = MyDocumentSerializerNew(pagin_tc, many=True)
         response = self.get_paginated_response(serializer.data)
         return  response
 
@@ -3913,3 +3919,10 @@ def project_word_char_count(request):
                     "proj_seg_count": 0, "task_words":[]})
         final.append(res)
     return Response({'out':final})
+
+
+
+# def task_download(task_id):
+#     tt = Task.objects.get(id=task_id)
+#     mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
+    
