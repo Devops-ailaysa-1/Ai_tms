@@ -80,7 +80,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
 import json ,base64
 def thumbnail_create(json_str,formats,multiplierValue):
     json_ = json.dumps(json_str)
-    data = {'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
+    data = {'json':json_ , 'format':formats,'multiplierValue':0.2}
     thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
     if thumb_image.status_code ==200:
         split_text_base64 = thumb_image.text.split(",")[-1]

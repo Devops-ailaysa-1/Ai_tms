@@ -163,11 +163,13 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                     src_json_file.json = json_src_change(src_json_file.json,req_host,instance)
                     src_json_file.save()
                     res = canvas_translate_json_fn(src_json_file.json,src_lang.locale.first().locale_code,tar_lang.locale.first().locale_code)
+                     
                     if res[tar_lang.locale.first().locale_code]:
                         tar_json_form=res[tar_lang.locale.first().locale_code]
-                        tar_json_form=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1) 
-                        CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,
-                                                json=tar_json_form,page_no=src_json_file.page_no)
+                        
+                        tar_json_thum_image=self.thumb_create(json_str=tar_json_form,formats='png',multiplierValue=1) 
+                        CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
+                                                             json=tar_json_form,page_no=src_json_file.page_no)
 
         
         if canvas_translation_target and tar_page:
