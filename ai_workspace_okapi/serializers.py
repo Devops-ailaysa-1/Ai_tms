@@ -124,8 +124,11 @@ class SegmentSerializerV2(SegmentSerializer):
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
+            print("Inside if target")
             if instance.target == '':
+                print("In target empty")
                 if (instance.text_unit.document.job.project.mt_enable == False) or (validated_data.get('status') == manual_confirm_status):
+                    print("mt dable and manual confirm check")
                     user = instance.text_unit.document.doc_credit_debit_user
                     initial_credit = user.credit_balance.get("total_left")
                     consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)

@@ -620,6 +620,8 @@ class SourceTMXFilesCreate(views.APIView):
     def post(self, request, project_id):
         jobs, files = self.get_queryset(project_id=project_id)
 
+
+from rest_framework import serializers
 class SegmentsUpdateView(viewsets.ViewSet):
     def get_object(self, segment_id):
         qs = Segment.objects.all()
@@ -683,27 +685,32 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def partial_update(self, request, *args, **kwargs):
         # Get a list of PKs to update
         data={}
-        pks = request.data.getlist('pks')
-        status = request.data.get('status')
-        print("RTR---------->",pks)
+        confirm_list = request.data.get('confirm_list', [])
+        confirm_list = json.loads(confirm_list)
+        print("RTR---------->",confirm_list)
         
-        for segment_id in pks:
-            segment = self.get_object(segment_id)
-            if segment.temp_target != '':
-                print("Inside partial upd")
-                data['target'] = segment.temp_target
-                data['status'] = status
-            else:
-                data={}
-            authorize(request, resource=segment, actor=request.user, action="read")
-            edit_allow = self.edit_allowed_check(segment)
-            if edit_allow == False:
-                return Response({"msg": "Someone is working already.."}, status=400)
+        for item in confirm_list:
+            try:
+                segment_id = item.get('pk')
+                status = item.get('status')
+                segment = self.get_object(segment_id)
+                if segment.temp_target != '':
+                    print("Inside partial upd")
+                    data['target'] = segment.temp_target
+                    data['status'] = status
+                else:
+                    data={}
+                authorize(request, resource=segment, actor=request.user, action="read")
+                edit_allow = self.edit_allowed_check(segment)
+                if edit_allow == False:
+                    return Response({"msg": "Someone is working already.."}, status=400)
 
-            # Segment update for a Split segment
-            if segment.is_split == True:
-                self.split_update(data, segment)
-            segment_serlzr = self.get_update(segment, data, request)
+                # Segment update for a Split segment
+                if segment.is_split == True:
+                    self.split_update(data, segment)
+                segment_serlzr = self.get_update(segment, data, request)
+            except serializers.ValidationError as e:
+                print("Exception=======>",e)
         return Response({'message': 'Objects updated successfully'})
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         # return Response(segment_serlzr.data, status=201)
