@@ -711,7 +711,9 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 segment_serlzr = self.get_update(segment, data, request)
             except serializers.ValidationError as e:
                 print("Exception=======>",e)
-        return Response({'message': 'Objects updated successfully'})
+                msg = 'confirm all may not work properly due to insufficient credits'
+        message = 'Objects updated successfully' if not msg else msg
+        return Response({'message': message})
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         # return Response(segment_serlzr.data, status=201)
         
