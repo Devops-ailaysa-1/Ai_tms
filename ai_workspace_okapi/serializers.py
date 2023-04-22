@@ -116,6 +116,7 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print("VD----------->",validated_data)
         print("Ins-------->",instance)
+        manual_confirm_status = TranslationStatus.objects.get(id=106)
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
@@ -124,7 +125,7 @@ class SegmentSerializerV2(SegmentSerializer):
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
             if instance.target == '':
-                if instance.text_unit.document.job.project.mt_enable == False:
+                if (instance.text_unit.document.job.project.mt_enable == False) or (validated_data.get('status') == manual_confirm_status):
                     user = instance.text_unit.document.doc_credit_debit_user
                     initial_credit = user.credit_balance.get("total_left")
                     consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
