@@ -691,6 +691,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         
         for item in confirm_list:
             try:
+                msg = None
                 segment_id = item.get('pk')
                 status = item.get('status')
                 segment = self.get_object(segment_id)
@@ -712,7 +713,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
             except serializers.ValidationError as e:
                 print("Exception=======>",e)
                 msg = 'confirm all may not work properly due to insufficient credits'
-        message = 'Objects updated successfully' if not msg else msg
+        message = msg if msg else 'Objects updated successfully'
         return Response({'message': message})
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         # return Response(segment_serlzr.data, status=201)
