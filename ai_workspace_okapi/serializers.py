@@ -135,7 +135,7 @@ class SegmentSerializerV2(SegmentSerializer):
                     user = instance.text_unit.document.doc_credit_debit_user
                     initial_credit = user.credit_balance.get("total_left")
                     consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
-                    consumable = round(consumable_credits/3)
+                    consumable = max(round(consumable_credits/3),1) 
                     if initial_credit < consumable:
                         raise serializers.ValidationError("Insufficient Credits")
                     else:
