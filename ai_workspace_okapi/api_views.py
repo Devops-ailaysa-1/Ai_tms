@@ -702,7 +702,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
 
             # Segment update for a Split segment
             if segment.is_split == True:
-                return self.split_update(data, segment)
+                self.split_update(data, segment)
             segment_serlzr = self.get_update(segment, data, request)
         return Response({'message': 'Objects updated successfully'})
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
