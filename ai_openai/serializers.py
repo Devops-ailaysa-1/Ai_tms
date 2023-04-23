@@ -358,18 +358,18 @@ class BlogArticleSerializer(serializers.ModelSerializer):
     blog_creation = serializers.PrimaryKeyRelatedField(queryset=BlogCreation.objects.all(),required=True)
     sub_categories = serializers.PrimaryKeyRelatedField(queryset=PromptSubCategories.objects.all(),
                                                         many=False,required=False)
-    #outline_section_list = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
-                                                                                    # many=False),write_only=True,required=True)
+    outline_section_list = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=BlogOutlineSession.objects.all(),
+                                                                                     many=False),write_only=True,required=True)
     class Meta:
 
         model=BlogArticle
-        fields=('id','blog_article','blog_article_mt','blog_creation',
-                'token_usage','sub_categories','created_at','updated_at')
+        fields=('id','blog_article','blog_article_mt','blog_creation','document',
+                'token_usage','sub_categories','created_at','updated_at','outline_section_list')
         # extra_kwargs = {'outline_section_list':{'required':True}}'blog_outline_article_gen','outline_section_list',
 
     def create(self, validated_data): #prompt, Blog Title, keywords, outline 
         blog_available_langs =[17]
-        #outline_section_list = validated_data.pop('outline_section_list')
+        outline_section_list = validated_data.pop('outline_section_list')
         instance = BlogArticle.objects.create(**validated_data)
         initial_credit = instance.blog_creation.user.credit_balance.get("total_left")
         if initial_credit < 700:
@@ -378,22 +378,24 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         title = instance.blog_creation.user_title if instance.blog_creation.user_title else instance.blog_creation.user_title_mt
         keyword = instance.blog_creation.keywords if instance.blog_creation.keywords else instance.blog_creation.keywords_mt
         queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
-        queryset_new = queryset.annotate(
-                        order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
-                        ).order_by(ExpressionWrapper(Case(
-                        When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
-                        default=F('order_new'),  # Use 'custom_order' field for ordering
-                        output_field=IntegerField()),
-                    output_field=IntegerField()
-                    ))
-        if queryset_new:
-            detected_lang = lang_detector(queryset[0].blog_outline)
+        # queryset_new = queryset.annotate(
+        #                 order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
+        #                 ).order_by(ExpressionWrapper(Case(
+        #                 When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
+        #                 default=F('order_new'),  # Use 'custom_order' field for ordering
+        #                 output_field=IntegerField()),
+        #             output_field=IntegerField()
+        #             ))
+        print("OutlineSelection---------------->",outline_section_list)
+        if outline_section_list:
+            detected_lang = lang_detector(outline_section_list[0].blog_outline)
         else: raise serializers.ValidationError({'msg':'No Outlines Selected'}, code=400)
         if detected_lang!='en':
-            outlines = [i.blog_outline_mt for i in queryset_new if i.blog_outline_mt ]
+            outlines = [i.blog_outline_mt for i in outline_section_list if i.blog_outline_mt ]
         else:
-            outlines = [i.blog_outline for i in queryset_new]
+            outlines = [i.blog_outline for i in outline_section_list]
         selected_outline_section_list = ",".join(outlines)
+        print("Selected------------>",selected_outline_section_list)
         prompt = blog_article_start_phrase.format(title,keyword,selected_outline_section_list)
         prompt+=', in {} tone'.format(instance.blog_creation.tone.tone)
         print("prompt____article--->>>>",prompt)
@@ -421,7 +423,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
                                                            ,token_usage)
         instance.save()
         article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
-        tt = MyDocuments.objects.create(doc_name=title,html_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+        tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
         print("Doc--------->",tt)
         instance.document = tt
         instance.save()
