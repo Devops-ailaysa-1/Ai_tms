@@ -1,5 +1,5 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap
+from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap, EMPTY_SEGMENT_CHARACTERS
 import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
@@ -372,7 +372,8 @@ def get_res_path(source_lang):
 
     res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
                  "fprm_file_path": None,
-                 "use_spaces": settings.USE_SPACES
+                 "use_spaces": settings.USE_SPACES,
+                 "empty_segment_chars": EMPTY_SEGMENT_CHARACTERS,
                  }
 
     if source_lang in ['hi','bn','or','ne','pa']:
@@ -388,7 +389,6 @@ def get_res_path(source_lang):
         return res_paths
 
     elif source_lang in ['ta']:
-        print("-------------Inside Tamil SRX-----------------")
         res_paths["srx_file_path"] = "okapi_resources/tamil.srx"
         return res_paths
     elif source_lang in ['kn']:

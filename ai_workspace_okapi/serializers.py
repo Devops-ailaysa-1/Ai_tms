@@ -13,7 +13,7 @@ from django.db import connection
 from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
-from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment
+from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment, SegmentPageSize
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 from .utils import split_check
@@ -114,12 +114,33 @@ class SegmentSerializerV2(SegmentSerializer):
         except:pass
 
     def update(self, instance, validated_data):
+        print("VD----------->",validated_data)
+        print("Ins-------->",instance)
+        manual_confirm_status = TranslationStatus.objects.get(id=106)
+        reviewed_status = TranslationStatus.objects.get(id=110)
+        from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
+            print("Inside if target")
+            if instance.target == '':
+                print("In target empty")
+                if (instance.text_unit.document.job.project.mt_enable == False)\
+                 or (validated_data.get('status') == manual_confirm_status)\
+                 or (validated_data.get('status') == reviewed_status):
+                    print("mt dable and manual confirm check")
+                    user = instance.text_unit.document.doc_credit_debit_user
+                    initial_credit = user.credit_balance.get("total_left")
+                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+                    consumable = max(round(consumable_credits/3),1) 
+                    if initial_credit < consumable:
+                        raise serializers.ValidationError("Insufficient Credits")
+                    else:
+                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
+                        print("Credit Debited",status_code)
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
@@ -475,6 +496,11 @@ class TranslationStatusSerializer(serializers.ModelSerializer):
 class FontSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FontSize
+        fields = "__all__"
+
+class SegmentPageSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SegmentPageSize
         fields = "__all__"
 
 class CommentSerializer(serializers.ModelSerializer):

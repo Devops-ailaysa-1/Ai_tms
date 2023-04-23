@@ -1,4 +1,4 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt,
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
                      BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
 from django.core import serializers
 import logging ,os ,json
@@ -277,7 +277,7 @@ def customize_text_openai(request):
     data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
-            'api_result':result_txt.strip('\"').strip() if result_txt else None,'prompt_result':txt_generated}
+            'api_result':result_txt.strip().strip('\"') if result_txt else None,'prompt_result':txt_generated}
     ser = AiPromptCustomizeSerializer(data=data)
     if ser.is_valid():
         ser.save()
@@ -384,7 +384,9 @@ class BlogCreationViewset(viewsets.ViewSet):
         return Response(serializer.data)
     
     def create(self,request):
-        serializer = BlogCreationSerializer(data={**request.POST.dict(),'user':request.user.id} ) 
+        categories = 10
+        sub_categories = 61
+        serializer = BlogCreationSerializer(data={**request.POST.dict(),'categories':categories,'sub_categories':sub_categories,'user':request.user.id} ) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -401,6 +403,12 @@ class BlogCreationViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
+    def delete(self,request,pk):
+        obj = BlogCreation.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
+
+
  
 class BlogKeywordGenerateViewset(viewsets.ViewSet):
  
@@ -410,7 +418,8 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
         return Response(serializer.data)
     
     def list(self, request):
-        query_set=BlogKeywordGenerate.objects.all()
+        blog_creation = request.GET.get('blog')
+        query_set=BlogKeywordGenerate.objects.filter(blog_creation=blog_creation).order_by('-id')
         serializer=BlogKeywordGenerateSerializer(query_set,many=True)
         return Response(serializer.data)
 
@@ -418,7 +427,10 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
         serializer = BlogKeywordGenerateSerializer(data=request.POST.dict()) 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            ins = serializer.data.get('blog_creation')
+            queryset = BlogKeywordGenerate.objects.filter(blog_creation = ins).order_by('-id')
+            ser2=BlogKeywordGenerateSerializer(queryset,many=True)
+            return Response(ser2.data)
         return Response(serializer.errors)
 
     def update(self,request,pk):
@@ -434,7 +446,8 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
 class BlogtitleViewset(viewsets.ViewSet):
     def create(self,request):
         blog_inst = request.POST.get('blog_creation_gen',None)
-        serializer = BlogtitleSerializer(data=request.POST.dict())  
+        sub_categories = 62
+        serializer = BlogtitleSerializer(data={**request.POST.dict(),'sub_categories':sub_categories})  
         if serializer.is_valid():
             serializer.save()
             blog_creation=BlogCreation.objects.filter(id=blog_inst).last()
@@ -464,12 +477,16 @@ class BlogtitleViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
-    
+    def delete(self,request,pk):
+        obj = Blogtitle.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
 
 class BlogOutlineViewset(viewsets.ViewSet):
 
     def create(self,request):
-        serializer = BlogOutlineSerializer(data=request.POST.dict()) 
+        sub_categories = 63
+        serializer = BlogOutlineSerializer(data={**request.POST.dict(),'sub_categories':sub_categories}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -498,29 +515,24 @@ class BlogOutlineViewset(viewsets.ViewSet):
 
 
 class BlogOutlineSessionViewset(viewsets.ViewSet):
-    def create(self,request):
-        serializer = BlogOutlineSessionSerializer(data=request.POST.dict()) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
-    
+
     def list(self, request):
-        blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
-        group = request.POST.get('group',None)
+        #blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
+        group = request.GET.get('group',None)
+        title = request.GET.get('blog_title',None)
         
-        if blog_outline_gen_id and group:
-            blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_outline_gen = blog_out_ins,group=group)
+        if title and group:
+            #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title,group=group).order_by('custom_order')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
 
-        elif blog_outline_gen_id:
-            blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_outline_gen = blog_out_ins)
+        elif title:
+            #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title).order_by('custom_order')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
             
         else:
-            query_set=BlogOutlineSession.objects.all()
+            query_set=BlogOutlineSession.objects.all().order_by('id')
             serializer=BlogOutlineSessionSerializer(query_set,many=True)
         return Response(serializer.data)
 
@@ -529,10 +541,19 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         serializer=BlogOutlineSessionSerializer(query_set )
         return Response(serializer.data)
 
+    def create(self,request):
+        serializer = BlogOutlineSessionSerializer(data=request.POST.dict()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
     def update(self,request,pk):
-        select_session_list = request.POST.get('select_session_list')
-        unselect_session_list = request.POST.get('unselect_session_list')
+        selected = request.POST.getlist('selected')
+        unselected = request.POST.getlist('unselected')
+        order_list = request.POST.get('order_list')
         query_set = BlogOutlineSession.objects.get(id = pk)
+        print('qs------->',query_set)
         serializer = BlogOutlineSessionSerializer(query_set,data=request.data,partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -540,10 +561,31 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
         
+    def delete(self,request,pk=None):
+        group = request.GET.get('group')
+        title = request.GET.get('blog_title')
+        if pk:
+            obj = BlogOutlineSession.objects.get(id=pk)
+            obj.delete()
+        else:
+            queryset = BlogOutlineSession.objects.filter(blog_title = title).filter(group=group).delete()
+        return Response(status=204)
+        
 class BlogArticleViewset(viewsets.ViewSet):
+
+    def list(self,request):
+        blog_creation = request.GET.get('blog_creation')
+        query_set=BlogArticle.objects.filter(blog_creation_id = blog_creation).last()
+        serializer=BlogArticleSerializer(query_set)
+        return Response(serializer.data)
+
     def create(self,request):
-        outline_section_list = request.POST.getlist('outline_section_list')
-        serializer = BlogArticleSerializer(data=request.data) 
+        sub_categories = 64
+        outline_list = request.POST.get('outline_section_list')
+        blog_creation = request.POST.get('blog_creation')
+        outline_section_list = list(map(int, outline_list.split(',')))
+        print("outline_section_list------------>",outline_section_list)
+        serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

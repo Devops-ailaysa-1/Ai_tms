@@ -158,7 +158,13 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
                 print("Text after preprocess------------>",text)
-                doc.add_paragraph(text)
+                if i == 1:
+                    all_text = doc.add_paragraph(text)
+                    print("---->",i)
+                else:
+                    all_text.add_run(text)
+                # doc.add_paragraph(text)
+
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
@@ -230,14 +236,15 @@ def file_pdf_check(file_path,pdf_id):
     except:
         if pdf_id:
             file_details = Ai_PdfUpload.objects.get(id = pdf_id)
-            file_details.delete()
-            # return None,None
-            # file_details.status = "FileCorrupted"
-            # file_details.save()
-            raise serializers.ValidationError({'msg':'pdf_corrupted'}, 
-                                            code =400)
-        else:
-            return None,None
+            file_details.status = "ERROR"
+            file_details.save()
+        #     # return None,None
+        #     # file_details.status = "FileCorrupted"
+        #     # file_details.save()
+        #     raise serializers.ValidationError({'msg':'pdf_corrupted'}, 
+        #                                     code =400)
+        # else:
+        return None,None
     
     
  
@@ -246,11 +253,10 @@ def file_pdf_check(file_path,pdf_id):
 from ai_workspace.models import Task
 def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
-    lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+    #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
     pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
     # pdf_text_ocr_check = pdf_text_check(file_details.pdf_file.path)[0]
-    if (pdf_text_ocr_check == 'ocr') or \
-                (lang in google_ocr_indian_language):
+    if (pdf_text_ocr_check == 'ocr'): #or (lang in google_ocr_indian_language):
         response_result = ai_export_pdf.apply_async((id, ),)
 
         file_details.pdf_task_id = response_result.id
@@ -258,12 +264,12 @@ def pdf_conversion(id ):
         logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
         return response_result.id
 
-    elif pdf_text_ocr_check == 'text':
-        response_result = convertiopdf2docx.apply_async((id,lang ,pdf_text_ocr_check),0)
-        file_details.pdf_task_id = response_result.id
-        file_details.save()
-        logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name))
-        return response_result.id
+    # elif pdf_text_ocr_check == 'text':
+    #     response_result = convertiopdf2docx.apply_async((id,lang ,pdf_text_ocr_check),0)
+    #     file_details.pdf_task_id = response_result.id
+    #     file_details.save()
+    #     logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name))
+    #     return response_result.id
     else:
         return "error"
 
@@ -283,19 +289,19 @@ def project_pdf_conversion(id):
         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
                                    pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
         file_details = Ai_PdfUpload.objects.filter(task = task_details).last()
-        lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+        #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-        if (file_format == 'ocr') or (lang in google_ocr_indian_language):
+        if (file_format == 'ocr'): #or (lang in google_ocr_indian_language):
 
             response_result = ai_export_pdf.apply_async((file_details.id, ),)
             file_details.pdf_task_id = response_result.id
             file_details.save()
             return response_result.id ,file_details.id
-        elif file_format == 'text':
-            response_result = convertiopdf2docx.apply_async((file_details.id,lang ,file_format),0)
-            file_details.pdf_task_id = response_result.id
-            file_details.save()
-            return response_result.id ,file_details.id
+        # elif file_format == 'text':
+        #     response_result = convertiopdf2docx.apply_async((file_details.id,lang ,file_format),0)
+        #     file_details.pdf_task_id = response_result.id
+        #     file_details.save()
+        #     return response_result.id ,file_details.id
         else:
             return "error"
     else:

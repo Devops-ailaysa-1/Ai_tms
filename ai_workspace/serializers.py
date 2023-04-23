@@ -488,29 +488,41 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	project_name = serializers.CharField(required=False,allow_null=True)
 	team_exist = serializers.BooleanField(required=False,allow_null=True, write_only=True)
 	workflow_id = serializers.PrimaryKeyRelatedField(queryset=Workflows.objects.all().values_list('pk', flat=True),required=False,allow_null=True, write_only=True)
-	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True)
+	mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False,allow_null=True,write_only=True)
 	assign_enable = serializers.SerializerMethodField(method_name='check_role')
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False)
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
-	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
-	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False)
-	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)
-	project_deadline = serializers.DateTimeField(required=False,allow_null=True)
-	mt_enable = serializers.BooleanField(required=False,allow_null=True)
+	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
+	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
+	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False,write_only=True)
+	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
+	mt_enable = serializers.BooleanField(required=False,allow_null=True,write_only=True)
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)
-	from_text = serializers.BooleanField(required=False,allow_null=True)
+	from_text = serializers.BooleanField(required=False,allow_null=True,write_only=True)
 	file_create_type = serializers.CharField(read_only=True,
 			source="project_file_create_type.file_create_type")
-	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False)
+	#subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","assigned","text_to_speech_source_download", "jobs","clone_available","assign_enable","files","files_jobs_choice_url",
-		 			"progress", "files_count", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type","project_deadline","mt_enable",\
-					"pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id","project_type_id",\
-					"voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at","from_text",'get_assignable_tasks_exists',)
+		fields = ("id", "project_name","assigned", "jobs","clone_available","assign_enable","files",
+		 			"progress", "tasks_count", "show_analysis","project_analysis", "is_proj_analysed","get_project_type",\
+					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
+					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
+					"mt_enable","from_text",'get_assignable_tasks_exists',)#"files_count", "files_jobs_choice_url","text_to_speech_source_download",
+	
+		# extra_kwargs = {
+		# 	"subjects": {"write_only": True},
+		# 	"contents": {"write_only": True},
+		# 	"project_deadline": {'write_only': True},
+		# 	"mt_engine_id": {'write_only': True},
+		# 	"from_text" : {'write_only' : True},
+		# 	"steps" : {'write_only' : True},
+		# 	"mt_enable" : {'write_only' : True},
+		# }
+
 
 
 	def run_validation(self,data):
@@ -680,6 +692,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				#tt = mt_only(project,self.context.get('request'))
 				#print(tt)
 		except BaseException as e:
+			print("Exception---------->",e)
 			logger.warning(f"project creation failed {user.uid} : {str(e)}")
 			raise serializers.ValidationError({"error": f"project creation failed {user.uid}"})
 		return  project
@@ -760,18 +773,18 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 
 		return  project
 
-	def to_representation(self, value):
-		from ai_glex.serializers import GlossarySerializer
-		from ai_glex.models import Glossary
-		data = super().to_representation(value)
-		try:
-			ins = Glossary.objects.get(project_id = value.id)
-			print(ins)
-			glossary_serializer = GlossarySerializer(ins)
-			data['glossary'] = glossary_serializer.data
-		except:
-			data['glossary'] = None
-		return data
+	# def to_representation(self, value):
+	# 	from ai_glex.serializers import GlossarySerializer
+	# 	from ai_glex.models import Glossary
+	# 	data = super().to_representation(value)
+	# 	try:
+	# 		ins = Glossary.objects.get(project_id = value.id)
+	# 		print(ins)
+	# 		glossary_serializer = GlossarySerializer(ins)
+	# 		data['glossary'] = glossary_serializer.data
+	# 	except:
+	# 		data['glossary'] = None
+	# 	return data
 
 
 class InstructionfilesSerializer(serializers.ModelSerializer):
@@ -1201,14 +1214,19 @@ class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
     project_name = serializers.ReadOnlyField(source ='task.job.project.project_name')
     source_lang = serializers.SerializerMethodField()
     punctuation_support = serializers.SerializerMethodField()
+    transcription_source_file = serializers.SerializerMethodField()
     class Meta:
         model = TaskTranscriptDetails
         fields = "__all__"
         #fields = ('id','quill_data','transcripted_text','writer_filename','writer_edited_count')
-        write_only_fields = ("project_name",'source_lang',"source_audio_file", "translated_audio_file","transcripted_file_writer","audio_file_length","user","created_at","updated_at","punctuation_support",)
+        write_only_fields = ("project_name",'source_lang',"source_audio_file", "translated_audio_file","transcripted_file_writer",\
+							"audio_file_length","user","created_at","updated_at","punctuation_support","transcription_source_file",)
         #read_only_fields = ("id","task",)
     def get_source_lang(self,obj):
         return obj.task.job.project.project_jobs_set.first().source_language.language
+
+    def get_transcription_source_file(self,obj):
+	    return obj.task.file.file.url
 
     def get_punctuation_support(self,obj):
        lang = obj.task.job.project.project_jobs_set.first().source_language
@@ -1219,14 +1237,23 @@ class TaskTranscriptDetailSerializer(serializers.ModelSerializer):
 
 class ProjectListSerializer(serializers.ModelSerializer):
 	jobs = serializers.SerializerMethodField()
+	assignable = serializers.SerializerMethodField()
+
 	class Meta:
 		model = Project
-		fields = ("id", "project_name","jobs",)
+		fields = ("id", "project_name","jobs","assignable",)
 
 	def get_jobs(self,obj):
 		source_lang = obj.project_jobs_set.first().source_language_id
 		target_lang = [i.target_language_id for i in obj.project_jobs_set.exclude(target_language=None)]
 		return {'source':source_lang,'target':target_lang}
+
+	def get_assignable(self, data):
+		data_1 = data.get_assignable_tasks_exists
+		if data_1: return True
+		else: return False
+
+	
 
 
 class VendorLanguagePairOnlySerializer(serializers.ModelSerializer):
@@ -1504,3 +1531,13 @@ class DocumentImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentImages
         fields = "__all__"
+
+
+
+class MyDocumentSerializerNew(serializers.Serializer):
+	id = serializers.IntegerField(read_only=True)
+	word_count = serializers.IntegerField(read_only=True)
+	doc_name = serializers.CharField(read_only=True)
+	open_as = serializers.CharField(read_only=True)
+	document_type__type = serializers.CharField(read_only=True)
+	created_at = serializers.DateTimeField(read_only=True)

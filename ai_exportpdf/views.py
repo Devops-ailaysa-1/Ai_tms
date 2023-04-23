@@ -73,7 +73,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         file_language = request.POST.get('file_language')
         user = request.user.team.owner if request.user.team else request.user
         created_by = request.user
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user,'created_by':created_by ,'pdf_file_name' : pdf_file_list._get_name() ,
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user.id,'created_by':created_by.id ,'pdf_file_name' : pdf_file_list._get_name() ,
                  'file_name':pdf_file_list._get_name() ,'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
@@ -124,14 +124,18 @@ class ConversionPortableDoc(APIView):
         for id in ids:
             pdf_path = Ai_PdfUpload.objects.get(id = int(id)).pdf_file.path
             file_format,page_length = file_pdf_check(pdf_path,id)
+            if page_length:
             #pdf consuming credits
-            consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
-            if initial_credit > consumable_credits:
-                task_id = pdf_conversion(int(id))
-                celery_task[int(id)] = task_id
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+                if initial_credit > consumable_credits:
+                    task_id = pdf_conversion(int(id))
+                    print("TaskId---------->",task_id)
+                    celery_task[int(id)] = task_id
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                else:
+                    return Response({'msg':'Insufficient Credits'},status=400)
             else:
-                return Response({'msg':'Insufficient Credits'},status=400)
+                celery_task[int(id)] = 'pdf corrupted'
         return Response(celery_task)
 
 

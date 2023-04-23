@@ -39,7 +39,7 @@ def openai_text_trim(text):
     return text
 
 import backoff
-@backoff.on_exception(backoff.expo, openai.error.RateLimitError)
+@backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt(prompt ,model_name , max_token ,n ):
 
     #max_token = 256
@@ -62,7 +62,7 @@ def get_prompt(prompt ,model_name , max_token ,n ):
                 )
     return response
 
-@backoff.on_exception(backoff.expo, openai.error.RateLimitError)
+@backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt_freestyle(prompt):
     response = openai.Completion.create(
                 model="text-curie-001",
@@ -90,6 +90,7 @@ def get_prompt_edit(input_text ,instruction ):
     return response
     
 #DALLE
+@backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt_image_generations(prompt,size,no_of_image):
     try:
         response = openai.Image.create(prompt=prompt,n=no_of_image,size=size) 
@@ -107,7 +108,7 @@ def get_img_content_from_openai_url(image_url):
     return img_byte_arr
 
 
-@backoff.on_exception(backoff.expo, openai.error.RateLimitError)
+@backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
 def get_prompt_chatgpt_turbo(prompt,n):
     completion = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",

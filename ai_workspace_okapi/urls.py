@@ -8,8 +8,14 @@ app_name = "ws_okapi"
 router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
+router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
 
 urlpatterns = router.urls
+
+myobject_detail = api_views.SegmentsUpdateView.as_view({
+    'put': 'update',
+    'patch': 'partial_update',
+})
 
 urlpatterns+=[
     # path("task/", TaskView.as_view(), name = "tasks"),
@@ -20,7 +26,7 @@ urlpatterns+=[
 
     # Segment related endpoints
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
-    path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put": "update"}), \
+    path("segment/update/", myobject_detail, \
          name="segment-update"),
     path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment'),
     path("segment/restore/<int:pk>", api_views.MergeSegmentDeleteView.as_view({"delete": "destroy"}), \
@@ -42,6 +48,7 @@ urlpatterns+=[
     #     {"put":"put"}), name="seg-find-&-replace"),
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
+    #path("page_size", api_views.SegmentSizeView.as_view(), name='default-page-size'),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
     path("segment/get/page/filter/<int:document_id>/<int:segment_id>", api_views
          .GetPageIndexWithFilterApplied.as_view(), name="get-page-id-of-segment-on-apply-filter"),

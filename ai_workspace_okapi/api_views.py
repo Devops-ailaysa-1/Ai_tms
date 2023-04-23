@@ -1,6 +1,6 @@
 from .serializers import (DocumentSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, CommentSerializer,
-                          TM_FetchSerializer, VerbSerializer)
+                          TM_FetchSerializer, VerbSerializer,SegmentPageSizeSerializer)
 from ai_workspace.serializers import TaskCreditStatusSerializer, TaskTranscriptDetailSerializer
 from rest_framework import views
 import json, logging,os,re,urllib.parse,xlsxwriter
@@ -32,6 +32,7 @@ from django_celery_results.models import TaskResult
 from django.shortcuts import get_object_or_404
 from nltk.tokenize import TweetTokenizer
 from rest_framework import permissions
+from rest_framework import status
 from rest_framework import views
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
@@ -60,7 +61,7 @@ from ai_workspace.models import Task, TaskAssign
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
 from ai_workspace.serializers import TaskTranscriptDetailSerializer
 from ai_workspace.utils import get_consumable_credits_for_text_to_speech
-from ai_workspace_okapi.models import SplitSegment
+from ai_workspace_okapi.models import SplitSegment,SegmentPageSize
 from .models import Document, Segment, MT_RawTranslation, TextUnit, TranslationStatus, FontSize, Comment, MergeSegment, \
     MtRawSplitSegment
 from .okapi_configs import CURRENT_SUPPORT_FILE_EXTENSIONS_LIST
@@ -213,8 +214,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         if doc_data['total_word_count'] >= 50000:
 
-            #print("USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
-
             doc_data, needed_keys = DocumentViewByTask.trim_segments(doc_data)
             serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
@@ -238,7 +237,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 task_write_data = json.dumps(validated_data, default=str)
                 write_segments_to_db.apply_async((task_write_data, document.id), )
         else:
-            #print("NOT USING CELERY &&&&&&&&&&&&&&&&&&&&&&&77")
             serializer = (DocumentSerializerV2(data={**doc_data, \
                                                      "file": task.file.id, "job": task.job.id,
                                                      }, ))
@@ -264,7 +262,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         from ai_workspace.models import MTonlytaskCeleryStatus
         print("create_document_for_task_if_not_exists")
-        print("Tt------>",task.document)
         if task.document != None:
             print("<--------------------------Document Exists--------------------->")
             if task.job.project.pre_translate == True:
@@ -291,7 +288,6 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
                         seg = task.document.get_segments().filter(target='').first().source
                         consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
-                        print("Consumable------->",consumable_credits)
                         if initial_credit > consumable_credits:
                             cel_task = pre_translate_update.apply_async((task.id,),)
                             return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
@@ -331,22 +327,18 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
             params_data = {**data, "output_type": None}
 
             res_paths = get_res_path(params_data["source_language"])
-            print("ResPath------------>",res_paths)
-            print("srclang------------>",params_data["source_language"])
             json_file_path = DocumentViewByTask.get_json_file_path(task)
 
             # For large files, json file is already written during word count
             if exists(json_file_path):
                 document = DocumentViewByTask.write_from_json_file(task, json_file_path)
-                #print("params_data exists------------>",params_data)
-                #print("data---->" ,data)
                 
             else:
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params": json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
-                #print("params_data------------>",params_data)
+
                 if doc.status_code == 200:
                     doc_data = doc.json()
                     if doc_data.get('total_word_count') == 0:
@@ -372,7 +364,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
         if task.job.project.pre_translate == True and task.document == None:
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=task_id) & Q(task_name = 'mt_only')).last()
             state = mt_only.AsyncResult(ins.celery_task_id).state if ins and ins.celery_task_id else None
-            print("State------------------>",state)
+
             if state == 'STARTED' or state == 'PENDING':
                 if ins.status == 1:
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
@@ -443,8 +435,36 @@ class DocumentViewByDocumentId(views.APIView):
         # else:
         #     return Response({"msg" : "Unauthorised"}, status=401)
 
+
+# from rest_framework import pagination
+
+# class CustomPageNumberPagination(pagination.PageNumberPagination):
+#     """Custom page number pagination."""
+
+#     page_size = 20
+#     max_page_size = 50
+#     page_size_query_param = 'page_size'
+
+#     def get_page_size(self, request):
+#         """Get page size."""
+#         # On certain pages, force custom/max page size.
+#         try:
+#             user = request.user
+#             Print("User-------->",user)
+#             size = SegmentPageSize.objects.get(user=user).page_size
+#             return size
+#         except:
+#             return self.page_size
+
+#         return super(CustomPageNumberPagination, self).get_page_size(request)
+
+
+
 class SegmentsView(views.APIView, PageNumberPagination):
     PAGE_SIZE = page_size =  20
+    max_page_size = 50
+    page_size_query_param = 'page_size'#self.get_page_size()
+    #pagination_class = CustomPageNumberPagination
 
     def get_object(self, document_id):
         document = get_object_or_404(\
@@ -452,6 +472,9 @@ class SegmentsView(views.APIView, PageNumberPagination):
         authorize(self.request, resource=document, actor=self.request.user, action="read")
         return document
 
+    # def get_page_size(self):
+    #     page_size = SegmentPageSize.objects.filter(ai_user_id = self.request.user.id).last().page_size
+    #     return page_size
 
     def get(self, request, document_id):
         document = self.get_object(document_id=document_id)
@@ -597,6 +620,8 @@ class SourceTMXFilesCreate(views.APIView):
     def post(self, request, project_id):
         jobs, files = self.get_queryset(project_id=project_id)
 
+
+from rest_framework import serializers
 class SegmentsUpdateView(viewsets.ViewSet):
     def get_object(self, segment_id):
         qs = Segment.objects.all()
@@ -657,7 +682,52 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment.save()
         return Response(SegmentSerializerV2(segment).data, status=201)
 
-    def update(self, request, segment_id):
+    def partial_update(self, request, *args, **kwargs):
+        # Get a list of PKs to update
+        data={}
+        confirm_list = request.data.get('confirm_list', [])
+        confirm_list = json.loads(confirm_list)
+        print("RTR---------->",confirm_list)
+        
+        for item in confirm_list:
+            try:
+                msg = None
+                segment_id = item.get('pk')
+                status = item.get('status')
+                segment = self.get_object(segment_id)
+                if segment.temp_target != '':
+                    print("Inside partial upd")
+                    data['target'] = segment.temp_target
+                    data['status'] = status
+                else:
+                    data={}
+                authorize(request, resource=segment, actor=request.user, action="read")
+                edit_allow = self.edit_allowed_check(segment)
+                if edit_allow == False:
+                    return Response({"msg": "Someone is working already.."}, status=400)
+
+                # Segment update for a Split segment
+                if segment.is_split == True:
+                    self.split_update(data, segment)
+                segment_serlzr = self.get_update(segment, data, request)
+            except serializers.ValidationError as e:
+                print("Exception=======>",e)
+                msg = 'confirm all may not work properly due to insufficient credits'
+        message = msg if msg else 'Objects updated successfully'
+        return Response({'message': message})
+        # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
+        # return Response(segment_serlzr.data, status=201)
+        
+        # # Get the objects to update
+        # queryset = Segment.objects.filter(pk__in=pks)
+        
+        # # Update each object with the request data
+        # for obj in queryset:
+        #     serializer = self.serializer_class(obj, data=request.data, partial=True)
+        #     serializer.is_valid(raise_exception=True)
+        #     serializer.save()
+    def update(self, request, pk=None):
+        segment_id  = request.POST.get('segment')
         segment = self.get_object(segment_id)
         authorize(request, resource=segment, actor=request.user, action="read")
         edit_allow = self.edit_allowed_check(segment)
@@ -705,7 +775,7 @@ class MT_RawAndTM_View(views.APIView):
                     "extension": ".txt"
                     }
         res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-                            data={"segmentWordCountdata": json.dumps(seg_data)})
+                            data={"segmentWordCountdata": json.dumps(seg_data)},timeout=3)
         if res.status_code == 200:
             return res.json()
         else:
@@ -1150,6 +1220,11 @@ class DocumentToFile(views.APIView):
             return download_file(task.task_transcript_details.last().translated_audio_file.path)
 
 
+    # #FOR DOWNLOADING MTONLY FILE
+    # def download_mt_only_file(self,document_id):
+    #     pass
+
+
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
         if string!=None:
@@ -1284,7 +1359,7 @@ class DocumentToFile(views.APIView):
         task = document.task_set.first()
         ser = TaskSerializer(task)
         task_data = ser.data
-
+        print("TT------------->",task_data)
         DocumentViewByTask.correct_fields(task_data)
         output_type = output_type if output_type in OUTPUT_TYPES else "ORIGINAL"
 
@@ -1334,6 +1409,7 @@ class TranslationStatusList(views.APIView):
 class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
     PAGE_SIZE = page_size = 20
     lookup_field = "source"
+    page_size_query_param = 'page_size'
 
     @staticmethod
     def prepare_data(data):
@@ -1579,6 +1655,60 @@ class ProgressView(views.APIView):
                  segments_confirmed_count=segments_confirmed_count), safe=False
         )
 
+
+# class SegmentSizeView(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated]
+    
+#     def list(self, request):
+#         print("$$$$")
+#         obj = SegmentPageSize.objects.filter(ai_user_id = request.user.id)
+#         ser = FontSizeSerializer(obj, many=True)
+#         return Response(ser.data, status=200)
+
+#     def create(self,request):
+        # obj = SegmentPageSize.objects.filter(ai_user_id = request.user.id)
+        # if obj is not None:
+        #     obj.update({'page_size':request.POST.get('page_size')})
+        # else:
+        #     ser = SegmentPageSizeSerializer(data={**request.POST.dict(), "ai_user": request.user.id})
+        #     if ser.is_valid(raise_exception=True):
+        #         ser.save()
+        #         return Response(ser.data)
+        #     return Response(ser.errors)
+        # return Response({'page_size':obj.page_size})
+
+class SegmentSizeView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def list(self,request):
+        try:
+            queryset = SegmentPageSize.objects.get(ai_user_id = request.user.id)
+            serializer = SegmentPageSizeSerializer(queryset)
+            return Response(serializer.data)
+        except:
+            return Response({'page_size':None})
+
+    def create(self,request):
+        obj = SegmentPageSize.objects.filter(ai_user_id = request.user.id)
+        if obj:
+            obj.update(page_size = request.POST.get('size'))
+        else:
+            ser = SegmentPageSizeSerializer(data={'page_size':request.POST.get('size'), "ai_user": request.user.id})
+            if ser.is_valid(raise_exception=True):
+                ser.save()
+                return Response(ser.data)
+            return Response(ser.errors)
+        return Response({'page_size':obj.last().page_size})
+
+    def update(self,request,pk):
+        pass
+
+    def delete(self,request,pk):
+        pass
+
+
+
+
+
 class FontSizeView(views.APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1711,6 +1841,8 @@ class GetPageIndexWithFilterApplied(views.APIView):
 
     def post(self, request, document_id, segment_id):
         status_list = request.data.get("status_list", [])
+        page_size = SegmentPageSize.objects.filter(ai_user_id = self.request.user.id).last().page_size
+        page_size = page_size if page_size else 20
         doc = get_object_or_404(Document.objects.all(), id=document_id)
         segs = doc.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
@@ -1724,9 +1856,8 @@ class GetPageIndexWithFilterApplied(views.APIView):
         ids = [
             segment.id for segment in segments
         ]
-
         try:
-            res = ({"page_id": (ids.index(segment_id)//20)+1}, 200)
+            res = ({"page_id": (ids.index(segment_id)//page_size)+1}, 200)
         except:
             res = ({"page_id": None}, 404)
         return  Response(*res)
@@ -2042,6 +2173,8 @@ from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for
 
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
+    from ai_workspace.api_views import get_consumable_credits_for_text
+    from ai_openai.utils import get_prompt_chatgpt_turbo,get_consumable_credits_for_openai_text_generator
     sentence = request.POST.get('sentence')
     user = request.user
     initial_credit = user.credit_balance.get("total_left")
@@ -2052,34 +2185,34 @@ def paraphrasing(request):
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-        result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence with 5 output :"+clean_sentence,n=1)
-        para_sentence = result_prompt["choices"][0]["message"]["content"].split('\n')
+        result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence :"+clean_sentence,n=1)
+        para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         # openai_token_usage(result_prompt)
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-        for i in range(len(para_sentence)):
-            para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
+        # for i in range(len(para_sentence)):
+        #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
         if any(tag_names):
             for i in range(len(list(tag_names))):
                 tag_names[i] = '<'+tag_names[i]+'>'
         print("tag-->",tag_names)
-        return Response({'paraphrase':para_sentence ,'tag':tag_names})
+        return Response({'paraphrase':[para_sentence] ,'tag':tag_names})
     else:
         return  Response({'msg':'Insufficient Credits'},status=400)
-    
 
-
-    # sentence = request.POST.get('sentence')
-    # try:
-    #     text = {}
-    #     text['sentence'] = sentence
-    #     end_pts = settings.END_POINT +"paraphrase/"
-    #     data = requests.post(end_pts , text)
-    #     return JsonResponse(data.json())
-    # except:
-    #     return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
+# @api_view(['POST',])############### only available for english ###################
+# def paraphrasing(request):
+#     sentence = request.POST.get('sentence')
+#     try:
+#         text = {}
+#         text['sentence'] = sentence
+#         end_pts = settings.END_POINT +"paraphrase/"
+#         data = requests.post(end_pts , text)
+#         return JsonResponse(data.json())
+#     except:
+#         return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
 
 
 
@@ -2186,7 +2319,7 @@ def get_word_api(request):
 #             res = requests.request("GET", url, headers=headers)
 #     print("doc--->",res.text)
 
-
+#################################################################################################################################
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])

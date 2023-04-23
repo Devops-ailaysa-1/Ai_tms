@@ -69,6 +69,7 @@ urlpatterns += [
 	path('tasks_list/',api_views.tasks_list),
 	path('used_steps/',api_views.previously_created_steps),
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
+	path('project/word_char/count',api_views.project_word_char_count),
 	path("download/<int:project_id>/",api_views.project_download),
 	path("instruction_file_download/<int:instruction_file_id>", api_views.instruction_file_download, name="instruction-file-download"),
 	#path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"})),
@@ -96,6 +97,7 @@ urlpatterns += [
 	path('instant_customize/',api_views.instant_translation_custom),
 	path('task_status/',api_views.get_task_status),
 	path('voice_task_status/',api_views.get_voice_task_status),
+	path('docx_convertor/',api_views.docx_convertor),
 ]
 # views urls adding for local testing
 urlpatterns += [

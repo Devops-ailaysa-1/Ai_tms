@@ -329,6 +329,7 @@ class Document(models.Model):
     google_api_cost_est = models.IntegerField(null=True) #Estimation
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
+    
 
     class Meta:
         constraints = [ models.UniqueConstraint(fields=("file", "job"),\
@@ -539,6 +540,10 @@ class Document(models.Model):
     def task_obj(self):
         return self.task_set.last()
 
+class SegmentPageSize(models.Model):
+    ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,
+                                   related_name="user_default_page_size")
+    page_size = models.IntegerField()
 
 
 class FontSize(models.Model):

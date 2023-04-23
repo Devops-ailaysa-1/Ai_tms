@@ -105,7 +105,7 @@ class TestSignin:
     def test_apisignin(self,api_client):
         endpoint = "/auth/dj-rest-auth/login/"
         payload={'email': 'ailaysademo@gmail.com',
-        'password': 'Ai_demo#4321'}
+        'password': 'admin@1000'}
         # header = {'Authorization': f'Bearer {pytest.access_token}'}
         # assert (response.status_code == 200), "Status code is not 200. Rather found : " + str(response.status_code)
         #client=
