@@ -116,3 +116,30 @@ def get_prompt_chatgpt_turbo(prompt,n):
     ],n=n
     )
     return completion
+
+
+
+from docx import Document
+from ai_openai.html2docx_custom import HtmlToDocx
+import re
+document = Document()
+new_parser = HtmlToDocx()
+new_parser.table_style = 'TableGrid'
+
+
+def replace_hex_color(match):
+    hex_color = match.group(1)
+    red, green, blue = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    rgb_color = f"rgb({red}, {green}, {blue})"
+    return rgb_color
+
+def replace_hex_colors_with_rgb(html):
+    hex_color_regex = re.compile("'#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})'")
+    html = hex_color_regex.sub(replace_hex_color, html)
+    return html
+
+
+# updatedHtml = replace_hex_colors_with_rgb("html_file")  
+# htmlupdates = updatedHtml.replace('<br />', '')
+# new_parser.add_html_to_document(htmlupdates, document)
+# document.save('file_name.docx')s
