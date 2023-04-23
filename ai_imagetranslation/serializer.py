@@ -5,9 +5,9 @@ from PIL import Image
 from ai_imagetranslation.utils import inpaint_image_creation ,image_content
 from ai_workspace_okapi.utils import get_translation
 from django import core
+from ai_canvas.utils import thumbnail_create
 
 class ImageloadSerializer(serializers.ModelSerializer):
-    # image = serializers.FileField(required = True)
     class Meta:
         model = Imageload
         fields = ('id','image','file_name','types','height','width')
@@ -101,8 +101,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         inpaint_creation_target_lang = validated_data.get('inpaint_creation_target_lang' ,None)
         image_to_translate_id = validated_data.get('image_to_translate_id' ,None)
         
-        if validated_data.get('mask_json'):
+        if validated_data.get('mask_json'): #also creation of mask image using node server
+            mask_json=validated_data.get('mask_json')
+
+            thumb_mask_image=thumbnail_create(mask_json,formats='mask')
+            mask_image = core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             instance.mask_json = validated_data.get('mask_json')
+            instance.mask = mask_image
             instance.save()
             
         if validated_data.get('project_name' ,None):

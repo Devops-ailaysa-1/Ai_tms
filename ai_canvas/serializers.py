@@ -112,7 +112,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
 
 
     def thumb_create(self,json_str,formats,multiplierValue):
-        thumb_image_content= thumbnail_create(json_str=json_str,formats=formats,multiplierValue=multiplierValue)
+        thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
         thumb_name = self.instance.file_name+'_thumbnail.png' if self.instance and self.instance.file_name else 'thumbnail.png'
         thumbnail_src = core.files.File(core.files.base.ContentFile(thumb_image_content),thumb_name)
         return thumbnail_src
@@ -318,7 +318,7 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
         return data
 
     def thumb_create(self,json_str,formats,multiplierValue):
-        thumb_image_content= thumbnail_create(json_str=json_str,formats=formats,multiplierValue=multiplierValue)
+        thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
         thumb_name = self.instance.file_name+'_thumbnail.png' if self.instance and self.instance.file_name else 'thumbnail.png'
         thumbnail_src = thumbnail_src = core.files.File(core.files.base.ContentFile(thumb_image_content),thumb_name)
         return thumbnail_src
@@ -333,7 +333,6 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
             thumbnail_page = self.thumb_create(json_str=json_page,formats='png',multiplierValue=1)
             TemplatePage.objects.create(template_page=instance,thumbnail_page=thumbnail_page,export_page=export_page,
                                         json_page=json_page,page_no=1)
-            
         return instance
 
 

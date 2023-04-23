@@ -90,6 +90,9 @@ def inpaint_image_creation(image_details):
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         img = cv2.cvtColor(img ,  cv2.COLOR_BGR2RGB)
         output = inpaint_image(img_path, mask_path)
+        print("output----->>>",output)
+        print("mask_path--->",mask_path)
+        print("img_path---->",img_path)
         output = np.reshape(output, img.shape)    
     else:
         image_text_details = creating_image_bounding_box(image_details.image.path)
