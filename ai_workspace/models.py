@@ -334,8 +334,8 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
-    @cached_property
-    #@property
+    #@cached_property
+    @property
     def progress(self):
         from ai_workspace.api_views import voice_project_progress
         if self.project_type_id == 3:
