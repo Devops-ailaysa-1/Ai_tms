@@ -184,7 +184,6 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.pdf_api_use = "google-ocr"
         txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
- 
     except:
         end = time.time()
         txt_field_obj.status = "ERROR"

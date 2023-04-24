@@ -75,37 +75,30 @@ def inpaint_image_creation(image_details):
     img_path=image_details.image.path
     mask_path=image_details.mask.path
     img = cv2.imread(img_path)
-    mask_check = cv2.imread(mask_path)
-    print("shape",mask_check.shape , img.shape)
+    mask = cv2.imread(mask_path)
     if image_details.mask:
-        mask = cv2.imread(image_details.mask.path )
+        
         image_to_extract_text = np.bitwise_and(mask ,img)
         content = image_content(image_to_extract_text)
         inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
-        image_details.create_inpaint_pixel_location = inpaint_image_file
+        image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
         image_text_details = creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
-        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-        img = cv2.cvtColor(img ,  cv2.COLOR_BGR2RGB)
-        output = inpaint_image(img_path, mask_path)
-        print("output----->>>",output)
-        print("mask_path--->",mask_path)
-        print("img_path---->",img_path)
-        output = np.reshape(output, img.shape)    
+        # mask=cv2.cvtColor(mask,cv2.COLOR_BGR2GRAY)
+        # img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+        output=inpaint_image(img_path, mask_path)
+        output=np.reshape(output,img.shape)    
     else:
         image_text_details = creating_image_bounding_box(image_details.image.path)
         mask_out_to_inpaint  = np.zeros((img.shape[0] , img.shape[1] ,3) , np.uint8)
-
         for i in image_text_details.values():
             bbox =  i['bbox']
             cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
-        # output = cv2.inpaint(img , mask_out_to_inpaint  ,3, cv2.INPAINT_NS)
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
         mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
-        # mask = cv2.cvtColor(mask_out_to_inpaint, cv2.IMREAD_GRAYSCALE)
         output = inpaint_image(img_path, mask_path)
         output = np.reshape(output, img.shape) 
-    return output ,image_text_details
+    return output,image_text_details
 
 
  

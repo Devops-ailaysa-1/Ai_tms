@@ -93,6 +93,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         src_lang = validated_data.get('source_language' ,None)
         inpaint_creation_target_lang = validated_data.get('inpaint_creation_target_lang' ,None)
         image_to_translate_id = validated_data.get('image_to_translate_id' ,None)
+        mask_json=validated_data.get('mask_json')
         if validated_data.get('image'):
             print("update__image")
             instance.image = validated_data.get('image')
@@ -104,12 +105,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         
         if validated_data.get('mask_json'): #also creation of mask image using node server
             print("mask__json")
-            mask_json=validated_data.get('mask_json')
-            thumb_mask_image=thumbnail_create(mask_json,formats='mask')
-
-            mask_image = core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             instance.mask_json = mask_json
-            instance.mask = mask_image
             instance.save()
             
         if validated_data.get('project_name' ,None):
@@ -126,9 +122,14 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
-            print("update-->","inpaint")
+            
             # im_details=[ImageTranslate.objects.create(user=instance.user.id,image=instance.image,project_name=instance.file_name)]
             # im_details=ImageTranslate.objects.filter(id__in=image_to_translate_id)
+            thumb_mask_image=thumbnail_create(mask_json,formats='mask')
+            mask_image = core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
+            instance.mask_json = mask_json
+            instance.mask = mask_image
+            instance.save()
             inpaint_out_image,source_bounding_box=inpaint_image_creation(instance)
             instance.source_bounding_box = source_bounding_box
             content = image_content(inpaint_out_image)
