@@ -6,6 +6,7 @@ from ai_staff.models import Languages,LanguagesLocale
 from django.http import HttpRequest
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create
 from django import core
+from ai_imagetranslation.utils import image_content
 
 class LocaleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -266,7 +267,7 @@ class CanvasUserImageAssetsSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         import cv2
-        from ai_imagetranslation.utils import image_content
+        
         user =  self.context['request'].user
         data = {**validated_data ,'user':user}
         instance = CanvasUserImageAssets.objects.create(**data)

@@ -4,11 +4,7 @@
 # pad_mod = 8
 # pad_to_square = False
 # min_size = None
-import os 
-import requests
-IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
-import numpy as np
- 
+    
 # model = torch.jit.load(model_path, map_location="cpu")
 # model = model.to('cpu')
 
@@ -49,15 +45,4 @@ import numpy as np
 #     cur_res = cv2.cvtColor(cur_res, cv2.COLOR_RGB2BGR)
 #     return cur_res
 
-def inpaint_image(im,msk):
-    headers = {"User-Agent" : "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"}
-    payload={}
-    files=[
-    ('image',('image',open(im,'rb'),'')),
-    ('mask',('mask',open(msk,'rb'),''))]
-    response = requests.request("POST", IMAGE_TRANSLATE_URL, headers=headers, data=payload, files=files)
-    if response.status_code==200:
-        arr = np.frombuffer(response.content, dtype=np.uint8)
-        return arr
-    else:
-        return {'status':'error in inpaint prediction {}'.format(response.status_code)}
+

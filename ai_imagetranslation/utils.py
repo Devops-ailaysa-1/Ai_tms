@@ -6,11 +6,15 @@ from google.cloud import vision_v1 , vision
 from google.oauth2 import service_account
 import extcolors 
 from django import core
-from ai_imagetranslation.lamamodel_process import inpaint_image
 # from torch.utils.data._utils.collate import default_collate
 from django.conf import settings
 credentials = service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
+from django.core.exceptions import ValidationError
+import os 
+import requests
+IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
+ 
 
 def image_ocr_google_cloud_vision(image_path , inpaint):
     if inpaint:
@@ -70,35 +74,64 @@ def image_content(image_numpy):
     content = encoded_image.tobytes()
     return content
 
+def inpaint_image(im,msk):
+    headers = {}
+    # 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
+    # 'Content-Type': 'application/json','Accept': 'application/json'}
+    data={}
+    files=[
+    ('image',('',open(im,'rb'),'image/jpeg')),
+    ('mask',('',open(msk,'rb'),'image/png'))]
+    response = requests.request("POST",IMAGE_TRANSLATE_URL, headers=headers, data=data, files=files)
+    print(response.content)
+    if response.status_code==200:
+        arr = np.frombuffer(response.content, dtype=np.uint8)
+        return {'result':arr,'code':response.status_code }
+    else:
+        return {'result':'error in inpaint prediction','code':response.status_code }
+
 
 def inpaint_image_creation(image_details):
     img_path=image_details.image.path
     mask_path=image_details.mask.path
-    img = cv2.imread(img_path)
     mask = cv2.imread(mask_path)
-    if image_details.mask:
-        
-        image_to_extract_text = np.bitwise_and(mask ,img)
-        content = image_content(image_to_extract_text)
-        inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
-        image_details.create_inpaint_pixel_location=inpaint_image_file
+    img_mode = Image.open(img_path)
+    if img_mode.mode == 'RGBA':
+        img_mode = img_mode.convert('RGB')
+        img_mode = np.array(img_mode)
+        name = image_details.image.name.split('/')[-1]
+        image_byte_content= core.files.File(core.files.base.ContentFile(image_content(img_mode)),name)
+        image_details.image = image_byte_content
         image_details.save()
+    img = cv2.imread(img_path)
+    print(mask.shape)
+    print(img.shape)
+    if image_details.mask:
+        # image_to_extract_text = np.bitwise_and(mask ,img)
+        # content = image_content(image_to_extract_text)
+        # inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
+        # image_details.create_inpaint_pixel_location=inpaint_image_file
+        # image_details.save()
         image_text_details = creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
-        # mask=cv2.cvtColor(mask,cv2.COLOR_BGR2GRAY)
-        # img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+
         output=inpaint_image(img_path, mask_path)
-        output=np.reshape(output,img.shape)    
-    else:
-        image_text_details = creating_image_bounding_box(image_details.image.path)
-        mask_out_to_inpaint  = np.zeros((img.shape[0] , img.shape[1] ,3) , np.uint8)
-        for i in image_text_details.values():
-            bbox =  i['bbox']
-            cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
-        img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
-        mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
-        output = inpaint_image(img_path, mask_path)
-        output = np.reshape(output, img.shape) 
-    return output,image_text_details
+        if output['code']==200:
+            print(output)
+            res=np.reshape(output['result'],img.shape)   
+            return res,image_text_details
+        else:
+            return ValidationError(output)
+    # else:
+    #     image_text_details = creating_image_bounding_box(image_details.image.path)
+    #     mask_out_to_inpaint  = np.zeros((img.shape[0] , img.shape[1] ,3) , np.uint8)
+    #     for i in image_text_details.values():
+    #         bbox =  i['bbox']
+    #         cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
+    #     img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+    #     mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
+    #     output = inpaint_image(img_path, mask_path)
+    #     output = np.reshape(output, img.shape) 
+    #     return output,image_text_details
 
 
  

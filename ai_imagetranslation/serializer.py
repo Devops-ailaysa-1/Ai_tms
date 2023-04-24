@@ -84,7 +84,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance=ImageTranslate.objects.create(**data)
             width,height = self.image_shape(instance.image.path)
             instance.width=width
-            instance.height=height
+            instance.height=height            
             instance.types=str(validated_data.get('image')).split('.')[-1]
             instance.save()
             return instance
@@ -95,16 +95,15 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         image_to_translate_id = validated_data.get('image_to_translate_id' ,None)
         mask_json=validated_data.get('mask_json')
         if validated_data.get('image'):
-            print("update__image")
+ 
             instance.image = validated_data.get('image')
             width , height = self.image_shape(instance.image)
             instance.width = width
             instance.height = height
             instance.types  = str(validated_data.get('image')).split('.')[-1]
 
-        
         if validated_data.get('mask_json'): #also creation of mask image using node server
-            print("mask__json")
+ 
             instance.mask_json = mask_json
             instance.save()
             
@@ -117,14 +116,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             
         if src_lang :
-            print("src_lang")
+ 
             instance.source_language = src_lang.locale.first()
             instance.save()
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
-            
-            # im_details=[ImageTranslate.objects.create(user=instance.user.id,image=instance.image,project_name=instance.file_name)]
-            # im_details=ImageTranslate.objects.filter(id__in=image_to_translate_id)
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
             mask_image = core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             instance.mask_json = mask_json
@@ -139,11 +135,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             for tar_lang in inpaint_creation_target_lang:
                 tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())   
                 source_bbox = source_bounding_box
+                instance.save()
                 for text in source_bbox.values(): 
                     translate_bbox = get_translation(1,source_string=text['text'],source_lang_code='en',
                                                      target_lang_code=tar_lang.locale.first().locale_code)
                     text['text']=translate_bbox
-                tar_bbox.target_bounding_box = source_bbox
+                tar_bbox.target_bounding_box=source_bbox
                 tar_bbox.save()
             return instance
             # for im in im_details:
@@ -151,7 +148,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             #     im.source_bounding_box = source_bounding_box
             #     content = image_content(inpaint_out_image)
             #     inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
-            #     print(inpaint_image_file)
+ 
             #     im.inpaint_image = inpaint_image_file 
             #     im.save()
             #     for tar_lang in inpaint_creation_target_lang:
