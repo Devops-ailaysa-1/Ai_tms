@@ -170,8 +170,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             txt_field_obj.counter = int(no_of_page_processed_counting)
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
-        logger.info('finished ocr and saved as docx ,file_name: ' )
- 
+        logger.info('finished ocr and saved as docx ,file_name:')
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)

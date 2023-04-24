@@ -5,16 +5,13 @@ from PIL import Image
 from google.cloud import vision_v1 , vision
 from google.oauth2 import service_account
 import extcolors 
+from django import core
 from ai_imagetranslation.lamamodel_process import inpaint_image
 # from torch.utils.data._utils.collate import default_collate
 from django.conf import settings
 credentials = service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
 
-
-# jit_model = torch.jit.load(settings.LAMA_MODEL,map_location="cpu")
-# print(settings.LAMA_MODEL)
- 
 def image_ocr_google_cloud_vision(image_path , inpaint):
     if inpaint:
         with io.open(image_path, 'rb') as image_file:
@@ -73,12 +70,13 @@ def image_content(image_numpy):
     content = encoded_image.tobytes()
     return content
 
-from django import core
+
 def inpaint_image_creation(image_details):
-    img = cv2.imread(image_details.image.path  )
     img_path=image_details.image.path
     mask_path=image_details.mask.path
-
+    img = cv2.imread(img_path)
+    mask_check = cv2.imread(mask_path)
+    print("shape",mask_check.shape , img.shape)
     if image_details.mask:
         mask = cv2.imread(image_details.mask.path )
         image_to_extract_text = np.bitwise_and(mask ,img)
@@ -105,10 +103,8 @@ def inpaint_image_creation(image_details):
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
         mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
         # mask = cv2.cvtColor(mask_out_to_inpaint, cv2.IMREAD_GRAYSCALE)
- 
         output = inpaint_image(img_path, mask_path)
         output = np.reshape(output, img.shape) 
- 
     return output ,image_text_details
 
 

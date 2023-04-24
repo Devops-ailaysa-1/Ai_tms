@@ -5,6 +5,7 @@ from ai_workspace_okapi.utils import get_translation
 import os
 from django.core.exceptions import ValidationError
 IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
+import json ,base64
 
 # from google.cloud import translate_v2 as translate
 
@@ -77,7 +78,7 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
     return canvas_result
 
 
-import json ,base64
+
 def thumbnail_create(json_str,formats):
     all_format=['png','jpeg','jpg','svg']
     width = json_str['backgroundImage']['width']
@@ -95,6 +96,7 @@ def thumbnail_create(json_str,formats):
     if thumb_image.status_code ==200:
         split_text_base64 = thumb_image.text.split(",")[-1]
         b64_bytes = base64.b64decode(split_text_base64)
+        print(b64_bytes)
         return b64_bytes
     else:
         return ValidationError("error in node server")

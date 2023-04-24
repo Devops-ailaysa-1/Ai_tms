@@ -8,6 +8,7 @@ import os
 import requests
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
 import numpy as np
+ 
 # model = torch.jit.load(model_path, map_location="cpu")
 # model = model.to('cpu')
 
@@ -49,20 +50,14 @@ import numpy as np
 #     return cur_res
 
 def inpaint_image(im,msk):
-    headers = {} 
+    headers = {"User-Agent" : "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"}
     payload={}
     files=[
-    ('image',('',open(im,'rb'),'')),
-    ('mask',('',open(msk,'rb'),''))
-    ]
+    ('image',('image',open(im,'rb'),'')),
+    ('mask',('mask',open(msk,'rb'),''))]
     response = requests.request("POST", IMAGE_TRANSLATE_URL, headers=headers, data=payload, files=files)
-    arr = np.frombuffer(response.content, dtype=np.uint8)
-    
-    # origin_height, origin_width = im.shape[:2]
-    # pad_image = pad_img_to_modulo(im, mod=pad_mod, square=pad_to_square, min_size=min_size)
-    # pad_mask = pad_img_to_modulo(msk, mod=pad_mod, square=pad_to_square, min_size=min_size)
-    # res = forward(pad_image,pad_mask)
-    # result = res[0:origin_height, 0:origin_width, :]
-    # original_pixel_indices = msk < 127
-    # result[original_pixel_indices] = im[:, :, ::-1][original_pixel_indices]
-    return arr
+    if response.status_code==200:
+        arr = np.frombuffer(response.content, dtype=np.uint8)
+        return arr
+    else:
+        return {'status':'error in inpaint prediction {}'.format(response.status_code)}

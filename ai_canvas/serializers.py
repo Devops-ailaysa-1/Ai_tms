@@ -5,7 +5,6 @@ from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create
-from django.core.files.base import ContentFile
 from django import core
 
 class LocaleSerializer(serializers.ModelSerializer):
@@ -318,9 +317,9 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
         return data
 
     def thumb_create(self,json_str,formats,multiplierValue):
-        thumb_image_content= thumbnail_create(json_str=json_str,formats=formats)
-        thumb_name = self.instance.file_name+'_thumbnail.png' if self.instance and self.instance.file_name else 'thumbnail.png'
-        thumbnail_src = thumbnail_src = core.files.File(core.files.base.ContentFile(thumb_image_content),thumb_name)
+        thumb_image_content=thumbnail_create(json_str=json_str,formats=formats)
+        thumb_name=self.instance.file_name+'_thumbnail.png' if self.instance and self.instance.file_name else 'thumbnail.png'
+        thumbnail_src=core.files.File(core.files.base.ContentFile(thumb_image_content),thumb_name)
         return thumbnail_src
 
     def create(self, validated_data):
