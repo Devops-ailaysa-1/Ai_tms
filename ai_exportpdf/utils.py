@@ -246,9 +246,6 @@ def file_pdf_check(file_path,pdf_id):
         # else:
         return None,None
     
-    
- 
-
 
 from ai_workspace.models import Task
 def pdf_conversion(id ):
