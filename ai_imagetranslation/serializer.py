@@ -116,7 +116,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             
         if src_lang :
- 
             instance.source_language = src_lang.locale.first()
             instance.save()
             

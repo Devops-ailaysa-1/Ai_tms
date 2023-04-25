@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 class ImageloadViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     def get(self, request):
-        query_set = Imageload.objects.all()
+        query_set = Imageload.objects.filter(user=request.user.id)
         serializer = ImageloadSerializer(query_set ,many =True)
         return Response(serializer.data)
     
@@ -38,7 +38,7 @@ class ImageTranslateViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
     def get(self, request):
-        query_set = ImageTranslate.objects.all()
+        query_set = ImageTranslate.objects.filter(user=request.user.id)
         serializer = ImageTranslateSerializer(query_set ,many =True)
         return Response(serializer.data)
 
