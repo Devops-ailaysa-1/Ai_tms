@@ -152,7 +152,9 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.pdf_no_of_page = int(pdf_len)
         doc = docx.Document()
         for i in tqdm(range(1,pdf_len+1)):
+            print("1111111111")
             with tempfile.TemporaryDirectory() as image:
+                print("222222222222")
                 image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
@@ -164,7 +166,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
                 else:
                     all_text.add_run(text)
                 # doc.add_paragraph(text)
-
+            print("33333333333333")
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
@@ -251,15 +253,15 @@ from ai_workspace.models import Task
 def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
     #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
-    pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
+    #pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
     # pdf_text_ocr_check = pdf_text_check(file_details.pdf_file.path)[0]
-    if (pdf_text_ocr_check == 'ocr'): #or (lang in google_ocr_indian_language):
-        response_result = ai_export_pdf.apply_async((id, ),)
+    #if (pdf_text_ocr_check == 'ocr'): #or (lang in google_ocr_indian_language):
+    response_result = ai_export_pdf.apply_async((id, ),)
 
-        file_details.pdf_task_id = response_result.id
-        file_details.save()
-        logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
-        return response_result.id
+    file_details.pdf_task_id = response_result.id
+    file_details.save()
+    logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
+    return response_result.id
 
     # elif pdf_text_ocr_check == 'text':
     #     response_result = convertiopdf2docx.apply_async((id,lang ,pdf_text_ocr_check),0)
@@ -267,9 +269,8 @@ def pdf_conversion(id ):
     #     file_details.save()
     #     logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name))
     #     return response_result.id
-    else:
-        return "error"
-
+    # else:
+    #     return "error"
 
 
 from django.core.files.base import ContentFile
@@ -286,23 +287,48 @@ def project_pdf_conversion(id):
         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
                                    pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
         file_details = Ai_PdfUpload.objects.filter(task = task_details).last()
-        #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-        if (file_format == 'ocr'): #or (lang in google_ocr_indian_language):
-
+        if file_format:
             response_result = ai_export_pdf.apply_async((file_details.id, ),)
             file_details.pdf_task_id = response_result.id
             file_details.save()
             return response_result.id ,file_details.id
-        # elif file_format == 'text':
-        #     response_result = convertiopdf2docx.apply_async((file_details.id,lang ,file_format),0)
-        #     file_details.pdf_task_id = response_result.id
-        #     file_details.save()
-        #     return response_result.id ,file_details.id
         else:
             return "error"
     else:
         return Response({'msg':'Insufficient Credits'},status=400)
+
+# from django.core.files.base import ContentFile
+# from ai_workspace.api_views import UpdateTaskCreditStatus
+# def project_pdf_conversion(id):
+#     task_details = Task.objects.get(id = id)
+#     user = task_details.job.project.ai_user
+#     file_obj = ContentFile(task_details.file.file.read(),task_details.file.filename)
+#     initial_credit = user.credit_balance.get("total_left")
+#     file_format,page_length = file_pdf_check(task_details.file.file.path,id)
+
+#     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+#     if initial_credit > consumable_credits:
+#         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
+#                                    pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
+#         file_details = Ai_PdfUpload.objects.filter(task = task_details).last()
+#         #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+#         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+#         #if (file_format == 'ocr'): #or (lang in google_ocr_indian_language):
+#         if file_format:
+#             response_result = ai_export_pdf.apply_async((file_details.id, ),)
+#             file_details.pdf_task_id = response_result.id
+#             file_details.save()
+#             return response_result.id ,file_details.id
+#         # elif file_format == 'text':
+#         #     response_result = convertiopdf2docx.apply_async((file_details.id,lang ,file_format),0)
+#         #     file_details.pdf_task_id = response_result.id
+#         #     file_details.save()
+#         #     return response_result.id ,file_details.id
+#         else:
+#             return "error"
+#     else:
+#         return Response({'msg':'Insufficient Credits'},status=400)
 
 def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
     if formats == 'text':
