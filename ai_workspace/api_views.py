@@ -3326,15 +3326,16 @@ def translate_from_pdf(request,task_id):
 
 
 
-class MyDocFilter(django_filters.FilterSet):
-    #proj_name = django_filters.CharFilter(lookup_expr='icontains')
-    doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
-    class Meta:
-        model = MyDocuments
-        fields = ['doc_name']#proj_name
+# class MyDocFilter(django_filters.FilterSet):
+#     #proj_name = django_filters.CharFilter(lookup_expr='icontains')
+#     doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
+#     class Meta:
+#         model = MyDocuments
+#         fields = ['doc_name']#proj_name
 
 from django.db.models import Value, CharField, IntegerField
 from ai_openai.models import BlogCreation
+from functools import reduce
 
 class MyDocumentsView(viewsets.ModelViewSet):
 
@@ -3342,7 +3343,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['doc_name','id']#'proj_name',
-    filterset_class = MyDocFilter
+    #filterset_class = MyDocFilter
     paginator = PageNumberPagination()
     #ordering = ('-id')
     paginator.page_size = 20
@@ -3351,15 +3352,28 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
 
     def get_queryset(self):
+        query = self.request.query_params.get('doc_name')
+        ordering = self.request.query_params.get('ordering')
         user = self.request.user
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
         #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
         q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
+        q1 = q1.filter(doc_name__icontains =query) if query else q1
         q2 = BlogCreation.objects.filter(user = user).filter(document=None).annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
+        q2 = q2.filter(user_title__icontains = query) if query else q2
         q3 = q1.union(q2)
         final_queryset = q3.order_by('-created_at')
+        if ordering:
+            field_name = ordering.lstrip('-')
+            if ordering.startswith('-'):
+                queryset = final_queryset.order_by(F(field_name).desc(nulls_last=True))
+            else:
+                queryset = final_queryset.order_by(F(field_name).asc(nulls_last=True))
+
+            return queryset
+        
         return final_queryset
         
     
@@ -3372,7 +3386,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         paginate = request.GET.get('pagination',True)
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.get_queryset()
         if paginate == 'False':
             serializer = MyDocumentSerializerNew(queryset, many=True)
             return Response(serializer.data)
