@@ -3,12 +3,18 @@ from ai_imagetranslation.serializer import ImageloadSerializer ,ImageTranslateSe
 from rest_framework.response import Response
 from ai_imagetranslation.models import Imageload ,ImageTranslate
 from rest_framework import status
-
+from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
 ###image_upload
 
 class ImageloadViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
+
+    def get_object(self, pk):
+        try:
+            return Imageload.objects.get(id=pk)
+        except Imageload.DoesNotExist:
+            raise Http404
     def get(self, request):
         query_set = Imageload.objects.filter(user=request.user.id)
         serializer = ImageloadSerializer(query_set ,many =True)
@@ -24,6 +30,7 @@ class ImageloadViewset(viewsets.ViewSet):
             return Response(serializer.errors)
     
     def retrieve(self,request,pk):
+        obj =self.get_object(pk)
         query_set = Imageload.objects.get(id = pk)
         serializer = ImageloadSerializer(query_set )
         return Response(serializer.data)
@@ -37,12 +44,19 @@ class ImageloadViewset(viewsets.ViewSet):
 class ImageTranslateViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
+    def get_object(self, pk):
+        try:
+            return ImageTranslate.objects.get(id=pk)
+        except ImageTranslate.DoesNotExist:
+            raise Http404
+
     def get(self, request):
         query_set = ImageTranslate.objects.filter(user=request.user.id)
         serializer = ImageTranslateSerializer(query_set ,many =True)
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
+        obj =self.get_object(pk)
         query_set = ImageTranslate.objects.get(id = pk)
         serializer = ImageTranslateSerializer(query_set )
         return Response(serializer.data)
@@ -60,6 +74,7 @@ class ImageTranslateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
         
     def update(self,request,pk):
+        obj =self.get_object(pk)
         query_set = ImageTranslate.objects.get(id = pk)
         serializer = ImageTranslateSerializer(query_set,data=request.data ,partial=True)
         if serializer.is_valid():

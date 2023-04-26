@@ -15,8 +15,8 @@ router.register(r'canvas-design-list' ,api_views.CanvasDesignListViewset,basenam
 router.register(r'canvas-designs',api_views.CanvasDesignViewset,basename='canvas_designs')
 router.register(r'template-design',api_views.TemplateGlobalDesignViewset ,basename='templatedesign')
 router.register(r'mytemplate-design',api_views.MyTemplateDesignViewset ,basename='mytemplatedesign')
-router.register(r'text-keyword' , api_views.TemplateKeywordViewset ,basename= 'textkeyword')
-router.register(r'text-template' , api_views.TextTemplateViewset ,basename='texttemplate')
+router.register(r'text-keyword', api_views.TemplateKeywordViewset ,basename= 'textkeyword')
+router.register(r'text-template', api_views.TextTemplateViewset ,basename='texttemplate')
 
 urlpatterns = router.urls
 urlpatterns += [

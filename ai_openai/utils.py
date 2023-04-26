@@ -78,10 +78,7 @@ def get_prompt_freestyle(prompt):
 model_edit = os.getenv('OPENAI_EDIT_MODEL')
 
 def get_prompt_edit(input_text ,instruction ):
-    response = openai.Edit.create(model=model_edit, input=input_text.strip(),instruction=instruction,
-                # temperature=0.7,
-                # top_p=1,
-                )
+    response = openai.Edit.create(model=model_edit, input=input_text.strip(),instruction=instruction,)
     return response
     
 #DALLE

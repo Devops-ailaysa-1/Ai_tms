@@ -41,29 +41,30 @@ def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
 def creating_image_bounding_box(image_path):
     poly_line = []
     pillow_image_to_extract_color =  Image.open(image_path) 
-    texts = image_ocr_google_cloud_vision(image_path,inpaint = True)  
+    texts=image_ocr_google_cloud_vision(image_path,inpaint=True)  
     text_and_bounding_results = {}
     no_of_segments = 0
     text_list = []
     for i in  texts.pages:
         for j in i.blocks:
-            x,y,w,h = j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y ,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
-            vertex = j.bounding_box.vertices
-            poly_line.append([[vertex[0].x ,vertex[0].y] , [vertex[1].x,vertex[1].y] ,[vertex[2].x ,vertex[2].y] ,[vertex[3].x,vertex[3].y]])
-            final_color = color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
+            x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
+            vertex=j.bounding_box.vertices
+            poly_line.append([[vertex[0].x ,vertex[0].y],[vertex[1].x,vertex[1].y],[vertex[2].x ,vertex[2].y] ,[vertex[3].x,vertex[3].y]])
+            final_color=color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
             for k in j.paragraphs:
-                # text_list = [] 
-                for a in  k.words:
+                for a in k.words:
                     text_list.append(" ") 
-                    font_size = []
-                    font_size2 = []  
+                    font_size=[]
+                    font_size2=[]  
                     for b in a.symbols:
                         text_list.append(b.text)
-                        fx,fy,fw,fh  = b.bounding_box.vertices[0].x,b.bounding_box.vertices[1].y ,b.bounding_box.vertices[2].x,b.bounding_box.vertices[3].y
+                        fx,fy,fw,fh=b.bounding_box.vertices[0].x,b.bounding_box.vertices[1].y,b.bounding_box.vertices[2].x,b.bounding_box.vertices[3].y
                         font_size.append(fh-fy)  
                         font_size2.append(fw-fx)
-            text_and_bounding_results[no_of_segments] = {"text":"".join(text_list),
-            "bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),"fontsize2":sum(font_size2)//len(font_size2),"color1":final_color ,"poly_line":poly_line}
+            text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],
+                                                         "fontsize":sum(font_size)//len(font_size),
+                                                         "fontsize2":sum(font_size2)//len(font_size2),
+                                                         "color1":final_color ,"poly_line":poly_line}
             no_of_segments+=1
             text_list = []
     return text_and_bounding_results 
@@ -104,19 +105,16 @@ def inpaint_image_creation(image_details):
         image_details.image = image_byte_content
         image_details.save()
     img = cv2.imread(img_path)
-    print(mask.shape)
-    print(img.shape)
     if image_details.mask:
         image_to_extract_text = np.bitwise_and(mask ,img)
         content = image_content(image_to_extract_text)
         inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
-        image_text_details = creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
+        image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
 
         output=inpaint_image(img_path, mask_path)
         if output['code']==200:
-            print(output)
             res=np.reshape(output['result'],img.shape)   
             return res,image_text_details
         else:

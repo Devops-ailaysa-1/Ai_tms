@@ -6,14 +6,13 @@ from ai_imagetranslation.utils import inpaint_image_creation ,image_content
 from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
-
+import copy
 class ImageloadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Imageload
         fields = ('id','image','file_name','types','height','width')
         
     def create(self, validated_data):
-        from PIL import Image
         user =  self.context['request'].user
         data = {**validated_data ,'user':user}
         instance =  Imageload.objects.create(**data)
@@ -103,7 +102,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.types  = str(validated_data.get('image')).split('.')[-1]
 
         if validated_data.get('mask_json'): #also creation of mask image using node server
- 
             instance.mask_json = mask_json
             instance.save()
             
@@ -125,22 +123,27 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.mask_json = mask_json
             instance.mask = mask_image
             instance.save()
-            inpaint_out_image,source_bounding_box=inpaint_image_creation(instance)
-            instance.source_bounding_box = source_bounding_box
-            content = image_content(inpaint_out_image)
-            inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
-            instance.inpaint_image = inpaint_image_file 
-            instance.save()
+            ####to create instance for source language
+            if not instance.source_bounding_box:
+                
+                inpaint_out_image,source_bounding_box=inpaint_image_creation(instance)
+                src_json=copy.deepcopy(source_bounding_box)
+                instance.source_bounding_box = src_json 
+                content=image_content(inpaint_out_image)
+                inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
+                instance.inpaint_image = inpaint_image_file 
+            
+            ####to create instance for target language
             for tar_lang in inpaint_creation_target_lang:
                 tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())   
                 source_bbox = source_bounding_box
-                instance.save()
                 for text in source_bbox.values(): 
                     translate_bbox = get_translation(1,source_string=text['text'],source_lang_code='en',
                                                      target_lang_code=tar_lang.locale.first().locale_code)
                     text['text']=translate_bbox
                 tar_bbox.target_bounding_box=source_bbox
                 tar_bbox.save()
+            instance.save()
             return instance
             # for im in im_details:
             #     inpaint_out_image,source_bounding_box=inpaint_image_creation(im)
@@ -161,27 +164,27 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             # return im_details
  
         ####update for target and source json 
-        bounding_box_source_update = validated_data.get('bounding_box_source_update' ,None)
-        bounding_box_target_update = validated_data.get('bounding_box_target_update' ,None)
-        target_update_id = validated_data.get('target_update_id' ,None)
-        source_canvas_json = validated_data.get('source_canvas_json' ,None)
-        target_canvas_json = validated_data.get('target_canvas_json' ,None)
-        thumbnail = validated_data.get('thumbnail' , None)
-        export = validated_data.get('export' , None)
+        bounding_box_source_update=validated_data.get('bounding_box_source_update',None)
+        bounding_box_target_update=validated_data.get('bounding_box_target_update',None)
+        target_update_id=validated_data.get('target_update_id',None)
+        source_canvas_json=validated_data.get('source_canvas_json',None)
+        target_canvas_json=validated_data.get('target_canvas_json',None)
+        thumbnail=validated_data.get('thumbnail',None)
+        export=validated_data.get('export',None)
         
         if export and target_update_id:
-            im_export = ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
-            im_export.export = export
+            im_export=ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
+            im_export.export=export
             im_export.save()
         
         if thumbnail and target_update_id:
-            im_thumbnail = ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
-            im_thumbnail.thumbnail = thumbnail
+            im_thumbnail=ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
+            im_thumbnail.thumbnail=thumbnail
             im_thumbnail.save()
             
         if bounding_box_target_update and target_update_id:
-            im_cre = ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
-            im_cre.target_bounding_box = bounding_box_target_update
+            im_cre=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
+            im_cre.target_bounding_box=bounding_box_target_update
             im_cre.save()
             
         if bounding_box_source_update:
@@ -189,11 +192,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             
         if source_canvas_json:
-             instance.source_canvas_json = source_canvas_json
+             instance.source_canvas_json=source_canvas_json
              instance.save()
              
         if target_canvas_json and target_update_id:
-            im_cre = ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
+            im_cre = ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
             im_cre.target_canvas_json = target_canvas_json
             im_cre.save()
         return instance 
