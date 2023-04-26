@@ -20,6 +20,7 @@ from ai_workspace_okapi.utils import special_character_check
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 import string
+from ai_openai.utils import blog_generator
 from django.db.models import Case, IntegerField, When, Value
 from django.db.models.functions import Coalesce
 from django.db.models import Case, ExpressionWrapper, F
@@ -396,16 +397,25 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             outlines = [i.blog_outline for i in outline_section_list]
         selected_outline_section_list = ",".join(outlines)
         print("Selected------------>",selected_outline_section_list)
-        prompt = blog_article_start_phrase.format(title,keyword,selected_outline_section_list)
-        prompt+=', in {} tone'.format(instance.blog_creation.tone.tone)
-        prompt+='. Format everything in Markdown.'
-        print("prompt____article--->>>>",prompt)
-        # if isinstance(prompt,list):
-        prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
-        print("prot_resp--->>>>>>>>>>>",prompt_response)
-        prompt_response_article_resp = prompt_response['choices'][0].message['content']
-        total_token = openai_token_usage(prompt_response)
-        token_usage = get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
+        # prompt = blog_article_start_phrase.format(title,keyword,selected_outline_section_list)
+        # prompt+=', in {} tone'.format(instance.blog_creation.tone.tone)
+        # print("prompt____article--->>>>",prompt)
+        # prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1) outline_section_prompt_list ,title,tone
+        prompt_responses = blog_generator(outline_section_prompt_list= outlines,title=title,tone=instance.blog_creation.tone.tone,
+                                              keyword=keyword)
+        prompt_response_article_resp=[]
+        token_usage=0
+        for count,prompt_response in enumerate(prompt_responses):
+            generated_text=prompt_response.choices[0].text
+            prompt_response_article_resp.append('\n'+'<h1>'+outlines[count]+'<h1>'+generated_text)
+            total_token=openai_token_usage(prompt_response)
+            token_usage+=get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
+
+        prompt_response_article_resp= '<h1>'+title+'<h1>'+'\n\n'+"'\n".join(prompt_response_article_resp)
+        print("prot_resp--->>>>>>>>>>>",prompt_response_article_resp)
+        # prompt_response_article_resp = prompt_response['choices'][0].message['content']
+        # total_token = openai_token_usage(prompt_response)
+        # token_usage = get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
         print("token_usage---->>",token_usage)
 
         if instance.blog_creation.user_language_id not in blog_available_langs:
@@ -415,13 +425,12 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
                                                                                  instance.blog_creation.user_language_code,'en')
             tot_tok =  token_usage+consumable_credits_for_article_gen
-            AiPromptSerializer().customize_token_deduction(instance.blog_creation
-                                                           ,tot_tok)
+            print("tot_tok",tot_tok)
+            AiPromptSerializer().customize_token_deduction(instance.blog_creation,tot_tok)
             instance.blog_article_mt=prompt_response_article_resp
         else:
             instance.blog_article = prompt_response_article_resp 
-            AiPromptSerializer().customize_token_deduction(instance.blog_creation
-                                                           ,token_usage)
+            AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
         instance.save()
         article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
         tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
