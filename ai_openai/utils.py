@@ -1,4 +1,4 @@
-import json,logging,mimetypes,os
+import json,logging,mimetypes,os,openai,asyncio, math
 import re,requests,time,urllib.request
 from django.contrib.auth import settings
 from django.http import HttpResponse
@@ -6,17 +6,14 @@ from ai_auth.models import UserCredits
 from ai_tms.settings import OPENAI_API_KEY ,OPENAI_MODEL
 from ai_staff.models import Languages
 from django.db.models import Q
-import math
-import requests
 from io import BytesIO
 from PIL import Image
 logger = logging.getLogger('django')
-import openai
 openai.api_key = os.getenv('OPENAI_API_KEY')
+
 def ceil_round_off(token_len):
     import math
     return math.ceil(len(token_len)/4)
-    
     
 def get_consumable_credits_for_openai_text_generator(total_token):
     total_consumable_token_credit = math.ceil(total_token/12)     
@@ -89,7 +86,6 @@ def get_prompt_chatgpt_turbo(prompt,n):
     return completion
 
 
-import asyncio
 
 async def generate_text(prompt):
     response = await openai.Completion.acreate(engine="text-davinci-003",prompt=prompt,max_tokens=150,n=1,top_p=1,
