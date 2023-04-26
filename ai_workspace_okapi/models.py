@@ -157,6 +157,28 @@ class Segment(BaseSegment):
                     target_joined += split_seg.source
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
+
+    @property
+    def get_mt_raw_target_if_have(self):
+        if self.is_split in [False, None]:
+            mt_raw = self.get_active_object().seg_mt_raw.mt_raw
+            print("RR---------->",mt_raw)
+            if mt_raw != None:
+                return mt_raw
+            else:
+                return self.get_active_object().source
+        else:
+            split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
+            target_joined = ""
+            for split_seg in split_segs:
+                if split_seg.mt_raw_split_segment != None:
+                    target_joined += split_seg.mt_raw_split_segment.first().mt_raw
+                else:
+                    target_joined += split_seg.source
+            return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
+
+
     @property
     def get_merge_segment_count(self):
         count = 0
@@ -281,7 +303,7 @@ class SplitSegment(BaseSegment):
 
 class MT_RawTranslation(models.Model):
 
-    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
+    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL,related_name='seg_mt_raw')
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="segment_mt_engine")
     mt_raw = models.TextField()
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="mt_engine_task")
