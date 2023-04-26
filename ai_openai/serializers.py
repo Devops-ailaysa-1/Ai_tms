@@ -398,6 +398,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         print("Selected------------>",selected_outline_section_list)
         prompt = blog_article_start_phrase.format(title,keyword,selected_outline_section_list)
         prompt+=', in {} tone'.format(instance.blog_creation.tone.tone)
+        prompt+='. Format everything in Markdown.'
         print("prompt____article--->>>>",prompt)
         # if isinstance(prompt,list):
         prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)

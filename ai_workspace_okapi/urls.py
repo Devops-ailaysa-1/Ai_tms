@@ -34,7 +34,7 @@ urlpatterns+=[
     path('split/segment/', api_views.SplitSegmentView.as_view({"post": "create"}), name='split-segment'),
     path("mt_raw_and_tm/<int:segment_id>", api_views.MT_RawAndTM_View.as_view(), name="mt-raw"),
 
-
+    
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(),\
          name="document-convert-to-file"),
     path("outputtypes", api_views.output_types, name="output-types"),
@@ -61,7 +61,9 @@ urlpatterns+=[
     path('grammercheck/',api_views.grammar_check_model, name ='grammercheck'),
     path('paraphrase/',api_views.paraphrasing, name = 'paraphrase'),
     path('download_audio_file/',api_views.download_audio_output_file),
+    path('download_mt_file/',api_views.download_mt_file),
     path('download_converted_audio_file/',api_views.download_converted_audio_file),
+    path('get_mt_raw/<int:task_id>/',api_views.get_mt_raw),
 ]
 
 urlpatterns+=[
