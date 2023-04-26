@@ -64,7 +64,7 @@ urlpatterns += [
 	path('task_assign_update/',api_views.TaskAssignUpdateView.as_view({'put':'update'})),
 	path('get_assign_to_list/',api_views.get_assign_to_list),
 	path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
-	path('file_project_list/',api_views.get_file_project_list),
+	path('file_project_list/',api_views.WriterProjectListView.as_view({'get':'list'})),
 	path('assign_to/',api_views.AssignToListView.as_view({'get': 'list'}),name='assign-list'),
 	path('tasks_list/',api_views.tasks_list),
 	path('used_steps/',api_views.previously_created_steps),
