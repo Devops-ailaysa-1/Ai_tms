@@ -435,29 +435,29 @@ class DocumentViewByDocumentId(views.APIView):
         # else:
         #     return Response({"msg" : "Unauthorised"}, status=401)
 
-@api_view(['GET',])
-@permission_classes([IsAuthenticated])
-def get_mt_raw(request,task_id):
-    from ai_auth.tasks import mt_raw_update
-    print("TT--------->",task_id)
-    data={}
-    task = Task.objects.get(id=task_id)
-    if task.document == None:
-        print("Document process first")
-        document_view_by_task = DocumentViewByTask()
-        response = document_view_by_task.get(request,task_id)
-        print("RR------->",response.data)
-    else:
-        result = mt_raw_update.apply((task_id,))
-        if result.successful():
-            print('Task completed successfully')
-            print('Result:', result.result)
-            data = {'msg':'completed call download','doc_id':task.document.id}
-        else:
-            print('Task failed')
-            print('Exception:', result.result)
+# @api_view(['GET',])
+# @permission_classes([IsAuthenticated])
+# def get_mt_raw(request,task_id):
+#     from ai_auth.tasks import mt_raw_update
+#     print("TT--------->",task_id)
+#     data={}
+#     task = Task.objects.get(id=task_id)
+#     if task.document == None:
+#         print("Document process first")
+#         document_view_by_task = DocumentViewByTask()
+#         response = document_view_by_task.get(request,task_id)
+#         print("RR------->",response.data)
+#     else:
+#         result = mt_raw_update.apply((task_id,))
+#         if result.successful():
+#             print('Task completed successfully')
+#             print('Result:', result.result)
+#             data = {'msg':'completed call download','doc_id':task.document.id}
+#         else:
+#             print('Task failed')
+#             print('Exception:', result.result)
         
-    return Response(data,status=200)
+#     return Response(data,status=200)
 
 
 # from rest_framework import pagination
