@@ -376,8 +376,14 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         if initial_credit < 700:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         blog_article_start_phrase = instance.sub_categories.prompt_sub_category.first().start_phrase
-        title = instance.blog_creation.user_title if instance.blog_creation.user_title else instance.blog_creation.user_title_mt
-        keyword = instance.blog_creation.keywords if instance.blog_creation.keywords else instance.blog_creation.keywords_mt
+        title = instance.blog_creation.user_title
+        detected_lang = lang_detector(title)
+        if detected_lang!='en':
+            title = instance.blog_creation.user_title_mt
+        keyword = instance.blog_creation.keywords 
+        detected_lang = lang_detector(keyword)
+        if detected_lang!='en':
+            keyword = instance.blog_creation.keywords_mt
         queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
         # queryset_new = queryset.annotate(
         #                 order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
@@ -407,7 +413,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         token_usage=0
         for count,prompt_response in enumerate(prompt_responses):
             generated_text=prompt_response.choices[0].text
-            prompt_response_article_resp.append('\n'+'<h1>'+outlines[count]+'<h1>'+generated_text)
+            prompt_response_article_resp.append('\n'+'<h2>'+outlines[count]+'<h2>'+generated_text)
             total_token=openai_token_usage(prompt_response)
             token_usage+=get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
 
