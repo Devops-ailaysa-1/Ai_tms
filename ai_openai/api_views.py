@@ -502,7 +502,6 @@ class BlogOutlineViewset(viewsets.ViewSet):
         serializer=BlogOutlineSerializer(query_set )
         return Response(serializer.data)
 
-
     def update(self,request,pk):
         select_group=request.POST.get('select_group',None)
         query_set = BlogOutline.objects.get(id = pk)
