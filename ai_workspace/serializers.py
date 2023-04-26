@@ -1010,7 +1010,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Task
 		fields = \
-			("id", "filename", "download_audio_source_file", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
+			("id", "filename",'document',"download_audio_source_file", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
 			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',)
 
 	def get_converted(self,obj):
