@@ -248,9 +248,6 @@ def file_pdf_check(file_path,pdf_id):
         # else:
         return None,None
     
-    
- 
-
 
 from ai_workspace.models import Task
 def pdf_conversion(id ):
@@ -390,7 +387,6 @@ def remove_duplicate_new_line(text):
 #     len_doc = doc.page_count
 #     doc.close()
 #     return ["text" if text_perc < 0.01 else "ocr" ,len_doc ]
-
 
 
 
