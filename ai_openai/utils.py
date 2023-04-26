@@ -41,52 +41,27 @@ def openai_text_trim(text):
 import backoff
 @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt(prompt ,model_name , max_token ,n ):
-
     #max_token = 256
     temperature=0.7
     frequency_penalty = 1
     presence_penalty = 1
     top_p = 1
-
-    response = openai.Completion.create(
-                model=model_name, 
-                prompt=prompt.strip(),
-                temperature=temperature,
-                max_tokens=int(max_token),
-                top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty,
-                # stop = ['#'],
-                n=n,
-                #logit_bias = {"50256": -100}
-                )
+    response = openai.Completion.create(model=model_name, prompt=prompt.strip(),temperature=temperature,
+                                        max_tokens=int(max_token),top_p=top_p,frequency_penalty=frequency_penalty,
+                                        presence_penalty=presence_penalty,n=n)    # stop = ['#'],#logit_bias = {"50256": -100}        
     return response
 
 @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt_freestyle(prompt):
-    response = openai.Completion.create(
-                model="text-curie-001",
-                prompt=prompt.strip(),
-                temperature=0.7,
-                max_tokens=300,
-                top_p=1,
-                frequency_penalty=1,
-                presence_penalty=1,
-                n=1,
-                #logit_bias = {"50256": -100}
-                )
+    response = openai.Completion.create(model="text-curie-001",prompt=prompt.strip(),temperature=0.7,max_tokens=300,
+                                        top_p=1,frequency_penalty=1,presence_penalty=1,n=1,)#logit_bias = {"50256": -100}
     return response
 
 model_edit = os.getenv('OPENAI_EDIT_MODEL')
 
 def get_prompt_edit(input_text ,instruction ):
-    response = openai.Edit.create(
-                model=model_edit, 
-                input=input_text.strip(),
-                instruction=instruction,
-                # temperature=0.7,
-                # top_p=1,
-                )
+    response = openai.Edit.create(model=model_edit, input=input_text.strip(),instruction=instruction,) # temperature=0.7,
+                # top_p=1,    
     return response
     
 #DALLE
@@ -110,10 +85,50 @@ def get_img_content_from_openai_url(image_url):
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
 def get_prompt_chatgpt_turbo(prompt,n):
-    completion = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "user", "content": prompt}
-    ],n=n
-    )
+    completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],n=n)
     return completion
+
+
+import asyncio
+
+async def generate_text(prompt):
+    response = await openai.Completion.acreate(engine="text-davinci-003",prompt=prompt,max_tokens=150,n=1,top_p=1,
+                                               frequency_penalty=1,presence_penalty=1,temperature=0.7,)
+    return response
+
+async def generate_texts(outline_section_prompt_list , title ,tone ,keyword):
+    coroutines=[]
+    for prompt in outline_section_prompt_list:
+        prompt='Create a paragraph for {} for a title {} with keywords {} in {} tone'.format(prompt,title,keyword,tone)
+        coroutines.append(generate_text(prompt))
+    return await asyncio.gather(*coroutines)
+
+def blog_generator(outline_section_prompt_list ,title,tone,keyword):
+    results = asyncio.run(generate_texts(outline_section_prompt_list ,title ,tone ,keyword))
+    return  results
+
+
+from docx import Document
+from ai_openai.html2docx_custom import HtmlToDocx
+import re
+document = Document()
+new_parser = HtmlToDocx()
+new_parser.table_style = 'TableGrid'
+
+
+def replace_hex_color(match):
+    hex_color = match.group(1)
+    red, green, blue = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    rgb_color = f"rgb({red}, {green}, {blue})"
+    return rgb_color
+
+def replace_hex_colors_with_rgb(html):
+    hex_color_regex = re.compile("'#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})'")
+    html = hex_color_regex.sub(replace_hex_color, html)
+    return html
+
+
+# updatedHtml = replace_hex_colors_with_rgb("html_file")  
+# htmlupdates = updatedHtml.replace('<br />', '')
+# new_parser.add_html_to_document(htmlupdates, document)
+# document.save('file_name.docx')s

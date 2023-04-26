@@ -3780,6 +3780,21 @@ files = [
 ]
 
 [[package]]
+name = "quickemailverification"
+version = "1.0.3"
+description = "Official QuickEmailVerification API library client for python"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "quickemailverification-1.0.3.tar.gz", hash = "sha256:3f8b2dd0e5f234d774242359319af70a6532fc747afa49f99630cc621e1d84d4"},
+]
+
+[package.dependencies]
+requests = ">=2.1.0"
+six = ">=1.9.0"
+
+[[package]]
 name = "quill-delta"
 version = "1.0.3"
 description = "Python port of the quill.js delta library that enables operational transformation with aditional functionality for rendering html"
@@ -5164,4 +5179,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "92629203428fae1f955f922ea8d61ad90db1cfdab8c69a594859b079340b1793"
+content-hash = "e54f9926e1036a2a290e7c8fb71f1c9f0e41d2a1ac8ae67c30ad808e16dec22d"
