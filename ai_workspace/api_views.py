@@ -1693,14 +1693,22 @@ class ProjectListView(viewsets.ModelViewSet):
 
         
 
-@permission_classes([IsAuthenticated])
-@api_view(['GET',])
-def get_file_project_list(request):
-    queryset = Project.objects.filter(Q(ai_user = request.user)|Q(team__owner = request.user)\
-                    |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
-    serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
-    data = serializer.data
-    return Response(serializer.data)
+# @permission_classes([IsAuthenticated])
+# @api_view(['GET',])
+# def get_file_project_list(request):
+class WriterProjectListView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectListSerializer
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+
+    def list(self,request):
+        queryset = Project.objects.filter(Q(ai_user = request.user)|Q(team__owner = request.user)\
+                        |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        serializer = ProjectListSerializer(pagin_tc, many=True, context={'request': request})
+        response = self.get_paginated_response(serializer.data)
+        return response
 
 
 
