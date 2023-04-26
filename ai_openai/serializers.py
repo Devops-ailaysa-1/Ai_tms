@@ -13,6 +13,7 @@ from .utils import get_prompt ,get_consumable_credits_for_openai_text_generator,
 from ai_workspace_okapi.utils import get_translation
 from ai_tms.settings import  OPENAI_MODEL
 from django.db.models import Q
+from ai_openai.utils import outline_gen
 from googletrans import Translator
 from ai_auth.api_views import get_lang_code
 from ai_workspace.api_views import UpdateTaskCreditStatus ,get_consumable_credits_for_text
@@ -670,7 +671,9 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         prompt = blog_outline_start_phrase.start_phrase.format(title,keywords)
         prompt+=', in {} tone'.format(instance.blog_title_gen.blog_creation_gen.tone.tone)
         print("PR------------->",prompt)
-        prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=2)
+        # prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
+        prompt_response_gpt = outline_gen(prompt=prompt)
+
         prompt_response = prompt_response_gpt.choices
         total_token = prompt_response_gpt['usage']['total_tokens']
         total_token = get_consumable_credits_for_openai_text_generator(total_token)

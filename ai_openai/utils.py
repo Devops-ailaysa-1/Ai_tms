@@ -85,8 +85,6 @@ def get_prompt_chatgpt_turbo(prompt,n):
     completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],n=n)
     return completion
 
-
-
 async def generate_text(prompt):
     response = await openai.Completion.acreate(engine="text-davinci-003",prompt=prompt,max_tokens=150,n=1,top_p=1,
                                                frequency_penalty=1,presence_penalty=1,temperature=0.7,)
@@ -103,6 +101,17 @@ def blog_generator(outline_section_prompt_list ,title,tone,keyword):
     results = asyncio.run(generate_texts(outline_section_prompt_list ,title ,tone ,keyword))
     return  results
 
+############
+async def generate_outline_response(prompt):
+    response = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],
+                                                   n=1,max_tokens=170)
+    return response 
+
+async def outline_gen(prompt):
+    prompt = prompt+" and every outline should be less than three words."
+    response = await generate_outline_response(prompt)
+    return response
+######################
 
 from docx import Document
 from ai_openai.html2docx_custom import HtmlToDocx
