@@ -41,7 +41,7 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
         return representation
 
 class ImageTranslateSerializer(serializers.ModelSerializer):  
-    image_inpaint_creation = ImageInpaintCreationSerializer(source= 's_im' ,many=True,read_only=True)
+    image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
     inpaint_creation_target_lang = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),
                                                         required=False,write_only=True)
     bounding_box_target_update = serializers.JSONField(required=False)
@@ -145,23 +145,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 tar_bbox.save()
             instance.save()
             return instance
-            # for im in im_details:
-            #     inpaint_out_image,source_bounding_box=inpaint_image_creation(im)
-            #     im.source_bounding_box = source_bounding_box
-            #     content = image_content(inpaint_out_image)
-            #     inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
- 
-            #     im.inpaint_image = inpaint_image_file 
-            #     im.save()
-            #     for tar_lang in inpaint_creation_target_lang:
-            #         tar_bbox=ImageInpaintCreation.objects.create(source_image=im,target_language=tar_lang.locale.first())  #tar_lang.locale.first()
-            #         source_bbox = source_bounding_box
-            #         for text in source_bbox.values(): 
-            #             translate_bbox = get_translation(1,source_string=text['text'],source_lang_code='en',target_lang_code=tar_lang.locale.first().locale_code)
-            #             text['text']=translate_bbox
-            #         tar_bbox.target_bounding_box = source_bbox
-            #         tar_bbox.save()
-            # return im_details
  
         ####update for target and source json 
         bounding_box_source_update=validated_data.get('bounding_box_source_update',None)
@@ -200,5 +183,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             im_cre.target_canvas_json = target_canvas_json
             im_cre.save()
         return instance 
-    
-         
+
+
+
+# class ImageloadRetrieveLSerializer(serializers.ModelSerializer):
+#     image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)

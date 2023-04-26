@@ -8,7 +8,6 @@ from ai_auth.models import AiUser
 
 class CanvasCatagories(models.Model):
     catagory_name = models.CharField(max_length=50,null=True,blank=True)
-
     def __str__(self) -> str:
         return self.catagory_name
 
@@ -79,8 +78,7 @@ class CanvasTranslatedJson(models.Model):
     undo_hide_tar = models.BooleanField(default=False)
     class Meta:
         constraints = [
-        models.UniqueConstraint(fields=['canvas_design', 'source_language','target_language'], name="%(app_label)s_%(class)s_unique")
-        ]
+        models.UniqueConstraint(fields=['canvas_design', 'source_language','target_language'], name="%(app_label)s_%(class)s_unique")]
 
 class CanvasTargetJsonFiles(models.Model):
     canvas_trans_json = models.ForeignKey(CanvasTranslatedJson,related_name='canvas_json_tar', on_delete=models.CASCADE)

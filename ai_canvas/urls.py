@@ -26,6 +26,7 @@ urlpatterns += [
     path('image-term/',api_views.free_pix_api , name='freepixapi'),
     path('instane-translate/',api_views.instant_canvas_translation,name='instant_canvas_translation'),
     path('images/',api_views.pixabay_api , name='pixabayapi'),
+    path('canvas-export',api_views.canvas_export_download,name='canvas_export_download')
     
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

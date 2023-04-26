@@ -96,14 +96,14 @@ def inpaint_image_creation(image_details):
     img_path=image_details.image.path
     mask_path=image_details.mask.path
     mask = cv2.imread(mask_path)
-    img_mode = Image.open(img_path)
-    if img_mode.mode == 'RGBA':
-        img_mode = img_mode.convert('RGB')
-        img_mode = np.array(img_mode)
-        name = image_details.image.name.split('/')[-1]
-        image_byte_content= core.files.File(core.files.base.ContentFile(image_content(img_mode)),name)
-        image_details.image = image_byte_content
-        image_details.save()
+    # img_mode = Image.open(img_path)
+    # if img_mode.mode == 'RGBA':
+    #     img_mode = img_mode.convert('RGB')
+    #     img_mode = np.array(img_mode)
+    #     name = image_details.image.name.split('/')[-1]
+    #     image_byte_content= core.files.File(core.files.base.ContentFile(image_content(img_mode)),name)
+    #     image_details.image = image_byte_content
+    #     image_details.save()
     img = cv2.imread(img_path)
     if image_details.mask:
         image_to_extract_text = np.bitwise_and(mask ,img)

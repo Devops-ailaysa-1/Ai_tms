@@ -1,4 +1,4 @@
-from rest_framework import viewsets   
+from rest_framework import viewsets, generics
 from ai_imagetranslation.serializer import ImageloadSerializer ,ImageTranslateSerializer
 from rest_framework.response import Response
 from ai_imagetranslation.models import Imageload ,ImageTranslate
@@ -87,3 +87,10 @@ class ImageTranslateViewset(viewsets.ViewSet):
         query_obj = ImageTranslate.objects.get(id = pk)
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+
+# class ImageloadRetrieveViewset(generics.RetrieveAPIView):
+#     queryset = Imageload.objects.all()
+#     serializer_class = ImageloadRetrieveRetrieveSerializer
+#     lookup_field = 'id'

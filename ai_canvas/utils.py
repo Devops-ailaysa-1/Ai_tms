@@ -96,7 +96,21 @@ def thumbnail_create(json_str,formats):
     if thumb_image.status_code ==200:
         split_text_base64 = thumb_image.text.split(",")[-1]
         b64_bytes = base64.b64decode(split_text_base64)
-        print(b64_bytes)
         return b64_bytes
     else:
         return ValidationError("error in node server")
+
+
+
+def export_download(json_str,format,multipliervalue):
+    json_ = json.dumps(json_str)
+    data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
+
+    thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
+    if thumb_image.status_code ==200:
+        split_text_base64 = thumb_image.text.split(",")[-1]
+        b64_bytes = base64.b64decode(split_text_base64)
+        return b64_bytes
+    else:
+        return ValidationError("error in node server")
+
