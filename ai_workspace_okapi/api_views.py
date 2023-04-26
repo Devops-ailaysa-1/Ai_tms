@@ -1206,7 +1206,10 @@ def pre_process(data):
 def mt_raw_pre_process(data):
     for key in data['text'].keys():
         for d in data['text'][key]:
-            d['target'] = d['mt_raw_target']
+            if d['mt_raw_target'] != None:
+                d['target'] = d['mt_raw_target']
+            else:
+                d['target'] = d['source']
             del d['mt_raw_target']
     return data
 
@@ -2421,8 +2424,8 @@ def download_mt_file(request):
     state = mt_raw_update.AsyncResult(cel_task.celery_task_id).state
     print("st------>",state)
     if state == 'SUCCESS':
-        if cel_task.error_type == 'Insufficient Credits':
-            return Response({'msg':'Insufficient Credits'},status=400)
+        #if cel_task.error_type == 'Insufficient Credits':
+        #    return Response({'msg':'Insufficient Credits'},status=400)
         doc_to_file = DocumentToFile()
         res = doc_to_file.document_data_to_file(request,document_id,True)
         if res.status_code in [200, 201]:
