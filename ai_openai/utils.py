@@ -103,14 +103,19 @@ def blog_generator(outline_section_prompt_list ,title,tone,keyword):
 
 ############
 async def generate_outline_response(prompt):
-    response = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],
+    response = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt[0]}],
                                                    n=1,max_tokens=170)
     return response 
+ 
+async def outline_co(prompt):
+    coroutines=[]
+    prompt = [prompt]#+" and every outline should be less than three words."]
+    coroutines.append(generate_outline_response(prompt))
+    return await asyncio.gather(*coroutines)
 
-async def outline_gen(prompt):
-    prompt = prompt+" and every outline should be less than three words."
-    response = await generate_outline_response(prompt)
-    return response
+def outline_gen(prompt):
+    results = asyncio.run(outline_co(prompt))
+    return results[0]
 ######################
 
 from docx import Document
