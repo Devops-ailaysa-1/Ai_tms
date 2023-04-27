@@ -163,10 +163,7 @@ class Segment(BaseSegment):
         if self.is_split in [False, None]:
             mt_raw = self.seg_mt_raw.mt_raw
             print("RR---------->",mt_raw)
-            if mt_raw != None:
-                return mt_raw
-            else:
-                return self.get_active_object().source
+            return mt_raw
         else:
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
             target_joined = ""
