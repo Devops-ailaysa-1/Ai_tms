@@ -730,8 +730,11 @@ def mt_raw_update(task_id):
     
     for seg in final_segments:###############Need to revise####################
         try:
-            mt_raw = seg.seg_mt_raw
-        except MT_RawTranslation.DoesNotExist:
+            if (type(seg) is Segment) or (type(seg) is MergeSegment):
+                mt_raw = seg.seg_mt_raw
+            else:
+                mt_raw = seg.mt_raw_split_segment
+        except:
             mt_raw = None
         print("Seg---------->",seg) 
         print("MtRw---------->",mt_raw)
