@@ -712,6 +712,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         confirm_list = request.data.get('confirm_list', [])
         confirm_list = json.loads(confirm_list)
         print("RTR---------->",confirm_list)
+        msg=None
         
         for item in confirm_list:
             try:
