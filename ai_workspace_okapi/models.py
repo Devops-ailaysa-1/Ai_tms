@@ -163,16 +163,17 @@ class Segment(BaseSegment):
     @property
     def get_mt_raw_target_if_have(self):
         if self.is_split in [False, None]:
-            print(self)
-            if self.is_merged == None:
-               mt_raw = self.seg_mt_raw.mt_raw 
-               print("RR---------->",mt_raw)
-               return mt_raw
-            if self.is_merged and self.is_merge_start:
-                mt_raw = self.seg_mt_raw.mt_raw
-                print("RR---------->",mt_raw)
-                return mt_raw
+            print('self------>',self)
+            seg = self.get_active_object().id
+            print("seg------->",seg)
+            try:
+                mt_raw = Segment.objects.get(id=seg).seg_mt_raw.mt_raw
+            except:
+                mt_raw = None
+            print("RR---------------->",mt_raw)
+            return mt_raw
         else:
+            print("Inside else------->",self)
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
             target_joined = ""
             for split_seg in split_segs:
