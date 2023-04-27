@@ -3934,12 +3934,6 @@ def project_word_char_count(request):
         else:
             #from .api_views import ProjectAnalysisProperty
             try:
-                # task = pr_obj.get_tasks[0]
-                # obj = MTonlytaskCeleryStatus.object.filter(task_id = task.id).filter(task_name = 'project_analysis_property').last()
-                # state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
-                # if state == 'STARTED':
-                #     return Response({'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id},status=400)
-                # elif state == 'PENDING' or state =='None' or state == 'FAILURE':
                 celery_task = project_analysis_property.apply_async((pr_obj_id,), )
                 res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
                 #return ProjectAnalysisProperty.get(pr_obj_id)
