@@ -1201,7 +1201,8 @@ def long_text_process(consumable_credits,document_user,file_path,task,target_lan
 def pre_process(data):
     for key in data['text'].keys():
         for d in data['text'][key]:
-            del d['mt_raw_target']
+            #del d['mt_raw_target']
+            d.pop('mt_raw_target',None)
     return data
 
 def mt_raw_pre_process(data):
@@ -1211,7 +1212,8 @@ def mt_raw_pre_process(data):
                 d['target'] = d['mt_raw_target']
             else:
                 d['target'] = d['source']
-            del d['mt_raw_target']
+            #del d['mt_raw_target']
+            d.pop('mt_raw_target',None)
     return data
 
     
