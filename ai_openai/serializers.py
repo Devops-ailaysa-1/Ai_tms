@@ -575,7 +575,8 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         Blogtitle.objects.filter(blog_creation_gen=blog_title_gen_inst.blog_creation_gen).exclude(id = blog_title_gen_inst.id).update(selected_field=False)
         queryset = BlogOutlineSession.objects.filter(blog_title=blog_title_gen_inst)
         if queryset:instance = BlogOutline.objects.get(blog_title_gen=blog_title_gen_inst)
-        else:instance = BlogOutline.objects.create(**validated_data)
+        else:instance,created = BlogOutline.objects.get_or_create(**validated_data)
+        print("Ins---------->",instance)
         initial_credit = instance.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
         if initial_credit <150:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
@@ -847,7 +848,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         initial_credit = instance.user.credit_balance.get("total_left")
         total_usage = 0
         if initial_credit < 1400:
-            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+            raise serializers.ValidationError({'msg':'Insufficient Credits','blog_id':instance.id}, code=400)
 
         lang_detect_user_title_key = lang_detector(instance.user_title) 
         if lang_detect_user_title_key !='en':
