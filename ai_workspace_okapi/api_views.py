@@ -1208,8 +1208,8 @@ def pre_process(data):
 def mt_raw_pre_process(data):
     for key in data['text'].keys():
         for d in data['text'][key]:
-            if d['mt_raw_target'] != None:
-                d['target'] = d['mt_raw_target']
+            if d.get('mt_raw_target') != None:
+                d['target'] = d.get('mt_raw_target')
             else:
                 d['target'] = d['source']
             #del d['mt_raw_target']
