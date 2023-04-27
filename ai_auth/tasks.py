@@ -733,12 +733,16 @@ def mt_raw_update(task_id):
             if (type(seg) is Segment) or (type(seg) is MergeSegment):
                 mt_raw = seg.seg_mt_raw
             else:
-                mt_raw = seg.mt_raw_split_segment
+                if seg.mt_raw_split_segment.exists() == False:
+                    mt_raw = None
+                else:
+                    mt_raw = seg.mt_raw_split_segment.first().mt_raw
         except:
             mt_raw = None
         print("Seg---------->",seg) 
         print("MtRw---------->",mt_raw)
         if mt_raw == None:
+            print("Inside mt raw none")
             if seg.target == '' or seg.target==None:
                 print("**********************")
                 initial_credit = user.credit_balance.get("total_left")
@@ -787,7 +791,7 @@ def mt_raw_update(task_id):
     Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
     MergeSegment.objects.bulk_update(update_list_for_merged,['target','temp_target','status_id'])
     SplitSegment.objects.bulk_update(update_list_for_split,['target','temp_target','status_id'])
-
+    print("mt----------?",mt_segments)
     instances = [
             MT_RawTranslation(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
@@ -800,7 +804,7 @@ def mt_raw_update(task_id):
 
     tt = MT_RawTranslation.objects.bulk_create(instances, ignore_conflicts=True)
     print("norm and merg--------->",tt)
-
+    print("mt_split------------->",mt_split_segments)
     instances_1 = [
             MtRawSplitSegment(
                 mt_raw= re.sub(r'<[^>]+>', "", i['mt']),

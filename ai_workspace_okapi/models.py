@@ -181,6 +181,7 @@ class Segment(BaseSegment):
                     target_joined += split_seg.mt_raw_split_segment.first().mt_raw
                 else:
                     target_joined += split_seg.source
+            print("RR----------------->",target_joined)
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
 
