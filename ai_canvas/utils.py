@@ -101,7 +101,8 @@ def thumbnail_create(json_str,formats):
         return ValidationError("error in node server")
 
 
-
+import io
+from PIL import Image
 def export_download(json_str,format,multipliervalue):
     json_ = json.dumps(json_str)
     data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
@@ -110,7 +111,12 @@ def export_download(json_str,format,multipliervalue):
     if thumb_image.status_code ==200:
         split_text_base64 = thumb_image.text.split(",")[-1]
         b64_bytes = base64.b64decode(split_text_base64)
-        return b64_bytes
+        im_file = io.BytesIO(b64_bytes)
+        img = Image.open(im_file)
+        output_buffer=io.BytesIO()
+        img.save(output_buffer, format=format, optimize=True, quality=85)
+        compressed_data=output_buffer.getvalue()
+        return img
     else:
         return ValidationError("error in node server")
 
