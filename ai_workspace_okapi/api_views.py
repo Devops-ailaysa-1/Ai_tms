@@ -7,7 +7,7 @@ import json, logging,os,re,urllib.parse,xlsxwriter
 from json import JSONDecodeError
 from django.urls import reverse
 import requests
-from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update
+from ai_auth.tasks import google_long_text_file_process_cel,pre_translate_update,mt_raw_update
 from django.contrib.auth import settings
 from django.http import HttpResponse, JsonResponse
 import json
@@ -247,7 +247,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
 
         return document
     
-    def authorize_doc(self,doc,action):
+    def authorize_doc(self,request,doc,action):
         if  dict == type(doc):
             try:
                 doc =doc.get('doc')
@@ -255,7 +255,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return False 
             except:
                 return False 
-        authorize(self.request, resource=doc, actor=self.request.user, action=action)
+        authorize(request, resource=doc, actor=request.user, action=action)
 
     @staticmethod
     def create_document_for_task_if_not_exists(task):
@@ -370,7 +370,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
                 else:
                     document = self.create_document_for_task_if_not_exists(task)
-                    self.authorize_doc(document,action="read")
+                    self.authorize_doc(request,document,action="read") 
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
@@ -381,7 +381,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 return Response({"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
-                self.authorize_doc(document,action="read")
+                self.authorize_doc(request,document,action="read") 
                 try:
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
@@ -393,12 +393,12 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         return Response(document,status=400)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
-                self.authorize_doc(document,action="read")
+                self.authorize_doc(request,document,action="read") 
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
             document = self.create_document_for_task_if_not_exists(task)   
-            self.authorize_doc(document,action="read")        
+            self.authorize_doc(request,document,action="read")        
             try:
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
@@ -434,6 +434,30 @@ class DocumentViewByDocumentId(views.APIView):
         return Response(data, status=200)
         # else:
         #     return Response({"msg" : "Unauthorised"}, status=401)
+
+# @api_view(['GET',])
+# @permission_classes([IsAuthenticated])
+# def get_mt_raw(request,task_id):
+#     from ai_auth.tasks import mt_raw_update
+#     print("TT--------->",task_id)
+#     data={}
+#     task = Task.objects.get(id=task_id)
+#     if task.document == None:
+#         print("Document process first")
+#         document_view_by_task = DocumentViewByTask()
+#         response = document_view_by_task.get(request,task_id)
+#         print("RR------->",response.data)
+#     else:
+#         result = mt_raw_update.apply((task_id,))
+#         if result.successful():
+#             print('Task completed successfully')
+#             print('Result:', result.result)
+#             data = {'msg':'completed call download','doc_id':task.document.id}
+#         else:
+#             print('Task failed')
+#             print('Exception:', result.result)
+        
+#     return Response(data,status=200)
 
 
 # from rest_framework import pagination
@@ -688,6 +712,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         confirm_list = request.data.get('confirm_list', [])
         confirm_list = json.loads(confirm_list)
         print("RTR---------->",confirm_list)
+        msg=None
         
         for item in confirm_list:
             try:
@@ -1173,6 +1198,24 @@ def long_text_process(consumable_credits,document_user,file_path,task,target_lan
     f2.close()
 
 
+def pre_process(data):
+    for key in data['text'].keys():
+        for d in data['text'][key]:
+            del d['mt_raw_target']
+    return data
+
+def mt_raw_pre_process(data):
+    for key in data['text'].keys():
+        for d in data['text'][key]:
+            if d['mt_raw_target'] != None:
+                d['target'] = d['mt_raw_target']
+            else:
+                d['target'] = d['source']
+            del d['mt_raw_target']
+    return data
+
+    
+
 class DocumentToFile(views.APIView):
    
     @staticmethod
@@ -1209,6 +1252,20 @@ class DocumentToFile(views.APIView):
         return download_file(source_file_path)
 
 
+    def mt_pre_process(self,document_id):
+        doc = DocumentToFile.get_object(document_id)
+        task = doc.task_set.first()
+        segments = doc.segments_for_workspace.filter(seg_mt_raw__isnull=True)
+        split_segments = SplitSegment.objects.filter(text_unit__document=doc).filter(mt_raw_split_segment__isnull=True)
+        final_segments = list(chain(segments, split_segments))
+        print("Fs---------->",final_segments)
+        if final_segments:
+            cel = mt_raw_update.apply_async((task.id,))
+            if cel:
+                return {'status':False,'celery_id':cel.id}
+        else:
+            return {'status':True}
+
     #For Downloading Audio File################only for voice project###########Need to work
     def download_audio_file(self,document_user,document_id,voice_gender,language_locale,voice_name):
         res_1 = process_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
@@ -1218,12 +1275,6 @@ class DocumentToFile(views.APIView):
             doc = DocumentToFile.get_object(document_id)
             task = doc.task_set.first()
             return download_file(task.task_transcript_details.last().translated_audio_file.path)
-
-
-    # #FOR DOWNLOADING MTONLY FILE
-    # def download_mt_only_file(self,document_id):
-    #     pass
-
 
     # FOR DOWNLOADING BILINGUAL FILE
     def remove_tags(self, string):
@@ -1324,12 +1375,21 @@ class DocumentToFile(views.APIView):
             if output_type == "BILINGUAL":
                 return self.download_bilingual_file(document_id)
 
+
             # For Downloading Audio File
             if output_type == "AUDIO":
                 #res = self.document_data_to_file(request, document_id)
                 return self.download_audio_file(document_user,document_id,voice_gender,language_locale,voice_name)
 
-            res = self.document_data_to_file(request, document_id)
+            if output_type == "MTRAW":
+                mt_process = self.mt_pre_process(document_id)
+                print("In write--------->",mt_process.get('status'))
+                if mt_process.get('status') == True:
+                    res = self.document_data_to_file(request,document_id,True)
+                else:
+                    return Response({'msg':'Conversion is going on.Please wait',"celery_id":mt_process.get('celery_id')},status=400)
+            else:
+                res = self.document_data_to_file(request, document_id)
             if res.status_code in [200, 201]:
                 file_path = res.text
                 try:
@@ -1346,12 +1406,16 @@ class DocumentToFile(views.APIView):
             return JsonResponse({"msg": "Unauthorised"}, status=401)
 
     @staticmethod
-    def document_data_to_file(request, document_id):
+    def document_data_to_file(request, document_id,mt_raw=None):
         output_type = request.GET.get("output_type", "")
         document = DocumentToFile.get_object(document_id)
         doc_serlzr = DocumentSerializerV3(document)
         data = doc_serlzr.data
-
+        if mt_raw == True:
+            data = mt_raw_pre_process(data)
+        else:
+            data = pre_process(data)
+        print("Data--------------->",data)
         if 'fileProcessed' not in data:
             data['fileProcessed'] = True
         if 'numberOfWords' not in data: # we can remove this duplicate field in future
@@ -2164,8 +2228,18 @@ def get_segment_history(request):
         return Response({'msg':'Not found'}, status=404)
 ####################################################### Hemanth #########################################################
 
+<<<<<<< HEAD
 from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
+=======
+# @api_view(['POST',])############### only available for english ###################
+# def paraphrasing(request):
+
+from ai_workspace.api_views import get_consumable_credits_for_text
+from ai_openai.utils import get_prompt_chatgpt_turbo
+from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
+
+>>>>>>> origin/v4-merged-production
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
     from ai_workspace.api_views import get_consumable_credits_for_text
@@ -2342,6 +2416,41 @@ def download_audio_output_file(request):
     else:
         return Response({'msg':'Pending'},status=400)
 
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def download_mt_file(request):
+    from ai_workspace.models import MTonlytaskCeleryStatus
+    celery_id = request.GET.get('celery_id')
+    document_id = request.GET.get('document_id')
+    doc = Document.objects.get(id=document_id)
+    task = doc.task_set.first()
+    #user_credit = UserCredits.objects.get(Q(user=doc.doc_credit_debit_user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+    cel_task = MTonlytaskCeleryStatus.objects.filter(task = doc.task_set.first(),task_name='mt_raw_update').last()
+    print("YY----->",cel_task)
+    state = mt_raw_update.AsyncResult(cel_task.celery_task_id).state
+    print("st------>",state)
+    if state == 'SUCCESS':
+        #if cel_task.error_type == 'Insufficient Credits':
+        #    return Response({'msg':'Insufficient Credits'},status=400)
+        doc_to_file = DocumentToFile()
+        res = doc_to_file.document_data_to_file(request,document_id,True)
+        if res.status_code in [200, 201]:
+            file_path = res.text
+            try:
+                if os.path.isfile(res.text):
+                    if os.path.exists(file_path):
+                        return doc_to_file.get_file_response(file_path)
+            except Exception as e:
+                print("Exception during file output------> ", e)
+        else:
+            logger.info(f">>>>>>>> Error in output for document_id -> {document_id}<<<<<<<<<")
+            return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
+                        status=409)
+    elif state == 'FAILURE':
+        return Response({'msg':'Failure'},status=400)
+    else:
+        return Response({'msg':'Pending'},status=400)
+
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
@@ -2464,3 +2573,5 @@ def get_tags(seg):
     else:
         tags = remove_random_tags(seg.target_tags,random_tags)
     return tags
+
+

@@ -156,19 +156,25 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
         trim_whitespace=False)
     merge_segment_count = serializers.IntegerField(read_only=True,
         source="get_merge_segment_count", )
+    mt_raw_target = serializers.CharField(read_only=True, source="get_mt_raw_target_if_have",
+        trim_whitespace=False)
 
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+        fields = ['source', 'target','mt_raw_target', 'coded_source', 'coded_brace_pattern',
             'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
-            'coded_ids_sequence']
+            'coded_ids_sequence','mt_raw_target']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
         return ret
+
+
+    
+
 
 class MergeSegmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -234,6 +240,7 @@ class TextUnitSerializerV2(serializers.ModelSerializer):
             ret.pop("segment_ser")
         )
         return ret
+
 
 class TextUnitSerializerTest(serializers.ModelSerializer):
     class Meta:
@@ -419,6 +426,9 @@ class DocumentSerializerV3(DocumentSerializerV2):
             coll.update(itr)
         ret["text"] = coll
         return ret
+
+
+
 
 class MT_RawSerializer(serializers.ModelSerializer):
     mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
@@ -681,3 +691,57 @@ class VerbSerializer(serializers.Serializer):
 # Command Execution time: 0.9043436050415039 seconds
 # Execution time: 44.367270708084106 seconds
 # Postman: 1 m 36.06 s
+
+# class SegmentSerializerNew(serializers.ModelSerializer):# For Read only
+#     target = serializers.CharField(read_only=True, source="get_mt_raw_target_if_have",
+#         trim_whitespace=False)
+#     merge_segment_count = serializers.IntegerField(read_only=True,
+#         source="get_merge_segment_count", )
+
+#     class Meta:
+#         # pass
+#         model = Segment
+#         fields = ['id','source', 'target', 'coded_source', 'coded_brace_pattern',
+#             'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
+#         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+#             'coded_ids_sequence']
+#     def to_representation(self, instance):
+#         ret = super().to_representation(instance)
+#         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
+#         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
+#         return ret
+
+
+# class TextUnitSerializerNew(serializers.ModelSerializer):
+#     segment_ser = SegmentSerializerNew(many=True ,read_only=True, source="text_unit_segment_set")
+
+#     class Meta:
+#         model = TextUnit
+#         fields = (
+#             "segment_ser","okapi_ref_translation_unit_id"
+#         )
+
+#     def to_representation(self, instance):
+#         ret = super(TextUnitSerializerNew, self).to_representation(instance=instance)
+#         ret[ret.pop("okapi_ref_translation_unit_id")] = (
+#             ret.pop("segment_ser")
+#         )
+#         return ret
+
+
+# class DocumentSerializerNew(DocumentSerializerV2):
+#     text = TextUnitSerializerNew(many=True,  read_only=True, source="document_text_unit_set")
+#     filename = serializers.CharField(read_only=True, source="file.filename")
+#     class Meta(DocumentSerializerV2.Meta):
+#         model = Document
+#         fields = (
+#             "text",  'total_word_count', 'total_char_count', 'total_segment_count', "filename"
+#         )
+
+#     def to_representation(self, instance):
+#         ret = super().to_representation(instance=instance)
+#         coll = {}
+#         for itr in ret.pop("text", []):
+#             coll.update(itr)
+#         ret["text"] = coll
+#         return ret

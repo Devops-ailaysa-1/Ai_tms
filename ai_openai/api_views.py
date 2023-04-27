@@ -502,7 +502,6 @@ class BlogOutlineViewset(viewsets.ViewSet):
         serializer=BlogOutlineSerializer(query_set )
         return Response(serializer.data)
 
-
     def update(self,request,pk):
         select_group=request.POST.get('select_group',None)
         query_set = BlogOutline.objects.get(id = pk)
@@ -528,7 +527,7 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
 
         elif title:
             #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title).order_by('custom_order')
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title).order_by('id')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
             
         else:

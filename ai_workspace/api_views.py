@@ -1693,14 +1693,22 @@ class ProjectListView(viewsets.ModelViewSet):
 
         
 
-@permission_classes([IsAuthenticated])
-@api_view(['GET',])
-def get_file_project_list(request):
-    queryset = Project.objects.filter(Q(ai_user = request.user)|Q(team__owner = request.user)\
-                    |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
-    serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
-    data = serializer.data
-    return Response(serializer.data)
+# @permission_classes([IsAuthenticated])
+# @api_view(['GET',])
+# def get_file_project_list(request):
+class WriterProjectListView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectListSerializer
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+
+    def list(self,request):
+        queryset = Project.objects.filter(Q(ai_user = request.user)|Q(team__owner = request.user)\
+                        |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        serializer = ProjectListSerializer(pagin_tc, many=True, context={'request': request})
+        response = self.get_paginated_response(serializer.data)
+        return response
 
 
 
@@ -3361,7 +3369,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
         q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
         q1 = q1.filter(doc_name__icontains =query) if query else q1
-        q2 = BlogCreation.objects.filter(user = user).filter(document=None).annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
+        q2 = BlogCreation.objects.filter(user = user).filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
         q2 = q2.filter(user_title__icontains = query) if query else q2
         q3 = q1.union(q2)
         final_queryset = q3.order_by('-created_at')
@@ -3947,4 +3955,20 @@ def project_word_char_count(request):
 # def task_download(task_id):
 #     tt = Task.objects.get(id=task_id)
 #     mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
-    
+
+from celery.result import AsyncResult
+from django.http import HttpResponse
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def stop_task(request):
+    task_id = request.GET.get('task_id')
+    task = AsyncResult(task_id)
+    print("TT---------->",task.state)
+    if task.state == 'STARTED':
+        task.revoke(terminate=True)
+        return HttpResponse('Task has been stopped.') 
+    elif task.state == 'PENDING':
+        task.revoke()
+        return HttpResponse('Task has been revoked.')
+    else:
+        return HttpResponse('Task is already running or has completed.')
