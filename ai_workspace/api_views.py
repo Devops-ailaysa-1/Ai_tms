@@ -3906,9 +3906,9 @@ def project_word_char_count(request):
         obj = MTonlytaskCeleryStatus.objects.filter(project_id = pr).filter(task_name = 'project_analysis_property').last()
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
         print("State-------->",state)
-        if state == 'STARTED':
+        if state == 'STARTED' or state == 'PENDING':
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
-        elif state == 'PENDING' or state =='None' or state == 'FAILURE':
+        elif state =='None' or state == 'FAILURE':
             celery_task = project_analysis_property.apply_async((pr_obj.id,), )
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
