@@ -2710,7 +2710,7 @@ def get_task_status(request):
                     status = 'True' 
             if status == 'True':
                 progress = i.get_progress
-            res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
+            res.append({'task':i.id,'document':i.document_id,'open':status,'progress':progress,'msg':msg})
         return Response({'res':res})
     else:
         return Response({'msg':'No Detail'})
