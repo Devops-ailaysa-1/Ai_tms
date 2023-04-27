@@ -104,7 +104,7 @@ def blog_generator(outline_section_prompt_list ,title,tone,keyword):
 ############
 async def generate_outline_response(prompt):
     response = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt[0]}],
-                                                   n=1,max_tokens=170)
+                                                   n=2,max_tokens=170)
     return response 
  
 async def outline_co(prompt):

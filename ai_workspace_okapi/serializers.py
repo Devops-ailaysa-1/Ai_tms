@@ -118,6 +118,7 @@ class SegmentSerializerV2(SegmentSerializer):
         print("Ins-------->",instance)
         manual_confirm_status = TranslationStatus.objects.get(id=106)
         reviewed_status = TranslationStatus.objects.get(id=110)
+        tm_confirm_status = TranslationStatus.objects.get(id=102)
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
@@ -130,7 +131,8 @@ class SegmentSerializerV2(SegmentSerializer):
                 print("In target empty")
                 if (instance.text_unit.document.job.project.mt_enable == False)\
                  or (validated_data.get('status') == manual_confirm_status)\
-                 or (validated_data.get('status') == reviewed_status):
+                 or (validated_data.get('status') == reviewed_status)\
+                 or (validated_data.get('status') == tm_confirm_status):
                     print("mt dable and manual confirm check")
                     user = instance.text_unit.document.doc_credit_debit_user
                     initial_credit = user.credit_balance.get("total_left")
