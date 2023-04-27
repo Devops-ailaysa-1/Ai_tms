@@ -786,6 +786,7 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
         print("Blog------------>",blog)
         instance = blog
         consumable_credits = 0
+        credits_needed_to_generate = 2 
         blog_sub_phrase = PromptStartPhrases.objects.get(sub_category = instance.sub_categories)
         keyword_start_phrase = blog_sub_phrase.start_phrase.format(instance.response_copies_keyword)
         initial_credit = instance.user.credit_balance.get("total_left")
@@ -800,6 +801,8 @@ class BlogKeywordGenerateSerializer(serializers.ModelSerializer):
             title = instance.user_title_mt if lang_detect_user_title_key !='en' else instance.user_title
             token_usage = keyword_process(keyword_start_phrase,title,instance,trans=True)
         else:
+            if initial_credit < credits_needed_to_generate:#credits needed for keyword generation
+                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
             title = instance.user_title_mt if lang_detect_user_title_key !='en' else instance.user_title
             token_usage = keyword_process(keyword_start_phrase,instance.user_title,instance,trans=False)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.user, consumable_credits)                 
@@ -847,15 +850,15 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         instance = BlogCreation.objects.create(**validated_data)
         initial_credit = instance.user.credit_balance.get("total_left")
         total_usage = 0
-        if initial_credit < 1400:
-            raise serializers.ValidationError({'msg':'Insufficient Credits','blog_id':instance.id}, code=400)
+        # if initial_credit < 1400:
+        #     raise serializers.ValidationError({'msg':'Insufficient Credits','blog_id':instance.id}, code=400)
 
         lang_detect_user_title_key = lang_detector(instance.user_title) 
         if lang_detect_user_title_key !='en':
             consumable_credits = get_consumable_credits_for_text(instance.user_title,instance.user_language_code,'en')
 
             if initial_credit < consumable_credits:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                raise serializers.ValidationError({'msg':'Insufficient Credits','blog_id':instance.id}, code=400)
             
             instance.user_title_mt=get_translation(1,instance.user_title,lang_detect_user_title_key,"en",user_id=instance.user.id) if instance.user_title else None
             instance.save()
@@ -865,7 +868,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             consumable_credits = get_consumable_credits_for_text(instance.keywords,instance.user_language_code,'en')
 
             if initial_credit < consumable_credits:
-                raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+                raise serializers.ValidationError({'msg':'Insufficient Credits','blog_id':instance.id}, code=400)
             
             instance.keywords_mt=get_translation(1,instance.keywords,detected_lang,"en",user_id=instance.user.id) if instance.user_title else None
             instance.save() 
