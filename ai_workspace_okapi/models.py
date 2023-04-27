@@ -161,7 +161,7 @@ class Segment(BaseSegment):
     @property
     def get_mt_raw_target_if_have(self):
         if self.is_split in [False, None]:
-            mt_raw = self.get_active_object().seg_mt_raw.mt_raw
+            mt_raw = self.seg_mt_raw.mt_raw
             print("RR---------->",mt_raw)
             if mt_raw != None:
                 return mt_raw
