@@ -121,8 +121,8 @@ class ServiceUnavailable(APIException):
 
 def get_empty_segments(doc):
     segments_1 = doc.segments_for_find_and_replace.filter(target__exact='')
-    merge_segments_1 =MergeSegment.objects.filter(text_unit__document=doc).filter(target__exact=None)
-    split_segments_1 = SplitSegment.objects.filter(text_unit__document=doc).filter(target__exact=None)
+    merge_segments_1 =MergeSegment.objects.filter(text_unit__document=doc).filter(Q(target__exact=None)|Q(target__exact=''))
+    split_segments_1 = SplitSegment.objects.filter(text_unit__document=doc).filter(Q(target__exact=None)|Q(target__exact=''))
     if (segments_1 or merge_segments_1 or split_segments_1):
         return True
     else:
@@ -713,6 +713,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         confirm_list = json.loads(confirm_list)
         print("RTR---------->",confirm_list)
         msg=None
+        success_list=[]
         
         for item in confirm_list:
             try:
@@ -721,7 +722,6 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 status = item.get('status')
                 segment = self.get_object(segment_id)
                 if segment.temp_target != '':
-                    print("Inside partial upd")
                     data['target'] = segment.temp_target
                     data['status'] = status
                 else:
@@ -735,11 +735,13 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 if segment.is_split == True:
                     self.split_update(data, segment)
                 segment_serlzr = self.get_update(segment, data, request)
+                if data!={}:
+                    success_list.append(item.get('pk'))
             except serializers.ValidationError as e:
                 print("Exception=======>",e)
                 msg = 'confirm all may not work properly due to insufficient credits'
         message = msg if msg else 'Objects updated successfully'
-        return Response({'message': message})
+        return Response({'message': message,'confirmed_list':success_list})
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         # return Response(segment_serlzr.data, status=201)
         
@@ -1211,7 +1213,7 @@ def mt_raw_pre_process(data):
             if d.get('mt_raw_target') != None:
                 d['target'] = d.get('mt_raw_target')
             else:
-                d['target'] = d['source']
+                d['target'] = ''
             #del d['mt_raw_target']
             d.pop('mt_raw_target',None)
     return data
