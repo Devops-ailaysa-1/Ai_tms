@@ -2228,10 +2228,6 @@ def get_segment_history(request):
         return Response({'msg':'Not found'}, status=404)
 ####################################################### Hemanth #########################################################
 
-<<<<<<< HEAD
-from ai_workspace.api_views import get_consumable_credits_for_text
-from ai_openai.utils import get_prompt_chatgpt_turbo
-=======
 # @api_view(['POST',])############### only available for english ###################
 # def paraphrasing(request):
 
@@ -2239,7 +2235,6 @@ from ai_workspace.api_views import get_consumable_credits_for_text
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 
->>>>>>> origin/v4-merged-production
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
     from ai_workspace.api_views import get_consumable_credits_for_text

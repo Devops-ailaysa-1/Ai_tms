@@ -38,6 +38,7 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         if representation.get('target_language' ,None):
             representation['target_language'] = instance.target_language.language.id
+         
         return representation
 
 class ImageTranslateSerializer(serializers.ModelSerializer):  
@@ -68,6 +69,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         if representation.get('source_language' , None):
             representation['source_language'] = instance.source_language.language.id  
+        if representation.get('image_inpaint_creation',None):
+            print(representation['image_inpaint_creation'])
+            print(type( representation['image_inpaint_creation']))
+            representation['image_inpaint_creation']= sorted(representation['image_inpaint_creation'].all(), key=lambda x: x.id)
         return representation
     
     @staticmethod

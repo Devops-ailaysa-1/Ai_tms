@@ -116,7 +116,7 @@ def export_download(json_str,format,multipliervalue):
         output_buffer=io.BytesIO()
         img.save(output_buffer, format=format, optimize=True, quality=85)
         compressed_data=output_buffer.getvalue()
-        return img
+        return compressed_data
     else:
         return ValidationError("error in node server")
 

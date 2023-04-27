@@ -16,7 +16,7 @@ class ImageloadViewset(viewsets.ViewSet):
         except Imageload.DoesNotExist:
             raise Http404
     def get(self, request):
-        query_set = Imageload.objects.filter(user=request.user.id)
+        query_set = Imageload.objects.filter(user=request.user.id).order_by('id')
         serializer = ImageloadSerializer(query_set ,many =True)
         return Response(serializer.data)
     
@@ -51,7 +51,7 @@ class ImageTranslateViewset(viewsets.ViewSet):
             raise Http404
 
     def get(self, request):
-        query_set = ImageTranslate.objects.filter(user=request.user.id)
+        query_set = ImageTranslate.objects.filter(user=request.user.id).order_by('id')
         serializer = ImageTranslateSerializer(query_set ,many =True)
         return Response(serializer.data)
 
