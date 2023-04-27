@@ -169,9 +169,11 @@ class Segment(BaseSegment):
             try:
                 mt_raw = Segment.objects.get(id=seg).seg_mt_raw.mt_raw
             except:
-                mt_raw = None
+                mt_raw = ''
             print("RR---------------->",mt_raw)
-            return mt_raw
+            #return mt_raw
+            return set_runs_to_ref_tags(self.coded_source, mt_raw, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
         else:
             print("Inside else------->",self)
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
