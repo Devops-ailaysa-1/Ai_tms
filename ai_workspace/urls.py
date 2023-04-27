@@ -98,6 +98,7 @@ urlpatterns += [
 	path('task_status/',api_views.get_task_status),
 	path('voice_task_status/',api_views.get_voice_task_status),
 	path('docx_convertor/',api_views.docx_convertor),
+	path('stop_task/',api_views.stop_task),
 ]
 # views urls adding for local testing
 urlpatterns += [

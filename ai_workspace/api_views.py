@@ -3955,4 +3955,20 @@ def project_word_char_count(request):
 # def task_download(task_id):
 #     tt = Task.objects.get(id=task_id)
 #     mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
-    
+
+from celery.result import AsyncResult
+from django.http import HttpResponse
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def stop_task(request):
+    task_id = request.GET.get('task_id')
+    task = AsyncResult(task_id)
+    print("TT---------->",task.state)
+    if task.state == 'STARTED':
+        task.revoke(terminate=True)
+        return HttpResponse('Task has been stopped.') 
+    elif task.state == 'PENDING':
+        task.revoke()
+        return HttpResponse('Task has been revoked.')
+    else:
+        return HttpResponse('Task is already running or has completed.')
