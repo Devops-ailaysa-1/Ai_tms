@@ -485,3 +485,5 @@ INPAINT_SOURCE_IMAGE_ROOT =  os.path.join(BASE_DIR, 'inpaint_source_image')
 INPAINT_SOURCE_IMAGE_URL = '/inpaint_source_image/'
 
 
+EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
+EXPORT_IMAGE_URL = '/temp_download/'

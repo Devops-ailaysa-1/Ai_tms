@@ -13,21 +13,22 @@ router.register(r'languageslocale',api_views.LanguagesLocaleViewset,basename='la
 router.register(r'canvas-user-images',api_views.CanvasUserImageAssetsViewset,basename='canvas_user_images')
 router.register(r'canvas-design-list' ,api_views.CanvasDesignListViewset,basename='canvasdesignlist')
 router.register(r'canvas-designs',api_views.CanvasDesignViewset,basename='canvas_designs')
-router.register(r'template-design',api_views.TemplateGlobalDesignViewset ,basename='templatedesign')
-router.register(r'mytemplate-design',api_views.MyTemplateDesignViewset ,basename='mytemplatedesign')
-router.register(r'text-keyword', api_views.TemplateKeywordViewset ,basename= 'textkeyword')
-router.register(r'text-template', api_views.TextTemplateViewset ,basename='texttemplate')
+router.register(r'template-design',api_views.TemplateGlobalDesignViewset,basename='templatedesign')
+router.register(r'mytemplate-design',api_views.MyTemplateDesignViewset,basename='mytemplatedesign')
+router.register(r'text-keyword', api_views.TemplateKeywordViewset,basename= 'textkeyword')
+router.register(r'text-template', api_views.TextTemplateViewset,basename='texttemplate')
 
 urlpatterns = router.urls
 urlpatterns += [
-    path('template-design-get/<int:id>/', api_views.TemplateGlobalDesignRetrieveViewset.as_view(), name='templatedesignget'),     
-    path('mytemplate-design-get/<int:id>', api_views.MyTemplateDesignRetrieveViewset.as_view(), name='mytemplatedesignget'),
+    path('template-design-get/<int:id>/', api_views.TemplateGlobalDesignRetrieveViewset.as_view(),name='templatedesignget'),     
+    path('mytemplate-design-get/<int:id>', api_views.MyTemplateDesignRetrieveViewset.as_view(),name='mytemplatedesignget'),
     path('canvas-download/',api_views.canvas_download,name="canvas_download"),
-    path('image-term/',api_views.free_pix_api , name='freepixapi'),
+    path('image-term/',api_views.free_pix_api,name='freepixapi'),
     path('instane-translate/',api_views.instant_canvas_translation,name='instant_canvas_translation'),
-    path('images/',api_views.pixabay_api , name='pixabayapi'),
+    path('images/',api_views.pixabay_api,name='pixabayapi'),
     path('canvas-export',api_views.canvas_export_download,name='canvas_export_download')
     
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# urlpatterns +=static(settings.FONT_THUMBNAIL_URL, document_root=settings.FONT_THUMBNAIL_ROOT) 
+
+urlpatterns +=static(settings.EXPORT_IMAGE_URL, document_root=settings.EXPORT_IMAGE_ROOT) 
