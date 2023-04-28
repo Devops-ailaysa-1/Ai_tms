@@ -107,7 +107,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
         token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 256
-        openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , token,1 )
+        openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , token,instance.response_copies )
         generated_text = openai_response.get('choices' ,None)
         response_id =openai_response.get('id' , None)
         token_usage = openai_response.get('usage' ,None) 
@@ -749,7 +749,7 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
     prompt+=', in {} tone'.format(instance.tone.tone)
     print("Prompt------------>",prompt)
     print("Trans----------->",trans)
-    openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token, instance.response_copies_keyword)
+    openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token,1)
     token_usage = openai_token_usage(openai_response)
     keywords = openai_response['choices'][0]['text']
     print("From openai-------->",keywords)
