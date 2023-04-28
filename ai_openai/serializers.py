@@ -419,7 +419,8 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             generated_text=prompt_response.choices[0].text
             prompt_response_article_resp.append('\n'+'<h2>'+outlines[count]+'</h2>'+generated_text)
             total_token=openai_token_usage(prompt_response)
-            token_usage+=get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
+            token_usage+=total_token.total_tokens
+        token_usage = get_consumable_credits_for_openai_text_generator(token_usage)
 
         prompt_response_article_resp= '<h1>'+title+'</h1>'+'\n\n'+"'\n".join(prompt_response_article_resp)
         print("prot_resp--->>>>>>>>>>>",prompt_response_article_resp)
