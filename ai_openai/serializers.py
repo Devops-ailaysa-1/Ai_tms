@@ -678,15 +678,16 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         title_start_phrase = PromptStartPhrases.objects.get(sub_category=sub_categories)
         #prompt creation
         initial_credit = blog_create_instance.user.credit_balance.get("total_left")
-        prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title if blog_create_instance.user_title else blog_create_instance.user_title_mt)
-        title = instance.blog_title_gen.blog_title
+        title = blog_create_instance.user_title
         detected_lang = lang_detector(title)
         if detected_lang != 'en':
-            title = instance.blog_title_gen.blog_title_mt
-        keywords = instance.blog_title_gen.blog_creation_gen.keywords 
+            title = blog_create_instance.user_title_mt
+        prompt = title_start_phrase.start_phrase.format(title)
+        keywords = blog_create_instance.keywords
         detected_lang = lang_detector(keywords)
         if detected_lang!='en':
-            keywords = instance.blog_title_gen.blog_creation_gen.keywords_mt
+            keywords = blog_create_instance.keywords_mt
+        #prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title if blog_create_instance.user_title else blog_create_instance.user_title_mt)
         #title = instance.blog_title_gen.blog_title if instance.blog_title_gen.blog_title else instance.blog_title_gen.blog_title_mt
         #keywords = instance.blog_title_gen.blog_creation_gen.keywords 
         prompt+=' with keywords '+blog_create_instance.keywords if blog_create_instance.keywords else blog_create_instance.keywords_mt
