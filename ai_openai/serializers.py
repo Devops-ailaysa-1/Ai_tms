@@ -43,6 +43,7 @@ def lang_detector(user_text):
 
 
 def openai_token_usage(openai_response ):
+    print("Response------------------->",openai_response)
     token_usage = openai_response.get("usage",None)
     prompt_token = token_usage['prompt_tokens']
     total_tokens=token_usage['total_tokens']
