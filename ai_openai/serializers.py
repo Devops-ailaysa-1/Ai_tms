@@ -434,7 +434,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             tot_tok =  token_usage#+consumable_credits_for_article_gen
             print("tot_tok",tot_tok)
             AiPromptSerializer().customize_token_deduction(instance.blog_creation,tot_tok)
-            instance.blog_article_mt=prompt_response_article_resp
+            #instance.blog_article_mt=prompt_response_article_resp
         else:
             instance.blog_article = prompt_response_article_resp 
             AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
