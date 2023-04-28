@@ -444,7 +444,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
         instance.save()
         article = instance.blog_article_mt if instance.blog_creation.user_language_code != 'en' else instance.blog_article
-        tt = MyDocuments.objects.create(doc_name=title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
+        tt = MyDocuments.objects.create(doc_name=instance.blog_creation.user_title,blog_data = article,document_type_id=2,ai_user=instance.blog_creation.user)
         print("Doc--------->",tt)
         instance.document = tt
         instance.save()
@@ -634,10 +634,10 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
                         initial_credit = instance.blog_title_gen.blog_creation_gen.user.credit_balance.get("total_left")
                         consumable_credits_to_translate_section = get_consumable_credits_for_text(session,instance.blog_title_gen.blog_creation_gen.user_language_code,'en')
                         if initial_credit > consumable_credits_to_translate_section:
-                            blog_outline=get_translation(1,session,'en',blog_title_gen_inst.blog_creation_gen.user_language_code,
+                            blog_outline_mt=get_translation(1,session,'en',blog_title_gen_inst.blog_creation_gen.user_language_code,
                                                         user_id=blog_title_gen_inst.blog_creation_gen.user.id) 
-                            BlogOutlineSession.objects.create(blog_outline_gen=instance,blog_outline=blog_outline,custom_order=order,temp_order=order,
-                                                          blog_outline_mt=session,group=group,blog_title =instance.blog_title_gen )
+                            BlogOutlineSession.objects.create(blog_outline_gen=instance,blog_outline=session,custom_order=order,temp_order=order,
+                                                          blog_outline_mt=blog_outline_mt,group=group,blog_title =instance.blog_title_gen )
                             # debit_status, status_code = UpdateTaskCreditStatus.update_credits(instance.blog_title_gen.blog_creation_gen.user,consumable_credits_to_translate_section)
                         else:
                             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
@@ -723,7 +723,7 @@ class BlogtitleSerializer(serializers.ModelSerializer):
                     else:
                         raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
                     Blogtitle.objects.create(blog_creation_gen=blog_create_instance,sub_categories=sub_categories,
-                                         blog_title=blog_title_in_other_lang,blog_title_mt=blog_title,
+                                         blog_title=blog_title,blog_title_mt=blog_title_in_other_lang,
                                          token_usage=token_usage,selected_field=False)
                 else:
                     print("blog title create in en")
