@@ -685,12 +685,15 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         prompt = title_start_phrase.start_phrase.format(title)
         keywords = blog_create_instance.keywords
         detected_lang = lang_detector(keywords)
+        print("DL--------->>",detected_lang)
         if detected_lang!='en':
             keywords = blog_create_instance.keywords_mt
         #prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title if blog_create_instance.user_title else blog_create_instance.user_title_mt)
         #title = instance.blog_title_gen.blog_title if instance.blog_title_gen.blog_title else instance.blog_title_gen.blog_title_mt
         #keywords = instance.blog_title_gen.blog_creation_gen.keywords 
-        prompt+=' with keywords '+blog_create_instance.keywords if blog_create_instance.keywords else blog_create_instance.keywords_mt
+        print("User Title----->",title)
+        print("Keywords-------->",keywords)
+        prompt+=' with keywords '+ keywords
         prompt+=', in {} tone'.format(blog_create_instance.tone.tone)
         consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
 
