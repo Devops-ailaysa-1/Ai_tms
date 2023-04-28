@@ -426,7 +426,7 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         print("token_usage---->>",token_usage)
 
         if instance.blog_creation.user_language_id not in blog_available_langs:
-            consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
+            consumable_credits_for_article_gen = get_consumable_credits_for_text(prompt_response_article_resp,
                                                                                  instance.blog_creation.user_language_code,'en')
             if initial_credit >= consumable_credits_for_article_gen:
                 blog_article_trans = get_translation(1,prompt_response_article_resp,"en",instance.blog_creation.user_language_code,
