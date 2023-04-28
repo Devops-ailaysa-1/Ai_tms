@@ -377,7 +377,11 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         outline_section_list = validated_data.pop('outline_section_list')
         instance = BlogArticle.objects.create(**validated_data)
         initial_credit = instance.blog_creation.user.credit_balance.get("total_left")
-        if initial_credit < 700:
+        if instance.blog_creation.user_language_code != 'en':
+            credits_required = 200
+        else:
+            credits_required = 100
+        if initial_credit < credits_required:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         blog_article_start_phrase = instance.sub_categories.prompt_sub_category.first().start_phrase
         title = instance.blog_creation.user_title
@@ -424,10 +428,10 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         if instance.blog_creation.user_language_id not in blog_available_langs:
             blog_article_trans = get_translation(1,prompt_response_article_resp,"en",instance.blog_creation.user_language_code,
                                                  user_id=instance.blog_creation.user.id)  
-            instance.blog_article = blog_article_trans
+            instance.blog_article_mt = blog_article_trans
             consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
                                                                                  instance.blog_creation.user_language_code,'en')
-            tot_tok =  token_usage+consumable_credits_for_article_gen
+            tot_tok =  token_usage#+consumable_credits_for_article_gen
             print("tot_tok",tot_tok)
             AiPromptSerializer().customize_token_deduction(instance.blog_creation,tot_tok)
             instance.blog_article_mt=prompt_response_article_resp
