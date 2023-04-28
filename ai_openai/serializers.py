@@ -107,7 +107,7 @@ class AiPromptSerializer(serializers.ModelSerializer):
         if initial_credit < consumable_credit:
             return  Response({'msg':'Insufficient Credits'},status=400)
         token = instance.sub_catagories.prompt_sub_category.first().max_token if instance.sub_catagories else 256
-        openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , token,instance.response_copies )
+        openai_response =get_prompt(prompt,instance.model_gpt_name.model_code , token,1 )
         generated_text = openai_response.get('choices' ,None)
         response_id =openai_response.get('id' , None)
         token_usage = openai_response.get('usage' ,None) 
