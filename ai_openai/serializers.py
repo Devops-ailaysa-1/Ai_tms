@@ -679,6 +679,16 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         #prompt creation
         initial_credit = blog_create_instance.user.credit_balance.get("total_left")
         prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title if blog_create_instance.user_title else blog_create_instance.user_title_mt)
+        title = instance.blog_title_gen.blog_title
+        detected_lang = lang_detector(title)
+        if detected_lang != 'en':
+            title = instance.blog_title_gen.blog_title_mt
+        keywords = instance.blog_title_gen.blog_creation_gen.keywords 
+        detected_lang = lang_detector(keywords)
+        if detected_lang!='en':
+            keywords = instance.blog_title_gen.blog_creation_gen.keywords_mt
+        #title = instance.blog_title_gen.blog_title if instance.blog_title_gen.blog_title else instance.blog_title_gen.blog_title_mt
+        #keywords = instance.blog_title_gen.blog_creation_gen.keywords 
         prompt+=' with keywords '+blog_create_instance.keywords if blog_create_instance.keywords else blog_create_instance.keywords_mt
         prompt+=', in {} tone'.format(blog_create_instance.tone.tone)
         consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
