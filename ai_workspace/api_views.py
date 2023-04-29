@@ -795,8 +795,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
         team = request.POST.get('team',None)
-        req_copy = copy.copy( request._request)
-        req_copy.method = "DELETE"
+        #req_copy = copy.copy( request._request)
+        #req_copy.method = "DELETE"
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
@@ -857,10 +857,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
 
-    # def delete(self, request, pk):
-    #     project = self.get_object()
-    #     project.delete()
-    #     return Response(status=status.HTTP_204_NO_CONTENT)
+    def destroy(self, request, *args, **kwargs):
+        project = self.get_object()
+        if project.assigned == True:
+            return Response({'msg':'some tasks are assigned in this project. Unassign and delete'},status=400)
+        else:
+            project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class VendorDashBoardView(viewsets.ModelViewSet):
