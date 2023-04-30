@@ -708,7 +708,7 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         blog_titles = openai_response['choices'][0]['text']
         #title creation
         for blog_title in blog_titles.split('\n'):
-            if blog_title.strip():
+            if blog_title.strip().strip('.'):
                 blog_title = re.sub(r'\d+.','',blog_title)
                 blog_title = blog_title.strip()
                 
