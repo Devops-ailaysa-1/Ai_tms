@@ -99,6 +99,7 @@ class BlogCreation(models.Model):
     response_copies_keyword = models.IntegerField(null=True, blank=True,default=10)
     steps =  models.CharField(max_length=50, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    created_by = models.ForeignKey(AiUser, on_delete=models.CASCADE,null=True, blank=True,related_name='blog_created_by')
     
     @property
     def user_language_code(self):

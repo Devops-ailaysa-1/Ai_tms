@@ -705,7 +705,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
     filterset_class = ProjectFilter
     search_fields = ['project_name','project_files_set__filename','project_jobs_set__source_language__language',\
                     'project_jobs_set__target_language__language']
-    #ordering = ('-id')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
+    ordering = ('-sorted_datetime')#'-project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at',
     paginator.page_size = 20
 
     def get_serializer_class(self):
@@ -742,7 +742,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                             ),
                             Value(datetime.min),),
                             output_field=DateTimeField(),)
-                            ).order_by('-sorted_datetime')
+                            )#.order_by('-sorted_datetime')
 
         #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
         return parent_queryset#queryset
@@ -3369,10 +3369,10 @@ class MyDocumentsView(viewsets.ModelViewSet):
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
         #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
-        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
+        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
         q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
         q1 = q1.filter(doc_name__icontains =query) if query else q1
-        q2 = BlogCreation.objects.filter(user = user).filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
+        q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
         q2 = q2.filter(user_title__icontains = query) if query else q2
         q3 = q1.union(q2)
         final_queryset = q3.order_by('-created_at')
