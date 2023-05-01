@@ -392,15 +392,6 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         detected_lang = lang_detector(keyword)
         if detected_lang!='en':
             keyword = instance.blog_creation.keywords_mt
-        queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
-        # queryset_new = queryset.annotate(
-        #                 order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
-        #                 ).order_by(ExpressionWrapper(Case(
-        #                 When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
-        #                 default=F('order_new'),  # Use 'custom_order' field for ordering
-        #                 output_field=IntegerField()),
-        #             output_field=IntegerField()
-        #             ))
         print("OutlineSelection---------------->",outline_section_list)
         if outline_section_list:
             detected_lang = lang_detector(outline_section_list[0].blog_outline)
@@ -866,7 +857,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         model = BlogCreation
         fields = ('id','user_title','steps','user_title_mt','keywords','keywords_mt','prompt_user_title_mt','prompt_keyword_mt',
                   'categories','sub_categories','user_language','tone','response_copies_keyword','selected_keywords_list',
-                  'unselected_keywords_list','blog_key_create','user','blog_title_create')
+                  'unselected_keywords_list','blog_key_create','user','blog_title_create','created_by')
         
     def create(self, validated_data):
         blog_available_langs = [17]
@@ -1191,3 +1182,14 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             #             blog_keyword =replace_punctuation(blog_keyword)
             #             BlogKeywordGenerate.objects.create(blog_creation=instance,blog_keyword=blog_keyword,selected_field= False, 
             #                                     blog_keyword_mt=None,token_usage=token_usage)                   
+
+
+                    # queryset_new = queryset.annotate(
+        #                 order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
+        #                 ).order_by(ExpressionWrapper(Case(
+        #                 When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
+        #                 default=F('order_new'),  # Use 'custom_order' field for ordering
+        #                 output_field=IntegerField()),
+        #             output_field=IntegerField()
+        #             ))
+        # queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
