@@ -400,22 +400,32 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             outlines = [i.blog_outline_mt for i in outline_section_list if i.blog_outline_mt ]
         else:
             outlines = [i.blog_outline for i in outline_section_list]
-        selected_outline_section_list = ",".join(outlines)
+        joined_list = "', '".join(outlines)
+        selected_outline_section_list = f"'{joined_list}'"
         print("Selected------------>",selected_outline_section_list)
-        prompt_responses = blog_generator(outline_section_prompt_list= outlines,title=title,tone=instance.blog_creation.tone.tone,
-                                              keyword=keyword)
-        prompt_response_article_resp=[]
-        token_usage=0
-        for count,prompt_response in enumerate(prompt_responses):
-            generated_text=prompt_response.choices[0].text
-            prompt_response_article_resp.append('\n'+'<h2>'+outlines[count]+'</h2>'+generated_text)
-            total_token=openai_token_usage(prompt_response)
-            token_usage+=total_token.total_tokens
-        token_usage = get_consumable_credits_for_openai_text_generator(token_usage)
+        prompt = blog_article_start_phrase.format(title,selected_outline_section_list,keyword,instance.blog_creation.tone.tone)
+        #prompt+=', in {} tone'.format(instance.blog_creation.tone.tone)
+        print("prompt____article--->>>>",prompt)
+        # if isinstance(prompt,list):
+        prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
+        print("prot_resp--->>>>>>>>>>>",prompt_response)
+        prompt_response_article_resp = prompt_response['choices'][0].message['content']
+        total_token = openai_token_usage(prompt_response)
+        token_usage = get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
+        #prompt_responses = blog_generator(outline_section_prompt_list= outlines,title=title,tone=instance.blog_creation.tone.tone,
+        #                                      keyword=keyword)
+        # prompt_response_article_resp=[]
+        # token_usage=0
+        # for count,prompt_response in enumerate(prompt_responses):
+        #     generated_text=prompt_response.choices[0].text
+        #     prompt_response_article_resp.append('\n'+'<h2>'+outlines[count]+'</h2>'+generated_text)
+        #     total_token=openai_token_usage(prompt_response)
+        #     token_usage+=total_token.total_tokens
+        # token_usage = get_consumable_credits_for_openai_text_generator(token_usage)
 
-        prompt_response_article_resp= '<h1>'+title+'</h1>'+'\n\n'+"'\n".join(prompt_response_article_resp)
-        print("prot_resp--->>>>>>>>>>>",prompt_response_article_resp)
-        print("token_usage---->>",token_usage)
+        # prompt_response_article_resp= '<h1>'+title+'</h1>'+'\n\n'+"'\n".join(prompt_response_article_resp)
+        # print("prot_resp--->>>>>>>>>>>",prompt_response_article_resp)
+        # print("token_usage---->>",token_usage)
 
         if instance.blog_creation.user_language_id not in blog_available_langs:
             consumable_credits_for_article_gen = get_consumable_credits_for_text(prompt_response_article_resp,
@@ -604,7 +614,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         print("TT------>",title)
         print("KK------->",keywords)
         prompt = blog_outline_start_phrase.start_phrase.format(title,keywords)
-        prompt+=', in {} tone'.format(instance.blog_title_gen.blog_creation_gen.tone.tone)
+        prompt+='use a {} tone.'.format(instance.blog_title_gen.blog_creation_gen.tone.tone)
         print("PR------------->",prompt)
         # prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
         prompt_response_gpt = outline_gen(prompt=prompt)
