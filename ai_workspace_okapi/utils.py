@@ -1,5 +1,5 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap
+from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap, EMPTY_SEGMENT_CHARACTERS
 import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
@@ -8,10 +8,9 @@ from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
 
-import string 
+import string ,backoff
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
-
 client = translate.Client()
 
 class DebugVariables(object): # For Class Functions only to use
@@ -266,7 +265,7 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
     return r.json()["result"]
 
 import backoff
-@backoff.on_exception(backoff.expo, (requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
+@backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
                     target_lang_code, user_id=None, cc=None, from_open_ai = None):
     from ai_workspace.api_views import get_consumable_credits_for_text,UpdateTaskCreditStatus
@@ -326,6 +325,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         if user:
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, cc)
             print("status_code---------->",status_code)
+            print("Debited----------->",cc,user.credit_balance.get("total_left"))
     else:
         print('Not debited in this func')
     print("Translate---------->",translate)
@@ -373,7 +373,8 @@ def get_res_path(source_lang):
 
     res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
                  "fprm_file_path": None,
-                 "use_spaces": settings.USE_SPACES
+                 "use_spaces": settings.USE_SPACES,
+                 "empty_segment_chars": EMPTY_SEGMENT_CHARACTERS,
                  }
 
     if source_lang in ['hi','bn','or','ne','pa']:
@@ -389,7 +390,6 @@ def get_res_path(source_lang):
         return res_paths
 
     elif source_lang in ['ta']:
-        print("-------------Inside Tamil SRX-----------------")
         res_paths["srx_file_path"] = "okapi_resources/tamil.srx"
         return res_paths
     elif source_lang in ['kn']:

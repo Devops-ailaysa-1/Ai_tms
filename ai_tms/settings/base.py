@@ -111,7 +111,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cacheops',
+    # 'cacheops',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -170,7 +170,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'ai_tms.urls'
 AUTH_USER_MODEL="ai_auth.AiUser"
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

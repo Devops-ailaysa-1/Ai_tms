@@ -13,7 +13,7 @@ from django.db import connection
 from django.utils import timezone
 from django.apps import apps
 from django.http import HttpResponse, JsonResponse
-from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment
+from ai_workspace_okapi.models import SegmentHistory,Segment, MergeSegment, SplitSegment, SegmentPageSize
 from ai_workspace.api_views import UpdateTaskCreditStatus
 import re
 from .utils import split_check
@@ -105,6 +105,26 @@ class SegmentSerializerV2(SegmentSerializer):
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
+    def target_check(self, obj, target):
+        if obj.source[0].isspace():
+            if target[0].isspace(): 
+                return target
+            else:
+                return ' ' + target
+        else:
+            return target
+        # if data.get('target'):
+        #     if data.get('target')[0].isspace():
+        #         copied_data["target"] = data['target'] 
+        #     else:
+        #         copied_data['target'] = ' ' + data['target']
+        # if data.get('temp_target'):
+        #     if data.get('temp_target')[0].isspace():
+        #         copied_data["temp_target"] = data['temp_target'] 
+        #     else:
+        #         copied_data['temp_target'] = ' ' + data['temp_target']
+        # return super().run_validation(copied_data)
+
     def update_task_assign(self,task_obj,user):
         try:
             obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
@@ -114,12 +134,39 @@ class SegmentSerializerV2(SegmentSerializer):
         except:pass
 
     def update(self, instance, validated_data):
+        print("VD----------->",validated_data)
+        print("Ins-------->",instance)
+        if validated_data.get('target'):
+            validated_data['target'] = self.target_check(instance,validated_data.get('target'))
+        if validated_data.get('temp_target'):
+            validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
+        manual_confirm_status = TranslationStatus.objects.get(id=106)
+        reviewed_status = TranslationStatus.objects.get(id=110)
+        tm_confirm_status = TranslationStatus.objects.get(id=102)
+        from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         if "target" in validated_data:
+            print("Inside if target")
+            if instance.target == '':
+                print("In target empty")
+                if (instance.text_unit.document.job.project.mt_enable == False)\
+                 or (validated_data.get('status') == manual_confirm_status)\
+                 or (validated_data.get('status') == reviewed_status)\
+                 or (validated_data.get('status') == tm_confirm_status):
+                    print("mt dable and manual confirm check")
+                    user = instance.text_unit.document.doc_credit_debit_user
+                    initial_credit = user.credit_balance.get("total_left")
+                    consumable_credits = MT_RawAndTM_View.get_consumable_credits(instance.text_unit.document, instance.id, None)
+                    consumable = max(round(consumable_credits/3),1) 
+                    if initial_credit < consumable:
+                        raise serializers.ValidationError("Insufficient Credits")
+                    else:
+                        debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable)
+                        print("Credit Debited",status_code)
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
@@ -135,19 +182,25 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
         trim_whitespace=False)
     merge_segment_count = serializers.IntegerField(read_only=True,
         source="get_merge_segment_count", )
+    mt_raw_target = serializers.CharField(read_only=True, source="get_mt_raw_target_if_have",
+        trim_whitespace=False)
 
     class Meta:
         # pass
         model = Segment
-        fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+        fields = ['source', 'target','mt_raw_target', 'coded_source', 'coded_brace_pattern',
             'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
-            'coded_ids_sequence']
+            'coded_ids_sequence','mt_raw_target']
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
         return ret
+
+
+    
+
 
 class MergeSegmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -213,6 +266,7 @@ class TextUnitSerializerV2(serializers.ModelSerializer):
             ret.pop("segment_ser")
         )
         return ret
+
 
 class TextUnitSerializerTest(serializers.ModelSerializer):
     class Meta:
@@ -399,6 +453,9 @@ class DocumentSerializerV3(DocumentSerializerV2):
         ret["text"] = coll
         return ret
 
+
+
+
 class MT_RawSerializer(serializers.ModelSerializer):
     mt_engine_name = serializers.CharField(source="mt_engine.engine_name", read_only=True)
 
@@ -475,6 +532,11 @@ class TranslationStatusSerializer(serializers.ModelSerializer):
 class FontSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FontSize
+        fields = "__all__"
+
+class SegmentPageSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SegmentPageSize
         fields = "__all__"
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -655,3 +717,57 @@ class VerbSerializer(serializers.Serializer):
 # Command Execution time: 0.9043436050415039 seconds
 # Execution time: 44.367270708084106 seconds
 # Postman: 1 m 36.06 s
+
+# class SegmentSerializerNew(serializers.ModelSerializer):# For Read only
+#     target = serializers.CharField(read_only=True, source="get_mt_raw_target_if_have",
+#         trim_whitespace=False)
+#     merge_segment_count = serializers.IntegerField(read_only=True,
+#         source="get_merge_segment_count", )
+
+#     class Meta:
+#         # pass
+#         model = Segment
+#         fields = ['id','source', 'target', 'coded_source', 'coded_brace_pattern',
+#             'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
+#         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
+#             'coded_ids_sequence']
+#     def to_representation(self, instance):
+#         ret = super().to_representation(instance)
+#         ret['random_tag_ids'] = json.loads(ret['random_tag_ids'])
+#         ret['coded_ids_sequence'] = json.loads(ret['coded_ids_sequence'])
+#         return ret
+
+
+# class TextUnitSerializerNew(serializers.ModelSerializer):
+#     segment_ser = SegmentSerializerNew(many=True ,read_only=True, source="text_unit_segment_set")
+
+#     class Meta:
+#         model = TextUnit
+#         fields = (
+#             "segment_ser","okapi_ref_translation_unit_id"
+#         )
+
+#     def to_representation(self, instance):
+#         ret = super(TextUnitSerializerNew, self).to_representation(instance=instance)
+#         ret[ret.pop("okapi_ref_translation_unit_id")] = (
+#             ret.pop("segment_ser")
+#         )
+#         return ret
+
+
+# class DocumentSerializerNew(DocumentSerializerV2):
+#     text = TextUnitSerializerNew(many=True,  read_only=True, source="document_text_unit_set")
+#     filename = serializers.CharField(read_only=True, source="file.filename")
+#     class Meta(DocumentSerializerV2.Meta):
+#         model = Document
+#         fields = (
+#             "text",  'total_word_count', 'total_char_count', 'total_segment_count', "filename"
+#         )
+
+#     def to_representation(self, instance):
+#         ret = super().to_representation(instance=instance)
+#         coll = {}
+#         for itr in ret.pop("text", []):
+#             coll.update(itr)
+#         ret["text"] = coll
+#         return ret

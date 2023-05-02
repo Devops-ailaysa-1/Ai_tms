@@ -576,11 +576,12 @@ optional = false
 python-versions = "*"
 files = [
     {file = "celery-progress-0.1.3.tar.gz", hash = "sha256:7d73e0268e51b124745d052b0d3f05dfab5bb8089de650a3ef30c97d3e49be6b"},
+    {file = "celery_progress-0.1.3-py3-none-any.whl", hash = "sha256:a71d20441543d4a6662f62aee817bf099cee566a1efe114ce7edce73f004b7c3"},
 ]
 
 [package.extras]
-rabbitmq = ["channels_rabbitmq"]
-redis = ["channels_redis"]
+rabbitmq = ["channels-rabbitmq"]
+redis = ["channels-redis"]
 websockets = ["channels"]
 
 [[package]]
@@ -3598,6 +3599,18 @@ doc = ["sphinx", "sphinx_rtd_theme"]
 test = ["coverage[toml]", "flake8 (<5)", "pytest", "pytest-cov", "pytest-flake8", "pytest-isort", "pytest-xdist"]
 
 [[package]]
+name = "pyspellchecker"
+version = "0.6.2"
+description = "Pure python spell checker based on work by Peter Norvig"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pyspellchecker-0.6.2-py3-none-any.whl", hash = "sha256:218759d4166fd49dee5c0473da99792d9274aca495ded0d9594a0bd75e2831ca"},
+    {file = "pyspellchecker-0.6.2.tar.gz", hash = "sha256:af6a1d0393a175499475a873f31e52135f1efd5fc912c979101b795b3c2ee77f"},
+]
+
+[[package]]
 name = "pytest"
 version = "7.2.0"
 description = "pytest: simple powerful testing with Python"
@@ -3765,6 +3778,21 @@ files = [
     {file = "PyYAML-5.4.1-cp39-cp39-win_amd64.whl", hash = "sha256:c20cfa2d49991c8b4147af39859b167664f2ad4561704ee74c1de03318e898db"},
     {file = "PyYAML-5.4.1.tar.gz", hash = "sha256:607774cbba28732bfa802b54baa7484215f530991055bb562efbed5b2f20a45e"},
 ]
+
+[[package]]
+name = "quickemailverification"
+version = "1.0.3"
+description = "Official QuickEmailVerification API library client for python"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "quickemailverification-1.0.3.tar.gz", hash = "sha256:3f8b2dd0e5f234d774242359319af70a6532fc747afa49f99630cc621e1d84d4"},
+]
+
+[package.dependencies]
+requests = ">=2.1.0"
+six = ">=1.9.0"
 
 [[package]]
 name = "quill-delta"
@@ -5151,4 +5179,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ea682e040cb1c66beb0d4c26e0edfb7da1850fb77503f2b3c6c23915cbea12f0"
+content-hash = "e54f9926e1036a2a290e7c8fb71f1c9f0e41d2a1ac8ae67c30ad808e16dec22d"
