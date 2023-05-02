@@ -105,19 +105,25 @@ class SegmentSerializerV2(SegmentSerializer):
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
-    def run_validation(self, data):
-        copied_data = data.copy()
-        if data.get('target'):
-            if data.get('target')[0].isspace():
-                copied_data["target"] = data['target'] 
+    def target_check(self, obj, target):
+        if obj.source[0].isspace():
+            if target[0].isspace(): 
+                return target
             else:
-                copied_data['target'] = ' ' + data['target']
-        if data.get('temp_target'):
-            if data.get('temp_target')[0].isspace():
-                copied_data["temp_target"] = data['temp_target'] 
-            else:
-                copied_data['temp_target'] = ' ' + data['temp_target']
-        return super().run_validation(copied_data)
+                return ' ' + target
+        else:
+            return target
+        # if data.get('target'):
+        #     if data.get('target')[0].isspace():
+        #         copied_data["target"] = data['target'] 
+        #     else:
+        #         copied_data['target'] = ' ' + data['target']
+        # if data.get('temp_target'):
+        #     if data.get('temp_target')[0].isspace():
+        #         copied_data["temp_target"] = data['temp_target'] 
+        #     else:
+        #         copied_data['temp_target'] = ' ' + data['temp_target']
+        # return super().run_validation(copied_data)
 
     def update_task_assign(self,task_obj,user):
         try:
@@ -130,6 +136,10 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print("VD----------->",validated_data)
         print("Ins-------->",instance)
+        if validated_data.get('target'):
+            validated_data['target'] = self.target_check(instance,validated_data.get('target'))
+        if validated_data.get('temp_target'):
+            validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
         manual_confirm_status = TranslationStatus.objects.get(id=106)
         reviewed_status = TranslationStatus.objects.get(id=110)
         tm_confirm_status = TranslationStatus.objects.get(id=102)
