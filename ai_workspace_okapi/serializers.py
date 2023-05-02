@@ -106,18 +106,18 @@ class SegmentSerializerV2(SegmentSerializer):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
     def run_validation(self, data):
-        rr = data.copy()
+        copied_data = data.copy()
         if data.get('target'):
             if data.get('target')[0].isspace():
-                rr["target"] = data['target'] 
+                copied_data["target"] = data['target'] 
             else:
-                rr['target'] = ' ' + data['target']
+                copied_data['target'] = ' ' + data['target']
         if data.get('temp_target'):
             if data.get('temp_target')[0].isspace():
-                rr["temp_target"] = data['temp_target'] 
+                copied_data["temp_target"] = data['temp_target'] 
             else:
-                rr['temp_target'] = ' ' + data['temp_target']
-        return super().run_validation(rr)
+                copied_data['temp_target'] = ' ' + data['temp_target']
+        return super().run_validation(copied_data)
 
     def update_task_assign(self,task_obj,user):
         try:
