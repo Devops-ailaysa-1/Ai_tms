@@ -756,4 +756,4 @@ RUST_BACKTRACE=1
 # DBBACKUP_CLEANUP_KEEP_MEDIA = int(os.getenv("DBBACKUP_CLEANUP_KEEP_MEDIA"))
 
 
-STRIPE_API_HOST = "http://stripe_mock:12111"
+# STRIPE_API_HOST = "http://stripe_mock:12111"

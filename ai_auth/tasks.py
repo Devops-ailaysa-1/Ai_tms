@@ -34,7 +34,7 @@ from time import sleep
 from django.core.management import call_command
 import calendar
 from ai_workspace.models import ExpressTaskHistory
-
+from celery.exceptions import MaxRetriesExceededError
 
 extend_mail_sent= 0
 
@@ -619,6 +619,24 @@ def update_forbidden_words(forbidden_file_id):
     ForbiddenWords.objects.filter(file_id = forbidden_file_id).update(job=file.job)
     logger.info("forbidden words updated")
 
+@task
+def project_analysis_property(project_id, retries=0, max_retries=3):
+    from ai_workspace.api_views import ProjectAnalysisProperty
+    from ai_workspace.models import Project
+    proj = Project.objects.get(id=project_id)
+    task = proj.get_tasks[0]
+    try:
+        obj = MTonlytaskCeleryStatus.objects.create(task_id=task.id, project_id=proj.id,status=1,task_name='project_analysis_property',celery_task_id=project_analysis_property.request.id)
+        print("GG------->",obj)
+        ProjectAnalysisProperty.get(project_id)
+        logger.info("analysis property called")
+    except Exception as e:
+        print(f'Error in task: {e}')
+        retries += 1
+        print("Retry Count--------->",retries)
+        if retries > max_retries:
+            raise MaxRetriesExceededError("Maximum retries reached.") from e
+            logger.info("retries exceeded")
 
 
 
@@ -683,6 +701,125 @@ def count_update(job_id):
                                 notify_word_count(assigns,word_count,char_count)
                     #print("wc,cc--------->",assigns.task_assign_info.billable_word_count,assigns.task_assign_info.billable_char_count)
     logger.info('billable count updated')
+
+
+
+@task
+def mt_raw_update(task_id):
+    from ai_workspace.models import Task, TaskAssign
+    from ai_workspace_okapi.models import Document,Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
+    from ai_workspace.api_views import UpdateTaskCreditStatus
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View,get_tags
+    from ai_workspace_okapi.models import MergeSegment,SplitSegment
+    #from ai_workspace_okapi.api_views import DocumentViewByTask
+    from itertools import chain
+
+    task = Task.objects.get(id=task_id)
+    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id)
+    user = task.job.project.ai_user
+    mt_engine = task.job.project.mt_engine_id
+    task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
+    segments = task.document.segments_for_find_and_replace
+    merge_segments = MergeSegment.objects.filter(text_unit__document=task.document)
+    split_segments = SplitSegment.objects.filter(text_unit__document=task.document)
+
+    final_segments = list(chain(segments, merge_segments, split_segments))
+
+    update_list, update_list_for_merged,update_list_for_split = [],[],[]
+    mt_segments, mt_split_segments = [],[]
+    
+    for seg in final_segments:###############Need to revise####################
+        try:
+            if (type(seg) is Segment) or (type(seg) is MergeSegment):
+                mt_raw = seg.seg_mt_raw
+            else:
+                if seg.mt_raw_split_segment.exists() == False:
+                    mt_raw = None
+                else:
+                    mt_raw = seg.mt_raw_split_segment.first().mt_raw
+        except:
+            mt_raw = None
+        print("Seg---------->",seg) 
+        print("MtRw---------->",mt_raw)
+        if mt_raw == None:
+            print("Inside mt raw none")
+            if seg.target == '' or seg.target==None:
+                print("**********************")
+                initial_credit = user.credit_balance.get("total_left")
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
+                if initial_credit > consumable_credits:
+                    try:
+                        mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                        tags = get_tags(seg)
+                        if tags:
+                            seg.target = mt + tags
+                            seg.temp_target = mt + tags
+                        else:
+                            seg.target = mt
+                            seg.temp_target = mt
+                        seg.status_id = TranslationStatus.objects.get(status_id=104).id
+                        #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                        if type(seg) is SplitSegment:
+                            mt_split_segments.append({'seg':seg,'mt':mt})
+                        else:mt_segments.append({'seg':seg,'mt':mt})
+                    except:
+                        seg.target = ''
+                        seg.temp_target = ''
+                        seg.status_id=None
+                else:
+                    MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id,error_type="Insufficient Credits")
+                    print("Insufficient")
+                    break
+                if type(seg) is Segment:
+                    update_list.append(seg)
+                elif type(seg) is SplitSegment:
+                    update_list_for_split.append(seg)
+                elif type(seg) is MergeSegment:
+                    update_list_for_merged.append(seg)
+            else:
+                initial_credit = user.credit_balance.get("total_left")
+                consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
+                if initial_credit > consumable_credits:
+                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                    if type(seg) is SplitSegment:
+                        mt_split_segments.append({'seg':seg,'mt':mt})
+                    else:mt_segments.append({'seg':seg,'mt':mt})
+                else:
+                    print("Insufficient credits")
+                
+    print("UL->",mt_segments)
+    Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+    MergeSegment.objects.bulk_update(update_list_for_merged,['target','temp_target','status_id'])
+    SplitSegment.objects.bulk_update(update_list_for_split,['target','temp_target','status_id'])
+    print("mt----------?",mt_segments)
+    instances = [
+            MT_RawTranslation(
+                mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
+                mt_engine_id = mt_engine,
+                task_mt_engine_id = mt_engine,
+                segment_id= i['seg'].id,
+            )
+            for i in mt_segments
+        ]
+
+    tt = MT_RawTranslation.objects.bulk_create(instances, ignore_conflicts=True)
+    print("norm and merg--------->",tt)
+    print("mt_split------------->",mt_split_segments)
+    instances_1 = [
+            MtRawSplitSegment(
+                mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
+                split_segment_id= i['seg'].id,
+            )
+            for i in mt_split_segments
+        ]
+    tr = MtRawSplitSegment.objects.bulk_create(instances_1, ignore_conflicts=True)
+    print("split-------->",tr)
+    #MTonlytaskCeleryStatus.objects.create(task_id = task_id,status=2,celery_task_id=pre_translate_update.request.id)
+    logger.info("mt_raw_update")
+
+
+
+
 
 
 

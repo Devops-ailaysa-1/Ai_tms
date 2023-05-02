@@ -1450,24 +1450,34 @@ def account_activation(request):
         return JsonResponse({"msg":"no need to call activation.user is already active "})
 
 
+
+def user_delete(user):
+    cancel_subscription(user)
+    dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
+    os.system("rm -r " +dir)
+    user.delete()
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def account_delete(request):
+    from allauth.socialaccount.models import SocialAccount
     password_entered = request.POST.get('password')
     user = AiUser.objects.get(id =request.user.id)
-    match_check = check_password(password_entered,user.password)
-    if match_check:
-        # present = datetime.now()
-        # three_mon_rel = relativedelta(months=3)
-        # user.is_active = False
-        # user.deactivation_date = present.date()+three_mon_rel
-        # user.save()
-        cancel_subscription(user)
-        dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
-        os.system("rm -r " +dir)
-        user.delete()
+    query = SocialAccount.objects.filter(user=user)
+    if not query:
+        match_check = check_password(password_entered,user.password)
+        if match_check:
+            # present = datetime.now()
+            # three_mon_rel = relativedelta(months=3)
+            # user.is_active = False
+            # user.deactivation_date = present.date()+three_mon_rel
+            # user.save()
+            user_delete(user)
+        else:
+            return Response({"msg":"password didn't match"},status = 400)
     else:
-        return Response({"msg":"password didn't match"},status = 400)
+        user_delete(user)
     return JsonResponse({"msg":"user account deleted"},safe = False)
 
 
@@ -2011,18 +2021,20 @@ def get_user(request):
             return Response({'user_exist':True})
         except:
             return Response({'user_exist':False})
-
-
-
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def get_user(request):
-#     email = request.POST.get('email')
-#     try:
-#         user = AiUser.objects.get(email=email)
-#         return Response({'user_exist':True})
-#     except:
-#         return Response({'user_exist':False})
+    
+    # queryset = AiUser.objects.filter(Q(email__contains = email)|Q(email__icontains=email.split('+')[0])).filter(email__contains='+')
+    # if queryset:
+    #     return Response({'user_exist':True})
+    # else:
+    #     email_str = email.split('@')[0]
+    #     if "+" in email_str:
+    #         return Response({"msg":"Invalid Email"})
+    #     return Response({'user_exist':False})
+    # try:
+    #     user = AiUser.objects.get(email=email)
+    #     return Response({'user_exist':True})
+    # except:
+    #     return Response({'user_exist':False})
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

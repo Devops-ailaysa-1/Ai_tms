@@ -6,7 +6,7 @@ from ai_staff.models import (Billingunits, CATSoftwares, ContentTypes,
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from ai_auth.models import AiUser,user_directory_path
-from ai_workspace.models import Job,Project
+#from ai_workspace.models import Job,Project
 from ai_staff.models import ContentTypes, Currencies, ParanoidModel, SubjectFields,Languages, VendorLegalCategories,VendorMemberships,MtpeEngines,Billingunits,ServiceTypes,CATSoftwares,ServiceTypeunits
 from django.db.models import Q
 from django.db.models.signals import post_save, pre_save

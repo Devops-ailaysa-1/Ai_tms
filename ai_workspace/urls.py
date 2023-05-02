@@ -64,11 +64,12 @@ urlpatterns += [
 	path('task_assign_update/',api_views.TaskAssignUpdateView.as_view({'put':'update'})),
 	path('get_assign_to_list/',api_views.get_assign_to_list),
 	path('project_list/',api_views.ProjectListView.as_view({'get': 'list'}),name='project-list'),
-	path('file_project_list/',api_views.get_file_project_list),
+	path('file_project_list/',api_views.WriterProjectListView.as_view({'get':'list'})),
 	path('assign_to/',api_views.AssignToListView.as_view({'get': 'list'}),name='assign-list'),
 	path('tasks_list/',api_views.tasks_list),
 	path('used_steps/',api_views.previously_created_steps),
 	path('project_analysis/<int:project_id>',api_views.ProjectAnalysis.as_view(), name='project-analysis'),
+	path('project/word_char/count',api_views.project_word_char_count),
 	path("download/<int:project_id>/",api_views.project_download),
 	path("instruction_file_download/<int:instruction_file_id>", api_views.instruction_file_download, name="instruction-file-download"),
 	#path("project/integeration/<int:pk>", api_views.IntegerationProject.as_view({"get": "list"})),
@@ -97,6 +98,7 @@ urlpatterns += [
 	path('task_status/',api_views.get_task_status),
 	path('voice_task_status/',api_views.get_voice_task_status),
 	path('docx_convertor/',api_views.docx_convertor),
+	path('stop_task/',api_views.stop_task),
 ]
 # views urls adding for local testing
 urlpatterns += [

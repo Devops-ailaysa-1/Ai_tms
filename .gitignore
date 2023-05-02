@@ -115,3 +115,5 @@ req_ilango.txt
 *.yml
 *.ini
 *.dockerfile
+ai_tms/settings/local.py
+ai_tms/settings/local_settings.py

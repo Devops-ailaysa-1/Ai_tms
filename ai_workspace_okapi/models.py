@@ -146,6 +146,8 @@ class Segment(BaseSegment):
     @property
     def get_merge_target_if_have(self):
         if self.is_split in [False, None]:
+            print(self)
+            print("tt------>",self.get_active_object().coded_target)
             return self.get_active_object().coded_target
         else:
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
@@ -157,6 +159,35 @@ class Segment(BaseSegment):
                     target_joined += split_seg.source
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
+
+    @property
+    def get_mt_raw_target_if_have(self):
+        if self.is_split in [False, None]:
+            print('self------>',self)
+            seg = self.get_active_object().id
+            print("seg------->",seg)
+            try:
+                mt_raw = Segment.objects.get(id=seg).seg_mt_raw.mt_raw
+            except:
+                mt_raw = ''
+            print("RR---------------->",mt_raw)
+            #return mt_raw
+            return set_runs_to_ref_tags(self.coded_source, mt_raw, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
+        else:
+            print("Inside else------->",self)
+            split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
+            target_joined = ""
+            for split_seg in split_segs:
+                if split_seg.mt_raw_split_segment != None:
+                    target_joined += split_seg.mt_raw_split_segment.first().mt_raw
+                else:
+                    target_joined += split_seg.source
+            print("RR----------------->",target_joined)
+            return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
+
+
     @property
     def get_merge_segment_count(self):
         count = 0
@@ -281,7 +312,7 @@ class SplitSegment(BaseSegment):
 
 class MT_RawTranslation(models.Model):
 
-    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
+    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL,related_name='seg_mt_raw')
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="segment_mt_engine")
     mt_raw = models.TextField()
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="mt_engine_task")
@@ -329,6 +360,7 @@ class Document(models.Model):
     google_api_cost_est = models.IntegerField(null=True) #Estimation
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
+    
 
     class Meta:
         constraints = [ models.UniqueConstraint(fields=("file", "job"),\
@@ -539,6 +571,10 @@ class Document(models.Model):
     def task_obj(self):
         return self.task_set.last()
 
+class SegmentPageSize(models.Model):
+    ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,
+                                   related_name="user_default_page_size")
+    page_size = models.IntegerField()
 
 
 class FontSize(models.Model):
