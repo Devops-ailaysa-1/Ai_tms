@@ -113,17 +113,7 @@ class SegmentSerializerV2(SegmentSerializer):
                 return ' ' + target
         else:
             return target
-        # if data.get('target'):
-        #     if data.get('target')[0].isspace():
-        #         copied_data["target"] = data['target'] 
-        #     else:
-        #         copied_data['target'] = ' ' + data['target']
-        # if data.get('temp_target'):
-        #     if data.get('temp_target')[0].isspace():
-        #         copied_data["temp_target"] = data['temp_target'] 
-        #     else:
-        #         copied_data['temp_target'] = ' ' + data['temp_target']
-        # return super().run_validation(copied_data)
+
 
     def update_task_assign(self,task_obj,user):
         try:
