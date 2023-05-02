@@ -1442,6 +1442,10 @@ class DocumentToFile(views.APIView):
 
         res_paths = get_res_path(task_data["source_language"])
 
+        # print("data---------->",json.dumps(data))
+        # print("req_res_params--------->",json.dumps(res_paths))
+        # print('req_params------>',json.dumps(params_data))
+
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
             data={
@@ -2433,9 +2437,9 @@ def download_mt_file(request):
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
     elif state == 'FAILURE':
-        return Response({'msg':'Failure'},status=400)
+        return Response({'msg':'Failure','task':task.id},status=400)
     else:
-        return Response({'msg':'Pending'},status=400)
+        return Response({'msg':'Pending','task':task.id},status=400)
 
 
 @api_view(['GET',])
