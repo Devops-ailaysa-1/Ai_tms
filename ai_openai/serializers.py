@@ -441,8 +441,6 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-    
-
 
 class BlogOutlineSessionSerializer(serializers.ModelSerializer):
     blog_title = serializers.PrimaryKeyRelatedField(queryset=Blogtitle.objects.all(),many=False) 
@@ -748,7 +746,7 @@ def keyword_process(keyword_start_phrase,user_title,instance,trans):
     prompt+=', in {} tone'.format(instance.tone.tone)
     print("Prompt------------>",prompt)
     print("Trans----------->",trans)
-    openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token, instance.response_copies_keyword)
+    openai_response = get_prompt(prompt,OPENAI_MODEL,blog_sub_phrase.max_token,1)
     token_usage = openai_token_usage(openai_response)
     keywords = openai_response['choices'][0]['text']
     print("From openai-------->",keywords)

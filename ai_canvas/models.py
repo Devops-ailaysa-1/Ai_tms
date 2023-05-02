@@ -64,8 +64,8 @@ class CanvasSourceJsonFiles(models.Model):
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     undo_hide_src = models.BooleanField(default=False)
     class Meta:
-        constraints = [
-        models.UniqueConstraint(fields=['canvas_design', 'page_no'], name="%(app_label)s_%(class)s_unique")]
+        constraints = [models.UniqueConstraint(fields=['canvas_design', 'page_no'], name="%(app_label)s_%(class)s_unique")]
+        ordering = ('page_no',)
 
 class CanvasTranslatedJson(models.Model):
     canvas_design = models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
@@ -77,8 +77,9 @@ class CanvasTranslatedJson(models.Model):
     updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
     undo_hide_tar = models.BooleanField(default=False)
     class Meta:
-        constraints = [
-        models.UniqueConstraint(fields=['canvas_design', 'source_language','target_language'], name="%(app_label)s_%(class)s_unique")]
+        constraints = [models.UniqueConstraint(fields=['canvas_design', 'source_language','target_language'], name="%(app_label)s_%(class)s_unique")]
+
+
 
 class CanvasTargetJsonFiles(models.Model):
     canvas_trans_json = models.ForeignKey(CanvasTranslatedJson,related_name='canvas_json_tar', on_delete=models.CASCADE)
@@ -87,7 +88,8 @@ class CanvasTargetJsonFiles(models.Model):
     json = models.JSONField(null=True)
     page_no = models.IntegerField()
 
-
+    class Meta:
+        ordering = ('page_no',)
 # #########template design##############
 
 class TemplateGlobalDesign(models.Model):
