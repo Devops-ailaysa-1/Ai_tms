@@ -3424,7 +3424,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
     #     return  response
 
     def retrieve(self, request, pk):
-        queryset = self.get_queryset_new()
+        queryset = self.get_queryset()
         ins = get_object_or_404(queryset, pk=pk)
         serializer = MyDocumentSerializer(ins)
         return Response(serializer.data)
