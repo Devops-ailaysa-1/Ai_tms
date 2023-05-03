@@ -3971,3 +3971,5 @@ def stop_task(request):
         return HttpResponse('Task has been revoked.')
     else:
         return HttpResponse('Task is already running or has completed.')
+
+
