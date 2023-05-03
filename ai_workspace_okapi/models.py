@@ -585,3 +585,14 @@ class SegmentHistory(models.Model):
     status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
     user =  models.ForeignKey(AiUser, null=True, on_delete=models.SET_NULL,related_name="edited_by")
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+
+class SelflearningAsset(models.Model):
+    user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    target_language=models.ForeignKey(Languages,related_name='selflearning_target',on_delete=models.CASCADE)
+    source_word=models.CharField(max_length=100,null=True,blank=True)
+    edited_word=models.CharField(max_length=100,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.source_word+'--'+self.edited_word
