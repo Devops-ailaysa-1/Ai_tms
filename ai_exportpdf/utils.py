@@ -152,9 +152,7 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.pdf_no_of_page = int(pdf_len)
         doc = docx.Document()
         for i in tqdm(range(1,pdf_len+1)):
-            print("1111111111")
             with tempfile.TemporaryDirectory() as image:
-                print("222222222222")
                 image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
@@ -162,11 +160,9 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
                 print("Text after preprocess------------>",text)
                 if i == 1:
                     all_text = doc.add_paragraph(text)
-                    print("---->",i)
                 else:
                     all_text.add_run(text)
                 # doc.add_paragraph(text)
-            print("33333333333333")
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
