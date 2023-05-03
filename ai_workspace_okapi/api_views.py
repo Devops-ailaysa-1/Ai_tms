@@ -121,8 +121,8 @@ class ServiceUnavailable(APIException):
 
 def get_empty_segments(doc):
     segments_1 = doc.segments_for_find_and_replace.filter(target__exact='')
-    merge_segments_1 =MergeSegment.objects.filter(text_unit__document=doc).filter(target__exact=None)
-    split_segments_1 = SplitSegment.objects.filter(text_unit__document=doc).filter(target__exact=None)
+    merge_segments_1 =MergeSegment.objects.filter(text_unit__document=doc).filter(Q(target__exact=None)|Q(target__exact=''))
+    split_segments_1 = SplitSegment.objects.filter(text_unit__document=doc).filter(Q(target__exact=None)|Q(target__exact=''))
     if (segments_1 or merge_segments_1 or split_segments_1):
         return True
     else:
@@ -283,8 +283,8 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     cel_task = pre_translate_update.apply_async((task.id,),)
                     return {"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id}
                 elif state == "SUCCESS":
-                    empty = task.document.get_segments().filter(target='').first()
-                    if ins.error_type == "Insufficient Credits" or empty:
+                    #empty = task.document.get_segments().filter(target='').first()
+                    if ins.error_type == "Insufficient Credits" or get_empty_segments(task.document) == True:
                         initial_credit = task.document.doc_credit_debit_user.credit_balance.get("total_left")
                         seg = task.document.get_segments().filter(target='').first().source
                         consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document,None,seg)
@@ -713,6 +713,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         confirm_list = json.loads(confirm_list)
         print("RTR---------->",confirm_list)
         msg=None
+        success_list=[]
         
         for item in confirm_list:
             try:
@@ -721,7 +722,6 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 status = item.get('status')
                 segment = self.get_object(segment_id)
                 if segment.temp_target != '':
-                    print("Inside partial upd")
                     data['target'] = segment.temp_target
                     data['status'] = status
                 else:
@@ -735,11 +735,13 @@ class SegmentsUpdateView(viewsets.ViewSet):
                 if segment.is_split == True:
                     self.split_update(data, segment)
                 segment_serlzr = self.get_update(segment, data, request)
+                if data!={}:
+                    success_list.append(item.get('pk'))
             except serializers.ValidationError as e:
                 print("Exception=======>",e)
                 msg = 'confirm all may not work properly due to insufficient credits'
         message = msg if msg else 'Objects updated successfully'
-        return Response({'message': message})
+        return Response({'message': message,'confirmed_list':success_list})
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         # return Response(segment_serlzr.data, status=201)
         
@@ -1201,17 +1203,19 @@ def long_text_process(consumable_credits,document_user,file_path,task,target_lan
 def pre_process(data):
     for key in data['text'].keys():
         for d in data['text'][key]:
-            del d['mt_raw_target']
+            #del d['mt_raw_target']
+            d.pop('mt_raw_target',None)
     return data
 
 def mt_raw_pre_process(data):
     for key in data['text'].keys():
         for d in data['text'][key]:
-            if d['mt_raw_target'] != None:
-                d['target'] = d['mt_raw_target']
+            if d.get('mt_raw_target') != None:
+                d['target'] = d.get('mt_raw_target')
             else:
-                d['target'] = d['source']
-            del d['mt_raw_target']
+                d['target'] = ''
+            #del d['mt_raw_target']
+            d.pop('mt_raw_target',None)
     return data
 
     
@@ -1437,6 +1441,10 @@ class DocumentToFile(views.APIView):
         params_data = {**task_data, "output_type": output_type}
 
         res_paths = get_res_path(task_data["source_language"])
+
+        # print("data---------->",json.dumps(data))
+        # print("req_res_params--------->",json.dumps(res_paths))
+        # print('req_params------>',json.dumps(params_data))
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
@@ -2442,9 +2450,9 @@ def download_mt_file(request):
             return JsonResponse({"msg": "Sorry! Something went wrong with file processing."},\
                         status=409)
     elif state == 'FAILURE':
-        return Response({'msg':'Failure'},status=400)
+        return Response({'msg':'Failure','task':task.id},status=400)
     else:
-        return Response({'msg':'Pending'},status=400)
+        return Response({'msg':'Pending','task':task.id},status=400)
 
 
 @api_view(['GET',])

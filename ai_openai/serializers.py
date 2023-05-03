@@ -43,6 +43,7 @@ def lang_detector(user_text):
 
 
 def openai_token_usage(openai_response ):
+    print("Response------------------->",openai_response)
     token_usage = openai_response.get("usage",None)
     prompt_token = token_usage['prompt_tokens']
     total_tokens=token_usage['total_tokens']
@@ -376,7 +377,11 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         outline_section_list = validated_data.pop('outline_section_list')
         instance = BlogArticle.objects.create(**validated_data)
         initial_credit = instance.blog_creation.user.credit_balance.get("total_left")
-        if initial_credit < 700:
+        if instance.blog_creation.user_language_code != 'en':
+            credits_required = 2000
+        else:
+            credits_required = 200
+        if initial_credit < credits_required:
             raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
         blog_article_start_phrase = instance.sub_categories.prompt_sub_category.first().start_phrase
         title = instance.blog_creation.user_title
@@ -387,15 +392,6 @@ class BlogArticleSerializer(serializers.ModelSerializer):
         detected_lang = lang_detector(keyword)
         if detected_lang!='en':
             keyword = instance.blog_creation.keywords_mt
-        queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)
-        # queryset_new = queryset.annotate(
-        #                 order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
-        #                 ).order_by(ExpressionWrapper(Case(
-        #                 When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
-        #                 default=F('order_new'),  # Use 'custom_order' field for ordering
-        #                 output_field=IntegerField()),
-        #             output_field=IntegerField()
-        #             ))
         print("OutlineSelection---------------->",outline_section_list)
         if outline_section_list:
             detected_lang = lang_detector(outline_section_list[0].blog_outline)
@@ -404,32 +400,46 @@ class BlogArticleSerializer(serializers.ModelSerializer):
             outlines = [i.blog_outline_mt for i in outline_section_list if i.blog_outline_mt ]
         else:
             outlines = [i.blog_outline for i in outline_section_list]
-        selected_outline_section_list = ",".join(outlines)
+        joined_list = "', '".join(outlines)
+        selected_outline_section_list = f"'{joined_list}'"
         print("Selected------------>",selected_outline_section_list)
-        prompt_responses = blog_generator(outline_section_prompt_list= outlines,title=title,tone=instance.blog_creation.tone.tone,
-                                              keyword=keyword)
-        prompt_response_article_resp=[]
-        token_usage=0
-        for count,prompt_response in enumerate(prompt_responses):
-            generated_text=prompt_response.choices[0].text
-            prompt_response_article_resp.append('\n'+'<h2>'+outlines[count]+'</h2>'+generated_text)
-            total_token=openai_token_usage(prompt_response)
-            token_usage+=get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
+        prompt = blog_article_start_phrase.format(title,selected_outline_section_list,keyword,instance.blog_creation.tone.tone)
+        #prompt+=', in {} tone'.format(instance.blog_creation.tone.tone)
+        print("prompt____article--->>>>",prompt)
+        # if isinstance(prompt,list):
+        prompt_response = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
+        print("prot_resp--->>>>>>>>>>>",prompt_response)
+        prompt_response_article_resp = prompt_response['choices'][0].message['content']
+        total_token = openai_token_usage(prompt_response)
+        token_usage = get_consumable_credits_for_openai_text_generator(total_token.total_tokens)
+        #prompt_responses = blog_generator(outline_section_prompt_list= outlines,title=title,tone=instance.blog_creation.tone.tone,
+        #                                      keyword=keyword)
+        # prompt_response_article_resp=[]
+        # token_usage=0
+        # for count,prompt_response in enumerate(prompt_responses):
+        #     generated_text=prompt_response.choices[0].text
+        #     prompt_response_article_resp.append('\n'+'<h2>'+outlines[count]+'</h2>'+generated_text)
+        #     total_token=openai_token_usage(prompt_response)
+        #     token_usage+=total_token.total_tokens
+        # token_usage = get_consumable_credits_for_openai_text_generator(token_usage)
 
-        prompt_response_article_resp= '<h1>'+title+'</h1>'+'\n\n'+"'\n".join(prompt_response_article_resp)
-        print("prot_resp--->>>>>>>>>>>",prompt_response_article_resp)
-        print("token_usage---->>",token_usage)
+        # prompt_response_article_resp= '<h1>'+title+'</h1>'+'\n\n'+"'\n".join(prompt_response_article_resp)
+        # print("prot_resp--->>>>>>>>>>>",prompt_response_article_resp)
+        # print("token_usage---->>",token_usage)
 
         if instance.blog_creation.user_language_id not in blog_available_langs:
-            blog_article_trans = get_translation(1,prompt_response_article_resp,"en",instance.blog_creation.user_language_code,
-                                                 user_id=instance.blog_creation.user.id)  
-            instance.blog_article = blog_article_trans
-            consumable_credits_for_article_gen = get_consumable_credits_for_text(blog_article_trans,
+            consumable_credits_for_article_gen = get_consumable_credits_for_text(prompt_response_article_resp,
                                                                                  instance.blog_creation.user_language_code,'en')
-            tot_tok =  token_usage+consumable_credits_for_article_gen
+            if initial_credit >= consumable_credits_for_article_gen:
+                blog_article_trans = get_translation(1,prompt_response_article_resp,"en",instance.blog_creation.user_language_code,
+                                                    user_id=instance.blog_creation.user.id)  
+                instance.blog_article_mt = blog_article_trans
+            else:
+                instance.blog_article_mt = prompt_response_article_resp
+            tot_tok =  token_usage#+consumable_credits_for_article_gen
             print("tot_tok",tot_tok)
             AiPromptSerializer().customize_token_deduction(instance.blog_creation,tot_tok)
-            instance.blog_article_mt=prompt_response_article_resp
+            #instance.blog_article_mt=prompt_response_article_resp
         else:
             instance.blog_article = prompt_response_article_resp 
             AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
@@ -602,7 +612,7 @@ class BlogOutlineSerializer(serializers.ModelSerializer):
         print("TT------>",title)
         print("KK------->",keywords)
         prompt = blog_outline_start_phrase.start_phrase.format(title,keywords)
-        prompt+=', in {} tone'.format(instance.blog_title_gen.blog_creation_gen.tone.tone)
+        prompt+='use a {} tone.'.format(instance.blog_title_gen.blog_creation_gen.tone.tone)
         print("PR------------->",prompt)
         # prompt_response_gpt = get_prompt_chatgpt_turbo(prompt=prompt,n=1)
         prompt_response_gpt = outline_gen(prompt=prompt)
@@ -667,8 +677,22 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         title_start_phrase = PromptStartPhrases.objects.get(sub_category=sub_categories)
         #prompt creation
         initial_credit = blog_create_instance.user.credit_balance.get("total_left")
-        prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title if blog_create_instance.user_title else blog_create_instance.user_title_mt)
-        prompt+=' with keywords '+blog_create_instance.keywords if blog_create_instance.keywords else blog_create_instance.keywords_mt
+        title = blog_create_instance.user_title
+        detected_lang = lang_detector(title)
+        if detected_lang != 'en':
+            title = blog_create_instance.user_title_mt
+        prompt = title_start_phrase.start_phrase.format(title)
+        keywords = blog_create_instance.keywords
+        detected_lang = lang_detector(keywords)
+        print("DL--------->>",detected_lang)
+        if detected_lang!='en':
+            keywords = blog_create_instance.keywords_mt
+        #prompt = title_start_phrase.start_phrase.format(blog_create_instance.user_title if blog_create_instance.user_title else blog_create_instance.user_title_mt)
+        #title = instance.blog_title_gen.blog_title if instance.blog_title_gen.blog_title else instance.blog_title_gen.blog_title_mt
+        #keywords = instance.blog_title_gen.blog_creation_gen.keywords 
+        print("User Title----->",title)
+        print("Keywords-------->",keywords)
+        prompt+=' with keywords '+ keywords
         prompt+=', in {} tone'.format(blog_create_instance.tone.tone)
         consumable_credits = get_consumable_credits_for_text(prompt,None,'en')
 
@@ -683,7 +707,7 @@ class BlogtitleSerializer(serializers.ModelSerializer):
         blog_titles = openai_response['choices'][0]['text']
         #title creation
         for blog_title in blog_titles.split('\n'):
-            if blog_title.strip():
+            if blog_title.strip().strip('.'):
                 blog_title = re.sub(r'\d+.','',blog_title)
                 blog_title = blog_title.strip()
                 
@@ -841,7 +865,7 @@ class BlogCreationSerializer(serializers.ModelSerializer):
         model = BlogCreation
         fields = ('id','user_title','steps','user_title_mt','keywords','keywords_mt','prompt_user_title_mt','prompt_keyword_mt',
                   'categories','sub_categories','user_language','tone','response_copies_keyword','selected_keywords_list',
-                  'unselected_keywords_list','blog_key_create','user','blog_title_create')
+                  'unselected_keywords_list','blog_key_create','user','blog_title_create','created_by')
         
     def create(self, validated_data):
         blog_available_langs = [17]
@@ -1166,3 +1190,14 @@ class BlogCreationSerializer(serializers.ModelSerializer):
             #             blog_keyword =replace_punctuation(blog_keyword)
             #             BlogKeywordGenerate.objects.create(blog_creation=instance,blog_keyword=blog_keyword,selected_field= False, 
             #                                     blog_keyword_mt=None,token_usage=token_usage)                   
+
+
+                    # queryset_new = queryset.annotate(
+        #                 order_new=Coalesce('custom_order', models.Value(9999, output_field=IntegerField()))
+        #                 ).order_by(ExpressionWrapper(Case(
+        #                 When(custom_order__isnull=True, then=F('id')),  # Use 'id' field as default value when 'order' is null
+        #                 default=F('order_new'),  # Use 'custom_order' field for ordering
+        #                 output_field=IntegerField()),
+        #             output_field=IntegerField()
+        #             ))
+        # queryset = instance.blog_creation.blog_title_create.filter(selected_field = True).first().blogoutlinesession_title.filter(selected_field=True)

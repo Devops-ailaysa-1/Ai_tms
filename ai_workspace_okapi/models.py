@@ -146,6 +146,8 @@ class Segment(BaseSegment):
     @property
     def get_merge_target_if_have(self):
         if self.is_split in [False, None]:
+            print(self)
+            print("tt------>",self.get_active_object().coded_target)
             return self.get_active_object().coded_target
         else:
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
@@ -161,13 +163,19 @@ class Segment(BaseSegment):
     @property
     def get_mt_raw_target_if_have(self):
         if self.is_split in [False, None]:
-            mt_raw = self.get_active_object().seg_mt_raw.mt_raw
-            print("RR---------->",mt_raw)
-            if mt_raw != None:
-                return mt_raw
-            else:
-                return self.get_active_object().source
+            print('self------>',self)
+            seg = self.get_active_object().id
+            print("seg------->",seg)
+            try:
+                mt_raw = Segment.objects.get(id=seg).seg_mt_raw.mt_raw
+            except:
+                mt_raw = ''
+            print("RR---------------->",mt_raw)
+            #return mt_raw
+            return set_runs_to_ref_tags(self.coded_source, mt_raw, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
         else:
+            print("Inside else------->",self)
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
             target_joined = ""
             for split_seg in split_segs:
@@ -175,6 +183,7 @@ class Segment(BaseSegment):
                     target_joined += split_seg.mt_raw_split_segment.first().mt_raw
                 else:
                     target_joined += split_seg.source
+            print("RR----------------->",target_joined)
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
 

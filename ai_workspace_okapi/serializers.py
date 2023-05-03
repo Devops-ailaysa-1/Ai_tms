@@ -105,6 +105,16 @@ class SegmentSerializerV2(SegmentSerializer):
     def to_internal_value(self, data):
         return super(SegmentSerializer, self).to_internal_value(data=data)
 
+    def target_check(self, obj, target):
+        if obj.source[0].isspace():
+            if target[0].isspace(): 
+                return target
+            else:
+                return ' ' + target
+        else:
+            return target
+
+
     def update_task_assign(self,task_obj,user):
         try:
             obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
@@ -116,6 +126,10 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print("VD----------->",validated_data)
         print("Ins-------->",instance)
+        if validated_data.get('target'):
+            validated_data['target'] = self.target_check(instance,validated_data.get('target'))
+        if validated_data.get('temp_target'):
+            validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
         manual_confirm_status = TranslationStatus.objects.get(id=106)
         reviewed_status = TranslationStatus.objects.get(id=110)
         tm_confirm_status = TranslationStatus.objects.get(id=102)

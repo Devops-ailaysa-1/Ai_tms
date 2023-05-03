@@ -88,8 +88,8 @@ class BlogCreation(models.Model):
     document = models.ForeignKey(to= MyDocuments, on_delete = models.SET_NULL, blank=True, null=True,related_name='blog_doc')
     user_title = models.CharField(max_length=100,null=True,blank=True)
     user_title_mt = models.CharField(max_length = 100, null=True, blank=True)
-    keywords = models.CharField(max_length=200,null=True,blank=True)
-    keywords_mt = models.CharField(max_length = 200, null=True, blank=True)
+    keywords = models.CharField(max_length=1000,null=True,blank=True)
+    keywords_mt = models.CharField(max_length = 1000, null=True, blank=True)
     prompt_user_title_mt = models.CharField(max_length = 200, null=True, blank=True)
     prompt_keyword_mt = models.CharField(max_length = 200, null=True, blank=True)
     categories = models.ForeignKey(to= PromptCategories, on_delete = models.CASCADE,related_name = 'blog_categories' ,blank=True,null=True )
@@ -99,6 +99,7 @@ class BlogCreation(models.Model):
     response_copies_keyword = models.IntegerField(null=True, blank=True,default=10)
     steps =  models.CharField(max_length=50, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    created_by = models.ForeignKey(AiUser, on_delete=models.CASCADE,null=True, blank=True,related_name='blog_created_by')
     
     @property
     def user_language_code(self):

@@ -386,7 +386,8 @@ class BlogCreationViewset(viewsets.ViewSet):
     def create(self,request):
         categories = 10
         sub_categories = 61
-        serializer = BlogCreationSerializer(data={**request.POST.dict(),'categories':categories,'sub_categories':sub_categories,'user':request.user.id} ) 
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = BlogCreationSerializer(data={**request.POST.dict(),'categories':categories,'sub_categories':sub_categories,'created_by':request.user.id,'user':user.id} ) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

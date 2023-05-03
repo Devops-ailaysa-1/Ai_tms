@@ -91,7 +91,7 @@ from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
-from django.db.models import Case, When, F, Value, DateTimeField
+from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
 from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 
@@ -733,19 +733,19 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         # parent_queryset = queryset.annotate(
-        #                     sorted_datetime=Coalesce(
+        #                     sorted_datetime=ExpressionWrapper(Coalesce(
         #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
         #                     Case(
         #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
         #                         default=F('created_at'),
         #                         output_field=DateTimeField(),
         #                     ),
-        #                     Value(datetime.min),
-        #                     )
-        #                     ).order_by('-sorted_datetime')
+        #                     Value(datetime.min),),
+        #                     output_field=DateTimeField(),)
+        #                     )#.order_by('-sorted_datetime')
 
         #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
-        return queryset#parent_queryset
+        return queryset #parent_queryset
 
 
     def list(self, request, *args, **kwargs):
@@ -795,8 +795,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
         team = request.POST.get('team',None)
-        req_copy = copy.copy( request._request)
-        req_copy.method = "DELETE"
+        #req_copy = copy.copy( request._request)
+        #req_copy.method = "DELETE"
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
@@ -857,10 +857,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
 
-    # def delete(self, request, pk):
-    #     project = self.get_object()
-    #     project.delete()
-    #     return Response(status=status.HTTP_204_NO_CONTENT)
+    def destroy(self, request, *args, **kwargs):
+        project = self.get_object()
+        if project.assigned == True:
+            return Response({'msg':'some tasks are assigned in this project. Unassign and delete'},status=400)
+        else:
+            project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class VendorDashBoardView(viewsets.ModelViewSet):
@@ -2710,7 +2713,7 @@ def get_task_status(request):
                     status = 'True' 
             if status == 'True':
                 progress = i.get_progress
-            res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
+            res.append({'task':i.id,'document':i.document_id,'open':status,'progress':progress,'msg':msg})
         return Response({'res':res})
     else:
         return Response({'msg':'No Detail'})
@@ -3334,12 +3337,12 @@ def translate_from_pdf(request,task_id):
 
 
 
-# class MyDocFilter(django_filters.FilterSet):
-#     #proj_name = django_filters.CharFilter(lookup_expr='icontains')
-#     doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
-#     class Meta:
-#         model = MyDocuments
-#         fields = ['doc_name']#proj_name
+class MyDocFilter(django_filters.FilterSet):
+    #proj_name = django_filters.CharFilter(lookup_expr='icontains')
+    doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
+    class Meta:
+        model = MyDocuments
+        fields = ['doc_name']#proj_name
 
 from django.db.models import Value, CharField, IntegerField
 from ai_openai.models import BlogCreation
@@ -3347,45 +3350,45 @@ from functools import reduce
 
 class MyDocumentsView(viewsets.ModelViewSet):
 
-    serializer_class = MyDocumentSerializerNew
+    serializer_class = MyDocumentSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['doc_name','id']#'proj_name',
-    #filterset_class = MyDocFilter
+    filterset_class = MyDocFilter
     paginator = PageNumberPagination()
-    #ordering = ('-id')
+    ordering = ('-id')
     paginator.page_size = 20
     # https://www.django-rest-framework.org/api-guide/filtering/
 
 
 
-    def get_queryset(self):
-        query = self.request.query_params.get('doc_name')
-        ordering = self.request.query_params.get('ordering')
-        user = self.request.user
-        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
-        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
-        #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
-        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
-        q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
-        q1 = q1.filter(doc_name__icontains =query) if query else q1
-        q2 = BlogCreation.objects.filter(user = user).filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
-        q2 = q2.filter(user_title__icontains = query) if query else q2
-        q3 = q1.union(q2)
-        final_queryset = q3.order_by('-created_at')
-        if ordering:
-            field_name = ordering.lstrip('-')
-            if ordering.startswith('-'):
-                queryset = final_queryset.order_by(F(field_name).desc(nulls_last=True))
-            else:
-                queryset = final_queryset.order_by(F(field_name).asc(nulls_last=True))
+    # def get_queryset(self):
+    #     query = self.request.query_params.get('doc_name')
+    #     ordering = self.request.query_params.get('ordering')
+    #     user = self.request.user
+    #     project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+    #     owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+    #     #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
+    #     queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
+    #     q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
+    #     q1 = q1.filter(doc_name__icontains =query) if query else q1
+    #     q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
+    #     q2 = q2.filter(user_title__icontains = query) if query else q2
+    #     q3 = q1.union(q2)
+    #     final_queryset = q3.order_by('-created_at')
+    #     if ordering:
+    #         field_name = ordering.lstrip('-')
+    #         if ordering.startswith('-'):
+    #             queryset = final_queryset.order_by(F(field_name).desc(nulls_last=True))
+    #         else:
+    #             queryset = final_queryset.order_by(F(field_name).asc(nulls_last=True))
 
-            return queryset
+    #         return queryset
         
-        return final_queryset
+    #     return final_queryset
         
     
-    def get_queryset_new(self):
+    def get_queryset(self):
         user = self.request.user
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
@@ -3394,12 +3397,12 @@ class MyDocumentsView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         paginate = request.GET.get('pagination',True)
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         if paginate == 'False':
-            serializer = MyDocumentSerializerNew(queryset, many=True)
+            serializer = MyDocumentSerializer(queryset, many=True)
             return Response(serializer.data)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = MyDocumentSerializerNew(pagin_tc, many=True)
+        serializer = MyDocumentSerializer(pagin_tc, many=True)
         response = self.get_paginated_response(serializer.data)
         return  response
 
@@ -3421,7 +3424,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
     #     return  response
 
     def retrieve(self, request, pk):
-        queryset = self.get_queryset_new()
+        queryset = self.get_queryset()
         ins = get_object_or_404(queryset, pk=pk)
         serializer = MyDocumentSerializer(ins)
         return Response(serializer.data)
@@ -3906,9 +3909,9 @@ def project_word_char_count(request):
         obj = MTonlytaskCeleryStatus.objects.filter(project_id = pr).filter(task_name = 'project_analysis_property').last()
         state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
         print("State-------->",state)
-        if state == 'STARTED':
+        if state == 'STARTED' or state == 'PENDING':
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
-        elif state == 'PENDING' or state =='None' or state == 'FAILURE':
+        elif state =='None' or state == 'FAILURE':
             celery_task = project_analysis_property.apply_async((pr_obj.id,), )
             res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
         elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:

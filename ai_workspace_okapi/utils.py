@@ -338,6 +338,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         if user:
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, cc)
             print("status_code---------->",status_code)
+            print("Debited----------->",cc,user.credit_balance.get("total_left"))
     else:
         print('Not debited in this func')
     print("Translate---------->",translate)
