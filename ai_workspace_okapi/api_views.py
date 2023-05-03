@@ -1554,6 +1554,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         # data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
         #         if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
         #
+    
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
 
         res = self.get_paginated_response(segments_ser.data)
