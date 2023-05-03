@@ -496,7 +496,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
 	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False,write_only=True)
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
-	mt_enable = serializers.BooleanField(required=False,allow_null=True,write_only=True)
+	mt_enable = serializers.BooleanField(required=False,allow_null=True)
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
 	pre_translate = serializers.BooleanField(required=False,allow_null=True)
 	copy_paste_enable = serializers.BooleanField(required=False,allow_null=True)

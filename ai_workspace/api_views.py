@@ -3955,6 +3955,8 @@ def project_word_char_count(request):
 
 from celery.result import AsyncResult
 from django.http import HttpResponse
+from celery import Celery
+app = Celery('ai_tms')
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def stop_task(request):
@@ -3962,10 +3964,10 @@ def stop_task(request):
     task = AsyncResult(task_id)
     print("TT---------->",task.state)
     if task.state == 'STARTED':
-        task.revoke(terminate=True)
+        app.control.revoke(task_id, terminated=True, signal='SIGKILL')
         return HttpResponse('Task has been stopped.') 
     elif task.state == 'PENDING':
-        task.revoke()
+        app.control.revoke(task_id)
         return HttpResponse('Task has been revoked.')
     else:
         return HttpResponse('Task is already running or has completed.')
