@@ -416,6 +416,7 @@ class DocumentViewByDocumentId(views.APIView):
 
     def get(self, request, document_id):
         document = self.get_object(document_id)
+        mt_enable = document.job.project.mt_enable
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
@@ -425,10 +426,12 @@ class DocumentViewByDocumentId(views.APIView):
         # if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
         dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
         dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
+        dict_2 = {'mt_enable':mt_enable}
         authorize(request, resource=document, actor=request.user, action="read")
         data = DocumentSerializerV2(document).data
         data.update(dict)
         data.update(dict_1)
+        data.update(dict_2)
         return Response(data, status=200)
         # else:
         #     return Response({"msg" : "Unauthorised"}, status=401)
@@ -1440,9 +1443,9 @@ class DocumentToFile(views.APIView):
 
         res_paths = get_res_path(task_data["source_language"])
 
-        # print("data---------->",json.dumps(data))
-        # print("req_res_params--------->",json.dumps(res_paths))
-        # print('req_params------>',json.dumps(params_data))
+        print("data---------->",json.dumps(data))
+        print("req_res_params--------->",json.dumps(res_paths))
+        print('req_params------>',json.dumps(params_data))
 
         res = requests.post(
             f'http://{spring_host}:8080/getTranslatedAsFile/',
@@ -1549,6 +1552,7 @@ class SourceSegmentsListView(viewsets.ViewSet, PageNumberPagination):
         # data = [SegmentSerializer(MergeSegment.objects.get(id=i.get("segment_id"))).data
         #         if (i.get("is_merged") == True and i.get("is_merge_start")) else i for i in segments_ser.data]
         #
+    
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
 
         res = self.get_paginated_response(segments_ser.data)
