@@ -1446,6 +1446,8 @@ class DocumentToFile(views.APIView):
         res_paths = get_res_path(task_data["source_language"])
 
         print("data---------->",json.dumps(data))
+        with open("sample.json", "w") as outfile:
+            outfile.write(json.dumps(data))
         print("req_res_params--------->",json.dumps(res_paths))
         print('req_params------>',json.dumps(params_data))
 
