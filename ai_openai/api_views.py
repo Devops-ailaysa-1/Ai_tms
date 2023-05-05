@@ -775,9 +775,6 @@ from django.http import HttpResponse, StreamingHttpResponse
 import time
 @api_view(["POST"])
 def generate_article(request):
-    # response = HttpResponse(content_type='text/event-stream')
-    # response['Cache-Control'] = 'no-cache'
-    # response['Connection'] = 'keep-alive'
     
     text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
             Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
@@ -807,9 +804,17 @@ def generate_article(request):
             print(chunk)
             time.sleep(0.2)
             ##print(chunk)
-    response = StreamingHttpResponse(stream(), status=200, content_type='text/event-stream')
+
+    response = HttpResponse(stream(),content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
     return response
+
+
+
+    # response = StreamingHttpResponse(stream(), status=200, content_type='text/event-stream')
+    # response['Cache-Control'] = 'no-cache'
+    # return response
     # response.status_code = 200
     # return response(stream())
     #return StreamingHttpResponse(stream(), content_type='text/event-stream')
