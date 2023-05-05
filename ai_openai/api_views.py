@@ -771,36 +771,46 @@ class BlogArticleViewset(viewsets.ViewSet):
 
 
 
-from django.http import StreamingHttpResponse,JsonResponse
+from django.http import HttpResponse, StreamingHttpResponse
 import time
 @api_view(["POST"])
 def generate_article(request):
-    if request.method == 'POST':
-        def stream_article_response():
-            text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
-                    Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
-                    Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small. This makes it difficult for the network to update the weights during training, leading to slow convergence or no convergence at all. 
-                    Understanding Backpropagation in the Context of Vanishing Gradient
-                    Backpropagation is the most popular algorithm for training neural networks. It works by propagating the error backward through the network, updating the weights in a way that reduces the error. However, when the gradient of the error function becomes small, backpropagation cannot update the weights effectively, leading to the problem of vanishing gradient. 
-                    The Cause and Effect of Vanishing Gradient on Neural Networks
-                    Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small due to the activation functions used. Activation functions such as sigmoid and hyperbolic tangent functions have a limited range that they can output which could cause them to saturate at either end of the function. This means that as you propagate through the network, the gradients of this function become smaller, leading to the vanishing gradient. 
-                    The Impact of Vanishing Gradient on Deep Learning Performance
-                    Vanishing gradient can have a significant impact on the performance of deep learning networks. In a deep neural network with many layers, vanishing gradient can prevent the lower layers from learning effectively, leading to poor performance. Additionally, it can cause the network to get stuck in local optima, resulting in a suboptimal solution.
-                    Strategies and Techniques for Mitigating Vanishing Gradient in Neural Networks
-                    Several strategies and techniques can help mitigate the problem of vanishing gradient in neural networks. One approach is to use activation functions that are less prone to saturation, such as the Rectified Linear Unit (ReLU) function. Another approach is to use skip connections, allowing for information to flow more easily between layers. Residual connections, popular in ResNets, is an architecture with skip connections between layers. Additionally, weight normalization or gradient clipping can be implemented to manage gradients and weights. 
-                    Challenges in Detecting and Diagnosing Vanishing Gradient in Machine Learning
-                    Detecting and diagnosing vanishing gradient can be challenging, as it is not always apparent during training. Some common signs of vanishing gradient include slow convergence, instability during training, and poor performance. However, these symptoms can also be caused by other factors, making it difficult to pinpoint the exact issue.
-                    Case Studies: Real-world Examples of Vanishing Gradient in Deep Learning Projects
-                    Vanishing gradient can manifest in various ways during real-world deep learning projects. One example is image classification, where deep learning models can struggle to distinguish between similar objects, such as different breeds of dogs. Another example is natural language processing, where the neural network can have difficulty predicting the next word in a sentence. In both of these cases, vanishing gradient can lead to poor performance and accuracy.
-                    Exploring the Possibilities of Overcoming Vanishing Gradient with Alternative Optimizers
-                    Several alternative optimization techniques have been proposed to overcome the problem of vanishing gradient. One such method is to use adaptive optimization methods, such as Adam and RMSprop. These algorithms adjust the learning rate for each weight in the network iteratively, providing better performance on the training set. 
-                    The Future of Vanishing Gradient: Opportunities and Emerging Solutions in Neural Networks
-                    As research in neural networks continues, we can expect to see new solutions emerge for vanishing gradient. One promising approach is to use more complex network architectures, such as the attention mechanism, to help manage the flow of information through the network. Additionally, transfer learning and pre-training networks on similar tasks can help alleviate problems associated with vanishing gradients.
-                    Conclusion and Next Steps in Vanishing Gradient Research and Development for Machine Learning
-                    Vanishing gradient is a common problem in neural networks that can have a significant impact on performance. Strategies and techniques can help mitigate this issue, but their effectiveness may vary depending on the specific architecture and application. As research in neural networks evolves, we can expect to see more advanced solutions for vanishing gradient emerge, leading to even more powerful AI technologies."""
-            for chunk in text.split(' '):
-                time.sleep(0.2)
-                ##print(chunk)
-                yield chunk
-        return StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
-    return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    # response = HttpResponse(content_type='text/event-stream')
+    # response['Cache-Control'] = 'no-cache'
+    # response['Connection'] = 'keep-alive'
+    
+    text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
+            Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
+            Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small. This makes it difficult for the network to update the weights during training, leading to slow convergence or no convergence at all. 
+            Understanding Backpropagation in the Context of Vanishing Gradient
+            Backpropagation is the most popular algorithm for training neural networks. It works by propagating the error backward through the network, updating the weights in a way that reduces the error. However, when the gradient of the error function becomes small, backpropagation cannot update the weights effectively, leading to the problem of vanishing gradient. 
+            The Cause and Effect of Vanishing Gradient on Neural Networks
+            Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small due to the activation functions used. Activation functions such as sigmoid and hyperbolic tangent functions have a limited range that they can output which could cause them to saturate at either end of the function. This means that as you propagate through the network, the gradients of this function become smaller, leading to the vanishing gradient. 
+            The Impact of Vanishing Gradient on Deep Learning Performance
+            Vanishing gradient can have a significant impact on the performance of deep learning networks. In a deep neural network with many layers, vanishing gradient can prevent the lower layers from learning effectively, leading to poor performance. Additionally, it can cause the network to get stuck in local optima, resulting in a suboptimal solution.
+            Strategies and Techniques for Mitigating Vanishing Gradient in Neural Networks
+            Several strategies and techniques can help mitigate the problem of vanishing gradient in neural networks. One approach is to use activation functions that are less prone to saturation, such as the Rectified Linear Unit (ReLU) function. Another approach is to use skip connections, allowing for information to flow more easily between layers. Residual connections, popular in ResNets, is an architecture with skip connections between layers. Additionally, weight normalization or gradient clipping can be implemented to manage gradients and weights. 
+            Challenges in Detecting and Diagnosing Vanishing Gradient in Machine Learning
+            Detecting and diagnosing vanishing gradient can be challenging, as it is not always apparent during training. Some common signs of vanishing gradient include slow convergence, instability during training, and poor performance. However, these symptoms can also be caused by other factors, making it difficult to pinpoint the exact issue.
+            Case Studies: Real-world Examples of Vanishing Gradient in Deep Learning Projects
+            Vanishing gradient can manifest in various ways during real-world deep learning projects. One example is image classification, where deep learning models can struggle to distinguish between similar objects, such as different breeds of dogs. Another example is natural language processing, where the neural network can have difficulty predicting the next word in a sentence. In both of these cases, vanishing gradient can lead to poor performance and accuracy.
+            Exploring the Possibilities of Overcoming Vanishing Gradient with Alternative Optimizers
+            Several alternative optimization techniques have been proposed to overcome the problem of vanishing gradient. One such method is to use adaptive optimization methods, such as Adam and RMSprop. These algorithms adjust the learning rate for each weight in the network iteratively, providing better performance on the training set. 
+            The Future of Vanishing Gradient: Opportunities and Emerging Solutions in Neural Networks
+            As research in neural networks continues, we can expect to see new solutions emerge for vanishing gradient. One promising approach is to use more complex network architectures, such as the attention mechanism, to help manage the flow of information through the network. Additionally, transfer learning and pre-training networks on similar tasks can help alleviate problems associated with vanishing gradients.
+            Conclusion and Next Steps in Vanishing Gradient Research and Development for Machine Learning
+            Vanishing gradient is a common problem in neural networks that can have a significant impact on performance. Strategies and techniques can help mitigate this issue, but their effectiveness may vary depending on the specific architecture and application. As research in neural networks evolves, we can expect to see more advanced solutions for vanishing gradient emerge, leading to even more powerful AI technologies."""
+
+    def stream():
+        for chunk in text.split(' '):
+            yield chunk
+            print(chunk)
+            time.sleep(0.2)
+            ##print(chunk)
+    response = StreamingHttpResponse(stream(), status=200, content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    return response
+    # response.status_code = 200
+    # return response(stream())
+    #return StreamingHttpResponse(stream(), content_type='text/event-stream')
+    #return JsonResponse({'error': 'Error'}, status=405)
