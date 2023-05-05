@@ -2637,7 +2637,7 @@ def update_self_learning(sender, instance, *args, **kwargs):
         print("both segment tar from current instance ")
         edited_segment=seg_his.last().target
         target_segment=seg_his[len(seg_his)-2].target
-        print(edited_segment,target_segment)
+        print(edited_segment,'<------>',target_segment)
 
     elif len(seg_his)==1:
         print("from mt segment and current inst target")
@@ -2651,22 +2651,22 @@ def update_self_learning(sender, instance, *args, **kwargs):
 
         print("no history found")
 
-    if instance.status.status_id==104:
-        if edited_segment and target_segment:
-            diff_words=do_compare_sentence(target_segment,edited_segment)
-            if diff_words:
-                for diff_word in diff_words:
-                    self_learn_filter=SelflearningAsset.objects.filter(user=user,source_word=diff_word[0])
-                    if not self_learn_filter:
-                        SelflearningAsset.objects.create(user=user,source_word=diff_word[0],edited_word=diff_word[1],
-                                                        target_language=language)
-                    if self_learn_filter:
-                        self_learn_filter.update(source_word=diff_word[0],edited_word=diff_word[1])
-                print("diff_words--->",diff_words)
-            else:
-                print("no_diff")
+    # if instance.status.status_id==104:
+    if edited_segment and target_segment:
+        diff_words=do_compare_sentence(target_segment,edited_segment)
+        if diff_words:
+            for diff_word in diff_words:
+                self_learn_filter=SelflearningAsset.objects.filter(user=user,source_word=diff_word[0])
+                if not self_learn_filter:
+                    SelflearningAsset.objects.create(user=user,source_word=diff_word[0],edited_word=diff_word[1],
+                                                    target_language=language)
+                if self_learn_filter:
+                    self_learn_filter.update(source_word=diff_word[0],edited_word=diff_word[1])
+            print("diff_words--->",diff_words)
         else:
-            print("no_seg and no_tar")
+            print("no_diff")
+    else:
+        print("no_seg and no_tar")
 
 
 post_save.connect(update_self_learning, sender=SegmentHistory)
