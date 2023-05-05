@@ -142,3 +142,6 @@ def replace_hex_colors_with_rgb(html):
 # htmlupdates = updatedHtml.replace('<br />', '')
 # new_parser.add_html_to_document(htmlupdates, document)
 # document.save('file_name.docx')s
+
+
+
