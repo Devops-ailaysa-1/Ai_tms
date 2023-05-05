@@ -2651,7 +2651,7 @@ def update_self_learning(sender, instance, *args, **kwargs):
 
         print("no history found")
 
-    if instance.status.status_id==102:
+    if instance.status.status_id==104:
         if edited_segment and target_segment:
             diff_words=do_compare_sentence(target_segment,edited_segment)
             if diff_words:
