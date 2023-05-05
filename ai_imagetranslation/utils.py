@@ -84,7 +84,7 @@ def inpaint_image(im,msk):
     ('image',('',open(im,'rb'),'image/jpeg')),
     ('mask',('',open(msk,'rb'),'image/png'))]
     response = requests.request("POST",IMAGE_TRANSLATE_URL, headers=headers, data=data, files=files)
-    print(response.content)
+    
     if response.status_code==200:
         arr = np.frombuffer(response.content, dtype=np.uint8)
         return {'result':arr,'code':response.status_code }

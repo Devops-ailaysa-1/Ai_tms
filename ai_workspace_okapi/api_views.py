@@ -2633,23 +2633,23 @@ def update_self_learning(sender, instance, *args, **kwargs):
     language=instance.segment.text_unit.document.job.target_language
     seg_his=SegmentHistory.objects.filter(segment=instance.segment)
 
-    if len(seg_his)>=2:
-        print("both segment tar from current instance ")
-        edited_segment=seg_his.last().target
-        target_segment=seg_his[len(seg_his)-2].target
-        print(edited_segment,'<------>',target_segment)
+    # if len(seg_his)>=2:
+    #     print("both segment tar from current instance ")
+    #     edited_segment=seg_his.last().target
+    #     target_segment=seg_his[len(seg_his)-2].target
+    #     print(edited_segment,'<------>',target_segment)
 
-    elif len(seg_his)==1:
-        print("from mt segment and current inst target")
-        target_segment=instance.segment.seg_mt_raw.mt_raw
-        edited_segment=instance.target
+    # elif len(seg_his)==1:
+    print("from mt segment and current inst target")
+    target_segment=instance.segment.seg_mt_raw.mt_raw
+    edited_segment=instance.target
 
-    else:
-        print("update segment and target")
-        target_segment=instance.segment.target
-        edited_segment=instance.target
+    # else:
+    #     print("update segment and target")
+    #     target_segment=instance.segment.target
+    #     edited_segment=instance.target
 
-        print("no history found")
+    #     print("no history found")
 
     # if instance.status.status_id==104:
     if edited_segment and target_segment:
