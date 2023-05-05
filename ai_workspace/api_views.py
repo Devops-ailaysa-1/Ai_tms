@@ -795,8 +795,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         pdf_obj_id = request.POST.get('pdf_obj_id',None)
         pdf_task_id = request.POST.get('pdf_task_id',None)
         team = request.POST.get('team',None)
-        #req_copy = copy.copy( request._request)
-        #req_copy.method = "DELETE"
+        req_copy = copy.copy( request._request)
+        req_copy.method = "DELETE"
 
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
