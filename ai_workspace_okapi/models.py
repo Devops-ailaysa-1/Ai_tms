@@ -3,7 +3,7 @@ import re
 
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save 
 from django.utils.functional import cached_property
 
 from ai_auth.models import AiUser
@@ -11,6 +11,7 @@ from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoic
     MTLanguageSupport
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
+
 
 
 class TaskStatus(models.Model):
@@ -76,10 +77,8 @@ class BaseSegment(models.Model):
     random_tag_ids = models.TextField(null=True, blank=True)
     target_tags = models.TextField(null=True, blank=True)
     okapi_ref_segment_id = models.CharField(max_length=50)
-    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=\
-        models.SET_NULL)
-    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name=\
-        "text_unit_segment_set")
+    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL)
+    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name="text_unit_segment_set")
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
 
@@ -605,3 +604,6 @@ class SelflearningAsset(models.Model):
 
     def __str__(self) -> str:
         return self.source_word+'--'+self.edited_word
+    
+# from ai_workspace_okapi.api_views import update_self_learning
+# post_save.connect(update_self_learning, sender=SegmentHistory)

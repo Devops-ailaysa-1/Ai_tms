@@ -305,6 +305,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 mt = get_translation(mt_engine,str(source),document.source_language_code,document.target_language_code,user_id=document.owner_pk,cc=consumable_credits)
                 if target_tags !='':
                     temp_target = mt + target_tags
+                    
                     target = mt + target_tags
                 else:
                     temp_target = mt
@@ -479,6 +480,20 @@ class MT_RawSerializer(serializers.ModelSerializer):
         data["task_mt_engine"] = task_mt_engine_id if task_mt_engine_id else 1
         return super().to_internal_value(data=data)
 
+    def slf_learning_word_update(self,instance,doc):
+        from ai_workspace_okapi.models import SelflearningAsset
+        slf_lrn_inst=SelflearningAsset.objects.filter(user=doc.owner_pk,target_language=doc.target_language_id)
+        if slf_lrn_inst:
+            word_list=list(slf_lrn_inst.values_list('source_word',flat=True))
+            mt_raw_lists=instance.mt_raw.split(' ')
+            for mt_raw_list in mt_raw_lists:
+                if mt_raw_list in word_list:
+                    edited_word=slf_lrn_inst.filter(source_word=mt_raw_list).last().edited_word
+                    instance.mt_raw=instance.mt_raw.replace(mt_raw_list,edited_word)
+                    instance.save()
+
+        return instance
+
     def create(self, validated_data):
 
         segment = validated_data["segment"]
@@ -493,7 +508,10 @@ class MT_RawSerializer(serializers.ModelSerializer):
         tl_code = doc.target_language_code
 
         validated_data["mt_raw"] = get_translation(mt_engine.id, active_segment.source, sl_code, tl_code,user_id=doc.owner_pk)
+        print("mt_raw------>>",validated_data["mt_raw"])
+        print("inside ____mt--------------------------------")
         instance = MT_RawTranslation.objects.create(**validated_data)
+        instance=self.slf_learning_word_update(instance,doc)
         return instance
 
 class TM_FetchSerializer(serializers.ModelSerializer):
@@ -666,8 +684,11 @@ class VerbSerializer(serializers.Serializer):
     synonyms_form =serializers.ListField()
 
 
-
-
+from ai_workspace_okapi.models import SelflearningAsset
+class SelflearningAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SelflearningAsset
+        fields='__all__'
 
 
 
@@ -761,3 +782,5 @@ class VerbSerializer(serializers.Serializer):
 #             coll.update(itr)
 #         ret["text"] = coll
 #         return ret
+
+

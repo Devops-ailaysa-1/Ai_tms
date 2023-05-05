@@ -10,7 +10,6 @@ from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
                                    TextTemplateSerializer,TemplateKeywordSerializer)
-from django.http import Http404 
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.decorators import api_view,permission_classes

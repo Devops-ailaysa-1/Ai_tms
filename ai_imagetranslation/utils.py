@@ -1,5 +1,5 @@
 from .models import *
-import cv2 ,io #,torch
+import cv2 ,io 
 import numpy as np
 from PIL import Image
 from google.cloud import vision_v1 , vision
