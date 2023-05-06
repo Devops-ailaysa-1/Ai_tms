@@ -126,7 +126,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.save()
             ####to create instance for source language
             if not instance.source_bounding_box:
-                inpaint_out_image,source_bounding_box=inpaint_image_creation.apply_async((instance,),0) 
+                inpaint_out_image,source_bounding_box=inpaint_image_creation(instance)  #inpaint_image_creation.apply_async((instance,),0)
                 src_json=copy.deepcopy(source_bounding_box)
                 instance.source_bounding_box = src_json 
                 content=image_content(inpaint_out_image)

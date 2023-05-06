@@ -91,8 +91,8 @@ def inpaint_image(im,msk):
     else:
         return {'result':'error in inpaint prediction','code':response.status_code }
 
-from celery import shared_task
-@shared_task(serializer='json')
+# from celery import shared_task
+# @shared_task(serializer='json')
 def inpaint_image_creation(image_details):
     img_path=image_details.image.path
     mask_path=image_details.mask.path
