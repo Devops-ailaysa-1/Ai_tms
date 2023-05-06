@@ -1,7 +1,7 @@
 from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
                      BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
-from django.core import serializers
-import logging ,os ,json
+ 
+import logging ,os  
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
@@ -635,22 +635,22 @@ Conclusion and Next Steps in Vanishing Gradient Research and Development for Mac
 
 Vanishing gradient is a common problem in neural networks that can have a significant impact on performance. Strategies and techniques can help mitigate this issue, but their effectiveness may vary depending on the specific architecture and application. As research in neural networks evolves, we can expect to see more advanced solutions for vanishing gradient emerge, leading to even more powerful AI technologies."""
 
-
+def stream_article_response():
+    for chunk in text.split(' '):
+        time.sleep(0.2)
+        print(chunk)
+        yield '%s' % chunk
 
 from django.http import StreamingHttpResponse,JsonResponse
 import time
-@api_view(["POST"])
+ 
 def generate_article(request):
-    if request.method == 'POST':
-        def stream_article_response():
-            for chunk in text.split(' '):
-                time.sleep(0.2)
-                print(chunk)
-                yield chunk
-        return StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
-    return JsonResponse({'error': 'Method not allowed.'}, status=405)
+    if request.method == 'GET':
+        response=StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
+        return response
+    # return JsonResponse({'error': 'Method not allowed.'}, status=405)
 
-
+ 
 
 # from django.http import StreamingHttpResponse,JsonResponse
 # import openai  #blog_cre_id list

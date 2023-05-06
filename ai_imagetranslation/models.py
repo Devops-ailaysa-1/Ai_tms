@@ -1,8 +1,6 @@
 from django.db import models
 from ai_staff.models import Languages ,LanguagesLocale
-
 from ai_auth.models import AiUser
-
 
 def user_directory_path_image_load(instance, filename):
     return '{0}/{1}/{2}'.format(instance.user.uid, "image_translate/image_load/",filename)
@@ -45,7 +43,9 @@ class ImageTranslate(models.Model):
     source_bounding_box = models.JSONField(blank=True,null=True)
     source_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,blank=True,null=True, related_name='s_lang')
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
+    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
+    celery_status=models.CharField(max_length=200,blank=True,null=True)
+    celery_id=models.CharField(max_length=200,null=True,blank=True)
  
     
 def user_directory_path_image_translate_thumbnail(instance, filename):

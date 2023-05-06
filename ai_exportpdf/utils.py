@@ -6,6 +6,7 @@ from PyPDF2 import PdfFileReader
 from celery import shared_task
 from django.contrib.auth import settings
 from django.http import HttpResponse
+from rest_framework.response import Response
 from google.cloud import vision_v1, vision
 from google.oauth2 import service_account
 from pdf2image import convert_from_path
