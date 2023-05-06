@@ -1390,6 +1390,84 @@ class TaskAssignInfo(models.Model):
         return self.task_assign.task_obj
 
 
+# class TaskReassign(models.Model):
+#     YET_TO_START = 1
+#     IN_PROGRESS = 2
+#     COMPLETED = 3
+#     STATUS_CHOICES = [
+#         (YET_TO_START,'Yet to start'),
+#         (IN_PROGRESS, 'In Progress'),
+#         (COMPLETED, 'Completed'),
+#     ]
+#     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
+#             related_name="task_info")
+#     step = models.ForeignKey(Steps,on_delete=models.CASCADE, null=False, blank=False,
+#              related_name="task_step")
+#     re_assign_to = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True,
+#             related_name="user_tasks_set")
+#     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
+#         on_delete=models.CASCADE, related_name="task_mt_engine")
+#     pre_translate = models.BooleanField(null=True, blank=True)
+#     mt_enable = models.BooleanField(null=True, blank=True)
+#     copy_paste_enable = models.BooleanField(null=True, blank=True)
+#     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
+
+#     # objects = TaskAssignManager()
+
+#     # @property
+#     # def owner_pk(self):
+#     #     return self.task.owner_pk
+
+#     # @property
+#     # def task_obj(self):
+#     #     return self.task
+
+
+#     # task_assign_obj = TaskAssign.objects.filter(
+#     #     Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
+#     #     Q(step_id=1)
+#     # ).first()
+#     # return TaskAssignSerializer(task_assign_obj).data
+
+# class TaskReassignInfo(models.Model):
+#     task_reassign = models.OneToOneField(TaskReassign,on_delete=models.CASCADE, null=False, blank=False,
+#                     related_name="task_assign_info")
+#     PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
+#                     ("stripe","stripe")]
+#     ACCEPT_STATUS =[("task_accepted","task_accepted"),
+#                     ("change_request","change_request")]
+#     instruction = models.TextField(max_length=1000, blank=True, null=True)
+#     assignment_id = models.CharField(max_length=191, blank=True, null=True)
+#     deadline = models.DateTimeField(blank=True, null=True)
+#     total_word_count = models.IntegerField(null=True, blank=True)
+#     mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
+#     estimated_hours = models.IntegerField(blank=True,null=True)
+#     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
+#     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
+#     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
+#             related_name="user_assign_info")
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
+#     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
+#     billable_char_count = models.IntegerField(blank=True,null=True)
+#     billable_word_count = models.IntegerField(blank=True,null=True)
+#     account_raw_count = models.BooleanField(default=True)
+
+    # def save(self, *args, **kwargs):
+    #     if not self.assignment_id:
+    #         self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
+    #     super().save()
+
+    # @property
+    # def owner_pk(self):
+    #     return self.task_assign.owner_pk
+
+    # @property
+    # def task_obj(self):
+    #     return self.task_assign.task_obj
+
+
+
 # post_save.connect(assign_object_task, sender=TaskAssignInfo)
 
 # class TaskAssignBillDetail(models.Model):

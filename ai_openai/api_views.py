@@ -873,6 +873,3 @@ def generate_article(request):
 #         #print("Txt------>",txt_generated.strip())
 #     #total_tokens = response['usage']['total_tokens']
 #     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
-
-
-
