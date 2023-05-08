@@ -3960,16 +3960,18 @@ app = Celery('ai_tms')
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def stop_task(request):
+    app = Celery()
     task_id = request.GET.get('task_id')
     task = AsyncResult(task_id)
     print("TT---------->",task.state)
-    if task.state == 'STARTED':
-        app.control.revoke(task_id, terminated=True, signal='SIGKILL')
-        return HttpResponse('Task has been stopped.') 
-    elif task.state == 'PENDING':
-        app.control.revoke(task_id)
-        return HttpResponse('Task has been revoked.')
-    else:
-        return HttpResponse('Task is already running or has completed.')
+    app.control.revoke(task_id,terminated=True, signal='SIGKILL')
+    # if task.state == 'STARTED':
+    #     app.control.revoke(task_id, terminated=True, signal='SIGKILL')
+    #     return HttpResponse('Task has been stopped.') 
+    # elif task.state == 'PROGRESS':
+    #     app.control.revoke(task_id,terminated=True, signal='SIGKILL')
+        # return HttpResponse('Task has been revoked.')
+    # else:
+    return HttpResponse('Task is already running or has completed.')
 
 
