@@ -217,6 +217,23 @@ def celery_revoke(request):
  
 
 
+# app = Celery('ai_tms')
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def stop_task(request):
+#     task_id = request.GET.get('task_id')
+#     task = AsyncResult(task_id)
+#     print("TT---------->",task.state)
+#     if task.state == 'STARTED':
+#         app.control.revoke(task_id, terminated=True, signal='SIGKILL')
+#         return JsonResponse({'status':'Task has been stopped.'}) 
+#     elif task.state == 'PENDING':
+#         app.control.revoke(task_id)
+#         return JsonResponse({'status':'Task has been revoked.'})
+#     else:
+#         return JsonResponse({'status':'Task is already running or has completed.'})
+
+
 
 # @api_view(['POST',])
 # @permission_classes([IsAuthenticated])
