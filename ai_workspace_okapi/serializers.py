@@ -684,13 +684,16 @@ class VerbSerializer(serializers.Serializer):
     synonyms_form =serializers.ListField()
 
 
-from ai_workspace_okapi.models import SelflearningAsset
+from ai_workspace_okapi.models import SelflearningAsset,SegmentDiff
 class SelflearningAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model=SelflearningAsset
         fields='__all__'
 
-
+class SegmentDiffSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SegmentDiff
+        fields='__all__'
 
 
 

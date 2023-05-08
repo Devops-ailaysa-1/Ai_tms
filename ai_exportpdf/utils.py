@@ -140,8 +140,10 @@ def convertiopdf2docx(id ,language,ocr = None ):
 
 import tempfile
 #########ocr ######
-@shared_task(serializer='json')
-def ai_export_pdf(id): # , file_language , file_name , file_path
+from celery_progress.backend import ProgressRecorder
+ 
+@shared_task(serializer='json',bind=True)
+def ai_export_pdf(self, id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
     user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
@@ -150,15 +152,16 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
     pdf_len = pdf.getNumPages()
     try:
         no_of_page_processed_counting = 0
-        txt_field_obj.pdf_no_of_page = int(pdf_len)
-        doc = docx.Document()
+        txt_field_obj.pdf_no_of_page=int(pdf_len)
+        doc=docx.Document()
+        progress_recorder=ProgressRecorder(self)
         for i in tqdm(range(1,pdf_len+1)):
             with tempfile.TemporaryDirectory() as image:
                 image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
-                print("Text after preprocess------------>",text)
+                progress_recorder.set_progress(i+1,pdf_len,description='pdf_converting')
                 if i == 1:
                     all_text = doc.add_paragraph(text)
                 else:
@@ -169,6 +172,8 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
             txt_field_obj.counter = int(no_of_page_processed_counting)
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
+        progress_recorder.set_progress(pdf_len+1, pdf_len+1, "pdf_convert_completed")
+ 
         logger.info('finished ocr and saved as docx ,file_name:')
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
@@ -187,10 +192,9 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.pdf_api_use = "FileCorrupted"
         txt_field_obj.save()
         ###retain cred if error
-        file_format,page_length =  file_pdf_check(fp , id ) 
-        # file_format,page_length = pdf_text_check(fp)
-        consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
-        user_credit.credits_left = user_credit.credits_left + consum_cred
+        file_format,page_length=file_pdf_check(fp,id) 
+        consum_cred = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+        user_credit.credits_left=user_credit.credits_left + consum_cred
         user_credit.save()
         print("pdf_conversion_something went wrong")
  

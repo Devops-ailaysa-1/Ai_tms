@@ -97,6 +97,7 @@ from django.db import transaction
 from ai_tm.models import TmxFileNew
 from ai_tm.api_views import TAG_RE, remove_tags as remove_tm_tags
 #from translate.storage.tmx import tmxfile
+from ai_workspace_okapi.models import SegmentDiff
 from ai_tm import match
 # logging.basicConfig(filename="server.log", filemode="a", level=logging.DEBUG, )
 logger = logging.getLogger('django')
@@ -2581,13 +2582,15 @@ def get_tags(seg):
         tags = remove_random_tags(seg.target_tags,random_tags)
     return tags
 
-from ai_workspace_okapi.serializers import SelflearningAssetSerializer
+from ai_workspace_okapi.serializers import SelflearningAssetSerializer,SegmentDiffSerializer
 from django.http import Http404
 from ai_staff.models import Languages
+from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
+from ai_workspace_okapi.utils import do_compare_sentence
+from django.db.models.signals import post_save 
+
 class SelflearningAssetViewset(viewsets.ViewSet):
-
     permission_classes = [IsAuthenticated,]
-
     def get_object(self, pk):
         try:
             return SelflearningAsset.objects.get(id=pk)
@@ -2624,38 +2627,38 @@ class SelflearningAssetViewset(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors,status=400)
 
- 
+class SegmentDiffViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def get_object(self, pk):
+        try:
+            return SegmentDiff.objects.get(id=pk)
+        except SegmentDiff.DoesNotExist:
+            raise Http404
+    
+    def list(self, request):
+        segment_id=request.query_params.get('segment_id')
+        queryset=SegmentDiff.objects.filter(segment__id=segment_id)
+        serializer = SegmentDiffSerializer(queryset,many=True)
+        return Response(serializer.data)
 
-from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory
-from ai_workspace_okapi.utils import do_compare_sentence
-from django.db.models.signals import post_save 
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer = SegmentDiffSerializer(obj)
+        return Response(serializer.data)
+    
 
 def update_self_learning(sender, instance, *args, **kwargs):
     user=instance.user
     language=instance.segment.text_unit.document.job.target_language
     seg_his=SegmentHistory.objects.filter(segment=instance.segment)
 
-    # if len(seg_his)>=2:
-    #     print("both segment tar from current instance ")
-    #     edited_segment=seg_his.last().target
-    #     target_segment=seg_his[len(seg_his)-2].target
-    #     print(edited_segment,'<------>',target_segment)
-
-    # elif len(seg_his)==1:
     print("from mt segment and current inst target")
     target_segment=instance.segment.seg_mt_raw.mt_raw
     edited_segment=instance.target
 
-    # else:
-    #     print("update segment and target")
-    #     target_segment=instance.segment.target
-    #     edited_segment=instance.target
-
-    #     print("no history found")
-
     # if instance.status.status_id==104:
     if edited_segment and target_segment:
-        diff_words=do_compare_sentence(target_segment,edited_segment)
+        diff_words=do_compare_sentence(target_segment,edited_segment,sentense_diff=False)
         if diff_words:
             for diff_word in diff_words:
                 self_learn_filter=SelflearningAsset.objects.filter(user=user,source_word=diff_word[0])
@@ -2672,3 +2675,31 @@ def update_self_learning(sender, instance, *args, **kwargs):
 
 
 post_save.connect(update_self_learning, sender=SegmentHistory)
+
+
+
+def segment_difference(sender, instance, *args, **kwargs):
+    seg_his=SegmentHistory.objects.filter(segment=instance.segment)
+    #from current segment
+    edited_segment=''
+    target_segment=''
+
+    if len(seg_his)>=2:
+        print("both segment tar from current instance ")
+        edited_segment=seg_his.last().target
+        target_segment=seg_his[len(seg_his)-2].target
+        print(edited_segment,'<------>',target_segment)
+ 
+
+    elif len(seg_his)==1:
+        print("from mt segment and current inst target")
+        target_segment=instance.segment.seg_mt_raw.mt_raw
+        edited_segment=instance.target
+        print(edited_segment,'<------>',target_segment)
+
+    if edited_segment and target_segment:
+        diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
+        if diff_sentense:
+            seg_diff=SegmentDiff.objects.create(segment=instance.segment, seg_his=instance,sentense_diff_result=diff_sentense)
+
+post_save.connect(segment_difference, sender=SegmentHistory)

@@ -464,21 +464,25 @@ def split_check(segment_id):
 
 
 
-def do_compare_sentence(source_segment,edited_segment):
-  difftool = difflib.Differ()
-  diff_words=[]
-  pair_words=[]
-  diff = difftool.compare(source_segment.split(),edited_segment.split())
-  for line in diff:
-    if not line.startswith(" "):
-      if line.startswith("-"):
-         diff_words.append(line)
-      elif line.startswith("+"):
-         diff_words.append(line)
-  for i in range(len(diff_words)-1):
-    if diff_words[i][0]=='-' and diff_words[i+1][0]=='+':
-        pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
-  return pair_words
+def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
+    difftool = difflib.Differ()
+    diff_words=[]
+    pair_words=[]
+    if sentense_diff:
+        diff = difftool.compare(source_segment.splitlines(),edited_segment.splitlines())
+        return '\n'.join(diff)  
+    else:
+        diff = difftool.compare(source_segment.split(),edited_segment.split())
+        for line in diff:
+            if not line.startswith(" "):
+                if line.startswith("-"):
+                    diff_words.append(line)
+                elif line.startswith("+"):
+                    diff_words.append(line)
+            for i in range(len(diff_words)-1):
+                if diff_words[i][0]=='-' and diff_words[i+1][0]=='+':
+                    pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
+        return pair_words
 
 
 

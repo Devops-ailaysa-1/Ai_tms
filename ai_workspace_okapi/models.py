@@ -607,3 +607,14 @@ class SelflearningAsset(models.Model):
     
 # from ai_workspace_okapi.api_views import update_self_learning
 # post_save.connect(update_self_learning, sender=SegmentHistory)
+
+
+class SegmentDiff(models.Model):
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="main_segment")
+    seg_his=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
+    sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
+    created_at=models.DateTimeField(auto_now_add=True)
+    edited_at=models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return self.sentense_diff_result
