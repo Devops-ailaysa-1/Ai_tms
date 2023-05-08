@@ -145,7 +145,7 @@ from celery_progress.backend import ProgressRecorder
 @shared_task(serializer='json',bind=True)
 def ai_export_pdf(self, id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
-    user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+    # user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
     start = time.time()
     pdf = PdfFileReader(open(fp,'rb') ,strict=False)
@@ -192,10 +192,10 @@ def ai_export_pdf(self, id): # , file_language , file_name , file_path
         txt_field_obj.pdf_api_use = "FileCorrupted"
         txt_field_obj.save()
         ###retain cred if error
-        file_format,page_length=file_pdf_check(fp,id) 
-        consum_cred = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
-        user_credit.credits_left=user_credit.credits_left + consum_cred
-        user_credit.save()
+        # file_format,page_length=file_pdf_check(fp,id) 
+        # consum_cred = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+        # user_credit.credits_left=user_credit.credits_left + consum_cred
+        # user_credit.save()
         print("pdf_conversion_something went wrong")
  
 def google_ocr_pdf():

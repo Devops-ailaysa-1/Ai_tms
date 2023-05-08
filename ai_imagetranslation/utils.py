@@ -87,12 +87,14 @@ def inpaint_image(im,msk):
     
     if response.status_code==200:
         arr = np.frombuffer(response.content, dtype=np.uint8)
+        
         return {'result':arr,'code':response.status_code }
     else:
         return {'result':'error in inpaint prediction','code':response.status_code }
 
 # from celery import shared_task
 # @shared_task(serializer='json')
+from rest_framework import serializers
 def inpaint_image_creation(image_details):
     img_path=image_details.image.path
     mask_path=image_details.mask.path
@@ -108,16 +110,19 @@ def inpaint_image_creation(image_details):
 
         output=inpaint_image(img_path, mask_path)
         if output['code']==200:
-            res=np.reshape(output['result'],img.shape)   
-            diff=cv2.absdiff(img, res)
-            ray_img=cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-            dst=cv2.inpaint(img,ray_img,3,cv2.INPAINT_TELEA)
-            return dst,image_text_details
+            if output.shape[0]==np.prod(img.shape):
+                res=np.reshape(output['result'],img.shape)   
+                diff=cv2.absdiff(img, res)
+                ray_img=cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+                dst=cv2.inpaint(img,ray_img,3,cv2.INPAINT_TELEA)
+                return dst,image_text_details
+            else:return serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
+                
         else:
             return ValidationError(output)
     else:
-        image_text_details = creating_image_bounding_box(image_details.image.path)
-        mask_out_to_inpaint  = np.zeros((img.shape[0] , img.shape[1] ,3) , np.uint8)
+        image_text_details=creating_image_bounding_box(image_details.image.path)
+        mask_out_to_inpaint=np.zeros((img.shape[0],img.shape[1] ,3) , np.uint8)
         for i in image_text_details.values():
             bbox =  i['bbox']
             cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
