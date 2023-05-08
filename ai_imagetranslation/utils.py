@@ -110,7 +110,7 @@ def inpaint_image_creation(image_details):
 
         output=inpaint_image(img_path, mask_path)
         if output['code']==200:
-            if output.shape[0]==np.prod(img.shape):
+            if output['result'].shape[0]==np.prod(img.shape):
                 res=np.reshape(output['result'],img.shape)   
                 diff=cv2.absdiff(img, res)
                 ray_img=cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)

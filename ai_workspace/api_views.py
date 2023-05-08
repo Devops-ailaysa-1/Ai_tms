@@ -3956,11 +3956,11 @@ def project_word_char_count(request):
 from celery.result import AsyncResult
 from django.http import HttpResponse
 from celery import Celery
-app = Celery('ai_tms')
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def stop_task(request):
-    app = Celery()
+    app = Celery('ai_tms')
     task_id = request.GET.get('task_id')
     task = AsyncResult(task_id)
     print("TT---------->",task.state)

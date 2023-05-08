@@ -141,7 +141,6 @@ def convertiopdf2docx(id ,language,ocr = None ):
 import tempfile
 #########ocr ######
 from celery_progress.backend import ProgressRecorder
- 
 @shared_task(serializer='json',bind=True)
 def ai_export_pdf(self, id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
@@ -183,8 +182,8 @@ def ai_export_pdf(self, id): # , file_language , file_name , file_path
         txt_field_obj.html_data = html_str
         txt_field_obj.docx_url_field = docx_file_path
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2))
-        txt_field_obj.pdf_api_use = "google-ocr"
-        txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
+        txt_field_obj.pdf_api_use="google-ocr"
+        txt_field_obj.docx_file_name=str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
     except:
         end = time.time()
