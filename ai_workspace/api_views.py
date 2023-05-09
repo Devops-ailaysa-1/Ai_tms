@@ -1527,7 +1527,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
 
     @integrity_error
     def create(self,request):
-        reassign = request.POST.get('reassign')
         step = request.POST.get('step')
         task_assign_detail = request.POST.get('task_assign_detail')
         files=request.FILES.getlist('instruction_file')
@@ -1627,9 +1626,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     def delete(self,request):
         task = request.GET.getlist('task')
         steps = request.GET.getlist('step')
+        reassigned = request.GET.get('reassigned',False)
         task_assign_info_ids = request.GET.getlist('task_assign_info')
-        if task and steps:
-            assigns = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in=task) & Q(task_assign__step_id__in=steps))
+        if task and steps and reassigned:
+            assigns = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in=task) & Q(task_assign__step_id__in=steps) & Q(reassigned=reassigned))
         if task_assign_info_ids:
             assigns = TaskAssignInfo.objects.filter(id__in = task_assign_info_ids )
         for obj in assigns:
@@ -1641,13 +1641,16 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             except:pass
             user = obj.task_assign.task.job.project.ai_user
             with transaction.atomic():
-                assigned_user = obj.task_assign.assign_to
-                obj.task_assign.assign_to = user
-                obj.task_assign.status = 1
-                obj.task_assign.save()
-                role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
-                unassign_task(assigned_user,role,obj.task_obj)             
-                obj.delete()
+                if obj.reassigned == True:
+                    obj.task_assign.delete()
+                else:
+                    assigned_user = obj.task_assign.assign_to
+                    obj.task_assign.assign_to = user
+                    obj.task_assign.status = 1
+                    obj.task_assign.save()
+                    role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
+                    unassign_task(assigned_user,role,obj.task_obj)             
+                    obj.delete()
                 
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
@@ -1841,7 +1844,7 @@ class AssignToListView(viewsets.ModelViewSet):
         job = self.request.GET.getlist('job')
         pro = Project.objects.get(id = project)
         try:
-            job_obj = Job.objects.get(id__in = job).first() #need to work
+            job_obj = Job.objects.filter(id__in = job).first() #need to work
             authorize(request, resource=job_obj, actor=request.user, action="read")
         except Job.DoesNotExist:
             pass
