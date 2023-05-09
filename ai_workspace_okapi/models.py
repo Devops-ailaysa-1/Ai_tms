@@ -615,6 +615,9 @@ class SegmentDiff(models.Model):
     sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
     edited_at=models.DateTimeField(auto_now=True)
+    status=models.ForeignKey(TranslationStatus,null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name="segmentdiff_status")
+    save_type=models.CharField(max_length=100,blank=True,null=True)
 
     def __str__(self) -> str:
         return self.sentense_diff_result

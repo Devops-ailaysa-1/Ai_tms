@@ -112,7 +112,11 @@ def inpaint_image_creation(image_details):
         if output['code']==200:
             if output['result'].shape[0]==np.prod(img.shape):
                 res=np.reshape(output['result'],img.shape)   
-                diff=cv2.absdiff(img, res)
+                diff=cv2.absdiff(img,res)
+
+                
+
+
                 ray_img=cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
                 dst=cv2.inpaint(img,ray_img,3,cv2.INPAINT_TELEA)
                 return dst,image_text_details

@@ -462,6 +462,26 @@ def split_check(segment_id):
     else:
         return True
 
+def seq_match_seg_diff(words1,words2):
+    matcher = difflib.SequenceMatcher(None, words1, words2)
+    delete_tag='<del class="removed-word">{}</del>'
+    insert='<ins class="changed-word">{}</ins>'
+    replace='<replace>{}</replace>'
+    replace_with='<replace_with>{}</replace_with>'
+    save_type=[]
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'replace':
+            words1[i1]=replace.format(' '.join(words1[i1:i2]))
+            words2[j1]=replace_with.format(' '.join(words2[j1:j2]))
+            save_type.append('replace')
+        elif tag == 'delete':
+            words1[i1]=delete_tag.format(' '.join(words1[i1:i2]))
+            save_type.append('delete')
+        elif tag == 'insert':
+            words2[j1]=insert.format(' '.join(words2[j1:j2]))
+            save_type.append('insert')
+    
+    return (" ".join(words2)," ".join(save_type))
 
 
 def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
@@ -469,8 +489,10 @@ def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
     diff_words=[]
     pair_words=[]
     if sentense_diff:
-        diff = difftool.compare(source_segment.splitlines(),edited_segment.splitlines())
-        return '\n'.join(diff)  
+        diff=seq_match_seg_diff(source_segment,edited_segment)
+        return diff
+        # diff = difftool.compare(source_segment.splitlines(),edited_segment.splitlines())
+        # return '\n'.join(diff)  
     else:
         diff = difftool.compare(source_segment.split(),edited_segment.split())
         for line in diff:
