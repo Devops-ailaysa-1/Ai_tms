@@ -92,6 +92,62 @@ def inpaint_image(im,msk):
     else:
         return {'result':'error in inpaint prediction','code':response.status_code }
 
+
+
+import cv2,requests,base64
+from PIL import Image
+import matplotlib.pyplot as plt
+import numpy as np
+from io import BytesIO
+
+def convert_transparent(img,value):
+    img = img.convert("RGBA")
+    data = img.getdata()
+    new_data = []
+    for pixel in data:
+        if pixel[0] == value and pixel[1] == value and pixel[2] == value:
+            new_data.append((value, value, value, 0))
+        else:
+            new_data.append(pixel)
+    img.putdata(new_data)
+    return img
+
+def layer_blend(lama_result,img_transparent):
+    lama_result.paste(img_transparent, (0, 0), img_transparent) 
+    return lama_result
+
+
+
+def lama_inpaint_optimize(image_diff,lama_result,original):
+    buffered = BytesIO()
+    img_gen='https://apinodestaging.ailaysa.com/ai_canvas_mask_generate'
+    width,heigth=image_diff.size
+    resized_image = image_diff.resize((256,256))
+    resized_image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue())
+    resized_width,resized_image_heigth= resized_image.size
+    output = img_str.decode()
+    ima_str='data:image/png;base64,'+str(output)
+    data = {'maskimage':ima_str , 'width':resized_width,'height':resized_image_heigth}
+    thumb_image = requests.request('POST',url=img_gen,data=data ,headers={},files=[])
+    ###convert thumb to black and white
+    black_and_white=Image.open(BytesIO(base64.b64decode(thumb_image.content.decode().split(',')[-1])))
+    black_and_white=black_and_white.resize(image_diff.size)
+    img_arr = np.asarray(black_and_white)
+    img_arr_copy = np.copy(img_arr)
+    img_arr_copy[img_arr_copy!= 0] = 255
+
+    ###morphing
+    SE = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
+    res = cv2.morphologyEx(img_arr_copy, cv2.MORPH_DILATE, SE)
+    img_transparent = Image.fromarray(res)
+    img_transparent=convert_transparent(img_transparent,255)
+    lama_transparent=layer_blend( lama_result=lama_result ,img_transparent=img_transparent)
+    lama_convert_transparent=convert_transparent(lama_transparent,0)
+    result=layer_blend(original,lama_convert_transparent)
+    return result
+
+
 # from celery import shared_task
 # @shared_task(serializer='json')
 from rest_framework import serializers
@@ -113,13 +169,15 @@ def inpaint_image_creation(image_details):
             if output['result'].shape[0]==np.prod(img.shape):
                 res=np.reshape(output['result'],img.shape)   
                 diff=cv2.absdiff(img,res)
-
-                
-
-
-                ray_img=cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-                dst=cv2.inpaint(img,ray_img,3,cv2.INPAINT_TELEA)
-                return dst,image_text_details
+                diff=Image.fromarray(diff)
+                lama_result=Image.fromarray(res)
+                original=Image.open(img_path)
+                dst=lama_inpaint_optimize(image_diff=diff,lama_result=lama_result,original=original)
+                dst=np.asarray(dst)
+                dst_final = np.copy(dst)
+                # ray_img=cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+                # dst=cv2.inpaint(img,ray_img,3,cv2.INPAINT_TELEA)
+                return dst_final,image_text_details
             else:return serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
                 
         else:
