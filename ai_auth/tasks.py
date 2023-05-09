@@ -316,7 +316,7 @@ def write_segments_to_db(validated_str_data, document_id): #validated_data
                         else:
                             seg['temp_target'] = mt
                             seg['target'] = mt
-                        status_id = TranslationStatus.objects.get(status_id=104).id
+                        status_id = TranslationStatus.objects.get(status_id=103).id
                         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     except:
                         seg['target']=""
@@ -558,7 +558,7 @@ def pre_translate_update(task_id):
                     else:
                         seg.target = mt
                         seg.temp_target = mt
-                    seg.status_id = TranslationStatus.objects.get(status_id=104).id
+                    seg.status_id = TranslationStatus.objects.get(status_id=103).id
                     #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                     if type(seg) is SplitSegment:
                         mt_split_segments.append(seg)
@@ -759,7 +759,7 @@ def mt_raw_update(task_id):
                         else:
                             seg.target = mt
                             seg.temp_target = mt
-                        seg.status_id = TranslationStatus.objects.get(status_id=104).id
+                        seg.status_id = TranslationStatus.objects.get(status_id=103).id
                         #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                         if type(seg) is SplitSegment:
                             mt_split_segments.append({'seg':seg,'mt':mt})
