@@ -36,6 +36,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
     from_mysql = models.BooleanField(default=False)
     deactivate = models.BooleanField(default=False)
     is_vendor = models.BooleanField(default=False)
+    is_agency = models.BooleanField(default=False)
     is_internal_member = models.BooleanField(default=False)
     currency_based_on_country = models.ForeignKey(Currencies,related_name='aiuser_country_based_currency',
         on_delete=models.CASCADE,blank=True, null=True)
