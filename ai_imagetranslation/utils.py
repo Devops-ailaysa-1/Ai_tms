@@ -96,7 +96,6 @@ def inpaint_image(im,msk):
 
 import cv2,requests,base64
 from PIL import Image
-import matplotlib.pyplot as plt
 import numpy as np
 from io import BytesIO
 
