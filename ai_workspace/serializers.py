@@ -834,11 +834,12 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
     mt_engine_id = serializers.PrimaryKeyRelatedField(queryset=AilaysaSupportedMtpeEngines.objects.all().values_list('pk', flat=True),required=False)
     mt_enable = serializers.BooleanField(required=False,allow_null=True,write_only=True)
     pre_translate = serializers.BooleanField(required=False,allow_null=True,write_only=True)
+    reassigned = serializers.BooleanField(required=False,allow_null=True,write_only=True)
 
 
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_files','step','task_ven_status',\
+        fields = ('id','instruction','instruction_files','step','task_ven_status','reassigned',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','estimated_hours','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable',\
@@ -908,10 +909,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
            data['mt_engine_id'] = json.loads(data['mt_engine'])
         if data.get('mt_enable'):
            data['mt_enable'] = json.loads(data['mt_enable'])
+        if data.get('reassigned'):
+           data['reassigned'] = json.loads(data['reassigned'])
         if data.get('pre_translate'):
            data['pre_translate'] = json.loads(data['pre_translate'])
-        if data.get('task'): #and self.context['request']._request.method=='POST':
-           data['tasks'] = [json.loads(task) for task in data.pop('task',[])]
+        # if data.get('tasks'): #and self.context['request']._request.method=='POST':
+        #    print("tasks------>",data['tasks']) 
+        #    print("type-------->",[type(i) for i in data['tasks']])
+        #    data['tasks'] = [task for task in data.pop('tasks',[])]
         if data.get('files'):
            data['files'] = [{'instruction_file':file} for file in data['files']]
         data['assigned_by'] = self.context['request'].user.id
@@ -926,12 +931,24 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         step = data.pop('step')
         assign_to = data.pop('assign_to')
         files = data.pop('files')
+        project = Task.objects.get(id=task_list[0]).job.project
         mt_engine_id = data.pop('mt_engine_id',None)
         mt_enable = data.pop('mt_enable',None)
+        reassigned = data.pop('reassigned',False)
+        print("reassigned----->",reassigned)
         user1 = AiUser.objects.get(id=assign_to)
         pre_translate = data.pop('pre_translate',None)
-        task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step)) for task in task_list]
         with transaction.atomic():
+            if reassigned:
+                print("Inside if")
+                task_assigns = [TaskAssign.objects.get_or_create(task_id = task,step_id = step,reassigned=True,\
+								defaults = {"status":1,"mt_engine_id":project.mt_engine_id,\
+                         "mt_enable":project.mt_enable,"pre_translate":project.pre_translate,'copy_paste_enable':project.copy_paste_enable}) for task in task_list]
+                task_assign_list = [t[0] for t in task_assigns]
+            else:
+                print("inside else")
+                task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)) for task in task_list]
+            print('task_assign_list--------->',task_assign_list)
             task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
             objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
             for i in task_assign_info:
@@ -943,10 +960,10 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                 # billable_char_count = get_weighted_char_count(i.task_assign.task)
                 TaskAssignInfo.objects.filter(id=i.id).update(total_word_count = total_word_count)#,billable_char_count=billable_char_count,billable_word_count=billable_word_count)
             tt = [Instructionfiles.objects.create(**instruction_file,task_assign_info = assign) for instruction_file in files for assign in task_assign_info]
-            task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(assign_to_id = assign_to) for task in task_list]
-            print("Task Assign-------->",[TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).first().assign_to for task in task_list])
+            task_assign_data = [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)).update(assign_to_id = assign_to) for task in task_list]
+            print("Task Assign-------->",[TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)).first().assign_to for task in task_list])
             if mt_engine_id or mt_enable or pre_translate:
-                [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step)).update(mt_engine_id=mt_engine_id,mt_enable=mt_enable,pre_translate=pre_translate) for task in task_list]
+                [TaskAssign.objects.filter(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)).update(mt_engine_id=mt_engine_id,mt_enable=mt_enable,pre_translate=pre_translate) for task in task_list]
         if user1.is_internal_member == False:
           print("task_assing id",[i.task_assign.assign_to for i in task_assign_info])
           generate_client_po([i.id for i in task_assign_info])
@@ -995,6 +1012,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	progress = serializers.DictField(source="get_progress", read_only=True)
 	#task_assign_info = TaskAssignInfoSerializer(required=False)
 	task_assign_info = serializers.SerializerMethodField(source = "get_task_assign_info")
+	task_reassign_info = serializers.SerializerMethodField(source = "get_task_reassign_info")
 	#task_self_assign_info = serializers.SerializerMethodField()
 	bid_job_detail_info = serializers.SerializerMethodField()
 	open_in =  serializers.SerializerMethodField()
@@ -1011,8 +1029,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Task
 		fields = \
-			("id", "filename",'document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
-			"document_url", "progress","task_assign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',)
+			("id", "filename",'job','document',"download_audio_source_file","mt_only_credit_check", "transcribed", "text_to_speech_convert_enable","ai_taskid", "source_language", "target_language", "task_word_count","task_char_count","project_name",\
+			"document_url", "progress","task_assign_info","task_reassign_info","bid_job_detail_info","open_in","assignable","first_time_open",'converted','is_task_translated',)
 
 	def get_converted(self,obj):
 		if obj.job.project.project_type_id == 4 :
@@ -1106,7 +1124,17 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
-		task_assign = obj.task_info.filter(task_assign_info__isnull=False)
+		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
+		if task_assign:
+			task_assign_info=[]
+			for i in task_assign:
+				try:task_assign_info.append(i.task_assign_info)
+				except:pass
+			return TaskAssignInfoSerializer(task_assign_info,many=True).data
+		else: return None
+
+	def get_task_reassign_info(self, obj):
+		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 		if task_assign:
 			task_assign_info=[]
 			for i in task_assign:
@@ -1276,22 +1304,38 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 	status = serializers.ReadOnlyField(source='get_status_display')
 	avatar= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
 	vendor_lang_pair = serializers.SerializerMethodField()
+	suggestions = serializers.SerializerMethodField()
 
-	def get_vendor_lang_pair(self,obj):
+	def get_suggestions(self,obj):
 		request = self.context['request']
-		job_id= request.query_params.get('job')
+		#job_ids= request.query_params.getlist('job')
 		project_id= request.query_params.get('project')
 		proj = Project.objects.get(id = project_id)
-		jobs = Job.objects.filter(id = job_id) if job_id else proj.get_jobs
+		jobs = proj.get_jobs
 		lang_pair = VendorLanguagePair.objects.none()
 		for i in jobs:
 			if i.target_language_id == None:
-				#tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) | Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
 				tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
 			else:
 				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
 			print("Tr------------>",tr)
 			lang_pair = lang_pair.union(tr)
+		print("langpair----------------->",lang_pair)
+		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
+
+
+	def get_vendor_lang_pair(self,obj):
+		request = self.context['request']
+		job_ids= request.query_params.getlist('job')
+		project_id= request.query_params.get('project')
+		proj = Project.objects.get(id = project_id)
+		jobs = Job.objects.filter(id__in = job_ids) if job_ids else proj.get_jobs
+		lang_pair = VendorLanguagePair.objects.filter(Q(user_id = obj.hired_editor_id) &Q(deleted_at=None))
+		for i in jobs:
+			if i.target_language_id == None:
+				lang_pair = lang_pair.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			else:
+				lang_pair = lang_pair.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')	
 		print("langpair----------------->",lang_pair)
 		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 
@@ -1319,6 +1363,7 @@ class InternalEditorDetailSerializer(serializers.Serializer):
 class GetAssignToSerializer(serializers.Serializer):
 	internal_editors = serializers.SerializerMethodField()
 	external_editors = serializers.SerializerMethodField()
+	suggestions = serializers.SerializerMethodField()
 
 	def get_internal_editors(self,obj):
 		request = self.context['request']
@@ -1329,6 +1374,26 @@ class GetAssignToSerializer(serializers.Serializer):
 			return []
 
 	def get_external_editors(self,obj):
+		try:
+			default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
+			if self.context.get('request').user == default:
+				tt =[]
+			else:
+				try:profile = default.professional_identity_info.avatar_url
+				except:profile = None
+				tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'status':'Invite Accepted','avatar':profile}]
+		except:
+			tt=[]
+		request = self.context['request']
+		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+		qs_ = qs.filter(hired_editor__is_active = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
+		for i in ser:
+			if i.get("vendor_lang_pair")!=[]:
+				tt.append(i)
+		return tt
+
+	def get_suggestions(self,obj):
 		try:
 			default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
 			if self.context.get('request').user == default:
