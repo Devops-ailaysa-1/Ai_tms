@@ -1627,9 +1627,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task = request.GET.getlist('task')
         steps = request.GET.getlist('step')
         reassigned = request.GET.get('reassigned',False)
+        print("reassign---->",reassigned)
         task_assign_info_ids = request.GET.getlist('task_assign_info')
-        if task and steps and reassigned:
-            assigns = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in=task) & Q(task_assign__step_id__in=steps) & Q(reassigned=reassigned))
+        if task and steps:
+            assigns = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in=task) & Q(task_assign__step_id__in=steps) & Q(task_assign__reassigned=reassigned))
         if task_assign_info_ids:
             assigns = TaskAssignInfo.objects.filter(id__in = task_assign_info_ids )
         for obj in assigns:
@@ -1641,7 +1642,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             except:pass
             user = obj.task_assign.task.job.project.ai_user
             with transaction.atomic():
-                if obj.reassigned == True:
+                if obj.task_assign.reassigned == True:
                     obj.task_assign.delete()
                 else:
                     assigned_user = obj.task_assign.assign_to
