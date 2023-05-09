@@ -309,7 +309,7 @@ class DocumentSerializer(serializers.ModelSerializer):# @Deprecated
                 else:
                     temp_target = mt
                     target = mt
-                status_id = TranslationStatus.objects.get(status_id=104).id
+                status_id = TranslationStatus.objects.get(status_id=103).id
                 #debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
                 return target,temp_target,status_id
             except:

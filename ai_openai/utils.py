@@ -64,6 +64,8 @@ def get_prompt_edit(input_text ,instruction ):
 #DALLE
 @backoff.on_exception(backoff.expo,(openai.error.RateLimitError,openai.error.APIConnectionError,),max_tries=2)
 def get_prompt_image_generations(prompt,size,no_of_image):
+    #prompt = "Generate an image based on the following text description: " + prompt
+    print("Prompt--------->",prompt)
     try:
         response = openai.Image.create(prompt=prompt,n=no_of_image,size=size) 
     except:
