@@ -178,8 +178,8 @@ def inpaint_image_creation(image_details):
 
                 diff=cv2.absdiff(img,res)
                 diff=lama_diff(mask,diff)
-                # diff=cv2.cvtColor(diff, cv2.COLOR_BGR2RGB)
-                # res=cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
+                diff=cv2.cvtColor(diff, cv2.COLOR_BGR2RGB)
+                res=cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
                 diff=Image.fromarray(diff)
                 lama_result=Image.fromarray(res)
                 original=Image.open(img_path)
