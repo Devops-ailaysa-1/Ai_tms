@@ -119,7 +119,11 @@ def layer_blend(lama_result,img_transparent):
     # lama_result.paste(img_transparent, (0, 0), img_transparent) 
     return lama_result
 
-
+def lama_diff(mask,diff):
+    mask[mask!= 0] = 255
+    msk_pil=convert_transparent(Image.fromarray(mask),value=255)
+    img_blend=layer_blend(Image.fromarray(diff),msk_pil)
+    return  np.asarray(img_blend)
 
 def lama_inpaint_optimize(image_diff,lama_result,original):
     buffered = BytesIO()
@@ -173,6 +177,7 @@ def inpaint_image_creation(image_details):
                 res=np.reshape(output['result'],img.shape)   
 
                 diff=cv2.absdiff(img,res)
+                diff=lama_diff(mask,diff)
                 # diff=cv2.cvtColor(diff, cv2.COLOR_BGR2RGB)
                 # res=cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
                 diff=Image.fromarray(diff)
