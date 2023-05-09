@@ -119,6 +119,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          # #     if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
          # #        or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
          # #         raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
+        #   ##
          if "source_lang" in data:
              if data.get('source_lang')==data.get('target_lang'):
                  raise serializers.ValidationError({"message":"source and target language should not be same"})
