@@ -177,7 +177,7 @@ def inpaint_image_creation(image_details):
                 dst=lama_inpaint_optimize(image_diff=diff,lama_result=lama_result,original=original)
                 dst=np.asarray(dst)
                 dst_final=np.copy(dst)
-
+                dst_final=cv2.cvtColor(dst_final,cv2.COLOR_BGR2RGB)
                 # ray_img=cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
                 # dst=cv2.inpaint(img,ray_img,3,cv2.INPAINT_TELEA)
                 return dst_final,image_text_details
