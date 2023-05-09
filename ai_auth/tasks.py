@@ -717,6 +717,7 @@ def mt_raw_update(task_id):
     task = Task.objects.get(id=task_id)
     MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id)
     user = task.job.project.ai_user
+    print("AiUser--->",user)
     mt_engine = task.job.project.mt_engine_id
     task_mt_engine_id = TaskAssign.objects.get(Q(task=task) & Q(step_id=1)).mt_engine.id
     segments = task.document.segments_for_find_and_replace
@@ -746,6 +747,7 @@ def mt_raw_update(task_id):
             if seg.target == '' or seg.target==None:
                 print("**********************")
                 initial_credit = user.credit_balance.get("total_left")
+                print("Intial Credit------------->",initial_credit)
                 consumable_credits = MT_RawAndTM_View.get_consumable_credits(task.document, seg.id, None)
                 if initial_credit > consumable_credits:
                     try:
