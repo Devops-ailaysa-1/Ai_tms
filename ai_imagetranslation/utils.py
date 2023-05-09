@@ -112,7 +112,11 @@ def convert_transparent(img,value):
     return img
 
 def layer_blend(lama_result,img_transparent):
-    lama_result.paste(img_transparent, (0, 0), img_transparent) 
+
+    lama_result=lama_result.convert('RGBA')
+    img_transparent=img_transparent.convert('RGBA')
+    lama_result.alpha_composite(img_transparent)
+    # lama_result.paste(img_transparent, (0, 0), img_transparent) 
     return lama_result
 
 
@@ -169,8 +173,8 @@ def inpaint_image_creation(image_details):
                 res=np.reshape(output['result'],img.shape)   
 
                 diff=cv2.absdiff(img,res)
-                diff=cv2.cvtColor(diff, cv2.COLOR_BGR2RGB)
-                res=cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
+                # diff=cv2.cvtColor(diff, cv2.COLOR_BGR2RGB)
+                # res=cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
                 diff=Image.fromarray(diff)
                 lama_result=Image.fromarray(res)
                 original=Image.open(img_path)
@@ -185,17 +189,17 @@ def inpaint_image_creation(image_details):
                 
         else:
             return ValidationError(output)
-    else:
-        image_text_details=creating_image_bounding_box(image_details.image.path)
-        mask_out_to_inpaint=np.zeros((img.shape[0],img.shape[1] ,3) , np.uint8)
-        for i in image_text_details.values():
-            bbox =  i['bbox']
-            cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
-        img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
-        mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
-        output = inpaint_image(img_path, mask_path)
-        output = np.reshape(output, img.shape) 
-        return output,image_text_details
+    # else:
+    #     image_text_details=creating_image_bounding_box(image_details.image.path)
+    #     mask_out_to_inpaint=np.zeros((img.shape[0],img.shape[1] ,3) , np.uint8)
+    #     for i in image_text_details.values():
+    #         bbox =  i['bbox']
+    #         cv2.rectangle(mask_out_to_inpaint, bbox[:2], bbox[2:] , (255,255,255), thickness=cv2.FILLED)
+    #     img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+    #     mask = cv2.cvtColor(mask_out_to_inpaint , cv2.COLOR_BGR2GRAY)
+    #     output = inpaint_image(img_path, mask_path)
+    #     output = np.reshape(output, img.shape) 
+    #     return output,image_text_details
 
 
  
