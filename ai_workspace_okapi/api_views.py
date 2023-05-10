@@ -2241,7 +2241,8 @@ def get_segment_history(request):
         obj = Segment.objects.get(id=seg_id)
         history = obj.segment_history.all().order_by('-id')
         ser = SegmentHistorySerializer(history,many=True)
-        data = [i for i in ser.data if i.segment_difference]
+        data_ser=ser.data
+        data=[i for i in data_ser if dict(i)['segment_difference']]
         return Response(data)
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
