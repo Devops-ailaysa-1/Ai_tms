@@ -2701,7 +2701,8 @@ def segment_difference(sender, instance, *args, **kwargs):
         diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
         if diff_sentense:
             result_sen,save_type=diff_sentense
-            SegmentDiff.objects.create(segment=instance.segment,seg_his=instance,
+            if result_sen.strip()!=edited_segment.strip():
+                SegmentDiff.objects.create(segment=instance.segment,seg_his=instance,
                                     sentense_diff_result=result_sen,
                                     status=instance.status,save_type=save_type)
 
