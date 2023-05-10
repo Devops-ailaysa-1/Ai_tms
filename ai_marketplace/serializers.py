@@ -452,7 +452,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     projectpost_content_type=ProjectPostContentTypeSerializer(many=True,required=False)
     projectpost_subject=ProjectPostSubjectFieldSerializer(many=True,required=False)
     projectpost_steps=ProjectPostStepsSerializer(many=True,required=False)
-    project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True))#,write_only=True)
+    project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True),required=False)#,write_only=True)
     customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
     posted_by_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
     bidding_currency = serializers.ReadOnlyField(source='currency.currency_code')

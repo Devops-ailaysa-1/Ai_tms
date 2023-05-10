@@ -1334,6 +1334,7 @@ class TaskAssign(models.Model):
     mt_enable = models.BooleanField(null=True, blank=True)
     copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
+    reassigned = models.BooleanField(default=False)
 
     objects = TaskAssignManager()
 
@@ -1400,13 +1401,13 @@ class TaskAssignInfo(models.Model):
 #         (COMPLETED, 'Completed'),
 #     ]
 #     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
-#             related_name="task_info")
+#             related_name="task_reassign_info")
 #     step = models.ForeignKey(Steps,on_delete=models.CASCADE, null=False, blank=False,
-#              related_name="task_step")
+#              related_name="task_reassign_step")
 #     re_assign_to = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True,
-#             related_name="user_tasks_set")
+#             related_name="user_reassign_tasks_set")
 #     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
-#         on_delete=models.CASCADE, related_name="task_mt_engine")
+#         on_delete=models.CASCADE, related_name="reassign_task_mt_engine")
 #     pre_translate = models.BooleanField(null=True, blank=True)
 #     mt_enable = models.BooleanField(null=True, blank=True)
 #     copy_paste_enable = models.BooleanField(null=True, blank=True)
@@ -1431,7 +1432,7 @@ class TaskAssignInfo(models.Model):
 
 # class TaskReassignInfo(models.Model):
 #     task_reassign = models.OneToOneField(TaskReassign,on_delete=models.CASCADE, null=False, blank=False,
-#                     related_name="task_assign_info")
+#                     related_name="task_reassign_info")
 #     PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
 #                     ("stripe","stripe")]
 #     ACCEPT_STATUS =[("task_accepted","task_accepted"),
@@ -1442,10 +1443,10 @@ class TaskAssignInfo(models.Model):
 #     total_word_count = models.IntegerField(null=True, blank=True)
 #     mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
 #     estimated_hours = models.IntegerField(blank=True,null=True)
-#     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='accepted_unit', on_delete=models.CASCADE,blank=True, null=True)
-#     currency = models.ForeignKey(Currencies,related_name='accepted_currency', on_delete=models.CASCADE,blank=True, null=True)
+#     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='accepted_mtpe_unit', on_delete=models.CASCADE,blank=True, null=True)
+#     currency = models.ForeignKey(Currencies,related_name='accepted_rate_currency', on_delete=models.CASCADE,blank=True, null=True)
 #     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
-#             related_name="user_assign_info")
+#             related_name="user_reassign_info")
 #     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 #     task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
 #     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
