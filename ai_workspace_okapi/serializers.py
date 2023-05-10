@@ -142,6 +142,8 @@ class SegmentSerializerV2(SegmentSerializer):
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         output_list = [li for li in difflib.ndiff(instance.target, content) if li[0]=='+' or li[0]=='-']
         print("ol------>",output_list)
+        print("content--->",content)
+        print("target",instance.target)
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
@@ -165,7 +167,7 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.save()
             self.update_task_assign(task_obj,user)
             if output_list:
-                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+                SegmentHistory.objects.create(segment_id=seg_id,user=self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
         if output_list:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
