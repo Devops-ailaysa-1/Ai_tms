@@ -94,6 +94,7 @@ class SegmentSerializer(serializers.ModelSerializer):
         return representation
 
 from ai_workspace.models import Task,TaskAssignInfo
+import difflib
 class SegmentSerializerV2(SegmentSerializer):
     temp_target = serializers.CharField(trim_whitespace=False, allow_null=True)
     target = serializers.CharField(trim_whitespace=False, required=False)
@@ -139,6 +140,8 @@ class SegmentSerializerV2(SegmentSerializer):
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
+        output_list = [li for li in difflib.ndiff(instance.target, content) if li[0]=='+' or li[0]=='-']
+        print("ol------>",output_list)
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
@@ -161,9 +164,11 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.temp_target = instance.target
             instance.save()
             self.update_task_assign(task_obj,user)
-            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+            if output_list:
+                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
-        SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+        if output_list:
+            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
         self.update_task_assign(task_obj,user)
         return super().update(instance, validated_data)
 
@@ -657,9 +662,23 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
         return text_unit
 
 class SegmentHistorySerializer(serializers.ModelSerializer):
+    step_name = serializers.SerializerMethodField()
+    status_name = serializers.ReadOnlyField(source='status.status_name')
+    user_name = serializers.ReadOnlyField(source='user.fullname')
     class Meta:
         model = SegmentHistory
-        fields = '__all__'
+        fields = ('segment','target','created_at','user_name','status_name','step_name',)
+        # extra_kwargs = {
+        #     "status": {"write_only": True}}
+
+    def get_step_name(self,obj):
+        try:
+            step = TaskAssign.objects.filter(
+                Q(task__document__document_text_unit_set__text_unit_segment_set=obj.segment_id) &
+                Q(assign_to = obj.user)).first().step
+            return step.name
+        except:
+            return None
 
 class VerbSerializer(serializers.Serializer):
     text_string = serializers.CharField()
