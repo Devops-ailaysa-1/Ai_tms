@@ -1866,10 +1866,10 @@ class AssignToListView(viewsets.ModelViewSet):
         pro = Project.objects.get(id = project)
         try:
             job_obj = Job.objects.filter(id__in = job).first() #need to work
-            authorize(request, resource=job_obj, actor=request.user, action="read")
+            #authorize(request, resource=job_obj, actor=request.user, action="read")
         except Job.DoesNotExist:
             pass
-        authorize(request, resource=pro, actor=request.user, action="read")
+        #authorize(request, resource=pro, actor=request.user, action="read")
         user =pro.ai_user    
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
