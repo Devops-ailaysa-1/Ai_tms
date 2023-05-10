@@ -494,7 +494,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
-	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False,write_only=True)
+	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)#,write_only=True)
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
@@ -1003,9 +1003,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
 	source_language = serializers.CharField(read_only=True, source=\
-		"job.source_language.language")
+		"job.source_language.id")
 	target_language = serializers.CharField(read_only=True, source=\
-		"job.target_language.language")
+		"job.target_language.id")
 	project_name = serializers.CharField(read_only=True, source=\
 		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
