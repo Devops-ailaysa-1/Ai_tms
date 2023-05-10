@@ -448,8 +448,6 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
             out.write(response.audio_content)
             print('Audio content written to file',filename)
 
-
-
 def split_check(segment_id):
     from ai_workspace_okapi.models import SplitSegment
     split_seg = SplitSegment.objects.filter(id=segment_id).first()
@@ -461,36 +459,14 @@ def split_check(segment_id):
     else:
         return True
 
-
-
-    # for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-    #     if tag == 'replace':
-    #         rep1=' '.join(words1[i1:i2])
-    #         rep2=' '.join(words2[j1:j2])
-    #         words1[i1]=replace.format(rep1)
-    #         words2[j1]=replace.format(rep2)
-    #         save_type.append('replace')
-    #     elif tag == 'delete':
-    #         dele=' '.join(words1[i1:i2])
-    #         words1[i1]=delete_tag.format(dele)
-    #         save_type.append('delete')
-    #     elif tag == 'insert':
-    #         ins=' '.join(words2[j1:j2])
-    #         words2[j1]=insert.format(ins)
-    #         save_type.append('insert')
-    # return (" ".join(words2)," ".join(save_type))
-
-
 def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
-    difftool = difflib.Differ()
     diff_words=[]
     pair_words=[]
     if sentense_diff:
         diff=seq_match_seg_diff(source_segment,edited_segment)
-        return diff
-        # diff = difftool.compare(source_segment.splitlines(),edited_segment.splitlines())
-        # return '\n'.join(diff)  
+        return diff 
     else:
+        difftool = difflib.Differ()
         diff = difftool.compare(source_segment.split(),edited_segment.split())
         for line in diff:
             if not line.startswith(" "):
@@ -503,15 +479,13 @@ def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
                     pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
         return pair_words
 
-
-
 def seq_match_seg_diff(words1,words2):
     s1=words1.split()
     s2=words2.split()
     matcher=difflib.SequenceMatcher(None,s1,s2)
     save_type=[]
     data=[]
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+    for tag,i1,i2,j1,j2 in matcher.get_opcodes():
         if tag=='equal':
             data.append(" ".join(s2[j1:j2]))
         elif tag=='replace':

@@ -694,6 +694,10 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
     class Meta:
         model=SegmentDiff
         fields='__all__'
+    
+    def to_representation(self, instance):
+        data=super().to_representation(instance)
+        return data
 
 
 

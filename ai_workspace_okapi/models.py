@@ -593,7 +593,9 @@ class SegmentHistory(models.Model):
     status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
     user =  models.ForeignKey(AiUser, null=True, on_delete=models.SET_NULL,related_name="edited_by")
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
+    # sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
+    # save_type=models.CharField(max_length=100,blank=True,null=True)
 
 
 class SelflearningAsset(models.Model):
@@ -611,12 +613,11 @@ class SelflearningAsset(models.Model):
 
 class SegmentDiff(models.Model):
     segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="main_segment")
-    seg_his=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
+    seg_history=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
     sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)
-    edited_at=models.DateTimeField(auto_now=True)
-    status=models.ForeignKey(TranslationStatus,null=True, blank=True, on_delete=models.SET_NULL,
-                                related_name="segmentdiff_status")
+    # edited_at=models.DateTimeField(auto_now=True)
+    status=models.ForeignKey(TranslationStatus,null=True, blank=True, on_delete=models.SET_NULL,related_name="segmentdiff_status")
     save_type=models.CharField(max_length=100,blank=True,null=True)
 
     def __str__(self) -> str:

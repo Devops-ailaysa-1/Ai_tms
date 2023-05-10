@@ -2690,7 +2690,6 @@ def segment_difference(sender, instance, *args, **kwargs):
         target_segment=seg_his[len(seg_his)-2].target
         print(edited_segment,'<------>',target_segment)
  
-
     elif len(seg_his)==1:
         print("from mt segment and current inst target")
         target_segment=instance.segment.seg_mt_raw.mt_raw
@@ -2705,5 +2704,4 @@ def segment_difference(sender, instance, *args, **kwargs):
                 SegmentDiff.objects.create(segment=instance.segment,seg_his=instance,
                                     sentense_diff_result=result_sen,
                                     status=instance.status,save_type=save_type)
-
 post_save.connect(segment_difference, sender=SegmentHistory)
