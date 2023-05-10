@@ -497,4 +497,6 @@ def seq_match_seg_diff(words1,words2):
         elif tag=='delete':
             data.append('<del class="removed-word">'+ " ".join(s1[i1:i2])+'</del>')
             save_type.append('delete')
+    if save_type:
+        save_type=list(set(save_type))
     return (" ".join(data)," ".join(save_type))
