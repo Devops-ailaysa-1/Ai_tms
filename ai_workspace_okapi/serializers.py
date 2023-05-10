@@ -684,7 +684,7 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
 from ai_workspace_okapi.models import SegmentDiff
 
 class SegmentDiffSerializer(serializers.ModelSerializer):
-    seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
+    # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
     class Meta:
         model=SegmentDiff
         fields=('id','sentense_diff_result','save_type')

@@ -2640,16 +2640,16 @@ class SegmentDiffViewset(viewsets.ViewSet):
         except SegmentDiff.DoesNotExist:
             raise Http404
     
-    def list(self, request):
-        segment_id=request.query_params.get('segment_id')
-        queryset=SegmentDiff.objects.filter(segment__id=segment_id)
-        serializer = SegmentDiffSerializer(queryset,many=True)
-        return Response(serializer.data)
+    # def list(self, request):
+    #     segment_id=request.query_params.get('segment_id')
+    #     queryset=SegmentDiff.objects.filter(segment__id=segment_id)
+    #     serializer = SegmentDiffSerializer(queryset,many=True)
+    #     return Response(serializer.data)
 
-    def retrieve(self,request,pk):
-        obj =self.get_object(pk)
-        serializer = SegmentDiffSerializer(obj)
-        return Response(serializer.data)
+    # def retrieve(self,request,pk):
+    #     obj =self.get_object(pk)
+    #     serializer = SegmentDiffSerializer(obj)
+    #     return Response(serializer.data)
     
 
 def update_self_learning(sender, instance, *args, **kwargs):
