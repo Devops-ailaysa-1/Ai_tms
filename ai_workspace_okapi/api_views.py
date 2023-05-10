@@ -2703,6 +2703,6 @@ def segment_difference(sender, instance, *args, **kwargs):
             result_sen,save_type=diff_sentense
             SegmentDiff.objects.create(segment=instance.segment,seg_his=instance,
                                     sentense_diff_result=result_sen,
-                                    status__id=instance.status.status_id,save_type=save_type)
+                                    status=instance.status,save_type=save_type)
 
 post_save.connect(segment_difference, sender=SegmentHistory)

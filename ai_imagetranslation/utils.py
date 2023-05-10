@@ -128,20 +128,19 @@ def lama_diff(mask,diff):
 def lama_inpaint_optimize(image_diff,lama_result,original):
     buffered = BytesIO()
     img_gen='https://apinodestaging.ailaysa.com/ai_canvas_mask_generate'
-    width,heigth=image_diff.size
     resized_image = image_diff.resize((256,256))
     resized_image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue())
     resized_width,resized_image_heigth= resized_image.size
-    output = img_str.decode()
+    output=img_str.decode()
     ima_str='data:image/png;base64,'+str(output)
     data = {'maskimage':ima_str , 'width':resized_width,'height':resized_image_heigth}
     thumb_image = requests.request('POST',url=img_gen,data=data ,headers={},files=[])
     ###convert thumb to black and white
     black_and_white=Image.open(BytesIO(base64.b64decode(thumb_image.content.decode().split(',')[-1])))
     black_and_white=black_and_white.resize(image_diff.size)
-    img_arr = np.asarray(black_and_white)
-    img_arr_copy = np.copy(img_arr)
+    img_arr=np.asarray(black_and_white)
+    img_arr_copy=np.copy(img_arr)
     img_arr_copy[img_arr_copy!= 0] = 255
 
     ###morphing

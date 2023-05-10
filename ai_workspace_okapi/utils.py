@@ -452,7 +452,6 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
 
 def split_check(segment_id):
     from ai_workspace_okapi.models import SplitSegment
-
     split_seg = SplitSegment.objects.filter(id=segment_id).first()
     if split_seg:
         if split_seg.segment.is_split == True:
@@ -463,25 +462,42 @@ def split_check(segment_id):
         return True
 
 def seq_match_seg_diff(words1,words2):
-    matcher = difflib.SequenceMatcher(None, words1, words2)
-    delete_tag='<del class="removed-word">{}</del>'
-    insert='<ins class="changed-word">{}</ins>'
-    replace='<replace>{}</replace>'
-    replace_with='<replace_with>{}</replace_with>'
+    s1=words1.split()
+    s2=words2.split()
+    matcher=difflib.SequenceMatcher(None,s1,s2)
     save_type=[]
+    data=[]
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == 'replace':
-            words1[i1]=replace.format(' '.join(words1[i1:i2]))
-            words2[j1]=replace_with.format(' '.join(words2[j1:j2]))
+        if tag=='equal':
+            data.append(" ".join(s2[j1:j2]))
+        elif tag=='replace':
+            data.append('<replace>'+ " ".join(s2[j1:j2])+'</replace>')
             save_type.append('replace')
-        elif tag == 'delete':
-            words1[i1]=delete_tag.format(' '.join(words1[i1:i2]))
-            save_type.append('delete')
-        elif tag == 'insert':
-            words2[j1]=insert.format(' '.join(words2[j1:j2]))
+        elif tag=='insert':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>')
             save_type.append('insert')
-    
-    return (" ".join(words2)," ".join(save_type))
+        elif tag=='delete':
+            data.append('<del class="removed-word">'+ " ".join(s1[i1:i2])+'</del>')
+            save_type.append('delete')
+    return (" ".join(data)," ".join(save_type))
+
+
+    # for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+    #     if tag == 'replace':
+    #         rep1=' '.join(words1[i1:i2])
+    #         rep2=' '.join(words2[j1:j2])
+    #         words1[i1]=replace.format(rep1)
+    #         words2[j1]=replace.format(rep2)
+    #         save_type.append('replace')
+    #     elif tag == 'delete':
+    #         dele=' '.join(words1[i1:i2])
+    #         words1[i1]=delete_tag.format(dele)
+    #         save_type.append('delete')
+    #     elif tag == 'insert':
+    #         ins=' '.join(words2[j1:j2])
+    #         words2[j1]=insert.format(ins)
+    #         save_type.append('insert')
+    # return (" ".join(words2)," ".join(save_type))
 
 
 def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
