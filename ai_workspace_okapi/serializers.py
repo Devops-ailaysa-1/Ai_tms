@@ -140,10 +140,9 @@ class SegmentSerializerV2(SegmentSerializer):
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        output_list = [li for li in difflib.ndiff(instance.target, content) if li[0]=='+' or li[0]=='-']
+        # output_list = [li for li in difflib.ndiff(instance.target, content) if li[0]=='+' or li[0]=='-']
+        output_list = True if instance.target != content else False
         print("ol------>",output_list)
-        print("content--->",content)
-        print("target",instance.target)
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
@@ -691,6 +690,7 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
         model=SegmentDiff
         fields=('id','sentense_diff_result','save_type')
     
+
  
 
 class SegmentHistorySerializer(serializers.ModelSerializer):

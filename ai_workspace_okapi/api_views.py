@@ -2241,7 +2241,8 @@ def get_segment_history(request):
         obj = Segment.objects.get(id=seg_id)
         history = obj.segment_history.all().order_by('-id')
         ser = SegmentHistorySerializer(history,many=True)
-        return Response(ser.data)
+        data = [i for i in ser.data if i.segment_difference]
+        return Response(data)
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
 ####################################################### Hemanth #########################################################
@@ -2690,16 +2691,16 @@ def segment_difference(sender, instance, *args, **kwargs):
     target_segment=''
 
     if len(seg_his)>=2:
-        print("both segment tar from current instance ")
+ 
         edited_segment=seg_his.last().target
         target_segment=seg_his[len(seg_his)-2].target
-        print(edited_segment,'<------>',target_segment)
+ 
  
     elif len(seg_his)==1:
-        print("from mt segment and current inst target")
+ 
         target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
-        print(edited_segment,'<------>',target_segment)
+ 
 
     if edited_segment and target_segment:
         diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
