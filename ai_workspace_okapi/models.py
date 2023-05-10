@@ -610,7 +610,7 @@ class SelflearningAsset(models.Model):
 
 
 class SegmentDiff(models.Model):
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="main_segment")
+    segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="main_segment")
     seg_his=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
     sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True)

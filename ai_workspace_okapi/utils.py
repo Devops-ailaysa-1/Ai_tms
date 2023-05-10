@@ -461,25 +461,6 @@ def split_check(segment_id):
     else:
         return True
 
-def seq_match_seg_diff(words1,words2):
-    s1=words1.split()
-    s2=words2.split()
-    matcher=difflib.SequenceMatcher(None,s1,s2)
-    save_type=[]
-    data=[]
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag=='equal':
-            data.append(" ".join(s2[j1:j2]))
-        elif tag=='replace':
-            data.append('<replace>'+ " ".join(s2[j1:j2])+'</replace>')
-            save_type.append('replace')
-        elif tag=='insert':
-            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>')
-            save_type.append('insert')
-        elif tag=='delete':
-            data.append('<del class="removed-word">'+ " ".join(s1[i1:i2])+'</del>')
-            save_type.append('delete')
-    return (" ".join(data)," ".join(save_type))
 
 
     # for tag, i1, i2, j1, j2 in matcher.get_opcodes():
@@ -524,4 +505,22 @@ def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
 
 
 
-    
+def seq_match_seg_diff(words1,words2):
+    s1=words1.split()
+    s2=words2.split()
+    matcher=difflib.SequenceMatcher(None,s1,s2)
+    save_type=[]
+    data=[]
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag=='equal':
+            data.append(" ".join(s2[j1:j2]))
+        elif tag=='replace':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>'+'<del>'+" ".join(s1[i1:i2])+'</del>')
+            save_type.append('insert')
+        elif tag=='insert':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>')
+            save_type.append('insert')
+        elif tag=='delete':
+            data.append('<del class="removed-word">'+ " ".join(s1[i1:i2])+'</del>')
+            save_type.append('delete')
+    return (" ".join(data)," ".join(save_type))
