@@ -696,11 +696,11 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
 class SegmentHistorySerializer(serializers.ModelSerializer):
     segment_difference=SegmentDiffSerializer(many=True)
     step_name = serializers.SerializerMethodField()
-    status_name = serializers.ReadOnlyField(source='status.status_name')
+    status_id = serializers.ReadOnlyField(source='status.status_id')
     user_name = serializers.ReadOnlyField(source='user.fullname')
     class Meta:
         model = SegmentHistory
-        fields = ('segment','created_at','user_name','status_name','step_name','segment_difference')
+        fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
         # extra_kwargs = {
         #     "status": {"write_only": True}}
 
