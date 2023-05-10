@@ -679,13 +679,26 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
         ser.create(segments, text_unit=text_unit)
         return text_unit
 
+
+
+from ai_workspace_okapi.models import SegmentDiff
+
+class SegmentDiffSerializer(serializers.ModelSerializer):
+    seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
+    class Meta:
+        model=SegmentDiff
+        fields=('id','sentense_diff_result','save_type')
+    
+ 
+
 class SegmentHistorySerializer(serializers.ModelSerializer):
+    segment_difference=SegmentDiffSerializer(many=True)
     step_name = serializers.SerializerMethodField()
     status_name = serializers.ReadOnlyField(source='status.status_name')
     user_name = serializers.ReadOnlyField(source='user.fullname')
     class Meta:
         model = SegmentHistory
-        fields = ('segment','target','created_at','user_name','status_name','step_name',)
+        fields = ('segment','created_at','user_name','status_name','step_name','segment_difference')
         # extra_kwargs = {
         #     "status": {"write_only": True}}
 
@@ -708,20 +721,6 @@ class SelflearningAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model=SelflearningAsset
         fields='__all__'
-
-class SegmentDiffSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=SegmentDiff
-        fields='__all__'
-    
-    def to_representation(self, instance):
-        data=super().to_representation(instance)
-        return data
-
-
-
-
-
 
 
 #For copy_from command
