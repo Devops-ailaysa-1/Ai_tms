@@ -1523,15 +1523,18 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     #     return Response({"msg":"Task Assigned"})
     #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def reassign_check(self,request,tasks):
+    def reassign_check(self,tasks):
         user = self.request.user
-        if self.request.user.team.owner.user.is_agency == True:
-            for i in tasks:
-                if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists():
-                    return {'msg': "There is no assign. you can't reassign" }
-            return None
+        team = self.request.user.team
+        if team:
+            if team.owner.is_agency == True:
+                for i in tasks:
+                    print(i)
+                    if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists() == False:
+                        return "There is no assign. you can't reassign" 
+                return None
         else:
-            return {"msg":"user is not an agency. Reassign is not allowed"}
+            return "user is not an agency. Reassign is not allowed"
         
 
         
@@ -1543,6 +1546,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         files=request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
+        reassign = request.POST.get('reassigned') 
+        print("Reassign----->",reassign)
         Receiver = AiUser.objects.get(id = receiver)
         data = request.POST.dict()
         ################################Need to change########################################
@@ -1563,8 +1568,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task_assign_detail = json.loads(task_assign_detail)
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
         print("Tasks------->",tasks)
-        if request.POST.get('reassigned') == True:
-            msg = self.reassign_check(request,tasks)
+        if reassign == 'true':
+            print("Inside")
+            msg = self.reassign_check(tasks)
+            print("Msg------>",msg)
             if msg:
                 return Response({'Error':msg},status=400)
         # tasks= task_assign_detail[0].get('tasks')
