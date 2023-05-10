@@ -1523,7 +1523,18 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     #     return Response({"msg":"Task Assigned"})
     #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def reassign_check(self,request,tasks):
+        user = self.request.user
+        if self.request.user.team.owner.user.is_agency == True:
+            for i in tasks:
+                if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists():
+                    return {'msg': "There is no assign. you can't reassign" }
+            return None
+        else:
+            return {"msg":"user is not an agency. Reassign is not allowed"}
+        
 
+        
 
     @integrity_error
     def create(self,request):
@@ -1550,7 +1561,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         final =[]
         task_assign_detail = data.pop('task_assign_detail')
         task_assign_detail = json.loads(task_assign_detail)
-        tasks= task_assign_detail[0].get('tasks')
+        tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
+        print("Tasks------->",tasks)
+        if request.POST.get('reassigned') == True:
+            msg = self.reassign_check(request,tasks)
+            if msg:
+                return Response({'Error':msg},status=400)
+        # tasks= task_assign_detail[0].get('tasks')
         for i in task_assign_detail:
             i.update(data)
             i.update(extra)
@@ -1643,7 +1660,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             user = obj.task_assign.task.job.project.ai_user
             with transaction.atomic():
                 if obj.task_assign.reassigned == True:
-                    obj.task_assign.delete()
+                    obj.task_assign.assign_to = self.request.user.team.owner #if unassigned..it is assigned back to LSP 
+                    obj.task_assign.status = 1
+                    obj.task_assign.save()
+                    obj.delete()
                 else:
                     assigned_user = obj.task_assign.assign_to
                     obj.task_assign.assign_to = user
