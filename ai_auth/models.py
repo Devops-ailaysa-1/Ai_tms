@@ -78,12 +78,12 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
         if self.is_internal_member == True:
             obj = InternalMember.objects.get(internal_member_id = self.id)
             plan = get_plan_name(obj.team.owner)
-            return obj.team if plan == "Business" or 'Pay-As-You-Go' else None
+            return obj.team if plan == "Business" or plan == 'Pay-As-You-Go' else None
         else:
             try:
                 team = Team.objects.get(owner_id = self.id)
                 plan = get_plan_name(self)
-                return team if plan == "Business" or 'Pay-As-You-Go' else None
+                return team if plan == "Business" or plan == 'Pay-As-You-Go' else None
             except:
                 return None
 
