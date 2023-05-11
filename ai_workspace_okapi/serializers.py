@@ -140,7 +140,7 @@ class SegmentSerializerV2(SegmentSerializer):
         user = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        output_list = True if instance.target != content else False 
+        output_list = True if instance.temp_target != content else False 
         print('output_list',output_list)
         print('instance.target',instance.target)
         print('content',content)
