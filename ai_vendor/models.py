@@ -43,6 +43,15 @@ class VendorsInfo(models.Model):
             return self.cv_file.url
 
 
+class SavedVendor(models.Model):
+    customer = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='customer')
+    vendor = models.ForeignKey(AiUser, on_delete=models.CASCADE,related_name='saved_vendor')#either freelance or agency
+    created_at = models.DateTimeField(auto_now_add=True)  
+
+    class Meta:
+        unique_together = ("customer", "vendor")   
+
+
 class VendorOnboardingInfo(models.Model):
     user = models.OneToOneField(AiUser, on_delete=models.CASCADE,related_name='vendor_onboard_info')
     onboarded_as_vendor = models.BooleanField(default=False,blank=True, null=True)

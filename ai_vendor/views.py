@@ -19,12 +19,12 @@ from django.http import Http404
 
 from .models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
-                     VendorMtpeEngines)#, AvailableVendors,ProjectboardDetails,ProjectPostJobDetails)
+                     VendorMtpeEngines, SavedVendor)#, AvailableVendors,ProjectboardDetails,ProjectPostJobDetails)
 from .serializers import (ServiceExpertiseSerializer,
                           VendorBankDetailSerializer,VendorLanguagePairCloneSerializer,
                           VendorLanguagePairSerializer,
                           VendorServiceInfoSerializer, VendorsInfoSerializer,
-                          )
+                          SavedVendorSerializer)
 from ai_staff.models import (Languages,Spellcheckers,SpellcheckerLanguages,
                             VendorLegalCategories, CATSoftwares, VendorMemberships,
                             MtpeEngines, SubjectFields,ServiceTypeunits, LanguageMetaDetails)
@@ -310,7 +310,37 @@ def vendor_subject_matter_list(request):
         out.append({"label":i.name,"value":i.id})
     return JsonResponse({"out":out},safe = False)
 
+class SavedVendorView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
 
+    def list(self,request):
+        glossary_selected = SavedVendor.objects.filter(customer=self.request.user).all()
+        serializer = SavedVendorSerializer(glossary_selected, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        vendor = request.POST.get('vendor')
+        user = request.user.team.owner if request.user.team else request.user 
+        serializer = SavedVendorSerializer(data={'customer':user.id,'vendor':vendor})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self,request,pk):
+        pass
+        # data = request.POST.dict()
+        # serializer = SavedVendorSerializer(data=data,partial=True)
+        # if serializer.is_valid(raise_exception=True):
+        #     serializer.save()
+        #     return Response(serializer.data)
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk):
+        user = request.user.team.owner if request.user.team else request.user 
+        obj = SavedVendor.objects.filter(customer=user).filter(id=pk).first()
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 # @api_view(['POST',])
 # def get_vendor_list(request):
