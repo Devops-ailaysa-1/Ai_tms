@@ -217,6 +217,8 @@ def celery_revoke(request):
  
 
 
+
+
 # app = Celery('ai_tms')
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])

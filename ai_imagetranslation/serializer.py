@@ -102,7 +102,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             instance.height = height
             instance.types  = str(validated_data.get('image')).split('.')[-1]
 
-        if validated_data.get('mask_json'): #also creation of mask image using node server
+        if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             instance.mask_json = mask_json
             instance.save()
             

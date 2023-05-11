@@ -2659,8 +2659,13 @@ def update_self_learning(sender, instance, *args, **kwargs):
     language=instance.segment.text_unit.document.job.target_language
     seg_his=SegmentHistory.objects.filter(segment=instance.segment)
 
-    print("from mt segment and current inst target")
-    target_segment=instance.segment.seg_mt_raw.mt_raw
+ 
+
+    if hasattr(instance.segment,'seg_mt_raw'):
+ 
+        target_segment =instance.segment.seg_mt_raw.mt_raw  
+    else:target_segment=''
+    
     edited_segment=instance.target
 
     # if instance.status.status_id==104:
