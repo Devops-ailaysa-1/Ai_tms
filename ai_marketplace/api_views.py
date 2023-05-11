@@ -763,6 +763,10 @@ def customer_mp_dashboard_count(request):
     "bid_deadline_expired_project_count":bid_deadline_expired_project_count})
 
 
+
+
+
+
 class GetVendorListBasedonProjects(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 

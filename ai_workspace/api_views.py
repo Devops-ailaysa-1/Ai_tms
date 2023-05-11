@@ -1806,17 +1806,26 @@ class WriterProjectListView(viewsets.ModelViewSet):
 @api_view(['GET',])
 def tasks_list(request):
     job_id = request.GET.get("job")
+    project_id = request.GET.get('project')
+    if project_id:
+        jobs = Project.objects.get(id=project_id).get_jobs
+    else:
+        jobs = Job.objects.filter(id = job_id)
+    print("Jobs-------------->",jobs)
     try:
-        job = Job.objects.get(id = job_id)
-        authorize(request, resource=job, actor=request.user, action="read")
+        # job = Job.objects.get(id = job_id)
+        # authorize(request, resource=job, actor=request.user, action="read")
         #tasks = job.job_tasks_set.all()
         tasks=[]
-        for task in job.job_tasks_set.all():
-            if (task.job.target_language == None):
-                if (task.file.get_file_extension == '.mp3'):
-                    tasks.append(task)
-                else:pass
-            else:tasks.append(task)
+        for job in jobs:
+            authorize(request, resource=job, actor=request.user, action="read")
+            for task in job.job_tasks_set.all():
+                if (task.job.target_language == None):
+                    if (task.file.get_file_extension == '.mp3'):
+                        tasks.append(task)
+                    else:pass
+                else:tasks.append(task)
+        print("Tasks----------->",tasks)
         ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request})
         return Response(ser.data)
     except Job.DoesNotExist:
