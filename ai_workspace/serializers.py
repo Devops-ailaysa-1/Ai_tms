@@ -1124,24 +1124,33 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
-		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
-		if task_assign:
+		user = self.context.get('request').user
+		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
+		if task_assign:task_assign_final= task_assign
+		else:
+			task_assign_final = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
+		# task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
+		if task_assign_final:
 			task_assign_info=[]
-			for i in task_assign:
+			for i in task_assign_final:
 				try:task_assign_info.append(i.task_assign_info)
 				except:pass
 			return TaskAssignInfoSerializer(task_assign_info,many=True).data
 		else: return None
 
 	def get_task_reassign_info(self, obj):
-		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
-		if task_assign:
-			task_assign_info=[]
-			for i in task_assign:
-				try:task_assign_info.append(i.task_assign_info)
-				except:pass
-			return TaskAssignInfoSerializer(task_assign_info,many=True).data
-		else: return None
+		user = self.context.get('request').user.team.owner if self.context.get('request').user.team else self.context.get('request').user
+		if user.is_agency == True:
+			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
+			if task_assign:
+				task_assign_info=[]
+				for i in task_assign:
+					try:task_assign_info.append(i.task_assign_info)
+					except:pass
+				return TaskAssignInfoSerializer(task_assign_info,many=True).data
+			else: return None
+		else:
+			return None
 
 	# def get_task_self_assign_info(self,obj):
 	# 	user = self.context.get("request").user
