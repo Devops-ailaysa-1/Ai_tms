@@ -1524,15 +1524,15 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def reassign_check(self,tasks):
-        user = self.request.user
-        team = self.request.user.team
-        if team:
-            if team.owner.is_agency == True:
-                for i in tasks:
-                    print(i)
-                    if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists() == False:
-                        return "There is no assign. you can't reassign" 
-                return None
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        #plan = get_plan_name(self.request.user)
+        #team = self.request.user.team
+        if user.is_agency == True:
+            for i in tasks:
+                print(i)
+                if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists() == False:
+                    return "There is no assign. you can't reassign" 
+            return None
         else:
             return "user is not an agency. Reassign is not allowed"
         
