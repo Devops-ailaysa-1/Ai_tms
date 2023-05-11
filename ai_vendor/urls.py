@@ -7,6 +7,7 @@ from django.conf.urls import url
 router = DefaultRouter()
 router.register(r'vendorserviceinfo',views.VendorServiceListCreate,basename="vendor-service-info")
 router.register(r'vendorexpertiseinfo',views.VendorExpertiseListCreate,basename="vendor-expertise-info")
+router.register(r'savetalent', views.SavedVendorView,basename='save-talent')
 #router.register(r'vendorlangpair',views.VendorLangPairCreate,basename="vendor-lang-pair")
 
 

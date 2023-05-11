@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from ai_vendor.models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware
+from ai_vendor.models import (VendorsInfo,VendorLanguagePair,VendorServiceTypes,
+                                VendorServiceInfo,VendorMtpeEngines,VendorMembership,
+                                VendorSubjectFields,VendorContentTypes,VendorBankDetails,
+                                TranslationSamples,MtpeSamples,VendorCATsoftware,
+                                SavedVendor)
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
@@ -37,6 +41,22 @@ class VendorCATsoftwareSerializer(serializers.ModelSerializer):
     class Meta:
         model=VendorCATsoftware
         fields=('software',)
+
+class SavedVendorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SavedVendor
+        fields='__all__'
+
+    def run_validation(self, data):
+        customer = data.get('customer')
+        vendor = json.loads(data.get('vendor'))
+        print('customer--------->',customer,type(customer))
+        print('vendor----------->',vendor,type(vendor))
+        if customer == vendor:
+            print("Inside")
+            raise serializers.ValidationError({"msg":"save-vendor cannot happen between same person"})
+        return super().run_validation(data) 
+    
 
 class VendorSubjectFieldSerializer(serializers.ModelSerializer):
     subject_name = serializers.ReadOnlyField(source='subject.name')

@@ -690,6 +690,11 @@ class GetVendorListViewNew(generics.ListAPIView):
             queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset
 
+    # def list(self, request, *args, **kwargs):
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     serializer = self.serializer_class(queryset, context={'request': request, 'user': request.user},many=True)
+    #     return Response(serializer.data)
+
 
 
 
