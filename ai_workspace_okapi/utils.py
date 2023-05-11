@@ -482,7 +482,7 @@ def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
 def seq_match_seg_diff(words1,words2):
     s1=words1.split()
     s2=words2.split()
-    matcher=difflib.SequenceMatcher(None,s1,s2)
+    matcher=difflib.SequenceMatcher(None,s1,s2,junk=lambda x: x.isspace())
     save_type=[]
     data=[]
     for tag,i1,i2,j1,j2 in matcher.get_opcodes():
