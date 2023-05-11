@@ -2239,7 +2239,7 @@ def get_segment_history(request):
     seg_id = request.GET.get('segment')
     try:
         obj = Segment.objects.get(id=seg_id)
-        history = obj.segment_history.all().order_by('-id')
+        history = obj.segment_history.all().order_by('-id') 
         ser = SegmentHistorySerializer(history,many=True)
         data_ser=ser.data
         data=[i for i in data_ser if dict(i)['segment_difference']]
@@ -2658,11 +2658,7 @@ def update_self_learning(sender, instance, *args, **kwargs):
     user=instance.user
     language=instance.segment.text_unit.document.job.target_language
     seg_his=SegmentHistory.objects.filter(segment=instance.segment)
-
- 
-
     if hasattr(instance.segment,'seg_mt_raw'):
- 
         target_segment =instance.segment.seg_mt_raw.mt_raw  
     else:target_segment=''
     
@@ -2703,12 +2699,15 @@ def segment_difference(sender, instance, *args, **kwargs):
  
  
     elif len(seg_his)==1:
- 
-        target_segment=instance.segment.seg_mt_raw.mt_raw
+        if hasattr(instance.segment,'seg_mt_raw'):
+            target_segment =instance.segment.seg_mt_raw.mt_raw  
+        else:target_segment=''
+        # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
  
-
+    print('edited_segment',edited_segment , 'target_segment',target_segment )
     if edited_segment and target_segment:
+        print('edited_segment',edited_segment , 'target_segment',target_segment )
         diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
         if diff_sentense:
             result_sen,save_type=diff_sentense
