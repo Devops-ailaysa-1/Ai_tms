@@ -872,7 +872,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     paginator.page_size = 20
 
     @staticmethod
-    def get_tasks_by_projectid(self, request, pk):
+    def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
         if project.ai_user == request.user:
@@ -1804,7 +1804,7 @@ class WriterProjectListView(viewsets.ModelViewSet):
 
 
 @permission_classes([IsAuthenticated])
-@api_view(['GET',])
+@api_view(['GET',])####changed
 def tasks_list(request):
     job_id = request.GET.get("job")
     project_id = request.GET.get('project')
@@ -1812,7 +1812,7 @@ def tasks_list(request):
         job = Job.objects.get(id = job_id)
         project_id = job.project.id
     vbd = VendorDashBoardView
-    res = vbd.get_tasks_by_projectid(vbd,request=request,pk=project_id)
+    res = vbd.get_tasks_by_projectid(request=request,pk=project_id)
     if job_id:
         res = [i for i in res if i.job == job ]
     print("res----->",res)
