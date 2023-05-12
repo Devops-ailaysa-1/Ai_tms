@@ -118,13 +118,18 @@ class SegmentSerializerV2(SegmentSerializer):
 
     def update_task_assign(self,task_obj,user):
         try:
-            task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first()         
+            task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first()
+            print("t_a_o----->",task_assign_obj)         
             obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
             if obj.status != 2:
                 obj.status = 2
                 obj.save()
-            # if task_assign_obj.task.reassigned == True:
-            #     TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__reassigned=False).update(task_assign__status = 2)  
+            if task_assign_obj.task.reassigned == True:
+                assigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__reassigned=False)
+                for i in assigns:
+                    if i.task_assign.status != 2:
+                        i.task_assign.status = 2
+                        i.task_assign.save()
         except:pass
 
     def update(self, instance, validated_data):
@@ -140,7 +145,7 @@ class SegmentSerializerV2(SegmentSerializer):
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
-        user = self.context.get('request').user
+        user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
         output_list = [li for li in difflib.ndiff(instance.target, content) if li[0]=='+' or li[0]=='-']
@@ -166,13 +171,13 @@ class SegmentSerializerV2(SegmentSerializer):
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
-            self.update_task_assign(task_obj,user)
+            self.update_task_assign(task_obj,user_1)
             if output_list:
                 SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
         if output_list:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
-        self.update_task_assign(task_obj,user)
+        self.update_task_assign(task_obj,user_1)
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
