@@ -118,10 +118,13 @@ class SegmentSerializerV2(SegmentSerializer):
 
     def update_task_assign(self,task_obj,user):
         try:
+            task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first()         
             obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
             if obj.status != 2:
                 obj.status = 2
                 obj.save()
+            # if task_assign_obj.task.reassigned == True:
+            #     TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__reassigned=False).update(task_assign__status = 2)  
         except:pass
 
     def update(self, instance, validated_data):
