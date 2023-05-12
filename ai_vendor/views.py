@@ -354,6 +354,7 @@ def vendor_lang_sheet():
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
+    boolean=['True','False']
     worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})    
     worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
@@ -361,6 +362,7 @@ def vendor_lang_sheet():
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
     worksheet.data_validation('F2:F1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
     worksheet.data_validation('G2:G1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
+    worksheet.data_validation('H2:H1048576', {'validate': 'list','source':boolean})
     worksheet2.hide()
     workbook.close()
     xlsx_data = output.getvalue()
@@ -408,6 +410,7 @@ def vendor_language_pair(request):
                                                         unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
                     if row['Reverse']:
                         pass
+                    
                 except IntegrityError as e:
                     return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
