@@ -394,8 +394,8 @@ def vendor_language_pair(request):
         return JsonResponse({'status':'file not uploaded'})
     column_name=['Source Language','Target Language','Currency','Service','Unit Type','Unit Rate','Hourly Rate','Reverse']	
     df=pd.read_excel(language_pair_xl_file)
-    if not df.empty:
-        return JsonResponse({'status':'empty file upload'})
+    # if not df.empty:
+    #     return JsonResponse({'status':'empty file upload'})
     if df.columns.to_list() == column_name:
         any_null=check_null_rows(df)
         df=df.dropna()
