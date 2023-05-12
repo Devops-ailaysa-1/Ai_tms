@@ -812,6 +812,9 @@ def generate_article(request):
 
 
 
+
+
+
     # response = StreamingHttpResponse(stream(), status=200, content_type='text/event-stream')
     # response['Cache-Control'] = 'no-cache'
     # return response

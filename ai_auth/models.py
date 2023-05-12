@@ -67,7 +67,7 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             obj = InternalMember.objects.get(internal_member_id = self.id)
             # return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name}
             plan = get_plan_name(obj.team.owner)
-            if plan == "Business" or 'Pay-As-You-Go':
+            if plan == "Business" or plan == 'Pay-As-You-Go':
                 return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"team_active":"True"}
             else:
                 return {'team_name':obj.team.name,'team_id':obj.team.id,"role":obj.role.name,"team_active":"False"}
