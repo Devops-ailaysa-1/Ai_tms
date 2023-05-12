@@ -321,8 +321,7 @@ import xlsxwriter
 def vendor_lang_sheet():
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output)
- 
-    protected_format = workbook.add_format({'locked': True})
+    
     header = workbook.add_format({
             'bold': True,
             'bg_color': '#ffffcc',
@@ -340,7 +339,7 @@ def vendor_lang_sheet():
     worksheet.write('E1', 'Unit Type',header)
     worksheet.write('F1', 'Unit Rate',header) 
     worksheet.write('G1','Hourly Rate',header)
-    languages=list(Languages.objects.all().values_list('language'))
+    languages=list(Languages.objects.all().values_list('language',flat=True))
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
@@ -351,9 +350,8 @@ def vendor_lang_sheet():
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
     worksheet.data_validation('F2:F1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
     worksheet.data_validation('G2:G1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
-    worksheet.set_row(0,cell_format=protected_format)
+     
     workbook.close()
-        
     xlsx_data = output.getvalue()
     return xlsx_data
 
@@ -411,7 +409,7 @@ def vendor_language_pair(request):
 #@permission_classes([IsAuthenticated])
 def vendor_lang_pair_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
-    response['Content-Disposition'] = 'attachment; filename=Glossary_template.xlsx'
+    response['Content-Disposition'] = 'attachment; filename=Vendor_language_pairs.xlsx'
     xlsx_data = vendor_lang_sheet()
     response.write(xlsx_data)
     response['Access-Control-Expose-Headers'] = 'Content-Disposition'
