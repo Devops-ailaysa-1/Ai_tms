@@ -339,7 +339,7 @@ def vendor_lang_sheet():
     worksheet.write('E1', 'Unit Type',header)
     worksheet.write('F1', 'Unit Rate',header) 
     worksheet.write('G1','Hourly Rate',header)
-    languages=['Tamil','English']
+    languages=list(Languages.objects.all().values_list('language',flat=True))
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
