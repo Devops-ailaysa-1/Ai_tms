@@ -1152,9 +1152,9 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 					try:task_assign_info.append(i.task_assign_info)
 					except:pass
 				return TaskAssignInfoSerializer(task_assign_info,many=True).data
-			else: return None
+			else: return True
 		else:
-			return True
+			return None
 
 	# def get_task_self_assign_info(self,obj):
 	# 	user = self.context.get("request").user
