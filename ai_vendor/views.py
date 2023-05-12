@@ -350,7 +350,7 @@ def vendor_lang_sheet():
     worksheet.write('E1', 'Unit Type',header)
     worksheet.write('F1', 'Unit Rate',header) 
     worksheet.write('G1','Hourly Rate',header)
-    
+    worksheet.write('H1','Reverse',header)
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
@@ -410,7 +410,7 @@ def vendor_language_pair(request):
                                                         unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
                     if row['Reverse']:
                         pass
-                    
+
                 except IntegrityError as e:
                     return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
