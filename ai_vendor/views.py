@@ -354,7 +354,7 @@ def vendor_lang_sheet():
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
-    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
+    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})    
     worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
     worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
@@ -381,7 +381,7 @@ def vendor_language_pair(request):
     language_pair_xl_file=request.FILES.get('language_pair_xl_file')
     if not language_pair_xl_file:
         return JsonResponse({'status':'file not uploaded'})
-    column_name=['Source Language','Target Language','Currency','Service','Unit Type','Unit Rate','Hourly Rate']	
+    column_name=['Source Language','Target Language','Currency','Service','Unit Type','Unit Rate','Hourly Rate','Reverse']	
     df=pd.read_excel(language_pair_xl_file)
     if df.columns.to_list() == column_name:
         any_null=check_null_rows(df)
@@ -406,8 +406,9 @@ def vendor_language_pair(request):
                     else:
                         VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
                                                         unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
+                    if row['Reverse']:
+                        pass
                 except IntegrityError as e:
-                    print(e)
                     return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
             return JsonResponse({'status':'some null present in rolls and might contain same lang pair'})
@@ -417,7 +418,7 @@ def vendor_language_pair(request):
 
 
 @api_view(['GET',])
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def vendor_lang_pair_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Vendor_language_pairs.xlsx'
