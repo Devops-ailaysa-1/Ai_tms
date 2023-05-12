@@ -5,7 +5,8 @@ from .views import stream
 
 websocket_urlpatterns = [
     path('marketplace/messages/', consumers.ChatConsumer.as_asgi()),
-    path("marketplace/stream/", stream),
+    path('stream/', consumers.StreamConsumer.as_asgi()),
+    # path("marketplace/stream/", stream),
     # path('marketplace/notify/', notification_consumers.NotificationConsumer.as_asgi())
     # path("notifications/", consumers.NotificationConsumer.as_asgi()),
 ]
