@@ -15,8 +15,8 @@ from ai_workspace.models import Steps
 from itertools import groupby
 from rest_framework.response import Response
 from dj_rest_auth.serializers import UserDetailsSerializer
-from ai_auth.serializers import ProfessionalidentitySerializer
-from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer
+from ai_auth.serializers import ProfessionalidentitySerializer,HiredEditorSerializer
+from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer,SavedVendorSerializer
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
 from  django.utils import timezone
 from ai_auth.tasks import check_dict
@@ -919,3 +919,16 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
                 if objs:
                     return VendorServiceSerializer(objs[0], many=False, read_only=True).data
                 else:return {'service':[]}
+
+
+class GetTalentSerializer(serializers.Serializer):
+    hired = serializers.SerializerMethodField()
+    saved = serializers.SerializerMethodField()
+
+    def get_saved(self,obj):
+        queryset = SavedVendor.objects.filter(customer=obj)
+        return SavedVendorSerializer(queryset, many=True).data
+
+    def get_hired(self,obj):
+        queryset =HiredEditors.objects.filter(user=obj).filter(status=2)
+        return HiredEditorSerializer(queryset,many=True).data

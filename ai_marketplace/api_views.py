@@ -42,7 +42,7 @@ from .serializers import(ProjectPostSerializer,ProjectPostTemplateSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
                         GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
                         SimpleProjectSerializer,AvailablePostJobSerializer,ProjectPostStepsSerializer,
-                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer)
+                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer,GetTalentSerializer)
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines)
@@ -815,7 +815,12 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
         # elif len(res)==1:return Response(self.dt(res,3))
         # else:return Response([])
 
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_talents(request):
+    user = request.user.team.owner if request.user.team else request.user
+    ser = GetTalentSerializer(user)
+    return Response(ser.data)
 
 
 # class GetVendorListBasedonProjects(generics.ListAPIView):
