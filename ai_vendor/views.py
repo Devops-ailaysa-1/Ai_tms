@@ -354,8 +354,8 @@ def vendor_lang_sheet():
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
-    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$6'})
-    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$6'})
+    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
+    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$109'})
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
     worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
