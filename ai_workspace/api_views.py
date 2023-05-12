@@ -1804,7 +1804,7 @@ class WriterProjectListView(viewsets.ModelViewSet):
 
 
 @permission_classes([IsAuthenticated])
-@api_view(['GET',])
+@api_view(['GET',])####changed
 def tasks_list(request):
     job_id = request.GET.get("job")
     project_id = request.GET.get('project')
