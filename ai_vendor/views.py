@@ -397,7 +397,7 @@ def vendor_language_pair(request):
                     tar_lang=Languages.objects.get(language=row['Target Language'])
                     currency=Currencies.objects.get(currency_code=row['Currency'])
                     service=ServiceTypes.objects.get(name=row['Service'])
-                    unit_type=ServiceTypeunits.objects.get(unit=row['Unit Type'].lower())
+                    unit_type=ServiceTypeunits.objects.get(unit=row['Unit Type'])
                     unit_rate=row['Unit Rate']
                     hourly_rate=row['Hourly Rate']
                     vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
