@@ -45,4 +45,5 @@ urlpatterns+= [
     path('pr_post_template/<int:id>/',api_views.project_post_template_delete),
     path('get_template/',api_views.project_post_template_get),
     path('delete_sample_file/<int:bid_propasal_id>/',api_views.sample_file_delete),
+    path('get_talents/',api_views.get_talents),
     ]
