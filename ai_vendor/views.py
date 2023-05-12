@@ -393,7 +393,7 @@ def vendor_language_pair(request):
     if not language_pair_xl_file:
         return JsonResponse({'status':'file not uploaded'})
     column_name=['Source Language','Target Language','Currency','Service','Unit Type','Unit Rate','Hourly Rate','Reverse']	
-    df=pd.read_excel(language_pair_xl_file,columns=column_name)
+    df=pd.read_excel(language_pair_xl_file)
     if not df.empty:
         return JsonResponse({'status':'empty file upload'})
     if df.columns.to_list() == column_name:
@@ -414,13 +414,13 @@ def vendor_language_pair(request):
                     vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
                                                                     target_lang=tar_lang,currency=currency)
                     
-                    create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                    service=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 
                     if row['Reverse']:
                         vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
                                                                     target_lang=src_lang,currency=currency)
-                        create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
-                        pass
+                        service=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                        
 
                 except IntegrityError as e:
                     pass
