@@ -332,6 +332,17 @@ def vendor_lang_sheet():
             'locked': True
         })
     worksheet = workbook.add_worksheet('Vendor Language Pairs')
+
+    worksheet2 = workbook.add_worksheet('Languages')
+    languages=list(Languages.objects.all().values_list('language',flat=True))
+    worksheet2.write('A1','Languages')
+    for i in range(len(languages)):
+        a='A{}'.format(i+2)
+        worksheet2.write(a,languages[i])
+
+    worksheet2.add_table('A1:A{}'.format(len(languages)+1),{'name': 'Languages','autofilter': False,'columns': [{'header': 'Languages'}]} ) 
+ 
+
     worksheet.write('A1', 'Source Language',header)
     worksheet.write('B1', 'Target Language',header)
     worksheet.write('C1', 'Currency',header)
@@ -339,18 +350,18 @@ def vendor_lang_sheet():
     worksheet.write('E1', 'Unit Type',header)
     worksheet.write('F1', 'Unit Rate',header) 
     worksheet.write('G1','Hourly Rate',header)
-    languages=list(Languages.objects.all().values_list('language',flat=True))
+    
     currency=['EUR','GBP','INR','USD']
     service=['MTPE (MPE)','Human Translation (HUT)']
     unit_type=['Word','Char']
-    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': languages})
-    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': languages})
+    worksheet.data_validation('A2:A1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$6'})
+    worksheet.data_validation('B2:B1048576', {'validate': 'list', 'source': '=Languages!$A$2:$A$6'})
     worksheet.data_validation('C2:C1048576', {'validate': 'list', 'source': currency})
     worksheet.data_validation('D2:D1048576', {'validate': 'list', 'source': service})
     worksheet.data_validation('E2:E1048576', {'validate': 'list', 'source': unit_type})
     worksheet.data_validation('F2:F1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
     worksheet.data_validation('G2:G1048576', {'validate': 'integer','criteria': 'between', 'minimum': 0, 'maximum': 999999})
-     
+    worksheet2.hide()
     workbook.close()
     xlsx_data = output.getvalue()
     return xlsx_data
