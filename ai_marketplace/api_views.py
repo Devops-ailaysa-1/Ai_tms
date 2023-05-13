@@ -507,8 +507,14 @@ class JobFilter(django_filters.FilterSet):
     fullname = django_filters.CharFilter(field_name='customer__fullname',lookup_expr='icontains')
     source = django_filters.CharFilter(field_name='projectpost_jobs__src_lang__language',lookup_expr='icontains')
     target = django_filters.CharFilter(field_name='projectpost_jobs__tar_lang__language',lookup_expr='icontains')
-    subject = django_filters.CharFilter(field_name='projectpost_subject__subject',lookup_expr='icontains')
+    #subject = django_filters.CharFilter(field_name='projectpost_subject__subject',lookup_expr='icontains')
     #content = django_filters.CharFilter(field_name='projectpost_subject__content',lookup_expr='icontains')
+    subject = django_filters.CharFilter(method='filter_subject')
+
+    def filter_subject(self, queryset, name, value):
+        ids = value.split(',')  # split input into a list of IDs
+        return queryset.filter(projectpost_subject__subject_id__in=ids)
+
     class Meta:
         model = ProjectboardDetails
         fields = ('fullname', 'source','target','subject',)#'content',)
