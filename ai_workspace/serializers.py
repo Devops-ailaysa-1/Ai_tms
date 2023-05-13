@@ -494,7 +494,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
 	subjects =ProjectSubjectSerializer(many=True, source="proj_subject",required=False,write_only=True)
 	contents =ProjectContentTypeSerializer(many=True, source="proj_content_type",required=False,write_only=True)
-	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False,write_only=True)
+	steps = ProjectStepsSerializer(many=True,source="proj_steps",required=False)#,write_only=True)
 	project_deadline = serializers.DateTimeField(required=False,allow_null=True,write_only=True)
 	mt_enable = serializers.BooleanField(required=False,allow_null=True)
 	project_type_id = serializers.PrimaryKeyRelatedField(queryset=ProjectType.objects.all().values_list('pk',flat=True),required=False,write_only=True)
@@ -725,7 +725,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 			instance.save()
 
 		if 'team_exist' in validated_data:
-			instance.team_id = None if validated_data.get('team_exist') == False else instance.ai_user.team.id
+			if validated_data.get('team_exist') == False:
+				instance.team_id = None  
+			else:
+				try:instance.ai_user.team.id
+				except: instance.team_id = None
 			instance.save()
 
 		if validated_data.get('project_manager_id'):
@@ -950,7 +954,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                 task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)) for task in task_list]
             print('task_assign_list--------->',task_assign_list)
             task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
-            objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
+            #objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
             for i in task_assign_info:
                 try:total_word_count = i.task_assign.task.document.total_word_count
                 except:
@@ -1003,9 +1007,9 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 class VendorDashBoardSerializer(serializers.ModelSerializer):
 	filename = serializers.CharField(read_only=True, source="file.filename")
 	source_language = serializers.CharField(read_only=True, source=\
-		"job.source_language.language")
+		"job.source_language.id")
 	target_language = serializers.CharField(read_only=True, source=\
-		"job.target_language.language")
+		"job.target_language.id")
 	project_name = serializers.CharField(read_only=True, source=\
 		"file.project.project_name")
 	document_url = serializers.CharField(read_only=True, source="get_document_url")
@@ -1124,24 +1128,36 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
-		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
-		if task_assign:
+		user = self.context.get('request').user
+		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
+		if task_assign:task_assign_final= task_assign
+		else:
+			task_assign_final = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
+		# task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
+		if task_assign_final:
 			task_assign_info=[]
-			for i in task_assign:
+			for i in task_assign_final:
 				try:task_assign_info.append(i.task_assign_info)
 				except:pass
 			return TaskAssignInfoSerializer(task_assign_info,many=True).data
 		else: return None
 
 	def get_task_reassign_info(self, obj):
-		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
-		if task_assign:
-			task_assign_info=[]
-			for i in task_assign:
-				try:task_assign_info.append(i.task_assign_info)
-				except:pass
-			return TaskAssignInfoSerializer(task_assign_info,many=True).data
-		else: return None
+		user = self.context.get('request').user.team.owner if self.context.get('request').user.team else self.context.get('request').user
+		if user.is_agency == True:
+			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
+			if task_assign:
+				task_assign_info=[]
+				for i in task_assign:
+					try:task_assign_info.append(i.task_assign_info)
+					except:pass
+				return TaskAssignInfoSerializer(task_assign_info,many=True).data
+			else: return None
+		else:
+			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
+			if task_assign:
+				return True
+			else: return None
 
 	# def get_task_self_assign_info(self,obj):
 	# 	user = self.context.get("request").user

@@ -871,23 +871,24 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     paginator = PageNumberPagination()
     paginator.page_size = 20
 
-    def get_tasks_by_projectid(self, pk):
+    @staticmethod
+    def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
-        if project.ai_user == self.request.user:
+        if project.ai_user == request.user:
             return project.get_tasks
         if project.team:
             print(project.team.get_project_manager)
-            if ((project.team.owner == self.request.user)|(self.request.user in project.team.get_project_manager)):
+            if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
                 return project.get_tasks
             # elif self.request.user in project.team.get_project_manager:
             #     return project.get_tasks
             else:
                 return [task for job in project.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = self.request.user).exists()]#.distinct('task')]
+                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = request.user).exists()]#.distinct('task')]
         else:
             return [task for job in project.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = self.request.user).exists()]#.distinct('task')]
+                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = request.user).exists()]#.distinct('task')]
 
 
     def get_object(self):
@@ -905,7 +906,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
 
     def retrieve(self, request, pk, format=None):
         #print("%%%%")
-        tasks = self.get_tasks_by_projectid(pk=pk)
+        tasks = self.get_tasks_by_projectid(request=request,pk=pk)
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
         return Response(serlzr.data, status=200)
@@ -1523,15 +1524,18 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     #     return Response({"msg":"Task Assigned"})
     #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def reassign_check(self,request,tasks):
-        user = self.request.user
-        if self.request.user.team.owner.user.is_agency == True:
+    def reassign_check(self,tasks):
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        #plan = get_plan_name(self.request.user)
+        #team = self.request.user.team
+        if user.is_agency == True:
             for i in tasks:
-                if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists():
-                    return {'msg': "There is no assign. you can't reassign" }
+                print(i)
+                if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists() == False:
+                    return "There is no assign. you can't reassign" 
             return None
         else:
-            return {"msg":"user is not an agency. Reassign is not allowed"}
+            return "user is not an agency. Reassign is not allowed"
         
 
         
@@ -1543,6 +1547,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         files=request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
+        reassign = request.POST.get('reassigned') 
+        print("Reassign----->",reassign)
         Receiver = AiUser.objects.get(id = receiver)
         data = request.POST.dict()
         ################################Need to change########################################
@@ -1563,8 +1569,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task_assign_detail = json.loads(task_assign_detail)
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
         print("Tasks------->",tasks)
-        if request.POST.get('reassigned') == True:
-            msg = self.reassign_check(request,tasks)
+        if reassign == 'true':
+            print("Inside")
+            msg = self.reassign_check(tasks)
+            print("Msg------>",msg)
             if msg:
                 return Response({'Error':msg},status=400)
         # tasks= task_assign_detail[0].get('tasks')
@@ -1796,24 +1804,31 @@ class WriterProjectListView(viewsets.ModelViewSet):
 
 
 @permission_classes([IsAuthenticated])
-@api_view(['GET',])
+@api_view(['GET',])####changed
 def tasks_list(request):
     job_id = request.GET.get("job")
-    try:
+    project_id = request.GET.get('project')
+    if job_id:
         job = Job.objects.get(id = job_id)
-        authorize(request, resource=job, actor=request.user, action="read")
-        #tasks = job.job_tasks_set.all()
+        project_id = job.project.id
+    vbd = VendorDashBoardView
+    res = vbd.get_tasks_by_projectid(request=request,pk=project_id)
+    if job_id:
+        res = [i for i in res if i.job == job ]
+    print("res----->",res)
+    try:
         tasks=[]
-        for task in job.job_tasks_set.all():
+        for task in res:
             if (task.job.target_language == None):
                 if (task.file.get_file_extension == '.mp3'):
                     tasks.append(task)
                 else:pass
             else:tasks.append(task)
+        print("Tasks----------->",tasks)
         ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request})
         return Response(ser.data)
-    except Job.DoesNotExist:
-        return JsonResponse({"msg":"No job exists"})
+    except:
+        return JsonResponse({"msg":"something went wrong"})
 
 
     # for i in tasks:
@@ -1866,10 +1881,10 @@ class AssignToListView(viewsets.ModelViewSet):
         pro = Project.objects.get(id = project)
         try:
             job_obj = Job.objects.filter(id__in = job).first() #need to work
-            authorize(request, resource=job_obj, actor=request.user, action="read")
+            #authorize(request, resource=job_obj, actor=request.user, action="read")
         except Job.DoesNotExist:
             pass
-        authorize(request, resource=pro, actor=request.user, action="read")
+        #authorize(request, resource=pro, actor=request.user, action="read")
         user =pro.ai_user    
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)

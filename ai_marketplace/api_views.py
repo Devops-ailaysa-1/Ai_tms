@@ -42,7 +42,7 @@ from .serializers import(ProjectPostSerializer,ProjectPostTemplateSerializer,
                         ThreadSerializer,GetVendorDetailSerializer,VendorServiceSerializer,
                         GetVendorListSerializer,ChatMessageSerializer,ChatMessageByDateSerializer,
                         SimpleProjectSerializer,AvailablePostJobSerializer,ProjectPostStepsSerializer,
-                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer)
+                        PrimaryBidDetailSerializer,GetVendorListBasedonProjectSerializer,GetTalentSerializer)
 from ai_vendor.models import (VendorBankDetails, VendorLanguagePair, VendorServiceInfo,
                      VendorServiceTypes, VendorsInfo, VendorSubjectFields,VendorContentTypes,
                      VendorMtpeEngines)
@@ -690,6 +690,11 @@ class GetVendorListViewNew(generics.ListAPIView):
             queryset = queryset.filter(Q(vendor_subject__subject_id__in = subjectlist)&Q(vendor_subject__deleted_at=None)).annotate(number_of_match=Count('vendor_subject__subject_id',0)).order_by('-number_of_match').distinct()
         return queryset
 
+    # def list(self, request, *args, **kwargs):
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     serializer = self.serializer_class(queryset, context={'request': request, 'user': request.user},many=True)
+    #     return Response(serializer.data)
+
 
 
 
@@ -758,6 +763,10 @@ def customer_mp_dashboard_count(request):
     "bid_deadline_expired_project_count":bid_deadline_expired_project_count})
 
 
+
+
+
+
 class GetVendorListBasedonProjects(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -806,7 +815,12 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
         # elif len(res)==1:return Response(self.dt(res,3))
         # else:return Response([])
 
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_talents(request):
+    user = request.user.team.owner if request.user.team else request.user
+    ser = GetTalentSerializer(user)
+    return Response(ser.data)
 
 
 # class GetVendorListBasedonProjects(generics.ListAPIView):
