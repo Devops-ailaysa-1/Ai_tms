@@ -749,25 +749,6 @@ class BlogArticleViewset(viewsets.ViewSet):
 #             return Response(serializer.data)
 #         return Response(serializer.errors)
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # def customize_response(customize ,user_text,tone,request):
 #     if customize.prompt or customize.customize == "Text completion":
 #         initial_credit = request.user.credit_balance.get("total_left")
@@ -830,6 +811,9 @@ class BlogArticleViewset(viewsets.ViewSet):
 #         else:txt_generated = 'Something Went Wrong.Try Again'
 #         #print("Txt------>",txt_generated.strip())
 #     #total_tokens = response['usage']['total_tokens']
+ 
+#     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
+ 
 #     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
 from django.http import HttpResponse, StreamingHttpResponse
 import time
@@ -877,4 +861,6 @@ def generate_article(request):
     # response.status_code = 200
     # return response(stream())
     #return StreamingHttpResponse(stream(), content_type='text/event-stream')
+ 
     #return JsonResponse({'error': 'Error'}, status=405)
+ 

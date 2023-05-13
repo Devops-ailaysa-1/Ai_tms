@@ -59,6 +59,7 @@ list_of_tables.txt
 dummy.txt
 test5.out-2.docx
 *.bak
+
 json_back.zip
 fixtures
 *.ipy
@@ -121,3 +122,14 @@ req_ilango.txt
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
 lama_model/lama_q_int8_jit.pt
+
+*.zip
+*.xlsx
+*.txt
+*.dockerignore
+okapi_resources
+docker
+*.sh
+*.tbx
+*.mp3
+*.log*
