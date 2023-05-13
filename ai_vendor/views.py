@@ -414,12 +414,12 @@ def vendor_language_pair(request):
                     vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
                                                                     target_lang=tar_lang,currency=currency)
                     
-                    service=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                    ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 
                     if row['Reverse']:
                         vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
                                                                     target_lang=src_lang,currency=currency)
-                        service=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                        ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                         
 
                 except IntegrityError as e:
