@@ -183,7 +183,7 @@ class CanvasDesignListViewset(viewsets.ViewSet,PageNumberPagination):
     permission_classes = [IsAuthenticated,]
     def list(self,request):
         queryset = CanvasDesign.objects.filter(user=request.user.id).order_by('-updated_at')
-        print("request.user.id--------------------->>>>",request.user.id)
+        print("request.user.id--------------------->>>>",request.user.id , request.user)
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = CanvasDesignListSerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
