@@ -1468,8 +1468,9 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     def list(self,request):
         tasks = request.GET.getlist('tasks')
         step = request.GET.get('step')
+        reassigned = request.GET.get('reassigned',False)
         try:
-            task_assign_info = TaskAssignInfo.objects.filter(task_assign__task_id__in = tasks)
+            task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__reassigned = reassigned))
             # task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__step_id =step))
         except TaskAssignInfo.DoesNotExist:
             return HttpResponse(status=404)
@@ -1663,22 +1664,30 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 po_modify(obj.id,['unassigned',])
             except BaseException as e:
                 logger.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
-            try:self.history(obj)
-            except:pass
             user = obj.task_assign.task.job.project.ai_user
             with transaction.atomic():
+                try:self.history(obj)
+                except:pass
                 if obj.task_assign.reassigned == True:
                     obj.task_assign.assign_to = self.request.user.team.owner #if unassigned..it is assigned back to LSP 
                     obj.task_assign.status = 1
                     obj.task_assign.save()
                     obj.delete()
                 else:
-                    assigned_user = obj.task_assign.assign_to
+                    reassigns = TaskAssign.objects.filter(Q(task=obj.task_assign.task) & Q(step=obj.task_assign.step) & Q(reassigned = True))
+                    if reassigns:
+                        obj_1 = reassigns.first().task_assign_info
+                        self.history(obj_1)
+                        obj_1.task_assign.assign_to = user
+                        obj_1.task_assign.status = 1
+                        obj_1.task_assign.save()
+                        obj_1.delete()
+                    #assigned_user = obj.task_assign.assign_to
                     obj.task_assign.assign_to = user
                     obj.task_assign.status = 1
                     obj.task_assign.save()
-                    role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
-                    unassign_task(assigned_user,role,obj.task_obj)             
+                    # role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
+                    # unassign_task(assigned_user,role,obj.task_obj)             
                     obj.delete()
                 
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
