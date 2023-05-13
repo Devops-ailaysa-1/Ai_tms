@@ -296,8 +296,13 @@ class GetVendorDetailSerializer(serializers.Serializer):
         if job_id:
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
-        queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
+        if source_lang and target_lang:
+            queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
+        else:
+            queryset = obj.vendor_lang_pair.filter(deleted_at=None)
+
         query = queryset.filter(currency = obj.currency_based_on_country)
+
         if query.exists():
             if query[0].service.exists() or query[0].servicetype.exists():
                 return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
@@ -311,7 +316,10 @@ class GetVendorDetailSerializer(serializers.Serializer):
             else:
                 objs = [data for data in queryset if data.service.exists() or data.servicetype.exists()]
                 if objs:
-                    return [VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data]
+                    if source_lang and target_lang:
+                        return [VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data]
+                    else:
+                        return VendorLanguagePairCloneSerializer(objs, many=True, read_only=True).data
                 else:return [{'service':[],'servicetype':[]}]
         # query = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
         # if query.count() > 1:
@@ -627,10 +635,16 @@ class AvailablePostJobSerializer(serializers.Serializer):
     projectpost_subject=ProjectPostSubjectFieldSerializer(many=True,required=False)
     projectpost_steps =ProjectPostStepsSerializer(many=True,required=False)
     projectpost_jobs=ProjectPostJobSerializer(many=True,required=False)
+    bid_count = serializers.SerializerMethodField()
 
 
     class Meta:
-        fields = ('post_id', 'post_name', 'post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
+        fields = ('post_id', 'post_name','bid_count','post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', 'created_at')
+
+    def get_bid_count(self, obj):
+        bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
+        # print(obj.bidproject_details.count())
+        return obj.bidproject_details.count()
 
     def get_apply(self, obj):
         vendor = self.context.get("request").user
