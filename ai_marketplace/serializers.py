@@ -711,6 +711,8 @@ class GetVendorListSerializer(serializers.ModelSerializer):
     legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.sortname')
+    bio = serializers.ReadOnlyField(source = 'vendor_info.bio')
+    location = serializers.ReadOnlyField(source = 'vendor_info.location')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     status = serializers.SerializerMethodField()
     verified = serializers.SerializerMethodField()
@@ -718,7 +720,7 @@ class GetVendorListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','legal_category','saved','country','currency','professional_identity','vendor_lang_pair','status','verified',)
+        fields = ('id','uid','fullname','legal_category','saved','bio','location','country','currency','professional_identity','vendor_lang_pair','status','verified',)
 
     def get_saved(self,obj):
         request_user = self.context['request'].user
@@ -922,13 +924,30 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
 
 
 class GetTalentSerializer(serializers.Serializer):
-    hired = serializers.SerializerMethodField()
     saved = serializers.SerializerMethodField()
+    hired = serializers.SerializerMethodField()
 
     def get_saved(self,obj):
-        queryset = SavedVendor.objects.filter(customer=obj)
-        return SavedVendorSerializer(queryset, many=True).data
+        tt=[]
+        request = self.context['request']
+        saved_ids = SavedVendor.objects.filter(customer=request.user).values_list('vendor_id')
+        saved = AiUser.objects.filter(id__in=saved_ids)
+        ser = GetVendorListSerializer(saved,many=True,context={'request': request}).data
+        for i in ser:
+            if i.get("saved")==True:
+                if i.get('status') != "Invite Accepted":
+                    tt.append(i)
+        return tt
 
     def get_hired(self,obj):
-        queryset =HiredEditors.objects.filter(user=obj).filter(status=2)
-        return HiredEditorSerializer(queryset,many=True).data
+        tt=[]
+        request = self.context['request']
+        hired_ids = HiredEditors.objects.filter(user=request.user).values_list('hired_editor_id')
+        hired = AiUser.objects.filter(id__in=hired_ids)
+        ser = GetVendorListSerializer(hired,many=True,context={'request': request}).data
+        print("ser------->",ser)
+        for i in ser:
+            print("I---------->",i)
+            if i.get("status")=="Invite Accepted":
+                tt.append(i)
+        return tt
