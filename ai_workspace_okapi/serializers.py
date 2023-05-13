@@ -698,9 +698,6 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
     class Meta:
         model=SegmentDiff
         fields=('id','sentense_diff_result','save_type')
-    
-
- 
 
 class SegmentHistorySerializer(serializers.ModelSerializer):
     segment_difference=SegmentDiffSerializer(many=True)
@@ -735,7 +732,7 @@ class VerbSerializer(serializers.Serializer):
     synonyms_form =serializers.ListField()
 
 
-from ai_workspace_okapi.models import SelflearningAsset,SegmentDiff
+from ai_workspace_okapi.models import SelflearningAsset
 class SelflearningAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model=SelflearningAsset

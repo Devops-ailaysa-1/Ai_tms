@@ -67,6 +67,7 @@ class CanvasSourceJsonFiles(models.Model):
         constraints = [models.UniqueConstraint(fields=['canvas_design', 'page_no'], name="%(app_label)s_%(class)s_unique")]
         ordering = ('page_no',)
 
+
 class CanvasTranslatedJson(models.Model):
     canvas_design = models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
     source_language =  models.ForeignKey(LanguagesLocale,related_name='source_locale' , on_delete=models.CASCADE) 
@@ -80,7 +81,6 @@ class CanvasTranslatedJson(models.Model):
         constraints = [models.UniqueConstraint(fields=['canvas_design', 'source_language','target_language'], name="%(app_label)s_%(class)s_unique")]
 
 
-
 class CanvasTargetJsonFiles(models.Model):
     canvas_trans_json = models.ForeignKey(CanvasTranslatedJson,related_name='canvas_json_tar', on_delete=models.CASCADE)
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_target_json_thumbnails,blank=True,null=True)
@@ -90,6 +90,7 @@ class CanvasTargetJsonFiles(models.Model):
 
     class Meta:
         ordering = ('page_no',)
+
 # #########template design##############
 
 class TemplateGlobalDesign(models.Model):
@@ -108,8 +109,8 @@ class TemplatePage(models.Model):
     page_no = models.IntegerField()
     class Meta:
         constraints = [
-        models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")
-        ]
+        models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
+
 
 def user_directory_path_canvas_mytemplatedesign_thumbnails(instance, filename):
     return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "canvas/mytemplatedesign/canva_thumbnails_target/thumbnails/",filename)
