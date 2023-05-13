@@ -245,7 +245,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
     uid = serializers.CharField(read_only=True)
     fullname = serializers.CharField(read_only=True)
     organisation_name = serializers.ReadOnlyField(source='ai_profile_info.organisation_name')
-    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    #legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.name')
     location = serializers.ReadOnlyField(source = 'vendor_info.location')
@@ -261,6 +261,13 @@ class GetVendorDetailSerializer(serializers.Serializer):
     status = serializers.SerializerMethodField()
     verified = serializers.SerializerMethodField()
     saved = serializers.SerializerMethodField()
+    legal_category = serializers.SerializerMethodField()
+
+    def get_legal_category(self,obj):
+        if obj.is_agency == True:
+            return "Agency"
+        else:
+            return "Freelancer"
 
 
     def get_saved(self,obj):
@@ -708,7 +715,7 @@ class VendorServiceSerializer(serializers.ModelSerializer):
 
 class GetVendorListSerializer(serializers.ModelSerializer):
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
-    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    #legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.sortname')
     bio = serializers.ReadOnlyField(source = 'vendor_info.bio')
@@ -717,6 +724,7 @@ class GetVendorListSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     verified = serializers.SerializerMethodField()
     saved = serializers.SerializerMethodField()
+    legal_category = serializers.SerializerMethodField()
 
     class Meta:
         model = AiUser
@@ -732,6 +740,11 @@ class GetVendorListSerializer(serializers.ModelSerializer):
         else:
             return False
       
+    def get_legal_category(self,obj):
+        if obj.is_agency == True:
+            return "Agency"
+        else:
+            return "Freelancer"
 
     def get_verified(self,obj):
         try:
@@ -850,7 +863,7 @@ class ChatMessageByDateSerializer(serializers.ModelSerializer):
 
 class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
-    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    #legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.sortname')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
@@ -858,11 +871,20 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
     verified = serializers.SerializerMethodField()
     language = serializers.SerializerMethodField()
     saved = serializers.SerializerMethodField()
+    legal_category = serializers.SerializerMethodField()
+
     class Meta:
         model = AiUser
         fields = ('id','uid','fullname','saved','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified','language',)
 
 
+
+    def get_legal_category(self,obj):
+        if obj.is_agency == True:
+            return "Agency"
+        else:
+            return "Freelancer"
+            
     def get_saved(self,obj):
         request_user = self.context['request'].user
         user = request_user.team.owner if (request_user.team) else request_user
