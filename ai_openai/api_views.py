@@ -831,14 +831,10 @@ class BlogArticleViewset(viewsets.ViewSet):
 #         #print("Txt------>",txt_generated.strip())
 #     #total_tokens = response['usage']['total_tokens']
 #     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
-
-
-
 from django.http import HttpResponse, StreamingHttpResponse
 import time
 @api_view(["POST"])
 def generate_article(request):
-    
     text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
             Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
             Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small. This makes it difficult for the network to update the weights during training, leading to slow convergence or no convergence at all. 
