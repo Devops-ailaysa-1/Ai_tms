@@ -894,7 +894,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_object(self):
         tasks = Task.objects.order_by("-id").all()
         tasks = get_list_or_404(tasks, file__project__ai_user=self.request.user)
-        tasks = authorize_list(tasks,"read",self.request.user)
+        # tasks = authorize_list(tasks,"read",self.request.user)
         return tasks
 
     def list(self, request, *args, **kwargs):
