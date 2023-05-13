@@ -628,6 +628,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
     post_id = serializers.ReadOnlyField(source = 'id')
     post_name = serializers.ReadOnlyField(source='proj_name')
     post_desc = serializers.ReadOnlyField(source='proj_desc')
+    created_at = serializers.ReadOnlyField(source='created_at')
     posted_by = serializers.ReadOnlyField(source='customer.fullname')
     apply = serializers.SerializerMethodField()
     post_bid_deadline =serializers.ReadOnlyField(source='bid_deadline')
