@@ -592,20 +592,20 @@ class BlogArticleViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
 
-def stream_article_response():
-    for chunk in range(40):
-        time.sleep(0.2)
-        print(chunk)
-        yield '%s' % chunk
+# def stream_article_response():
+#     for chunk in range(40):
+#         time.sleep(0.2)
+#         print(chunk)
+#         yield '%s' % chunk
 
-from django.http import StreamingHttpResponse,JsonResponse
-import time
+# from django.http import StreamingHttpResponse,JsonResponse
+# import time
  
-def generate_article(request):
-    if request.method == 'GET':
-        response=StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
-        print("streaming")
-        return response
+# def generate_article(request):
+#     if request.method == 'GET':
+#         response=StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
+#         print("streaming")
+#         return response
     # return JsonResponse({'error': 'Method not allowed.'}, status=405)
 
  

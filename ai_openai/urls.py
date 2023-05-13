@@ -1,5 +1,5 @@
 from django.urls import path, include
-from . import api_views
+from ai_openai import api_views
 from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register(r'aiprompt',api_views.AiPromptViewset,basename='ai_prompt')
