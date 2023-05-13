@@ -2713,5 +2713,6 @@ def segment_difference(sender, instance, *args, **kwargs):
             result_sen,save_type=diff_sentense
             if result_sen.strip()!=edited_segment.strip():
                 SegmentDiff.objects.create(seg_history=instance,sentense_diff_result=result_sen,save_type=save_type)
+                print("seg_diff_created")
 
 post_save.connect(segment_difference, sender=SegmentHistory)

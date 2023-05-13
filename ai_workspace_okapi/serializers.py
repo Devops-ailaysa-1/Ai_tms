@@ -696,14 +696,22 @@ class SegmentDiffSerializer(serializers.ModelSerializer):
 
 class SegmentHistorySerializer(serializers.ModelSerializer):
     segment_difference=SegmentDiffSerializer(many=True)
-    step_name = serializers.SerializerMethodField()
-    status_id = serializers.ReadOnlyField(source='status.status_id')
-    user_name = serializers.ReadOnlyField(source='user.fullname')
+    step_name=serializers.SerializerMethodField()
+    status_id=serializers.ReadOnlyField(source='status.status_id')
+    user_name=serializers.ReadOnlyField(source='user.fullname')
     class Meta:
         model = SegmentHistory
         fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
         # extra_kwargs = {
         #     "status": {"write_only": True}}
+
+
+    def to_representation(self, instance):
+        from ai_workspace_okapi.api_views import segment_difference
+        s=SegmentDiff.objects.filter(seg_history=instance)
+        if not s:
+            seg_diff=segment_difference(sender=None, instance=instance)
+        return super().to_representation(instance)
 
     def get_step_name(self,obj):
         try:
