@@ -120,7 +120,7 @@ def post_project_primary_details(request):
 class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     serializer_class = ProjectPostSerializer
     permission_classes = [IsAuthenticated]
-    search_fields = ['proj_name','projectpost_jobs__source_language__language','projectpost_jobs__target_language__language']
+    search_fields = ['proj_name','projectpost_jobs__src_lang__language','projectpost_jobs__tar_lang__language']
     ordering_fields = ['proj_name','id']
     page_size = 20
 
