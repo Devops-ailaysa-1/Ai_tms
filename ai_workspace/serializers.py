@@ -1317,7 +1317,7 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 	name = serializers.ReadOnlyField(source='hired_editor.fullname')
 	id = serializers.ReadOnlyField(source='hired_editor_id')
 	obj_id = serializers.ReadOnlyField(source='id')
-	is_agency = serializers.ReadOnlyField(source='hired_editor.is_agency')
+	#is_agency = serializers.ReadOnlyField(source='hired_editor.is_agency')
 	status = serializers.ReadOnlyField(source='get_status_display')
 	avatar= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
 	vendor_lang_pair = serializers.SerializerMethodField()
@@ -1381,6 +1381,7 @@ class GetAssignToSerializer(serializers.Serializer):
 	internal_editors = serializers.SerializerMethodField()
 	external_editors = serializers.SerializerMethodField()
 	suggestions = serializers.SerializerMethodField()
+	agencies = serializers.SerializerMethodField()
 
 	def get_internal_editors(self,obj):
 		request = self.context['request']
@@ -1390,7 +1391,8 @@ class GetAssignToSerializer(serializers.Serializer):
 		else:
 			return []
 
-	def get_external_editors(self,obj):
+
+	def get_agencies(self,obj):
 		try:
 			default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
 			if self.context.get('request').user == default:
@@ -1403,7 +1405,18 @@ class GetAssignToSerializer(serializers.Serializer):
 			tt=[]
 		request = self.context['request']
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
+		for i in ser:
+			if i.get("vendor_lang_pair")!=[]:
+				tt.append(i)
+		return tt
+
+	def get_external_editors(self,obj):
+		request = self.context['request']
+		tt=[]
+		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
 		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
 		for i in ser:
 			if i.get("vendor_lang_pair")!=[]:

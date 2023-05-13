@@ -819,7 +819,7 @@ class GetVendorListBasedonProjects(viewsets.ViewSet):
 @permission_classes([IsAuthenticated])
 def get_talents(request):
     user = request.user.team.owner if request.user.team else request.user
-    ser = GetTalentSerializer(user)
+    ser = GetTalentSerializer(user,context={'request':request})
     return Response(ser.data)
 
 
