@@ -1317,27 +1317,28 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 	name = serializers.ReadOnlyField(source='hired_editor.fullname')
 	id = serializers.ReadOnlyField(source='hired_editor_id')
 	obj_id = serializers.ReadOnlyField(source='id')
+	is_agency = serializers.ReadOnlyField(source='hired_editor.is_agency')
 	status = serializers.ReadOnlyField(source='get_status_display')
 	avatar= serializers.ReadOnlyField(source='hired_editor.professional_identity_info.avatar_url')
 	vendor_lang_pair = serializers.SerializerMethodField()
-	suggestions = serializers.SerializerMethodField()
+	#suggestions = serializers.SerializerMethodField()
 
-	def get_suggestions(self,obj):
-		request = self.context['request']
-		#job_ids= request.query_params.getlist('job')
-		project_id= request.query_params.get('project')
-		proj = Project.objects.get(id = project_id)
-		jobs = proj.get_jobs
-		lang_pair = VendorLanguagePair.objects.none()
-		for i in jobs:
-			if i.target_language_id == None:
-				tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-			else:
-				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-			print("Tr------------>",tr)
-			lang_pair = lang_pair.union(tr)
-		print("langpair----------------->",lang_pair)
-		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
+	# def get_suggestions(self,obj):
+	# 	request = self.context['request']
+	# 	#job_ids= request.query_params.getlist('job')
+	# 	project_id= request.query_params.get('project')
+	# 	proj = Project.objects.get(id = project_id)
+	# 	jobs = proj.get_jobs
+	# 	lang_pair = VendorLanguagePair.objects.none()
+	# 	for i in jobs:
+	# 		if i.target_language_id == None:
+	# 			tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+	# 		else:
+	# 			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+	# 		print("Tr------------>",tr)
+	# 		lang_pair = lang_pair.union(tr)
+	# 	print("langpair----------------->",lang_pair)
+	# 	return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 
 
 	def get_vendor_lang_pair(self,obj):
@@ -1397,7 +1398,7 @@ class GetAssignToSerializer(serializers.Serializer):
 			else:
 				try:profile = default.professional_identity_info.avatar_url
 				except:profile = None
-				tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'status':'Invite Accepted','avatar':profile}]
+				tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'is_agency':default.is_agency,'status':'Invite Accepted','avatar':profile}]
 		except:
 			tt=[]
 		request = self.context['request']
@@ -1417,7 +1418,7 @@ class GetAssignToSerializer(serializers.Serializer):
 			else:
 				try:profile = default.professional_identity_info.avatar_url
 				except:profile = None
-				tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'status':'Invite Accepted','avatar':profile}]
+				tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'is_agency':default.is_agency,'status':'Invite Accepted','avatar':profile}]
 		except:
 			tt=[]
 		request = self.context['request']
