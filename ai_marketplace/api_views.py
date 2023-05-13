@@ -132,21 +132,21 @@ class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
         return queryset
 
     def get(self, request):
-        try:
-            projectpost_id = request.GET.get('project_post_id')
-            if projectpost_id:
-                queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
-            else:
-                queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = request.user.id) | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
-                # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
-            queryset = self.filter_queryset(queryset)
-            pagin_tc = self.paginate_queryset(queryset, request , view=self)
-            serializer = ProjectPostSerializer(pagin_tc,many=True,context={'request':request})
-            response = self.get_paginated_response(serializer.data)
-            return response
+        #try:
+        projectpost_id = request.GET.get('project_post_id')
+        if projectpost_id:
+            queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
+        else:
+            queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = request.user.id) | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
+            # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ProjectPostSerializer(pagin_tc,many=True,context={'request':request})
+        response = self.get_paginated_response(serializer.data)
+        return response
             #return Response(serializer.data)
-        except:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        # except:
+        #     return Response(status=status.HTTP_204_NO_CONTENT)
 
     def create(self, request):
         template = request.POST.get('is_template',None)
