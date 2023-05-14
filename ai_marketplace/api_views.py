@@ -73,6 +73,7 @@ import os,mimetypes
 from django.http import JsonResponse,HttpResponse
 from ai_workspace_okapi.utils import download_file
 from django_oso.auth import authorize
+
 # Create your views here.
 
 
@@ -119,23 +120,33 @@ def post_project_primary_details(request):
 class ProjectPostInfoCreateView(viewsets.ViewSet, PageNumberPagination):
     serializer_class = ProjectPostSerializer
     permission_classes = [IsAuthenticated]
+    search_fields = ['proj_name','projectpost_jobs__src_lang__language','projectpost_jobs__tar_lang__language']
+    ordering_fields = ['proj_name','id']
     page_size = 20
 
+    def filter_queryset(self, queryset):
+        from rest_framework.filters import SearchFilter, OrderingFilter
+        filter_backends = (DjangoFilterBackend,SearchFilter,OrderingFilter )
+        for backend in list(filter_backends):
+            queryset = backend().filter_queryset(self.request, queryset, view=self)
+        return queryset
+
     def get(self, request):
-        try:
-            projectpost_id = request.GET.get('project_post_id')
-            if projectpost_id:
-                queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
-            else:
-                queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = request.user.id) | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
-                # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
-            pagin_tc = self.paginate_queryset(queryset, request , view=self)
-            serializer = ProjectPostSerializer(pagin_tc,many=True,context={'request':request})
-            response = self.get_paginated_response(serializer.data)
-            return response
+        #try:
+        projectpost_id = request.GET.get('project_post_id')
+        if projectpost_id:
+            queryset = ProjectboardDetails.objects.filter(Q(id=projectpost_id) & Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
+        else:
+            queryset = ProjectboardDetails.objects.filter(deleted_at=None).filter(Q(customer_id = request.user.id) | Q(project__team__owner = request.user) | Q(project__team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).order_by('-id').distinct()
+            # queryset = ProjectboardDetails.objects.filter(Q(customer_id = request.user.id) & Q(deleted_at=None)).order_by('-id').all()
+        queryset = self.filter_queryset(queryset)
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = ProjectPostSerializer(pagin_tc,many=True,context={'request':request})
+        response = self.get_paginated_response(serializer.data)
+        return response
             #return Response(serializer.data)
-        except:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        # except:
+        #     return Response(status=status.HTTP_204_NO_CONTENT)
 
     def create(self, request):
         template = request.POST.get('is_template',None)
@@ -496,11 +507,17 @@ class JobFilter(django_filters.FilterSet):
     fullname = django_filters.CharFilter(field_name='customer__fullname',lookup_expr='icontains')
     source = django_filters.CharFilter(field_name='projectpost_jobs__src_lang__language',lookup_expr='icontains')
     target = django_filters.CharFilter(field_name='projectpost_jobs__tar_lang__language',lookup_expr='icontains')
-    subject = django_filters.CharFilter(field_name='projectpost_subject__subject',lookup_expr='icontains')
+    #subject = django_filters.CharFilter(field_name='projectpost_subject__subject',lookup_expr='icontains')
+    #content = django_filters.CharFilter(field_name='projectpost_subject__content',lookup_expr='icontains')
+    subject = django_filters.CharFilter(method='filter_subject')
+
+    def filter_subject(self, queryset, name, value):
+        ids = value.split(',')  # split input into a list of IDs
+        return queryset.filter(projectpost_subject__subject_id__in=ids)
 
     class Meta:
         model = ProjectboardDetails
-        fields = ('fullname', 'source','target','subject',)
+        fields = ('fullname', 'source','target','subject',)#'content',)
         together = ['source','target']
         # groups = [
         #     RequiredGroup(['source', 'target']),

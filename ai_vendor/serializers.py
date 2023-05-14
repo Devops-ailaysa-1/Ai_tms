@@ -94,9 +94,11 @@ class VendorLanguagePairCloneSerializer(serializers.ModelSerializer):
     Currency = serializers.ReadOnlyField(source='currency.currency_code')
     service=VendorServiceInfoSerializer(many=True,required=False)
     servicetype=VendorServiceTypeSerializer(many=True,required=False)
+    source_lang = serializers.ReadOnlyField(source='source_lang.language')
+    target_lang = serializers.ReadOnlyField(source='target_lang.language')
     class Meta:
         model = VendorLanguagePair
-        fields=('Currency','service','servicetype',)
+        fields=('source_lang','target_lang','Currency','service','servicetype')
 
 class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):#WritableNestedModelSerializer,
      service=VendorServiceInfoSerializer(many=True,required=False)
