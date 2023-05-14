@@ -46,3 +46,27 @@ def messages_page(request):
         'receivers_list':receivers_list,
     }
     return render(request, 'messages.html', context)
+
+
+
+
+from django.http import HttpResponse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from . import consumers
+
+def stream(request):
+    channel_layer = get_channel_layer()
+    channel_name = "stream"
+
+    async def send_data():
+        consumer = consumers.StreamConsumer()
+        for i in range(10):
+            data = "Hello, world! {}".format(i)
+            await consumer.stream_data(data)
+            await asyncio.sleep(1)
+
+    async_to_sync(channel_layer.group_add)(channel_name, "stream")
+    async_to_sync(send_data)
+
+    return HttpResponse(status=200)

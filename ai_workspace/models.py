@@ -12,7 +12,7 @@ from django.db.models.base import Model
 from django.utils.text import slugify
 from datetime import datetime, date
 from enum import Enum
-
+from django.db import models, transaction, connection
 from django.contrib.auth import settings
 from django.core.validators import FileExtensionValidator
 from django.db import models
@@ -21,7 +21,7 @@ from django.db.models.fields.files import FileField
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.shortcuts import reverse
 from django.utils.functional import cached_property
-
+from django.db import transaction
 from ai_auth.models import AiUser, Team
 from ai_auth.utils import get_unique_pid
 from ai_staff.models import AilaysaSupportedMtpeEngines, AssetUsageTypes, \
@@ -52,6 +52,7 @@ from .utils import create_dirs_if_not_exists, create_task_id
 from ai_workspace_okapi.models import SplitSegment
 from django.db.models.functions import Cast
 from django.db.models import CharField
+from django.core.cache import cache
 
 
 
@@ -158,11 +159,12 @@ class WriterProject(models.Model):
 
 class MyDocuments(models.Model):
     project = models.ForeignKey(WriterProject, null=True, blank=True, on_delete=models.CASCADE,related_name = 'related_docs')
-    writer_project_type = models.ForeignKey(DocumentType, null=False, blank=False,on_delete=models.CASCADE,default=1)
+    document_type = models.ForeignKey(DocumentType, null=False, blank=False,on_delete=models.CASCADE,default=1)
     file = models.FileField (upload_to=my_docs_upload_path,blank=True, null=True)
     doc_name = models.CharField(max_length=1000, null=True, blank=True,)
     word_count = models.IntegerField(null=True,blank=True)
     html_data = models.TextField(null=True,blank=True)
+    blog_data = models.TextField(null=True,blank=True)
     created_by = models.ForeignKey(AiUser, null=True, blank=True, on_delete=models.SET_NULL,related_name = 'doc_created_by')
     ai_user = models.ForeignKey(AiUser, null=False, blank=False,on_delete=models.CASCADE,related_name = 'credit_debit_user')
     source_language = models.ForeignKey(Languages, null=True, blank=True, on_delete=models.CASCADE, related_name="doc_source_lang")
@@ -234,29 +236,91 @@ class Project(models.Model):
     penseive_tm_klass = PenseiveTM
 
     def save(self, *args, **kwargs):
-        ''' try except block created for logging the exception '''
+        
+        with transaction.atomic():
+            #transaction.set_isolation_level(transaction.ISOLATION_SERIALIZABLE)
 
-        if not self.ai_project_id:
-            self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
+            queryset = Project.objects.select_for_update().filter(ai_user=self.ai_user)
 
-        if not self.project_name:
-            self.project_name = 'Project-'+str(Project.objects.filter(ai_user=self.ai_user).count()+1).zfill(3)+'('+str(date.today()) +')'
+            if not self.ai_project_id:
+                self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
 
-        if self.id:
-            project_count = Project.objects.filter(project_name=self.project_name, \
-                            ai_user=self.ai_user).exclude(id=self.id).count()
-        else:
-            project_count = Project.objects.filter(project_name=self.project_name, \
-                            ai_user=self.ai_user).count()
-        if project_count != 0:
+            if not self.project_name:
+                count = queryset.count()
+                self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(date.today()) +')'
+
             if self.id:
-                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                                ai_user=self.ai_user).exclude(id=self.id).count()
+                project_count = queryset.filter(project_name=self.project_name).exclude(id=self.id).count()
             else:
-                count_num = Project.objects.filter(project_name__icontains=self.project_name, \
-                                ai_user=self.ai_user).count()
-            self.project_name = self.project_name + "(" + str(count_num) + ")"
-        return super().save()
+                project_count = queryset.filter(project_name=self.project_name).count()
+            if project_count != 0:
+                while True:
+                    try:
+                        if self.id:
+                            count_num = queryset.filter(project_name__icontains=self.project_name).exclude(id=self.id).count()
+                        else:
+                            count_num = queryset.filter(project_name__icontains=self.project_name).count()
+                        self.project_name = self.project_name + "(" + str(count_num) + ")"
+                        super().save()
+                        break
+                    except:
+                        count_num = count_num+1
+                        self.project_name = self.project_name + "(" + str(count_num) + ")"
+            return super().save()
+
+
+            # if not self.ai_project_id:
+            #     self.ai_project_id = create_ai_project_id_if_not_exists(self.ai_user)
+
+            # if not self.project_name:
+            #     queryset = Project.objects.select_for_update().filter(ai_user=self.ai_user)
+            #     count = queryset.count()
+            #     print("Count for pr name-------->",count)
+            #     self.project_name = 'Project-'+str(count+1).zfill(3)+'('+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) +')'
+            #     print("Pr Name--------->",self.project_name)
+           
+            # project_count = self.get_queryset_count_safely()
+            # print("Pr Count if exists---------->",project_count)
+            # if project_count != 0:
+            #     count_num = self.get_count_num_safely()
+            #     print("Already Exists Count_num--------->",count_num)
+            #     self.project_name = self.project_name + "(" + str(count_num) + ")"
+            #     print("Name---------->",self.project_name)
+            # cache_key = f'my_cached_property_{self.id}'  # Use a unique cache key for each instance
+            # cache.delete(cache_key)
+            # return super().save()
+
+    # @transaction.atomic
+    # def get_count_for_project_name_safely(self):
+    #     query = Project.objects.filter(ai_user=self.ai_user)
+    #     queryset = query.select_for_update()
+    #     count = queryset.count()
+    #     #print("Count------------>",count)
+    #     return count
+
+    # @transaction.atomic
+    # def get_queryset_count_safely(self):
+    #     if self.id:
+    #         queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user).exclude(id=self.id)
+    #     else:
+    #         queryset = Project.objects.filter(project_name=self.project_name, ai_user=self.ai_user)
+    #     queryset = queryset.select_for_update()
+    #     count = queryset.count()
+    #     #print("Count1---------->",count)
+    #     return count
+
+    # @transaction.atomic
+    # def get_count_num_safely(self):
+    #     if self.id:
+    #         queryset = Project.objects.filter(project_name__icontains=self.project_name, \
+    #                         ai_user=self.ai_user).exclude(id=self.id)
+    #     else:
+    #         queryset = Project.objects.filter(project_name__icontains=self.project_name, \
+    #                         ai_user=self.ai_user)
+    #     queryset = queryset.select_for_update()
+    #     count_num = queryset.count()
+    #     #print("Count_num------------>",count_num)
+    #     return count_num
 
     @property
     def ref_files(self):
@@ -270,6 +334,7 @@ class Project(models.Model):
     def get_project_type(self):
         return self.project_type.id
 
+    #@cached_property
     @property
     def progress(self):
         from ai_workspace.api_views import voice_project_progress
@@ -569,12 +634,15 @@ class Project(models.Model):
     def get_tasks_pk(self):
         return self.project_jobs_set.values("job_tasks_set__id").annotate(as_char=Cast('job_tasks_set__id', CharField())).values_list("as_char",flat=True)
 
+
     def project_analysis(self,tasks):
+        from ai_auth.tasks import project_analysis_property
+        from .models import MTonlytaskCeleryStatus
+        from .models import MTonlytaskCeleryStatus
 
         if self.is_proj_analysed == True:
             task_words = []
             if self.is_all_doc_opened:
-
                 [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
                 out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
                     Sum('total_char_count'),Sum('total_segment_count'))
@@ -593,10 +661,71 @@ class Project(models.Model):
         else:
             from .api_views import ProjectAnalysisProperty
             try:
-                return ProjectAnalysisProperty.get(self.id)
+                print("Inside Try. Checking celery")
+                obj = MTonlytaskCeleryStatus.objects.filter(project_id = self.id).filter(task_name = 'project_analysis_property').last()
+                state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
+                print("st------->",state)
+                if state == 'STARTED':
+                    return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
+                else:
+                    celery_task = project_analysis_property.apply_async((self.id,), )
+                    return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+                #return ProjectAnalysisProperty.get(self.id)
             except:
+                print("Inside Except")
                 return {"proj_word_count": 0, "proj_char_count": 0, \
-                    "proj_seg_count": 0, "task_words":[]}
+                "proj_seg_count": 0, "task_words":[]}
+
+
+    # def project_analysis(self,tasks):
+    #     from .api_views import ProjectAnalysisProperty
+    #     from .models import MTonlytaskCeleryStatus
+    #     from ai_auth.tasks import project_analysis_property
+    #     print("Model---------->",tasks)
+    #     print("Proj--------->",self.id)
+    #     obj = MTonlytaskCeleryStatus.objects.filter(project_id = self.id).filter(task_name = 'project_analysis_property').last()
+    #     print("Obj---------->",obj)
+    #     state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
+    #     print("Called in model")
+    #     #print("State------------>",state)
+    #     if state == 'STARTED':
+    #         return {'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
+    #     # elif state == 'PENDING' or state =='None' or state == 'FAILURE':
+    #     #     celery_task = project_analysis_property.apply_async((self.id,), )
+    #     #     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+    #     elif state == "SUCCESS" or self.is_proj_analysed == True:
+    #         print("inside if analyse")
+    #         task_words = []
+    #         if self.is_all_doc_opened:
+    #             print("Doc opened")
+    #             [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
+    #             out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
+    #                 Sum('total_char_count'),Sum('total_segment_count'))
+
+    #             return {"proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+    #                 "proj_seg_count":out.get('total_segment_count__sum'),\
+    #                               "task_words" : task_words }
+    #         else:
+    #             print("Not Doc Opened")
+    #             out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+    #             task_words = []
+    #             [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+
+    #             return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+    #                 "proj_seg_count":out.get('task_seg_count__sum'),
+    #                             "task_words":task_words}
+    #     else:
+            # print("Not Analysed")
+            # from .api_views import ProjectAnalysisProperty
+            # try:
+            #     print("Inside Try")
+            #     celery_task = project_analysis_property.apply_async((self.id,), )
+            #     return {'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+            #     #return ProjectAnalysisProperty.get(self.id)
+            # except:
+            #     print("Inside Except")
+            #     return {"proj_word_count": 0, "proj_char_count": 0, \
+            #     "proj_seg_count": 0, "task_words":[]}
 
 pre_save.connect(create_project_dir, sender=Project)
 post_save.connect(create_pentm_dir_of_project, sender=Project,)
@@ -1173,6 +1302,8 @@ class MTonlytaskCeleryStatus(models.Model):
     celery_task_id = models.CharField(max_length=255, blank=True, null=True)
     task_name = models.TextField(blank=True, null=True)
     error_type = models.TextField(blank=True, null=True)
+    project = models.ForeignKey(Project,on_delete=models.CASCADE, null=True, blank=True,
+            related_name="mt_only_project_status")
 
     @property
     def owner_pk(self):
@@ -1203,6 +1334,7 @@ class TaskAssign(models.Model):
     mt_enable = models.BooleanField(null=True, blank=True)
     copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
+    reassigned = models.BooleanField(default=False)
 
     objects = TaskAssignManager()
 
@@ -1257,6 +1389,84 @@ class TaskAssignInfo(models.Model):
     @property
     def task_obj(self):
         return self.task_assign.task_obj
+
+
+# class TaskReassign(models.Model):
+#     YET_TO_START = 1
+#     IN_PROGRESS = 2
+#     COMPLETED = 3
+#     STATUS_CHOICES = [
+#         (YET_TO_START,'Yet to start'),
+#         (IN_PROGRESS, 'In Progress'),
+#         (COMPLETED, 'Completed'),
+#     ]
+#     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
+#             related_name="task_reassign_info")
+#     step = models.ForeignKey(Steps,on_delete=models.CASCADE, null=False, blank=False,
+#              related_name="task_reassign_step")
+#     re_assign_to = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True,
+#             related_name="user_reassign_tasks_set")
+#     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, \
+#         on_delete=models.CASCADE, related_name="reassign_task_mt_engine")
+#     pre_translate = models.BooleanField(null=True, blank=True)
+#     mt_enable = models.BooleanField(null=True, blank=True)
+#     copy_paste_enable = models.BooleanField(null=True, blank=True)
+#     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
+
+#     # objects = TaskAssignManager()
+
+#     # @property
+#     # def owner_pk(self):
+#     #     return self.task.owner_pk
+
+#     # @property
+#     # def task_obj(self):
+#     #     return self.task
+
+
+#     # task_assign_obj = TaskAssign.objects.filter(
+#     #     Q(task__document__document_text_unit_set__text_unit_segment_set=segment_id) &
+#     #     Q(step_id=1)
+#     # ).first()
+#     # return TaskAssignSerializer(task_assign_obj).data
+
+# class TaskReassignInfo(models.Model):
+#     task_reassign = models.OneToOneField(TaskReassign,on_delete=models.CASCADE, null=False, blank=False,
+#                     related_name="task_reassign_info")
+#     PAYMENT_TYPE =[("outside_ailaysa","outside_ailaysa"),
+#                     ("stripe","stripe")]
+#     ACCEPT_STATUS =[("task_accepted","task_accepted"),
+#                     ("change_request","change_request")]
+#     instruction = models.TextField(max_length=1000, blank=True, null=True)
+#     assignment_id = models.CharField(max_length=191, blank=True, null=True)
+#     deadline = models.DateTimeField(blank=True, null=True)
+#     total_word_count = models.IntegerField(null=True, blank=True)
+#     mtpe_rate= models.DecimalField(max_digits=12,decimal_places=4,blank=True, null=True)
+#     estimated_hours = models.IntegerField(blank=True,null=True)
+#     mtpe_count_unit=models.ForeignKey(Billingunits,related_name='accepted_mtpe_unit', on_delete=models.CASCADE,blank=True, null=True)
+#     currency = models.ForeignKey(Currencies,related_name='accepted_rate_currency', on_delete=models.CASCADE,blank=True, null=True)
+#     assigned_by = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True,
+#             related_name="user_reassign_info")
+#     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#     task_ven_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
+#     payment_type = models.CharField(max_length=20,choices=PAYMENT_TYPE,null=True,blank=True)
+#     billable_char_count = models.IntegerField(blank=True,null=True)
+#     billable_word_count = models.IntegerField(blank=True,null=True)
+#     account_raw_count = models.BooleanField(default=True)
+
+    # def save(self, *args, **kwargs):
+    #     if not self.assignment_id:
+    #         self.assignment_id = self.task_assign.task.job.project.ai_project_id+self.task_assign.step.short_name+str(TaskAssignInfo.objects.filter(task_assign=self.task_assign).count()+1)
+    #     super().save()
+
+    # @property
+    # def owner_pk(self):
+    #     return self.task_assign.owner_pk
+
+    # @property
+    # def task_obj(self):
+    #     return self.task_assign.task_obj
+
 
 
 # post_save.connect(assign_object_task, sender=TaskAssignInfo)

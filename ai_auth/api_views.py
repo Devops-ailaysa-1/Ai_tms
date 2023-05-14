@@ -61,7 +61,7 @@ from  django.utils import timezone
 import time,pytz,six
 from dateutil.relativedelta import relativedelta
 from ai_marketplace.models import Thread,ChatMessage
-from ai_auth.utils import get_plan_name
+from ai_auth.utils import get_plan_name,company_members_list
 from ai_auth.vendor_onboard_list import VENDORS_TO_ONBOARD
 from ai_vendor.models import VendorsInfo,VendorLanguagePair
 from django.db import transaction
@@ -569,6 +569,29 @@ def subscribe_trial(price,customer=None):
     )
 
     return subscription
+
+
+def subscribe_lsp(user):
+    plan = None
+    try:
+        cust = Customer.objects.get(subscriber=user,djstripe_owner_account=default_djstripe_owner)
+    except Customer.DoesNotExist:
+        customer,created = Customer.get_or_create(subscriber=user)
+        cust=customer
+        if created:
+            plan = 'new'
+    if cust.currency=='':
+        if user.country.id == 101 :
+            currency = 'inr'
+        else:
+            currency ='usd'
+    else:
+        currency =cust.currency
+    price = Plan.objects.get(product__name="Business - V",currency=currency,interval='month',djstripe_owner_account=default_djstripe_owner)
+    if plan == 'new':
+        sub=subscribe_trial(price=price,customer=cust)
+        return sub
+
 
 def subscribe_vendor(user):
     plan = None
@@ -1450,24 +1473,34 @@ def account_activation(request):
         return JsonResponse({"msg":"no need to call activation.user is already active "})
 
 
+
+def user_delete(user):
+    cancel_subscription(user)
+    dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
+    os.system("rm -r " +dir)
+    user.delete()
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def account_delete(request):
+    from allauth.socialaccount.models import SocialAccount
     password_entered = request.POST.get('password')
     user = AiUser.objects.get(id =request.user.id)
-    match_check = check_password(password_entered,user.password)
-    if match_check:
-        # present = datetime.now()
-        # three_mon_rel = relativedelta(months=3)
-        # user.is_active = False
-        # user.deactivation_date = present.date()+three_mon_rel
-        # user.save()
-        cancel_subscription(user)
-        dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
-        os.system("rm -r " +dir)
-        user.delete()
+    query = SocialAccount.objects.filter(user=user)
+    if not query:
+        match_check = check_password(password_entered,user.password)
+        if match_check:
+            # present = datetime.now()
+            # three_mon_rel = relativedelta(months=3)
+            # user.is_active = False
+            # user.deactivation_date = present.date()+three_mon_rel
+            # user.save()
+            user_delete(user)
+        else:
+            return Response({"msg":"password didn't match"},status = 400)
     else:
-        return Response({"msg":"password didn't match"},status = 400)
+        user_delete(user)
     return JsonResponse({"msg":"user account deleted"},safe = False)
 
 
@@ -1975,16 +2008,59 @@ def vendor_onboard_complete(request):#######while using social signups##########
 
 
 
+import quickemailverification
+API_KEY = os.getenv('API_KEY')
+client = quickemailverification.Client(API_KEY)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def get_user(request):
     email = request.POST.get('email')
-    try:
-        user = AiUser.objects.get(email=email)
-        return Response({'user_exist':True})
-    except:
-        return Response({'user_exist':False})
+    email_str = email.split('@')[0]
+    print("RR------------->",email_str)
+    if email_str.split('+')[0] not in company_members_list:
+        if "+" in email_str:
+            return Response({"msg":"Invalid"})
+        queryset = AiUser.objects.filter(Q(email__contains = email)|Q(email__icontains=email.split('+')[0]))
+        if queryset:
+            return Response({'user_exist':True})
+        elif queryset.filter(email__contains='+'):
+            return Response({'user_exist':True})
+        else:
+            quickemailverification = client.quickemailverification()
+            try:
+                response = quickemailverification.verify(email)
+                print(response.body)
+                if response.code == 200:
+                    if response.body.get('result') == "invalid" or response.body.get('disposable') == 'true':
+                        return Response({'msg':'Invalid'})
+                    else:
+                        return Response({'user_exist':False})
+                else:
+                    print(response.code)
+                    return Response({'user_exist':False})
+            except:
+                return Response({'user_exist':False})
+    else:
+        try:
+            user = AiUser.objects.get(email=email)
+            return Response({'user_exist':True})
+        except:
+            return Response({'user_exist':False})
+    
+    # queryset = AiUser.objects.filter(Q(email__contains = email)|Q(email__icontains=email.split('+')[0])).filter(email__contains='+')
+    # if queryset:
+    #     return Response({'user_exist':True})
+    # else:
+    #     email_str = email.split('@')[0]
+    #     if "+" in email_str:
+    #         return Response({"msg":"Invalid Email"})
+    #     return Response({'user_exist':False})
+    # try:
+    #     user = AiUser.objects.get(email=email)
+    #     return Response({'user_exist':True})
+    # except:
+    #     return Response({'user_exist':False})
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

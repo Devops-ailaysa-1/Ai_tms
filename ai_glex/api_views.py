@@ -168,6 +168,8 @@ class TermUploadView(viewsets.ModelViewSet):
     ordering_fields = ['created_date','id','sl_term','tl_term']
     search_fields = ['sl_term','tl_term']
     ordering = ('-id')
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
 
 
     def edit_allowed_check(self,job):
@@ -201,14 +203,19 @@ class TermUploadView(viewsets.ModelViewSet):
         task = request.GET.get('task')
         job = Task.objects.get(id=task).job
         project_name = job.project.project_name
-        queryset = self.filter_queryset(TermsModel.objects.filter(job = job))
+        queryset = self.filter_queryset(TermsModel.objects.filter(job = job)).select_related('job')
         source_language = str(job.source_language)
         try:target_language = LanguageMetaDetails.objects.get(language_id=job.target_language.id).lang_name_in_script
         except:target_language = None
         additional_info = [{'project_name':project_name,'source_language':source_language,'target_language':target_language}]
-        serializer = TermsSerializer(queryset, many=True, context={'request': request})
-        additional_info.extend(serializer.data)
-        return  Response(additional_info)
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        serializer = TermsSerializer(pagin_tc, many=True, context={'request': request})
+        response = self.get_paginated_response(serializer.data)
+        response.data['additional_info'] = additional_info
+        return response
+        # serializer = TermsSerializer(queryset, many=True, context={'request': request})
+        #additional_info.extend(serializer.data)
+        #return  Response(additional_info)
 
     def create(self, request):
         user = self.request.user

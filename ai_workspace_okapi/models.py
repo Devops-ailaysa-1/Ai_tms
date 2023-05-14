@@ -3,7 +3,7 @@ import re
 
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save 
 from django.utils.functional import cached_property
 
 from ai_auth.models import AiUser
@@ -11,6 +11,7 @@ from ai_staff.models import LanguageMetaDetails, Languages, MTLanguageLocaleVoic
     MTLanguageSupport
 from ai_workspace_okapi.utils import get_runs_and_ref_ids, set_runs_to_ref_tags, split_check
 from .signals import set_segment_tags_in_source_and_target, translate_segments
+
 
 
 class TaskStatus(models.Model):
@@ -76,10 +77,8 @@ class BaseSegment(models.Model):
     random_tag_ids = models.TextField(null=True, blank=True)
     target_tags = models.TextField(null=True, blank=True)
     okapi_ref_segment_id = models.CharField(max_length=50)
-    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=\
-        models.SET_NULL)
-    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name=\
-        "text_unit_segment_set")
+    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL)
+    text_unit = models.ForeignKey(TextUnit, on_delete=models.CASCADE, related_name="text_unit_segment_set")
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
 
@@ -146,6 +145,8 @@ class Segment(BaseSegment):
     @property
     def get_merge_target_if_have(self):
         if self.is_split in [False, None]:
+            print(self)
+            print("tt------>",self.get_active_object().coded_target)
             return self.get_active_object().coded_target
         else:
             split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
@@ -157,6 +158,35 @@ class Segment(BaseSegment):
                     target_joined += split_seg.source
             return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
                 self.coded_brace_pattern, self.coded_ids_aslist))
+
+    @property
+    def get_mt_raw_target_if_have(self):
+        if self.is_split in [False, None]:
+            print('self------>',self)
+            seg = self.get_active_object().id
+            print("seg------->",seg)
+            try:
+                mt_raw = Segment.objects.get(id=seg).seg_mt_raw.mt_raw
+            except:
+                mt_raw = ''
+            print("RR---------------->",mt_raw)
+            #return mt_raw
+            return set_runs_to_ref_tags(self.coded_source, mt_raw, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
+        else:
+            print("Inside else------->",self)
+            split_segs = SplitSegment.objects.filter(segment_id = self.id).order_by('id')
+            target_joined = ""
+            for split_seg in split_segs:
+                if split_seg.mt_raw_split_segment != None:
+                    target_joined += split_seg.mt_raw_split_segment.first().mt_raw
+                else:
+                    target_joined += split_seg.source
+            print("RR----------------->",target_joined)
+            return set_runs_to_ref_tags(self.coded_source, target_joined, get_runs_and_ref_ids( \
+                self.coded_brace_pattern, self.coded_ids_aslist))
+
+
     @property
     def get_merge_segment_count(self):
         count = 0
@@ -281,7 +311,7 @@ class SplitSegment(BaseSegment):
 
 class MT_RawTranslation(models.Model):
 
-    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL)
+    segment = models.OneToOneField(Segment, null=True, blank=True, on_delete=models.SET_NULL,related_name='seg_mt_raw')
     mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="segment_mt_engine")
     mt_raw = models.TextField()
     task_mt_engine = models.ForeignKey(AilaysaSupportedMtpeEngines, null=True, blank=True, on_delete=models.SET_NULL,related_name="mt_engine_task")
@@ -329,6 +359,7 @@ class Document(models.Model):
     google_api_cost_est = models.IntegerField(null=True) #Estimation
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey("ai_auth.AiUser", on_delete=models.SET_NULL, null=True)
+    
 
     class Meta:
         constraints = [ models.UniqueConstraint(fields=("file", "job"),\
@@ -539,6 +570,10 @@ class Document(models.Model):
     def task_obj(self):
         return self.task_set.last()
 
+class SegmentPageSize(models.Model):
+    ai_user = models.ForeignKey(AiUser, on_delete=models.CASCADE,
+                                   related_name="user_default_page_size")
+    page_size = models.IntegerField()
 
 
 class FontSize(models.Model):
@@ -553,8 +588,37 @@ class FontSize(models.Model):
         return self.ai_user.id
     
 class SegmentHistory(models.Model):
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
-    target = models.TextField(null=True, blank=True)
-    status = models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
-    user =  models.ForeignKey(AiUser, null=True, on_delete=models.SET_NULL,related_name="edited_by")
-    created_at = models.DateTimeField(auto_now_add=True)
+    segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
+    target=models.TextField(null=True, blank=True)
+    status=models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
+    user=models.ForeignKey(AiUser, null=True, on_delete=models.SET_NULL,related_name="edited_by")
+    created_at=models.DateTimeField(auto_now_add=True)
+    
+    # sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
+    # save_type=models.CharField(max_length=100,blank=True,null=True)
+
+
+class SelflearningAsset(models.Model):
+    user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    target_language=models.ForeignKey(Languages,related_name='selflearning_target',on_delete=models.CASCADE)
+    source_word=models.CharField(max_length=100,null=True,blank=True)
+    edited_word=models.CharField(max_length=100,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return self.source_word+'--'+self.edited_word
+    
+# from ai_workspace_okapi.api_views import update_self_learning
+# post_save.connect(update_self_learning, sender=SegmentHistory)
+
+
+class SegmentDiff(models.Model):
+    # segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="main_segment")
+    seg_history=models.ForeignKey(SegmentHistory,on_delete=models.CASCADE, related_name="segment_difference")
+    sentense_diff_result=models.CharField(max_length=3000,null=True,blank=True)
+    created_at=models.DateTimeField(auto_now_add=True)
+    # edited_at=models.DateTimeField(auto_now=True)
+    # status=models.ForeignKey(TranslationStatus,null=True, blank=True, on_delete=models.SET_NULL,related_name="segmentdiff_status")
+    save_type=models.CharField(max_length=100,blank=True,null=True)
+
+    def __str__(self) -> str:
+        return self.sentense_diff_result

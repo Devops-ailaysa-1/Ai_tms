@@ -1,14 +1,15 @@
 from .okapi_configs import ALLOWED_FILE_EXTENSIONSFILTER_MAPPER as afemap
-from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap
-import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib
+from .okapi_configs import LINGVANEX_LANGUAGE_MAPPER as llmap, EMPTY_SEGMENT_CHARACTERS
+import os, mimetypes, requests, uuid, json, xlwt, boto3, urllib,difflib
 from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import settings
 from xlwt import Workbook
 from django.core.files import File as DJFile
 from google.cloud import translate_v2 as translate
 from ai_auth.models import AiUser
-
-import string ,backoff
+import string
+import backoff
+# from ai_workspace_okapi.models import SelflearningAsset
 def special_character_check(s): 
     return all(i in string.punctuation or i.isdigit() if i!=" " else True for i in s.strip())
 client = translate.Client()
@@ -264,7 +265,11 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
     r = requests.post(url, headers=headers, json=data)
     return r.json()["result"]
 
+<<<<<<< HEAD
 import backoff
+=======
+ 
+>>>>>>> origin/dynamic_inpaint
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
 def get_translation(mt_engine_id, source_string, source_lang_code, 
                     target_lang_code, user_id=None, cc=None, from_open_ai = None):
@@ -283,14 +288,20 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         initial_credit = user.credit_balance.get("total_left")
 
     if cc == None:
-        cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
+        if isinstance(source_string,list):
+            for src_text in source_string:
+                cc=0
+                cc+= get_consumable_credits_for_text(src_text,target_lang_code,source_lang_code)
+        else:
+            cc = get_consumable_credits_for_text(source_string,target_lang_code,source_lang_code)
 
     print("Init-------->",initial_credit)
     print("cc-------->",cc)
     print("from_open_ai---------->",from_open_ai)
     print("source----------->",source_string)
     
-    if special_character_check(source_string):
+    
+    if isinstance(source_string,str) and special_character_check(source_string)  :
         print("Inside--->")
         mt_called = False
         translate = source_string
@@ -301,10 +312,17 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     
     # FOR GOOGLE TRANSLATE
     elif mt_engine_id == 1:
-        record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)))
-        translate = client.translate(source_string,
-                                target_language=target_lang_code,
-                                format_="text").get("translatedText")
+        if isinstance(source_string,list):
+            for src_text in source_string:
+                record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(src_text)))
+            source_string_list= client.translate(source_string,target_language=target_lang_code,format_="text")
+            translate =  [translated_text['translatedText'] for translated_text in source_string_list]
+        else:
+            record_api_usage.apply_async(("GCP","Machine Translation",uid,email,len(source_string)))
+            translate = client.translate(source_string,
+                                    target_language=target_lang_code,
+                                    format_="text").get("translatedText")
+        
     # FOR MICROSOFT TRANSLATE
     elif mt_engine_id == 2:
         record_api_usage.apply_async(("AZURE","Machine Translation",uid,email,len(source_string)))
@@ -325,6 +343,7 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
         if user:
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, cc)
             print("status_code---------->",status_code)
+            print("Debited----------->",cc,user.credit_balance.get("total_left"))
     else:
         print('Not debited in this func')
     print("Translate---------->",translate)
@@ -372,7 +391,8 @@ def get_res_path(source_lang):
 
     res_paths = {"srx_file_path": "okapi_resources/okapi_default_icu4j.srx",
                  "fprm_file_path": None,
-                 "use_spaces": settings.USE_SPACES
+                 "use_spaces": settings.USE_SPACES,
+                 "empty_segment_chars": EMPTY_SEGMENT_CHARACTERS,
                  }
 
     if source_lang in ['hi','bn','or','ne','pa']:
@@ -388,7 +408,6 @@ def get_res_path(source_lang):
         return res_paths
 
     elif source_lang in ['ta']:
-        print("-------------Inside Tamil SRX-----------------")
         res_paths["srx_file_path"] = "okapi_resources/tamil.srx"
         return res_paths
     elif source_lang in ['kn']:
@@ -433,11 +452,8 @@ def text_to_speech_long(ssml_file,target_language,filename,voice_gender,voice_na
             out.write(response.audio_content)
             print('Audio content written to file',filename)
 
-
-
 def split_check(segment_id):
     from ai_workspace_okapi.models import SplitSegment
-
     split_seg = SplitSegment.objects.filter(id=segment_id).first()
     if split_seg:
         if split_seg.segment.is_split == True:
@@ -447,5 +463,44 @@ def split_check(segment_id):
     else:
         return True
 
+def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
+    diff_words=[]
+    pair_words=[]
+    if sentense_diff:
+        diff=seq_match_seg_diff(source_segment,edited_segment)
+        return diff 
+    else:
+        difftool = difflib.Differ()
+        diff = difftool.compare(source_segment.split(),edited_segment.split())
+        for line in diff:
+            if not line.startswith(" "):
+                if line.startswith("-"):
+                    diff_words.append(line)
+                elif line.startswith("+"):
+                    diff_words.append(line)
+            for i in range(len(diff_words)-1):
+                if diff_words[i][0]=='-' and diff_words[i+1][0]=='+':
+                    pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
+        return pair_words
 
-
+def seq_match_seg_diff(words1,words2):
+    s1=words1.split()
+    s2=words2.split()
+    matcher=difflib.SequenceMatcher(None,s1,s2 )
+    save_type=[]
+    data=[]
+    for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+        if tag=='equal':
+            data.append(" ".join(s2[j1:j2]))
+        elif tag=='replace':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>'+'<del>'+" ".join(s1[i1:i2])+'</del>')
+            save_type.append('insert')
+        elif tag=='insert':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>')
+            save_type.append('insert')
+        elif tag=='delete':
+            data.append('<del class="removed-word">'+ " ".join(s1[i1:i2])+'</del>')
+            save_type.append('delete')
+    if save_type:
+        save_type=list(set(save_type))
+    return (" ".join(data)," ".join(save_type))

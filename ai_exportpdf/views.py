@@ -24,6 +24,7 @@ from ai_staff.models import AiCustomize ,Languages
 from langdetect import detect
 from django.db.models import Q
 from ai_workspace_okapi.utils import get_translation
+from celery.result import AsyncResult
 openai_model = os.getenv('OPENAI_MODEL')
 
 logger = logging.getLogger('django')
@@ -73,7 +74,7 @@ class Pdf2Docx(viewsets.ViewSet, PageNumberPagination):
         file_language = request.POST.get('file_language')
         user = request.user.team.owner if request.user.team else request.user
         created_by = request.user
-        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user,'created_by':created_by ,'pdf_file_name' : pdf_file_list._get_name() ,
+        data = [{'pdf_file':pdf_file_list ,'pdf_language':file_language,'user':user.id,'created_by':created_by.id ,'pdf_file_name' : pdf_file_list._get_name() ,
                  'file_name':pdf_file_list._get_name() ,'status':'YET TO START' } for pdf_file_list in pdf_request_file]
         serializer = PdfFileSerializer(data = data,many=True)
         if serializer.is_valid():
@@ -124,14 +125,18 @@ class ConversionPortableDoc(APIView):
         for id in ids:
             pdf_path = Ai_PdfUpload.objects.get(id = int(id)).pdf_file.path
             file_format,page_length = file_pdf_check(pdf_path,id)
+            if page_length:
             #pdf consuming credits
-            consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
-            if initial_credit > consumable_credits:
-                task_id = pdf_conversion(int(id))
-                celery_task[int(id)] = task_id
-                debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+                if initial_credit > consumable_credits:
+                    task_id = pdf_conversion(int(id))
+                    print("TaskId---------->",task_id)
+                    celery_task[int(id)] = task_id  
+                    debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+                else:
+                    return Response({'msg':'Insufficient Credits'},status=400)
             else:
-                return Response({'msg':'Insufficient Credits'},status=400)
+                celery_task[int(id)] = 'pdf corrupted'
         return Response(celery_task)
 
 
@@ -155,6 +160,7 @@ def get_docx_file_path(pdf_id):
     return docx_file_path
 
 
+
 @api_view(['POST',])
 @permission_classes([IsAuthenticated])
 def project_pdf_conversion(request,task_id):
@@ -172,22 +178,15 @@ def project_pdf_conversion(request,task_id):
             if pdf_obj == None:
                 pdf_obj = Ai_PdfUpload.objects.create(user= user , file_name = task_obj.file.filename, status='YET TO START',
                                     pdf_file_name =task_obj.file.filename ,task = task_obj ,pdf_file =file_obj , pdf_language = task_obj.job.source_language_id)
-            #file_details = Ai_PdfUpload.objects.filter(task = task_obj).last()
             lang = Languages.objects.get(id=int(pdf_obj.pdf_language)).language.lower()
             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-            if (file_format == 'ocr') or (lang in google_ocr_indian_language):
-
+            if file_format:
                 response_result = ai_export_pdf.apply_async((pdf_obj.id, ),)
                 pdf_obj.pdf_task_id = response_result.id
                 pdf_obj.save()
                 return Response({'celery_id':response_result.id ,"pdf":pdf_obj.id})
-            elif file_format == 'text':
-                response_result = convertiopdf2docx.apply_async((pdf_obj.id,lang ,file_format),0)
-                pdf_obj.pdf_task_id = response_result.id
-                pdf_obj.save()
-                return Response({'celery_id':response_result.id ,"pdf":pdf_obj.id})
             else:
-                return Response({"msg":"error"})
+               return Response({"msg":"error"})
         else:
             return Response({'msg':'Insufficient Credits'},status=400)
     else:
@@ -198,5 +197,88 @@ def project_pdf_conversion(request,task_id):
         else:
             pdf_obj = Ai_PdfUpload.objects.create(user= user,task=task_obj,pdf_api_use="FileCorrupted")
         return Response({'msg':'File Cannot be Processed'},status=400)
+
+
+
+from celery import Celery
+from ai_exportpdf.utils import ai_export_pdf
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def celery_revoke(request):
+    app = Celery()
+    task_id=request.POST.get('task_id')
+    # result = AsyncResult(task_id)
+    # print(result.result)
+    # if result:
+    # ai_export_pdf.AsyncResult(task_id).revoke()
+    app.control.revoke(task_id, terminate=True)
+    response_data = {"status": "task_revoked"}
+    return JsonResponse(response_data, status=200)
+ 
+
+
+
+
+# app = Celery('ai_tms')
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def stop_task(request):
+#     task_id = request.GET.get('task_id')
+#     task = AsyncResult(task_id)
+#     print("TT---------->",task.state)
+#     if task.state == 'STARTED':
+#         app.control.revoke(task_id, terminated=True, signal='SIGKILL')
+#         return JsonResponse({'status':'Task has been stopped.'}) 
+#     elif task.state == 'PENDING':
+#         app.control.revoke(task_id)
+#         return JsonResponse({'status':'Task has been revoked.'})
+#     else:
+#         return JsonResponse({'status':'Task is already running or has completed.'})
+
+
+
+# @api_view(['POST',])
+# @permission_classes([IsAuthenticated])
+# def project_pdf_conversion(request,task_id):
+#     from ai_workspace.models import Task
+#     from ai_staff.models import Languages
+#     task_obj = Task.objects.get(id = task_id)
+#     user = task_obj.job.project.ai_user
+#     file_obj = ContentFile(task_obj.file.file.read(),task_obj.file.filename)
+#     initial_credit = user.credit_balance.get("total_left")
+#     file_format,page_length = file_pdf_check(task_obj.file.file.path,None)
+#     if page_length:
+#         consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+#         if initial_credit > consumable_credits:
+#             pdf_obj = Ai_PdfUpload.objects.filter(task = task_obj).last()
+#             if pdf_obj == None:
+#                 pdf_obj = Ai_PdfUpload.objects.create(user= user , file_name = task_obj.file.filename, status='YET TO START',
+#                                     pdf_file_name =task_obj.file.filename ,task = task_obj ,pdf_file =file_obj , pdf_language = task_obj.job.source_language_id)
+#             #file_details = Ai_PdfUpload.objects.filter(task = task_obj).last()
+#             lang = Languages.objects.get(id=int(pdf_obj.pdf_language)).language.lower()
+#             debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+#             #if (file_format == 'ocr'): #or (lang in google_ocr_indian_language):
+
+#             response_result = ai_export_pdf.apply_async((pdf_obj.id, ),)
+#             pdf_obj.pdf_task_id = response_result.id
+#             pdf_obj.save()
+#             return Response({'celery_id':response_result.id ,"pdf":pdf_obj.id})
+#             # elif file_format == 'text':
+#             #     response_result = convertiopdf2docx.apply_async((pdf_obj.id,lang ,file_format),0)
+#             #     pdf_obj.pdf_task_id = response_result.id
+#             #     pdf_obj.save()
+#             #     return Response({'celery_id':response_result.id ,"pdf":pdf_obj.id})
+#             #else:
+#             #    return Response({"msg":"error"})
+#         else:
+#             return Response({'msg':'Insufficient Credits'},status=400)
+#     else:
+#         pdf_obj = Ai_PdfUpload.objects.filter(task = task_obj).last()
+#         if pdf_obj:
+#             pdf_obj.pdf_api_use = "FileCorrupted"
+#             pdf_obj.save()
+#         else:
+#             pdf_obj = Ai_PdfUpload.objects.create(user= user,task=task_obj,pdf_api_use="FileCorrupted")
+#         return Response({'msg':'File Cannot be Processed'},status=400)
 
 

@@ -14,7 +14,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
-                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize)
+                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -23,7 +23,7 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
-                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer)
+                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,SocialMediaSizeSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -918,3 +918,41 @@ class AiCustomizeViewset(viewsets.ViewSet):
 #         serializer = PromptSubCategoriesSerializer(query_set,many=True)
 #         return Response(serializer.data) 
 
+class SocialMediaSizeViewset(viewsets.ViewSet):
+    def list(self,request):
+        queryset = SocialMediaSize.objects.all()
+        serializer = SocialMediaSizeSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+
+class FontLanguageViewset(viewsets.ViewSet):
+
+    def list(self, request):
+        queryset = FontLanguage.objects.all()
+        serializer = FontLanguageSerializer(queryset,many=True)
+        return Response(serializer.data)
+
+class  FontFamilyViewset(viewsets.ViewSet):
+    def list(self, request):
+        queryset = FontFamily.objects.all()
+        serializer = FontFamilySerializer(queryset,many=True)
+        font_fam_list = [i['font_family_name'] for i in serializer.data]
+        font_fam_list.sort()
+        return Response({'font_family_name' : font_fam_list})
+    
+class FontDataViewset(viewsets.ViewSet):
+    def list(self, request):
+        font_lang = request.query_params.get('font_lang')
+        if font_lang:
+            font_lang = FontLanguage.objects.get(id=font_lang)
+            queryset = FontData.objects.filter(font_lang=font_lang)
+            serializer = FontDataSerializer(queryset,many=True)
+            font_data = []
+            for i in serializer.data:
+                if i['font_family']:
+                    font_data.append(i['font_family']['font_family_name'])
+            return Response({'font_list':font_data})
+        else:
+            queryset = FontData.objects.all()
+            serializer = FontDataSerializer(queryset,many=True)
+            return Response(serializer.data)

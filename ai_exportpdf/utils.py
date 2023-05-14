@@ -6,6 +6,7 @@ from PyPDF2 import PdfFileReader
 from celery import shared_task
 from django.contrib.auth import settings
 from django.http import HttpResponse
+from rest_framework.response import Response
 from google.cloud import vision_v1, vision
 from google.oauth2 import service_account
 from pdf2image import convert_from_path
@@ -139,33 +140,40 @@ def convertiopdf2docx(id ,language,ocr = None ):
 
 import tempfile
 #########ocr ######
-@shared_task(serializer='json')
-def ai_export_pdf(id): # , file_language , file_name , file_path
+from celery_progress.backend import ProgressRecorder
+@shared_task(serializer='json',bind=True)
+def ai_export_pdf(self, id): # , file_language , file_name , file_path
     txt_field_obj = Ai_PdfUpload.objects.get(id = id)
-    user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
+    # user_credit =UserCredits.objects.get(Q(user=txt_field_obj.user) & Q(credit_pack_type__icontains="Subscription") & Q(ended_at=None))
     fp = txt_field_obj.pdf_file.path
     start = time.time()
     pdf = PdfFileReader(open(fp,'rb') ,strict=False)
     pdf_len = pdf.getNumPages()
     try:
         no_of_page_processed_counting = 0
-        txt_field_obj.pdf_no_of_page = int(pdf_len)
-        doc = docx.Document()
+        txt_field_obj.pdf_no_of_page=int(pdf_len)
+        doc=docx.Document()
+        progress_recorder=ProgressRecorder(self)
         for i in tqdm(range(1,pdf_len+1)):
             with tempfile.TemporaryDirectory() as image:
                 image = convert_from_path(fp ,thread_count=8,fmt='png',grayscale=False ,first_page=i,last_page=i ,size=(800, 800) )[0]
                 # ocr_pages[i] = pytesseract.image_to_string(image ,lang=language_pair)  tessearct function
                 text = image_ocr_google_cloud_vision(image , inpaint=False)
                 text = re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\U00010000-\U0010FFFF]+', '', text)
-                print("Text after preprocess------------>",text)
-                doc.add_paragraph(text)
+                progress_recorder.set_progress(i+1,pdf_len,description='pdf_converting')
+                if i == 1:
+                    all_text = doc.add_paragraph(text)
+                else:
+                    all_text.add_run(text)
+                # doc.add_paragraph(text)
             end = time.time()
             no_of_page_processed_counting+=1
             txt_field_obj.counter = int(no_of_page_processed_counting)
             txt_field_obj.status = "PENDING"
             txt_field_obj.save()
-        logger.info('finished ocr and saved as docx ,file_name: ' )
+        progress_recorder.set_progress(pdf_len+1, pdf_len+1, "pdf_convert_completed")
  
+        logger.info('finished ocr and saved as docx ,file_name:')
         txt_field_obj.status = "DONE"
         docx_file_path = str(fp).split(".pdf")[0] +".docx"
         doc.save(docx_file_path)
@@ -174,21 +182,19 @@ def ai_export_pdf(id): # , file_language , file_name , file_path
         txt_field_obj.html_data = html_str
         txt_field_obj.docx_url_field = docx_file_path
         txt_field_obj.pdf_conversion_sec = int(round(end-start,2))
-        txt_field_obj.pdf_api_use = "google-ocr"
-        txt_field_obj.docx_file_name = str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
+        txt_field_obj.pdf_api_use="google-ocr"
+        txt_field_obj.docx_file_name=str(txt_field_obj.pdf_file_name).split('.pdf')[0]+ '.docx'
         txt_field_obj.save()
- 
     except:
         end = time.time()
         txt_field_obj.status = "ERROR"
         txt_field_obj.pdf_api_use = "FileCorrupted"
         txt_field_obj.save()
         ###retain cred if error
-        file_format,page_length =  file_pdf_check(fp , id ) 
-        # file_format,page_length = pdf_text_check(fp)
-        consum_cred = get_consumable_credits_for_pdf_to_docx(page_length ,file_format)
-        user_credit.credits_left = user_credit.credits_left + consum_cred
-        user_credit.save()
+        # file_format,page_length=file_pdf_check(fp,id) 
+        # consum_cred = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+        # user_credit.credits_left=user_credit.credits_left + consum_cred
+        # user_credit.save()
         print("pdf_conversion_something went wrong")
  
 def google_ocr_pdf():
@@ -230,43 +236,39 @@ def file_pdf_check(file_path,pdf_id):
     except:
         if pdf_id:
             file_details = Ai_PdfUpload.objects.get(id = pdf_id)
-            file_details.delete()
-            # return None,None
-            # file_details.status = "FileCorrupted"
-            # file_details.save()
-            raise serializers.ValidationError({'msg':'pdf_corrupted'}, 
-                                            code =400)
-        else:
-            return None,None
+            file_details.status = "ERROR"
+            file_details.save()
+        #     # return None,None
+        #     # file_details.status = "FileCorrupted"
+        #     # file_details.save()
+        #     raise serializers.ValidationError({'msg':'pdf_corrupted'}, 
+        #                                     code =400)
+        # else:
+        return None,None
     
-    
- 
-
 
 from ai_workspace.models import Task
 def pdf_conversion(id ):
     file_details = Ai_PdfUpload.objects.get(id = id)
-    lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
-    pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
+    #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+    #pdf_text_ocr_check = file_pdf_check(file_details.pdf_file.path , id)[0]
     # pdf_text_ocr_check = pdf_text_check(file_details.pdf_file.path)[0]
-    if (pdf_text_ocr_check == 'ocr') or \
-                (lang in google_ocr_indian_language):
-        response_result = ai_export_pdf.apply_async((id, ),)
+    #if (pdf_text_ocr_check == 'ocr'): #or (lang in google_ocr_indian_language):
+    response_result = ai_export_pdf.apply_async((id, ),)
 
-        file_details.pdf_task_id = response_result.id
-        file_details.save()
-        logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
-        return response_result.id
+    file_details.pdf_task_id = response_result.id
+    file_details.save()
+    logger.info('assigned ocr ,file_name: google indian language'+str(file_details.pdf_file_name))
+    return response_result.id
 
-    elif pdf_text_ocr_check == 'text':
-        response_result = convertiopdf2docx.apply_async((id,lang ,pdf_text_ocr_check),0)
-        file_details.pdf_task_id = response_result.id
-        file_details.save()
-        logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name))
-        return response_result.id
-    else:
-        return "error"
-
+    # elif pdf_text_ocr_check == 'text':
+    #     response_result = convertiopdf2docx.apply_async((id,lang ,pdf_text_ocr_check),0)
+    #     file_details.pdf_task_id = response_result.id
+    #     file_details.save()
+    #     logger.info('assigned pdf text ,file_name: convertio'+str(file_details.pdf_file_name))
+    #     return response_result.id
+    # else:
+    #     return "error"
 
 
 from django.core.files.base import ContentFile
@@ -283,16 +285,9 @@ def project_pdf_conversion(id):
         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
                                    pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
         file_details = Ai_PdfUpload.objects.filter(task = task_details).last()
-        lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
-        if (file_format == 'ocr') or (lang in google_ocr_indian_language):
-
+        if file_format:
             response_result = ai_export_pdf.apply_async((file_details.id, ),)
-            file_details.pdf_task_id = response_result.id
-            file_details.save()
-            return response_result.id ,file_details.id
-        elif file_format == 'text':
-            response_result = convertiopdf2docx.apply_async((file_details.id,lang ,file_format),0)
             file_details.pdf_task_id = response_result.id
             file_details.save()
             return response_result.id ,file_details.id
@@ -300,6 +295,38 @@ def project_pdf_conversion(id):
             return "error"
     else:
         return Response({'msg':'Insufficient Credits'},status=400)
+
+# from django.core.files.base import ContentFile
+# from ai_workspace.api_views import UpdateTaskCreditStatus
+# def project_pdf_conversion(id):
+#     task_details = Task.objects.get(id = id)
+#     user = task_details.job.project.ai_user
+#     file_obj = ContentFile(task_details.file.file.read(),task_details.file.filename)
+#     initial_credit = user.credit_balance.get("total_left")
+#     file_format,page_length = file_pdf_check(task_details.file.file.path,id)
+
+#     consumable_credits = get_consumable_credits_for_pdf_to_docx(page_length,file_format)
+#     if initial_credit > consumable_credits:
+#         Ai_PdfUpload.objects.create(user= user , file_name = task_details.file.filename, status='YET TO START',
+#                                    pdf_file_name =task_details.file.filename  ,task = task_details ,pdf_file =file_obj , pdf_language = task_details.job.source_language_id)
+#         file_details = Ai_PdfUpload.objects.filter(task = task_details).last()
+#         #lang = Languages.objects.get(id=int(file_details.pdf_language)).language.lower()
+#         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumable_credits)
+#         #if (file_format == 'ocr'): #or (lang in google_ocr_indian_language):
+#         if file_format:
+#             response_result = ai_export_pdf.apply_async((file_details.id, ),)
+#             file_details.pdf_task_id = response_result.id
+#             file_details.save()
+#             return response_result.id ,file_details.id
+#         # elif file_format == 'text':
+#         #     response_result = convertiopdf2docx.apply_async((file_details.id,lang ,file_format),0)
+#         #     file_details.pdf_task_id = response_result.id
+#         #     file_details.save()
+#         #     return response_result.id ,file_details.id
+#         else:
+#             return "error"
+#     else:
+#         return Response({'msg':'Insufficient Credits'},status=400)
 
 def get_consumable_credits_for_pdf_to_docx(total_pages , formats):
     if formats == 'text':

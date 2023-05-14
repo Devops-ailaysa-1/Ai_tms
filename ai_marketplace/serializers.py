@@ -15,12 +15,13 @@ from ai_workspace.models import Steps
 from itertools import groupby
 from rest_framework.response import Response
 from dj_rest_auth.serializers import UserDetailsSerializer
-from ai_auth.serializers import ProfessionalidentitySerializer
-from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer
+from ai_auth.serializers import ProfessionalidentitySerializer,HiredEditorSerializer
+from ai_vendor.serializers import VendorLanguagePairSerializer,VendorSubjectFieldSerializer,VendorContentTypeSerializer,VendorServiceInfoSerializer,VendorLanguagePairCloneSerializer,SavedVendorSerializer
 from ai_vendor.models import VendorLanguagePair,VendorServiceInfo,VendorsInfo,VendorSubjectFields
 from  django.utils import timezone
 from ai_auth.tasks import check_dict
 from ai_auth.validators import file_size
+from ai_vendor.models import SavedVendor
 
 class SimpleProjectSerializer(serializers.ModelSerializer):
     # project_analysis = serializers.SerializerMethodField(method_name='get_project_analysis')
@@ -244,7 +245,7 @@ class GetVendorDetailSerializer(serializers.Serializer):
     uid = serializers.CharField(read_only=True)
     fullname = serializers.CharField(read_only=True)
     organisation_name = serializers.ReadOnlyField(source='ai_profile_info.organisation_name')
-    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    #legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.name')
     location = serializers.ReadOnlyField(source = 'vendor_info.location')
@@ -259,6 +260,25 @@ class GetVendorDetailSerializer(serializers.Serializer):
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
     status = serializers.SerializerMethodField()
     verified = serializers.SerializerMethodField()
+    saved = serializers.SerializerMethodField()
+    legal_category = serializers.SerializerMethodField()
+
+    def get_legal_category(self,obj):
+        if obj.is_agency == True:
+            return "Agency"
+        else:
+            return "Freelancer"
+
+
+    def get_saved(self,obj):
+        request_user = self.context['request'].user
+        user = request_user.team.owner if (request_user.team) else request_user
+        vendor = AiUser.objects.get(uid = obj.uid)
+        saved = SavedVendor.objects.filter(customer=user,vendor=vendor)
+        if saved:
+            return True
+        else:
+            return False
 
     def get_verified(self,obj):
         try:
@@ -276,8 +296,13 @@ class GetVendorDetailSerializer(serializers.Serializer):
         if job_id:
             source_lang=Job.objects.get(id=job_id).source_language_id
             target_lang=Job.objects.get(id=job_id).target_language_id
-        queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
+        if source_lang and target_lang:
+            queryset = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
+        else:
+            queryset = obj.vendor_lang_pair.filter(deleted_at=None)
+
         query = queryset.filter(currency = obj.currency_based_on_country)
+
         if query.exists():
             if query[0].service.exists() or query[0].servicetype.exists():
                 return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
@@ -291,7 +316,10 @@ class GetVendorDetailSerializer(serializers.Serializer):
             else:
                 objs = [data for data in queryset if data.service.exists() or data.servicetype.exists()]
                 if objs:
-                    return [VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data]
+                    if source_lang and target_lang:
+                        return [VendorLanguagePairCloneSerializer(objs[0], many=False, read_only=True).data]
+                    else:
+                        return VendorLanguagePairCloneSerializer(objs, many=True, read_only=True).data
                 else:return [{'service':[],'servicetype':[]}]
         # query = obj.vendor_lang_pair.filter(Q(source_lang_id=source_lang)&Q(target_lang_id=target_lang)&Q(deleted_at=None))
         # if query.count() > 1:
@@ -452,7 +480,7 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     projectpost_content_type=ProjectPostContentTypeSerializer(many=True,required=False)
     projectpost_subject=ProjectPostSubjectFieldSerializer(many=True,required=False)
     projectpost_steps=ProjectPostStepsSerializer(many=True,required=False)
-    project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True))#,write_only=True)
+    project_id=serializers.PrimaryKeyRelatedField(queryset=Project.objects.all().values_list('pk', flat=True),required=False)#,write_only=True)
     customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
     posted_by_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
     bidding_currency = serializers.ReadOnlyField(source='currency.currency_code')
@@ -600,6 +628,7 @@ class AvailablePostJobSerializer(serializers.Serializer):
     post_id = serializers.ReadOnlyField(source = 'id')
     post_name = serializers.ReadOnlyField(source='proj_name')
     post_desc = serializers.ReadOnlyField(source='proj_desc')
+    post_created_at = serializers.ReadOnlyField(source='created_at')
     posted_by = serializers.ReadOnlyField(source='customer.fullname')
     apply = serializers.SerializerMethodField()
     post_bid_deadline =serializers.ReadOnlyField(source='bid_deadline')
@@ -607,10 +636,16 @@ class AvailablePostJobSerializer(serializers.Serializer):
     projectpost_subject=ProjectPostSubjectFieldSerializer(many=True,required=False)
     projectpost_steps =ProjectPostStepsSerializer(many=True,required=False)
     projectpost_jobs=ProjectPostJobSerializer(many=True,required=False)
+    bid_count = serializers.SerializerMethodField()
 
 
     class Meta:
-        fields = ('post_id', 'post_name', 'post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', )
+        fields = ('post_id', 'post_name','bid_count','post_desc','posted_by','post_bid_deadline','post_deadline','projectpost_steps','projectpost_jobs','projectpost_subject','apply', 'post_created_at')
+
+    def get_bid_count(self, obj):
+        bidproject_details = BidPropasalDetailSerializer(many=True,read_only=True)
+        # print(obj.bidproject_details.count())
+        return obj.bidproject_details.count()
 
     def get_apply(self, obj):
         vendor = self.context.get("request").user
@@ -695,15 +730,36 @@ class VendorServiceSerializer(serializers.ModelSerializer):
 
 class GetVendorListSerializer(serializers.ModelSerializer):
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
-    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    #legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.sortname')
+    bio = serializers.ReadOnlyField(source = 'vendor_info.bio')
+    location = serializers.ReadOnlyField(source = 'vendor_info.location')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     status = serializers.SerializerMethodField()
     verified = serializers.SerializerMethodField()
+    saved = serializers.SerializerMethodField()
+    legal_category = serializers.SerializerMethodField()
+
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified',)
+        fields = ('id','uid','fullname','legal_category','saved','bio','location','country','currency','professional_identity','vendor_lang_pair','status','verified',)
+
+    def get_saved(self,obj):
+        request_user = self.context['request'].user
+        user = request_user.team.owner if (request_user.team) else request_user
+        vendor = AiUser.objects.get(uid = obj.uid)
+        saved = SavedVendor.objects.filter(customer=user,vendor=vendor)
+        if saved:
+            return True
+        else:
+            return False
+      
+    def get_legal_category(self,obj):
+        if obj.is_agency == True:
+            return "Agency"
+        else:
+            return "Freelancer"
 
     def get_verified(self,obj):
         try:
@@ -822,16 +878,37 @@ class ChatMessageByDateSerializer(serializers.ModelSerializer):
 
 class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
     vendor_lang_pair = serializers.SerializerMethodField(source='get_vendor_lang_pair')
-    legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
+    #legal_category = serializers.ReadOnlyField(source='vendor_info.type.name')
     currency = serializers.ReadOnlyField(source='vendor_info.currency.currency_code')
     country = serializers.ReadOnlyField(source = 'country.sortname')
     professional_identity= serializers.ReadOnlyField(source='professional_identity_info.avatar_url')
     status = serializers.SerializerMethodField()
     verified = serializers.SerializerMethodField()
     language = serializers.SerializerMethodField()
+    saved = serializers.SerializerMethodField()
+    legal_category = serializers.SerializerMethodField()
+
     class Meta:
         model = AiUser
-        fields = ('id','uid','fullname','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified','language',)
+        fields = ('id','uid','fullname','saved','legal_category','country','currency','professional_identity','vendor_lang_pair','status','verified','language',)
+
+
+
+    def get_legal_category(self,obj):
+        if obj.is_agency == True:
+            return "Agency"
+        else:
+            return "Freelancer"
+            
+    def get_saved(self,obj):
+        request_user = self.context['request'].user
+        user = request_user.team.owner if (request_user.team) else request_user
+        vendor = AiUser.objects.get(uid = obj.uid)
+        saved = SavedVendor.objects.filter(customer=user,vendor=vendor)
+        if saved:
+            return True
+        else:
+            return False
 
 
     def get_language(self,obj):
@@ -881,3 +958,33 @@ class GetVendorListBasedonProjectSerializer(serializers.ModelSerializer):
                 if objs:
                     return VendorServiceSerializer(objs[0], many=False, read_only=True).data
                 else:return {'service':[]}
+
+
+class GetTalentSerializer(serializers.Serializer):
+    saved = serializers.SerializerMethodField()
+    hired = serializers.SerializerMethodField()
+
+    def get_saved(self,obj):
+        tt=[]
+        request = self.context['request']
+        saved_ids = SavedVendor.objects.filter(customer=request.user).values_list('vendor_id')
+        saved = AiUser.objects.filter(id__in=saved_ids)
+        ser = GetVendorListSerializer(saved,many=True,context={'request': request}).data
+        for i in ser:
+            if i.get("saved")==True:
+                if i.get('status') != "Invite Accepted":
+                    tt.append(i)
+        return tt
+
+    def get_hired(self,obj):
+        tt=[]
+        request = self.context['request']
+        hired_ids = HiredEditors.objects.filter(user=request.user).values_list('hired_editor_id')
+        hired = AiUser.objects.filter(id__in=hired_ids)
+        ser = GetVendorListSerializer(hired,many=True,context={'request': request}).data
+        print("ser------->",ser)
+        for i in ser:
+            print("I---------->",i)
+            if i.get("status")=="Invite Accepted":
+                tt.append(i)
+        return tt

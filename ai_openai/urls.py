@@ -1,5 +1,5 @@
 from django.urls import path, include
-from . import api_views
+from ai_openai import api_views
 from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register(r'aiprompt',api_views.AiPromptViewset,basename='ai_prompt')
@@ -21,6 +21,7 @@ urlpatterns += [
     path('image_history/',api_views.AiImageHistoryViewset.as_view()),
     path('image/',api_views.image_gen),
     path('default_langs/',api_views.user_preffered_langs),
+    path('stream_article/',api_views.generate_article),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 

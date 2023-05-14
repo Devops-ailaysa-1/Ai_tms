@@ -459,9 +459,6 @@ class ImageGeneratorResolution(models.Model):
     
     def __str__(self) -> str:
         return self.image_resolution 
-    
-    
-
  
 class PromptStartPhrases(models.Model):
     sub_category = models.ForeignKey(PromptSubCategories,related_name='prompt_sub_category',
@@ -618,3 +615,22 @@ class ApiServiceList(models.Model):
 
 
 
+class FontFamily(models.Model):
+    font_family_name = models.CharField(max_length=100 ,null=True , blank=True)
+    name = models.CharField(max_length=100,null=True , blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+
+class FontLanguage(models.Model):
+    name = models.CharField(max_length=100 ,null=True,blank=True)
+    language  =  models.CharField(max_length=100 ,null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+
+class FontData(models.Model):
+    font_lang = models.ForeignKey(FontLanguage,related_name='font_data_language', on_delete=models.CASCADE)
+    font_family = models.ForeignKey(FontFamily,related_name='font_data_family', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+
+class SocialMediaSize(models.Model):
+    social_media_name = models.CharField(max_length=200,blank=True ,null=True)
+    width = models.CharField(max_length=200,blank=True ,null=True)
+    height=models.CharField(max_length=200,blank=True ,null=True)

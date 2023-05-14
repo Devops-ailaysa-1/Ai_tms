@@ -8,8 +8,15 @@ app_name = "ws_okapi"
 router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
-
+router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
+router.register(r'selflearning',api_views.SelflearningAssetViewset,basename='self-learning')
+# router.register(r'segment_diff',api_views.SegmentDiffViewset,basename='segment_difference')
 urlpatterns = router.urls
+
+myobject_detail = api_views.SegmentsUpdateView.as_view({
+    'put': 'update',
+    'patch': 'partial_update',
+})
 
 urlpatterns+=[
     # path("task/", TaskView.as_view(), name = "tasks"),
@@ -20,7 +27,7 @@ urlpatterns+=[
 
     # Segment related endpoints
     path("segments/<int:document_id>/", api_views.SegmentsView.as_view(), name="segments"),
-    path("segment/update/<int:segment_id>", api_views.SegmentsUpdateView.as_view({"put": "update"}), \
+    path("segment/update/", myobject_detail, \
          name="segment-update"),
     path('merge/segment/', api_views.MergeSegmentView.as_view({"post": "create"}), name='merge-segment'),
     path("segment/restore/<int:pk>", api_views.MergeSegmentDeleteView.as_view({"delete": "destroy"}), \
@@ -28,7 +35,7 @@ urlpatterns+=[
     path('split/segment/', api_views.SplitSegmentView.as_view({"post": "create"}), name='split-segment'),
     path("mt_raw_and_tm/<int:segment_id>", api_views.MT_RawAndTM_View.as_view(), name="mt-raw"),
 
-
+    
     path("document/to/file/<int:document_id>", api_views.DocumentToFile.as_view(),\
          name="document-convert-to-file"),
     path("outputtypes", api_views.output_types, name="output-types"),
@@ -42,6 +49,7 @@ urlpatterns+=[
     #     {"put":"put"}), name="seg-find-&-replace"),
     path("progress/<int:document_id>", api_views.ProgressView.as_view(), name="document-progress"),
     path("font_size", api_views.FontSizeView.as_view(), name="user-font-size"),
+    #path("page_size", api_views.SegmentSizeView.as_view(), name='default-page-size'),
     path("concordance/<int:segment_id>", api_views.ConcordanceSearchView.as_view(), name="concordance-search"),
     path("segment/get/page/filter/<int:document_id>/<int:segment_id>", api_views
          .GetPageIndexWithFilterApplied.as_view(), name="get-page-id-of-segment-on-apply-filter"),
@@ -54,9 +62,10 @@ urlpatterns+=[
     path('grammercheck/',api_views.grammar_check_model, name ='grammercheck'),
     path('paraphrase/',api_views.paraphrasing, name = 'paraphrase'),
     path('download_audio_file/',api_views.download_audio_output_file),
+    path('download_mt_file/',api_views.download_mt_file),
     path('download_converted_audio_file/',api_views.download_converted_audio_file),
+    #path('get_mt_raw/<int:task_id>/',api_views.get_mt_raw),
 ]
-
 urlpatterns+=[
     path("document_list/dj", views.DocumentListView.as_view(), name="document-list"),
     path("segment_list/dj/<int:document_id>", views.SegmentListView.as_view(), name="segments-list"),

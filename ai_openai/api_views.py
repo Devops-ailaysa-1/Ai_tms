@@ -1,7 +1,7 @@
-from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt,
+from .models import (AiPrompt ,AiPromptResult, AiPromptCustomize  ,ImageGeneratorPrompt, BlogArticle,
                      BlogCreation ,BlogKeywordGenerate,Blogtitle,BlogOutline,BlogOutlineSession ,TranslateCustomizeDetails)
-from django.core import serializers
-import logging ,os ,json
+ 
+import logging ,os  
 from rest_framework import viewsets,generics
 from rest_framework.pagination import PageNumberPagination
 from .serializers import (AiPromptSerializer ,AiPromptResultSerializer, 
@@ -277,7 +277,7 @@ def customize_text_openai(request):
     data = {'document':document,'task':task,'pdf':pdf,'customize':customize_id,'created_by':request.user.id,\
             'user':user.id,'user_text':user_text,'user_text_mt':user_text_mt_en if user_text_mt_en else None,\
             'tone':tone,'credits_used':total_tokens,'prompt_generated':prompt,'user_text_lang':user_text_lang,\
-            'api_result':result_txt.strip('\"').strip() if result_txt else None,'prompt_result':txt_generated}
+            'api_result':result_txt.strip().strip('\"') if result_txt else None,'prompt_result':txt_generated}
     ser = AiPromptCustomizeSerializer(data=data)
     if ser.is_valid():
         ser.save()
@@ -384,7 +384,10 @@ class BlogCreationViewset(viewsets.ViewSet):
         return Response(serializer.data)
     
     def create(self,request):
-        serializer = BlogCreationSerializer(data={**request.POST.dict(),'user':request.user.id} ) 
+        categories = 10
+        sub_categories = 61
+        user = request.user.team.owner if request.user.team else request.user
+        serializer = BlogCreationSerializer(data={**request.POST.dict(),'categories':categories,'sub_categories':sub_categories,'created_by':request.user.id,'user':user.id} ) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -401,6 +404,12 @@ class BlogCreationViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
+    def delete(self,request,pk):
+        obj = BlogCreation.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
+
+
  
 class BlogKeywordGenerateViewset(viewsets.ViewSet):
  
@@ -410,7 +419,8 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
         return Response(serializer.data)
     
     def list(self, request):
-        query_set=BlogKeywordGenerate.objects.all()
+        blog_creation = request.GET.get('blog')
+        query_set=BlogKeywordGenerate.objects.filter(blog_creation=blog_creation).order_by('-id')
         serializer=BlogKeywordGenerateSerializer(query_set,many=True)
         return Response(serializer.data)
 
@@ -418,7 +428,10 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
         serializer = BlogKeywordGenerateSerializer(data=request.POST.dict()) 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            ins = serializer.data.get('blog_creation')
+            queryset = BlogKeywordGenerate.objects.filter(blog_creation = ins).order_by('-id')
+            ser2=BlogKeywordGenerateSerializer(queryset,many=True)
+            return Response(ser2.data)
         return Response(serializer.errors)
 
     def update(self,request,pk):
@@ -434,7 +447,8 @@ class BlogKeywordGenerateViewset(viewsets.ViewSet):
 class BlogtitleViewset(viewsets.ViewSet):
     def create(self,request):
         blog_inst = request.POST.get('blog_creation_gen',None)
-        serializer = BlogtitleSerializer(data=request.POST.dict())  
+        sub_categories = 62
+        serializer = BlogtitleSerializer(data={**request.POST.dict(),'sub_categories':sub_categories})  
         if serializer.is_valid():
             serializer.save()
             blog_creation=BlogCreation.objects.filter(id=blog_inst).last()
@@ -464,12 +478,16 @@ class BlogtitleViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
 
-    
+    def delete(self,request,pk):
+        obj = Blogtitle.objects.get(id=pk)
+        obj.delete()
+        return Response(status=204)
 
 class BlogOutlineViewset(viewsets.ViewSet):
 
     def create(self,request):
-        serializer = BlogOutlineSerializer(data=request.POST.dict()) 
+        sub_categories = 63
+        serializer = BlogOutlineSerializer(data={**request.POST.dict(),'sub_categories':sub_categories}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -485,7 +503,6 @@ class BlogOutlineViewset(viewsets.ViewSet):
         serializer=BlogOutlineSerializer(query_set )
         return Response(serializer.data)
 
-
     def update(self,request,pk):
         select_group=request.POST.get('select_group',None)
         query_set = BlogOutline.objects.get(id = pk)
@@ -498,29 +515,24 @@ class BlogOutlineViewset(viewsets.ViewSet):
 
 
 class BlogOutlineSessionViewset(viewsets.ViewSet):
-    def create(self,request):
-        serializer = BlogOutlineSessionSerializer(data=request.POST.dict()) 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
-    
+
     def list(self, request):
-        blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
-        group = request.POST.get('group',None)
+        #blog_outline_gen_id = request.POST.get('blog_outline_gen_id',None)
+        group = request.GET.get('group',None)
+        title = request.GET.get('blog_title',None)
         
-        if blog_outline_gen_id and group:
-            blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_outline_gen = blog_out_ins,group=group)
+        if title and group:
+            #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title,group=group).order_by('custom_order')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
 
-        elif blog_outline_gen_id:
-            blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
-            blog_out_sec = BlogOutlineSession.objects.filter(blog_outline_gen = blog_out_ins)
+        elif title:
+            #blog_out_ins = BlogOutline.objects.get(id =blog_outline_gen_id)
+            blog_out_sec = BlogOutlineSession.objects.filter(blog_title_id = title).order_by('id')
             serializer=BlogOutlineSessionSerializer(blog_out_sec,many=True)
             
         else:
-            query_set=BlogOutlineSession.objects.all()
+            query_set=BlogOutlineSession.objects.all().order_by('id')
             serializer=BlogOutlineSessionSerializer(query_set,many=True)
         return Response(serializer.data)
 
@@ -529,10 +541,19 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         serializer=BlogOutlineSessionSerializer(query_set )
         return Response(serializer.data)
 
+    def create(self,request):
+        serializer = BlogOutlineSessionSerializer(data=request.POST.dict()) 
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
     def update(self,request,pk):
-        select_session_list = request.POST.get('select_session_list')
-        unselect_session_list = request.POST.get('unselect_session_list')
+        selected = request.POST.getlist('selected')
+        unselected = request.POST.getlist('unselected')
+        order_list = request.POST.get('order_list')
         query_set = BlogOutlineSession.objects.get(id = pk)
+        print('qs------->',query_set)
         serializer = BlogOutlineSessionSerializer(query_set,data=request.data,partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -540,15 +561,99 @@ class BlogOutlineSessionViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors)
         
+    def delete(self,request,pk=None):
+        group = request.GET.get('group')
+        title = request.GET.get('blog_title')
+        if pk:
+            obj = BlogOutlineSession.objects.get(id=pk)
+            obj.delete()
+        else:
+            queryset = BlogOutlineSession.objects.filter(blog_title = title).filter(group=group).delete()
+        return Response(status=204)
+        
 class BlogArticleViewset(viewsets.ViewSet):
+
+    def list(self,request):
+        blog_creation = request.GET.get('blog_creation')
+        query_set=BlogArticle.objects.filter(blog_creation_id = blog_creation).last()
+        serializer=BlogArticleSerializer(query_set)
+        return Response(serializer.data)
+
     def create(self,request):
-        outline_section_list = request.POST.getlist('outline_section_list')
-        serializer = BlogArticleSerializer(data=request.data) 
+        sub_categories = 64
+        outline_list = request.POST.get('outline_section_list')
+        blog_creation = request.POST.get('blog_creation')
+        outline_section_list = list(map(int, outline_list.split(',')))
+        print("outline_section_list------------>",outline_section_list)
+        serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
-    
+
+
+# def stream_article_response():
+#     for chunk in range(40):
+#         time.sleep(0.2)
+#         print(chunk)
+#         yield '%s' % chunk
+
+# from django.http import StreamingHttpResponse,JsonResponse
+# import time
+ 
+# def generate_article(request):
+#     if request.method == 'GET':
+#         response=StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
+#         print("streaming")
+#         return response
+    # return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+ 
+
+# from django.http import StreamingHttpResponse,JsonResponse
+# import openai  #blog_cre_id list
+# from ai_staff.models import PromptSubCategories
+# import time
+# @api_view(["POST"])
+# def generate_article(request):
+#     if request.method == 'POST':
+        # blog_available_langs=[17]
+        # sub_categories = 63#64
+        # blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
+        # outline_list = request.POST.get('outline_section_list')
+        # blog_creation = request.POST.get('blog_creation')
+        # blog_creation=BlogCreation.objects.get(id=blog_creation)
+        # outline_section_list = list(map(int, outline_list.split(',')))
+        # outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
+        # if blog_creation.user_language_id not in blog_available_langs:
+        #     title = blog_creation.user_title_mt
+        #     keyword = blog_creation.keywords_mt
+        #     outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
+        # else:
+        #     title = blog_creation.user_title
+        #     keyword = blog_creation.keywords
+        #     outlines=list(outline_section_list.values_list('blog_outline',flat=True))
+        # joined_list = "', '".join(outlines)
+        # tone=blog_creation.tone.tone
+
+        # prompt = blog_article_start_phrase.format(title,joined_list,keyword,tone)
+        # completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",
+        #                                           messages=[{"role": "user", "content": prompt}],stream=True )
+        # def stream_article_response():
+        #     for chunk in text.split(' '):
+                # ins=chunk['choices'][0]
+                # if ins["finish_reason"] != 'stop':
+                #     delta=ins['delta']
+                #     if 'content' in delta.keys():
+                #         content=delta['content']
+                #         print(content)
+    #                     time.sleep(0.2)
+    #                     print(chunk)
+    #                     yield chunk
+    #     return StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
+    # return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+
     # def list(self, request):
     #     query_set=BlogOutlineSession.objects.all()
     #     serializer=BlogOutlineSessionSerializer(query_set,many=True)
@@ -644,25 +749,6 @@ class BlogArticleViewset(viewsets.ViewSet):
 #             return Response(serializer.data)
 #         return Response(serializer.errors)
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # def customize_response(customize ,user_text,tone,request):
 #     if customize.prompt or customize.customize == "Text completion":
 #         initial_credit = request.user.credit_balance.get("total_left")
@@ -725,4 +811,56 @@ class BlogArticleViewset(viewsets.ViewSet):
 #         else:txt_generated = 'Something Went Wrong.Try Again'
 #         #print("Txt------>",txt_generated.strip())
 #     #total_tokens = response['usage']['total_tokens']
+ 
 #     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
+ 
+#     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
+from django.http import HttpResponse, StreamingHttpResponse
+import time
+@api_view(["POST"])
+def generate_article(request):
+    text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
+            Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
+            Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small. This makes it difficult for the network to update the weights during training, leading to slow convergence or no convergence at all. 
+            Understanding Backpropagation in the Context of Vanishing Gradient
+            Backpropagation is the most popular algorithm for training neural networks. It works by propagating the error backward through the network, updating the weights in a way that reduces the error. However, when the gradient of the error function becomes small, backpropagation cannot update the weights effectively, leading to the problem of vanishing gradient. 
+            The Cause and Effect of Vanishing Gradient on Neural Networks
+            Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small due to the activation functions used. Activation functions such as sigmoid and hyperbolic tangent functions have a limited range that they can output which could cause them to saturate at either end of the function. This means that as you propagate through the network, the gradients of this function become smaller, leading to the vanishing gradient. 
+            The Impact of Vanishing Gradient on Deep Learning Performance
+            Vanishing gradient can have a significant impact on the performance of deep learning networks. In a deep neural network with many layers, vanishing gradient can prevent the lower layers from learning effectively, leading to poor performance. Additionally, it can cause the network to get stuck in local optima, resulting in a suboptimal solution.
+            Strategies and Techniques for Mitigating Vanishing Gradient in Neural Networks
+            Several strategies and techniques can help mitigate the problem of vanishing gradient in neural networks. One approach is to use activation functions that are less prone to saturation, such as the Rectified Linear Unit (ReLU) function. Another approach is to use skip connections, allowing for information to flow more easily between layers. Residual connections, popular in ResNets, is an architecture with skip connections between layers. Additionally, weight normalization or gradient clipping can be implemented to manage gradients and weights. 
+            Challenges in Detecting and Diagnosing Vanishing Gradient in Machine Learning
+            Detecting and diagnosing vanishing gradient can be challenging, as it is not always apparent during training. Some common signs of vanishing gradient include slow convergence, instability during training, and poor performance. However, these symptoms can also be caused by other factors, making it difficult to pinpoint the exact issue.
+            Case Studies: Real-world Examples of Vanishing Gradient in Deep Learning Projects
+            Vanishing gradient can manifest in various ways during real-world deep learning projects. One example is image classification, where deep learning models can struggle to distinguish between similar objects, such as different breeds of dogs. Another example is natural language processing, where the neural network can have difficulty predicting the next word in a sentence. In both of these cases, vanishing gradient can lead to poor performance and accuracy.
+            Exploring the Possibilities of Overcoming Vanishing Gradient with Alternative Optimizers
+            Several alternative optimization techniques have been proposed to overcome the problem of vanishing gradient. One such method is to use adaptive optimization methods, such as Adam and RMSprop. These algorithms adjust the learning rate for each weight in the network iteratively, providing better performance on the training set. 
+            The Future of Vanishing Gradient: Opportunities and Emerging Solutions in Neural Networks
+            As research in neural networks continues, we can expect to see new solutions emerge for vanishing gradient. One promising approach is to use more complex network architectures, such as the attention mechanism, to help manage the flow of information through the network. Additionally, transfer learning and pre-training networks on similar tasks can help alleviate problems associated with vanishing gradients.
+            Conclusion and Next Steps in Vanishing Gradient Research and Development for Machine Learning
+            Vanishing gradient is a common problem in neural networks that can have a significant impact on performance. Strategies and techniques can help mitigate this issue, but their effectiveness may vary depending on the specific architecture and application. As research in neural networks evolves, we can expect to see more advanced solutions for vanishing gradient emerge, leading to even more powerful AI technologies."""
+
+    def stream():
+        for chunk in text.split(' '):
+            yield chunk
+            print(chunk)
+            time.sleep(0.2)
+            ##print(chunk)
+
+    response = HttpResponse(stream(),content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    return response
+
+
+
+    # response = StreamingHttpResponse(stream(), status=200, content_type='text/event-stream')
+    # response['Cache-Control'] = 'no-cache'
+    # return response
+    # response.status_code = 200
+    # return response(stream())
+    #return StreamingHttpResponse(stream(), content_type='text/event-stream')
+ 
+    #return JsonResponse({'error': 'Error'}, status=405)
+ 

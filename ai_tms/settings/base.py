@@ -111,7 +111,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cacheops',
+    # 'cacheops',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -147,6 +147,8 @@ INSTALLED_APPS = [
     'ai_exportpdf',
     'ai_openai',
     'simple_history',
+    'ai_canvas',
+    'ai_imagetranslation',
 ]
 
 
@@ -461,8 +463,6 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 GOOGLE_CALLBACK_URL = os.getenv('GOOGLE_CALLBACK_URL')
 
 
-
-
 # DOCX_ROOT = os.path.join(BASE_DIR, 'output_docx')
 # DOCX_URL = '/output_docx/'
 GOOGLE_APPLICATION_CREDENTIALS_OCR = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_OCR")
@@ -473,6 +473,15 @@ OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
 
+# FONT_THUMBNAIL_ROOT = os.path.join(STATIC_ROOT, 'canvas-assets/font-thumnail')
+# FONT_THUMBNAIL_URL = '/font-thumnail/'
+#######
+INPAINT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'inpaint_image')
+INPAINT_IMAGE_URL = '/inpaint_image/'
+
+INPAINT_SOURCE_IMAGE_ROOT =  os.path.join(BASE_DIR, 'inpaint_source_image')
+INPAINT_SOURCE_IMAGE_URL = '/inpaint_source_image/'
 
 
-
+EXPORT_IMAGE_ROOT =  os.path.join(BASE_DIR, 'temp_download')
+EXPORT_IMAGE_URL = '/temp_download/'

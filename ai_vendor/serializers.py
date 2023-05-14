@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from ai_vendor.models import VendorsInfo,VendorLanguagePair,VendorServiceTypes,VendorServiceInfo,VendorMtpeEngines,VendorMembership,VendorSubjectFields,VendorContentTypes,VendorBankDetails,TranslationSamples,MtpeSamples,VendorCATsoftware
+from ai_vendor.models import (VendorsInfo,VendorLanguagePair,VendorServiceTypes,
+                                VendorServiceInfo,VendorMtpeEngines,VendorMembership,
+                                VendorSubjectFields,VendorContentTypes,VendorBankDetails,
+                                TranslationSamples,MtpeSamples,VendorCATsoftware,
+                                SavedVendor)
 from ai_auth.models import AiUser
 from drf_writable_nested import WritableNestedModelSerializer
 import json
@@ -38,6 +42,22 @@ class VendorCATsoftwareSerializer(serializers.ModelSerializer):
         model=VendorCATsoftware
         fields=('software',)
 
+class SavedVendorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SavedVendor
+        fields='__all__'
+
+    def run_validation(self, data):
+        customer = data.get('customer')
+        vendor = json.loads(data.get('vendor'))
+        print('customer--------->',customer,type(customer))
+        print('vendor----------->',vendor,type(vendor))
+        if customer == vendor:
+            print("Inside")
+            raise serializers.ValidationError({"msg":"save-vendor cannot happen between same person"})
+        return super().run_validation(data) 
+    
+
 class VendorSubjectFieldSerializer(serializers.ModelSerializer):
     subject_name = serializers.ReadOnlyField(source='subject.name')
     class Meta:
@@ -74,9 +94,11 @@ class VendorLanguagePairCloneSerializer(serializers.ModelSerializer):
     Currency = serializers.ReadOnlyField(source='currency.currency_code')
     service=VendorServiceInfoSerializer(many=True,required=False)
     servicetype=VendorServiceTypeSerializer(many=True,required=False)
+    source_lang = serializers.ReadOnlyField(source='source_lang.language')
+    target_lang = serializers.ReadOnlyField(source='target_lang.language')
     class Meta:
         model = VendorLanguagePair
-        fields=('Currency','service','servicetype',)
+        fields=('source_lang','target_lang','Currency','service','servicetype')
 
 class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.ModelSerializer):#WritableNestedModelSerializer,
      service=VendorServiceInfoSerializer(many=True,required=False)
@@ -119,6 +141,7 @@ class VendorLanguagePairSerializer(WritableNestedModelSerializer,serializers.Mod
          # #     if not (("service" in data and ((("source_lang") in data) and(("target_lang") in data)) )\
          # #        or ((("existing_lang_pair_id") in data) and (("apply_for_reverse") in data))):
          # #         raise serializers.ValidationError({"message":"Given data is not sufficient to create lang_pair"})
+        #   ##
          if "source_lang" in data:
              if data.get('source_lang')==data.get('target_lang'):
                  raise serializers.ValidationError({"message":"source and target language should not be same"})

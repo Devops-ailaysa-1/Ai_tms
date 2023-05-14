@@ -50,7 +50,7 @@ from django.db import models
 from django.db.models.functions import Lower
 from ai_auth.models import AiUser, UserCredits
 from ai_auth.models import HiredEditors
-from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel
+from ai_auth.tasks import mt_only, text_to_speech_long_celery, transcribe_long_file_cel, project_analysis_property
 from ai_auth.tasks import write_doc_json_file
 from ai_glex.serializers import GlossarySetupSerializer, GlossaryFileSerializer, GlossarySerializer
 from ai_marketplace.models import ChatMessage
@@ -85,12 +85,16 @@ from .serializers import (ProjectContentTypeSerializer, ProjectCreationSerialize
                           StepsSerializer, WorkflowsSerializer, \
                           WorkflowsStepsSerializer, TaskAssignUpdateSerializer, ProjectStepsSerializer,
                           ExpressProjectDetailSerializer,MyDocumentSerializer,ExpressProjectAIMTSerializer,\
-                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer)
+                          WriterProjectSerializer,DocumentImagesSerializer,ExpressTaskHistorySerializer,MyDocumentSerializerNew)
 from .utils import DjRestUtils
 from django.utils import timezone
 from .utils import get_consumable_credits_for_text_to_speech, get_consumable_credits_for_speech_to_text
 import regex as re
 spring_host = os.environ.get("SPRING_HOST")
+from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
+from django.db.models.functions import Coalesce
+from django.db.models.query import QuerySet
+
 
 class IsCustomer(permissions.BasePermission):
 
@@ -728,8 +732,20 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                     .filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+        # parent_queryset = queryset.annotate(
+        #                     sorted_datetime=ExpressionWrapper(Coalesce(
+        #                     # Use child_datetime if Child model is present, otherwise use parent_datetime
+        #                     Case(
+        #                         When(project_jobs_set__job_tasks_set__task_info__task_assign_info__isnull=False, then=F('project_jobs_set__job_tasks_set__task_info__task_assign_info__created_at')),
+        #                         default=F('created_at'),
+        #                         output_field=DateTimeField(),
+        #                     ),
+        #                     Value(datetime.min),),
+        #                     output_field=DateTimeField(),)
+        #                     )#.order_by('-sorted_datetime')
+
         #queryset = filter_authorize(self.request,queryset,'read',self.request.user)
-        return queryset
+        return queryset #parent_queryset
 
 
     def list(self, request, *args, **kwargs):
@@ -766,6 +782,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         if serlzr.is_valid(raise_exception=True):
             serlzr.save()
             pr = Project.objects.get(id=serlzr.data.get('id'))
+            #project_analysis_property.apply_async((serlzr.data.get('id'),), )
             if pr.pre_translate == True:
                 mt_only.apply_async((serlzr.data.get('id'), str(request.auth)), )
             return Response(serlzr.data, status=201)
@@ -840,10 +857,13 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
             return Response(serlzr.data)
         return Response(serlzr.errors, status=409)
 
-    # def delete(self, request, pk):
-    #     project = self.get_object()
-    #     project.delete()
-    #     return Response(status=status.HTTP_204_NO_CONTENT)
+    def destroy(self, request, *args, **kwargs):
+        project = self.get_object()
+        if project.assigned == True:
+            return Response({'msg':'some tasks are assigned in this project. Unassign and delete'},status=400)
+        else:
+            project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class VendorDashBoardView(viewsets.ModelViewSet):
@@ -851,23 +871,24 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     paginator = PageNumberPagination()
     paginator.page_size = 20
 
-    def get_tasks_by_projectid(self, pk):
+    @staticmethod
+    def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
-        if project.ai_user == self.request.user:
+        if project.ai_user == request.user:
             return project.get_tasks
         if project.team:
             print(project.team.get_project_manager)
-            if ((project.team.owner == self.request.user)|(self.request.user in project.team.get_project_manager)):
+            if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
                 return project.get_tasks
             # elif self.request.user in project.team.get_project_manager:
             #     return project.get_tasks
             else:
                 return [task for job in project.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = self.request.user).exists()]#.distinct('task')]
+                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = request.user).exists()]#.distinct('task')]
         else:
             return [task for job in project.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = self.request.user).exists()]#.distinct('task')]
+                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = request.user).exists()]#.distinct('task')]
 
 
     def get_object(self):
@@ -885,7 +906,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
 
     def retrieve(self, request, pk, format=None):
         #print("%%%%")
-        tasks = self.get_tasks_by_projectid(pk=pk)
+        tasks = self.get_tasks_by_projectid(request=request,pk=pk)
         #tasks = authorize_list(tasks,"read",self.request.user)
         serlzr = VendorDashBoardSerializer(tasks, many=True,context={'request':request})
         return Response(serlzr.data, status=200)
@@ -1296,6 +1317,7 @@ class ProjectAnalysisProperty(APIView):
     def analyse_project(project_id):
         project = Project.objects.get(id=project_id)
         project_tasks = Project.objects.get(id=project_id).get_mtpe_tasks
+        print("ProjectTasks----------->",project_tasks)
         tasks = []
         for _task in project_tasks:
             if _task.task_details.first() == None:
@@ -1305,26 +1327,23 @@ class ProjectAnalysisProperty(APIView):
 
         for task in tasks:
             if task.file_id not in file_ids:
-
+                print("Inside api_views If")
                 ser = TaskSerializer(task)
                 data = ser.data
                 ProjectAnalysisProperty.correct_fields(data)
                 # DocumentViewByTask.correct_fields(data)
                 params_data = {**data, "output_type": None}
                 res_paths = get_res_path(params_data["source_language"])
-                # res_paths = {"srx_file_path":"okapi_resources/okapi_default_icu4j.srx",
-                #          "fprm_file_path": None,
-                #          "use_spaces" : settings.USE_SPACES
-                #          }
                 doc = requests.post(url=f"http://{spring_host}:8080/getDocument/", data={
                     "doc_req_params":json.dumps(params_data),
                     "doc_req_res_params": json.dumps(res_paths)
                 })
 
                 try:
+                    print("status----->",doc.status_code)
                     if doc.status_code == 200 :
                         doc_data = doc.json()
-                        print("Doc Data---------------->",doc_data)
+                        #print("Doc Data---------------->",doc_data)
                         #if doc_data["total_word_count"] >= 50000:
 
                         task_write_data = json.dumps(doc_data, default=str)
@@ -1358,6 +1377,7 @@ class ProjectAnalysisProperty(APIView):
 
         [task_words.append({task.id : task.task_details.first().task_word_count})for task in project.get_mtpe_tasks]
         out = TaskDetails.objects.filter(project_id=project_id).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+        print("Out--------->",out)
         return {"proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
                         "proj_seg_count":out.get('task_seg_count__sum'),
                         "task_words":task_words}
@@ -1409,6 +1429,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
     def update(self, request,pk=None):
         task = request.POST.get('task')
         step = request.POST.get('step')
+        reassigned = request.POST.get('reassigned',False)
         file = request.FILES.getlist('instruction_file')
         req_copy = copy.copy( request._request)
         req_copy.method = "DELETE"
@@ -1416,13 +1437,16 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         file_delete_ids = self.request.query_params.get(\
             "file_delete_ids", [])
 
+        # if not reassigned:reassigned = False
+        # else: reassigned = True
+
         if file_delete_ids:
             file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
         if not task:
             return Response({'msg':'Task Id required'},status=status.HTTP_400_BAD_REQUEST)
         # try:
-        task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step))
+        task_assign = TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step) & Q(reassigned=reassigned))
         if file:
             serializer =TaskAssignUpdateSerializer(task_assign,data={**request.POST.dict(),'files':file},context={'request':request},partial=True)
         else:
@@ -1444,8 +1468,9 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     def list(self,request):
         tasks = request.GET.getlist('tasks')
         step = request.GET.get('step')
+        reassigned = request.GET.get('reassigned',False)
         try:
-            task_assign_info = TaskAssignInfo.objects.filter(task_assign__task_id__in = tasks)
+            task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__reassigned = reassigned))
             # task_assign_info = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in = tasks) & Q(task_assign__step_id =step))
         except TaskAssignInfo.DoesNotExist:
             return HttpResponse(status=404)
@@ -1460,6 +1485,62 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                                                         task_segment_confirmed=segment_count,unassigned_by=self.request.user)
 
 
+    # @integrity_error
+    # def create(self,request):
+    #     step = request.POST.get('step')
+    #     task_assign_detail = request.POST.get('task_assign_detail')
+    #     files=request.FILES.getlist('instruction_file')
+    #     sender = self.request.user
+    #     receiver = request.POST.get('assign_to')
+    #     Receiver = AiUser.objects.get(id = receiver)
+    #     ################################Need to change########################################
+    #     user = request.user.team.owner  if request.user.team  else request.user
+    #     if Receiver.email == 'ailaysateam@gmail.com':
+    #         HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
+    #     ##########################################################################################
+    #     task = request.POST.getlist('task')
+    #     hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
+    #     tasks= [json.loads(i) for i in task]
+    #     tsks = Task.objects.filter(id__in=tasks)
+    #     for tsk in tsks:
+    #         authorize(request, resource=tsk, actor=request.user, action="read")
+    #     job_id = Task.objects.get(id=tasks[0]).job.id
+    #     assignment_id = create_assignment_id()
+    #     for i in task_assign_detail:
+            
+    #         with transaction.atomic():
+    #             try:
+    #                 serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
+    #                 if serializer.is_valid():
+    #                     serializer.save()
+    #                     weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
+    #                     msg_send(sender,Receiver,tasks[0])
+    #                     print("Task Assigned")
+    #                 print("Error--------->",serializer.errors)
+    #             except:
+    #                 pass
+    #                 # if Receiver in hired_editors:
+    #                 #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+    #                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
+    #     return Response({"msg":"Task Assigned"})
+    #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def reassign_check(self,tasks):
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        #plan = get_plan_name(self.request.user)
+        #team = self.request.user.team
+        if user.is_agency == True:
+            for i in tasks:
+                print(i)
+                if TaskAssignInfo.objects.filter(task_assign__task = i).filter(task_assign__reassigned=False).exists() == False:
+                    return "There is no assign. you can't reassign" 
+            return None
+        else:
+            return "user is not an agency. Reassign is not allowed"
+        
+
+        
+
     @integrity_error
     def create(self,request):
         step = request.POST.get('step')
@@ -1467,22 +1548,41 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         files=request.FILES.getlist('instruction_file')
         sender = self.request.user
         receiver = request.POST.get('assign_to')
+        reassign = request.POST.get('reassigned') 
+        print("Reassign----->",reassign)
         Receiver = AiUser.objects.get(id = receiver)
+        data = request.POST.dict()
         ################################Need to change########################################
         user = request.user.team.owner  if request.user.team  else request.user
         if Receiver.email == 'ailaysateam@gmail.com':
             HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
         ##########################################################################################
-        task = request.POST.getlist('task')
+        # task = request.POST.getlist('task')
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
-        tasks= [json.loads(i) for i in task]
-        tsks = Task.objects.filter(id__in=tasks)
-        for tsk in tsks:
-            authorize(request, resource=tsk, actor=request.user, action="read")
-        job_id = Task.objects.get(id=tasks[0]).job.id
+        # tsks = Task.objects.filter(id__in=tasks)
+        # for tsk in tsks:
+        #     authorize(request, resource=tsk, actor=request.user, action="read")
+        # job_id = Task.objects.get(id=tasks[0]).job.id
         assignment_id = create_assignment_id()
+        extra = {'assignment_id':assignment_id,'files':files}
+        final =[]
+        task_assign_detail = data.pop('task_assign_detail')
+        task_assign_detail = json.loads(task_assign_detail)
+        tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
+        print("Tasks------->",tasks)
+        if reassign == 'true':
+            print("Inside")
+            msg = self.reassign_check(tasks)
+            print("Msg------>",msg)
+            if msg:
+                return Response({'Error':msg},status=400)
+        # tasks= task_assign_detail[0].get('tasks')
+        for i in task_assign_detail:
+            i.update(data)
+            i.update(extra)
+            final.append(i)
         with transaction.atomic():
-            serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
+            serializer = TaskAssignInfoSerializer(data=final,context={'request':request},many=True)
             if serializer.is_valid():
                 serializer.save()
                 weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
@@ -1552,9 +1652,11 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
     def delete(self,request):
         task = request.GET.getlist('task')
         steps = request.GET.getlist('step')
+        reassigned = request.GET.get('reassigned',False)
+        print("reassign---->",reassigned)
         task_assign_info_ids = request.GET.getlist('task_assign_info')
         if task and steps:
-            assigns = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in=task) & Q(task_assign__step_id__in=steps))
+            assigns = TaskAssignInfo.objects.filter(Q(task_assign__task_id__in=task) & Q(task_assign__step_id__in=steps) & Q(task_assign__reassigned=reassigned))
         if task_assign_info_ids:
             assigns = TaskAssignInfo.objects.filter(id__in = task_assign_info_ids )
         for obj in assigns:
@@ -1562,16 +1664,31 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 po_modify(obj.id,['unassigned',])
             except BaseException as e:
                 logger.error(f"po unassign error id :{obj.id} -ERROR:{str(e)}")
-            self.history(obj)
             user = obj.task_assign.task.job.project.ai_user
             with transaction.atomic():
-                assigned_user = obj.task_assign.assign_to
-                obj.task_assign.assign_to = user
-                obj.task_assign.status = 1
-                obj.task_assign.save()
-                role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
-                unassign_task(assigned_user,role,obj.task_obj)             
-                obj.delete()
+                try:self.history(obj)
+                except:pass
+                if obj.task_assign.reassigned == True:
+                    obj.task_assign.assign_to = self.request.user.team.owner #if unassigned..it is assigned back to LSP 
+                    obj.task_assign.status = 1
+                    obj.task_assign.save()
+                    obj.delete()
+                else:
+                    reassigns = TaskAssign.objects.filter(Q(task=obj.task_assign.task) & Q(step=obj.task_assign.step) & Q(reassigned = True))
+                    if reassigns:
+                        obj_1 = reassigns.first().task_assign_info
+                        self.history(obj_1)
+                        obj_1.task_assign.assign_to = user
+                        obj_1.task_assign.status = 1
+                        obj_1.task_assign.save()
+                        obj_1.delete()
+                    #assigned_user = obj.task_assign.assign_to
+                    obj.task_assign.assign_to = user
+                    obj.task_assign.status = 1
+                    obj.task_assign.save()
+                    # role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
+                    # unassign_task(assigned_user,role,obj.task_obj)             
+                    obj.delete()
                 
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
 
@@ -1649,51 +1766,78 @@ class ProjectListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectListSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    search_fields = ['project_name','id']
     #filterset_class = ProjectListFilter
 
     def get_queryset(self):
         print(self.request.user)
-        queryset = Project.objects.prefetch_related('project_jobs_set__job_tasks_set__task_info').filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
-                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id')
+        queryset = Project.objects.prefetch_related('project_jobs_set','project_jobs_set__job_tasks_set__task_info').filter(Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+                    |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct().order_by('-id').only('id','project_name')
         return queryset
 
 
     def list(self,request):
-        queryset = self.get_queryset()
-        filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
-        serializer = ProjectListSerializer(filtered, many=True, context={'request': request})
-        return  Response(serializer.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        #filtered = [pr for pr in queryset if pr.get_assignable_tasks_exists == True]
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        serializer = ProjectListSerializer(pagin_tc, many=True, context={'request': request})
+        data_1 = [i for i in serializer.data if i.get('assignable')==True ]
+        response = self.get_paginated_response(data_1)
+        return response
+        # queryset = self.get_queryset()
+        # filtered = (pr for pr in queryset if pr.get_assignable_tasks_exists == True)
+        # serializer = ProjectListSerializer(filtered, many=True, context={'request': request})
+        # return  Response(serializer.data)
+
+        
+
+# @permission_classes([IsAuthenticated])
+# @api_view(['GET',])
+# def get_file_project_list(request):
+class WriterProjectListView(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectListSerializer
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+
+    def list(self,request):
+        queryset = Project.objects.filter(Q(ai_user = request.user)|Q(team__owner = request.user)\
+                        |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
+        pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
+        serializer = ProjectListSerializer(pagin_tc, many=True, context={'request': request})
+        response = self.get_paginated_response(serializer.data)
+        return response
+
+
 
 @permission_classes([IsAuthenticated])
-@api_view(['GET',])
-def get_file_project_list(request):
-    queryset = Project.objects.filter(Q(ai_user = request.user)|Q(team__owner = request.user)\
-                    |Q(team__internal_member_team_info__in = request.user.internal_member.filter(role=1))).filter(project_type_id__in=[1,2]).distinct().order_by('-id')
-    serializer = ProjectListSerializer(queryset, many=True, context={'request': request})
-    data = serializer.data
-    return Response(serializer.data)
-
-
-
-@permission_classes([IsAuthenticated])
-@api_view(['GET',])
+@api_view(['GET',])####changed
 def tasks_list(request):
     job_id = request.GET.get("job")
-    try:
+    project_id = request.GET.get('project')
+    if job_id:
         job = Job.objects.get(id = job_id)
-        authorize(request, resource=job, actor=request.user, action="read")
-        #tasks = job.job_tasks_set.all()
+        project_id = job.project.id
+    vbd = VendorDashBoardView
+    res = vbd.get_tasks_by_projectid(request=request,pk=project_id)
+    if job_id:
+        res = [i for i in res if i.job == job ]
+    print("res----->",res)
+    try:
         tasks=[]
-        for task in job.job_tasks_set.all():
+        for task in res:
             if (task.job.target_language == None):
                 if (task.file.get_file_extension == '.mp3'):
                     tasks.append(task)
                 else:pass
             else:tasks.append(task)
+        print("Tasks----------->",tasks)
         ser = VendorDashBoardSerializer(tasks,many=True,context={'request':request})
         return Response(ser.data)
-    except Job.DoesNotExist:
-        return JsonResponse({"msg":"No job exists"})
+    except:
+        return JsonResponse({"msg":"something went wrong"})
 
 
     # for i in tasks:
@@ -1742,14 +1886,14 @@ class AssignToListView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def list(self, request, *args, **kwargs):
         project = self.request.GET.get('project')
-        job = self.request.GET.get('job')
+        job = self.request.GET.getlist('job')
         pro = Project.objects.get(id = project)
         try:
-            job_obj = Job.objects.get(id = job)
-            authorize(request, resource=job_obj, actor=request.user, action="read")
+            job_obj = Job.objects.filter(id__in = job).first() #need to work
+            #authorize(request, resource=job_obj, actor=request.user, action="read")
         except Job.DoesNotExist:
             pass
-        authorize(request, resource=pro, actor=request.user, action="read")
+        #authorize(request, resource=pro, actor=request.user, action="read")
         user =pro.ai_user    
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
@@ -2673,7 +2817,7 @@ def get_task_status(request):
                     status = 'True' 
             if status == 'True':
                 progress = i.get_progress
-            res.append({'task':i.id,'open':status,'progress':progress,'msg':msg})
+            res.append({'task':i.id,'document':i.document_id,'open':status,'progress':progress,'msg':msg})
         return Response({'res':res})
     else:
         return Response({'msg':'No Detail'})
@@ -2819,7 +2963,7 @@ def get_consumable_credits_for_text(source,target_lang,source_lang):
                  "extension":".txt"
                  }
     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
-        data={"segmentWordCountdata":json.dumps(seg_data)})
+        data={"segmentWordCountdata":json.dumps(seg_data)},timeout=3)
 
     if res.status_code == 200:
         print("Word count of the segment--->", res.json())
@@ -2943,7 +3087,7 @@ def seg_edit(express_obj,task_id,src_text,from_mt_edit=None):
     latest =  ExpressProjectSrcSegment.objects.filter(task_id=task_id).last().version
     for i in ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest):
         print(i.src_segment)
-        tt = ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest-1).filter(src_segment__exact = i.src_segment)
+        tt = ExpressProjectSrcSegment.objects.filter(task=task_id,version=latest-1).filter(src_segment__iexact = i.src_segment)
         if tt:
             mt_obj = tt.first().express_src_mt.filter(mt_engine_id=express_obj.mt_engine_id).first()
             if mt_obj: 
@@ -3296,45 +3440,73 @@ def translate_from_pdf(request,task_id):
     return Response(serlzr.errors)
 
 
-class MyDocFilter(django_filters.FilterSet):
-    #proj_name = django_filters.CharFilter(lookup_expr='icontains')
-    doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
-    class Meta:
-        model = MyDocuments
-        fields = ['doc_name']#proj_name
 
+# class MyDocFilter(django_filters.FilterSet):
+#     #proj_name = django_filters.CharFilter(lookup_expr='icontains')
+#     doc_name = django_filters.CharFilter(field_name='doc_name',lookup_expr='icontains')#related_docs__doc_name
+#     class Meta:
+#         model = MyDocuments
+#         fields = ['doc_name']#proj_name
+
+from django.db.models import Value, CharField, IntegerField
+from ai_openai.models import BlogCreation
+from functools import reduce
 
 class MyDocumentsView(viewsets.ModelViewSet):
 
-    serializer_class = MyDocumentSerializer
+    serializer_class = MyDocumentSerializerNew
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend,SearchFilter,CaseInsensitiveOrderingFilter]
     ordering_fields = ['doc_name','id']#'proj_name',
-    filterset_class = MyDocFilter
+    #filterset_class = MyDocFilter
     paginator = PageNumberPagination()
-    ordering = ('-id')
+    ordering = ('-created_at')
     paginator.page_size = 20
     # https://www.django-rest-framework.org/api-guide/filtering/
 
 
 
-    def get_queryset(self):
+    def get_queryset_new(self):
+        query = self.request.query_params.get('doc_name')
+        ordering = self.request.query_params.get('ordering')
         user = self.request.user
         project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
         owner = self.request.user.team.owner if self.request.user.team  else self.request.user
         #ai_user = user.team.owner if user.team and user in user.team.get_project_manager else user 
-        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner))
-        return queryset
+        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
+        q1 = queryset.annotate(open_as=Value('Document', output_field=CharField())).values('id','created_at','doc_name','word_count','open_as','document_type__type')
+        q1 = q1.filter(doc_name__icontains =query) if query else q1
+        q2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
+        q2 = q2.filter(user_title__icontains = query) if query else q2
+        q3 = q1.union(q2)
+        final_queryset = q3.order_by('-created_at')
+        if ordering:
+            field_name = ordering.lstrip('-')
+            if ordering.startswith('-'):
+                queryset = final_queryset.order_by(F(field_name).desc(nulls_last=True))
+            else:
+                queryset = final_queryset.order_by(F(field_name).asc(nulls_last=True))
+
+            return queryset
         
+        return final_queryset
+        
+    
+    def get_queryset(self):
+        user = self.request.user
+        project_managers = self.request.user.team.get_project_manager if self.request.user.team else []
+        owner = self.request.user.team.owner if self.request.user.team  else self.request.user
+        queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).order_by('-id')
+        return queryset
 
     def list(self, request, *args, **kwargs):
         paginate = request.GET.get('pagination',True)
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.get_queryset_new() #self.filter_queryset(self.get_queryset())
         if paginate == 'False':
-            serializer = MyDocumentSerializer(queryset, many=True)
+            serializer = MyDocumentSerializerNew(queryset, many=True)
             return Response(serializer.data)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
-        serializer = MyDocumentSerializer(pagin_tc, many=True)
+        serializer = MyDocumentSerializerNew(pagin_tc, many=True)
         response = self.get_paginated_response(serializer.data)
         return  response
 
@@ -3792,3 +3964,118 @@ class ExpressTaskHistoryView(viewsets.ViewSet):
         obj = ExpressTaskHistory.objects.get(id=pk)
         obj.delete()
         return Response(status=204)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def docx_convertor(request):
+    from docx import Document
+    from ai_workspace.html2docx_custom import HtmlToDocx
+    import re
+    html = request.POST.get('html')
+    name = request.POST.get('name')
+    document = Document()
+    new_parser = HtmlToDocx()
+    new_parser.table_style = 'TableGrid'
+    target_filename = name + '.docx'
+
+    def replace_hex_color(match):
+        hex_color = match.group(1)
+        red, green, blue = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        rgb_color = f"rgb({red}, {green}, {blue})"
+        return rgb_color
+
+    def replace_hex_colors_with_rgb(html):
+        hex_color_regex = re.compile("'#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})'")
+        html = hex_color_regex.sub(replace_hex_color, html)
+        return html
+
+    updatedHtml = replace_hex_colors_with_rgb(html)  
+    htmlupdates = updatedHtml.replace('<br />', '')
+    #new_parser.add_html_to_document(htmlupdates, document)
+    try:new_parser.add_html_to_document(htmlupdates, document)
+    except:return Response({'msg':"Unsupported formatting"}, status=400)
+    document.save(target_filename)
+    res = download_file(target_filename)
+    os.remove(target_filename)
+    return res
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def project_word_char_count(request):
+    from .api_views import ProjectAnalysisProperty
+    from .models import MTonlytaskCeleryStatus
+    prs = request.GET.getlist('project_id')
+    final =[]
+    for pr in prs:
+        pr_obj = Project.objects.get(id=pr)
+        print("Tasks--------->",pr_obj.get_tasks)
+        obj = MTonlytaskCeleryStatus.objects.filter(project_id = pr).filter(task_name = 'project_analysis_property').last()
+        state = project_analysis_property.AsyncResult(obj.celery_task_id).state if obj else None
+        print("State-------->",state)
+        if state == 'STARTED' or state == 'PENDING':
+            res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':obj.celery_task_id}
+        elif state =='None' or state == 'FAILURE':
+            celery_task = project_analysis_property.apply_async((pr_obj.id,), )
+            res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+        elif state == "SUCCESS" or pr_obj.is_proj_analysed == True:
+            task_words = []
+            tasks = pr_obj.get_tasks
+            if pr_obj.is_all_doc_opened:
+
+                [task_words.append({i.id:i.document.total_word_count}) for i in tasks]
+                out=Document.objects.filter(id__in=[j.document_id for j in tasks]).aggregate(Sum('total_word_count'),\
+                    Sum('total_char_count'),Sum('total_segment_count'))
+
+                res = ({"proj": pr_obj.id, "proj_word_count": out.get('total_word_count__sum'), "proj_char_count":out.get('total_char_count__sum'), \
+                    "proj_seg_count":out.get('total_segment_count__sum'),\
+                                    "task_words" : task_words })
+            else:
+                out = TaskDetails.objects.filter(task_id__in=[j.id for j in tasks]).aggregate(Sum('task_word_count'),Sum('task_char_count'),Sum('task_seg_count'))
+                task_words = []
+                [task_words.append({i.id:i.task_details.first().task_word_count if i.task_details.first() else 0}) for i in tasks]
+
+                res = ({"proj":pr_obj.id, "proj_word_count": out.get('task_word_count__sum'), "proj_char_count":out.get('task_char_count__sum'), \
+                    "proj_seg_count":out.get('task_seg_count__sum'),
+                                "task_words":task_words})
+        else:
+            #from .api_views import ProjectAnalysisProperty
+            try:
+                celery_task = project_analysis_property.apply_async((pr_obj_id,), )
+                res = {"proj":pr_obj.id,'msg':'project analysis ongoing. Please wait','celery_id':celery_task.id}
+                #return ProjectAnalysisProperty.get(pr_obj_id)
+
+            except:
+                res = ({"proj_word_count": 0, "proj_char_count": 0, \
+                    "proj_seg_count": 0, "task_words":[]})
+        final.append(res)
+    return Response({'out':final})
+
+
+
+# def task_download(task_id):
+#     tt = Task.objects.get(id=task_id)
+#     mt_only.apply_async((task.job.project.id, str(request.auth),task.id),)
+
+from celery.result import AsyncResult
+from django.http import HttpResponse
+from celery import Celery
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def stop_task(request):
+    app = Celery('ai_tms')
+    task_id = request.GET.get('task_id')
+    task = AsyncResult(task_id)
+    print("TT---------->",task.state)
+    app.control.revoke(task_id,terminated=True, signal='SIGKILL')
+    # if task.state == 'STARTED':
+    #     app.control.revoke(task_id, terminated=True, signal='SIGKILL')
+    #     return HttpResponse('Task has been stopped.') 
+    # elif task.state == 'PROGRESS':
+    #     app.control.revoke(task_id,terminated=True, signal='SIGKILL')
+        # return HttpResponse('Task has been revoked.')
+    # else:
+    return HttpResponse('Task is already running or has completed.')
+
+

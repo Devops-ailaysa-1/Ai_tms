@@ -6,6 +6,8 @@ from ai_staff import api_views
 from ai_staff import views
 from rest_framework.authtoken.views import obtain_auth_token
 from django.urls import path,include
+from django.conf import settings
+from django.conf.urls.static import static
 
 router = routers.DefaultRouter()
 router.register(r'subscriptionpricing', api_views.SubscriptionPricingCreateView,basename='subscription-pricing')
@@ -21,6 +23,9 @@ router.register(r'mt-language-support',api_views.MTLanguageSupportView,basename=
 router.register(r'voice-support-language',api_views.VoiceSupportLanguages,basename='voice-support-language')
 router.register(r'prompt-categories-list',api_views.PromptCategoriesViewset,basename='prompt-categories-list')
 router.register(r'prompt-tone',api_views.PromptTonesViewset,basename='prompt-tone')
+router.register(r'font-family',api_views.FontFamilyViewset ,basename='fontfamily')
+router.register(r'font-data',api_views.FontDataViewset ,basename='fontdata')
+router.register(r'font-language',api_views.FontLanguageViewset,basename='fontlanguage')
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -65,7 +70,10 @@ urlpatterns += [
      #path('ai_subcategories/<int:category_id>/',api_views.PromptSubCategoriesViewset.as_view({'get': 'list'}),name='ai-subcategories')
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      #path('insert',views.Bulk_insert)
+     path('social-media-size/', api_views.SocialMediaSizeViewset.as_view({'get': 'list'}), name='socialmediasize'),
      
 
 
 ]
+
+ 

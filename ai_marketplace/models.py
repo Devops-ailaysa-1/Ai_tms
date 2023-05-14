@@ -17,10 +17,10 @@ from ai_auth.signals import create_postjob_id
 
 
 class ProjectboardDetails(models.Model):#stephen
-    project=models.ForeignKey(Project, on_delete=models.CASCADE,related_name="proj_detail")
+    project=models.ForeignKey(Project, on_delete=models.CASCADE,null=True,blank=True,related_name="proj_detail")
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
-    proj_name = models.CharField(max_length=191,blank=True, null=True)
+    proj_name = models.CharField(max_length=500,blank=True, null=True)
     proj_desc = models.CharField(max_length=5000,blank=True, null=True)
     bid_deadline = models.DateTimeField(blank=True, null=True)
     proj_deadline = models.DateTimeField(blank=True, null=True)
@@ -118,7 +118,7 @@ class ProjectboardTemplateDetails(models.Model):
     project=models.ForeignKey(Project,blank=True, null=True, on_delete=models.SET_NULL,related_name="project_detail")
     customer = models.ForeignKey(AiUser,on_delete=models.CASCADE, null=True, blank=True)
     service = models.CharField(max_length=191,blank=True, null=True)
-    proj_name = models.CharField(max_length=191,blank=True, null=True)
+    proj_name = models.CharField(max_length=500,blank=True, null=True)
     proj_desc = models.CharField(max_length=5000,blank=True, null=True)
     bid_deadline = models.DateTimeField(blank=True, null=True)
     proj_deadline = models.DateTimeField(blank=True, null=True)
