@@ -1,4 +1,4 @@
-from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate)
+from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,TargetInpaintaImage)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -7,6 +7,8 @@ from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
 import copy
+
+
 class ImageloadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Imageload
@@ -45,13 +47,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
     inpaint_creation_target_lang = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),
                                                         required=False,write_only=True)
-    bounding_box_target_update = serializers.JSONField(required=False)
-    bounding_box_source_update = serializers.JSONField(required=False)
-    target_update_id = serializers.IntegerField(required=False)
-    source_canvas_json =  serializers.JSONField(required=False)
-    target_canvas_json = serializers.JSONField(required=False)
-    thumbnail = serializers.FileField(required=False)
-    export = serializers.FileField(required=False)
+    bounding_box_target_update=serializers.JSONField(required=False)
+    bounding_box_source_update=serializers.JSONField(required=False)
+    target_update_id=serializers.IntegerField(required=False)
+    source_canvas_json=serializers.JSONField(required=False)
+    target_canvas_json=serializers.JSONField(required=False)
+    thumbnail=serializers.FileField(required=False)
+    export=serializers.FileField(required=False)
     source_language=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required= False)
     image_to_translate_id=serializers.ListField(required =False,write_only=True)
     # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
@@ -135,14 +137,19 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             
             ####to create instance for target language
             for tar_lang in inpaint_creation_target_lang:
-                tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())   
+                tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,
+                                                             target_language=tar_lang.locale.first())
+                
+                t_inpaint_image=TargetInpaintaImage.objects.create(inpaint_creation=tar_bbox,mask_target=instance.mask,
+                                                   mask_json_target=instance.mask_json,inpaint_image_target=instance.inpaint_image)
                 source_bbox = source_bounding_box
                 for text in source_bbox.values(): 
                     translate_bbox = get_translation(1,source_string=text['text'],source_lang_code='en',
                                                      target_lang_code=tar_lang.locale.first().locale_code)
                     text['text']=translate_bbox
-                tar_bbox.target_bounding_box=source_bbox
-                tar_bbox.save()
+                t_inpaint_image.target_bounding_box=source_bbox
+                # tar_bbox.target_bounding_box=source_bbox
+                t_inpaint_image.save()
             instance.save()
             return instance
  
@@ -156,12 +163,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         export=validated_data.get('export',None)
         
         if export and target_update_id:
-            im_export=ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
+            im_export=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
             im_export.export=export
             im_export.save()
         
         if thumbnail and target_update_id:
-            im_thumbnail=ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
+            im_thumbnail=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
             im_thumbnail.thumbnail=thumbnail
             im_thumbnail.save()
             
@@ -179,8 +186,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
              instance.save()
              
         if target_canvas_json and target_update_id:
-            im_cre = ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
-            im_cre.target_canvas_json = target_canvas_json
+            im_cre=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
+            im_cre.target_canvas_json=target_canvas_json
             im_cre.save()
         return instance 
 
