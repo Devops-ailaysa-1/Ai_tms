@@ -2252,15 +2252,9 @@ def get_segment_history(request):
 # def paraphrasing(request):
 
 from ai_workspace.api_views import get_consumable_credits_for_text
-<<<<<<< HEAD
-from ai_openai.utils import get_prompt_chatgpt_turbo ,get_prompt
-from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
-from ai_tms.settings import OPENAI_MODEL
-=======
 from ai_openai.utils import get_prompt_chatgpt_turbo
 from ai_openai.serializers import openai_token_usage ,get_consumable_credits_for_openai_text_generator
 
->>>>>>> origin/dynamic_inpaint
 @api_view(['POST',])############### only available for english ###################
 def paraphrasing(request):
     from ai_workspace.api_views import get_consumable_credits_for_text
@@ -2270,55 +2264,18 @@ def paraphrasing(request):
     initial_credit = user.credit_balance.get("total_left")
     if initial_credit == 0:
         return  Response({'msg':'Insufficient Credits'},status=400)
-<<<<<<< HEAD
-=======
     
->>>>>>> origin/dynamic_inpaint
     tag_names = re.findall(r'<([a-zA-Z0-9]+)[^>]*>', sentence) 
     clean_sentence = re.sub('<[^<]+?>', '', sentence)
     consumable_credits_user_text =  get_consumable_credits_for_text(clean_sentence,source_lang='en',target_lang=None)
     if initial_credit >= consumable_credits_user_text:
-<<<<<<< HEAD
-        # result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence with 5 output :"+clean_sentence,n=1)
-        # para_sentence = result_prompt["choices"][0]["message"]["content"].split('\n')
-        result_prompt = get_prompt("Rewrite this sentence with 5 output :"+clean_sentence,
-                                   model_name=OPENAI_MODEL,max_token= 300 ,n=1)
-        # para_sentence=[i for i in result_prompt['choices'][0]['text'].split('\n') if i ]
-        para_sentence = [re.sub(r'\d+.','',i).strip() for i in result_prompt['choices'][0]['text'].split('\n') if i ]
-=======
         result_prompt = get_prompt_chatgpt_turbo("Rewrite this sentence :"+clean_sentence,n=1)
         para_sentence = result_prompt["choices"][0]["message"]["content"]#.split('\n')
->>>>>>> origin/dynamic_inpaint
         prompt_usage = result_prompt['usage']
         total_token = prompt_usage['completion_tokens']
         # openai_token_usage(result_prompt)
         consumed_credits = get_consumable_credits_for_openai_text_generator(total_token)
         debit_status, status_code = UpdateTaskCreditStatus.update_credits(user, consumed_credits)
-<<<<<<< HEAD
-
-        # for i in range(len(para_sentence)):
-
-        #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
-
-        if any(tag_names):
-            for i in range(len(list(tag_names))):
-                tag_names[i] = '<'+tag_names[i]+'>'
-        return Response({'paraphrase':para_sentence ,'tag':tag_names})
-    else:
-        return  Response({'msg':'Insufficient Credits'},status=400)
-    
-
-
-    # sentence = request.POST.get('sentence')
-    # try:
-    #     text = {}
-    #     text['sentence'] = sentence
-    #     end_pts = settings.END_POINT +"paraphrase/"
-    #     data = requests.post(end_pts , text)
-    #     return JsonResponse(data.json())
-    # except:
-    #     return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
-=======
         # for i in range(len(para_sentence)):
         #     para_sentence[i] = re.sub(r'\d+.','',para_sentence[i]).strip()
         if any(tag_names):
@@ -2340,7 +2297,6 @@ def paraphrasing(request):
 #         return JsonResponse(data.json())
 #     except:
 #         return JsonResponse({"message":"error in paraphrasing connect"},safe=False)
->>>>>>> origin/dynamic_inpaint
 
 
 

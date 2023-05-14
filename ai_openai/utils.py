@@ -87,17 +87,6 @@ def get_img_content_from_openai_url(image_url):
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError , max_time=30,max_tries=1)
 def get_prompt_chatgpt_turbo(prompt,n):
-<<<<<<< HEAD
-    completion = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "user", "content": prompt}
-    ],n=n
-    )
-    return completion
-
-
-=======
     completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content": prompt}],n=n)
     return completion
 
@@ -133,7 +122,6 @@ def outline_gen(prompt):
     results = asyncio.run(outline_co(prompt))
     return results[0]
 ######################
->>>>>>> origin/dynamic_inpaint
 
 from docx import Document
 from ai_openai.html2docx_custom import HtmlToDocx
@@ -158,11 +146,7 @@ def replace_hex_colors_with_rgb(html):
 # updatedHtml = replace_hex_colors_with_rgb("html_file")  
 # htmlupdates = updatedHtml.replace('<br />', '')
 # new_parser.add_html_to_document(htmlupdates, document)
-<<<<<<< HEAD
-# document.save('file_name.docx')s
-=======
 # document.save('file_name.docx')s
 
 
 
->>>>>>> origin/dynamic_inpaint

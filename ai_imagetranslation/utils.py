@@ -40,7 +40,7 @@ def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
 
 def creating_image_bounding_box(image_path):
     poly_line = []
-    pillow_image_to_extract_color =  Image.open(image_path) 
+    pillow_image_to_extract_color=Image.open(image_path) 
     texts=image_ocr_google_cloud_vision(image_path,inpaint=True)  
     text_and_bounding_results = {}
     no_of_segments = 0
@@ -157,8 +157,11 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
 # from celery import shared_task
 # @shared_task(serializer='json')
 from rest_framework import serializers
-def inpaint_image_creation(image_details):
-    img_path=image_details.image.path
+def inpaint_image_creation(image_details,dynamic):
+    if dynamic:
+        img_path=image_details.inpaint_creation.source_image.image.path
+    else:
+        img_path=image_details.image.path
     mask_path=image_details.mask.path
     mask = cv2.imread(mask_path)
     img = cv2.imread(img_path)
@@ -168,6 +171,9 @@ def inpaint_image_creation(image_details):
         inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
+        # if dynamic:
+        #     image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
+        # else:
         image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
 
         output=inpaint_image(img_path, mask_path)

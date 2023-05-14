@@ -6,7 +6,8 @@ import os
 from django.core.exceptions import ValidationError
 IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
 import json ,base64
-
+import io
+from PIL import Image
 # from google.cloud import translate_v2 as translate
 
 # def get_translation_canvas(source_string,target_lang_code):
@@ -27,7 +28,7 @@ def json_src_change(json_src ,req_host,instance):
             image_extention ="."+image_url.split('.')[-1]
             if req_host_url not in image_url:
                 req=requests.get(image_url).content
-                src_img_assets_can =  SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance)
+                src_img_assets_can=SourceImageAssetsCanvasTranslate.objects.create(canvas_design_img=instance)
                 src_file=core.files.File(core.files.base.ContentFile(req),"file"+image_extention)
                 src_img_assets_can.img =src_file
                 src_img_assets_can.save()
@@ -101,8 +102,7 @@ def thumbnail_create(json_str,formats):
         return ValidationError("error in node server")
 
 
-import io
-from PIL import Image
+
 def export_download(json_str,format,multipliervalue):
     json_ = json.dumps(json_str)
     data = {'json':json_ , 'format':format,'multiplierValue':multipliervalue}
