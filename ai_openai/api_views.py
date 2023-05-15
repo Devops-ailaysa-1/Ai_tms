@@ -895,7 +895,7 @@ def event_stream():
     for text in texts:
         time.sleep(0.06)
         t=text+" "
-        yield '{}'.format(t)
+        yield '\ndata: {}\n\n'.format(t)
 
 
 
