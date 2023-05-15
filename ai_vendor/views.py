@@ -469,7 +469,7 @@ def vendor_lang_pair_template(request):
     response['Content-Disposition'] = 'attachment; filename=Vendor_language_pairs.xlsx'
     xlsx_data = vendor_lang_sheet()
     response.write(xlsx_data)
-    response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+    response['Access-Control-Expose-Headers']='Content-Disposition'
     return response
 
 
@@ -713,3 +713,6 @@ def vendor_lang_pair_template(request):
 #     except:
 #         result["MT-Engines"]=[]
 #     return JsonResponse({"out":result},safe=False)
+
+
+    

@@ -864,3 +864,46 @@ def generate_article(request):
  
     #return JsonResponse({'error': 'Error'}, status=405)
  
+
+
+texts="""One of the UK’s leading gambling brands allegedly paid blogs advising new mothers to recommend its online casino games and link to its website, in a tactic that has been condemned as “predatory” by leading mental health and addiction experts.
+
+Coral struck deals with parenting bloggers to embed links in posts offering tips, including on how to relieve the stress of caring for a new baby.
+
+One post, ostensibly about baby food recipes, said: “If as a mum you can’t leave the house, then why not consider bingo online?
+
+“You can click here to play Bingo online at Coral – this momentary break from childcare can prove beneficial.”
+
+The Advertising Standards Authority’s (ASA) guidelines state that gambling adverts must not be “socially irresponsible”, including presenting betting as a way to relieve loneliness or depression.
+
+Another parenting blog recommended “opulent games of online roulette that are easy to learn and can provide some handy winnings too”.
+
+The ASA guidelines also state that gambling must not be presented as a “solution to financial concerns”.
+
+A further three parenting blogs posted parenting articles that also contained segments recommending online casino or bingo and linking to the Coral website.
+
+A source familiar with the arrangements said Coral had paid the bloggers to include the links.
+
+Such games are typically more popular with women than sports betting. Major gambling operators have sought to expand their customer base in recent years by targeting women, who have historically gambled less than men.
+
+Entain, which owns Coral, said the articles including links to the Coral website had been posted between 2014 and 2016, before it bought Ladbrokes Coral in 2018."""
+
+
+texts=texts.split(' ')
+
+def event_stream():
+    for text in texts:
+        time.sleep(0.06)
+        t=text+" "
+        yield '{}'.format(t)
+
+
+
+from django.views import View
+from django.http import StreamingHttpResponse
+
+class PostStreamView(View):
+    def get(self,request):
+        res=StreamingHttpResponse(event_stream())
+        res['Content-Type']='text/event-stream'
+        return res
