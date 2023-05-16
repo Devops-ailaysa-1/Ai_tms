@@ -978,11 +978,12 @@ class GetTalentSerializer(serializers.Serializer):
         saved_ids = SavedVendor.objects.filter(customer=request.user).values_list('vendor_id')
         saved = AiUser.objects.filter(id__in=saved_ids)
         ser = GetVendorListSerializer(saved,many=True,context={'request': request}).data
-        for i in ser:
-            if i.get("saved")==True:
-                if i.get('status') != "Invite Accepted":
-                    tt.append(i)
-        return tt
+        return ser
+        # for i in ser:
+        #     if i.get("saved")==True:
+        #         if i.get('status') != "Invite Accepted":
+        #             tt.append(i)
+        # return tt
 
     def get_hired(self,obj):
         tt=[]
