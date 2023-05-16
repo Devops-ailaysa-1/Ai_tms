@@ -550,7 +550,7 @@ class Document(models.Model):
         from ai_workspace.models import Task,TaskAssign
         task = Task.objects.filter(document=self).first().id
         if TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False):
-            rr = TaskAssign.objects.filter(task_id = task)
+            rr = TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False)
             return [{'assign_to_id':i.assign_to.id,'step_id':i.step.id,'task':i.task_id,'status':i.status} for i in rr]
         else:
             return []

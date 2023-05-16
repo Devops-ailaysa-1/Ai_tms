@@ -2635,8 +2635,8 @@ class SelflearningAssetViewset(viewsets.ViewSet):
         return Response(serializer.errors,status=400)
 
 class SegmentDiffViewset(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
-    def get_object(self, pk):
+    permission_classes=[IsAuthenticated,]
+    def get_object(self,pk):
         try:
             return SegmentDiff.objects.get(id=pk)
         except SegmentDiff.DoesNotExist:
@@ -2683,8 +2683,6 @@ def update_self_learning(sender, instance, *args, **kwargs):
 
 
 post_save.connect(update_self_learning, sender=SegmentHistory)
-
-
 
 def segment_difference(sender, instance, *args, **kwargs):
     seg_his=SegmentHistory.objects.filter(segment=instance.segment)

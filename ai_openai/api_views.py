@@ -811,50 +811,86 @@ def generate_article(request):
  
  
 
-
-texts="""One of the UK’s leading gambling brands allegedly paid blogs advising new mothers to recommend its online casino games and link to its website, in a tactic that has been condemned as “predatory” by leading mental health and addiction experts.
-
-Coral struck deals with parenting bloggers to embed links in posts offering tips, including on how to relieve the stress of caring for a new baby.
-
-One post, ostensibly about baby food recipes, said: “If as a mum you can’t leave the house, then why not consider bingo online?
-
-“You can click here to play Bingo online at Coral – this momentary break from childcare can prove beneficial.”
-
-The Advertising Standards Authority’s (ASA) guidelines state that gambling adverts must not be “socially irresponsible”, including presenting betting as a way to relieve loneliness or depression.
-
-Another parenting blog recommended “opulent games of online roulette that are easy to learn and can provide some handy winnings too”.
-
-The ASA guidelines also state that gambling must not be presented as a “solution to financial concerns”.
-
-A further three parenting blogs posted parenting articles that also contained segments recommending online casino or bingo and linking to the Coral website.
-
-A source familiar with the arrangements said Coral had paid the bloggers to include the links.
-
-Such games are typically more popular with women than sports betting. Major gambling operators have sought to expand their customer base in recent years by targeting women, who have historically gambled less than men.
-
-Entain, which owns Coral, said the articles including links to the Coral website had been posted between 2014 and 2016, before it bought Ladbrokes Coral in 2018."""
-
-
-texts=texts.split(' ')
+from django.http import StreamingHttpResponse,JsonResponse
+import openai  #blog_cre_id list
+from ai_staff.models import PromptSubCategories
 import time
-def event_stream():
-    for text in texts:
-        time.sleep(0.06)
-        t=text+" "
-        yield '\ndata: {}\n\n'.format(t)
+@api_view(["GET"])
+def generate_article(request):
+    if request.method=='GET':
+        blog_available_langs=[17]
+        sub_categories=59#63#64
+        blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
+        outline_list=request.query_params.get('outline_section_list')
+        blog_creation=request.query_params.get('blog_creation')
+        blog_creation=BlogCreation.objects.get(id=blog_creation)
+        outline_section_list=list(map(int,outline_list.split(',')))
+        outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
+        if blog_creation.user_language_id not in blog_available_langs:
+            title=blog_creation.user_title_mt
+            keyword=blog_creation.keywords_mt
+            outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
+        else:
+            title=blog_creation.user_title
+            keyword=blog_creation.keywords
+            outlines=list(outline_section_list.values_list('blog_outline',flat=True))
+        joined_list = "', '".join(outlines)
+        tone=blog_creation.tone.tone
+        prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
+        print("pmpt---->",prompt)
+        completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",
+                                                messages=[{"role":"user","content":prompt}],
+                                                stream=True)
+        def stream_article_response():
+            for chunk in completion:
+                ins=chunk['choices'][0]
+                if ins["finish_reason"]!='stop':
+                    delta=ins['delta']
+                    if 'content' in delta.keys():
+                        content=delta['content']
+                        t=content+" "
+                        yield '\ndata: {}\n\n'.format(t)
+        return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
+    return JsonResponse({'error':'Method not allowed.'},status=405)
 
-
-
-from django.views import View
-from django.http import StreamingHttpResponse
-
-class PostStreamView(View):
-    def get(self,request):
-        res=StreamingHttpResponse(event_stream())
-        res['Content-Type']='text/event-stream'
-        return res
+# from django.http import HttpResponse, StreamingHttpResponse
+# import time
+# @api_view(["POST"])
+# def generate_article(request):
     
- 
+#     text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
+#             Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
+#             Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small. This makes it difficult for the network to update the weights during training, leading to slow convergence or no convergence at all. 
+#             Understanding Backpropagation in the Context of Vanishing Gradient
+#             Backpropagation is the most popular algorithm for training neural networks. It works by propagating the error backward through the network, updating the weights in a way that reduces the error. However, when the gradient of the error function becomes small, backpropagation cannot update the weights effectively, leading to the problem of vanishing gradient. 
+#             The Cause and Effect of Vanishing Gradient on Neural Networks
+#             Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small due to the activation functions used. Activation functions such as sigmoid and hyperbolic tangent functions have a limited range that they can output which could cause them to saturate at either end of the function. This means that as you propagate through the network, the gradients of this function become smaller, leading to the vanishing gradient. 
+#             The Impact of Vanishing Gradient on Deep Learning Performance
+#             Vanishing gradient can have a significant impact on the performance of deep learning networks. In a deep neural network with many layers, vanishing gradient can prevent the lower layers from learning effectively, leading to poor performance. Additionally, it can cause the network to get stuck in local optima, resulting in a suboptimal solution.
+#             Strategies and Techniques for Mitigating Vanishing Gradient in Neural Networks
+#             Several strategies and techniques can help mitigate the problem of vanishing gradient in neural networks. One approach is to use activation functions that are less prone to saturation, such as the Rectified Linear Unit (ReLU) function. Another approach is to use skip connections, allowing for information to flow more easily between layers. Residual connections, popular in ResNets, is an architecture with skip connections between layers. Additionally, weight normalization or gradient clipping can be implemented to manage gradients and weights. 
+#             Challenges in Detecting and Diagnosing Vanishing Gradient in Machine Learning
+#             Detecting and diagnosing vanishing gradient can be challenging, as it is not always apparent during training. Some common signs of vanishing gradient include slow convergence, instability during training, and poor performance. However, these symptoms can also be caused by other factors, making it difficult to pinpoint the exact issue.
+#             Case Studies: Real-world Examples of Vanishing Gradient in Deep Learning Projects
+#             Vanishing gradient can manifest in various ways during real-world deep learning projects. One example is image classification, where deep learning models can struggle to distinguish between similar objects, such as different breeds of dogs. Another example is natural language processing, where the neural network can have difficulty predicting the next word in a sentence. In both of these cases, vanishing gradient can lead to poor performance and accuracy.
+#             Exploring the Possibilities of Overcoming Vanishing Gradient with Alternative Optimizers
+#             Several alternative optimization techniques have been proposed to overcome the problem of vanishing gradient. One such method is to use adaptive optimization methods, such as Adam and RMSprop. These algorithms adjust the learning rate for each weight in the network iteratively, providing better performance on the training set. 
+#             The Future of Vanishing Gradient: Opportunities and Emerging Solutions in Neural Networks
+#             As research in neural networks continues, we can expect to see new solutions emerge for vanishing gradient. One promising approach is to use more complex network architectures, such as the attention mechanism, to help manage the flow of information through the network. Additionally, transfer learning and pre-training networks on similar tasks can help alleviate problems associated with vanishing gradients.
+#             Conclusion and Next Steps in Vanishing Gradient Research and Development for Machine Learning
+#             Vanishing gradient is a common problem in neural networks that can have a significant impact on performance. Strategies and techniques can help mitigate this issue, but their effectiveness may vary depending on the specific architecture and application. As research in neural networks evolves, we can expect to see more advanced solutions for vanishing gradient emerge, leading to even more powerful AI technologies."""
+
+#     def stream():
+#         for chunk in text.split(' '):
+#             yield chunk
+#             print(chunk)
+#             time.sleep(0.2)
+#             ##print(chunk)
+
+#     response = HttpResponse(stream(),content_type='text/event-stream')
+#     response['Cache-Control'] = 'no-cache'
+#     response['Connection'] = 'keep-alive'
+#     return response
 
 
 
