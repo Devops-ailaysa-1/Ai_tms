@@ -2240,9 +2240,11 @@ def get_segment_history(request):
     seg_id = request.GET.get('segment')
     try:
         obj = Segment.objects.get(id=seg_id)
-        history = obj.segment_history.all().order_by('-id')
+        history = obj.segment_history.all().order_by('-id') 
         ser = SegmentHistorySerializer(history,many=True)
-        return Response(ser.data)
+        data_ser=ser.data
+        data=[i for i in data_ser if dict(i)['segment_difference']]
+        return Response(data)
     except Segment.DoesNotExist:
         return Response({'msg':'Not found'}, status=404)
 ####################################################### Hemanth #########################################################
@@ -2339,6 +2341,10 @@ def get_word_api(request):
     result = requests.post(end_pts , data )
     try:return JsonResponse(result.json())
     except:return JsonResponse({'msg':'something went wrong'})
+
+from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
+
+
 
 # headers = {
 #     "X-RapidAPI-Key": os.getenv("X-RapidAPI-Key"),
@@ -2589,3 +2595,115 @@ def get_tags(seg):
     return tags
 
 
+from ai_workspace_okapi.serializers import SegmentDiffSerializer
+from django.http import Http404
+from ai_staff.models import Languages
+from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
+from ai_workspace_okapi.utils import do_compare_sentence
+from django.db.models.signals import post_save 
+
+# class SelflearningAssetViewset(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated,]
+#     def get_object(self, pk):
+#         try:
+#             return SelflearningAsset.objects.get(id=pk)
+#         except SelflearningAsset.DoesNotExist:
+#             raise Http404
+
+#     def create(self,request):
+#         serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors)
+    
+#     def list(self, request):
+#         target_language=request.query_params.get('target_language', None)
+#         if target_language:
+#             target_language=Languages.objects.get(id=target_language)
+#             queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
+#         else:
+#             queryset = SelflearningAsset.objects.filter(user=request.user.id)
+#         serializer=SelflearningAssetSerializer(queryset,many=True)
+#         return Response(serializer.data)
+
+#     def retrieve(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer=SelflearningAssetSerializer(obj)
+#         return Response(serializer.data)
+    
+#     def update(self,request,pk):
+#         obj =self.get_object(pk)
+#         serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors,status=400)
+
+class SegmentDiffViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def get_object(self, pk):
+        try:
+            return SegmentDiff.objects.get(id=pk)
+        except SegmentDiff.DoesNotExist:
+            raise Http404
+
+
+# def update_self_learning(sender, instance, *args, **kwargs):
+#     user=instance.user
+#     language=instance.segment.text_unit.document.job.target_language
+#     seg_his=SegmentHistory.objects.filter(segment=instance.segment)
+#     if hasattr(instance.segment,'seg_mt_raw'):
+#         target_segment =instance.segment.seg_mt_raw.mt_raw  
+#     else:target_segment=''
+    
+#     edited_segment=instance.target
+
+#     # if instance.status.status_id==104:
+#     if edited_segment and target_segment:
+#         diff_words=do_compare_sentence(target_segment,edited_segment,sentense_diff=False)
+#         if diff_words:
+#             for diff_word in diff_words:
+#                 self_learn_filter=SelflearningAsset.objects.filter(user=user,source_word=diff_word[0])
+#                 if not self_learn_filter:
+#                     SelflearningAsset.objects.create(user=user,source_word=diff_word[0],edited_word=diff_word[1],
+#                                                     target_language=language)
+#                 if self_learn_filter:
+#                     self_learn_filter.update(source_word=diff_word[0],edited_word=diff_word[1])
+#             print("diff_words--->",diff_words)
+#         else:
+#             print("no_diff")
+#     else:
+#         print("no_seg and no_tar")
+
+
+# post_save.connect(update_self_learning, sender=SegmentHistory)
+
+
+
+def segment_difference(sender, instance, *args, **kwargs):
+    seg_his=SegmentHistory.objects.filter(segment=instance.segment)
+    #from current segment
+    edited_segment=''
+    target_segment=''
+    if len(seg_his)>=2:
+        edited_segment=seg_his.last().target
+        target_segment=seg_his[len(seg_his)-2].target
+    elif len(seg_his)==1:
+        if hasattr(instance.segment,'seg_mt_raw'):
+            target_segment =instance.segment.seg_mt_raw.mt_raw  
+        else:target_segment=''
+        # target_segment=instance.segment.seg_mt_raw.mt_raw
+        edited_segment=instance.target
+ 
+    print('edited_segment',edited_segment , 'target_segment',target_segment )
+    if edited_segment and target_segment:
+        print('edited_segment',edited_segment , 'target_segment',target_segment )
+        diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
+        if diff_sentense:
+            result_sen,save_type=diff_sentense
+            if result_sen.strip()!=edited_segment.strip():
+                SegmentDiff.objects.create(seg_history=instance,sentense_diff_result=result_sen,save_type=save_type)
+                print("seg_diff_created")
+
+post_save.connect(segment_difference, sender=SegmentHistory)
