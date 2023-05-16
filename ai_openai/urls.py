@@ -12,6 +12,7 @@ router.register(r'blogoutlinesession',api_views.BlogOutlineSessionViewset ,basen
 router.register(r'blogarticle',api_views.BlogArticleViewset ,basename='ai_article_gen')
 urlpatterns = router.urls
 
+ 
 urlpatterns += [
     path("prompt_result/",api_views.AiPromptResultViewset.as_view()),
     path("customize_text_generate",api_views.customize_text_openai),
@@ -21,7 +22,8 @@ urlpatterns += [
     path('image_history/',api_views.AiImageHistoryViewset.as_view()),
     path('image/',api_views.image_gen),
     path('default_langs/',api_views.user_preffered_langs),
-    path('stream_article/',api_views.PostStreamView.as_view()),
+    path('stream_article/',api_views.generate_article),
+    # path('stream_article/',api_views.PostStreamView.as_view()),
     #path('instant_translation_custom',api_views.instant_translation_custom)
 ]
 

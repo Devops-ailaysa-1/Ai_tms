@@ -460,8 +460,6 @@ def pixabay_api(request):
 
 #################################################################
 
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def instant_canvas_translation(request):
@@ -474,26 +472,25 @@ def instant_canvas_translation(request):
     text_translation = get_translation(1,text_list,'en',tar_lang_code)
     return Response({'translated_text_list':text_translation})
 
-
 ##################################
 
 
 class TextTemplateViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     def get(self, request):
-        query_set = TextTemplate.objects.all()
-        serializer = TextTemplateSerializer(query_set ,many =True)
+        query_set=TextTemplate.objects.all()
+        serializer=TextTemplateSerializer(query_set ,many =True)
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
-        query_set = TextTemplate.objects.get(id = pk)
-        serializer = TextTemplateSerializer(query_set )
+        query_set=TextTemplate.objects.get(id = pk)
+        serializer=TextTemplateSerializer(query_set )
         return Response(serializer.data)
         
     def create(self,request):
-        text_thumbnail = request.FILES.get('text_thumbnail' ,None)
-        text_keywords= request.POST.getlist('text_keywords' , None)
-        serializer = TextTemplateSerializer(data=request.data)
+        text_thumbnail=request.FILES.get('text_thumbnail',None)
+        text_keywords=request.POST.getlist('text_keywords',None)
+        serializer=TextTemplateSerializer(data=request.data)
                                         
         if serializer.is_valid():
             serializer.save()
@@ -502,10 +499,10 @@ class TextTemplateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
     
     def update(self,request,pk):
-        query_set = self.model.objects.get(id = pk)
-        text_thumbnail = request.FILES.get('text_thumbnail' ,None)
-        text_keywords= request.POST.getlist('text_keywords' , None)
-        serializer = TextTemplateSerializer(query_set, data=request.data ,partial = True)
+        query_set=self.model.objects.get(id = pk)
+        text_thumbnail=request.FILES.get('text_thumbnail',None)
+        text_keywords=request.POST.getlist('text_keywords',None)
+        serializer=TextTemplateSerializer(query_set, data=request.data ,partial = True)
                                 # 'text_keywords':text_keywords , 'text_thumbnail':text_thumbnail },partial = True)
         if serializer.is_valid():
             serializer.save()
@@ -515,15 +512,15 @@ class TextTemplateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
             
     def delete(self,request,pk):
-        query_set = self.model.objects.get(id = pk)
+        query_set=self.model.objects.get(id = pk)
         query_set.delete()
         return Response(status=204)
         
 class TemplateKeywordViewset(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
-    def get(self, request):
-        query_set = TemplateKeyword.objects.all()
-        serializer = TemplateKeywordSerializer(query_set ,many =True)
+    permission_classes=[IsAuthenticated,]
+    def get(self,request):
+        query_set=TemplateKeyword.objects.all()
+        serializer=TemplateKeywordSerializer(query_set ,many =True)
         return Response(serializer.data) 
     
 
