@@ -606,12 +606,20 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
                     hourly_rate = res[0].get('service__mtpe_hourly_rate')
                 else:
                     if res[0].get('service__mtpe_rate')!=None:
-                        res1 =requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_rate')})
-                        mtpe_rate = round(res1.json().get('result'),2) if res1.json().get('success') == True else None
+                        try:
+                            res1 =requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_rate')})
+                            print("Res1-------->",res1.json())
+                            mtpe_rate = round(res1.json().get('result'),2) if res1.json().get('success') == True else None
+                        except:
+                            mtpe_rate = None
                     else:mtpe_rate = None
                     if res[0].get('service__mtpe_hourly_rate')!=None:
-                        res2 = requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_hourly_rate')})
-                        hourly_rate = round(res2.json().get('result'),2) if res1.json().get('success') == True else None
+                        try:
+                            res2 = requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_hourly_rate')})
+                            print("Res2-------->",res2.json())
+                            hourly_rate = round(res2.json().get('result'),2) if res2.json().get('success') == True else None
+                        except:
+                            hourly_rate = None
                     else:hourly_rate = None
                 out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,\
                     "user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":res[0].get('currency'),\
