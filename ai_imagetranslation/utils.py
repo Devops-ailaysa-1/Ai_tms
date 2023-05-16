@@ -1,14 +1,14 @@
 from .models import *
-import cv2 ,io 
+import cv2,io 
 import numpy as np
 from PIL import Image
-from google.cloud import vision_v1 , vision
+from google.cloud import vision_v1,vision
 from google.oauth2 import service_account
 import extcolors 
 from django import core
 # from torch.utils.data._utils.collate import default_collate
 from django.conf import settings
-credentials = service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
+credentials=service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
 from django.core.exceptions import ValidationError
 import os 
@@ -40,11 +40,11 @@ def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
 
 def creating_image_bounding_box(image_path):
     poly_line = []
-    pillow_image_to_extract_color =  Image.open(image_path) 
+    pillow_image_to_extract_color=Image.open(image_path) 
     texts=image_ocr_google_cloud_vision(image_path,inpaint=True)  
-    text_and_bounding_results = {}
-    no_of_segments = 0
-    text_list = []
+    text_and_bounding_results={}
+    no_of_segments=0
+    text_list=[]
     for i in  texts.pages:
         for j in i.blocks:
             x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 

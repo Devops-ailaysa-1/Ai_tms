@@ -394,7 +394,7 @@ class BlogCreationViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
     def update(self,request,pk):
-        selected_keywords_list= request.POST.getlist('selected_keywords_list',None)
+        selected_keywords_list=request.POST.getlist('selected_keywords_list',None)
         unselected_keywords_list=request.POST.getlist('unselected_keywords_list',None)
         query_set = BlogCreation.objects.get(id = pk)
         serializer = BlogCreationSerializer(query_set,data=request.data,partial=True)
@@ -409,8 +409,6 @@ class BlogCreationViewset(viewsets.ViewSet):
         obj.delete()
         return Response(status=204)
 
-
- 
 class BlogKeywordGenerateViewset(viewsets.ViewSet):
  
     def retrieve(self, request,pk=None):
@@ -618,7 +616,7 @@ import time
 def generate_article(request):
     if request.method=='GET':
         blog_available_langs=[17]
-        sub_categories = 63#64
+        sub_categories=59#63#64
         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
         outline_list=request.query_params.get('outline_section_list')
         blog_creation=request.query_params.get('blog_creation')
@@ -626,20 +624,19 @@ def generate_article(request):
         outline_section_list=list(map(int,outline_list.split(',')))
         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
         if blog_creation.user_language_id not in blog_available_langs:
-            title = blog_creation.user_title_mt
-            keyword = blog_creation.keywords_mt
+            title=blog_creation.user_title_mt
+            keyword=blog_creation.keywords_mt
             outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
         else:
-            title = blog_creation.user_title
-            keyword = blog_creation.keywords
+            title=blog_creation.user_title
+            keyword=blog_creation.keywords
             outlines=list(outline_section_list.values_list('blog_outline',flat=True))
         joined_list = "', '".join(outlines)
         tone=blog_creation.tone.tone
         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
         print("pmpt---->",prompt)
         completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",
-                                                messages=[{"role":"user","content":prompt}],
-                                                stream=True)
+                                                messages=[{"role":"user","content":prompt}],stream=True)
         def stream_article_response():
             for chunk in completion:
                 ins=chunk['choices'][0]

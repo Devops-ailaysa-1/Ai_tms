@@ -2618,17 +2618,17 @@ class SelflearningAssetViewset(viewsets.ViewSet):
             queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
         else:
             queryset = SelflearningAsset.objects.filter(user=request.user.id)
-        serializer = SelflearningAssetSerializer(queryset,many=True)
+        serializer=SelflearningAssetSerializer(queryset,many=True)
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
         obj =self.get_object(pk)
-        serializer = SelflearningAssetSerializer(obj)
+        serializer=SelflearningAssetSerializer(obj)
         return Response(serializer.data)
     
     def update(self,request,pk):
         obj =self.get_object(pk)
-        serializer = SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
+        serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
