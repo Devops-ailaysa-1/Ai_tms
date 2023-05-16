@@ -148,7 +148,7 @@ class SegmentSerializerV2(SegmentSerializer):
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        output_list = [li for li in difflib.ndiff(instance.target, content) if li[0]=='+' or li[0]=='-']
+        output_list = True if instance.temp_target != content else False 
         print("ol------>",output_list)
         if "target" in validated_data:
             print("Inside if target")
@@ -190,7 +190,7 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
 
     class Meta:
         # pass
-        model = Segment
+        model=Segment
         fields = ['source', 'target','mt_raw_target', 'coded_source', 'coded_brace_pattern',
             'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
@@ -669,15 +669,33 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
         ser.create(segments, text_unit=text_unit)
         return text_unit
 
+
+from ai_workspace_okapi.models import SegmentDiff
+
+class SegmentDiffSerializer(serializers.ModelSerializer):
+    # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
+    class Meta:
+        model=SegmentDiff
+        fields=('id','sentense_diff_result','save_type')
+
 class SegmentHistorySerializer(serializers.ModelSerializer):
-    step_name = serializers.SerializerMethodField()
-    status_name = serializers.ReadOnlyField(source='status.status_name')
-    user_name = serializers.ReadOnlyField(source='user.fullname')
+    segment_difference=SegmentDiffSerializer(many=True)
+    step_name=serializers.SerializerMethodField()
+    status_id=serializers.ReadOnlyField(source='status.status_id')
+    user_name=serializers.ReadOnlyField(source='user.fullname')
     class Meta:
         model = SegmentHistory
-        fields = ('segment','target','created_at','user_name','status_name','step_name',)
+        fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
         # extra_kwargs = {
         #     "status": {"write_only": True}}
+
+
+    def to_representation(self, instance):
+        from ai_workspace_okapi.api_views import segment_difference
+        s=SegmentDiff.objects.filter(seg_history=instance)
+        if not s:
+            seg_diff=segment_difference(sender=None, instance=instance)
+        return super().to_representation(instance)
 
     def get_step_name(self,obj):
         try:
@@ -687,7 +705,7 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
             return step.name
         except:
             return None
-
+        
 class VerbSerializer(serializers.Serializer):
     text_string = serializers.CharField()
     synonyms_form =serializers.ListField()
@@ -695,7 +713,41 @@ class VerbSerializer(serializers.Serializer):
 
 
 
+from ai_workspace_okapi.models import SegmentDiff
 
+class SegmentDiffSerializer(serializers.ModelSerializer):
+    # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
+    class Meta:
+        model=SegmentDiff
+        fields=('id','sentense_diff_result','save_type')
+
+class SegmentHistorySerializer(serializers.ModelSerializer):
+    segment_difference=SegmentDiffSerializer(many=True)
+    step_name=serializers.SerializerMethodField()
+    status_id=serializers.ReadOnlyField(source='status.status_id')
+    user_name=serializers.ReadOnlyField(source='user.fullname')
+    class Meta:
+        model = SegmentHistory
+        fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
+        # extra_kwargs = {
+        #     "status": {"write_only": True}}
+
+
+    def to_representation(self, instance):
+        from ai_workspace_okapi.api_views import segment_difference
+        s=SegmentDiff.objects.filter(seg_history=instance)
+        if not s:
+            seg_diff=segment_difference(sender=None, instance=instance)
+        return super().to_representation(instance)
+
+    def get_step_name(self,obj):
+        try:
+            step = TaskAssign.objects.filter(
+                Q(task__document__document_text_unit_set__text_unit_segment_set=obj.segment_id) &
+                Q(assign_to = obj.user)).first().step
+            return step.name
+        except:
+            return None
 
 
 
