@@ -338,7 +338,8 @@ class SavedVendorView(viewsets.ViewSet):
 
     def delete(self,request,pk):
         user = request.user.team.owner if request.user.team else request.user 
-        obj = SavedVendor.objects.filter(customer=user).filter(id=pk).first()
+        obj = SavedVendor.objects.get(Q(customer=user) & Q(vendor=pk))
+        print("Obj----->",obj)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

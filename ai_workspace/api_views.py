@@ -727,9 +727,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
+        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        # user = self.request.user.team.owner if self.request.user.team else self.request.user
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
-                    .filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user)\
+                    .filter(Q(project_jobs_set__job_tasks_set__task_info__assign_to = user)\
                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
         # parent_queryset = queryset.annotate(
@@ -875,9 +877,12 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
+        user_1 = request.user.team.owner if request.user.team else request.user
         if project.ai_user == request.user:
+            print("Owner")
             return project.get_tasks
         if project.team:
+            print("Team")
             print(project.team.get_project_manager)
             if ((project.team.owner == request.user)|(request.user in project.team.get_project_manager)):
                 return project.get_tasks
@@ -885,10 +890,11 @@ class VendorDashBoardView(viewsets.ModelViewSet):
             #     return project.get_tasks
             else:
                 return [task for job in project.project_jobs_set.all() for task \
-                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = request.user).exists()]#.distinct('task')]
+                        in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
         else:
+            print("Indivual")
             return [task for job in project.project_jobs_set.all() for task \
-                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = request.user).exists()]#.distinct('task')]
+                    in job.job_tasks_set.all() if task.task_info.filter(assign_to = user_1).exists()]#.distinct('task')]
 
 
     def get_object(self):
@@ -1887,6 +1893,7 @@ class AssignToListView(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         project = self.request.GET.get('project')
         job = self.request.GET.getlist('job')
+        reassign = self.request.GET.get('reassign',None)
         pro = Project.objects.get(id = project)
         try:
             job_obj = Job.objects.filter(id__in = job).first() #need to work
@@ -1894,7 +1901,11 @@ class AssignToListView(viewsets.ModelViewSet):
         except Job.DoesNotExist:
             pass
         #authorize(request, resource=pro, actor=request.user, action="read")
-        user =pro.ai_user    
+        if reassign:
+            user = self.request.user.team.owner if self.request.user.team else self.request.user
+        else:
+            user =pro.ai_user   
+        print("User----------->",user) 
         serializer = GetAssignToSerializer(user,context={'request':request})
         return Response(serializer.data, status=201)
 

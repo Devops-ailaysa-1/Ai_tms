@@ -587,6 +587,9 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	def get_project_analysis(self,instance):
 		user = self.context.get("request").user if self.context.get("request")!=None else self\
 			.context.get("ai_user", None)
+
+		user_1 = user.team.owner if user.team else user
+
 		if instance.ai_user == user:
 			tasks = instance.get_tasks
 		elif instance.team:
@@ -594,11 +597,11 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 				tasks = instance.get_tasks
 			else:
 				tasks = [task for job in instance.project_jobs_set.all() for task \
-						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
+						in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 
 		else:
 			tasks = [task for job in instance.project_jobs_set.all() for task \
-					in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user)]
+					in job.job_tasks_set.all() for task_assign in task.task_info.filter(assign_to_id = user_1)]
 
 		res = instance.project_analysis(tasks)
 		return res
