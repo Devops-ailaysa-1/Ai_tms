@@ -117,8 +117,8 @@ class GlossaryFileView(viewsets.ViewSet):
 
     def list(self,request):
         job = request.GET.get('job')
-        queryset = GlossaryFiles.objects.filter(job_id = job)
-        serializer = GlossaryFileSerializer(queryset,many=True)
+        queryset=GlossaryFiles.objects.filter(job_id = job)
+        serializer=GlossaryFileSerializer(queryset,many=True)
         return  Response(serializer.data)
 
     def create(self, request):
@@ -136,8 +136,8 @@ class GlossaryFileView(viewsets.ViewSet):
         else:
             proj = Project.objects.get(id=proj_id)
             jobs = proj.get_jobs
-            data = [{"project": proj.id, "file": file, "job":job.id, "usage_type":8, "source_only":True} for file in files for job in jobs]
-        serializer = GlossaryFileSerializer(data=data,many=True)
+            data = [{"project": proj.id,"file":file,"job":job.id,"usage_type":8,"source_only":True} for file in files for job in jobs]
+        serializer=GlossaryFileSerializer(data=data,many=True)
         if serializer.is_valid():
             print(serializer.is_valid())
             serializer.save()
@@ -160,6 +160,8 @@ class GlossaryFileView(viewsets.ViewSet):
         return Response({"Msg":"Files Deleted"})
 
 ###############################Terms CRUD########################################
+
+
 
 class TermUploadView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

@@ -807,6 +807,21 @@ files = [
 ]
 
 [[package]]
+name = "convcolors"
+version = "2.2.0"
+description = "Convert colors between different color spaces."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "convcolors-2.2.0-py3-none-any.whl", hash = "sha256:aa5dfb9239cddd391df8aff1f6e482b242a212826a6e3427ba2e11db70836a2e"},
+    {file = "convcolors-2.2.0.tar.gz", hash = "sha256:4036848e98ae752abac4a54acb879b6711f8dcf2f768815c85366359a287c1bd"},
+]
+
+[package.extras]
+dev = ["pytest (==5.4.3)", "tox (==3.16.0)", "yapf (==0.30.0)"]
+
+[[package]]
 name = "cryptography"
 version = "38.0.4"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
@@ -1425,6 +1440,25 @@ files = [
 
 [package.extras]
 tests = ["asttokens", "littleutils", "pytest", "rich"]
+
+[[package]]
+name = "extcolors"
+version = "1.0.0"
+description = "Extract colors from an image. Colors are grouped based on visual similarities using the CIE76 formula."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "extcolors-1.0.0-py3-none-any.whl", hash = "sha256:92bfcd137c415ca1a3463feaa75f4189a7607f5bdf78dfd6a3e924be09e5ab14"},
+    {file = "extcolors-1.0.0.tar.gz", hash = "sha256:14e81457f98555ba36c07a5dde677d1d555e8f4b75633a4fad42df30a27c4f27"},
+]
+
+[package.dependencies]
+convcolors = ">=1.0.0"
+Pillow = ">=8.0.0"
+
+[package.extras]
+dev = ["pytest (==5.4.3)", "tox (==3.16.0)", "yapf (==0.30.0)"]
 
 [[package]]
 name = "filesplit"
@@ -2842,6 +2876,33 @@ typing_extensions = "*"
 dev = ["black (>=21.6b0,<22.0)", "pytest (>=6.0.0,<7.0.0)"]
 embeddings = ["matplotlib", "plotly", "scikit-learn (>=1.0.2)", "sklearn", "tenacity (>=8.0.1)"]
 wandb = ["wandb"]
+
+[[package]]
+name = "opencv-contrib-python"
+version = "4.7.0.72"
+description = "Wrapper package for OpenCV python bindings."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "opencv-contrib-python-4.7.0.72.tar.gz", hash = "sha256:ab33fa2385ec7e70b9d484293f6f1f3707933045af4d18bb3b0a0290fa44370f"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-macosx_10_16_x86_64.whl", hash = "sha256:698c6b6203831f6573e04258be197e3bfde97fb7279fb614e39d75a8bd5818fb"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:8cad628ea6cc493f6c56140d7edc86f7ed8de528e18e44311e42b390a7d9996e"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d1fef5ae16dfa73022749165e029e85eb0f399503470c0df1f84c95633f4ae52"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b54c2e8bb636e367d29bde48fae2aa52c43b782265cf65838a1fe852006cdd94"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-win32.whl", hash = "sha256:641ca83b34a9d3e8ef2da70533c6e4e3f076ffb0db69b963d82899cc53e9b3c2"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-win_amd64.whl", hash = "sha256:fefc5f7f1eef3125f78242afe5c989057b36c2f015619698c741b04f4503f913"},
+]
+
+[package.dependencies]
+numpy = [
+    {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
+    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
+    {version = ">=1.22.0", markers = "python_version >= \"3.11\""},
+    {version = ">=1.19.3", markers = "python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\" or python_version >= \"3.9\""},
+    {version = ">=1.17.0", markers = "python_version >= \"3.7\""},
+    {version = ">=1.17.3", markers = "python_version >= \"3.8\""},
+]
 
 [[package]]
 name = "openpyxl"
@@ -5179,4 +5240,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "e54f9926e1036a2a290e7c8fb71f1c9f0e41d2a1ac8ae67c30ad808e16dec22d"
+content-hash = "d6a3d073661fa5d338cb7c4c1a4c37df98fdef36a681bf3c001c0ed2a90c9b6f"

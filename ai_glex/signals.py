@@ -1,11 +1,30 @@
 from ai_glex import models as glex_model
 from tablib import Dataset
+import pandas as pd
+
+def duplicate_check(instance):
+    term=['Source language term','Target language term']
+    term_inst=list(glex_model.TermsModel.objects.filter(job__id=instance.job_id).values('sl_term','tl_term'))
+    df1=pd.DataFrame(term_inst)
+    df2=pd.DataFrame(instance.file.path)[term]
+    df1.rename(columns={'sl_term':term[0],'tl_term':term[1]},inplace=True)
+    df_all = df2.merge(df1, on=term,how='left',indicator=True)
+    df_look_up=df_all[df_all['_merge']=='left_only'][term]
+    return df_look_up
+
 
 def update_words_from_template(sender, instance, *args, **kwargs):
     print("Ins--->",instance)
     glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
-    dataset = Dataset()
-    imported_data = dataset.load(instance.file.read(), format='xlsx')
+    
+    uncommon_data_term=duplicate_check(instance)
+    if not uncommon_data_term.empty:
+        imported_data = Dataset()
+        imported_data.headers =uncommon_data_term.columns.tolist()
+        imported_data.add_data(uncommon_data_term.values.tolist())
+    else:
+        dataset = Dataset()
+        imported_data = dataset.load(instance.file.read(), format='xlsx')
     if instance.source_only == False and instance.job.source_language != instance.job.target_language:
         for data in imported_data:
             if data[2]:
@@ -43,11 +62,12 @@ def update_words_from_template(sender, instance, *args, **kwargs):
             value.job_id = instance.job_id
             value.save()
             #print("ID----------->",value.id)
+    
     print("Terms Uploaded")
 
 def delete_words_from_term_model(sender, instance, *args, **kwargs):
     try:
-        terms = glex_model.Terms.objects.filter(file_id = instance.id)
+        terms =glex_model.Terms.objects.filter(file_id=instance.id)
         terms.delete()
     except:
         pass
