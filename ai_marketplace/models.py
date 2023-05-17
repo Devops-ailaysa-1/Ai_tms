@@ -34,6 +34,7 @@ class ProjectboardDetails(models.Model):#stephen
     rate_range_max = models.DecimalField(
                          max_digits = 5,
                          decimal_places = 2,blank=True, null=True)
+    project_brief = models.BooleanField(default=False)
     currency = models.ForeignKey(Currencies,blank=True, null=True, related_name='rate_currency', on_delete=models.CASCADE)
     unit = models.ForeignKey(Billingunits,blank=True, null=True, related_name='bill_unit', on_delete=models.CASCADE)
     milestone = models.CharField(max_length=191,blank=True, null=True)

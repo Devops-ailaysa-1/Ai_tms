@@ -448,5 +448,46 @@ def split_check(segment_id):
     else:
         return True
 
+import difflib
 
+def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
+    diff_words=[]
+    pair_words=[]
+    if sentense_diff:
+        diff=seq_match_seg_diff(source_segment,edited_segment)
+        return diff 
+    else:
+        difftool = difflib.Differ()
+        diff = difftool.compare(source_segment.split(),edited_segment.split())
+        for line in diff:
+            if not line.startswith(" "):
+                if line.startswith("-"):
+                    diff_words.append(line)
+                elif line.startswith("+"):
+                    diff_words.append(line)
+            for i in range(len(diff_words)-1):
+                if diff_words[i][0]=='-' and diff_words[i+1][0]=='+':
+                    pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
+        return pair_words
 
+def seq_match_seg_diff(words1,words2):
+    s1=words1.split()
+    s2=words2.split()
+    matcher=difflib.SequenceMatcher(None,s1,s2 )
+    save_type=[]
+    data=[]
+    for tag,i1,i2,j1,j2 in matcher.get_opcodes():
+        if tag=='equal':
+            data.append(" ".join(s2[j1:j2]))
+        elif tag=='replace':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>'+'<del>'+" ".join(s1[i1:i2])+'</del>')
+            save_type.append('insert')
+        elif tag=='insert':
+            data.append('<ins class="changed-word">'+ " ".join(s2[j1:j2])+'</ins>')
+            save_type.append('insert')
+        elif tag=='delete':
+            data.append('<del class="removed-word">'+ " ".join(s1[i1:i2])+'</del>')
+            save_type.append('delete')
+    if save_type:
+        save_type=list(set(save_type))
+    return (" ".join(data)," ".join(save_type))

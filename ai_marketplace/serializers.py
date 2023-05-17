@@ -484,10 +484,11 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
     posted_by_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
     bidding_currency = serializers.ReadOnlyField(source='currency.currency_code')
+    project_brief = serializers.BooleanField(required=False)
     # steps_id = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),write_only=True)
     class Meta:
         model=ProjectboardDetails
-        fields=('id','project_id','customer_id','proj_name','proj_desc','post_word_count','status',
+        fields=('id','project_id','customer_id','project_brief','proj_name','proj_desc','post_word_count','status',
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
                  'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',
@@ -606,12 +607,20 @@ class PrimaryBidDetailSerializer(serializers.Serializer):
                     hourly_rate = res[0].get('service__mtpe_hourly_rate')
                 else:
                     if res[0].get('service__mtpe_rate')!=None:
-                        res1 =requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_rate')})
-                        mtpe_rate = round(res1.json().get('result'),2) if res1.json().get('success') == True else None
+                        try:
+                            res1 =requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_rate')})
+                            print("Res1-------->",res1.json())
+                            mtpe_rate = round(res1.json().get('result'),2) if res1.json().get('success') == True else None
+                        except:
+                            mtpe_rate = None
                     else:mtpe_rate = None
                     if res[0].get('service__mtpe_hourly_rate')!=None:
-                        res2 = requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_hourly_rate')})
-                        hourly_rate = round(res2.json().get('result'),2) if res1.json().get('success') == True else None
+                        try:
+                            res2 = requests.get('https://api.apilayer.com/fixer/convert',params={'apikey':key_,'from':vendor_currency_code,'to':obj.currency.currency_code,'amount':res[0].get('service__mtpe_hourly_rate')})
+                            print("Res2-------->",res2.json())
+                            hourly_rate = round(res2.json().get('result'),2) if res2.json().get('success') == True else None
+                        except:
+                            hourly_rate = None
                     else:hourly_rate = None
                 out=[{"vendor_id":vendor.id,"postedjob_id":i.id,"user_preffered_currency_id":obj.currency.id,\
                     "user_preffered_currency":obj.currency.currency_code,"vendor_given_currency":res[0].get('currency'),\
@@ -970,11 +979,12 @@ class GetTalentSerializer(serializers.Serializer):
         saved_ids = SavedVendor.objects.filter(customer=request.user).values_list('vendor_id')
         saved = AiUser.objects.filter(id__in=saved_ids)
         ser = GetVendorListSerializer(saved,many=True,context={'request': request}).data
-        for i in ser:
-            if i.get("saved")==True:
-                if i.get('status') != "Invite Accepted":
-                    tt.append(i)
-        return tt
+        return ser
+        # for i in ser:
+        #     if i.get("saved")==True:
+        #         if i.get('status') != "Invite Accepted":
+        #             tt.append(i)
+        # return tt
 
     def get_hired(self,obj):
         tt=[]
