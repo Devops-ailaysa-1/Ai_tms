@@ -837,10 +837,7 @@ def generate_article(request):
         joined_list = "', '".join(outlines)
         tone=blog_creation.tone.tone
         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
-        print("pmpt---->",prompt)
-        completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",
-                                                messages=[{"role":"user","content":prompt}],
-                                                stream=True)
+        completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
         def stream_article_response():
             for chunk in completion:
                 ins=chunk['choices'][0]
@@ -848,42 +845,106 @@ def generate_article(request):
                     delta=ins['delta']
                     if 'content' in delta.keys():
                         content=delta['content']
-                        t=content+" "
+                        t={'text':content+" "}
                         yield '\ndata: {}\n\n'.format(t)
         return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 from django.http import   StreamingHttpResponse
 import time
+
+text="""# Breaking the Language Barrier: An Introduction to Machine Translation
+The world is becoming increasingly globalized, and communication between people who speak different languages is becoming more common. This is where machine translation comes into play - it is a technology that is designed to bridge the language gap and enable communication between people who speak different languages.
+
+
+
+# The Science Behind Machine Translation: Natural Language Processing at Work
+
+
+
+Machine translation relies on natural language processing (NLP), which is a subfield of computer science that focuses on how computers can interpret and generate human language. NLP is a complex field that involves knowledge from linguistics, computer science, and artificial intelligence.
+
+
+
+# Decoding the Decoder: How Machine Translation Algorithms Work
+
+
+
+Machine translation algorithms work by breaking down human language into smaller parts, such as words and phrases. The algorithm then tries to translate each part individually and combine them to form a coherent translation. There are different types of machine translation algorithms, including rule-based, statistical, and neural machine translation.
+
+
+
+# The Importance of Training Data in Machine Translation
+
+
+
+Training data is critical in machine translation. The algorithm needs to learn from large sets of data in order to develop accurate translations. The training data can consist of parallel texts, which are texts in two different languages that have been aligned, or monolingual texts, which are texts in a single language.
+
+
+
+# Navigating Linguistic Nuances: Challenges of Machine Translation
+
+
+
+One of the biggest challenges in machine translation is navigating linguistic nuances. Different languages have different structures, idioms, and colloquialisms that can be difficult for the algorithm to understand. The algorithm also needs to take into account the context of the text and the intended audience.
+
+
+
+# Improving Accuracy with Machine Learning Techniques in Machine Translation
+
+
+
+Machine learning techniques can be used to improve the accuracy of machine translation. These techniques involve training the algorithm to automatically identify patterns in the data and adjust its translation process accordingly. Some popular machine learning techniques used in machine translation include deep learning and reinforcement learning.
+
+
+
+# The Future of Machine Translation: Advancements and Outlook
+
+
+
+The future of machine translation looks promising. Researchers are constantly working on improving the accuracy of machine translation and developing new techniques to better handle linguistic nuances. As the technology improves, machine translation will become more accessible and affordable, making it more widely available to businesses and individuals alike.
+
+
+
+# Evaluating the Quality of Machine Translation: Metrics and Methods
+
+
+
+There are several metrics and methods for evaluating the quality of machine translation. Two common metrics are the BLEU score and the human evaluation method. The BLEU score measures the similarity between the machine translation and a reference translation, whereas the human evaluation method involves having human evaluators rate the quality of the translation.
+
+
+
+# Applications of Machine Translation: Benefits and Limitations
+
+
+
+Machine translation has a wide range of applications. It can be used in business, tourism, education, and many other fields to enable communication between people who speak different languages. However, machine translation has its limitations, and it should not be relied upon for highly specialized or sensitive translations.
+
+
+
+# Closing the Gap: Conclusions on Decoding Machine Translation
+
+
+
+Machine translation is a powerful tool that can help bridge the language gap and enable communication between people who speak different languages. However, it is not a perfect solution, and there are limitations to what it can accomplish. As the technology continues to improve, we can expect to see machine translation become even more widely used and accessible.
+
+
+
+# Conclusion: The Evolution of Machine Translation and the Future of NLP and Decoder Development
+
+
+
+Machine translation has come a long way since its inception, and it continues to evolve and improve. The technology has the potential to revolutionize communication and open up new opportunities for businesses and individuals around the world. With advancements in NLP and decoder development, we can expect to see machine translation become even more accurate and widely used in the years to come."""
+
+
+
 @api_view(["GET"])
 def generate(request):
-    
-    text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
-            Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
-            Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small. This makes it difficult for the network to update the weights during training, leading to slow convergence or no convergence at all. 
-            Understanding Backpropagation in the Context of Vanishing Gradient
-            Backpropagation is the most popular algorithm for training neural networks. It works by propagating the error backward through the network, updating the weights in a way that reduces the error. However, when the gradient of the error function becomes small, backpropagation cannot update the weights effectively, leading to the problem of vanishing gradient. 
-            The Cause and Effect of Vanishing Gradient on Neural Networks
-            Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small due to the activation functions used. Activation functions such as sigmoid and hyperbolic tangent functions have a limited range that they can output which could cause them to saturate at either end of the function. This means that as you propagate through the network, the gradients of this function become smaller, leading to the vanishing gradient. 
-            The Impact of Vanishing Gradient on Deep Learning Performance
-            Vanishing gradient can have a significant impact on the performance of deep learning networks. In a deep neural network with many layers, vanishing gradient can prevent the lower layers from learning effectively, leading to poor performance. Additionally, it can cause the network to get stuck in local optima, resulting in a suboptimal solution.
-            Strategies and Techniques for Mitigating Vanishing Gradient in Neural Networks
-            Several strategies and techniques can help mitigate the problem of vanishing gradient in neural networks. One approach is to use activation functions that are less prone to saturation, such as the Rectified Linear Unit (ReLU) function. Another approach is to use skip connections, allowing for information to flow more easily between layers. Residual connections, popular in ResNets, is an architecture with skip connections between layers. Additionally, weight normalization or gradient clipping can be implemented to manage gradients and weights. 
-            Challenges in Detecting and Diagnosing Vanishing Gradient in Machine Learning
-            Detecting and diagnosing vanishing gradient can be challenging, as it is not always apparent during training. Some common signs of vanishing gradient include slow convergence, instability during training, and poor performance. However, these symptoms can also be caused by other factors, making it difficult to pinpoint the exact issue.
-            Case Studies: Real-world Examples of Vanishing Gradient in Deep Learning Projects
-            Vanishing gradient can manifest in various ways during real-world deep learning projects. One example is image classification, where deep learning models can struggle to distinguish between similar objects, such as different breeds of dogs. Another example is natural language processing, where the neural network can have difficulty predicting the next word in a sentence. In both of these cases, vanishing gradient can lead to poor performance and accuracy.
-            Exploring the Possibilities of Overcoming Vanishing Gradient with Alternative Optimizers
-            Several alternative optimization techniques have been proposed to overcome the problem of vanishing gradient. One such method is to use adaptive optimization methods, such as Adam and RMSprop. These algorithms adjust the learning rate for each weight in the network iteratively, providing better performance on the training set. 
-            The Future of Vanishing Gradient: Opportunities and Emerging Solutions in Neural Networks
-            As research in neural networks continues, we can expect to see new solutions emerge for vanishing gradient. One promising approach is to use more complex network architectures, such as the attention mechanism, to help manage the flow of information through the network. Additionally, transfer learning and pre-training networks on similar tasks can help alleviate problems associated with vanishing gradients.
-            Conclusion and Next Steps in Vanishing Gradient Research and Development for Machine Learning
-            Vanishing gradient is a common problem in neural networks that can have a significant impact on performance. Strategies and techniques can help mitigate this issue, but their effectiveness may vary depending on the specific architecture and application. As research in neural networks evolves, we can expect to see more advanced solutions for vanishing gradient emerge, leading to even more powerful AI technologies."""
-
     def stream():
         for chunk in text.split(' '):
-            yield '\ndata: {}\n\n'.format(chunk)
-            time.sleep(0.2)
+            t={'text':chunk+" "}
+            time.sleep(0.01)
+            yield '\ndata: {}\n\n'.format(t)     
     return StreamingHttpResponse(stream (),content_type='text/event-stream')
  
 
