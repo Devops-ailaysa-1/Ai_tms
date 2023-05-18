@@ -371,8 +371,10 @@ class ProjectPostBidDetailSerializer(serializers.ModelSerializer):
     def get_job_id(self,obj):
         tar_lang = None if obj.bidpostjob.src_lang_id == obj.bidpostjob.tar_lang_id else obj.bidpostjob.tar_lang_id
         pr = obj.bidpostjob.projectpost.project
-        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
-        return job[0].id if job else None
+        if pr:
+            job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
+            return job[0].id if job else None
+        else: return None
 
     def get_current_status(self,obj):
         user = self.context.get("request").user

@@ -806,7 +806,7 @@ def generate_article(request):
                     delta=ins['delta']
                     if 'content' in delta.keys():
                         content=delta['content']
-                        t=content+" "
+                        t={'text':content+" "}
                         yield '\ndata: {}\n\n'.format(t)
         return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
