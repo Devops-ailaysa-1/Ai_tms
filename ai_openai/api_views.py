@@ -944,7 +944,7 @@ def generate(request):
         for chunk in text.split(' '):
             t={'text':chunk+" "}
             time.sleep(0.01)
-            yield '\ndata: {}\n\n'.format(json.dumps(t).encode('utf-8'))     
+            yield '\ndata: {}\n\n'.format(t)     
     return StreamingHttpResponse(stream(),content_type='application/json')   #text/event-stream
  
 
