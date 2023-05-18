@@ -3550,6 +3550,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         writer_proj = request.POST.get('project',None)
         if not writer_proj:
             writer_obj = WriterProject.objects.create(ai_user_id = ai_user.id)
+            print("Writer------>",writer_obj)
             writer_proj = writer_obj.id
         ser = MyDocumentSerializer(data={**request.POST.dict(),'project':writer_proj,'file':file,'ai_user':ai_user.id,'created_by':request.user.id})
         if ser.is_valid(raise_exception=True):
