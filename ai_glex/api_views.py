@@ -117,7 +117,7 @@ class GlossaryFileView(viewsets.ViewSet):
 
     def list(self,request):
         job = request.GET.get('job')
-        queryset=GlossaryFiles.objects.filter(job_id = job)
+        queryset=GlossaryFiles.objects.filter(job_id=job)
         serializer=GlossaryFileSerializer(queryset,many=True)
         return  Response(serializer.data)
 
@@ -129,10 +129,12 @@ class GlossaryFileView(viewsets.ViewSet):
             df = pd.read_excel(i)
             if 'Source language term' not in df.head():
                 return Response({'msg':'file(s) not contained supported data'},status=400)
+        print(job_id)
         if job_id:
             job = json.loads(request.POST.get('job'))
             obj = Job.objects.get(id=job)
             data = [{"project": obj.project.id, "file": file, "job":job, "usage_type":8} for file in files]
+            print(data)
         else:
             proj = Project.objects.get(id=proj_id)
             jobs = proj.get_jobs

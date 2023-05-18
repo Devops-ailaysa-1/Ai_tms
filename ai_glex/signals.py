@@ -6,6 +6,7 @@ def duplicate_check(instance):
     term=['Source language term','Target language term']
     term_inst=list(glex_model.TermsModel.objects.filter(job__id=instance.job_id).values('sl_term','tl_term'))
     df1=pd.DataFrame(term_inst)
+    print("-------------->",instance.file.path)
     df2=pd.DataFrame(instance.file.path)[term]
     df1.rename(columns={'sl_term':term[0],'tl_term':term[1]},inplace=True)
     df_all = df2.merge(df1, on=term,how='left',indicator=True)
