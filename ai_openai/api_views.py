@@ -945,7 +945,7 @@ def generate(request):
             # t={'text':chunk+" "}
             t=chunk+" "
             time.sleep(0.01)
-            yield '\ndata: {}\n\n'.format(t)     
+            yield '\ndata: {}\n\n'.format(t.encode('utf-8'))     
     return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
  
 
