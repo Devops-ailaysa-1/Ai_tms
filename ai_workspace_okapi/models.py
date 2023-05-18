@@ -552,7 +552,7 @@ class Document(models.Model):
         task = Task.objects.filter(document=self).first().id
         if TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False):
             rr = TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False)
-            return [{'assign_to_id':i.assign_to.id,'step_id':i.step.id,'task':i.task_id,'status':i.status} for i in rr]
+            return [{'assign_to_id':i.assign_to.id,'step_id':i.step.id,'task':i.task_id,'status':i.status,'reassigned':i.reassigned} for i in rr]
         else:
             return []
 
