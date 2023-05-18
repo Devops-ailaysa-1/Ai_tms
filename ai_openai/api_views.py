@@ -961,7 +961,7 @@ def generate(request):
                     # d.append(j)
                 else:
                     time.sleep(0.01)
-                    yield '\ndata: {}\n\n'.format(i)
+                    yield '\ndata: {}\n\n'.format(i+' ')
                     # d.append(i)
             # t={'text':chunk+" "}
             time.sleep(0.01)
