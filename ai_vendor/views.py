@@ -404,6 +404,7 @@ def vendor_lang_sheet():
 def check_null_rows(df):
     fields_to_check = ['Source Language','Target Language']
     check_fields_empty = df[fields_to_check].notnull().all(axis=1)
+    print("Check---->",check_fields_empty)
     #check_row_empty=df.notnull().all(axis=1)
     return all(check_fields_empty)
 
@@ -434,29 +435,37 @@ def vendor_language_pair(request):
     #     return JsonResponse({'status':'empty file upload'})
     if df.columns.to_list() == column_name:
         any_null=check_null_rows(df)
-        df=df.dropna()
+        print("anyNull---->",any_null)
+        print("Df-------->",df)
+        #df=df.dropna()
         lang_check=check_lang_pair(df)
         if any_null and not lang_check:
             df=df.drop_duplicates(keep="first", inplace=False)
+            print("Df-------->",df)
             for _, row in df.iterrows():
                 try:
+                    print("Inside Try")
                     src_lang=Languages.objects.get(language=row['Source Language'])
                     tar_lang=Languages.objects.get(language=row['Target Language'])
-                    currency=Currencies.objects.get(currency_code=row['Currency'])
-                    service=ServiceTypes.objects.get(name=row['Service'])
-                    unit_type=ServiceTypeunits.objects.get(unit=row['Unit Type'])
-                    unit_rate=row['Unit Rate']
-                    hourly_rate=row['Hourly Rate']
+                    currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
+                    print("Cur------>",currency_code)
+                    currency=Currencies.objects.get(currency_code=currency_code)
+                    service= None if pd.isnull(row['Service']) else ServiceTypes.objects.get(name=row['Service'])
+                    unit_type=None if pd.isnull(row['Unit Type']) else ServiceTypeunits.objects.get(unit=row['Unit Type'])
+                    unit_rate=None if pd.isnull(row['Unit Rate']) else row['Unit Rate']
+                    hourly_rate=None if pd.isnull(row['Hourly Rate']) else row['Hourly Rate']
                     vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
                                                                     target_lang=tar_lang,currency=currency)
-                    print("Vendor_lang----->",vendor_lang_pair)
-                    ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                    print("Vendor_lang----->",vender_lang_pair)
+                    if service and unit_type and unit_rate:
+                        ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 
                     if row['Reverse']:
                         vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
                                                                     target_lang=src_lang,currency=currency)
-                        print("Vendor_lang----->",vendor_lang_pair)
-                        ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                        print("Vendor_lang----->",vender_lang_pair)
+                        if service and unit_type and unit_rate:
+                            ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
                     print("Exception--------->",e)
                     pass
