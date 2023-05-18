@@ -944,10 +944,11 @@ def generate(request):
             d=[]
             x=0
             for i in text.split(' '):
-                if i=='#':
+                if '#' in i:
                     x=1
                     time.sleep(0.01)
-                    yield '\ndata: {}\n\n'.format(i.encode('utf-8'))  
+                    j=i.replace("\n",'<h1>')
+                    yield '\ndata: {}\n\n'.format(j)  
                     # d.append("<h1>")
                 elif '\n' in i:
                     if x==1:
