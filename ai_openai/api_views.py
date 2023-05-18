@@ -851,7 +851,7 @@ def generate_article(request):
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 from django.http import   StreamingHttpResponse
-import time
+import time,json
 
 text="""# Breaking the Language Barrier: An Introduction to Machine Translation
 The world is becoming increasingly globalized, and communication between people who speak different languages is becoming more common. This is where machine translation comes into play - it is a technology that is designed to bridge the language gap and enable communication between people who speak different languages.
@@ -944,8 +944,8 @@ def generate(request):
         for chunk in text.split(' '):
             t={'text':chunk+" "}
             time.sleep(0.01)
-            yield '\ndata: {}\n\n'.format(t)     
-    return StreamingHttpResponse(stream (),content_type='text/event-stream')
+            yield '\ndata: {}\n\n'.format(json.dumps(t))     
+    return StreamingHttpResponse(stream(),content_type='text/event-stream')
  
 
 
