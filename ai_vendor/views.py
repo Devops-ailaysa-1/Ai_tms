@@ -402,8 +402,10 @@ def vendor_lang_sheet():
 
 
 def check_null_rows(df):
-    check_row_empty=df.notnull().all(axis=1)
-    return all(check_row_empty)
+    fields_to_check = ['Source Language','Target Language']
+    check_fields_empty = df[fields_to_check].notnull().all(axis=1)
+    #check_row_empty=df.notnull().all(axis=1)
+    return all(check_fields_empty)
 
 def check_lang_pair(df):
     return any(list(df['Source Language']==df['Target Language']))
@@ -413,9 +415,11 @@ def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rat
     if service.name=='MTPE (MPE)':
         service=VendorServiceInfo.objects.create(lang_pair=vender_lang_pair,mtpe_rate=unit_rate,
                                     mtpe_count_unit=unit_type,mtpe_hourly_rate=hourly_rate)
+        print("ser------>",service)
     else:
         service=VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
                                     unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
+        print("ser--------->",service)
     return service
 
 @api_view(['POST'])
@@ -445,13 +449,16 @@ def vendor_language_pair(request):
                     hourly_rate=row['Hourly Rate']
                     vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
                                                                     target_lang=tar_lang,currency=currency)
+                    print("Vendor_lang----->",vendor_lang_pair)
                     ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 
                     if row['Reverse']:
                         vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
                                                                     target_lang=src_lang,currency=currency)
+                        print("Vendor_lang----->",vendor_lang_pair)
                         ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                 except IntegrityError as e:
+                    print("Exception--------->",e)
                     pass
                     # return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
