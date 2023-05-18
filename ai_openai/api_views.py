@@ -947,7 +947,7 @@ def generate(request):
                 if '#' in i:
                     x=1
                     time.sleep(0.01)
-                    j=i.replace("\n",'<h1>')
+                    j=i.replace("#",'<h1>')
                     yield '\ndata: {}\n\n'.format(j)  
                     # d.append("<h1>")
                 elif '\n' in i:
