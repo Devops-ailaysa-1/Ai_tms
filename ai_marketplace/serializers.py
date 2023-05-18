@@ -82,8 +82,11 @@ class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
 
     def get_job_id(self,obj):
         pr = obj.bidpostjob.projectpost.project
-        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
-        return job[0].id if job else None
+        if pr:
+            job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
+            return job[0].id if job else None
+        else:
+            return None
 
 
 class BidPropasalDetailSerializer(serializers.ModelSerializer):
