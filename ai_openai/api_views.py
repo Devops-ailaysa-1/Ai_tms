@@ -946,7 +946,7 @@ def generate(request):
             t=chunk+" "
             time.sleep(0.01)
             yield '\ndata: {}\n\n'.format(t)     
-    return StreamingHttpResponse(stream(),content_type='application/json')   #text/event-stream
+    return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
  
 
 
