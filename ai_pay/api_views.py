@@ -438,7 +438,16 @@ def generate_client_po(task_assign_info):
                 'po_status':'issued','po_total_amount':0}
         # print("insert2",insert2)
 
-        po=PurchaseOrder.objects.create(**insert2)       
+        old_po = PurchaseOrder.objects.filter(Q(assignment=assign)&~Q(po_status="void")&Q(po_status="issued"))
+        if  old_po.count() != 0 :
+            if old_po.count() == 1:
+                po = old_po.last()
+            else:
+                logger.error("too many open po found")
+        else:
+            po = PurchaseOrder.objects.create(**insert2)
+            
+               
         for obj_id in task_assign_info:
             instance = TaskAssignInfo.objects.get(id=obj_id)
             assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]

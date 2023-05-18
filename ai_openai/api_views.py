@@ -777,7 +777,7 @@ import time
 def generate_article(request):
     if request.method=='GET':
         blog_available_langs=[17]
-        sub_categories=59#63#64
+        sub_categories=64
         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
         outline_list=request.query_params.get('outline_section_list')
         blog_creation=request.query_params.get('blog_creation')
