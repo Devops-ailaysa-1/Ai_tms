@@ -115,6 +115,12 @@ class SegmentSerializerV2(SegmentSerializer):
         else:
             return target
 
+    # def his_check(self,instance,temp_target,content,user):
+    #     if temp_target != content:
+    #         return True
+    #     else:
+    #         SegmentHistory.objects.filter(seg)
+
 
     def update_task_assign(self,task_obj,user):
         try:
@@ -148,8 +154,7 @@ class SegmentSerializerV2(SegmentSerializer):
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        output_list = True if instance.temp_target != content else False 
-        print("ol------>",output_list)
+        seg_his_create = True if instance.temp_target!=content else False #self.his_check(instance,instance.temp_target,content,user_1)
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
@@ -172,10 +177,10 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.temp_target = instance.target
             instance.save()
             self.update_task_assign(task_obj,user_1)
-            if output_list:
+            if seg_his_create:
                 SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
-        if output_list:
+        if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
         self.update_task_assign(task_obj,user_1)
         return super().update(instance, validated_data)
