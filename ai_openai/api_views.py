@@ -946,17 +946,21 @@ def generate(request):
             for i in text.split(' '):
                 if i=='#':
                     x=1
+                    time.sleep(0.01)
                     yield '\ndata: {}\n\n'.format(i.encode('utf-8'))  
-                    d.append("<h1>")
+                    # d.append("<h1>")
                 elif '\n' in i:
                     if x==1:
+                        time.sleep(0.01)
                         yield '\ndata: {}\n\n'.format('</h1>')
                         x=0  
                         # d.append("</h1>")
                     j=i.replace("\n",'<br>')
+                    time.sleep(0.01)
                     yield '\ndata: {}\n\n'.format(j)
                     # d.append(j)
                 else:
+                    time.sleep(0.01)
                     yield '\ndata: {}\n\n'.format(i)
                     # d.append(i)
             # t={'text':chunk+" "}
