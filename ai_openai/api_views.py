@@ -942,7 +942,8 @@ Machine translation has come a long way since its inception, and it continues to
 def generate(request):
     def stream():
         for chunk in text.split(' '):
-            t={'text':chunk+" "}
+            # t={'text':chunk+" "}
+            t=chunk+" "
             time.sleep(0.01)
             yield '\ndata: {}\n\n'.format(t)     
     return StreamingHttpResponse(stream(),content_type='application/json')   #text/event-stream
