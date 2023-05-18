@@ -941,11 +941,27 @@ Machine translation has come a long way since its inception, and it continues to
 @api_view(["GET"])
 def generate(request):
     def stream():
-        for chunk in text.split(' '):
+            d=[]
+            x=0
+            for i in text.split(' '):
+                if i=='#':
+                    x=1
+                    yield '\ndata: {}\n\n'.format(i.encode('utf-8'))  
+                    d.append("<h1>")
+                elif '\n' in i:
+                    if x==1:
+                        yield '\ndata: {}\n\n'.format('</h1>')
+                        x=0  
+                        # d.append("</h1>")
+                    j=i.replace("\n",'<br>')
+                    yield '\ndata: {}\n\n'.format(j)
+                    # d.append(j)
+                else:
+                    yield '\ndata: {}\n\n'.format(i)
+                    # d.append(i)
             # t={'text':chunk+" "}
-            t=chunk+" "
             time.sleep(0.01)
-            yield '\ndata: {}\n\n'.format(t.encode('utf-8'))     
+            # yield '\ndata: {}\n\n'.format(t.encode('utf-8'))     
     return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
  
 
