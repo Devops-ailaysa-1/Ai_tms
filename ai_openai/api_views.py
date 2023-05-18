@@ -964,7 +964,8 @@ def generate(request):
             #         time.sleep(0.01)
             #         yield '\ndata: {}\n\n'.format(i+' ')
                     # d.append(i)
-            t={'text':i+" "}
+            t=i+' '
+            # t={'text':i+" "}
             time.sleep(0.01)
             yield '\ndata: {}\n\n'.format(t.encode('utf-8'))     
     return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
