@@ -122,6 +122,8 @@ req_ilango.txt
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
 
+okapi_resources
+okapi_resources/tamil.srx
 *.xlsx
 *.sh
 *.zip
@@ -130,3 +132,5 @@ ai_tms/settings/local_settings.py
 *.save*
 *.txt
 *.dockerignore
+
+
