@@ -1012,8 +1012,8 @@ def generate(request):
                     a=[]
             else:
                 a.append(i)
-        return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
-    return JsonResponse({'error':'Method not allowed.'},status=405)
+    return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
+    # return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
  
