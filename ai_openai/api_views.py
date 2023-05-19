@@ -1002,7 +1002,7 @@ def generate(request):
                     a=[]
             else:
                 a.append(i)
-            yield '\ndata: {}\n\n'.format(t.encode('utf-8'))     
+             
     return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
  
 
