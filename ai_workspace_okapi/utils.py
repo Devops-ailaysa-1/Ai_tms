@@ -459,28 +459,6 @@ def split_check(segment_id):
     else:
         return True
 
-<<<<<<< HEAD
-def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
-    diff_words=[]
-    pair_words=[]
-    if sentense_diff:
-        diff=seq_match_seg_diff(source_segment,edited_segment)
-        return diff 
-    else:
-        difftool = difflib.Differ()
-        diff = difftool.compare(source_segment.split(),edited_segment.split())
-        for line in diff:
-            if not line.startswith(" "):
-                if line.startswith("-"):
-                    diff_words.append(line)
-                elif line.startswith("+"):
-                    diff_words.append(line)
-            for i in range(len(diff_words)-1):
-                if diff_words[i][0]=='-' and diff_words[i+1][0]=='+':
-                    pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
-        return pair_words
-
-=======
 import difflib
 
 def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
@@ -503,7 +481,6 @@ def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
                     pair_words.append((diff_words[i][1:].strip(),diff_words[i+1][1:].strip()))
         return pair_words
 
->>>>>>> origin/v4-merged-production
 def seq_match_seg_diff(words1,words2):
     s1=words1.split()
     s2=words2.split()
@@ -524,8 +501,4 @@ def seq_match_seg_diff(words1,words2):
             save_type.append('delete')
     if save_type:
         save_type=list(set(save_type))
-<<<<<<< HEAD
     return (" ".join(data)," ".join(save_type))
-=======
-    return (" ".join(data)," ".join(save_type))
->>>>>>> origin/v4-merged-production

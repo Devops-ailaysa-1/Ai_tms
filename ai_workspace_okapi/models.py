@@ -598,10 +598,6 @@ class SegmentHistory(models.Model):
     # sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
     # save_type=models.CharField(max_length=100,blank=True,null=True)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/v4-merged-production
 class SelflearningAsset(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
     target_language=models.ForeignKey(Languages,related_name='selflearning_target',on_delete=models.CASCADE)

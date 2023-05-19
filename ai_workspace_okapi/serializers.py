@@ -154,14 +154,7 @@ class SegmentSerializerV2(SegmentSerializer):
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-<<<<<<< HEAD
-        output_list = True if instance.temp_target != content else False 
-        print('output_list',output_list)
-        print('instance.target',instance.target)
-        print('content',content)
-=======
         seg_his_create = True if instance.temp_target!=content else False #self.his_check(instance,instance.temp_target,content,user_1)
->>>>>>> origin/v4-merged-production
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
@@ -184,13 +177,8 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.temp_target = instance.target
             instance.save()
             self.update_task_assign(task_obj,user_1)
-<<<<<<< HEAD
-            if output_list:
-                SegmentHistory.objects.create(segment_id=seg_id,user=self.context.get('request').user, target= content, status= validated_data.get('status') )
-=======
             if seg_his_create:
                 SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
->>>>>>> origin/v4-merged-production
             return res
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
@@ -705,10 +693,6 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
         return text_unit
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/v4-merged-production
 from ai_workspace_okapi.models import SegmentDiff
 
 class SegmentDiffSerializer(serializers.ModelSerializer):
@@ -750,13 +734,6 @@ class VerbSerializer(serializers.Serializer):
     synonyms_form =serializers.ListField()
 
 
-<<<<<<< HEAD
-from ai_workspace_okapi.models import SelflearningAsset
-class SelflearningAssetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=SelflearningAsset
-        fields='__all__'
-=======
 
 
 from ai_workspace_okapi.models import SegmentDiff
@@ -800,7 +777,6 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
 
 
 
->>>>>>> origin/v4-merged-production
 
 
 #For copy_from command
