@@ -9,7 +9,7 @@ router = routers.DefaultRouter()
 
 router.register(r"comment", api_views.CommentView, basename="comment")
 router.register(r"page_size",api_views.SegmentSizeView, basename='default-page-size')
-router.register(r'selflearning',api_views.SelflearningAssetViewset,basename='self-learning')
+# router.register(r'selflearning',api_views.SelflearningAssetViewset,basename='self-learning')
 # router.register(r'segment_diff',api_views.SegmentDiffViewset,basename='segment_difference')
 urlpatterns = router.urls
 
