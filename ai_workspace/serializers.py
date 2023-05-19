@@ -1147,6 +1147,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_task_reassign_info(self, obj):
 		user = self.context.get('request').user.team.owner if self.context.get('request').user.team else self.context.get('request').user
+		project_managers = self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
 		if user.is_agency == True:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 			if task_assign:
@@ -1160,8 +1161,11 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 			print("Task Assign-------->",task_assign)
 			if task_assign:
-				#task_assign.first().task_assign_info__assigned_by = 
-				return True
+				assigned_by = task_assign.first().task_assign_info.assigned_by
+				print("Assigned")
+				if assigned_by == user  or assigned_by in project_managers:
+					return True
+				else:return None
 			else: return None
 
 	# def get_task_self_assign_info(self,obj):

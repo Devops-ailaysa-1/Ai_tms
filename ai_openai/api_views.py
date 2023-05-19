@@ -831,9 +831,9 @@ def generate_article(request):
                                                     user_id=blog_creation.user.id)   
                                     if blog_article_trans.startswith("#"):
                                         blog_article_trans=markdowner.convert(blog_article_trans)
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans)                        
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
                                     else:
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
                                     arr.append(new_line_split[-1])
                                 elif "." in word:
@@ -842,10 +842,10 @@ def generate_article(request):
                                         sente=sente+'.'
                                         blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
                             else:
                                 arr.append(word)
