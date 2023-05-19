@@ -812,6 +812,8 @@ def generate_article(request):
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang():
+                from markdown2 import Markdown
+                markdowner = Markdown()
                 arr=[]
                 for chunk in completion:
                     ins=chunk['choices'][0]
@@ -823,20 +825,27 @@ def generate_article(request):
                             if "." in word or "\n" in word:
                                 if "\n" in word:
                                     new_line_split=word.split("\n")
-                                    arr.append(new_line_split[0])
+                                    arr.append(new_line_split[0]+'\n')
                                     text=" ".join(arr)
-                                    blog_article_trans = get_translation(1,text,"en",blog_creation.user_language_code,
-                                                    user_id=blog_creation.user.id)
-                                    yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                    blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,
+                                                    user_id=blog_creation.user.id)   
+                                    if blog_article_trans.startswith("#"):
+                                        blog_article_trans=markdowner.convert(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)                        
+                                    else:
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
                                     arr=[]
                                     arr.append(new_line_split[-1])
                                 elif "." in word:
                                     sente=" ".join(arr)
-                                    if sente[-1]=='.':
+                                    if sente[-1]!='.':
                                         sente=sente+'.'
-                                    blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
+                                        blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)
-                                    yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                    else:
+                                    # blog_article_trans=markdowner.convert(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
                                     arr=[]
                             else:
                                 arr.append(word)
