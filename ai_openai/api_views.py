@@ -981,7 +981,8 @@ Machine translation has come a long way since its inception, and it continues to
 def generate(request):
     def stream():
         from markdown2 import Markdown
-        markdowner = Markdown()
+        markdowner=Markdown()
+        a=[]
         for i in text.split(' '):
             time.sleep(0.01)
             if "." in i or "\n" in i:
