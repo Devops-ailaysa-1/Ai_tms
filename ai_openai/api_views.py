@@ -855,7 +855,7 @@ def generate_article(request):
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang():
                 from markdown2 import Markdown
-                markdowner = Markdown()
+                markdowner=Markdown()
                 arr=[]
                 for chunk in completion:
                     ins=chunk['choices'][0]
@@ -873,9 +873,9 @@ def generate_article(request):
                                                     user_id=blog_creation.user.id)   
                                     if blog_article_trans.startswith("#"):
                                         blog_article_trans=markdowner.convert(blog_article_trans)
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))                        
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
                                     else:
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
                                     arr.append(new_line_split[-1])
                                 elif "." in word:
@@ -884,10 +884,10 @@ def generate_article(request):
                                         sente=sente+'.'
                                         blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
-                                        yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
                             else:
                                 arr.append(word)
@@ -1034,18 +1034,18 @@ def generate(request):
                     a=" ".join(a)
                     if a.startswith("#"):
                         a=markdowner.convert(a)
-                        yield '\ndata: {}\n\n'.format(a.encode('utf-8'))                        
+                        yield '\ndata: {}\n\n'.format({"t":a})                        
                     else:
-                        yield '\ndata: {}\n\n'.format(a.encode('utf-8'))
+                        yield '\ndata: {}\n\n'.format({"t":a})
                     a=[]
                     a.append(new_line_split[-1])
                 elif "." in i:
                     txt=" ".join(a)
                     if txt[-1]!='.':
                         txt=txt+'.'
-                        yield '\ndata: {}\n\n'.format(txt.encode('utf-8')) #.encode('utf-8')
+                        yield '\ndata: {}\n\n'.format({"t":txt}) #.encode('utf-8')
                     else:
-                        yield '\ndata: {}\n\n'.format(txt.encode('utf-8')) #.encode('utf-8')
+                        yield '\ndata: {}\n\n'.format({"t":txt}) #.encode('utf-8')
                     a=[]
             else:
                 a.append(i)
