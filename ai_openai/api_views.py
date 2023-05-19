@@ -995,13 +995,18 @@ def generate(request):
                     a.append(new_line_split[-1])
                 elif "." in i:
                     txt=" ".join(a)
-                    if txt[-1]=='.':
+                    if txt[-1]!='.':
                         txt=txt+'.'
-                        # x=markdowner.convert(txt)
-                        yield '\ndata: {}\n\n'.format(txt.encode('utf-8'))
+                        x=markdowner.convert(txt)
+                        x=x.replace('<p>','<span>')
+                        x=x.replace('</p>','</span>')
+                        yield '\ndata: {}\n\n'.format(x.encode('utf-8'))
                     else:
-                        yield '\ndata: {}\n\n'.format(txt.encode('utf-8'))
-                        # print(markdowner.convert(txt))
+                        x=markdowner.convert(txt)
+                        x=x.replace('<p>','<span>')
+                        x=x.replace('</p>','</span>')
+                        yield '\ndata: {}\n\n'.format(x.encode('utf-8'))
+                         
                     a=[]
             else:
                 a.append(i)
