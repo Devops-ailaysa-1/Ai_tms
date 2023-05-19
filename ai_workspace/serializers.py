@@ -1162,7 +1162,6 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			print("Task Assign-------->",task_assign)
 			if task_assign:
 				assigned_by = task_assign.first().task_assign_info.assigned_by
-				print("Assigned")
 				if assigned_by == user  or assigned_by in project_managers:
 					return True
 				else:return None
