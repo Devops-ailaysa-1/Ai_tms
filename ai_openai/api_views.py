@@ -583,7 +583,7 @@ class BlogArticleViewset(viewsets.ViewSet):
         blog_creation = request.POST.get('blog_creation')
         outline_section_list = list(map(int, outline_list.split(',')))
         print("outline_section_list------------>",outline_section_list)
-        serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
+        serializer=BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -812,7 +812,7 @@ def generate_article(request):
  
 
 from django.http import StreamingHttpResponse,JsonResponse
-import openai  #blog_cre_id list
+import openai 
 from ai_staff.models import PromptSubCategories
 import time
 @api_view(["GET"])
@@ -837,20 +837,59 @@ def generate_article(request):
         joined_list = "', '".join(outlines)
         tone=blog_creation.tone.tone
         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
-        completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-        def stream_article_response():
-            for chunk in completion:
-                ins=chunk['choices'][0]
-                if ins["finish_reason"]!='stop':
-                    delta=ins['delta']
-                    if 'content' in delta.keys():
-                        content=delta['content']
-                        t=content+' '
-                        yield '\ndata: {}\n\n'.format(t.encode('utf-8'))
-        return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
+        # completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+        
+        if blog_creation.user_language_code== 'en':
+            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            def stream_article_response_en():
+                for chunk in completion:
+                    ins=chunk['choices'][0]
+                    if ins["finish_reason"]!='stop':
+                        delta=ins['delta']
+                        if 'content' in delta.keys():
+                            content=delta['content']
+                            t=content+' '
+                            yield '\ndata: {}\n\n'.format(t.encode('utf-8'))
+            return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')
+        else:
+            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            def stream_article_response_other_lang():
+                from markdown2 import Markdown
+                markdowner = Markdown()
+                arr=[]
+                for chunk in completion:
+                    ins=chunk['choices'][0]
+                    if ins["finish_reason"]!='stop':
+                        delta=ins['delta']
+                        if 'content' in delta.keys():
+                            content=delta['content']
+                            word=content+' '
+                            if "." in word or "\n" in word:
+                                if "\n" in word:
+                                    new_line_split=word.split("\n")
+                                    arr.append(new_line_split[0]+'\n')
+                                    text=" ".join(arr)
+                                    blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,
+                                                    user_id=blog_creation.user.id)
+                                    blog_article_trans=markdowner.convert(blog_article_trans)
+                                    yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                    arr=[]
+                                    arr.append(new_line_split[-1])
+                                elif "." in word:
+                                    sente=" ".join(arr)
+                                    if sente[-1]=='.':
+                                        sente=sente+'.'
+                                    blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
+                                                    user_id=blog_creation.user.id)
+                                    blog_article_trans=markdowner.convert(blog_article_trans)
+                                    yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                    arr=[]
+                            else:
+                                arr.append(word)
+            return StreamingHttpResponse(stream_article_response_other_lang(),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
-from django.http import   StreamingHttpResponse
+from django.http import StreamingHttpResponse
 import time,json
 from django.http import JsonResponse
 text="""# Breaking the Language Barrier: An Introduction to Machine Translation
@@ -941,32 +980,27 @@ Machine translation has come a long way since its inception, and it continues to
 @api_view(["GET"])
 def generate(request):
     def stream():
-            # d=[]
-            # x=0
+        from markdown2 import Markdown
+        markdowner = Markdown()
         for i in text.split(' '):
-            #     if '#' in i:
-            #         x=1
-            #         time.sleep(0.01)
-            #         j=i.replace("#",'<h1>')
-            #         yield '\ndata: {}\n\n'.format(j)  
-            #         # d.append("<h1>")
-            #     elif '\n' in i:
-            #         if x==1:
-            #             time.sleep(0.01)
-            #             yield '\ndata: {}\n\n'.format('</h1>')
-            #             x=0  
-            #             # d.append("</h1>")
-            #         j=i.replace("\n",'<br>')
-            #         time.sleep(0.01)
-            #         yield '\ndata: {}\n\n'.format(j)
-            #         # d.append(j)
-            #     else:
-            #         time.sleep(0.01)
-            #         yield '\ndata: {}\n\n'.format(i+' ')
-                    # d.append(i)
-            t=i+' '
-            # t={'text':i+" "}
             time.sleep(0.01)
+            if "." in i or "\n" in i:
+                if "\n" in i:
+                    new_line_split=i.split("\n")
+                    a.append(new_line_split[0]+'\n')
+                    x=markdowner.convert(" ".join(a))
+                    yield '\ndata: {}\n\n'.format(x.encode('utf-8'))
+                    a=[]
+                    a.append(new_line_split[-1])
+                elif "." in i:
+                    txt=" ".join(a)
+                    if txt[-1]=='.':
+                        txt=txt+'.'
+                        x=markdowner.convert(txt)
+                        yield '\ndata: {}\n\n'.format(x.encode('utf-8'))
+                    a=[]
+            else:
+                a.append(i)
             yield '\ndata: {}\n\n'.format(t.encode('utf-8'))     
     return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
  

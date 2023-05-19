@@ -6,12 +6,18 @@ def duplicate_check(instance):
     term=['Source language term','Target language term']
     term_inst=list(glex_model.TermsModel.objects.filter(job__id=instance.job_id).values('sl_term','tl_term'))
     df1=pd.DataFrame(term_inst)
+    print(df1)
     print("-------------->",instance.file.path)
-    df2=pd.DataFrame(instance.file.path)[term]
-    df1.rename(columns={'sl_term':term[0],'tl_term':term[1]},inplace=True)
-    df_all = df2.merge(df1, on=term,how='left',indicator=True)
-    df_look_up=df_all[df_all['_merge']=='left_only'][term]
-    return df_look_up
+    with open(instance.file.path,'rb') as fp:
+        df2=pd.read_excel(fp.read())[term]
+    print(df2)
+    if not df1.empty:
+        df1.rename(columns={'sl_term':term[0],'tl_term':term[1]},inplace=True)
+        df_all = df2.merge(df1, on=term,how='left',indicator=True)
+        df_look_up=df_all[df_all['_merge']=='left_only'][term]
+        return df_look_up
+    else:
+        return df2
 
 
 def update_words_from_template(sender, instance, *args, **kwargs):
@@ -20,12 +26,15 @@ def update_words_from_template(sender, instance, *args, **kwargs):
     
     uncommon_data_term=duplicate_check(instance)
     if not uncommon_data_term.empty:
-        imported_data = Dataset()
-        imported_data.headers =uncommon_data_term.columns.tolist()
-        imported_data.add_data(uncommon_data_term.values.tolist())
+        imported_data=Dataset()
+        imported_data.headers=uncommon_data_term.columns.tolist()
+        for row in uncommon_data_term.itertuples(index=False):
+            imported_data.append(row)
+        print(imported_data)
+        print(instance.source_only)
     else:
-        dataset = Dataset()
-        imported_data = dataset.load(instance.file.read(), format='xlsx')
+        dataset=Dataset()
+        imported_data=dataset.load(instance.file.read(), format='xlsx')
     if instance.source_only == False and instance.job.source_language != instance.job.target_language:
         for data in imported_data:
             if data[2]:
