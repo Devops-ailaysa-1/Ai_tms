@@ -989,8 +989,12 @@ def generate(request):
                 if "\n" in i:
                     new_line_split=i.split("\n")
                     a.append(new_line_split[0]+'\n')
-                    x=markdowner.convert(" ".join(a))
-                    yield '\ndata: {}\n\n'.format(x.encode('utf-8'))
+                    a=" ".join(a)
+                    if a.startswith("#"):
+                        a=markdowner.convert(a)
+                        yield '\ndata: {}\n\n'.format(a.encode('utf-8'))                        
+                    else:
+                        yield '\ndata: {}\n\n'.format(a.encode('utf-8'))
                     a=[]
                     a.append(new_line_split[-1])
                 elif "." in i:
