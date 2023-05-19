@@ -13,28 +13,23 @@ def duplicate_check(instance):
         df1.rename(columns={'sl_term':term[0],'tl_term':term[1]},inplace=True)
         df_all=df2.merge(df1, on=term,how='left',indicator=True)
         df_look_up=df_all[df_all['_merge']=='left_only'][term]
-        df_look_up.insert(0, 'sno', range(1, len(df_look_up) + 1))
+        # df_look_up.insert(0, 'sno', range(1, len(df_look_up) + 1))
         return df_look_up
     else:
-        df2.insert(0, 'sno', range(1, len(df2) + 1))
+        # df2.insert(0, 'sno', range(1, len(df2) + 1))
         return df2
 
 
 def update_words_from_template(sender, instance, *args, **kwargs):
     print("Ins--->",instance)
     glossary_obj = instance.project.glossary_project#glex_model.Glossary.objects.get(project_id = instance.project_id)
-    
     uncommon_data_term=duplicate_check(instance)
     if not uncommon_data_term.empty:
         imported_data=Dataset()
         imported_data.headers=uncommon_data_term.columns.tolist()
         for row in uncommon_data_term.itertuples(index=False):
             imported_data.append(row)
- 
-        print(instance.source_only)
-        instance.source_only = True
-   
-         
+        # instance.source_only = True
     else:
         dataset=Dataset()
         imported_data=dataset.load(instance.file.read(), format='xlsx')
@@ -64,7 +59,6 @@ def update_words_from_template(sender, instance, *args, **kwargs):
     else:
         for data in imported_data:
             print("Data in else------->",data)
-            print(data[1],"<---->",data[2])
             if data[2]:
                 value = glex_model.TermsModel(
                             # data[0],          #Blank column

@@ -997,15 +997,15 @@ def generate(request):
                     txt=" ".join(a)
                     if txt[-1]!='.':
                         txt=txt+'.'
-                        x=markdowner.convert(txt)
-                        x=x.replace('<p>','<span>')
-                        x=x.replace('</p>','</span>')
-                        yield '\ndata: {}\n\n'.format(x.encode('utf-8'))
+                        # x=markdowner.convert(txt)
+                        # x=x.replace('<p>','<span>')
+                        # x=x.replace('</p>','</span>')
+                        yield '\ndata: {}\n\n'.format(txt.encode('utf-8'))
                     else:
-                        x=markdowner.convert(txt)
-                        x=x.replace('<p>','<span>')
-                        x=x.replace('</p>','</span>')
-                        yield '\ndata: {}\n\n'.format(x.encode('utf-8'))
+                        # x=markdowner.convert(txt)
+                        # x=x.replace('<p>','<span>')
+                        # x=x.replace('</p>','</span>')
+                        yield '\ndata: {}\n\n'.format(txt.encode('utf-8'))
                          
                     a=[]
             else:
