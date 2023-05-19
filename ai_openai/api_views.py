@@ -870,19 +870,24 @@ def generate_article(request):
                                     arr.append(new_line_split[0]+'\n')
                                     text=" ".join(arr)
                                     blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,
-                                                    user_id=blog_creation.user.id)
-                                    blog_article_trans=markdowner.convert(blog_article_trans)
-                                    yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                                    user_id=blog_creation.user.id)   
+                                    if blog_article_trans.startswith("#"):
+                                        blog_article_trans=markdowner.convert(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)                        
+                                    else:
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
                                     arr=[]
                                     arr.append(new_line_split[-1])
                                 elif "." in word:
                                     sente=" ".join(arr)
-                                    if sente[-1]=='.':
+                                    if sente[-1]!='.':
                                         sente=sente+'.'
-                                    blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
+                                        blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)
-                                    blog_article_trans=markdowner.convert(blog_article_trans)
-                                    yield '\ndata: {}\n\n'.format(blog_article_trans.encode('utf-8'))
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
+                                    else:
+                                    # blog_article_trans=markdowner.convert(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format(blog_article_trans)
                                     arr=[]
                             else:
                                 arr.append(word)
@@ -992,7 +997,7 @@ def generate(request):
                     a=" ".join(a)
                     if a.startswith("#"):
                         a=markdowner.convert(a)
-                        yield '\ndata: {}\n\n'.format(a )                        
+                        yield '\ndata: {}\n\n'.format(a)                        
                     else:
                         yield '\ndata: {}\n\n'.format(a )
                     a=[]
@@ -1001,23 +1006,14 @@ def generate(request):
                     txt=" ".join(a)
                     if txt[-1]!='.':
                         txt=txt+'.'
-                        # x=markdowner.convert(txt)
-                        # x=x.replace('<p>','<span>')
-                        # x=x.replace('</p>','</span>')
                         yield '\ndata: {}\n\n'.format(txt) #.encode('utf-8')
                     else:
-                        # x=markdowner.convert(txt)
-                        # x=x.replace('<p>','<span>')
-                        # x=x.replace('</p>','</span>')
                         yield '\ndata: {}\n\n'.format(txt) #.encode('utf-8')
-                         
                     a=[]
             else:
                 a.append(i)
-             
-    return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
- 
-
+        return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
+    return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
  
