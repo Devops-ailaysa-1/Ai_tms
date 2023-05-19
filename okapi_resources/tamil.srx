@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<srx xmlns="http://www.lisa.org/srx20" xmlns:okpsrx="http://okapi.sf.net/srx-extensions" version="2.0">
+<!--Segmentation rules for Tamil language (ta)-->
+<header segmentsubflows="yes" cascade="yes">
+<formathandle type="start" include="no"></formathandle>
+<formathandle type="end" include="yes"></formathandle>
+<formathandle type="isolated" include="no"></formathandle>
+<okpsrx:options oneSegmentIncludesAll="no" trimLeadingWhitespaces="no" trimTrailingWhitespaces="no" useJavaRegex="yes" useIcu4JBreakRules="no" treatIsolatedCodesAsWhitespace="no"></okpsrx:options>
+<okpsrx:sample language="ta" useMappedRules="yes">புதுடெல்லி : இத்தாலியை சேர்ந்த முன்னணி நாளிதழான கூரியர் டெல்லா சீராவுக்கு காங்கிரஸ் முன்னாள் தலைவர் ராகுல் காந்தி அளித்த பேட்டியில் கூறியிருப்பதாவது : இந்தியாவில் பாசிசம் இருக்கிறது . ஜனநாயக அமைப்பு கள் சீர்குலைக்கப்படுகின்றன . அனைத்து அரசு துறைகளிலும்ஆர்எஸ்எஸ் ஊடுருவுகிறது . நாடாளுமன்றம் செயல்படவில்லை . அதானி குழுமம் குறித்து ஹிண்டன்பர்க் வெளியிட்ட அறிக்கை தொடர்பாக நாடாளுமன்றத்தில் பேசமுடியவில்லை . கருத்து சுதந்திரம் , பத்திரிகை சுதந்திரம் பாதிக்கப்பட்டிருக்கிறது . வறுமை , கல்வியறிவின்மை , பணவீக்கம் உள்ளிட்ட உண்மையான பிரச்சினைகளை பாஜக அரசு மூடி மறைக்கிறது . கரோனா பெருந்தொற்று காலத்துக்குப் பிறகு குறு , சிறு தொழில்கள் கடுமையாகப் பாதிக்கப்பட்டுள்ளன . நிலமில்லாத விவசாயிகளின் வாழ்வாதாரம் கேள்விக் குறியாகி இருக்கிறது . இதுபோன்ற உண்மையான பிரச்சினைகளை மறைக்க மத்தியில் ஆளும் பாஜக மத வெறுப்புணர்வை தூண்டி வருகிறது . ஒற்றுமையை விரும்பும் கட்சிகள் ஓரணியில் திரளவேண்டும் . இதன்மூலம் பாசிசத்தை தோற்கடிக்க முடியும் . இந்தியாவால் சீனாவோடு நேருவை எனது வழிகாட்டியாக கருதுகிறேன் . எதற்கும் அஞ்சாதே , எதையும் மறைக்காதே என்ற அவரது கொள்கையை பின்பற்றுகிறேன் . பாட்டி இந்திரா காந்தியை எனக்கு மிகவும் பிடிக்கும் . அவர் படுகொலை செய்யப்பட்ட நாளன்று காலையில் என்னை அழைத்தார் . நான் உயிரிழந்தால் அழக்கூடாது . குறிப்பாக பொது இடத்தில் அழக்கூடாது என்று அறிவுறுத்தினார் . எனது தந்தை ராஜீவ் காந்தி தனது மரணத்தை முன்கூட்டியே உணர்ந்தார் . விடுதலைப் புலிகளால் கொல்லப்படுவோம் என்பது அவருக்கு தெரியுமோ , தெரியாதோ , ஏதோ ஓர் உள்ளுணர்வில் அவர் தனது முடிவை முன்கூட்டியே உணர்ந்தார் . மேற்கொண்டபோது என்னை அச்சுறுத்த திடீரென பாதுகாப்பை விலக்கிக் கொண்டனர் . எவ்வித பாதுகாப்பும் இன்றி பாத யாத்தி ரையை தொடர்ந்தேன் . நான் ஏன் திருமணம் செய்து கொள்ளவில்லை என்பது எனக்கே புதிராக இருக்கிறது . நான் இன்னமும் பல்வேறு பணிகளை செய்ய</okpsrx:sample>
+<okpsrx:rangeRule></okpsrx:rangeRule>
+</header>
+<body>
+<languagerules>
+<languagerule languagerulename="Tamil">
+<rule break="no">
+<beforebreak>\b(திரு|திருமகள்|செல்வன்|செல்வி|திருமதி|திருவாளர்|மருத்துவர்|மரு|அ|ஆ|இ|ஈ|உ|ஊ|எ|ஏ|ஐ|ஒ|ஓ|ஔ|க|கா|கி|கீ|கு|கூ|கெ|கே|கை|கொ|கோ|கௌ|ச|சா|சி|சீ|சு|சூ|செ|சே|சை|சொ|சோ|சௌ|ஞா|டா|டி|ட|டீ|டு|டூ|டெ|டே|டை|டொ|டோ|டௌ|த|தா|தி|தீ|தூ|தெ|தே|தை|தொ|தோ|தௌ|ந|நா|நி|நீ|நு|நூ|நெ|நே|நை|நொ|நோ|நௌ|ப|பா|பி|பீ|பு|பூ|பெ|பே|பை|பொ|போ|பௌ|ம|மா|மி|மீ|மு|மூ|மெ|மே|மை|மொ|மோ|மௌ|ய|யா|யி|யீ|யு|யூ|யெ|யே|யை|யொ|யோ|யௌ|ர|ரா|ரி|ரீ|ரு|ரூ|ரெ|ரே|ரை|ரொ|ரோ|ரௌ|ல|லா|லி|லீ|லு|லூ|லெ|லே|லை|லொ|லோ|லௌ|வ|வா|வி|வீ|வு|வூ|வெ|வே|வை|வொ|வோ|வௌ|ஜ|ஜா|ஜி|ஜீ|ஜு|ஜூ|ஜெ|ஜே|ஜை|ஜொ|ஜோ|	ஜௌ|ஷ|ஷா|ஷி|ஷீ|ஷு|ஷூ|ஷெ|ஷே|ஷை|ஷொ|ஷோ|ஷௌ|ஸ|ஸா|ஸி|ஸீ|ஸு|ஸூ|ஸெ|ஸே|ஸை|ஸொ|ஸோ|ஸௌ|ஹ|ஹா|ஹி|ஹீ|ஹு|ஹூ|ஹெ|ஹே|ஹை|ஹொ|ஹோ|ஹௌ|St|Gen|Hon|Dr|Mr|Ms|Mrs|Col|Maj|Brig|Sgt|Capt|Cmnd|Sen|Rev|Rep|Revd|Pr|Pres|Ibid|comp|Thiru|Tmt|Shri|Smt|Thirumathi|Selvi|Selvan|([A-Z][a-z])|[A-Z]+|[a-z]+|ஃப்|ஹெட்ச்|எல்|எம்|என்|க்யு|ஆர்|எஸ்|டபல்யு|எக்ஸ|செட்|இரா|பழ|[0-9]+|கரு|சுப)\.</beforebreak>
+<afterbreak>\s</afterbreak>
+</rule>
+<rule break="no">
+<beforebreak>[0-9]+?[.]\s</beforebreak>
+<afterbreak>\s</afterbreak>
+</rule>
+<!--ICU splits this: "Normal sentence (question in parenthesis?) lowercase end."-->
+<rule break="no">
+<beforebreak>[?!][)\]]</beforebreak>
+<afterbreak>\s*\p{L}</afterbreak>
+</rule>
+<rule break="yes">
+<beforebreak>[.!?]</beforebreak>
+<afterbreak>\s+?</afterbreak>
+</rule>
+<!--Handle gracefully lists, avoiding breaking on starting numbers, letters and roman numbers.
+        For example:
+          1. Item with number identifier.
+          a. Item with letter identifier.
+          I. Item with roman number identifier.
+          1.1. All the previous identifiers work also for nested items like this.
+        I also considered items like these:
+          a) Item with identifier ending with parenthesis.
+          (a) Item with identifier wrapped in parenthesis.
+        But in these cases, ICU is not splitting, so we can exclude these cases from this rule.
+        With this rule, we are supporting all the main lists identifiers.-->
+<rule break="no">
+<beforebreak>^([0-9.]+|[ivx.]+|[a-z.]+)</beforebreak>
+<afterbreak></afterbreak>
+</rule>
+<!--ICU splits urls with querystring at the question mark. This rule avoids it. 
+        The regexp for url matching is of @stephenhay, found in:
+          https://mathiasbynens.be/demo/url-regex
+        In order to make the regexp work in this context I did some small changes.
+        Pay attention that the complexity of most of the expressions in that page can
+        cause infinite computations for the segmentation step, so be careful.
+        Previously we had this precise problem with the expression of @imme_emosol.-->
+<rule break="no">
+<beforebreak>(?i)(https?|ftp)://[^\s/$.?#].[^\s]*\?</beforebreak>
+<afterbreak>[^\s]+</afterbreak>
+</rule>
+<!--titles-->
+<rule break="no">
+<beforebreak>\b([Hh]on|[Dd]r|[Mm]r|[Mm]s|[Mm]rs|[Ss]t|[Gg]en|[Cc]ol|[Mm]aj|[Bb]rig|[Ss]gt|[Cc]apt|[Cc]mnd|[Ll]t|[Ss]en|[Rr]ev|[Rr]ep|[Rr]evd|[Pp]r|[Bb]ro?|[Pp]res|[Pp]rof|[Jj][Ss]|[Jj][Rr]|[Ss][Rr])\.</beforebreak>
+<afterbreak>[,|:]?\s\P{Ll}</afterbreak>
+</rule>
+<!--days of the week-->
+<rule break="no">
+<beforebreak>\b([Ss]un|[Mm]on|[Tt]ue|[Tt]ues|[Ww]ed|[Ww]eds|[Tt]hu|[Tt]hur|[Tt]hurs|[Ff]ri|[Ss]at)\.</beforebreak>
+<afterbreak>\s</afterbreak>
+</rule>
+<!--months-->
+<rule break="no">
+<beforebreak>\b([Jj]an|[Ff]eb|[Mm]ar|[Aa]pr|[Jj]un|[Jj]ul|[Aa]ug|[Ss]ep|[Ss]ept|[Oo]ct|[Nn]ov|[Dd]ec)\.</beforebreak>
+<afterbreak>\s</afterbreak>
+</rule>
+<!--scriptures-->
+<rule break="no">
+<beforebreak>\b([Gg]en|[Ee]x|[Ll]ev|[Nn]um|[Dd]eut|[Jj]osh|[Jj]udg|[Nn]eh|[Ee]sth|[Pp]s|[Pp]rov|[Ee]ccl|[Ii]sa|[Jj]er|[Ll]am|[Ee]zek|[Dd]an|[Oo]bad|[Hh]ab|[Zz]eph|[Hh]ag|[Zz]ech|[Mm]al|[Mm]att|[Rr]om|[Cc]or|[Gg]al|[Ee]ph|[Pp]hilip|[Cc]ol|[Tt]hes|[Tt]im|[Pp]hilem|[Hh]eb|[Pp]et|[Jj]n|[Rr]ev|[Nn]e|[Hh]el|[Mm]orm|[Mm]oro|[Aa]br|[Ss]am|[Kk]gs|[Cc]hr)\.
+</beforebreak>
+<afterbreak>\s\P{Ll}</afterbreak>
+</rule>
+<!--common abbreviations-->
+<rule break="no">
+<beforebreak>\b(Inc|Ltd|Corp|DC|US|lds|[Pp]\.?[Mm]\.?|[Aa]\.?[Mm]\.?|[Nn]o|pp|p|[Ff]igs?|[Dd]ept|[Gg]ovt|[Ii]bid|comp|[Bb]ros|Dist|Co|Ph\.?D|et\b\s\bal|etc)\.</beforebreak>
+<afterbreak>\s?</afterbreak>
+</rule>
+<!--common abbreviations - never sentence-final-->
+<rule break="no">
+<beforebreak>\b(i\.?e|e\.?g|c\.?f|max|p|min|sel|ed|www|comp|[Vv]ols?|[Vv]s|[Vv]iz|[Aa]pprox|[Ii]ncl|est|B\.[SA]|SEC)\.[,;:]?</beforebreak>
+<afterbreak>\s</afterbreak>
+</rule>
+<!--country names 2-->
+<rule break="no">
+<beforebreak>\b([Uu]\.?\s*[Kk]|[Uu]\.?\s*[Ss]\.?\s*[Aa]?)\.</beforebreak>
+<afterbreak>\s[^\p{Lu}|\p{Pi}|\p{Ps}|"]</afterbreak>
+</rule>
+<!--country names 1-->
+<rule break="no">
+<beforebreak>\b([UuSs]\.)</beforebreak>
+<afterbreak>\s[KkSsAa]\.</afterbreak>
+</rule>
+<rule break="no">
+<beforebreak>([0-9]+\.[0-9]+|[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)</beforebreak>
+<afterbreak>\s[^\p{Ps}\p{Pi}"'\(\[\{\p{Lu}]</afterbreak>
+</rule>
+<!--manual section numbers (e.g. 17.2.3 Administering)-->
+<rule break="no">
+<beforebreak>[0-9]+\.[0-9]+\.</beforebreak>
+<afterbreak>[0-9]+\s+\P{Ll}</afterbreak>
+</rule>
+<!--1.) a.) 1) a) etc..-->
+<rule break="no">
+<beforebreak>[0-9a-z]{1,3}\.?\)</beforebreak>
+<afterbreak>\s+</afterbreak>
+</rule>
+<!--manual section headings 2-->
+<rule break="no">
+<beforebreak>[0-9]+\.[0-9]+\.[0-9]+</beforebreak>
+<afterbreak>\s+\P{Ll}</afterbreak>
+</rule>
+<!--Roman numerals-->
+<rule break="no">
+<beforebreak>^[ivxIVX]+\s*\.</beforebreak>
+<afterbreak>\s*[\p{Pi}\p{Ps}"'\(\[\{]*\p{Lu}</afterbreak>
+</rule>
+<rule break="no">
+<beforebreak>([A-Z]\.){2,}</beforebreak>
+<afterbreak>\s\P{Lu}</afterbreak>
+</rule>
+<!--A. D. / B. C.-->
+<rule break="no">
+<beforebreak>[AaBb]\.</beforebreak>
+<afterbreak>\s[CcDd]\.</afterbreak>
+</rule>
+</languagerule>
+</languagerules>
+<maprules>
+<languagemap languagepattern="[Tt][Aa].*" languagerulename="Tamil"></languagemap>
+</maprules>
+</body>
+</srx>
