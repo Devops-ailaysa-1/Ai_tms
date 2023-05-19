@@ -993,7 +993,7 @@ def generate(request):
             if "." in i or "\n" in i:
                 if "\n" in i:
                     new_line_split=i.split("\n")
-                    a.append(new_line_split[0]) # +'\n'
+                    a.append(new_line_split[0]+'\n') #
                     a=" ".join(a)
                     if a.startswith("#"):
                         a=markdowner.convert(a)
