@@ -1160,6 +1160,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 			print("Task Assign-------->",task_assign)
 			if task_assign:
+				#task_assign.first().task_assign_info__assigned_by = 
 				return True
 			else: return None
 
