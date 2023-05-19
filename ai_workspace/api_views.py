@@ -3551,6 +3551,7 @@ class MyDocumentsView(viewsets.ModelViewSet):
         if not writer_proj:
             writer_obj = WriterProject.objects.create(ai_user_id = ai_user.id)
             writer_proj = writer_obj.id
+            print("Writer Proj-------->",writer_proj)
         ser = MyDocumentSerializer(data={**request.POST.dict(),'project':writer_proj,'file':file,'ai_user':ai_user.id,'created_by':request.user.id})
         if ser.is_valid(raise_exception=True):
             ser.save()

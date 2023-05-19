@@ -587,9 +587,9 @@ def subscribe_lsp(user):
             currency ='usd'
     else:
         currency =cust.currency
-    price = Plan.objects.get(product__name="Business - V",currency=currency,interval='month',djstripe_owner_account=default_djstripe_owner)
+    price = Plan.objects.get(product__name="Business - V",currency=currency,interval='month',amount=0,djstripe_owner_account=default_djstripe_owner)
     if plan == 'new':
-        sub=subscribe_trial(price=price,customer=cust)
+        sub=subscribe(price=price,customer=cust)
         return sub
 
 

@@ -121,6 +121,7 @@ req_ilango.txt
 *.dockerfile
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
+<<<<<<< HEAD
 lama_model/lama_q_int8_jit.pt
 
 *.zip
@@ -134,3 +135,14 @@ docker
 *.mp3
 *.log*
 docker
+=======
+
+*.xlsx
+*.sh
+*.zip
+*.tbx
+*.mp3
+*.save*
+*.txt
+*.dockerignore
+>>>>>>> origin/v4-merged-production

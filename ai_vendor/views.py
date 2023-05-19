@@ -344,6 +344,10 @@ class SavedVendorView(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/v4-merged-production
 import pandas as pd
 from ai_staff.models import Currencies ,ServiceTypeunits ,ServiceTypes
 from io import BytesIO
@@ -401,8 +405,16 @@ def vendor_lang_sheet():
 
 
 def check_null_rows(df):
+<<<<<<< HEAD
     check_row_empty=df.notnull().all(axis=1)
     return all(check_row_empty)
+=======
+    fields_to_check = ['Source Language','Target Language']
+    check_fields_empty = df[fields_to_check].notnull().all(axis=1)
+    print("Check---->",check_fields_empty)
+    #check_row_empty=df.notnull().all(axis=1)
+    return all(check_fields_empty)
+>>>>>>> origin/v4-merged-production
 
 def check_lang_pair(df):
     return any(list(df['Source Language']==df['Target Language']))
@@ -412,9 +424,17 @@ def create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rat
     if service.name=='MTPE (MPE)':
         service=VendorServiceInfo.objects.create(lang_pair=vender_lang_pair,mtpe_rate=unit_rate,
                                     mtpe_count_unit=unit_type,mtpe_hourly_rate=hourly_rate)
+<<<<<<< HEAD
     else:
         service=VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
                                     unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
+=======
+        print("ser------>",service)
+    else:
+        service=VendorServiceTypes.objects.create(lang_pair=vender_lang_pair,services=service,
+                                    unit_type=unit_type,unit_rate=unit_rate,hourly_rate=hourly_rate)
+        print("ser--------->",service)
+>>>>>>> origin/v4-merged-production
     return service
 
 @api_view(['POST'])
@@ -429,6 +449,7 @@ def vendor_language_pair(request):
     #     return JsonResponse({'status':'empty file upload'})
     if df.columns.to_list() == column_name:
         any_null=check_null_rows(df)
+<<<<<<< HEAD
         df=df.dropna()
         lang_check=check_lang_pair(df)
         if any_null and not lang_check:
@@ -446,14 +467,48 @@ def vendor_language_pair(request):
                                                                     target_lang=tar_lang,currency=currency)
                     
                     ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+=======
+        print("anyNull---->",any_null)
+        print("Df-------->",df)
+        #df=df.dropna()
+        lang_check=check_lang_pair(df)
+        if any_null and not lang_check:
+            df=df.drop_duplicates(keep="first", inplace=False)
+            print("Df-------->",df)
+            for _, row in df.iterrows():
+                try:
+                    print("Inside Try")
+                    src_lang=Languages.objects.get(language=row['Source Language'])
+                    tar_lang=Languages.objects.get(language=row['Target Language'])
+                    currency_code = 'USD' if pd.isnull(row['Currency']) else row['Currency']
+                    print("Cur------>",currency_code)
+                    currency=Currencies.objects.get(currency_code=currency_code)
+                    service= None if pd.isnull(row['Service']) else ServiceTypes.objects.get(name=row['Service'])
+                    unit_type=None if pd.isnull(row['Unit Type']) else ServiceTypeunits.objects.get(unit=row['Unit Type'])
+                    unit_rate=None if pd.isnull(row['Unit Rate']) else row['Unit Rate']
+                    hourly_rate=None if pd.isnull(row['Hourly Rate']) else row['Hourly Rate']
+                    vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=src_lang,
+                                                                    target_lang=tar_lang,currency=currency)
+                    print("Vendor_lang----->",vender_lang_pair)
+                    if service and unit_type and unit_rate:
+                        ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+>>>>>>> origin/v4-merged-production
                 
                     if row['Reverse']:
                         vender_lang_pair=VendorLanguagePair.objects.create(user=user,source_lang=tar_lang,
                                                                     target_lang=src_lang,currency=currency)
+<<<<<<< HEAD
                         ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
                         
 
                 except IntegrityError as e:
+=======
+                        print("Vendor_lang----->",vender_lang_pair)
+                        if service and unit_type and unit_rate:
+                            ser_ven=create_service_types(service,vender_lang_pair,unit_rate,unit_type,hourly_rate)
+                except IntegrityError as e:
+                    print("Exception--------->",e)
+>>>>>>> origin/v4-merged-production
                     pass
                     # return JsonResponse({'status':'Unique contrient same language pairs exists in your records'})
         else:
@@ -462,9 +517,15 @@ def vendor_language_pair(request):
         return JsonResponse({'status':'column_name miss match'})
     return JsonResponse({'status':'uploaded successfully'})
 
+<<<<<<< HEAD
 
 @api_view(['GET',])
 @permission_classes([IsAuthenticated])
+=======
+from rest_framework.permissions import AllowAny
+@api_view(['GET',])
+@permission_classes([AllowAny])
+>>>>>>> origin/v4-merged-production
 def vendor_lang_pair_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Vendor_language_pairs.xlsx'
@@ -473,8 +534,11 @@ def vendor_lang_pair_template(request):
     response['Access-Control-Expose-Headers']='Content-Disposition'
     return response
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> origin/v4-merged-production
 # @api_view(['POST',])
 # def get_vendor_list(request):
 #     job_id=request.POST.get('job_id')

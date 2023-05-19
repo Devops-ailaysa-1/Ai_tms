@@ -82,8 +82,11 @@ class BidPropasalServicesRatesSerializer(serializers.ModelSerializer):
 
     def get_job_id(self,obj):
         pr = obj.bidpostjob.projectpost.project
-        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
-        return job[0].id if job else None
+        if pr:
+            job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = obj.bidpostjob.tar_lang_id))
+            return job[0].id if job else None
+        else:
+            return None
 
 
 class BidPropasalDetailSerializer(serializers.ModelSerializer):
@@ -118,8 +121,11 @@ class BidPropasalDetailSerializer(serializers.ModelSerializer):
     def get_job_id(self,obj):
         tar_lang = None if obj.bidpostjob.src_lang_id == obj.bidpostjob.tar_lang_id else obj.bidpostjob.tar_lang_id
         pr = obj.bidpostjob.projectpost.project
-        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
-        return job[0].id if job else None
+        if pr:
+            job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
+            return job[0].id if job else None
+        else:
+            return None
 
     def get_current_status(self,obj):
         user_ = self.context.get("request").user
@@ -371,8 +377,10 @@ class ProjectPostBidDetailSerializer(serializers.ModelSerializer):
     def get_job_id(self,obj):
         tar_lang = None if obj.bidpostjob.src_lang_id == obj.bidpostjob.tar_lang_id else obj.bidpostjob.tar_lang_id
         pr = obj.bidpostjob.projectpost.project
-        job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
-        return job[0].id if job else None
+        if pr:
+            job = pr.project_jobs_set.filter(Q(source_language_id = obj.bidpostjob.src_lang_id) & Q(target_language_id = tar_lang))
+            return job[0].id if job else None
+        else: return None
 
     def get_current_status(self,obj):
         user = self.context.get("request").user
@@ -484,10 +492,11 @@ class ProjectPostSerializer(WritableNestedModelSerializer,serializers.ModelSeria
     customer_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True),write_only=True)
     posted_by_id = serializers.PrimaryKeyRelatedField(queryset=AiUser.objects.all().values_list('pk', flat=True))
     bidding_currency = serializers.ReadOnlyField(source='currency.currency_code')
+    project_brief = serializers.BooleanField(required=False)
     # steps_id = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),write_only=True)
     class Meta:
         model=ProjectboardDetails
-        fields=('id','project_id','customer_id','proj_name','proj_desc','post_word_count','status',
+        fields=('id','project_id','customer_id','project_brief','proj_name','proj_desc','post_word_count','status',
                  'bid_deadline','proj_deadline','ven_native_lang','ven_res_country','ven_special_req',
                  'bid_count','projectpost_jobs','projectpost_content_type','projectpost_subject',
                  'rate_range_min','rate_range_max','currency','unit','milestone','projectpost_steps',
