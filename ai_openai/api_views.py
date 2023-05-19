@@ -1022,8 +1022,8 @@ Machine translation has come a long way since its inception, and it continues to
 @api_view(["GET"])
 def generate(request):
     def stream():
-        from markdown2 import Markdown
-        markdowner=Markdown()
+        # from markdown2 import Markdown
+        # markdowner=Markdown()
         a=[]
         for i in text.split(' '):
             time.sleep(0.01)
@@ -1033,7 +1033,7 @@ def generate(request):
                     a.append(new_line_split[0]+'\n') #
                     a=" ".join(a)
                     if a.startswith("#"):
-                        a=markdowner.convert(a)
+                        # a=markdowner.convert(a)
                         yield '\ndata: {}\n\n'.format({"t":a})                        
                     else:
                         yield '\ndata: {}\n\n'.format({"t":a})
