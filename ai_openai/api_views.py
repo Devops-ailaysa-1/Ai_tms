@@ -997,18 +997,18 @@ def generate(request):
                     a=" ".join(a)
                     if a.startswith("#"):
                         a=markdowner.convert(a)
-                        yield '\ndata: {}\n\n'.format(a.encode('utf-8'))                        
+                        yield '\ndata: {}\n\n'.format(a )                        
                     else:
-                        yield '\ndata: {}\n\n'.format(a.encode('utf-8'))
+                        yield '\ndata: {}\n\n'.format(a )
                     a=[]
                     a.append(new_line_split[-1])
                 elif "." in i:
                     txt=" ".join(a)
                     if txt[-1]!='.':
                         txt=txt+'.'
-                        yield '\ndata: {}\n\n'.format(txt.encode('utf-8')) #.encode('utf-8')
+                        yield '\ndata: {}\n\n'.format(txt ) #.encode('utf-8')
                     else:
-                        yield '\ndata: {}\n\n'.format(txt.encode('utf-8')) #.encode('utf-8')
+                        yield '\ndata: {}\n\n'.format(txt ) #.encode('utf-8')
                     a=[]
             else:
                 a.append(i)
