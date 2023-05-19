@@ -2593,7 +2593,7 @@ def get_tags(seg):
         tags = remove_random_tags(seg.target_tags,random_tags)
     return tags
 
-from ai_workspace_okapi.serializers import SelflearningAssetSerializer,SegmentDiffSerializer
+#from ai_workspace_okapi.serializers import SelflearningAssetSerializer,SegmentDiffSerializer
 from django.http import Http404
 from ai_staff.models import Languages
 from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
