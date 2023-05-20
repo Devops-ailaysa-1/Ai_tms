@@ -37,28 +37,27 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if representation.get('target_language' ,None):
-            representation['target_language'] = instance.target_language.language.id
-          
+            representation['target_language'] = instance.target_language.language.id   
         return representation
 
 class ImageTranslateSerializer(serializers.ModelSerializer):  
-    image_inpaint_creation = ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
-    inpaint_creation_target_lang = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),
+    image_inpaint_creation=ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
+    inpaint_creation_target_lang=serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all()),
                                                         required=False,write_only=True)
-    bounding_box_target_update = serializers.JSONField(required=False)
-    bounding_box_source_update = serializers.JSONField(required=False)
-    target_update_id = serializers.IntegerField(required=False)
-    source_canvas_json =  serializers.JSONField(required=False)
-    target_canvas_json = serializers.JSONField(required=False)
-    thumbnail = serializers.FileField(required=False)
-    export = serializers.FileField(required=False)
+    bounding_box_target_update=serializers.JSONField(required=False)
+    bounding_box_source_update=serializers.JSONField(required=False)
+    target_update_id=serializers.IntegerField(required=False)
+    source_canvas_json=serializers.JSONField(required=False)
+    target_canvas_json=serializers.JSONField(required=False)
+    thumbnail=serializers.FileField(required=False)
+    export=serializers.FileField(required=False)
     source_language=serializers.PrimaryKeyRelatedField(queryset=Languages.objects.all(),required= False)
     image_to_translate_id=serializers.ListField(required =False,write_only=True)
     # image_id = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Imageload.objects.all()),required=True)
     
     class Meta:
-        model = ImageTranslate
-        fields = ('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
+        model=ImageTranslate
+        fields=('id','image','project_name','types','height','width','mask','mask_json','inpaint_image',
             'source_canvas_json','source_bounding_box','source_language','image_inpaint_creation',
             'inpaint_creation_target_lang','bounding_box_target_update','bounding_box_source_update',
             'target_update_id','target_canvas_json','thumbnail','export','image_to_translate_id',
@@ -66,9 +65,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         #,'image_id')
         
     def to_representation(self, instance):
-        representation = super().to_representation(instance)
+        representation=super().to_representation(instance)
         if representation.get('source_language' , None):
-            representation['source_language'] = instance.source_language.language.id  
+            representation['source_language']=instance.source_language.language.id  
         return representation
     
     @staticmethod

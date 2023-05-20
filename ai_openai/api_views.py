@@ -855,7 +855,7 @@ def generate_article(request):
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang():
                 from markdown2 import Markdown
-                markdowner=Markdown()
+                markdowner = Markdown()
                 arr=[]
                 for chunk in completion:
                     ins=chunk['choices'][0]

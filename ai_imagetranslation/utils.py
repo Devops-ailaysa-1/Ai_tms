@@ -26,21 +26,22 @@ def image_ocr_google_cloud_vision(image_path , inpaint):
         return texts
 
 def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
-    if w<x:x,w = w,x
-    if h<y:h,y = y,h
+    if w<x:x,w=w,x
+    if h<y:h,y=y,h
     t= 15
     x = x-t
     y = y-t
     w = w+t
     h = h+t
-    cropped_img = pillow_image_to_extract_color.crop([x,y,w,h])
-    extracted_color = extcolors.extract_from_image(cropped_img ,limit=2)
+    cropped_img=pillow_image_to_extract_color.crop([x,y,w,h])
+    extracted_color=extcolors.extract_from_image(cropped_img ,limit=2)
     # final_color = extracted_color[0][1][0] if len(extracted_color[0]) >=2  else (extracted_color[0][0][0] if len(extracted_color[0]) <=1 else 0)
-    return [i[0] for i in extracted_color[0]][::-1]
+    return [i[0] for i in extracted_color[0] if i[0]!=(0,0,0)][::-1]
 
-def creating_image_bounding_box(image_path):
+def creating_image_bounding_box(image_path,color_find_image_diff):
     poly_line = []
-    pillow_image_to_extract_color=Image.open(image_path) 
+    # pillow_image_to_extract_color=Image.open(image_path)  #color_find_image_diff
+    pillow_image_to_extract_color=Image.fromarray(color_find_image_diff)
     texts=image_ocr_google_cloud_vision(image_path,inpaint=True)  
     text_and_bounding_results={}
     no_of_segments=0
@@ -64,7 +65,7 @@ def creating_image_bounding_box(image_path):
             text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],
                                                          "fontsize":sum(font_size)//len(font_size),
                                                          "fontsize2":sum(font_size2)//len(font_size2),
-                                                         "color1":final_color ,"poly_line":poly_line}
+                                                         "color1":final_color} #,"poly_line":poly_line}
             no_of_segments+=1
             text_list = []
     return text_and_bounding_results 
@@ -84,10 +85,8 @@ def inpaint_image(im,msk):
     ('image',('',open(im,'rb'),'image/jpeg')),
     ('mask',('',open(msk,'rb'),'image/png'))]
     response = requests.request("POST",IMAGE_TRANSLATE_URL, headers=headers, data=data, files=files)
-    
     if response.status_code==200:
         arr = np.frombuffer(response.content, dtype=np.uint8)
-        
         return {'result':arr,'code':response.status_code }
     else:
         return {'result':'error in inpaint prediction','code':response.status_code }
@@ -112,7 +111,6 @@ def convert_transparent(img,value):
     return img
 
 def layer_blend(lama_result,img_transparent):
-
     lama_result=lama_result.convert('RGBA')
     img_transparent=img_transparent.convert('RGBA')
     lama_result.alpha_composite(img_transparent)
@@ -141,14 +139,14 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     black_and_white=black_and_white.resize(image_diff.size)
     img_arr=np.asarray(black_and_white)
     img_arr_copy=np.copy(img_arr)
-    img_arr_copy[img_arr_copy!= 0] = 255
+    img_arr_copy[img_arr_copy!= 0]=255
 
     ###morphing
-    SE = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
-    res = cv2.morphologyEx(img_arr_copy, cv2.MORPH_DILATE, SE)
-    img_transparent = Image.fromarray(res)
+    SE=cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
+    res=cv2.morphologyEx(img_arr_copy, cv2.MORPH_DILATE, SE)
+    img_transparent=Image.fromarray(res)
     img_transparent=convert_transparent(img_transparent,255)
-    lama_transparent=layer_blend( lama_result=lama_result ,img_transparent=img_transparent)
+    lama_transparent=layer_blend(lama_result=lama_result,img_transparent=img_transparent)
     lama_convert_transparent=convert_transparent(lama_transparent,0)
     result=layer_blend(original,lama_convert_transparent)
     return result
@@ -168,16 +166,17 @@ def inpaint_image_creation(image_details):
         inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
-        image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
+        # image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
 
         output=inpaint_image(img_path, mask_path)
         if output['code']==200:
             if output['result'].shape[0]==np.prod(img.shape):
                 res=np.reshape(output['result'],img.shape)  
                 diff=cv2.absdiff(img,res)
+                image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,diff)
                 diff=lama_diff(mask,diff)
-                diff=cv2.cvtColor(diff, cv2.COLOR_BGR2RGB)
-                res=cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
+                diff=cv2.cvtColor(diff,cv2.COLOR_BGR2RGB)
+                res=cv2.cvtColor(res,cv2.COLOR_BGR2RGB)
                 diff=Image.fromarray(diff)
                 lama_result=Image.fromarray(res)
                 original=Image.open(img_path)
@@ -185,6 +184,7 @@ def inpaint_image_creation(image_details):
                 dst=np.asarray(dst)
                 dst_final=np.copy(dst)
                 dst_final=cv2.cvtColor(dst_final,cv2.COLOR_BGR2RGB)
+                
                 return dst_final,image_text_details
             else:return serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
                 
