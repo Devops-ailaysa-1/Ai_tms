@@ -129,10 +129,10 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     resized_image = image_diff.resize((256,256))
     resized_image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue())
-    resized_width,resized_image_heigth= resized_image.size
+    resized_width,resized_heigth= resized_image.size
     output=img_str.decode()
     ima_str='data:image/png;base64,'+str(output)
-    data = {'maskimage':ima_str , 'width':resized_width,'height':resized_image_heigth}
+    data = {'maskimage':ima_str , 'width':resized_width,'height':resized_heigth}
     thumb_image = requests.request('POST',url=img_gen,data=data ,headers={},files=[])
     ###convert thumb to black and white
     black_and_white=Image.open(BytesIO(base64.b64decode(thumb_image.content.decode().split(',')[-1])))
@@ -149,7 +149,7 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     lama_transparent=layer_blend(lama_result=lama_result,img_transparent=img_transparent)
     lama_convert_transparent=convert_transparent(lama_transparent,0)
     result=layer_blend(original,lama_convert_transparent)
-    return result
+    return result,black_and_white
 
 
 # from celery import shared_task
@@ -158,8 +158,8 @@ from rest_framework import serializers
 def inpaint_image_creation(image_details):
     img_path=image_details.image.path
     mask_path=image_details.mask.path
-    mask = cv2.imread(mask_path)
-    img = cv2.imread(img_path)
+    mask=cv2.imread(mask_path)
+    img=cv2.imread(img_path)
     if image_details.mask:
         image_to_extract_text = np.bitwise_and(mask ,img)
         content = image_content(image_to_extract_text)
@@ -173,18 +173,21 @@ def inpaint_image_creation(image_details):
             if output['result'].shape[0]==np.prod(img.shape):
                 res=np.reshape(output['result'],img.shape)  
                 diff=cv2.absdiff(img,res)
-                image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,diff)
+                 
                 diff=lama_diff(mask,diff)
                 diff=cv2.cvtColor(diff,cv2.COLOR_BGR2RGB)
                 res=cv2.cvtColor(res,cv2.COLOR_BGR2RGB)
                 diff=Image.fromarray(diff)
                 lama_result=Image.fromarray(res)
                 original=Image.open(img_path)
-                dst=lama_inpaint_optimize(image_diff=diff,lama_result=lama_result,original=original)
+                dst,black_and_white=lama_inpaint_optimize(image_diff=diff,lama_result=lama_result,original=original)
                 dst=np.asarray(dst)
                 dst_final=np.copy(dst)
                 dst_final=cv2.cvtColor(dst_final,cv2.COLOR_BGR2RGB)
-                
+                image_color_change=cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+                image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
+                image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
                 return dst_final,image_text_details
             else:return serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
                 
