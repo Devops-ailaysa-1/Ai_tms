@@ -186,6 +186,8 @@ def inpaint_image_creation(image_details):
                 dst_final=cv2.cvtColor(dst_final,cv2.COLOR_BGR2RGB)
                 image_color_change=cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 black_and_white=np.asarray(black_and_white)
+                print("black_and_white",black_and_white)
+                print("image_color_change",image_color_change)
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
                 image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
                 return dst_final,image_text_details
