@@ -36,7 +36,7 @@ def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
     cropped_img=pillow_image_to_extract_color.crop([x,y,w,h])
     extracted_color=extcolors.extract_from_image(cropped_img ,limit=2)
     # final_color = extracted_color[0][1][0] if len(extracted_color[0]) >=2  else (extracted_color[0][0][0] if len(extracted_color[0]) <=1 else 0)
-    return (i[0] for i in extracted_color[0])[::-1] #if i[0]!=(0,0,0)
+    return [i[0] for i in extracted_color[0]][::-1] #if i[0]!=(0,0,0)
 
 from ai_canvas.template_json import textbox_json
 import copy
@@ -78,7 +78,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
             text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
                                                     "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
             textbox_['text']="".join(text_list)
-            textbox_['fill']="rgb{}".format(final_color[0])
+            textbox_['fill']="rgb{}".format(tuple(final_color[0]))
             no_of_segments+=1
             text_list = []
             text_box_list.append(textbox_)
