@@ -10,7 +10,6 @@ import copy,os
 
 HOST_NAME=os.getenv('HOST_NAME')
 
-from django.conf import settings
 class ImageloadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Imageload
@@ -139,16 +138,16 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.save()
                 img_json_copy=copy.deepcopy(img_json)
                 img_json_copy['src']=HOST_NAME+instance.inpaint_image.url
-                img_json_copy['width']=instance.width
-                img_json_copy['height']=instance.height
+                img_json_copy['width']=int(instance.width)
+                img_json_copy['height']=int(instance.height)
                 basic_json_copy['objects']=[img_json_copy]+text_box_list
-                basic_json_copy['backgroundImage']['width']=instance.width
-                basic_json_copy['backgroundImage']['height']=instance.height
+                basic_json_copy['backgroundImage']['width']=int(instance.width)
+                basic_json_copy['backgroundImage']['height']=int(instance.height)
                 instance.source_canvas_json=basic_json_copy
-
-                print("basic_json_copy",basic_json_copy)
-                print("img_json_copy",img_json_copy)
-                print("text_box_list",text_box_list)
+                basic_json_copy['projectid']={'langId':src_lang.locale.first().id,'langNo':src_lang.id ,'projId':instance.id,'projectType':'image-translate'}
+                # print("basic_json_copy",basic_json_copy)
+                # print("img_json_copy",img_json_copy)
+                # print("text_box_list",text_box_list)
                 instance.save()
             ####to create instance for target language
             for tar_lang in inpaint_creation_target_lang:
