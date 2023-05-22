@@ -52,9 +52,12 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
     text_box_list=[]
     for i in  texts.pages:
         for j in i.blocks:
+            count=0
             text_uuid=uuid.uuid4()
             textbox_=copy.deepcopy(textbox_json)
             name="Textbox_"+(str(text_uuid))
+            textbox_['id']="text_"+count
+            count+=1
             textbox_['name']=name
             x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
             textbox_['left']=x
@@ -77,8 +80,12 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                         font_size2.append(fw-fx)
             text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
                                                     "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
-            textbox_['text']="".join(text_list)
+            textbox_['text']="".join(text_list).strip()
             textbox_['fill']="rgb{}".format(tuple(final_color[0]))
+            f1=sum(font_size)//len(font_size)
+            f2=sum(font_size2)//len(font_size2)
+            font=f1 if f1>f2 else f2
+            textbox_['fontSize']=font
             no_of_segments+=1
             text_list = []
             text_box_list.append(textbox_)

@@ -143,11 +143,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 basic_json_copy['objects']=[img_json_copy]+text_box_list
                 basic_json_copy['backgroundImage']['width']=int(instance.width)
                 basic_json_copy['backgroundImage']['height']=int(instance.height)
-                instance.source_canvas_json=basic_json_copy
                 basic_json_copy['projectid']={'langId':src_lang.locale.first().id,'langNo':src_lang.id ,'projId':instance.id,'projectType':'image-translate'}
                 # print("basic_json_copy",basic_json_copy)
                 # print("img_json_copy",img_json_copy)
                 # print("text_box_list",text_box_list)
+                basic_json_copy['perPixelTargetFind']=False
+                instance.source_canvas_json=basic_json_copy
                 instance.save()
             ####to create instance for target language
             for tar_lang in inpaint_creation_target_lang:
