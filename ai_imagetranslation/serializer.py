@@ -6,7 +6,11 @@ from ai_imagetranslation.utils import inpaint_image_creation ,image_content
 from ai_workspace_okapi.utils import get_translation
 from django import core
 from ai_canvas.utils import thumbnail_create
-import copy
+import copy,os
+
+HOST_NAME=os.getenv('HOST_NAME')
+
+from django.conf import settings
 class ImageloadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Imageload
@@ -134,12 +138,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.inpaint_image=inpaint_image_file 
                 instance.save()
                 img_json_copy=copy.deepcopy(img_json)
-                img_json_copy['src']=instance.inpaint_image.url
+                img_json_copy['src']=HOST_NAME+instance.inpaint_image.url
                 img_json_copy['width']=instance.width
                 img_json_copy['height']=instance.height
                 basic_json_copy['objects']=[img_json_copy]+text_box_list
-                basic_json_copy['width']=instance.width
-                basic_json_copy['height']=instance.height
+                basic_json_copy['backgroundImage']['width']=instance.width
+                basic_json_copy['backgroundImage']['height']=instance.height
                 instance.source_canvas_json=basic_json_copy
 
                 print("basic_json_copy",basic_json_copy)
