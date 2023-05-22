@@ -40,7 +40,7 @@ def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
 
 from ai_canvas.template_json import textbox_json
 import copy
-import uuid
+import uuid,math
 def creating_image_bounding_box(image_path,color_find_image_diff):
     poly_line = []
     # pillow_image_to_extract_color=Image.open(image_path)  #color_find_image_diff
@@ -64,7 +64,10 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
             textbox_['top']=y
             textbox_['width']=w-x
             textbox_['height']=h
-            
+            dx = j.bounding_box.vertices[1].x - j.bounding_box.vertices[0].x
+            dy = j.bounding_box.vertices[1].y- j.bounding_box.vertices[0].y
+            arrival_angle=math.degrees(math.atan2(dy, dx))
+            arrival_angle=(arrival_angle + 360) % 360
             vertex=j.bounding_box.vertices
             poly_line.append([[vertex[0].x ,vertex[0].y],[vertex[1].x,vertex[1].y],[vertex[2].x ,vertex[2].y] ,[vertex[3].x,vertex[3].y]])
             final_color=color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
@@ -82,6 +85,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                                                     "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
             textbox_['text']="".join(text_list).strip()
             textbox_['fill']="rgb{}".format(tuple(final_color[0]))
+            textbox_['angle']=arrival_angle
             f1=sum(font_size)//len(font_size)
             f2=sum(font_size2)//len(font_size2)
             font=f1 if f1>f2 else f2
