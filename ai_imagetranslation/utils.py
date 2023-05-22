@@ -56,7 +56,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
             text_uuid=uuid.uuid4()
             textbox_=copy.deepcopy(textbox_json)
             name="Textbox_"+(str(text_uuid))
-            textbox_['id']="text_"+(str(1))
+            # textbox_['id']="text_"+(str(1))
             count+=1
             textbox_['name']=name
             x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
