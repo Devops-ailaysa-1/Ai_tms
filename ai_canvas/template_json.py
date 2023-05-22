@@ -124,7 +124,7 @@ basic_json =  { "version": "5.3.0",
 
 
 textbox_json={
-            "id": "",
+            "id":0,
             "top": 0,
             "fill": "",
             "left": 0,
