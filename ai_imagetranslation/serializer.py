@@ -141,6 +141,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 basic_json_copy['width']=instance.width
                 basic_json_copy['height']=instance.height
                 instance.source_canvas_json=basic_json_copy
+                print("basic_json_copy",basic_json_copy)
                 instance.save()
             ####to create instance for target language
             for tar_lang in inpaint_creation_target_lang:
