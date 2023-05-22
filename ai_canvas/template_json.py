@@ -124,7 +124,7 @@ basic_json =  { "version": "5.3.0",
 
 
 textbox_json={
-            "id":'text_1',
+            "id":0,
             "top": 0,
             "fill": "",
             "left": 0,
@@ -186,7 +186,7 @@ textbox_json={
             "perPixelTargetFind": false,
             "textBackgroundColor": "",
             "globalCompositeOperation": "source-atop"
-        },
+        }
 
 img_json={
     "type": "image",
