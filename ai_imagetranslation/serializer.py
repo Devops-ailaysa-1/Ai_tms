@@ -137,11 +137,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 img_json_copy['src']=instance.inpaint_image.url
                 img_json_copy['width']=instance.width
                 img_json_copy['height']=instance.height
-                basic_json_copy['objects']=[img_json_copy].extend(text_box_list)
+                basic_json_copy['objects']=[*img_json_copy,*text_box_list]
                 basic_json_copy['width']=instance.width
                 basic_json_copy['height']=instance.height
                 instance.source_canvas_json=basic_json_copy
-                
+
                 print("basic_json_copy",basic_json_copy)
                 print("img_json_copy",img_json_copy)
                 print("text_box_list",text_box_list)
