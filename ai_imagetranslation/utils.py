@@ -65,7 +65,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
             text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],
                                                          "fontsize":sum(font_size)//len(font_size),
                                                          "fontsize2":sum(font_size2)//len(font_size2),
-                                                         "color1":final_color} #,"poly_line":poly_line}
+                                                         "color1":final_color,"poly_line":poly_line}
             no_of_segments+=1
             text_list = []
     return text_and_bounding_results 
