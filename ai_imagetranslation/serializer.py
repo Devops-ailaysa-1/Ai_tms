@@ -27,7 +27,7 @@ class ImageloadSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-
+from ai_canvas.template_json import img_json,basic_json
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -120,24 +120,34 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
             mask_image = core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
-            instance.mask_json = mask_json
-            instance.mask = mask_image
+            instance.mask_json=mask_json
+            instance.mask=mask_image
             instance.save()
             ####to create instance for source language
             if not instance.source_bounding_box:
-                inpaint_out_image,source_bounding_box=inpaint_image_creation(instance)  #inpaint_image_creation.apply_async((instance,),0)
+                inpaint_out_image,source_bounding_box,text_box_list=inpaint_image_creation(instance)  #inpaint_image_creation.apply_async((instance,),0)
                 src_json=copy.deepcopy(source_bounding_box)
-                instance.source_bounding_box = src_json 
+                basic_json_copy=copy.deepcopy(basic_json)
+                instance.source_bounding_box=src_json 
                 content=image_content(inpaint_out_image)
-                inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
-                instance.inpaint_image = inpaint_image_file 
-            
+                inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
+                instance.inpaint_image=inpaint_image_file 
+                instance.save()
+                img_json_copy=copy.deepcopy(img_json)
+                img_json_copy['src']=instance.inpaint_image.file.url
+                img_json_copy['width']=instance.width
+                img_json_copy['height']=instance.height
+                basic_json_copy['objects']=[img_json_copy].extend(text_box_list)
+                basic_json_copy['width']=instance.width
+                basic_json_copy['height']=instance.height
+                instance.source_canvas_json=basic_json_copy
+                instance.save()
             ####to create instance for target language
             for tar_lang in inpaint_creation_target_lang:
                 tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())   
-                source_bbox = source_bounding_box
+                source_bbox=source_bounding_box
                 for text in source_bbox.values(): 
-                    translate_bbox = get_translation(1,source_string=text['text'],source_lang_code='en',
+                    translate_bbox=get_translation(1,source_string=text['text'],source_lang_code='en',
                                                      target_lang_code=tar_lang.locale.first().locale_code)
                     text['text']=translate_bbox
                 tar_bbox.target_bounding_box=source_bbox

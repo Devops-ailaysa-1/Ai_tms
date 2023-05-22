@@ -2636,7 +2636,7 @@ from django.db.models.signals import post_save
 #         obj =self.get_object(pk)
 #         serializer=SelflearningAssetSerializer(obj)
 #         return Response(serializer.data)
-    
+
 #     def update(self,request,pk):
 #         obj =self.get_object(pk)
 #         serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
@@ -2701,7 +2701,7 @@ def segment_difference(sender, instance, *args, **kwargs):
         # target_segment=instance.segment.seg_mt_raw.mt_raw
         edited_segment=instance.target
  
-    print('edited_segment',edited_segment , 'target_segment',target_segment )
+    print('edited_segment',edited_segment,'target_segment',target_segment )
     if edited_segment and target_segment:
         print('edited_segment',edited_segment , 'target_segment',target_segment )
         diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)

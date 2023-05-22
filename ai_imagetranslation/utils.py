@@ -36,8 +36,11 @@ def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
     cropped_img=pillow_image_to_extract_color.crop([x,y,w,h])
     extracted_color=extcolors.extract_from_image(cropped_img ,limit=2)
     # final_color = extracted_color[0][1][0] if len(extracted_color[0]) >=2  else (extracted_color[0][0][0] if len(extracted_color[0]) <=1 else 0)
-    return [i[0] for i in extracted_color[0] if i[0]!=(0,0,0)][::-1]
+    return (i[0] for i in extracted_color[0])[::-1] #if i[0]!=(0,0,0)
 
+from ai_canvas.template_json import textbox_json
+import copy
+import uuid
 def creating_image_bounding_box(image_path,color_find_image_diff):
     poly_line = []
     # pillow_image_to_extract_color=Image.open(image_path)  #color_find_image_diff
@@ -46,9 +49,19 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
     text_and_bounding_results={}
     no_of_segments=0
     text_list=[]
+    text_box_list=[]
     for i in  texts.pages:
         for j in i.blocks:
+            text_uuid=uuid.uuid4()
+            textbox_=copy.deepcopy(textbox_json)
+            name="Textbox_"+(str(text_uuid))
+            textbox_['name']=name
             x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
+            textbox_['left']=x
+            textbox_['top']=y
+            textbox_['width']=w-x
+            textbox_['height']=h
+            
             vertex=j.bounding_box.vertices
             poly_line.append([[vertex[0].x ,vertex[0].y],[vertex[1].x,vertex[1].y],[vertex[2].x ,vertex[2].y] ,[vertex[3].x,vertex[3].y]])
             final_color=color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
@@ -62,13 +75,14 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
                         fx,fy,fw,fh=b.bounding_box.vertices[0].x,b.bounding_box.vertices[1].y,b.bounding_box.vertices[2].x,b.bounding_box.vertices[3].y
                         font_size.append(fh-fy)  
                         font_size2.append(fw-fx)
-            text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],
-                                                         "fontsize":sum(font_size)//len(font_size),
-                                                         "fontsize2":sum(font_size2)//len(font_size2),
-                                                         "color1":final_color,"poly_line":poly_line}
+            text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
+                                                    "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
+            textbox_['text']="".join(text_list)
+            textbox_['fill']="rgb{}".format(final_color[0])
             no_of_segments+=1
             text_list = []
-    return text_and_bounding_results 
+            text_box_list.append(textbox_)
+    return text_and_bounding_results,text_box_list
  
 
 def image_content(image_numpy):
@@ -188,11 +202,11 @@ def inpaint_image_creation(image_details):
                 black_and_white=np.asarray(black_and_white)
                 black_and_white = black_and_white[:, :, :3]
                 image_color_change=image_color_change[:, :, :3]
-                print("black_and_white",black_and_white)
-                print("image_color_change",image_color_change)
+ 
                 image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
-                image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
-                return dst_final,image_text_details
+                image_text_details,text_box_list=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
+                
+                return dst_final,image_text_details,text_box_list
             else:return serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
                 
         else:

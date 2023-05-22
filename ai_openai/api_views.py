@@ -849,13 +849,13 @@ def generate_article(request):
                         if 'content' in delta.keys():
                             content=delta['content']
                             t=content+' '
-                            yield '\ndata: {}\n\n'.format(t.encode('utf-8'))
+                            yield '\ndata: {}\n\n'.format({"t":t})
             return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang():
-                from markdown2 import Markdown
-                markdowner = Markdown()
+                # from markdown2 import Markdown
+                # markdowner = Markdown()
                 arr=[]
                 for chunk in completion:
                     ins=chunk['choices'][0]
@@ -872,7 +872,7 @@ def generate_article(request):
                                     blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)   
                                     if blog_article_trans.startswith("#"):
-                                        blog_article_trans=markdowner.convert(blog_article_trans)
+                                        # blog_article_trans=markdowner.convert(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
                                     else:
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
@@ -893,6 +893,7 @@ def generate_article(request):
                                 arr.append(word)
             return StreamingHttpResponse(stream_article_response_other_lang(),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
+
 # @api_view(["GET"])
 # def generate_article(request):
 #     if request.method=='GET':
