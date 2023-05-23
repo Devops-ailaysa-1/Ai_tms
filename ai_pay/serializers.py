@@ -15,7 +15,7 @@ class POAssignmentSerializer(serializers.ModelSerializer):
     tasks = POTaskSerializer(many=True,source='assignment_po')
     class Meta:
         model = POAssignment    
-        fields =('assignment_id','tasks')
+        fields =('assignment_id','step','tasks',)
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
@@ -192,3 +192,19 @@ class InvoiceListSerializer(serializers.Serializer):
         response["payable"] = sorted(response["payable"], key=lambda x: x[self._get_ordering()], reverse=True)
         response["receivable"] = sorted(response["receivable"], key=lambda x: x[self._get_ordering()],reverse=True)
         return response
+
+
+class ProjectPoSerializer(serializers.Serializer):  
+    pass
+
+
+class PoAssignDetailsSerializer(serializers.ModelSerializer):
+    step = serializers.SerializerMethodField()
+    class Meta:
+        model = POTaskDetails
+        fields = ("task_id","po","assignment","step","source_language","target_language","project_name",
+                  "projectid","word_count","char_count","estimated_hours","unit_price","unit_type",
+                  "total_amount","tsk_accepted","assign_status","reassigned")
+        
+    def get_step(self,obj):
+        return obj.assignment.step.id
