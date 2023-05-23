@@ -1,4 +1,4 @@
-from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate,TargetInpaintimage)
+from ai_imagetranslation.models import (Imageload,ImageInpaintCreation,ImageTranslate)
 from ai_staff.models import Languages
 from rest_framework import serializers
 from PIL import Image
@@ -32,18 +32,17 @@ class ImageloadSerializer(serializers.ModelSerializer):
 
 from ai_canvas.template_json import img_json,basic_json
 
-class TargetInpaintimageSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = TargetInpaintimage
-        fields = "__all__"
+# class TargetInpaintimageSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = TargetInpaintimage
+#         fields = "__all__"
 
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
-    tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
+    # tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
     class Meta:
         model = ImageInpaintCreation
         fields = ("id",'source_image','target_language','target_canvas_json','target_bounding_box',
-                    'export','thumbnail','created_at','updated_at','tar_im_create')
+                    'export','thumbnail','created_at','updated_at','mask','inpaint_image','mask_json')
         
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -157,10 +156,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.save()
             ####to create instance for target language
             for tar_lang in inpaint_creation_target_lang:
-                tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())   
-                tar_inpaint_img=TargetInpaintimage.objects.create(inpaint_create=tar_bbox,
-                                                                  mask_json=instance.mask_json,inpaint_image=instance.inpaint_image,
-                                                                  )
+                tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first(),
+                                                             mask=instance.mask,inpaint_image=instance.inpaint_image,
+                                                             mask_json=instance.mask_json)   
+                
                 tar_json_copy=copy.deepcopy(instance.source_canvas_json)
                 tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,
                                             'projId':instance.id,'projectType':'image-translate'}
@@ -171,9 +170,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                      target_lang_code=tar_lang.locale.first().locale_code)
                         i['text']=translate_bbox
                 tar_bbox.target_canvas_json=tar_json_copy
-                tar_inpaint_img.target_canvas_json=tar_json_copy
                 tar_bbox.save()
-                tar_inpaint_img.save()
             instance.save()
             return instance
  

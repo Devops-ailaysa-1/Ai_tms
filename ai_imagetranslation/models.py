@@ -53,6 +53,9 @@ def user_directory_path_image_translate_thumbnail(instance, filename):
 def user_directory_path_image_translate_export(instance, filename):
     return '{0}/{1}/{2}'.format(instance.source_image.user.uid, "image_translate/export",filename) 
 
+def user_directory_path_inpaint_image(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.inpaint_create.source_image.user.uid, "image_translate/inpaint",filename) 
+
 class ImageInpaintCreation(models.Model):
     source_image=models.ForeignKey(to=ImageTranslate,blank=True,null=True,on_delete=models.CASCADE,related_name='s_im')
     target_language=models.ForeignKey(to=LanguagesLocale,on_delete=models.CASCADE,related_name='t_lang')
@@ -62,20 +65,24 @@ class ImageInpaintCreation(models.Model):
     export=models.FileField(upload_to=user_directory_path_image_translate_export,blank=True,null=True)  ##################
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+    mask=models.FileField(upload_to=user_directory_path_image_translate_process,blank=True,null=True)
+    inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
+    mask_json=models.JSONField(blank=True,null=True)
+
+
 
     class Meta:
         ordering = ['id']
 
-def user_directory_path_inpaint_image(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.inpaint_create.source_image.user.uid, "image_translate/inpaint",filename) 
 
-class TargetInpaintimage(models.Model):
-    inpaint_create=models.ForeignKey(to=ImageInpaintCreation,blank=True,null=True,on_delete=models.CASCADE,related_name='tar_im_create')
-    mask_json=models.JSONField(blank=True,null=True)
-    inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
-    target_canvas_json=models.JSONField(blank=True,null=True)
-    thumbnail=models.FileField(upload_to=user_directory_path_image_translate_thumbnail,blank=True,null=True)
-    export=models.FileField(upload_to=user_directory_path_image_translate_export,blank=True,null=True) 
+
+# class TargetInpaintimage(models.Model):
+#     inpaint_create=models.ForeignKey(to=ImageInpaintCreation,blank=True,null=True,on_delete=models.CASCADE,related_name='tar_im_create')
+#     mask_json=models.JSONField(blank=True,null=True)
+#     inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
+#     target_canvas_json=models.JSONField(blank=True,null=True)
+#     thumbnail=models.FileField(upload_to=user_directory_path_image_translate_thumbnail,blank=True,null=True)
+#     export=models.FileField(upload_to=user_directory_path_image_translate_export,blank=True,null=True) 
 
     
 
