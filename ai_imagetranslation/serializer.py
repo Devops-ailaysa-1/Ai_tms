@@ -144,21 +144,26 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 basic_json_copy['backgroundImage']['width']=int(instance.width)
                 basic_json_copy['backgroundImage']['height']=int(instance.height)
                 basic_json_copy['projectid']={'langId':None,'langNo':src_lang.id ,'projId':instance.id,'projectType':'image-translate'}
-                # print("basic_json_copy",basic_json_copy)
-                # print("img_json_copy",img_json_copy)
-                # print("text_box_list",text_box_list)
                 basic_json_copy['perPixelTargetFind']=False
                 instance.source_canvas_json=basic_json_copy
                 instance.save()
             ####to create instance for target language
             for tar_lang in inpaint_creation_target_lang:
                 tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())   
-                source_bbox=source_bounding_box
-                for text in source_bbox.values(): 
-                    translate_bbox=get_translation(1,source_string=text['text'],source_lang_code='en',
+                # source_bbox=source_bounding_box               
+                tar_json_copy=copy.deepcopy(instance.source_canvas_json)
+                for count,i in enumerate(tar_json_copy['objects']):
+                    if 'text' in i.keys():
+                        translate_bbox=get_translation(1,source_string=i['text'],source_lang_code='en',
                                                      target_lang_code=tar_lang.locale.first().locale_code)
-                    text['text']=translate_bbox
-                tar_bbox.target_bounding_box=source_bbox
+                        i['text']=translate_bbox
+
+                # for text in source_bbox.values(): 
+                #     translate_bbox=get_translation(1,source_string=text['text'],source_lang_code='en',
+                #                                      target_lang_code=tar_lang.locale.first().locale_code)
+                    # text['text']=translate_bbox
+                # tar_bbox.target_bounding_box=source_bbox
+                tar_bbox.target_bounding_box=tar_json_copy
                 tar_bbox.save()
             instance.save()
             return instance
