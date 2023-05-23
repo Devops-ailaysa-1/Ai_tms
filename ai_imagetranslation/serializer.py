@@ -186,26 +186,34 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         
         if target_update_id and mask_json:
             img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
+            print("img_tar",img_tar.target_canvas_json)
             img_tar.mask_json=mask_json
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
             mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             img_tar.mask=mask
             img_tar.save()
             inpaint_out_image,tar_bounding_box,text_box_list=inpaint_image_creation(img_tar)
+
+            text_box_list_new=[]
             for text_box in text_box_list:
-                if 'text' in text_box:
-                    translate_bbox=get_translation(1,source_string=text_box['text'],source_lang_code='en',
+                txt_box=copy.deepcopy(text_box)
+                if 'text' in txt_box:
+                    translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
                                                      target_lang_code=img_tar.target_language.locale_code)
-                    text_box['text']=translate_bbox
+            
+                    txt_box['text']=translate_bbox
+                text_box_list_new.append(txt_box)
             content=image_content(inpaint_out_image)
             inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
             img_tar.inpaint_image=inpaint_image_file
-            img_tar.target_canvas_json=img_tar.target_canvas_json['objects']+text_box_list
+            can_tar_json=img_tar.target_canvas_json
+            can_tar_json['objects']=can_tar_json['objects']+text_box_list_new
+            img_tar.inpaint_image=can_tar_json
             img_tar.save()
             return img_tar
 
         if export and target_update_id:
-            im_export=ImageInpaintCreation.objects.get(id=target_update_id ,source_image=instance)
+            im_export=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
             im_export.export=export
             im_export.save()
 
