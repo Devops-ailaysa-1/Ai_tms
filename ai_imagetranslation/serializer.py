@@ -57,6 +57,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
     bounding_box_target_update=serializers.JSONField(required=False)
     bounding_box_source_update=serializers.JSONField(required=False)
     target_update_id=serializers.IntegerField(required=False)
+    # target_update_id=serializers.PrimaryKeyRelatedField(queryset=ImageInpaintCreation.objects.all(),required=False,write_only=True)
     source_canvas_json=serializers.JSONField(required=False)
     target_canvas_json=serializers.JSONField(required=False)
     thumbnail=serializers.FileField(required=False)
@@ -183,13 +184,34 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         thumbnail=validated_data.get('thumbnail',None)
         export=validated_data.get('export',None)
         
+        if target_update_id and mask_json:
+            img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
+            img_tar.mask_json=mask_json
+            thumb_mask_image=thumbnail_create(mask_json,formats='mask')
+            mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
+            img_tar.mask=mask
+            img_tar.save()
+            inpaint_out_image,tar_bounding_box,text_box_list=inpaint_image_creation(img_tar)
+            for text_box in text_box_list:
+                if 'text' in text_box:
+                    translate_bbox=get_translation(1,source_string=text_box['text'],source_lang_code='en',
+                                                     target_lang_code=img_tar.target_language.locale_code)
+                    text_box['text']=translate_bbox
+            content=image_content(inpaint_out_image)
+            inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
+            img_tar.inpaint_image=inpaint_image_file
+            img_tar.target_canvas_json=img_tar.target_canvas_json['objects']+text_box_list
+            img_tar.save()
+            return img_tar
+
         if export and target_update_id:
-            im_export=ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
+            im_export=ImageInpaintCreation.objects.get(id=target_update_id ,source_image=instance)
             im_export.export=export
             im_export.save()
-        
+
+
         if thumbnail and target_update_id:
-            im_thumbnail=ImageInpaintCreation.objects.get(id = target_update_id , source_image = instance)
+            im_thumbnail=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
             im_thumbnail.thumbnail=thumbnail
             im_thumbnail.save()
             

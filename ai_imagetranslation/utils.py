@@ -181,7 +181,10 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
 # @shared_task(serializer='json')
 from rest_framework import serializers
 def inpaint_image_creation(image_details):
-    img_path=image_details.image.path
+    if hasattr(image_details,'image'):
+        img_path=image_details.image.path
+    else:
+        img_path=image_details.inpaint_image.path
     mask_path=image_details.mask.path
     mask=cv2.imread(mask_path)
     img=cv2.imread(img_path)
