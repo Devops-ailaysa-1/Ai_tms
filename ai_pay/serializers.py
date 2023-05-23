@@ -203,11 +203,12 @@ class PoAssignDetailsSerializer(serializers.ModelSerializer):
     step = serializers.SerializerMethodField()
     file_name = serializers.SerializerMethodField()
     job = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
     class Meta:
         model = POTaskDetails
         fields = ("task_id","file_name","job","po","assignment","step","source_language","target_language","project_name",
                   "projectid","word_count","char_count","estimated_hours","unit_price","unit_type",
-                  "total_amount","tsk_accepted","assign_status","reassigned")
+                  "total_amount","currency","tsk_accepted","assign_status","reassigned")
         
     def get_step(self,obj):
         return obj.assignment.step.id
@@ -219,3 +220,7 @@ class PoAssignDetailsSerializer(serializers.ModelSerializer):
     def get_job(self,obj):
         tsk = Task.objects.get(id=obj.task_id) 
         return tsk.job.id
+    
+    def get_currency(self,obj):
+        tsk = Task.objects.get(id=obj.task_id) 
+        return obj.po.currency.id
