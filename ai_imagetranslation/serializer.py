@@ -152,6 +152,9 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first())   
                 # source_bbox=source_bounding_box               
                 tar_json_copy=copy.deepcopy(instance.source_canvas_json)
+                tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,
+                                            'projId':instance.id,'projectType':'image-translate'}
+
                 for count,i in enumerate(tar_json_copy['objects']):
                     if 'text' in i.keys():
                         translate_bbox=get_translation(1,source_string=i['text'],source_lang_code='en',
