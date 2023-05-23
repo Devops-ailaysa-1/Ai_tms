@@ -35,7 +35,7 @@ from ai_canvas.template_json import img_json,basic_json
 class TargetInpaintimageSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = ImageInpaintCreation
+        model = TargetInpaintimage
         fields = "__all__"
 
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
