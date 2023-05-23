@@ -60,6 +60,16 @@ class AiUser(AbstractBaseUser, PermissionsMixin):####need to migrate and add val
             self.uid = get_unique_uid(AiUser)
         return super().save(*args, **kwargs)
 
+    @property
+    def agency(self):
+        if self.is_agency == True:
+            return True
+        else:
+            if self.team and self.team.owner.is_agency == True and self in self.team.get_project_manager:
+                return True
+            else:
+                return False               
+
 
     @property
     def internal_member_team_detail(self):

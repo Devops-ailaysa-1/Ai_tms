@@ -858,13 +858,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
              }
 
     def get_assign_to_details(self,instance):
-	    if instance.task_assign.assign_to:
-	        deleted = True if 'deleted' in instance.task_assign.assign_to.email else False
-	        external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
-	        email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
-	        try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
-	        except:avatar = None
-	        return {"id":instance.task_assign.assign_to_id,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor,"account_deleted":deleted}
+        if instance.task_assign.assign_to:
+            deleted = True if 'deleted' in instance.task_assign.assign_to.email else False
+            external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
+            email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
+            managers = [i.id for i in instance.task_assign.assign_to.team.get_project_manager] if external_editor and instance.task_assign.assign_to.team else []
+            try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
+            except:avatar = None
+            return {"id":instance.task_assign.assign_to_id,"managers":managers,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor,"account_deleted":deleted}
 	    #if instance.task.assign_to:
 	    #    external_editor = True if instance.task.assign_to.is_internal_member==False else False
 	    #    email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
@@ -1147,6 +1148,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 	def get_task_reassign_info(self, obj):
 		user = self.context.get('request').user.team.owner if self.context.get('request').user.team else self.context.get('request').user
+		project_managers = self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
 		if user.is_agency == True:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 			if task_assign:
@@ -1159,9 +1161,9 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		else:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 			print("Task Assign-------->",task_assign)
-			if task_assign:
-				#task_assign.first().task_assign_info__assigned_by = 
+			if task_assign and task_assign.filter(assign_to=user):
 				return True
+				# else:return None
 			else: return None
 
 	# def get_task_self_assign_info(self,obj):
@@ -1336,11 +1338,11 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 	# 	jobs = proj.get_jobs
 	# 	lang_pair = VendorLanguagePair.objects.none()
 	# 	for i in jobs:
-	# 		if i.target_language_id == None:
-	# 			tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-	# 		else:
-	# 			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-	# 		print("Tr------------>",tr)
+			# if i.target_language_id == None:
+			# 	tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			# else:
+			# 	tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			# print("Tr------------>",tr)
 	# 		lang_pair = lang_pair.union(tr)
 	# 	print("langpair----------------->",lang_pair)
 	# 	return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
@@ -1352,13 +1354,23 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 		project_id= request.query_params.get('project')
 		proj = Project.objects.get(id = project_id)
 		jobs = Job.objects.filter(id__in = job_ids) if job_ids else proj.get_jobs
-		lang_pair = VendorLanguagePair.objects.filter(Q(user_id = obj.hired_editor_id) &Q(deleted_at=None))
+		lang_pair = VendorLanguagePair.objects.none()
+		condition_satisfied = True
 		for i in jobs:
+			print(i.source_language_id,i.target_language_id)
 			if i.target_language_id == None:
-				lang_pair = lang_pair.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+				tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
 			else:
-				lang_pair = lang_pair.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')	
-		print("langpair----------------->",lang_pair)
+				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			print("Tr------------>",tr)
+			if tr:
+				condition_satisfied = True
+				lang_pair = lang_pair.union(tr)
+			else:
+				condition_satisfied = False
+				lang_pair = VendorLanguagePair.objects.none()
+				break
+		print("Langpair---------->",lang_pair)
 		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 
 class InternalEditorDetailSerializer(serializers.Serializer):
