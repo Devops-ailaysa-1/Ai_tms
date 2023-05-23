@@ -1322,6 +1322,14 @@ class TaskAssign(models.Model):
         (IN_PROGRESS, 'In Progress'),
         (COMPLETED, 'Completed'),
     ]
+    APPROVED = 1
+    REJECTED = 2
+    CLOSE = 3
+    RESPONSE_CHOICES = [
+        (APPROVED, 'Approved'),
+        (REJECTED, 'Rejected'),
+        (CLOSE, 'Close'),
+    ]
     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_info")
     step = models.ForeignKey(Steps,on_delete=models.CASCADE, null=False, blank=False,
@@ -1335,6 +1343,9 @@ class TaskAssign(models.Model):
     copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
     reassigned = models.BooleanField(default=False)
+    #client_response = models.IntegerField(choices=RESPONSE_CHOICES, blank=True, null=True)
+    #client_reason = models.TextField(null=True, blank=True)
+    #user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
 
     objects = TaskAssignManager()
 
