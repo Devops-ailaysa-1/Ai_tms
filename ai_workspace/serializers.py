@@ -858,13 +858,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
              }
 
     def get_assign_to_details(self,instance):
-	    if instance.task_assign.assign_to:
-	        deleted = True if 'deleted' in instance.task_assign.assign_to.email else False
-	        external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
-	        email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
-	        try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
-	        except:avatar = None
-	        return {"id":instance.task_assign.assign_to_id,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor,"account_deleted":deleted}
+        if instance.task_assign.assign_to:
+            deleted = True if 'deleted' in instance.task_assign.assign_to.email else False
+            external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
+            email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
+            managers = [i.id for i in instance.task_assign.assign_to.team.get_project_manager] if external_editor and instance.task_assign.assign_to.team else []
+            try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
+            except:avatar = None
+            return {"id":instance.task_assign.assign_to_id,"managers":managers,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor,"account_deleted":deleted}
 	    #if instance.task.assign_to:
 	    #    external_editor = True if instance.task.assign_to.is_internal_member==False else False
 	    #    email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
