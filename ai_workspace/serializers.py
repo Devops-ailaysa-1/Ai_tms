@@ -1160,11 +1160,9 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		else:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 			print("Task Assign-------->",task_assign)
-			if task_assign:
-				assigned_by = task_assign.first().task_assign_info.assigned_by
-				if assigned_by == user  or assigned_by in project_managers:
-					return True
-				else:return None
+			if task_assign and task_assign.filter(assign_to=user):
+				return True
+				# else:return None
 			else: return None
 
 	# def get_task_self_assign_info(self,obj):
@@ -1355,13 +1353,10 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 		project_id= request.query_params.get('project')
 		proj = Project.objects.get(id = project_id)
 		jobs = Job.objects.filter(id__in = job_ids) if job_ids else proj.get_jobs
-		print("Jobs--------->",jobs)
 		lang_pair = VendorLanguagePair.objects.none()
 		condition_satisfied = True
 		for i in jobs:
-			print(i.source_language_id,i.target_language_id,obj.hired_editor_id)
 			tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-			print("Tr--------->",tr)
 			if tr:
 				condition_satisfied = True
 				lang_pair = lang_pair.union(tr)
