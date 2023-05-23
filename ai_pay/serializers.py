@@ -202,9 +202,10 @@ class ProjectPoSerializer(serializers.Serializer):
 class PoAssignDetailsSerializer(serializers.ModelSerializer):
     step = serializers.SerializerMethodField()
     file_name = serializers.SerializerMethodField()
+    job = serializers.SerializerMethodField()
     class Meta:
         model = POTaskDetails
-        fields = ("task_id","file_name","po","assignment","step","source_language","target_language","project_name",
+        fields = ("task_id","file_name","job","po","assignment","step","source_language","target_language","project_name",
                   "projectid","word_count","char_count","estimated_hours","unit_price","unit_type",
                   "total_amount","tsk_accepted","assign_status","reassigned")
         
@@ -214,3 +215,7 @@ class PoAssignDetailsSerializer(serializers.ModelSerializer):
     def get_file_name(self,obj):
         tsk = Task.objects.get(id=obj.task_id)
         return tsk.file.filename
+    
+    def get_job(self,obj):
+        tsk = Task.objects.get(id=obj.task_id) 
+        return tsk.job.id
