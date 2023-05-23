@@ -88,11 +88,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         return width,height
     
     def create(self, validated_data):
-        user =  self.context['request'].user
-        data = {**validated_data ,'user':user}
+        user=self.context['request'].user
+        data={**validated_data ,'user':user}
         if validated_data.get('image',None):
             instance=ImageTranslate.objects.create(**data)
-            width,height = self.image_shape(instance.image.path)
+            width,height=self.image_shape(instance.image.path)
             instance.width=width
             instance.height=height 
             instance.types=str(validated_data.get('image')).split('.')[-1]
@@ -130,7 +130,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             
         if inpaint_creation_target_lang and src_lang and mask_json: #and image_to_translate_id: ##check target lang and source lang
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
-            mask_image = core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
+            mask_image=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             instance.mask_json=mask_json
             instance.mask=mask_image
             instance.save()
@@ -160,15 +160,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 tar_bbox=ImageInpaintCreation.objects.create(source_image=instance,target_language=tar_lang.locale.first(),
                                                              mask=instance.mask,inpaint_image=instance.inpaint_image,
                                                              mask_json=instance.mask_json)   
-                
                 tar_json_copy=copy.deepcopy(instance.source_canvas_json)
                 tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,
                                             'projId':instance.id,'projectType':'image-translate'}
-
                 for count,i in enumerate(tar_json_copy['objects']):
                     if 'text' in i.keys():
-                        translate_bbox=get_translation(1,source_string=i['text'],source_lang_code='en',
-                                                     target_lang_code=tar_lang.locale.first().locale_code)
+                        translate_bbox=get_translation(1,source_string=i['text'],source_lang_code='en',target_lang_code=tar_lang.locale.first().locale_code)
                         i['text']=translate_bbox
                 tar_bbox.target_canvas_json=tar_json_copy
                 tar_bbox.save()
@@ -186,30 +183,30 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         
         if target_update_id and mask_json:
             img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
-            print("img_tar",img_tar.target_canvas_json)
+             
             img_tar.mask_json=mask_json
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
             mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
             img_tar.mask=mask
             img_tar.save()
-            inpaint_out_image,tar_bounding_box,text_box_list=inpaint_image_creation(img_tar)
-
+            inpaint_out_image,_,text_box_list=inpaint_image_creation(img_tar)
             text_box_list_new=[]
             for text_box in text_box_list:
                 txt_box=copy.deepcopy(text_box)
                 if 'text' in txt_box:
                     translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
                                                      target_lang_code=img_tar.target_language.locale_code)
-            
                     txt_box['text']=translate_bbox
                 text_box_list_new.append(txt_box)
             content=image_content(inpaint_out_image)
             inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
             img_tar.inpaint_image=inpaint_image_file
-            can_tar_json=img_tar.target_canvas_json
-            can_tar_json['objects']=can_tar_json['objects']+text_box_list_new
-            img_tar.inpaint_image=can_tar_json
             img_tar.save()
+            can_tar_json=img_tar.target_canvas_json
+            obj_list=can_tar_json['objects']
+            can_tar_json['objects']=obj_list+text_box_list_new
+            img_tar.inpaint_image=can_tar_json
+ 
             return img_tar
 
         if export and target_update_id:
