@@ -1355,13 +1355,21 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 		project_id= request.query_params.get('project')
 		proj = Project.objects.get(id = project_id)
 		jobs = Job.objects.filter(id__in = job_ids) if job_ids else proj.get_jobs
-		lang_pair = VendorLanguagePair.objects.filter(Q(user_id = obj.hired_editor_id) &Q(deleted_at=None))
+		print("Jobs--------->",jobs)
+		lang_pair = VendorLanguagePair.objects.none()
+		condition_satisfied = True
 		for i in jobs:
-			if i.target_language_id == None:
-				lang_pair = lang_pair.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			print(i.source_language_id,i.target_language_id,obj.hired_editor_id)
+			tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			print("Tr--------->",tr)
+			if tr:
+				condition_satisfied = True
+				lang_pair = lang_pair.union(tr)
 			else:
-				lang_pair = lang_pair.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')	
-		print("langpair----------------->",lang_pair)
+				condition_satisfied = False
+				lang_pair = VendorLanguagePair.objects.none()
+				break
+		print("Langpair---------->",lang_pair)
 		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 
 class InternalEditorDetailSerializer(serializers.Serializer):
