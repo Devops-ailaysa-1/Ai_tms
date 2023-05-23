@@ -525,11 +525,22 @@ def po_modify(task_assign_info_id,po_update):
         try:
             po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
             po_task_obj.tsk_accepted=True
+            po_task_obj.assign_status="task_accepted"
             po_task_obj.save()
             return True
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
             
+    if 'change_request' in po_update:
+        try:
+            po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
+            po_task_obj.tsk_accepted=True
+            po_task_obj.assign_status="task_accepted"
+            po_task_obj.save()
+            return True
+        except BaseException as e:
+            logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
+
 
     if 'accepted_rate_by_owner' in po_update:
         try:
@@ -874,9 +885,8 @@ class ProjectPOTaskView(viewsets.ViewSet):
 
     def get_queryset(self):
 
-        proj_queryset = Project.objects.filter(ai_user=self.request.user)
         project_id = self.request.query_params.get('project_id')
-        proj_queryset = proj_queryset.filter(id=project_id)
+        proj_queryset = Project.objects.filter(id=project_id)
         queryset = POTaskDetails.objects.filter(projectid__in=proj_queryset.values_list('ai_project_id',flat=True))
         return queryset
     
