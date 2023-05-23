@@ -163,7 +163,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 #                                      target_lang_code=tar_lang.locale.first().locale_code)
                     # text['text']=translate_bbox
                 # tar_bbox.target_bounding_box=source_bbox
-                tar_bbox.target_bounding_box=tar_json_copy
+                tar_bbox.target_canvas_json=tar_json_copy
                 tar_bbox.save()
             instance.save()
             return instance
