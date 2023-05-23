@@ -1337,11 +1337,11 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 	# 	jobs = proj.get_jobs
 	# 	lang_pair = VendorLanguagePair.objects.none()
 	# 	for i in jobs:
-	# 		if i.target_language_id == None:
-	# 			tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-	# 		else:
-	# 			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-	# 		print("Tr------------>",tr)
+			# if i.target_language_id == None:
+			# 	tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			# else:
+			# 	tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			# print("Tr------------>",tr)
 	# 		lang_pair = lang_pair.union(tr)
 	# 	print("langpair----------------->",lang_pair)
 	# 	return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
@@ -1356,7 +1356,12 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 		lang_pair = VendorLanguagePair.objects.none()
 		condition_satisfied = True
 		for i in jobs:
-			tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			print(i.source_language_id,i.target_language_id)
+			if i.target_language_id == None:
+				tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			else:
+				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			print("Tr------------>",tr)
 			if tr:
 				condition_satisfied = True
 				lang_pair = lang_pair.union(tr)
