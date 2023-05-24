@@ -1317,10 +1317,12 @@ class TaskAssign(models.Model):
     YET_TO_START = 1
     IN_PROGRESS = 2
     COMPLETED = 3
+    RAISE_COMPLAINT = 4
     STATUS_CHOICES = [
         (YET_TO_START,'Yet to start'),
         (IN_PROGRESS, 'In Progress'),
         (COMPLETED, 'Completed'),
+        (RAISE_COMPLAINT, 'Raise complaint')
     ]
     APPROVED = 1
     REJECTED = 2
@@ -1343,9 +1345,10 @@ class TaskAssign(models.Model):
     copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
     reassigned = models.BooleanField(default=False)
-    #client_response = models.IntegerField(choices=RESPONSE_CHOICES, blank=True, null=True)
-    #client_reason = models.TextField(null=True, blank=True)
-    #user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
+    client_response = models.IntegerField(choices=RESPONSE_CHOICES, blank=True, null=True)
+    client_reason = models.TextField(null=True, blank=True)
+    complaint_reason = models.TextField(null=True, blank=True)
+    user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
 
     objects = TaskAssignManager()
 
