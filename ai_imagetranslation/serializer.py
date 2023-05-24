@@ -202,13 +202,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             can_tar_json['objects']=obj_list+text_box_list_new
             img_tar.target_canvas_json=can_tar_json
             img_tar.save()
-            return img_tar
+            return instance
 
         if export and target_update_id:
             im_export=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
             im_export.export=export
             im_export.save()
-            
+
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             instance.mask_json = mask_json
             instance.save()
