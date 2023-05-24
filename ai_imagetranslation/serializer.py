@@ -190,6 +190,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             img_tar.mask=mask
             img_tar.save()
             inpaint_out_image,_,text_box_list=inpaint_image_creation(img_tar)
+            content=image_content(inpaint_out_image)
+            inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
+            img_tar.inpaint_image=inpaint_image_file
+            img_tar.save()
             text_box_list_new=[]
             for text_box in text_box_list:
                 txt_box=copy.deepcopy(text_box)
@@ -198,16 +202,12 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                      target_lang_code=img_tar.target_language.locale_code)
                     txt_box['text']=translate_bbox
                 text_box_list_new.append(txt_box)
-            content=image_content(inpaint_out_image)
-            inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
-            img_tar.inpaint_image=inpaint_image_file
-            img_tar.save()
             can_tar_json=img_tar.target_canvas_json
             obj_list=can_tar_json['objects']
+            obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.path
             can_tar_json['objects']=obj_list+text_box_list_new
             img_tar.inpaint_image=can_tar_json
- 
-            return img_tar
+            img_tar.save()
 
         if export and target_update_id:
             im_export=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)

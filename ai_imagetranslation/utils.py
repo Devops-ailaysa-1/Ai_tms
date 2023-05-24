@@ -190,8 +190,8 @@ def inpaint_image_creation(image_details):
     img=cv2.imread(img_path)
     if image_details.mask:
         image_to_extract_text = np.bitwise_and(mask ,img)
-        content = image_content(image_to_extract_text)
-        inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
+        content=image_content(image_to_extract_text)
+        inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
         # image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
