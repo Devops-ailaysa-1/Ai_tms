@@ -105,16 +105,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         image_to_translate_id = validated_data.get('image_to_translate_id' ,None)
         mask_json=validated_data.get('mask_json')
         if validated_data.get('image'):
- 
             instance.image = validated_data.get('image')
             width , height = self.image_shape(instance.image)
             instance.width = width
             instance.height = height
             instance.types  = str(validated_data.get('image')).split('.')[-1]
-
-        if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
-            instance.mask_json = mask_json
-            instance.save()
             
         if validated_data.get('project_name' ,None):
             instance.project_name = validated_data.get('project_name')
@@ -183,7 +178,6 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         
         if target_update_id and mask_json:
             img_tar=ImageInpaintCreation.objects.get(id=target_update_id)
-             
             img_tar.mask_json=mask_json
             thumb_mask_image=thumbnail_create(mask_json,formats='mask')
             mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
@@ -214,7 +208,10 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
             im_export=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
             im_export.export=export
             im_export.save()
-
+            
+        if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
+            instance.mask_json = mask_json
+            instance.save()
 
         if thumbnail and target_update_id:
             im_thumbnail=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
