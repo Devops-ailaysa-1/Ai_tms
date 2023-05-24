@@ -534,7 +534,6 @@ def po_modify(task_assign_info_id,po_update):
     if 'change_request' in po_update:
         try:
             po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
-            po_task_obj.tsk_accepted=True
             po_task_obj.assign_status="change_request"
             po_task_obj.save()
             return True
