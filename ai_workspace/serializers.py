@@ -1619,6 +1619,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 					# editing po
 					print("inside accepted rate")
 					po_update.append('accepted_rate')
+					po_update.append('change_request')
 				else:
 					po_update.append('accepted_rate_by_owner')
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
