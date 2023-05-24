@@ -816,7 +816,9 @@ class TaskAssignSerializer(serializers.ModelSerializer):
 	# step = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),required=False)
 	class Meta:
 		model = TaskAssign
-		fields =('task_info','step','assign_to','mt_enable','mt_engine','pre_translate','copy_paste_enable','status',)
+		fields =('task_info','step','assign_to','mt_enable','complaint_reason',
+				'mt_engine','pre_translate','copy_paste_enable','status',
+				'client_response','client_reason','user_who_approved_or_rejected')
 
 class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	task_assign_info = TaskAssignSerializer(required=False)
@@ -1605,6 +1607,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 				task_assign_data.update({'status':1})
 				po_update.append('assign_to')
+			if task_assign_data.get('client_response'):
+				task_assign_data.update({'user_who_approved_or_rejected':self.context.get('request').user})
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
 			task_detail = data.get('task_assign_info')
