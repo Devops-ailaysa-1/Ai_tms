@@ -200,7 +200,8 @@ def inpaint_image_creation(image_details):
         if output['code']==200:
             if output['result'].shape[0]==np.prod(img.shape):
                 res=np.reshape(output['result'],img.shape)  
-                diff=cv2.absdiff(img,res)
+                # diff=cv2.absdiff(img,res)
+                diff=np.bitwise_and(img,res)
                 diff=lama_diff(mask,diff)
                 diff=cv2.cvtColor(diff,cv2.COLOR_BGR2RGB)
                 res=cv2.cvtColor(res,cv2.COLOR_BGR2RGB)
@@ -211,7 +212,7 @@ def inpaint_image_creation(image_details):
                 dst=np.asarray(dst)
                 dst_final=np.copy(dst)
                 dst_final=cv2.cvtColor(dst_final,cv2.COLOR_BGR2RGB)
-                image_color_change=cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                image_color_change=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
                 black_and_white=np.asarray(black_and_white)
                 black_and_white=black_and_white[:, :, :3]
                 image_color_change=image_color_change[:, :, :3]
