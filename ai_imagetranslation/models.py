@@ -69,17 +69,15 @@ class ImageInpaintCreation(models.Model):
     export=models.FileField(upload_to=user_directory_path_image_translate_export,blank=True,null=True)  ##################
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
-    mask=models.FileField(upload_to=user_directory_path_image_translate_process_target,blank=True,null=True)
-    inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
-    mask_json=models.JSONField(blank=True,null=True)
+    # mask=models.FileField(upload_to=user_directory_path_image_translate_process_target,blank=True,null=True)
+    # inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
+    # mask_json=models.JSONField(blank=True,null=True)
     create_inpaint_pixel_location=models.FileField(upload_to=user_directory_path_image_translate_process_target,blank=True,null=True)
 
 
 
     class Meta:
         ordering = ['id']
-
-
 
 # class TargetInpaintimage(models.Model):
 #     inpaint_create=models.ForeignKey(to=ImageInpaintCreation,blank=True,null=True,on_delete=models.CASCADE,related_name='tar_im_create')

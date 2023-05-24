@@ -89,7 +89,7 @@ def creating_image_bounding_box(image_path,color_find_image_diff):
             font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
             textbox_['fontSize']=font
             no_of_segments+=1
-            text_list = []
+            text_list=[]
             text_box_list.append(textbox_)
     return text_and_bounding_results,text_box_list
  
@@ -151,7 +151,7 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     img_gen='https://apinodestaging.ailaysa.com/ai_canvas_mask_generate'
     resized_image = image_diff.resize((256,256))
     resized_image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue())
+    img_str=base64.b64encode(buffered.getvalue())
     resized_width,resized_heigth= resized_image.size
     output=img_str.decode()
     ima_str='data:image/png;base64,'+str(output)
@@ -178,16 +178,22 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
 # from celery import shared_task
 # @shared_task(serializer='json')
 from rest_framework import serializers
-def inpaint_image_creation(image_details):
-    if hasattr(image_details,'image'):
-        img_path=image_details.image.path
-    else:
+def inpaint_image_creation(image_details,inpaintparallel=False):
+    # if hasattr(image_details,'image'):
+    #     img_path=image_details.image.path
+    # else:
+    #     img_path=image_details.inpaint_image.path
+    
+    if inpaintparallel:
         img_path=image_details.inpaint_image.path
+    else:
+        img_path=image_details.image.path
+
     mask_path=image_details.mask.path
     mask=cv2.imread(mask_path)
     img=cv2.imread(img_path)
     if image_details.mask:
-        image_to_extract_text = np.bitwise_and(mask ,img)
+        image_to_extract_text=np.bitwise_and(mask ,img)
         content=image_content(image_to_extract_text)
         inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
