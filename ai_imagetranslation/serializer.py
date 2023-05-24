@@ -202,12 +202,13 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                      target_lang_code=img_tar.target_language.locale_code)
                     txt_box['text']=translate_bbox
                 text_box_list_new.append(txt_box)
-            can_tar_json=img_tar.target_canvas_json
+            can_tar_json=copy.deepcopy(img_tar.target_canvas_json)
             obj_list=can_tar_json['objects']
-            obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.path
+            obj_list[0]['src']=HOST_NAME+img_tar.inpaint_image.url
             can_tar_json['objects']=obj_list+text_box_list_new
-            img_tar.inpaint_image=can_tar_json
+            img_tar.target_canvas_json=can_tar_json
             img_tar.save()
+            return img_tar
 
         if export and target_update_id:
             im_export=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
