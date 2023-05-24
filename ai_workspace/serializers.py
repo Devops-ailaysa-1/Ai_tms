@@ -1619,7 +1619,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 					# editing po
 					print("inside accepted rate")
 					po_update.append('accepted_rate')
-					po_update.append('change_request')
+					# po_update.append('change_request')
 				else:
 					po_update.append('accepted_rate_by_owner')
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
@@ -1627,6 +1627,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			if 'task_ven_status' in data.get('task_assign_info'):
 				if data.get('task_assign_info').get('task_ven_status') == 'task_accepted':
 					po_update.append("accepted")
+				if data.get('task_assign_info').get('task_ven_status') == "change_request":
+					po_update.append('change_request')
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
 				try:msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
 				except:pass
