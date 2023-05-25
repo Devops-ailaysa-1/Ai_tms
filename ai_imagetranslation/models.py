@@ -51,13 +51,13 @@ def user_directory_path_image_translate_thumbnail(instance, filename):
 
 
 def user_directory_path_image_translate_export(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.source_image.user.uid, "image_translate/export",filename) 
+    return '{0}/{1}/{2}'.format(instance.source_image.user.uid,"image_translate/export",filename) 
 
 def user_directory_path_inpaint_image(instance, filename):
     return '{0}/{1}/{2}'.format(instance.source_image.user.uid,"image_translate/image_upload/image_translate/inpaint_res",filename)
 
 def user_directory_path_image_translate_process_target(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.source_image.user.uid, "image_translate/image_upload/image_translate/mask",filename)
+    return '{0}/{1}/{2}'.format(instance.source_image.user.uid,"image_translate/image_upload/image_translate/mask",filename)
 
 
 class ImageInpaintCreation(models.Model):
@@ -73,8 +73,6 @@ class ImageInpaintCreation(models.Model):
     # inpaint_image=models.FileField(upload_to=user_directory_path_inpaint_image,blank=True,null=True)
     # mask_json=models.JSONField(blank=True,null=True)
     create_inpaint_pixel_location=models.FileField(upload_to=user_directory_path_image_translate_process_target,blank=True,null=True)
-
-
 
     class Meta:
         ordering = ['id']

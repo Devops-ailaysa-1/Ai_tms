@@ -41,8 +41,8 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
     # tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
     class Meta:
         model = ImageInpaintCreation
-        fields = ("id",'source_image','target_language','target_canvas_json','target_bounding_box',
-                    'export','thumbnail','created_at','updated_at','mask','inpaint_image','mask_json')
+        fields = ('id','source_image','target_language','target_canvas_json','target_bounding_box',
+                  'export','thumbnail','created_at','updated_at','mask','inpaint_image','mask_json')
         
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -208,37 +208,38 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
 
             instance.mask_json=mask_json
-            thumb_mask_image=thumbnail_create(mask_json,formats='mask')
-            mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
-            instance.mask=mask
-            instance.save()
-            inpaint_out_image,_,text_box_list=inpaint_image_creation(instance,inpaintparallel=True)
-            content=image_content(inpaint_out_image)
-            inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
-            instance.inpaint_image=inpaint_image_file
-            instance.save()
-            print("url",instance.inpaint_image.path)
-            source_canvas_json=copy.deepcopy(instance.source_canvas_json)
-            obj_list=source_canvas_json['objects']
-            obj_list[0]['src']=HOST_NAME+instance.inpaint_image.url
-            source_canvas_json['objects']=obj_list+text_box_list
-            for tar_ins in instance.s_im.all():
-                tar_json=copy.deepcopy(tar_ins.target_bounding_box)
-                text_box_list_new=[]
 
-                for text_box in text_box_list:
-                    txt_box=copy.deepcopy(text_box)
-                    if 'text' in txt_box:
-                        translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
-                                                     target_lang_code=tar_ins.target_language.locale_code)
-                        txt_box['text']=translate_bbox
-                    text_box_list_new.append(txt_box)
+            # thumb_mask_image=thumbnail_create(mask_json,formats='mask')
+            # mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
+            # instance.mask=mask
+            # instance.save()
+            # inpaint_out_image,_,text_box_list=inpaint_image_creation(instance,inpaintparallel=True)
+            # content=image_content(inpaint_out_image)
+            # inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
+            # instance.inpaint_image=inpaint_image_file
+            # instance.save()
+            # print("url",instance.inpaint_image.path)
+            # source_canvas_json=copy.deepcopy(instance.source_canvas_json)
+            # obj_list=source_canvas_json['objects']
+            # obj_list[0]['src']=HOST_NAME+instance.inpaint_image.url
+            # source_canvas_json['objects']=obj_list+text_box_list
+            # for tar_ins in instance.s_im.all():
+            #     tar_json=copy.deepcopy(tar_ins.target_bounding_box)
+            #     text_box_list_new=[]
+
+            #     for text_box in text_box_list:
+            #         txt_box=copy.deepcopy(text_box)
+            #         if 'text' in txt_box:
+            #             translate_bbox=get_translation(1,source_string=txt_box['text'],source_lang_code='en',
+            #                                          target_lang_code=tar_ins.target_language.locale_code)
+            #             txt_box['text']=translate_bbox
+            #         text_box_list_new.append(txt_box)
                 
-                tar_json['objects'][0]['src']=HOST_NAME+instance.inpaint_image.url
-                obj_list=tar_json['objects']
-                tar_json['objects']=obj_list+text_box_list_new
+            #     tar_json['objects'][0]['src']=HOST_NAME+instance.inpaint_image.url
+            #     obj_list=tar_json['objects']
+            #     tar_json['objects']=obj_list+text_box_list_new
 
-            return instance
+            instance.save()
                         
         if export and target_update_id:
             im_export=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
