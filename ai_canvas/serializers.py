@@ -483,7 +483,7 @@ class TextTemplateSerializer(serializers.ModelSerializer):
         fields = ('id','text_thumbnail','text_template_json' ,'txt_keywords' ,'text_keywords')
         
     def create(self, validated_data):
-        text_keywords = validated_data.pop('text_keywords') 
+        text_keywords=validated_data.pop('text_keywords') 
         text_temp = TextTemplate.objects.create(**validated_data)
         if text_keywords:
             for keyword in text_keywords:
@@ -506,7 +506,19 @@ class TextTemplateSerializer(serializers.ModelSerializer):
 
 
 
-class FontFileSerializer(serializers.Serializer):
+class FontFileSerializer(serializers.ModelSerializer):
     class Meta:
         model=FontFile
         fields='__all__'
+
+    def to_representation(self, instance):
+        rep=super().to_representation(instance)
+        if rep.get('font_family',None):
+            rep['font_family']=instance.font_family.url
+        return rep
+
+    def create(self, validated_data):
+ 
+        instance=FontFile.objects.create(**validated_data)
+        return instance
+    

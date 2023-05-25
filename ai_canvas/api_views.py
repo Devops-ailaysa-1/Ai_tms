@@ -538,7 +538,9 @@ class FontFileViewset(viewsets.ViewSet):
         
     def create(self,request):
         font_file=request.FILES.get('font_file',None)
-        serializer=FontFileSerializer(data=request.data)
+ 
+        print({**request.POST.dict(),'font_family':font_file})
+        serializer=FontFileSerializer(data={**request.POST.dict(),'font_family':font_file,'user':request.user.id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -548,7 +550,7 @@ class FontFileViewset(viewsets.ViewSet):
 
     def update(self,request,pk):
         font_file=request.FILES.get('font_file',None)
-        query_set=FontFile.objects.get(id = pk)
+        query_set=FontFile.objects.get(id=pk)
         serializer=FontFileSerializer(query_set, data=request.data,partial = True)                           
         if serializer.is_valid():
             serializer.save()
