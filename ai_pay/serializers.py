@@ -13,10 +13,10 @@ class POTaskSerializer(serializers.ModelSerializer):
 
 
 class POAssignmentSerializer(serializers.ModelSerializer):
-    tasks = POTaskSerializer(many=True,source='assignment_po')
+    # tasks = POTaskSerializer(many=True,source='assignment_po')
     class Meta:
         model = POAssignment    
-        fields =('assignment_id','step','tasks',)
+        fields =('assignment_id','step')
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
@@ -26,10 +26,11 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     client_country = serializers.CharField(source='client.country.name')
     seller_country = serializers.CharField(source='seller.country.name')
     assignment = POAssignmentSerializer()
+    tasks = POTaskSerializer(many=True,source='po_task')
     class Meta:
         model = PurchaseOrder
         fields = ('poid','client','seller','client_name','seller_name','client_country','seller_country','po_status',
-                'currency','currency_code','created_at','po_total_amount','assignment')
+                'currency','currency_code','created_at','po_total_amount','assignment','tasks')
         extra_kwargs = {
 		 	"currency_name": {"read_only": True},
              "currency":{"write_only":True},
@@ -224,3 +225,5 @@ class PoAssignDetailsSerializer(serializers.ModelSerializer):
     def get_currency(self,obj):
         tsk = Task.objects.get(id=obj.task_id) 
         return obj.po.currency.id
+    
+    # def get

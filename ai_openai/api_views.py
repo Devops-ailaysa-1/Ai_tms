@@ -807,7 +807,7 @@ def generate_article(request):
                         if 'content' in delta.keys():
                             content=delta['content']
                             t=content+' '
-                            yield '\ndata: {}\n\n'.format({"t":t})
+                            yield '\ndata: {}\n\n'.format({"t":content})
             return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)

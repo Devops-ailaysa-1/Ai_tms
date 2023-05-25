@@ -534,7 +534,6 @@ def po_modify(task_assign_info_id,po_update):
     if 'change_request' in po_update:
         try:
             po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
-            po_task_obj.tsk_accepted=True
             po_task_obj.assign_status="change_request"
             po_task_obj.save()
             return True
@@ -887,7 +886,8 @@ class ProjectPOTaskView(viewsets.ViewSet):
 
         project_id = self.request.query_params.get('project_id')
         proj_queryset = Project.objects.filter(id=project_id)
-        queryset = POTaskDetails.objects.filter(projectid__in=proj_queryset.values_list('ai_project_id',flat=True),po__seller=self.request.user)
+        queryset = POTaskDetails.objects.filter(Q(projectid__in=proj_queryset.values_list('ai_project_id',flat=True))&
+                                                Q(po__seller=self.request.user)&~Q(po__po_status="void"))
         return queryset
     
 
