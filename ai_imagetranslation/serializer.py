@@ -37,6 +37,30 @@ from ai_canvas.template_json import img_json,basic_json
 #         model = TargetInpaintimage
 #         fields = "__all__"
 
+
+class ImageInpaintCreationListSerializer(serializers.ModelSerializer):
+    # tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
+    class Meta:
+        model = ImageInpaintCreation
+        fields = ('id','source_image','target_language','thumbnail','created_at','updated_at')
+
+    def to_representation(self, instance):
+        representation=super().to_representation(instance)
+        if representation.get('target_language',None):
+            representation['target_language']=instance.target_language.language.id 
+        if not representation.get('thumbnail',None):
+            if instance.target_canvas_json:
+                target_canvas_json=instance.target_canvas_json
+                print("target_canvas_json",target_canvas_json)
+                if isinstance(target_canvas_json,dict) and  'backgroundImage' in target_canvas_json.keys():
+                    target_canvas_json_bs64=thumbnail_create(json_str=target_canvas_json,formats='png')
+                    name=instance.source_image.project_name
+                    thumb_image=core.files.File(core.files.base.ContentFile(target_canvas_json_bs64),'thumbnail_{}.png'.format(name))
+                    instance.thumbnail=thumb_image
+                    instance.save()
+        return representation
+
+
 class ImageInpaintCreationSerializer(serializers.ModelSerializer):
     # tar_im_create=TargetInpaintimageSerializer(many=True,read_only=True)
     class Meta:
@@ -50,6 +74,9 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
         if representation.get('target_language' ,None):
             representation['target_language'] = instance.target_language.language.id   
         return representation
+
+
+ 
 
 class ImageTranslateSerializer(serializers.ModelSerializer):  
     image_inpaint_creation=ImageInpaintCreationSerializer(source='s_im',many=True,read_only=True)
@@ -140,8 +167,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
                 instance.inpaint_image=inpaint_image_file 
                 instance.save()
-                print('=======>>>',instance.inpaint_image.path)
-                print('=======>>>',instance.inpaint_image.url)
+ 
                 img_json_copy=copy.deepcopy(img_json)
                 img_json_copy['src']=HOST_NAME+instance.inpaint_image.url
                 img_json_copy['width']=int(instance.width)

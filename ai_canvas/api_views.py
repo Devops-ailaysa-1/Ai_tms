@@ -4,12 +4,12 @@ from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate)
+                              TemplateKeyword,TextTemplate,FontFile)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
-                                   TextTemplateSerializer,TemplateKeywordSerializer)
+                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer)
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.decorators import api_view,permission_classes
@@ -524,3 +524,34 @@ class TemplateKeywordViewset(viewsets.ViewSet):
         return Response(serializer.data) 
     
 
+class FontFileViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def get(self, request):
+        query_set=FontFile.objects.all()
+        serializer=FontFileSerializer(query_set ,many =True)
+        return Response(serializer.data)
+
+    def retrieve(self,request,pk):
+        query_set=FontFile.objects.get(id = pk)
+        serializer=FontFileSerializer(query_set )
+        return Response(serializer.data)
+        
+    def create(self,request):
+        font_file=request.FILES.get('font_file',None)
+        serializer=FontFileSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
+
+    def update(self,request,pk):
+        font_file=request.FILES.get('font_file',None)
+        query_set=FontFile.objects.get(id = pk)
+        serializer=FontFileSerializer(query_set, data=request.data,partial = True)                           
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)

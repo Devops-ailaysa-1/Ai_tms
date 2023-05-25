@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,
                             CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
-                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword)
+                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile)
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create
@@ -180,7 +180,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                         can_tar_ins=CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
                                                              json=tar_json_form,page_no=src_json_file.page_no)
                         tar_json_pro=can_tar_ins.json
-                        tar_json_pro['projectid']={"pages": count+1,"langId": can_tar_ins.id,"langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
+                        tar_json_pro['projectid']={"pages": count+1,"langId": trans_json.id,"langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
                         can_tar_ins.json=tar_json_pro
                         can_tar_ins.save()
 
@@ -502,4 +502,11 @@ class TextTemplateSerializer(serializers.ModelSerializer):
             txt_temp = validated_data.pop('text_keywords')
             [TemplateKeyword.objects.create(text_template=instance , text_keywords = key) for key in  txt_temp]
         return instance
-    
+
+
+
+
+class FontFileSerializer(serializers.Serializer):
+    class Meta:
+        model=FontFile
+        fields='__all__'

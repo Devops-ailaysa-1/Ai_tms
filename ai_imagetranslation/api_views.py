@@ -1,7 +1,7 @@
-from rest_framework import viewsets, generics
-from ai_imagetranslation.serializer import ImageloadSerializer ,ImageTranslateSerializer
+from rest_framework import viewsets 
+from ai_imagetranslation.serializer import ImageloadSerializer,ImageTranslateSerializer,ImageInpaintCreationListSerializer
 from rest_framework.response import Response
-from ai_imagetranslation.models import Imageload ,ImageTranslate
+from ai_imagetranslation.models import Imageload ,ImageTranslate,ImageInpaintCreation
 from rest_framework import status
 from django.http import Http404 
 from rest_framework.permissions import IsAuthenticated
@@ -88,8 +88,13 @@ class ImageTranslateViewset(viewsets.ViewSet):
         query_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
+from rest_framework.generics import ListAPIView
 
+class ImageInpaintCreationListView(ListAPIView):
+    queryset = ImageInpaintCreation.objects.all()  # Specify the queryset for retrieving objects
+    serializer_class = ImageInpaintCreationListSerializer
 
+ 
 # class ImageloadRetrieveViewset(generics.RetrieveAPIView):
 #     queryset = Imageload.objects.all()
 #     serializer_class = ImageloadRetrieveRetrieveSerializer

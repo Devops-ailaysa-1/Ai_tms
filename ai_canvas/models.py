@@ -154,3 +154,13 @@ class TemplateKeyword(models.Model):
     text_keywords=models.CharField(max_length=100)
 
 
+def user_directory_path_font_file(instance, filename):
+    return '{0}/{1}/{2}'.format(instance.user.uid, "canvas/font_file/fonts/",filename)
+
+class FontFile(models.Model):
+    user=models.ForeignKey(AiUser,on_delete=models.CASCADE)
+    name=models.CharField(max_length=200,blank=True,null=True)
+    font_family=models.FileField(upload_to=user_directory_path_font_file,blank=True,null=True)
+
+    def __str__(self) -> str:
+        return self.name

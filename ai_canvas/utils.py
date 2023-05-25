@@ -81,17 +81,17 @@ def canvas_translate_json_fn(canvas_json,src_lang,languages):
 
 def thumbnail_create(json_str,formats):
     all_format=['png','jpeg','jpg','svg']
-    width = json_str['backgroundImage']['width']
-    height=   json_str['backgroundImage']['height']
+    width=json_str['backgroundImage']['width']
+    height=json_str['backgroundImage']['height']
 
     if formats=='mask':
         multiplierValue=1
     elif formats in all_format:
         multiplierValue=min([300 /width, 300 / height])
 
-    json_ = json.dumps(json_str)
-    data = {'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
-    thumb_image = requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
+    json_=json.dumps(json_str)
+    data={'json':json_ , 'format':formats,'multiplierValue':multiplierValue}
+    thumb_image=requests.request('POST',url=IMAGE_THUMBNAIL_CREATE_URL,data=data ,headers={},files=[])
 
     if thumb_image.status_code ==200:
         split_text_base64 = thumb_image.text.split(",")[-1]

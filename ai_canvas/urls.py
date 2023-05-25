@@ -17,7 +17,8 @@ router.register(r'template-design',api_views.TemplateGlobalDesignViewset,basenam
 router.register(r'mytemplate-design',api_views.MyTemplateDesignViewset,basename='mytemplatedesign')
 router.register(r'text-keyword', api_views.TemplateKeywordViewset,basename= 'textkeyword')
 router.register(r'text-template', api_views.TextTemplateViewset,basename='texttemplate')
-
+router.register(r'font-file', api_views.FontFileViewset,basename='fontfile')
+ 
 urlpatterns = router.urls
 urlpatterns += [
     path('template-design-get/<int:id>/', api_views.TemplateGlobalDesignRetrieveViewset.as_view(),name='templatedesignget'),     
