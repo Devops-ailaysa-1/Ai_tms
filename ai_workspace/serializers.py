@@ -848,7 +848,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_files','step','task_ven_status','reassigned',\
+        fields = ('id','instruction','instruction_files','step','task_ven_status','change_request_reason','reassigned',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','estimated_hours','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable',\
@@ -864,7 +864,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
             deleted = True if 'deleted' in instance.task_assign.assign_to.email else False
             external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
             email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
-            managers = [i.id for i in instance.task_assign.assign_to.team.get_project_manager] if external_editor and instance.task_assign.assign_to.team else []
+            managers = [i.id for i in instance.task_assign.assign_to.team.get_project_manager] if external_editor and instance.task_assign.assign_to.team and instance.task_assign.assign_to.team.owner.is_agency else []
             try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
             except:avatar = None
             return {"id":instance.task_assign.assign_to_id,"managers":managers,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor,"account_deleted":deleted}

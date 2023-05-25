@@ -1390,6 +1390,7 @@ class TaskAssignInfo(models.Model):
     billable_char_count = models.IntegerField(blank=True,null=True)
     billable_word_count = models.IntegerField(blank=True,null=True)
     account_raw_count = models.BooleanField(default=True)
+    change_request_reason = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
