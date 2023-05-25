@@ -42,7 +42,8 @@ class ImageInpaintCreationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageInpaintCreation
         fields = ('id','source_image','target_language','target_canvas_json','target_bounding_box',
-                  'export','thumbnail','created_at','updated_at','mask','inpaint_image','mask_json')
+                  'export','thumbnail','created_at','updated_at')
+                #   ,'mask','inpaint_image','mask_json')
         
     def to_representation(self, instance):
         representation = super().to_representation(instance)
