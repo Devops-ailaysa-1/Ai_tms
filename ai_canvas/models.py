@@ -45,48 +45,48 @@ class CanvasUserImageAssets(models.Model):
     updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
 
 class CanvasDesign(models.Model):
-    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    file_name =  models.CharField(max_length=50,null=True,blank=True) 
-    width = models.IntegerField(null=True,blank=True)
-    height = models.IntegerField(null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
+    user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    file_name=models.CharField(max_length=50,null=True,blank=True) 
+    width=models.IntegerField(null=True,blank=True)
+    height=models.IntegerField(null=True,blank=True)
+    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at=models .DateTimeField(auto_now=True,null=True,blank=True)
 
     class Meta:
         ordering = ('updated_at',)
 
 class CanvasSourceJsonFiles(models.Model):
-    canvas_design = models.ForeignKey(CanvasDesign,related_name='canvas_json_src', on_delete=models.CASCADE)
+    canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_json_src', on_delete=models.CASCADE)
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_source_json_thumbnails,blank=True,null=True)
-    export_file =models.FileField(upload_to=user_directory_path_canvas_source_json_exports,blank=True,null=True)
-    json = models.JSONField(null=True)
-    page_no = models.IntegerField()
-    updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
-    undo_hide_src = models.BooleanField(default=False)
+    export_file=models.FileField(upload_to=user_directory_path_canvas_source_json_exports,blank=True,null=True)
+    json=models.JSONField(null=True)
+    page_no=models.IntegerField()
+    updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
+    undo_hide_src=models.BooleanField(default=False)
     class Meta:
         constraints = [models.UniqueConstraint(fields=['canvas_design', 'page_no'], name="%(app_label)s_%(class)s_unique")]
         ordering = ('page_no',)
 
 
 class CanvasTranslatedJson(models.Model):
-    canvas_design = models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
-    source_language =  models.ForeignKey(LanguagesLocale,related_name='source_locale' , on_delete=models.CASCADE) 
-    target_language = models.ForeignKey(LanguagesLocale,related_name='target', on_delete=models.CASCADE)
+    canvas_design=models.ForeignKey(CanvasDesign,related_name='canvas_translate', on_delete=models.CASCADE)
+    source_language=models.ForeignKey(LanguagesLocale,related_name='source_locale' , on_delete=models.CASCADE) 
+    target_language=models.ForeignKey(LanguagesLocale,related_name='target', on_delete=models.CASCADE)
     #canvas_translate_json = models.JSONField(blank=True,null=True)
     #thumbnail_target=models.FileField(upload_to='canva_templates/thumbnails/',blank=True,null=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
-    undo_hide_tar = models.BooleanField(default=False)
+    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at=models .DateTimeField(auto_now=True,null=True,blank=True)
+    undo_hide_tar=models.BooleanField(default=False)
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['canvas_design', 'source_language','target_language'], name="%(app_label)s_%(class)s_unique")]
+        constraints=[models.UniqueConstraint(fields=['canvas_design', 'source_language','target_language'], name="%(app_label)s_%(class)s_unique")]
 
 
 class CanvasTargetJsonFiles(models.Model):
-    canvas_trans_json = models.ForeignKey(CanvasTranslatedJson,related_name='canvas_json_tar', on_delete=models.CASCADE)
+    canvas_trans_json=models.ForeignKey(CanvasTranslatedJson,related_name='canvas_json_tar', on_delete=models.CASCADE)
     thumbnail=models.FileField(upload_to=user_directory_path_canvas_target_json_thumbnails,blank=True,null=True)
-    export_file =models.FileField(upload_to=user_directory_path_canvas_target_json_exports,blank=True,null=True)
-    json = models.JSONField(null=True)
-    page_no = models.IntegerField()
+    export_file=models.FileField(upload_to=user_directory_path_canvas_target_json_exports,blank=True,null=True)
+    json=models.JSONField(null=True)
+    page_no=models.IntegerField()
 
     class Meta:
         ordering = ('page_no',)
@@ -94,19 +94,19 @@ class CanvasTargetJsonFiles(models.Model):
 # #########template design##############
 
 class TemplateGlobalDesign(models.Model):
-    file_name =  models.CharField(max_length=50,null=True,blank=True) 
-    width = models.IntegerField(null=True,blank=True)
-    height = models.IntegerField(null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
-    user_name = models.CharField(max_length=100,null=True,blank=True)
+    file_name=models.CharField(max_length=50,null=True,blank=True) 
+    width=models.IntegerField(null=True,blank=True)
+    height=models.IntegerField(null=True,blank=True)
+    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at=models .DateTimeField(auto_now=True,null=True,blank=True)
+    user_name=models.CharField(max_length=100,null=True,blank=True)
 
 class TemplatePage(models.Model):
-    template_page = models.ForeignKey(TemplateGlobalDesign,related_name='template_globl_pag', on_delete=models.CASCADE)
-    thumbnail_page =models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
-    export_page =models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
-    json_page = models.JSONField(null=True,default=dict)
-    page_no = models.IntegerField()
+    template_page=models.ForeignKey(TemplateGlobalDesign,related_name='template_globl_pag', on_delete=models.CASCADE)
+    thumbnail_page=models.FileField(upload_to='templates_page/thumbnails/',blank=True,null=True)
+    export_page=models.FileField(upload_to='templates_page/exports/',blank=True,null=True)
+    json_page=models.JSONField(null=True,default=dict)
+    page_no=models.IntegerField()
     class Meta:
         constraints = [
         models.UniqueConstraint(fields=['template_page', 'page_no'], name="%(app_label)s_%(class)s_unique")]
@@ -119,19 +119,19 @@ def user_directory_path_canvas_mytemplatedesign_exports(instance, filename):
     return '{0}/{1}/{2}'.format(instance.my_template_design.user.uid, "canvas/mytemplatedesign/canva_exports_target/exports/",filename)
 
 class MyTemplateDesign(models.Model):
-    user = models.ForeignKey(AiUser, on_delete=models.CASCADE)
-    file_name =  models.CharField(max_length=50,null=True,blank=True) 
-    width = models.IntegerField(null=True,blank=True)
-    height = models.IntegerField(null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
-    updated_at= models .DateTimeField(auto_now=True,null=True,blank=True)
+    user=models.ForeignKey(AiUser, on_delete=models.CASCADE)
+    file_name=models.CharField(max_length=50,null=True,blank=True) 
+    width=models.IntegerField(null=True,blank=True)
+    height=models.IntegerField(null=True,blank=True)
+    created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at=models.DateTimeField(auto_now=True,null=True,blank=True)
      
 class MyTemplateDesignPage(models.Model):
-    my_template_design = models.ForeignKey(MyTemplateDesign,related_name='my_template_page', on_delete=models.CASCADE)
-    my_template_thumbnail =models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_thumbnails,blank=True,null=True)
-    my_template_export =models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_exports,blank=True,null=True)
-    my_template_json = models.JSONField(null=True,default=dict)
-    page_no = models.IntegerField()
+    my_template_design=models.ForeignKey(MyTemplateDesign,related_name='my_template_page', on_delete=models.CASCADE)
+    my_template_thumbnail=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_thumbnails,blank=True,null=True)
+    my_template_export=models.FileField(upload_to=user_directory_path_canvas_mytemplatedesign_exports,blank=True,null=True)
+    my_template_json=models.JSONField(null=True,default=dict)
+    page_no=models.IntegerField()
     class Meta:
         constraints = [
         models.UniqueConstraint(fields=['my_template_design','page_no'], name="%(app_label)s_%(class)s_unique")
@@ -142,15 +142,15 @@ def user_directory_path_canvas_source_image_assets(instance, filename):
 
 
 class SourceImageAssetsCanvasTranslate(models.Model):
-    canvas_design_img = models.ForeignKey(CanvasDesign , related_name='canvas_design_image_assets', on_delete=models.CASCADE,blank=True,null=True)
+    canvas_design_img=models.ForeignKey(CanvasDesign , related_name='canvas_design_image_assets', on_delete=models.CASCADE,blank=True,null=True)
     img = models.FileField(upload_to=user_directory_path_canvas_source_image_assets,blank=True,null=True)
 
 class TextTemplate(models.Model):
-    text_thumbnail = models.FileField(upload_to = 'text_template' ,blank = True , null = True)
-    text_template_json = models.JSONField(blank = True , null = True)
+    text_thumbnail=models.FileField(upload_to = 'text_template' ,blank = True , null = True)
+    text_template_json=models.JSONField(blank = True , null = True)
 
 class TemplateKeyword(models.Model):
-    text_template= models.ForeignKey(TextTemplate, on_delete = models.CASCADE ,related_name= 'txt_temp')
-    text_keywords = models.CharField(max_length=100)
+    text_template=models.ForeignKey(TextTemplate, on_delete = models.CASCADE ,related_name= 'txt_temp')
+    text_keywords=models.CharField(max_length=100)
 
 

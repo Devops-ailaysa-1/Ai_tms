@@ -228,10 +228,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 obj_list=source_canvas_json['objects']
                 obj_list[0]['src']=HOST_NAME+instance.inpaint_image.url
                 source_canvas_json['objects']=obj_list+text_box_list
-
                 instance.source_canvas_json=source_canvas_json
                 instance.save()
-
                 for tar_ins in instance.s_im.all():
                     tar_json=copy.deepcopy(tar_ins.target_canvas_json)
                     text_box_list_new=[]
@@ -248,15 +246,11 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                     tar_ins.target_canvas_json=tar_json
                     tar_ins.save()
             return instance
-
-            
-                        
+              
         if export and target_update_id:
             im_export=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
             im_export.export=export
             im_export.save()
-
-
 
         if thumbnail and target_update_id:
             im_thumbnail=ImageInpaintCreation.objects.get(id=target_update_id,source_image=instance)
