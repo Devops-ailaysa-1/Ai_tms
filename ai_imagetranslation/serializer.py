@@ -175,7 +175,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 basic_json_copy['objects']=[img_json_copy]+text_box_list
                 basic_json_copy['backgroundImage']['width']=int(instance.width)
                 basic_json_copy['backgroundImage']['height']=int(instance.height)
-                basic_json_copy['projectid']={'langId':None,'langNo':src_lang.id ,'projId':instance.id,'projectType':'image-translate'}
+                basic_json_copy['projectid']={'langId':None,'langNo':src_lang.id,"pages": 1,"page":1,'projId':instance.id,'projectType':'image-translate'}
                 basic_json_copy['perPixelTargetFind']=False
                 instance.source_canvas_json=basic_json_copy
                 instance.save()
@@ -185,8 +185,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                             #  mask=instance.mask,inpaint_image=instance.inpaint_image,
                                                             #  mask_json=instance.mask_json)   
                 tar_json_copy=copy.deepcopy(instance.source_canvas_json)
-                tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,
-                                            'projId':instance.id,'projectType':'image-translate'}
+                tar_json_copy['projectid']={'langId':tar_bbox.id,'langNo':src_lang.id ,"pages": 1,
+                                             "page": 1,'projId':instance.id,'projectType':'image-translate'}
                 for count,i in enumerate(tar_json_copy['objects']):
                     if 'text' in i.keys():
                         translate_bbox=get_translation(1,source_string=i['text'],source_lang_code='en',target_lang_code=tar_lang.locale.first().locale_code)

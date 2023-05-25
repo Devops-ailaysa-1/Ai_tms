@@ -132,7 +132,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             can_json=CanvasSourceJsonFiles.objects.create(canvas_design=instance,json = source_json_file,
                                                  page_no=1,thumbnail=thumbnail_src,export_file=export_img_src)
             src_json=can_json.json
-            src_json['projectid']={"pages": 1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
+            src_json['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
             
             can_json.json=src_json
             can_json.save()
@@ -180,7 +180,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
                         can_tar_ins=CanvasTargetJsonFiles.objects.create(canvas_trans_json=trans_json,thumbnail=tar_json_thum_image,
                                                              json=tar_json_form,page_no=src_json_file.page_no)
                         tar_json_pro=can_tar_ins.json
-                        tar_json_pro['projectid']={"pages": count+1,"langId": trans_json.id,"langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
+                        tar_json_pro['projectid']={"pages":len(source_json_files_all),'page':count+1,"langId": trans_json.id,
+                                                   "langNo": tar_lang.id,"projId": instance.id,"projectType": "design"}
                         can_tar_ins.json=tar_json_pro
                         can_tar_ins.save()
 
@@ -350,7 +351,7 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
 
 
     def update(self, instance, validated_data):
-        instance.file_name = validated_data.get('file_name',instance.file_name)
+        instance.file_name=validated_data.get('file_name',instance.file_name)
         instance.width = validated_data.get('width',instance.width)
         instance.height = validated_data.get('height',instance.height)
         json_page = validated_data.pop('json_page',None)
@@ -373,7 +374,6 @@ class TemplateGlobalDesignSerializer(serializers.ModelSerializer):
                                         json_page=json_page,page_no=page_no)
         if validated_data.get('template_global_id',None):
             template_global_id = validated_data.get('template_global_id')
-
         return instance 
     
 
@@ -491,7 +491,7 @@ class TextTemplateSerializer(serializers.ModelSerializer):
         return text_temp
     
     def update(self, instance, validated_data):
-        template_keyword =  TemplateKeywordSerializer()
+        template_keyword=TemplateKeywordSerializer()
         if validated_data.get('text_thumbnail'):
             instance.text_thumbnail = validated_data.get('text_thumbnail')
             instance.save()
