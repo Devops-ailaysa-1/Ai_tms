@@ -214,6 +214,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 print(instance.inpaint_image)
                 instance.save()
             else:
+                instance.mask_json=mask_json
                 thumb_mask_image=thumbnail_create(mask_json,formats='mask')
                 mask=core.files.File(core.files.base.ContentFile(thumb_mask_image),'mask.png')
                 instance.mask=mask
