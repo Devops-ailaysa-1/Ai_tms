@@ -140,6 +140,8 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
                 instance.inpaint_image=inpaint_image_file 
                 instance.save()
+                print('=======>>>',instance.inpaint_image.path)
+                print('=======>>>',instance.inpaint_image.url)
                 img_json_copy=copy.deepcopy(img_json)
                 img_json_copy['src']=HOST_NAME+instance.inpaint_image.url
                 img_json_copy['width']=int(instance.width)
@@ -209,6 +211,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
         if validated_data.get('mask_json'): #also creation of mask image using node server  ###changes
             if not instance.s_im.all():
                 instance.mask_json=mask_json
+                print(instance.inpaint_image)
                 instance.save()
             else:
                 thumb_mask_image=thumbnail_create(mask_json,formats='mask')
@@ -217,18 +220,17 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                 instance.save()
                 inpaint_out_image,_,text_box_list=inpaint_image_creation(instance,inpaintparallel=True)
                 content=image_content(inpaint_out_image)
-                inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file.png")
+                inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"inpaint_file2112.png")
                 instance.inpaint_image=inpaint_image_file
                 instance.save()
-                print("url",instance.inpaint_image.path)
+                in_url=instance.inpaint_image.url
                 source_canvas_json=copy.deepcopy(instance.source_canvas_json)
                 obj_list=source_canvas_json['objects']
-                obj_list[0]['src']=HOST_NAME+instance.inpaint_image.url
+                obj_list[0]['src']=HOST_NAME+in_url
                 source_canvas_json['objects']=obj_list+text_box_list
                 for tar_ins in instance.s_im.all():
-                    tar_json=copy.deepcopy(tar_ins.target_bounding_box)
+                    tar_json=copy.deepcopy(tar_ins.target_canvas_json)
                     text_box_list_new=[]
-
                     for text_box in text_box_list:
                         txt_box=copy.deepcopy(text_box)
                         if 'text' in txt_box:
@@ -236,8 +238,7 @@ class ImageTranslateSerializer(serializers.ModelSerializer):
                                                         target_lang_code=tar_ins.target_language.locale_code)
                             txt_box['text']=translate_bbox
                         text_box_list_new.append(txt_box)
-                    
-                    tar_json['objects'][0]['src']=HOST_NAME+instance.inpaint_image.url
+                    tar_json['objects'][0]['src']=HOST_NAME+in_url
                     obj_list=tar_json['objects']
                     tar_json['objects']=obj_list+text_box_list_new
             return instance

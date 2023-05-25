@@ -74,6 +74,7 @@ class ImageInpaintCreation(models.Model):
     # mask_json=models.JSONField(blank=True,null=True)
     create_inpaint_pixel_location=models.FileField(upload_to=user_directory_path_image_translate_process_target,blank=True,null=True)
 
+
     class Meta:
         ordering = ['id']
 
