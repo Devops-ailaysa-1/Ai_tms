@@ -892,6 +892,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         pre_translate = instance.task_assign.pre_translate
         copy_paste_enable = instance.task_assign.copy_paste_enable
         task_status = instance.task_assign.get_status_display()
+        client_response = instance.task_assign.client_response.get_status_display() if instance.task_assign.client_response else None
         count = TaskAssignInfo.objects.filter(task_assign__task= instance.task_assign.task).count()
         print("Count-------------->",count)
         if count == 1:
@@ -908,7 +909,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 	            if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().status == 3:
 	                can_open = True
 	            else:can_open = False
-        return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
+        return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"client_response":client_response,"can_open":can_open}
 
     def run_validation(self, data):
         if data.get('assign_to'):
@@ -1601,6 +1602,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			task_assign_data = data.get('task_assign')
 			if task_assign_data.get('status') == 3:
 				notify_task_completion_status(instance)
+			# if task_assign_data.get('status') == 4:
+			# 	notify_task_rework(instance)
 			if task_assign_data.get('assign_to'):
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
