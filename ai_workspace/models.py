@@ -1317,7 +1317,7 @@ class TaskAssign(models.Model):
     YET_TO_START = 1
     IN_PROGRESS = 2
     COMPLETED = 3
-    RAISE_COMPLAINT = 4
+    RETURN_REQUEST = 4
     STATUS_CHOICES = [
         (YET_TO_START,'Yet to start'),
         (IN_PROGRESS, 'In Progress'),
