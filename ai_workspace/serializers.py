@@ -893,23 +893,23 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         copy_paste_enable = instance.task_assign.copy_paste_enable
         task_status = instance.task_assign.get_status_display()
         client_response = instance.task_assign.get_client_response_display() if instance.task_assign.client_response else None
-        count = TaskAssignInfo.objects.filter(task_assign__task= instance.task_assign.task).count()
-        print("Count-------------->",count)
-        if count == 1:
-            can_open = True
-        else:
-	        if instance.task_assign.step_id == 1:
-	            try:
-	                #print("$$$$$$$$$",TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status)
-	                if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status == 2:
-	                    can_open = False
-	                else:can_open = True
-	            except:can_open = True
-	        elif instance.task_assign.step_id == 2:
-	            if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().status == 3:
-	                can_open = True
-	            else:can_open = False
-        return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"client_response":client_response,"can_open":can_open}
+        # count = TaskAssignInfo.objects.filter(task_assign__task= instance.task_assign.task).count()
+        # print("Count-------------->",count)
+        # if count == 1:
+        #     can_open = True
+        # else:
+	    #     if instance.task_assign.step_id == 1:
+	    #         try:
+	    #             #print("$$$$$$$$$",TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status)
+	    #             if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status == 2:
+	    #                 can_open = False
+	    #             else:can_open = True
+	    #         except:can_open = True
+	    #     elif instance.task_assign.step_id == 2:
+	    #         if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().status == 3:
+	    #             can_open = True
+	    #         else:can_open = False
+        return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"client_response":client_response}#,"can_open":can_open}
 
     def run_validation(self, data):
         if data.get('assign_to'):
@@ -1606,7 +1606,7 @@ def notify_task_status(task_assign,status,reason):
             print("user---------->",task_assign.task.job.project.ai_user)
             receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
         except:pass
-    task_ass_list = TaskAssign.objects.filter(task=task_assign.task).filter(~Q(assign_to=task_assign.assign_to))
+    task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
     print('Receivers-------------->',receivers)
     for i in receivers:
