@@ -1657,11 +1657,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 try:self.history(obj)
                 except:pass
                 if obj.task_assign.reassigned == True:
+                    print("Inside IF")
                     obj.task_assign.assign_to = self.request.user.team.owner if self.request.user.team else self.request.user #if unassigned..it is assigned back to LSP 
                     #obj.task_assign.status = 1
                     obj.task_assign.save()
                     obj.delete()
                 else:
+                    print("Inside Else")
                     reassigns = TaskAssign.objects.filter(Q(task=obj.task_assign.task) & Q(step=obj.task_assign.step) & Q(reassigned = True))
                     if reassigns:
                         obj_1 = reassigns.first().task_assign_info

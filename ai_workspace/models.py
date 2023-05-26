@@ -1325,11 +1325,11 @@ class TaskAssign(models.Model):
         (RETURN_REQUEST, 'Return Request')
     ]
     APPROVED = 1
-    REJECTED = 2
+    REWORK = 2
     CLOSE = 3
     RESPONSE_CHOICES = [
         (APPROVED, 'Approved'),
-        (REJECTED, 'Rejected'),
+        (REWORK, 'Rework'),
         (CLOSE, 'Close'),
     ]
     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,

@@ -1515,7 +1515,7 @@ def msg_send_vendor_accept(task_assign,input):
     sender = task_assign.assign_to
     receivers = []
     receiver =  task_assign.task_assign_info.assigned_by
-    receivers =  receiver.team.get_project_manager if receiver.team.owner.is_agency or receiver.is_agency else []
+    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
     receivers.append( task_assign.task_assign_info.assigned_by)
     print("Receivers----------->",receivers)
     for i in receivers:
@@ -1539,6 +1539,7 @@ def msg_send_customer_rate_change(task_assign):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.task_assign_info.assigned_by
+    print("Sender------>",sender)
     receiver =  task_assign.assign_to 
     receivers = []
     receivers =  receiver.team.get_project_manager if receiver.team.owner.is_agency or receiver.is_agency else []
@@ -1551,10 +1552,38 @@ def msg_send_customer_rate_change(task_assign):
             thread_id = thread_ser.data.get('id')
         else:
             thread_id = thread_ser.errors.get('thread_id')
-        message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has changed rates. please view and accept"
-        print("Message---------------->",message)
-        msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-        notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+        if thread_id:
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has changed rates. please view and accept"
+            print("Message---------------->",message)
+            msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+            notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+
+def notify_client_status(task_assign,response,reason):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    sender = task_assign.task_assign_info.assigned_by  ## need to decide whether from assigned_by or from admin
+    print("Sender------>",sender)
+    receiver =  task_assign.assign_to 
+    receivers = []
+    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers.append(task_assign.assign_to)
+    print("Receivers--------->",receivers)
+    for i in receivers: 
+        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+        if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+        else:
+            thread_id = thread_ser.errors.get('thread_id')
+        if thread_id:
+            if response == 1:
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has been approved. you can initiate your payment process."
+            elif response == 2:
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has been set to be reworked for the following reason. "+reason
+            print("Message---------------->",message)
+            msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+            notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+
 
 
 def notify_task_status(task_assign,status,reason):
@@ -1577,17 +1606,16 @@ def notify_task_status(task_assign,status,reason):
             thread_id = thread_ser.data.get('id')
         else:
             thread_id = thread_ser.errors.get('thread_id')
-        if status == 3:
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted task."
-        elif status == 4:
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has returned task with following reason."+ reason
-        print("Message---------------->",message)
-        try:
+        if thread_id:
+            if status == 3:
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted task."
+            elif status == 4:
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has returned task with following reason."+ reason
+            print("Message---------------->",message)
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
-        except:pass
-
-
+			
+		
 
 class TaskAssignUpdateSerializer(serializers.Serializer):
 	task_assign = TaskAssignSerializer(required=False)
@@ -1627,6 +1655,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 				task_assign_data.update({'status':1})
 				po_update.append('assign_to')
 			if task_assign_data.get('client_response'):
+				notify_client_status(instance,task_assign_data.get('client_response'),task_assign_data.get('client_reason'))
 				task_assign_data.update({'user_who_approved_or_rejected':self.context.get('request').user})
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
