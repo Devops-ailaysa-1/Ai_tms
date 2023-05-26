@@ -1591,11 +1591,21 @@ def notify_task_status(task_assign,status,reason):
     from ai_marketplace.models import ChatMessage
     sender = task_assign.assign_to
     print("Sender-------->",sender)
+    print("reassigned------->",task_assign.reassigned)
     receivers=[]
-    try:
-        team = task_assign.task.job.project.ai_user.team
-        receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
-    except:pass
+    if task_assign.reassigned == True:
+        try:
+            already_assigned = TaskAssign.objects.filter(task=task_assign.task,step=task_assign.step,reassigned=False)
+            assigned_user = already_assigned.first().assign_to
+            print("AssignedUser--------->",assigned_user)
+            receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
+        except:pass
+    else:
+        try:
+            team = task_assign.task.job.project.ai_user.team
+            print("user---------->",task_assign.task.job.project.ai_user)
+            receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+        except:pass
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
     print('Receivers-------------->',receivers)

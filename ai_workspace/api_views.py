@@ -1447,7 +1447,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
 
         # if not reassigned:reassigned = False
         # else: reassigned = True
-
+        print("Reassigned-------->",reassigned)
         if file_delete_ids:
             file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
