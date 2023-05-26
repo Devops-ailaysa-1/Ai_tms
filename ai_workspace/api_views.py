@@ -1488,7 +1488,7 @@ def bulk_task_accept(request):
                 print("Error--------->",serializer.errors)
         except:
             pass
-        return Response({'msg':'Task Accept Succeded'})
+    return Response({'msg':'Task Accept Succeded'})
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
