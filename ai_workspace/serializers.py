@@ -892,7 +892,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         pre_translate = instance.task_assign.pre_translate
         copy_paste_enable = instance.task_assign.copy_paste_enable
         task_status = instance.task_assign.get_status_display()
-        client_response = instance.task_assign.client_response.get_status_display() if instance.task_assign.client_response else None
+        client_response = instance.task_assign.client_response.get_client_response_display() if instance.task_assign.client_response else None
         count = TaskAssignInfo.objects.filter(task_assign__task= instance.task_assign.task).count()
         print("Count-------------->",count)
         if count == 1:
