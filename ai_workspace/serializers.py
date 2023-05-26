@@ -1561,31 +1561,31 @@ def notify_task_status(task_assign,status,reason):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.assign_to
-	print("Sender-------->",sender)
+    print("Sender-------->",sender)
     receivers=[]
     try:
         team = task_assign.task.job.project.ai_user.team
         receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
     except:pass
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task).filter(~Q(assign_to=task_assign.assign_to))
-    if task_ass_list: receivers.append(task_ass_list.first().assign_to if task_ass_list.first().assign_to != assign_to)
+    if task_ass_list: receivers.append(task_ass_list.first().assign_to)
     print('Receivers-------------->',receivers)
     for i in receivers:
-       thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
-       if thread_ser.is_valid():
+        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+        if thread_ser.is_valid():
             thread_ser.save()
             thread_id = thread_ser.data.get('id')
-       else:
+        else:
             thread_id = thread_ser.errors.get('thread_id')
-	   if status == 3:
+        if status == 3:
             message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted task."
-	   elif status == 4:
-			message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has returned task with following reason."+ reason
-       print("Message---------------->",message)
-	   try:
+        elif status == 4:
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has returned task with following reason."+ reason
+        print("Message---------------->",message)
+        try:
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
-	   except:pass
+        except:pass
 
 
 
