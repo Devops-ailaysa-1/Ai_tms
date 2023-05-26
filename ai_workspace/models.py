@@ -1322,7 +1322,7 @@ class TaskAssign(models.Model):
         (YET_TO_START,'Yet to start'),
         (IN_PROGRESS, 'In Progress'),
         (COMPLETED, 'Completed'),
-        (RAISE_COMPLAINT, 'Raise complaint')
+        (RETURN_REQUEST, 'Return Request')
     ]
     APPROVED = 1
     REJECTED = 2
@@ -1347,7 +1347,7 @@ class TaskAssign(models.Model):
     reassigned = models.BooleanField(default=False)
     client_response = models.IntegerField(choices=RESPONSE_CHOICES, blank=True, null=True)
     client_reason = models.TextField(null=True, blank=True)
-    complaint_reason = models.TextField(null=True, blank=True)
+    return_request_reason = models.TextField(null=True, blank=True)
     user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
 
     objects = TaskAssignManager()
