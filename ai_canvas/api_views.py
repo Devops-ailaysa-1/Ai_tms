@@ -555,3 +555,8 @@ class FontFileViewset(viewsets.ViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+        
+    def delete(self,request,pk):
+        query_set=FontFile.objects.get(id=pk)
+        query_set.delete()
+        return Response(status=204)
