@@ -124,4 +124,18 @@ def export_download(json_str,format,multipliervalue):
 
 ####font_creation
 
-# import fonttools
+from fontTools.ttLib import TTFont
+import os
+import shutil
+
+def install_font(font_path):
+    install_dir="/usr/share/fonts/truetype"
+    font=TTFont(font_path)
+    family_name=font["name"].getName(1, 3, 1, 1033).toUnicode()
+    destination_path=os.path.join(install_dir, family_name)
+    os.makedirs(destination_path,exist_ok=True)
+    font_filename=os.path.basename(font_path)
+    destination_file_path=os.path.join(destination_path, font_filename)
+    shutil.copy(font_path,destination_file_path)
+    os.system("fc-cache -f -v")
+    print(f"Font '{family_name}' installed successfully!")

@@ -505,7 +505,7 @@ class TextTemplateSerializer(serializers.ModelSerializer):
 
 
 
-
+from ai_canvas.utils import install_font
 class FontFileSerializer(serializers.ModelSerializer):
     class Meta:
         model=FontFile
@@ -520,5 +520,7 @@ class FontFileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
  
         instance=FontFile.objects.create(**validated_data)
+        if instance.font_family:
+            install_font(instance.font_family.path)
         return instance
     
