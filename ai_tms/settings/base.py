@@ -470,6 +470,7 @@ OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
+TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
 
 
 

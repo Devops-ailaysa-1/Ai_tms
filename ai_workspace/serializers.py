@@ -961,7 +961,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                 task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)) for task in task_list]
             print('task_assign_list--------->',task_assign_list)
             task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
-            #objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
+	    	#need to add for resassign and lsp
+            # objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
             for i in task_assign_info:
                 try:total_word_count = i.task_assign.task.document.total_word_count
                 except:

@@ -1752,6 +1752,7 @@ class WorkflowSteps(models.Model):
 
 
 class AiRoleandStep(models.Model):
+    """maps which role responsible for which task"""
     role = models.ForeignKey(AiRoles,related_name='step_role',
         on_delete=models.CASCADE,blank=True, null=True)
     step = models.ForeignKey(Steps, on_delete=models.CASCADE,
