@@ -826,7 +826,7 @@ def generate_article(request):
         blog_creation=BlogCreation.objects.get(id=blog_creation)
         outline_section_list=list(map(int,outline_list.split(',')))
         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
-        if blog_creation.user_language_id not in blog_available_langs:
+        if blog_creation.user_language_id  not in blog_available_langs: #blog_creation.user_language_id
             title=blog_creation.user_title_mt
             keyword=blog_creation.keywords_mt
             outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
@@ -837,8 +837,7 @@ def generate_article(request):
         joined_list = "', '".join(outlines)
         tone=blog_creation.tone.tone
         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
-        # completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-        
+        title='#'+title
         if blog_creation.user_language_code== 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en():
@@ -848,14 +847,14 @@ def generate_article(request):
                         delta=ins['delta']
                         if 'content' in delta.keys():
                             content=delta['content']
-                            # t=content
+                            if title:
+                                content=title+'\n'+content
+                                title=''
                             yield '\ndata: {}\n\n'.format({"t":content})
             return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang():
-                # from markdown2 import Markdown
-                # markdowner = Markdown()
                 arr=[]
                 for chunk in completion:
                     ins=chunk['choices'][0]
@@ -871,8 +870,10 @@ def generate_article(request):
                                     text=" ".join(arr)
                                     blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)   
+                                    if title:
+                                        blog_article_trans=title+'\n'+blog_article_trans
+                                        title=''
                                     if blog_article_trans.startswith("#"):
-                                        # blog_article_trans=markdowner.convert(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
                                     else:
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
@@ -882,11 +883,13 @@ def generate_article(request):
                                     sente=" ".join(arr)
                                     if sente[-1]!='.':
                                         sente=sente+'.'
-                                        blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
+                                        blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)
+                                        if title:
+                                            blog_article_trans=title+'\n'+blog_article_trans
+                                            title=''
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
-                                    # blog_article_trans=markdowner.convert(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     arr=[]
                             else:
@@ -935,123 +938,26 @@ def generate_article(request):
 from django.http import StreamingHttpResponse
 import time,json
 from django.http import JsonResponse
-text="""# Breaking the Language Barrier: An Introduction to Machine Translation
-The world is becoming increasingly globalized, and communication between people who speak different languages is becoming more common. This is where machine translation comes into play - it is a technology that is designed to bridge the language gap and enable communication between people who speak different languages.
-
-
-
-# The Science Behind Machine Translation: Natural Language Processing at Work
-
-
-
-Machine translation relies on natural language processing (NLP), which is a subfield of computer science that focuses on how computers can interpret and generate human language. NLP is a complex field that involves knowledge from linguistics, computer science, and artificial intelligence.
-
-
-
-# Decoding the Decoder: How Machine Translation Algorithms Work
-
-
-
-Machine translation algorithms work by breaking down human language into smaller parts, such as words and phrases. The algorithm then tries to translate each part individually and combine them to form a coherent translation. There are different types of machine translation algorithms, including rule-based, statistical, and neural machine translation.
-
-
-
-# The Importance of Training Data in Machine Translation
-
-
-
-Training data is critical in machine translation. The algorithm needs to learn from large sets of data in order to develop accurate translations. The training data can consist of parallel texts, which are texts in two different languages that have been aligned, or monolingual texts, which are texts in a single language.
-
-
-
-# Navigating Linguistic Nuances: Challenges of Machine Translation
-
-
-
-One of the biggest challenges in machine translation is navigating linguistic nuances. Different languages have different structures, idioms, and colloquialisms that can be difficult for the algorithm to understand. The algorithm also needs to take into account the context of the text and the intended audience.
-
-
-
-# Improving Accuracy with Machine Learning Techniques in Machine Translation
-
-
-
-Machine learning techniques can be used to improve the accuracy of machine translation. These techniques involve training the algorithm to automatically identify patterns in the data and adjust its translation process accordingly. Some popular machine learning techniques used in machine translation include deep learning and reinforcement learning.
-
-
-
-# The Future of Machine Translation: Advancements and Outlook
-
-
-
-The future of machine translation looks promising. Researchers are constantly working on improving the accuracy of machine translation and developing new techniques to better handle linguistic nuances. As the technology improves, machine translation will become more accessible and affordable, making it more widely available to businesses and individuals alike.
-
-
-
-# Evaluating the Quality of Machine Translation: Metrics and Methods
-
-
-
-There are several metrics and methods for evaluating the quality of machine translation. Two common metrics are the BLEU score and the human evaluation method. The BLEU score measures the similarity between the machine translation and a reference translation, whereas the human evaluation method involves having human evaluators rate the quality of the translation.
-
-
-
-# Applications of Machine Translation: Benefits and Limitations
-
-
-
-Machine translation has a wide range of applications. It can be used in business, tourism, education, and many other fields to enable communication between people who speak different languages. However, machine translation has its limitations, and it should not be relied upon for highly specialized or sensitive translations.
-
-
-
-# Closing the Gap: Conclusions on Decoding Machine Translation
-
-
-
-Machine translation is a powerful tool that can help bridge the language gap and enable communication between people who speak different languages. However, it is not a perfect solution, and there are limitations to what it can accomplish. As the technology continues to improve, we can expect to see machine translation become even more widely used and accessible.
-
-
-
-# Conclusion: The Evolution of Machine Translation and the Future of NLP and Decoder Development
-
-
-
-Machine translation has come a long way since its inception, and it continues to evolve and improve. The technology has the potential to revolutionize communication and open up new opportunities for businesses and individuals around the world. With advancements in NLP and decoder development, we can expect to see machine translation become even more accurate and widely used in the years to come."""
-
+text="Please generate a 700-word blog post titled '{}' with sections: {} Use keywords such as {} and a {} tone. Keep the language simple and concise. Pre-written content for the section headlines is allowed. Please format everything in Markdown and blog post sections should be in ## tag. Please generate the content as quickly as possible.".format('Cost-Saving Strategies',
+                                                                                                                                                                                                                                                                                                                                                          'Introduction and overview of vanishing gradient and backpropagation ,The problem of vanishing gradients and how it affects neural network training,Explaining backpropagation and its role in solving the vanishing gradient problem,Analyzing the mathematical concepts behind backpropagation and gradient descent',
+                                                                                                                                                                                                                                                                                                                                                          'machine learning,cost machine gpu',
+                                                                                                                                                                                                                                                                                                                                                          'professional')
 
 
 @api_view(["GET"])
 def generate(request):
-    def stream():
-        # from markdown2 import Markdown
-        # markdowner=Markdown()
-        a=[]
-        for i in text.split(' '):
-            time.sleep(0.01)
-            if "." in i or "\n" in i:
-                if "\n" in i:
-                    new_line_split=i.split("\n")
-                    a.append(new_line_split[0]+'\n') #
-                    a=" ".join(a)
-                    if a.startswith("#"):
-                        # a=markdowner.convert(a)
-                        yield '\ndata: {}\n\n'.format({"t":a})                        
-                    else:
-                        yield '\ndata: {}\n\n'.format({"t":a})
-                    a=[]
-                    a.append(new_line_split[-1])
-                elif "." in i:
-                    txt=" ".join(a)
-                    if txt[-1]!='.':
-                        txt=txt+'.'
-                        yield '\ndata: {}\n\n'.format({"t":txt}) #.encode('utf-8')
-                    else:
-                        yield '\ndata: {}\n\n'.format({"t":txt}) #.encode('utf-8')
-                    a=[]
-            else:
-                a.append(i)
-    return StreamingHttpResponse(stream(),content_type='text/plain')   #text/event-stream
-    # return JsonResponse({'error':'Method not allowed.'},status=405)
+    if request.method=='GET':
+        completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":text}],stream=True)
+        def stream_article_response_en():
+            for chunk in completion:
+                ins=chunk['choices'][0]
+                if ins["finish_reason"]!='stop':
+                    delta=ins['delta']
+                    if 'content' in delta.keys():
+                        content=delta['content']
+                        yield '\ndata: {}\n\n'.format({"t":content})
+        return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')  #text/event-stream
+    return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
  

@@ -500,7 +500,7 @@ class TextTemplateSerializer(serializers.ModelSerializer):
             instance.save()
         if validated_data.get('text_keywords'):
             txt_temp = validated_data.pop('text_keywords')
-            [TemplateKeyword.objects.create(text_template=instance , text_keywords = key) for key in  txt_temp]
+            [TemplateKeyword.objects.create(text_template=instance,text_keywords = key) for key in  txt_temp]
         return instance
 
 
