@@ -94,7 +94,7 @@ spring_host = os.environ.get("SPRING_HOST")
 from django.db.models import Case, When, F, Value, DateTimeField, ExpressionWrapper
 from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
-
+from ai_auth.utils import get_assignment_role
 
 class IsCustomer(permissions.BasePermission):
 
@@ -727,7 +727,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.is_agency else self.request.user
+        print("User------------------>111----->",user)
         # user = self.request.user.team.owner if self.request.user.team else self.request.user
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
@@ -752,6 +753,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        print("QR------------>",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
@@ -877,7 +879,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
-        user_1 = request.user.team.owner if request.user.team else request.user
+        user_1 = request.user.team.owner if request.user.team and request.user.is_agency else request.user  #####For LSP
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
@@ -1445,7 +1447,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
 
         # if not reassigned:reassigned = False
         # else: reassigned = True
-
+        print("Reassigned-------->",reassigned)
         if file_delete_ids:
             file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
@@ -1467,6 +1469,26 @@ class TaskAssignUpdateView(viewsets.ViewSet):
         # except:
             # return Response({'msg':'Task Assign details not found'},status=status.HTTP_400_BAD_REQUEST)
         return Response(task, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST',])
+@permission_classes([IsAuthenticated])
+def bulk_task_accept(request):
+    task_accept_detail = request.POST.get('task_accept_detail')
+    task_accept_detail = json.loads(task_accept_detail)
+    for i in task_accept_detail:
+        try:
+            task_assign = TaskAssign.objects.get(Q(task_id = i.get('task')) & Q(step_id = i.get('step')) & Q(reassigned=i.get('reassigned'))) 
+            print("TaskAssign--------->",task_assign)
+            serializer =  TaskAssignUpdateSerializer(task_assign,data={'task_ven_status':'task_accepted'},context={'request':request},partial=True)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                print("Error--------->",serializer.errors)
+        except:
+            pass
+    return Response({'msg':'Task Accept Succeded'})
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1490,46 +1512,6 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                                                         previous_assign_id=instance.task_assign.assign_to_id,\
                                                         task_segment_confirmed=segment_count,unassigned_by=self.request.user)
 
-
-    # @integrity_error
-    # def create(self,request):
-    #     step = request.POST.get('step')
-    #     task_assign_detail = request.POST.get('task_assign_detail')
-    #     files=request.FILES.getlist('instruction_file')
-    #     sender = self.request.user
-    #     receiver = request.POST.get('assign_to')
-    #     Receiver = AiUser.objects.get(id = receiver)
-    #     ################################Need to change########################################
-    #     user = request.user.team.owner  if request.user.team  else request.user
-    #     if Receiver.email == 'ailaysateam@gmail.com':
-    #         HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
-    #     ##########################################################################################
-    #     task = request.POST.getlist('task')
-    #     hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
-    #     tasks= [json.loads(i) for i in task]
-    #     tsks = Task.objects.filter(id__in=tasks)
-    #     for tsk in tsks:
-    #         authorize(request, resource=tsk, actor=request.user, action="read")
-    #     job_id = Task.objects.get(id=tasks[0]).job.id
-    #     assignment_id = create_assignment_id()
-    #     for i in task_assign_detail:
-            
-    #         with transaction.atomic():
-    #             try:
-    #                 serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
-    #                 if serializer.is_valid():
-    #                     serializer.save()
-    #                     weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
-    #                     msg_send(sender,Receiver,tasks[0])
-    #                     print("Task Assigned")
-    #                 print("Error--------->",serializer.errors)
-    #             except:
-    #                 pass
-    #                 # if Receiver in hired_editors:
-    #                 #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
-    #                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
-    #     return Response({"msg":"Task Assigned"})
-    #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def reassign_check(self,tasks):
         user = self.request.user.team.owner if self.request.user.team else self.request.user
@@ -1565,9 +1547,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         ##########################################################################################
         # task = request.POST.getlist('task')
         hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
-        # tsks = Task.objects.filter(id__in=tasks)
-        # for tsk in tsks:
-        #     authorize(request, resource=tsk, actor=request.user, action="read")
+
         # job_id = Task.objects.get(id=tasks[0]).job.id
         assignment_id = create_assignment_id()
         extra = {'assignment_id':assignment_id,'files':files}
@@ -1576,6 +1556,11 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task_assign_detail = json.loads(task_assign_detail)
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
         print("Tasks------->",tasks)
+        # For authorization
+        tsks = Task.objects.filter(id__in=tasks)
+        for tsk in tsks:
+            authorize(request, resource=tsk, actor=request.user, action="read")
+
         if reassign == 'true':
             print("Inside")
             msg = self.reassign_check(tasks)
@@ -1666,6 +1651,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         if task_assign_info_ids:
             assigns = TaskAssignInfo.objects.filter(id__in = task_assign_info_ids )
         for obj in assigns:
+            authorize(request, resource=obj, actor=request.user, action="read")
             try:
                 po_modify(obj.id,['unassigned',])
             except BaseException as e:
@@ -1675,25 +1661,33 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 try:self.history(obj)
                 except:pass
                 if obj.task_assign.reassigned == True:
-                    obj.task_assign.assign_to = self.request.user.team.owner #if unassigned..it is assigned back to LSP 
-                    obj.task_assign.status = 1
+                    print("Inside IF")
+                    obj.task_assign.assign_to = self.request.user.team.owner if self.request.user.team else self.request.user #if unassigned..it is assigned back to LSP 
+                    #obj.task_assign.status = 1
                     obj.task_assign.save()
+                    role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
+                    assigned_user = obj.task_assign.assign_to
+                    unassign_task(assigned_user,role,obj.task_obj)   
                     obj.delete()
                 else:
+                    print("Inside Else")
                     reassigns = TaskAssign.objects.filter(Q(task=obj.task_assign.task) & Q(step=obj.task_assign.step) & Q(reassigned = True))
                     if reassigns:
-                        obj_1 = reassigns.first().task_assign_info
-                        self.history(obj_1)
-                        obj_1.task_assign.assign_to = user
-                        obj_1.task_assign.status = 1
-                        obj_1.task_assign.save()
-                        obj_1.delete()
-                    #assigned_user = obj.task_assign.assign_to
+                        try:obj_1 = reassigns.first().task_assign_info
+                        except:obj_1=None
+                        if obj_1:
+                            self.history(obj_1)
+                            obj_1.task_assign.assign_to = user
+                            obj_1.task_assign.status = 1
+                            obj_1.task_assign.save()
+                            obj_1.delete()
+                    assigned_user = obj.task_assign.assign_to
                     obj.task_assign.assign_to = user
                     obj.task_assign.status = 1
                     obj.task_assign.save()
                     # role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
-                    # unassign_task(assigned_user,role,obj.task_obj)             
+                    role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
+                    unassign_task(assigned_user,role,obj.task_obj)             
                     obj.delete()
                 
         return Response({"msg":"Tasks Unassigned Successfully"},status=200)
@@ -4091,3 +4085,45 @@ def stop_task(request):
     return HttpResponse('Task is already running or has completed.')
 
 
+
+
+
+    # @integrity_error
+    # def create(self,request):
+    #     step = request.POST.get('step')
+    #     task_assign_detail = request.POST.get('task_assign_detail')
+    #     files=request.FILES.getlist('instruction_file')
+    #     sender = self.request.user
+    #     receiver = request.POST.get('assign_to')
+    #     Receiver = AiUser.objects.get(id = receiver)
+    #     ################################Need to change########################################
+    #     user = request.user.team.owner  if request.user.team  else request.user
+    #     if Receiver.email == 'ailaysateam@gmail.com':
+    #         HiredEditors.objects.get_or_create(user_id=user.id,hired_editor_id=receiver,defaults = {"role_id":2,"status":2,"added_by_id":request.user.id})
+    #     ##########################################################################################
+    #     task = request.POST.getlist('task')
+    #     hired_editors = sender.get_hired_editors if sender.get_hired_editors else []
+    #     tasks= [json.loads(i) for i in task]
+    #     tsks = Task.objects.filter(id__in=tasks)
+    #     for tsk in tsks:
+    #         authorize(request, resource=tsk, actor=request.user, action="read")
+    #     job_id = Task.objects.get(id=tasks[0]).job.id
+    #     assignment_id = create_assignment_id()
+    #     for i in task_assign_detail:
+            
+    #         with transaction.atomic():
+    #             try:
+    #                 serializer = TaskAssignInfoSerializer(data={**request.POST.dict(),'assignment_id':assignment_id,'files':files,'task':request.POST.getlist('task')},context={'request':request})
+    #                 if serializer.is_valid():
+    #                     serializer.save()
+    #                     weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
+    #                     msg_send(sender,Receiver,tasks[0])
+    #                     print("Task Assigned")
+    #                 print("Error--------->",serializer.errors)
+    #             except:
+    #                 pass
+    #                 # if Receiver in hired_editors:
+    #                 #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+    #                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
+    #     return Response({"msg":"Task Assigned"})
+    #     #return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

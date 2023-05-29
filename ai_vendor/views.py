@@ -475,9 +475,9 @@ def vendor_language_pair(request):
         return JsonResponse({'status':'column_name miss match'})
     return JsonResponse({'status':'uploaded successfully'})
 
-from rest_framework.permissions import AllowAny
+#from rest_framework.permissions import AllowAny
 @api_view(['GET',])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def vendor_lang_pair_template(request):
     response = HttpResponse(content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename=Vendor_language_pairs.xlsx'
@@ -485,6 +485,7 @@ def vendor_lang_pair_template(request):
     response.write(xlsx_data)
     response['Access-Control-Expose-Headers']='Content-Disposition'
     return response
+
 
 # @api_view(['POST',])
 # def get_vendor_list(request):
@@ -727,4 +728,3 @@ def vendor_lang_pair_template(request):
 #     return JsonResponse({"out":result},safe=False)
 
 
-    

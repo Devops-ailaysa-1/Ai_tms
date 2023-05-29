@@ -874,6 +874,7 @@ def generate_article(request):
                                         blog_article_trans=title+'\n'+blog_article_trans
                                         title=''
                                     if blog_article_trans.startswith("#"):
+                                        # blog_article_trans=markdowner.convert(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
                                     else:
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})

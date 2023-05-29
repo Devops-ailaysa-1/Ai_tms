@@ -754,11 +754,13 @@ def get_previous_accepted_rate(request):
         tot_2=[]
         for i in query_1:
             currency = i.get('currency') if i.get('currency')!=None else vendor.vendor_info.currency.id
+            print("SS---------->",i.get('service__mtpe_rate'))
             if i.get('service__mtpe_rate') != None:
-                out = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
+                print("Inside if")
+                out_1 = [{'currency':currency,'mtpe_rate':i.get('service__mtpe_rate'),\
                         'hourly_rate':i.get('service__mtpe_hourly_rate'),'mtpe_count_unit':i.get('service__mtpe_count_unit')}]
-            if out:
-                tot_2.extend(out)
+                if out_1:
+                    tot_2.extend(out_1)
         #if tot_2:
         rates_given[j] = tot_2
         final_rates_given.append(rates_given)

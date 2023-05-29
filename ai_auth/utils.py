@@ -151,3 +151,13 @@ company_members_list = [
 'dinesh',
 'acilangoven'
 ]
+
+
+def get_assignment_role(step,reassigned=False):
+    from ai_workspace.models import AiRoleandStep
+    
+    if reassigned:
+        res = AiRoleandStep.objects.filter(Q(step=step)&Q(role__name__icontains='Agency')).last()
+    else:
+        res = AiRoleandStep.objects.filter(Q(step=step)&~Q(role__name__icontains='Agency')).last()
+    return res.role.name

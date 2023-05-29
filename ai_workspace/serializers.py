@@ -816,7 +816,9 @@ class TaskAssignSerializer(serializers.ModelSerializer):
 	# step = serializers.PrimaryKeyRelatedField(queryset=Steps.objects.all().values_list('pk', flat=True),required=False)
 	class Meta:
 		model = TaskAssign
-		fields =('task_info','step','assign_to','mt_enable','mt_engine','pre_translate','copy_paste_enable','status',)
+		fields =('task_info','step','assign_to','mt_enable','return_request_reason',
+				'mt_engine','pre_translate','copy_paste_enable','status',
+				'client_response','client_reason','user_who_approved_or_rejected')
 
 class TaskAssignInfoNewSerializer(serializers.ModelSerializer):
 	task_assign_info = TaskAssignSerializer(required=False)
@@ -846,7 +848,7 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskAssignInfo
-        fields = ('id','instruction','instruction_files','step','task_ven_status','reassigned',\
+        fields = ('id','instruction','instruction_files','step','task_ven_status','change_request_reason','reassigned',\
                    'job','project','assigned_by','assignment_id','mt_engine_id','deadline','created_at',\
                    'assign_to','tasks','mtpe_rate','estimated_hours','mtpe_count_unit','currency','files',\
                     'total_word_count','assign_to_details','assigned_by_details','payment_type', 'mt_enable',\
@@ -858,13 +860,14 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
              }
 
     def get_assign_to_details(self,instance):
-	    if instance.task_assign.assign_to:
-	        deleted = True if 'deleted' in instance.task_assign.assign_to.email else False
-	        external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
-	        email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
-	        try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
-	        except:avatar = None
-	        return {"id":instance.task_assign.assign_to_id,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor,"account_deleted":deleted}
+        if instance.task_assign.assign_to:
+            deleted = True if 'deleted' in instance.task_assign.assign_to.email else False
+            external_editor = True if instance.task_assign.assign_to.is_internal_member==False else False
+            email = instance.task_assign.assign_to.email if instance.task_assign.assign_to.is_internal_member==True else None
+            managers = [i.id for i in instance.task_assign.assign_to.team.get_project_manager] if external_editor and instance.task_assign.assign_to.team and instance.task_assign.assign_to.team.owner.is_agency else []
+            try:avatar = instance.task_assign.assign_to.professional_identity_info.avatar_url
+            except:avatar = None
+            return {"id":instance.task_assign.assign_to_id,"managers":managers,"name":instance.task_assign.assign_to.fullname,"email":email,"avatar":avatar,"external_editor":external_editor,"account_deleted":deleted}
 	    #if instance.task.assign_to:
 	    #    external_editor = True if instance.task.assign_to.is_internal_member==False else False
 	    #    email = instance.task.assign_to.email if instance.task.assign_to.is_internal_member==True else None
@@ -889,23 +892,24 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
         pre_translate = instance.task_assign.pre_translate
         copy_paste_enable = instance.task_assign.copy_paste_enable
         task_status = instance.task_assign.get_status_display()
-        count = TaskAssignInfo.objects.filter(task_assign__task= instance.task_assign.task).count()
-        print("Count-------------->",count)
-        if count == 1:
-            can_open = True
-        else:
-	        if instance.task_assign.step_id == 1:
-	            try:
-	                #print("$$$$$$$$$",TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status)
-	                if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status == 2:
-	                    can_open = False
-	                else:can_open = True
-	            except:can_open = True
-	        elif instance.task_assign.step_id == 2:
-	            if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().status == 3:
-	                can_open = True
-	            else:can_open = False
-        return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"can_open":can_open}
+        client_response = instance.task_assign.get_client_response_display() if instance.task_assign.client_response else None
+        # count = TaskAssignInfo.objects.filter(task_assign__task= instance.task_assign.task).count()
+        # print("Count-------------->",count)
+        # if count == 1:
+        #     can_open = True
+        # else:
+	    #     if instance.task_assign.step_id == 1:
+	    #         try:
+	    #             #print("$$$$$$$$$",TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status)
+	    #             if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=2).first().status == 2:
+	    #                 can_open = False
+	    #             else:can_open = True
+	    #         except:can_open = True
+	    #     elif instance.task_assign.step_id == 2:
+	    #         if TaskAssign.objects.filter(task = instance.task_assign.task).filter(step_id=1).first().status == 3:
+	    #             can_open = True
+	    #         else:can_open = False
+        return {'step':step,'mt_enable':mt_enable,'pre_translate':pre_translate,'task_status':task_status,"client_response":client_response}#,"can_open":can_open}
 
     def run_validation(self, data):
         if data.get('assign_to'):
@@ -957,7 +961,8 @@ class TaskAssignInfoSerializer(serializers.ModelSerializer):
                 task_assign_list = [TaskAssign.objects.get(Q(task_id = task) & Q(step_id = step) & Q(reassigned = reassigned)) for task in task_list]
             print('task_assign_list--------->',task_assign_list)
             task_assign_info = [TaskAssignInfo.objects.create(**data,task_assign = task_assign ) for task_assign in task_assign_list]
-            #objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
+	    	#need to add for resassign and lsp
+            # objls_is_allowed(task_assign_info,"create",self.context.get('request').user)
             for i in task_assign_info:
                 try:total_word_count = i.task_assign.task.document.total_word_count
                 except:
@@ -1160,11 +1165,9 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		else:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 			print("Task Assign-------->",task_assign)
-			if task_assign:
-				assigned_by = task_assign.first().task_assign_info.assigned_by
-				if assigned_by == user  or assigned_by in project_managers:
-					return True
-				else:return None
+			if task_assign and task_assign.filter(assign_to=user):
+				return True
+				# else:return None
 			else: return None
 
 	# def get_task_self_assign_info(self,obj):
@@ -1339,11 +1342,11 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 	# 	jobs = proj.get_jobs
 	# 	lang_pair = VendorLanguagePair.objects.none()
 	# 	for i in jobs:
-	# 		if i.target_language_id == None:
-	# 			tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-	# 		else:
-	# 			tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
-	# 		print("Tr------------>",tr)
+			# if i.target_language_id == None:
+			# 	tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			# else:
+			# 	tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			# print("Tr------------>",tr)
 	# 		lang_pair = lang_pair.union(tr)
 	# 	print("langpair----------------->",lang_pair)
 	# 	return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
@@ -1355,13 +1358,23 @@ class HiredEditorDetailSerializer(serializers.Serializer):
 		project_id= request.query_params.get('project')
 		proj = Project.objects.get(id = project_id)
 		jobs = Job.objects.filter(id__in = job_ids) if job_ids else proj.get_jobs
-		lang_pair = VendorLanguagePair.objects.filter(Q(user_id = obj.hired_editor_id) &Q(deleted_at=None))
+		lang_pair = VendorLanguagePair.objects.none()
+		condition_satisfied = True
 		for i in jobs:
+			print(i.source_language_id,i.target_language_id)
 			if i.target_language_id == None:
-				lang_pair = lang_pair.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+				tr = VendorLanguagePair.objects.filter(Q(target_lang_id=i.source_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
 			else:
-				lang_pair = lang_pair.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')	
-		print("langpair----------------->",lang_pair)
+				tr = VendorLanguagePair.objects.filter(Q(source_lang_id=i.source_language_id) & Q(target_lang_id=i.target_language_id) & Q(user_id = obj.hired_editor_id) &Q(deleted_at=None)).distinct('user')
+			print("Tr------------>",tr)
+			if tr:
+				condition_satisfied = True
+				lang_pair = lang_pair.union(tr)
+			else:
+				condition_satisfied = False
+				lang_pair = VendorLanguagePair.objects.none()
+				break
+		print("Langpair---------->",lang_pair)
 		return VendorLanguagePairOnlySerializer(lang_pair, many=True, read_only=True).data
 
 class InternalEditorDetailSerializer(serializers.Serializer):
@@ -1501,65 +1514,119 @@ def msg_send_vendor_accept(task_assign,input):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.assign_to
+    receivers = []
     receiver =  task_assign.task_assign_info.assigned_by
-    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
-    if thread_ser.is_valid():
-        thread_ser.save()
-        thread_id = thread_ser.data.get('id')
-    else:
-        thread_id = thread_ser.errors.get('thread_id')
-    #print("Thread--->",thread_id)
-    print("Details----------->",task_assign.task.ai_taskid,task_assign.assign_to.fullname,task_assign.task.job.project.project_name)
-    if input == 'task_accepted':
-       message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
-    elif input == 'change_request':
-       message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has submitted change request and waiting for your response."
-    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers.append( task_assign.task_assign_info.assigned_by)
+    print("Receivers----------->",receivers)
+    for i in receivers:
+        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+        if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+        else:
+            thread_id = thread_ser.errors.get('thread_id')
+		#print("Thread--->",thread_id)
+        print("Details----------->",task_assign.task.ai_taskid,task_assign.assign_to.fullname,task_assign.task.job.project.project_name)
+        if input == 'task_accepted':
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
+        elif input == 'change_request':
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has submitted change request and waiting for your response."
+        msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+        notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
 
 
 def msg_send_customer_rate_change(task_assign):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.task_assign_info.assigned_by
-    receiver =  task_assign.assign_to
-    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
-    if thread_ser.is_valid():
-        thread_ser.save()
-        thread_id = thread_ser.data.get('id')
-    else:
-        thread_id = thread_ser.errors.get('thread_id')
-    message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has changed rates. please view and accept"
-    print("Message---------------->",message)
-    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+    print("Sender------>",sender)
+    receiver =  task_assign.assign_to 
+    receivers = []
+    receivers =  receiver.team.get_project_manager if receiver.team.owner.is_agency or receiver.is_agency else []
+    receivers.append(task_assign.assign_to)
+    print("Receivers--------->",receivers)
+    for i in receivers: 
+        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+        if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+        else:
+            thread_id = thread_ser.errors.get('thread_id')
+        if thread_id:
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has changed rates. please view and accept"
+            print("Message---------------->",message)
+            msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+            notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+
+def notify_client_status(task_assign,response,reason):
+    from ai_marketplace.serializers import ThreadSerializer
+    from ai_marketplace.models import ChatMessage
+    sender = task_assign.task_assign_info.assigned_by  ## need to decide whether from assigned_by or from admin
+    print("Sender------>",sender)
+    receiver =  task_assign.assign_to 
+    receivers = []
+    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers.append(task_assign.assign_to)
+    print("Receivers--------->",receivers)
+    for i in receivers: 
+        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+        if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+        else:
+            thread_id = thread_ser.errors.get('thread_id')
+        if thread_id:
+            if response == 1:
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has been approved. you can initiate your payment process."
+            elif response == 2:
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has been set to be reworked for the following reason. "+reason
+            print("Message---------------->",message)
+            msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+            notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
 
 
-def notify_task_completion_status(task_assign):
+
+def notify_task_status(task_assign,status,reason):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
     sender = task_assign.assign_to
+    print("Sender-------->",sender)
+    print("reassigned------->",task_assign.reassigned)
     receivers=[]
-    try:
-        team = task_assign.task.job.project.ai_user.team
-        receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
-    except:pass
-    task_ass_list = TaskAssign.objects.filter(task=task_assign.task).filter(~Q(assign_to=task_assign.assign_to))
+    if task_assign.reassigned == True:
+        try:
+            already_assigned = TaskAssign.objects.filter(task=task_assign.task,step=task_assign.step,reassigned=False)
+            assigned_user = already_assigned.first().assign_to
+            print("AssignedUser--------->",assigned_user)
+            receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
+        except:pass
+    else:
+        try:
+            team = task_assign.task.job.project.ai_user.team
+            print("user---------->",task_assign.task.job.project.ai_user)
+            receivers =  team.get_project_manager if team else [task_assign.task_assign_info.assigned_by]
+        except:pass
+    task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
     print('Receivers-------------->',receivers)
     for i in receivers:
-       thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
-       if thread_ser.is_valid():
+        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+        if thread_ser.is_valid():
             thread_ser.save()
             thread_id = thread_ser.data.get('id')
-       else:
+        else:
             thread_id = thread_ser.errors.get('thread_id')
-       message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted task."
-       print("Message---------------->",message)
-       msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-       notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
-
-
+        if thread_id:
+            if status == 3:
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted task."
+            elif status == 4:
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has returned task with following reason."+ reason
+            print("Message---------------->",message)
+            msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+            notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+			
+		
 
 class TaskAssignUpdateSerializer(serializers.Serializer):
 	task_assign = TaskAssignSerializer(required=False)
@@ -1588,14 +1655,21 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		po_update =[]
 		if 'task_assign' in data:
 			task_assign_data = data.get('task_assign')
-			if task_assign_data.get('status') == 3:
-				notify_task_completion_status(instance)
+			if task_assign_data.get('status') == 3 or task_assign_data.get('status') == 4:
+				notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
+			# if task_assign_data.get('status') == 4:
+			# 	notify_task_return_request(instance)
 			if task_assign_data.get('assign_to'):
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 				task_assign_data.update({'status':1})
 				po_update.append('assign_to')
+			if task_assign_data.get('client_response'):
+				if task_assign_data.get('client_response') == 2:
+					task_assign_data.update({'status':2})
+				notify_client_status(instance,task_assign_data.get('client_response'),task_assign_data.get('client_reason'))
+				task_assign_data.update({'user_who_approved_or_rejected':self.context.get('request').user})
 			task_assign_serializer.update(instance, task_assign_data)
 		if 'task_assign_info' in data:
 			task_detail = data.get('task_assign_info')
@@ -1606,6 +1680,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 					# editing po
 					print("inside accepted rate")
 					po_update.append('accepted_rate')
+					# po_update.append('change_request')
 				else:
 					po_update.append('accepted_rate_by_owner')
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
@@ -1613,6 +1688,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			if 'task_ven_status' in data.get('task_assign_info'):
 				if data.get('task_assign_info').get('task_ven_status') == 'task_accepted':
 					po_update.append("accepted")
+				if data.get('task_assign_info').get('task_ven_status') == "change_request":
+					po_update.append('change_request')
 				ws_forms.task_assign_ven_status_mail(instance,data.get('task_assign_info').get('task_ven_status'))
 				try:msg_send_vendor_accept(instance,data.get('task_assign_info').get('task_ven_status'))
 				except:pass

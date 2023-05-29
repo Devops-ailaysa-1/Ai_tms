@@ -1,3 +1,4 @@
+from ai_workspace.models import Task
 from rest_framework import serializers
 from ai_pay.models import POAssignment, POTaskDetails, PurchaseOrder,AilaysaGeneratedInvoice
 from django.http import HttpRequest
@@ -12,10 +13,10 @@ class POTaskSerializer(serializers.ModelSerializer):
 
 
 class POAssignmentSerializer(serializers.ModelSerializer):
-    tasks = POTaskSerializer(many=True,source='assignment_po')
+    # tasks = POTaskSerializer(many=True,source='assignment_po')
     class Meta:
         model = POAssignment    
-        fields =('assignment_id','tasks')
+        fields =('assignment_id','step')
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
@@ -25,10 +26,11 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     client_country = serializers.CharField(source='client.country.name')
     seller_country = serializers.CharField(source='seller.country.name')
     assignment = POAssignmentSerializer()
+    tasks = POTaskSerializer(many=True,source='po_task')
     class Meta:
         model = PurchaseOrder
         fields = ('poid','client','seller','client_name','seller_name','client_country','seller_country','po_status',
-                'currency','currency_code','created_at','po_total_amount','assignment')
+                'currency','currency_code','created_at','po_total_amount','assignment','tasks')
         extra_kwargs = {
 		 	"currency_name": {"read_only": True},
              "currency":{"write_only":True},
@@ -192,3 +194,36 @@ class InvoiceListSerializer(serializers.Serializer):
         response["payable"] = sorted(response["payable"], key=lambda x: x[self._get_ordering()], reverse=True)
         response["receivable"] = sorted(response["receivable"], key=lambda x: x[self._get_ordering()],reverse=True)
         return response
+
+
+class ProjectPoSerializer(serializers.Serializer):  
+    pass
+
+
+class PoAssignDetailsSerializer(serializers.ModelSerializer):
+    step = serializers.SerializerMethodField()
+    file_name = serializers.SerializerMethodField()
+    job = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
+    class Meta:
+        model = POTaskDetails
+        fields = ("task_id","file_name","job","po","assignment","step","source_language","target_language","project_name",
+                  "projectid","word_count","char_count","estimated_hours","unit_price","unit_type",
+                  "total_amount","currency","tsk_accepted","assign_status","reassigned")
+        
+    def get_step(self,obj):
+        return obj.assignment.step.id
+    
+    def get_file_name(self,obj):
+        tsk = Task.objects.get(id=obj.task_id)
+        return tsk.file.filename
+    
+    def get_job(self,obj):
+        tsk = Task.objects.get(id=obj.task_id) 
+        return tsk.job.id
+    
+    def get_currency(self,obj):
+        tsk = Task.objects.get(id=obj.task_id) 
+        return obj.po.currency.id
+    
+    # def get
