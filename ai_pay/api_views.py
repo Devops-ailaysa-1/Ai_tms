@@ -35,6 +35,7 @@ import time
 from django.http import Http404
 from ai_auth.api_views import resync_instances
 from notifications.signals import notify
+from ai_auth.utils import get_assignment_role
 
 logger = logging.getLogger('django')
 
@@ -514,13 +515,13 @@ def po_modify(task_assign_info_id,po_update):
 
     if 'accepted' in po_update:
         #if instance.owner != instance.task_assign.task.job.project.project_manager:
-        role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
-        print("role>>",role)
+        #role= AiRoleandStep.objects.get(step=instance.task_assign.step).role.name
+
         assign_object.send(
             sender=TaskAssignInfo,
             instance = instance,
             user=instance.task_assign.assign_to,
-            role = role
+            role = get_assignment_role(instance.task_assign.step,instance.task_assign.reassigned )
         )
         try:
             po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
