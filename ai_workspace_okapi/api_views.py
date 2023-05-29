@@ -430,14 +430,19 @@ class DocumentViewByDocumentId(views.APIView):
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
         if user not in assigners:
             print("Not in assigners")
-            status = [i.task_assign.status for i in task_assigned_info.filter(task_assign__reassigned=False)]
-            print(status)
-            if all(i == 3 or i == 4 for i in status):
-                print("Inside if")
-                edit_allowed =True
+            query = task_assigned_info.filter(task_assign__reassigned=False)
+            if query.count() == 1 and query.first().task_assign.step_id == 2:
+                edit_allowed = True
             else:
-                print("isd else")
-                edit_allowed = False
+                status = [i.task_assign.status for i in query]
+                print(status)
+                if all(i == 3 or i == 4 for i in status):
+                    print("Inside if")
+                    edit_allowed =True
+                else:
+                    print("isd else")
+                    edit_allowed = False
+            return edit_allowed
         else:
             try:
                 print("Inside Try")
