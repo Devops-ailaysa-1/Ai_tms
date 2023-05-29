@@ -370,7 +370,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                     return Response({'msg':'Mt only Ongoing. Pls Wait','celery_id':ins.celery_task_id},status=401)
                 else:
                     document = self.create_document_for_task_if_not_exists(task)
-                    #self.authorize_doc(request,document,action="read") 
+                    self.authorize_doc(request,document,action="read") 
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
             elif (not ins) or state == 'FAILURE':
@@ -381,7 +381,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 return Response({"msg": "Pre Translation Ongoing. Please wait a little while.Hit refresh and try again",'celery_id':cel_task.id},status=401)
             elif state == "SUCCESS":
                 document = self.create_document_for_task_if_not_exists(task)
-                #self.authorize_doc(request,document,action="read") 
+                self.authorize_doc(request,document,action="read") 
                 try:
                     doc = DocumentSerializerV2(document).data
                     return Response(doc, status=201)
@@ -393,12 +393,12 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                         return Response(document,status=400)
             else:
                 document = self.create_document_for_task_if_not_exists(task)
-                #self.authorize_doc(request,document,action="read") 
+                self.authorize_doc(request,document,action="read") 
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
         else:
             document = self.create_document_for_task_if_not_exists(task)   
-            #self.authorize_doc(request,document,action="read")        
+            self.authorize_doc(request,document,action="read")        
             try:
                 doc = DocumentSerializerV2(document).data
                 return Response(doc, status=201)
@@ -498,7 +498,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
     def get_object(self, document_id):
         document = get_object_or_404(\
             Document.objects.all(), id=document_id)
-       # authorize(self.request, resource=document, actor=self.request.user, action="read")
+        authorize(self.request, resource=document, actor=self.request.user, action="read")
         return document
 
     # def get_page_size(self):
@@ -766,7 +766,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
     def update(self, request, pk=None):
         segment_id  = request.POST.get('segment')
         segment = self.get_object(segment_id)
-        #authorize(request, resource=segment, actor=request.user, action="read")
+        authorize(request, resource=segment, actor=request.user, action="read")
         edit_allow = self.edit_allowed_check(segment)
         if edit_allow == False:
             return Response({"msg": "Someone is working already.."}, status=400)
@@ -790,11 +790,11 @@ class MT_RawAndTM_View(views.APIView):
         hired_editors = debit_user.get_hired_editors if debit_user.get_hired_editors else []
 
         # Check if the debit_user (account holder) has plan other than Business like Pro, None etc
-        if get_plan_name(debit_user) != "Business" or 'Pay-As-You-Go':
+        if get_plan_name(debit_user) not in settings.TEAM_PLANS:
             return {}, 424, "cannot_translate"
 
         elif (request.user.is_internal_member or request.user.id in hired_editors) and \
-            (get_plan_name(debit_user) == "Business" or 'Pay-As-You-Go') and \
+            (get_plan_name(debit_user) in settings.TEAM_PLANS) and \
             (UserCredits.objects.filter(Q(user_id=debit_user.id)  \
                                      & Q(credit_pack_type__icontains="Subscription")).last().ended_at != None):
             return {}, 424, "cannot_translate"
