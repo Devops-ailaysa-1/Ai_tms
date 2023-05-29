@@ -450,8 +450,15 @@ class DocumentViewByDocumentId(views.APIView):
                 if task_reassign:
                     print("Inside TaskReassign")
                     try:
+                        assgn_count = task_assigned_info.filter(task_assign__reassigned=True).count()
+                        print("tyt----------->",assgn_count)                                     
                         task_assign_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(Q(task_assign__assign_to=user)).first().task_assign
-                        task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                        if assgn_count == 2:
+                            task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=True)\
+                                                  .filter(~Q(task_assign__assign_to=user)).first().task_assign
+                        else:
+                            if task_assigned_info.filter(task_assign__reassigned=True).first().task_assign__step_id=2:
+                                task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=True)
                     except:
                         print("Inside Task Reassign Except")
                         task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
@@ -462,8 +469,14 @@ class DocumentViewByDocumentId(views.APIView):
                             task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign
                             print("Detail --------->",task_assign_ins,task_assign_another_assign)
                         else:
+                            print("Tr-------->",task_assign_query.first(),task_assign_query.first().task_assign)
                             task_assign_ins = task_assign_query.first().task_assign
-                            task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                            try:task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                            except:
+                                q = task_assigned_info.filter(task_assign__reassigned=False)
+                                print("q------------>",q.count(),q.first().task_assign__step_id)
+                                if q.count() == 1 and q.first().task_assign__step_id ==2:
+                                    task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
                             print("Not LSP--------->",task_assign_ins,task_assign_another_assign)
                 else:
                     print("No reassign")
@@ -475,7 +488,12 @@ class DocumentViewByDocumentId(views.APIView):
                         print("Detail2 --------->",task_assign_ins,task_assign_another_assign)
                     else:
                         task_assign_ins = task_assign_query.first().task_assign
-                        task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                        try:task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                        except:
+                            q = task_assigned_info.filter(task_assign__reassigned=False)
+                            print("q2------------>",q.count(),q.first().task_assign__step_id)
+                            if q.count() == 1 and q.first().task_assign__step_id ==2:
+                                task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
                         print("Not Lsp --------->",task_assign_ins,task_assign_another_assign)
                     #task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
                 print("TaskAssignInsstep-------->",task_assign_ins.step_id)
