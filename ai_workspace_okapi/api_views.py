@@ -430,13 +430,20 @@ class DocumentViewByDocumentId(views.APIView):
                 if task_reassign:
                     task_assign_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(
                     ~Q(task_assign__assign_to=user)).first().task_assign
+                    if not task_assign_ins:
+                        task_assign_ins = task_assigned_info.filter(task_assign__reassigned=False).filter(
+                        ~Q(task_assign__assign_to=user)).first().task_assign
                 else:
                     task_assign_ins = task_assigned_info.filter(task_assign__reassigned=False).filter(
                     ~Q(task_assign__assign_to=user)).first().task_assign
                 print("TaskAssignInsstep-------->",task_assign_ins.step_id)
                 print("TaskAssignInsStatus---------->",task_assign_ins.status)
                 if task_assign_ins.step_id == 1 and task_assign_ins.status == 3:
-                    edit_allowed = True
+                    task_assign_current_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(
+                    Q(task_assign__assign_to=user)).first().task_assign
+                    if task_assign_current_ins.status == 3 or task_assign_current_ins.status == 4:
+                        edit_allowed = False
+                    else:edit_allowed = True
                 elif task_assign_ins.step_id == 2 and task_assign_ins.status != 2:
                     edit_allowed = True
                 else:edit_allowed = False
