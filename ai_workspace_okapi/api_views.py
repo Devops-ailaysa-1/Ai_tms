@@ -416,12 +416,39 @@ class DocumentViewByDocumentId(views.APIView):
         document = get_object_or_404(docs, id=document_id)
         return  document
 
+    def edit_allow_check(self, instance):
+        from ai_workspace.models import Task, TaskAssignInfo
+        user = self.request.user
+        task_obj = Task.objects.get(document_id=instance.id)
+        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
+        assigners = [i.task_assign.assign_to for i in task_assigned_info]
+        if user not in assigners:
+            edit_allowed = False
+        else:
+            try:
+                task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
+                if task_reassign:
+                    task_assign_status = task_assigned_info.filter(task_assign__reassigned=True).filter(
+                    ~Q(task_assign__assign_to=user)).first().task_assign.status
+                else:
+                    task_assign_status = task_assigned_info.filter(task_assign__reassigned=False).filter(
+                    ~Q(task_assign__assign_to=user)).first().task_assign.status
+                edit_allowed = False if task_assign_status == 2 else True
+            except:
+                edit_allowed = True
+        return edit_allowed
+
     def get(self, request, document_id):
         document = self.get_object(document_id)
         mt_enable = document.job.project.mt_enable
-        task_id = Task.objects.get(document=document).id
+        task = Task.objects.get(document=document)
+        edit_allowed = self.edit_allow_check(request.user)
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
+        assigned_users = [i.assign_to for i in Task.objects.get(document=document).task_info.all() if i.assign_to.is_agency]
+        assigned_users = [*set(assigned_users)]
+        assigned_users.extend([j.team.get_project_manager for j in assigned_users if j.team and j.team.get_project_manager]) 
+        print("Assigned---------->",assigned_users)
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
         try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
@@ -429,8 +456,8 @@ class DocumentViewByDocumentId(views.APIView):
         assign_enable = True if (request.user == doc_user) or (request.user in managers) else False
         # if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
         dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
-        dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
-        dict_2 = {'mt_enable':mt_enable,'task_id':task_id,'assign_enable':assign_enable}
+        dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) or (request.user in assigned_users) else {'updated_download':'disable'}
+        dict_2 = {'mt_enable':mt_enable,'task_id':task.id,'assign_enable':assign_enable,'edit_allowed':edit_allowed}
         authorize(request, resource=document, actor=request.user, action="read")
         data = DocumentSerializerV2(document).data
         data.update(dict)
