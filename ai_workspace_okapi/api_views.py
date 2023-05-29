@@ -433,9 +433,11 @@ class DocumentViewByDocumentId(views.APIView):
                 task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
                 if task_reassign:
                     print("Inside TaskReassign")
-                    task_assign_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(Q(task_assign__assign_to=user)).first().task_assign
-                    task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(~Q(task_assign__assign_to=user)).first().task_assign
-                    if not task_assign_ins:
+                    try:
+                        task_assign_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(Q(task_assign__assign_to=user)).first().task_assign
+                        task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                    except:
+                        print("Inside Task Reassign Except")
                         task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
                         Q(task_assign__assign_to=user))
                         print("Query------->",task_assign_query,task_assign_query.count())
