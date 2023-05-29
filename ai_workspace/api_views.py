@@ -727,7 +727,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        user = self.request.user.team.owner if self.request.user.team and self.request.user.is_agency else self.request.user
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency else self.request.user
         print("User------------------>111----->",user)
         # user = self.request.user.team.owner if self.request.user.team else self.request.user
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
@@ -879,7 +879,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
-        user_1 = request.user.team.owner if request.user.team and request.user.is_agency else request.user  #####For LSP
+        user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency else request.user  #####For LSP
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
