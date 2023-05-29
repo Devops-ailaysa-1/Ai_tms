@@ -888,7 +888,7 @@ class ProjectPOTaskView(viewsets.ViewSet):
         project_id = self.request.query_params.get('project_id')
         proj_queryset = Project.objects.filter(id=project_id)
         
-        if self.request.user.internal_member:
+        if self.request.user.is_internal_member:
             req_user = self.request.user.team.owner
         else:
             req_user = self.request.user
