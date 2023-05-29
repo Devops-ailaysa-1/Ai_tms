@@ -417,8 +417,8 @@ class DocumentViewByDocumentId(views.APIView):
         return  document
 
     def edit_allow_check(self, task_obj, given_step):
-        print("GivenStep------>",given_step)
         given_step = int(given_step) if given_step else None
+        print("GivenStep------>",given_step, type(given_step))
         from ai_workspace.models import Task, TaskAssignInfo
         user = self.request.user
         #task_obj = Task.objects.get(document_id=instance.id)
@@ -432,26 +432,33 @@ class DocumentViewByDocumentId(views.APIView):
                 print("Inside Try")
                 task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
                 if task_reassign:
+                    print("Inside TaskReassign")
                     task_assign_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(Q(task_assign__assign_to=user)).first().task_assign
                     task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(~Q(task_assign__assign_to=user)).first().task_assign
                     if not task_assign_ins:
                         task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
                         Q(task_assign__assign_to=user))
+                        print("Query------->",task_assign_query,task_assign_query.count())
                         if task_assign_query.count() == 2:
-                            task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first()
-                            task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first()
+                            task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first().task_assign
+                            task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign
+                            print("Detail --------->",task_assign_ins,task_assign_another_assign)
                         else:
-                            task_assign_ins = task_assign_query.first()
+                            task_assign_ins = task_assign_query.first().task_assign
                             task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                            print("Not LSP--------->",task_assign_ins,task_assign_another_assign)
                 else:
+                    print("No reassign")
                     task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
                     Q(task_assign__assign_to=user))
                     if task_assign_query.count() == 2:
-                        task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first()
-                        task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first()
+                        task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first().task_assign
+                        task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign
+                        print("Detail2 --------->",task_assign_ins,task_assign_another_assign)
                     else:
-                        task_assign_ins = task_assign_query.first()
+                        task_assign_ins = task_assign_query.first().task_assign
                         task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                        print("Not Lsp --------->",task_assign_ins,task_assign_another_assign)
                     #task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
                 print("TaskAssignInsstep-------->",task_assign_ins.step_id)
                 print("TaskAssignInsStatus---------->",task_assign_ins.status)
