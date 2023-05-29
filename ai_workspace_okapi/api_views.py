@@ -464,9 +464,10 @@ class DocumentViewByDocumentId(views.APIView):
                     #task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
                 print("TaskAssignInsstep-------->",task_assign_ins.step_id)
                 print("TaskAssignInsStatus---------->",task_assign_ins.status)
+                print("TaskAssignAnotherssign--------->",task_assign_another_assign.status)
                 if task_assign_ins.step_id == 1 and (task_assign_ins.status == 3 or task_assign_ins.status == 4) :
                     edit_allowed = False
-                elif task_assign_ins.step_id == 2 and (task_assign_ins.status == 3 or task_assign_ins.status == 4 or task_assign_another_ins.status in [2,1]):
+                elif task_assign_ins.step_id == 2 and (task_assign_ins.status == 3 or task_assign_ins.status == 4 or task_assign_another_assign.status in [2,1]):
                     edit_allowed = False
                 else:edit_allowed = True
             except BaseException as e:
