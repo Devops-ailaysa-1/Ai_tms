@@ -474,8 +474,8 @@ class DocumentViewByDocumentId(views.APIView):
                             try:task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
                             except:
                                 q = task_assigned_info.filter(task_assign__reassigned=False)
-                                print("q------------>",q.count(),q.first().task_assign__step_id)
-                                if q.count() == 1 and q.first().task_assign__step_id ==2:
+                                print("q------------>",q.count(),q.first().task_assign.step_id)
+                                if q.count() == 1 and q.first().task_assign.step_id ==2:
                                     task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
                             print("Not LSP--------->",task_assign_ins,task_assign_another_assign)
                 else:
@@ -491,8 +491,8 @@ class DocumentViewByDocumentId(views.APIView):
                         try:task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
                         except:
                             q = task_assigned_info.filter(task_assign__reassigned=False)
-                            print("q2------------>",q.count(),q.first().task_assign__step_id)
-                            if q.count() == 1 and q.first().task_assign__step_id ==2:
+                            print("q2------------>",q.count(),q.first().task_assign.step_id)
+                            if q.count() == 1 and q.first().task_assign.step_id ==2:
                                 task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
                         print("Not Lsp --------->",task_assign_ins,task_assign_another_assign)
                     #task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
