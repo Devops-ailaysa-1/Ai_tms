@@ -460,8 +460,8 @@ class DocumentViewByDocumentId(views.APIView):
                 elif task_assign_ins.step_id == 2 and (task_assign_ins.status == 3 or task_assign_ins.status == 4 or task_assign_another_ins.status in [2,1]):
                     edit_allowed = False
                 else:edit_allowed = True
-            except:
-                print("Inside Except")
+            except BaseException as e:
+                print(f"Error : {str(e)}")
                 edit_allowed = True
         return edit_allowed
 
