@@ -431,9 +431,12 @@ class DocumentViewByDocumentId(views.APIView):
         if user not in assigners:
             print("Not in assigners")
             status = [i.task_assign.status for i in task_assigned_info.filter(task_assign__reassigned=False)]
+            print(status)
             if all(i == 3 or i == 4 for i in status):
+                print("Inside if")
                 edit_allowed =True
             else:
+                print("isd else")
                 edit_allowed = False
         else:
             try:

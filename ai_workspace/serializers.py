@@ -1676,6 +1676,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			if task_assign_data.get('client_response'):
 				if task_assign_data.get('client_response') == 2:
 					task_assign_data.update({'status':2})
+					TaskAssign.objects.filter(task=instance.task,step=instance.step,reassigned=False).update(status=2)
 				notify_client_status(instance,task_assign_data.get('client_response'),task_assign_data.get('client_reason'))
 				task_assign_data.update({'user_who_approved_or_rejected':self.context.get('request').user})
 			task_assign_serializer.update(instance, task_assign_data)
