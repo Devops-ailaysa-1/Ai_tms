@@ -419,7 +419,7 @@ class DocumentViewByDocumentId(views.APIView):
     def edit_allow_check(self, task_obj):
         from ai_workspace.models import Task, TaskAssignInfo
         user = self.request.user
-        # task_obj = Task.objects.get(document_id=instance.id)
+        #task_obj = Task.objects.get(document_id=instance.id)
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
         if user not in assigners:
@@ -442,7 +442,7 @@ class DocumentViewByDocumentId(views.APIView):
         document = self.get_object(document_id)
         mt_enable = document.job.project.mt_enable
         task = Task.objects.get(document=document)
-        edit_allowed = self.edit_allow_check(request.user,task)
+        edit_allowed = self.edit_allow_check(task)
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
         assigned_users = [i.assign_to for i in Task.objects.get(document=document).task_info.all() if i.assign_to.is_agency]
