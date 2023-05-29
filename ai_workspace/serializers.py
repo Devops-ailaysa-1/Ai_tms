@@ -1517,7 +1517,11 @@ def msg_send_vendor_accept(task_assign,input):
     receivers = []
     receiver =  task_assign.task_assign_info.assigned_by
     receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
-    receivers.append( task_assign.task_assign_info.assigned_by)
+    print("AssignedBy--------->",task_assign.task_assign_info.assigned_by)
+    receivers.append(task_assign.task_assign_info.assigned_by)
+    if receiver.team:
+        receivers.append(task_assign.task_assign_info.assigned_by.team.owner)
+    receivers = [*set(receivers)]
     print("Receivers----------->",receivers)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
