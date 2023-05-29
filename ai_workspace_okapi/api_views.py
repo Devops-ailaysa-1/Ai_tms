@@ -409,6 +409,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 else:
                     return Response(document,status=400)
 
+
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
     def get_object(document_id):
@@ -416,17 +417,24 @@ class DocumentViewByDocumentId(views.APIView):
         document = get_object_or_404(docs, id=document_id)
         return  document
 
+
     def edit_allow_check(self, task_obj, given_step):
         given_step = int(given_step) if given_step else None
         print("GivenStep------>",given_step, type(given_step))
         from ai_workspace.models import Task, TaskAssignInfo
-        user = self.request.user
+        user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency) else self.request.user
         #task_obj = Task.objects.get(document_id=instance.id)
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
+        if not task_assigned_info:
+            return True
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
         if user not in assigners:
             print("Not in assigners")
-            edit_allowed = False
+            status = [i.task_assign.status for i in task_assigned_info.filter(reassigned=False)]
+            if all(i == 3 or i == 4 for i in status):
+                edit_allowed =True
+            else:
+                edit_allowed = False
         else:
             try:
                 print("Inside Try")
