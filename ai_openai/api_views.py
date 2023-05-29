@@ -796,7 +796,7 @@ def generate_article(request):
         tone=blog_creation.tone.tone
         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
         # completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-        
+        title='#'+title
         if blog_creation.user_language_code== 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en():
@@ -806,7 +806,9 @@ def generate_article(request):
                         delta=ins['delta']
                         if 'content' in delta.keys():
                             content=delta['content']
-                            t=content+' '
+                            if title:
+                                content=title+'\n'+content
+                                title=''
                             yield '\ndata: {}\n\n'.format({"t":content})
             return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')
         else:
@@ -828,7 +830,10 @@ def generate_article(request):
                                     arr.append(new_line_split[0]+'\n')
                                     text=" ".join(arr)
                                     blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,
-                                                    user_id=blog_creation.user.id)   
+                                                    user_id=blog_creation.user.id)
+                                    if title:
+                                        blog_article_trans=title+'\n'+blog_article_trans
+                                        title=''
                                     if blog_article_trans.startswith("#"):
                                         # blog_article_trans=markdowner.convert(blog_article_trans)
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
@@ -840,8 +845,11 @@ def generate_article(request):
                                     sente=" ".join(arr)
                                     if sente[-1]!='.':
                                         sente=sente+'.'
-                                        blog_article_trans = get_translation(1,sente,"en",blog_creation.user_language_code,
+                                        blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)
+                                        if title:
+                                            blog_article_trans=title+'\n'+blog_article_trans
+                                            title=''
                                         yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
                                     else:
                                     # blog_article_trans=markdowner.convert(blog_article_trans)
