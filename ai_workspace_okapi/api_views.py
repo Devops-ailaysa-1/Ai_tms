@@ -434,7 +434,7 @@ class DocumentViewByDocumentId(views.APIView):
                     task_assign_ins = task_assigned_info.filter(task_assign__reassigned=False).filter(
                     ~Q(task_assign__assign_to=user)).first().task_assign
                 print("TaskAssignInsstep-------->",task_assign_ins.step)
-                print("TaskAssignInsStatus---------->"task_assign_ins.status)
+                print("TaskAssignInsStatus---------->",task_assign_ins.status)
                 if task_assign_ins.step == 1 and task_assign_ins.status == 3:
                     edit_allowed = True
                 elif task_assign_ins.step == 2 and task_assign_ins.status != 2:
