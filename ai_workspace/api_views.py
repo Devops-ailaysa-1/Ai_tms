@@ -727,7 +727,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        user = self.request.user.team.owner if self.request.user.team else self.request.user
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.is_agency else self.request.user
+        print("User------------------>111----->",user)
         # user = self.request.user.team.owner if self.request.user.team else self.request.user
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
@@ -752,6 +753,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        print("QR------------>",queryset)
         pagin_tc = self.paginator.paginate_queryset(queryset, request , view=self)
         serializer = ProjectQuickSetupSerializer(pagin_tc, many=True, context={'request': request})
         response = self.get_paginated_response(serializer.data)
@@ -877,7 +879,7 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
-        user_1 = request.user.team.owner if request.user.team else request.user
+        user_1 = request.user.team.owner if request.user.team and request.user.is_agency else request.user  #####For LSP
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
@@ -1445,7 +1447,7 @@ class TaskAssignUpdateView(viewsets.ViewSet):
 
         # if not reassigned:reassigned = False
         # else: reassigned = True
-
+        print("Reassigned-------->",reassigned)
         if file_delete_ids:
             file_res = InstructionFilesView.as_view({"delete": "destroy"})(request=req_copy,\
                         pk='0', many="true", ids=file_delete_ids)
@@ -1486,7 +1488,7 @@ def bulk_task_accept(request):
                 print("Error--------->",serializer.errors)
         except:
             pass
-        return Response({'msg':'Task Accept Succeded'})
+    return Response({'msg':'Task Accept Succeded'})
 
 class TaskAssignInfoCreateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1659,6 +1661,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 try:self.history(obj)
                 except:pass
                 if obj.task_assign.reassigned == True:
+                    print("Inside IF")
                     obj.task_assign.assign_to = self.request.user.team.owner if self.request.user.team else self.request.user #if unassigned..it is assigned back to LSP 
                     #obj.task_assign.status = 1
                     obj.task_assign.save()
@@ -1667,14 +1670,17 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     unassign_task(assigned_user,role,obj.task_obj)   
                     obj.delete()
                 else:
+                    print("Inside Else")
                     reassigns = TaskAssign.objects.filter(Q(task=obj.task_assign.task) & Q(step=obj.task_assign.step) & Q(reassigned = True))
                     if reassigns:
-                        obj_1 = reassigns.first().task_assign_info
-                        self.history(obj_1)
-                        obj_1.task_assign.assign_to = user
-                        obj_1.task_assign.status = 1
-                        obj_1.task_assign.save()
-                        obj_1.delete()
+                        try:obj_1 = reassigns.first().task_assign_info
+                        except:obj_1=None
+                        if obj_1:
+                            self.history(obj_1)
+                            obj_1.task_assign.assign_to = user
+                            obj_1.task_assign.status = 1
+                            obj_1.task_assign.save()
+                            obj_1.delete()
                     assigned_user = obj.task_assign.assign_to
                     obj.task_assign.assign_to = user
                     obj.task_assign.status = 1
