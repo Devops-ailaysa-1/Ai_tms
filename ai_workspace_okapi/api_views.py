@@ -416,47 +416,64 @@ class DocumentViewByDocumentId(views.APIView):
         document = get_object_or_404(docs, id=document_id)
         return  document
 
-    def edit_allow_check(self, task_obj):
+    def edit_allow_check(self, task_obj, given_step):
+        print("GivenStep------>",given_step)
+        given_step = int(given_step) if given_step else None
         from ai_workspace.models import Task, TaskAssignInfo
         user = self.request.user
         #task_obj = Task.objects.get(document_id=instance.id)
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
         if user not in assigners:
+            print("Not in assigners")
             edit_allowed = False
         else:
             try:
+                print("Inside Try")
                 task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
                 if task_reassign:
-                    task_assign_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign
+                    task_assign_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(Q(task_assign__assign_to=user)).first().task_assign
+                    task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=True).filter(~Q(task_assign__assign_to=user)).first().task_assign
                     if not task_assign_ins:
-                        task_assign_ins = task_assigned_info.filter(task_assign__reassigned=False).filter(
-                        ~Q(task_assign__assign_to=user)).first().task_assign
+                        task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
+                        Q(task_assign__assign_to=user))
+                        if task_assign_query.count() == 2:
+                            task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first()
+                            task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first()
+                        else:
+                            task_assign_ins = task_assign_query.first()
+                            task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
                 else:
-                    task_assign_ins = task_assigned_info.filter(task_assign__reassigned=False).filter(
-                    ~Q(task_assign__assign_to=user)).first().task_assign
+                    task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
+                    Q(task_assign__assign_to=user))
+                    if task_assign_query.count() == 2:
+                        task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first()
+                        task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first()
+                    else:
+                        task_assign_ins = task_assign_query.first()
+                        task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+                    #task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
                 print("TaskAssignInsstep-------->",task_assign_ins.step_id)
                 print("TaskAssignInsStatus---------->",task_assign_ins.status)
-                if task_assign_ins.step_id == 1 and task_assign_ins.status == 3:
-                    task_assign_current_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(
-                    Q(task_assign__assign_to=user)).first().task_assign
-                    if task_assign_current_ins.status == 3 or task_assign_current_ins.status == 4:
-                        edit_allowed = False
-                    else:edit_allowed = True
-                elif task_assign_ins.step_id == 2 and task_assign_ins.status != 2:
-                    edit_allowed = True
-                else:edit_allowed = False
-                # edit_allowed = False if task_assign_status == 2 else True
+                if task_assign_ins.step_id == 1 and (task_assign_ins.status == 3 or task_assign_ins.status == 4) :
+                    edit_allowed = False
+                elif task_assign_ins.step_id == 2 and (task_assign_ins.status == 3 or task_assign_ins.status == 4 or task_assign_another_ins.status in [2,1]):
+                    edit_allowed = False
+                else:edit_allowed = True
             except:
+                print("Inside Except")
                 edit_allowed = True
         return edit_allowed
 
     def get(self, request, document_id):
+        if request.GET:
+            given_step = request.GET.get('step_id',None) 
+        else:
+            given_step = None
         document = self.get_object(document_id)
         mt_enable = document.job.project.mt_enable
         task = Task.objects.get(document=document)
-        edit_allowed = self.edit_allow_check(task)
+        edit_allowed = self.edit_allow_check(task,given_step)
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
         assigned_users = [i.assign_to for i in Task.objects.get(document=document).task_info.all() if i.assign_to.is_agency]
