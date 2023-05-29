@@ -1572,7 +1572,7 @@ def notify_client_status(task_assign,response,reason):
     receivers = []
     receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
     receivers.append(task_assign.assign_to)
-    print("Receivers--------->",receivers)
+    print("Receivers in client accept--------->",receivers)
     for i in receivers: 
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
         if thread_ser.is_valid():
@@ -1603,7 +1603,10 @@ def notify_task_status(task_assign,status,reason):
             already_assigned = TaskAssign.objects.filter(task=task_assign.task,step=task_assign.step,reassigned=False)
             assigned_user = already_assigned.first().assign_to
             print("AssignedUser--------->",assigned_user)
+            print("team owner------------->",assigned_user.team.owner)
             receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
+            if assigned_user.team:
+                receivers.append(assigned_user.team.owner)
         except:pass
     else:
         try:
@@ -1613,7 +1616,8 @@ def notify_task_status(task_assign,status,reason):
         except:pass
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
-    print('Receivers-------------->',receivers)
+    receivers = [*set(receivers)]
+    print('Receivers in task accept or return-------------->',receivers)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
         if thread_ser.is_valid():
