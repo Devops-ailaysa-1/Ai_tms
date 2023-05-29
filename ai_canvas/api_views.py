@@ -526,8 +526,8 @@ class TemplateKeywordViewset(viewsets.ViewSet):
 
 class FontFileViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
-    def get(self, request):
-        query_set=FontFile.objects.all()
+    def list(self, request):
+        query_set=FontFile.objects.filter(user=request.user.id)
         serializer=FontFileSerializer(query_set ,many =True)
         return Response(serializer.data)
 
