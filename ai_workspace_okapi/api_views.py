@@ -519,7 +519,7 @@ class DocumentViewByDocumentId(views.APIView):
                     edit_allowed = False
                 elif task_assign_ins.step_id == 1 and task_assign_ins.status not in [3,4]:
                     print("Inside ifif")
-                    reassigns = TaskAssignInfo.objects.filter(Q(task_assign__task=task_assign_ins.task) & Q(task_assign__step=task_assign_ins.step) & Q(task_asssign__reassigned=True))
+                    reassigns = TaskAssignInfo.objects.filter(Q(task_assign__task=task_assign_ins.task) & Q(task_assign__step=task_assign_ins.step) & Q(task_assign__reassigned=True))
                     print("reassigns---------->",reassigns)
                     if reassigns:edit_allowed = False
                     else: edit_allowed = True
