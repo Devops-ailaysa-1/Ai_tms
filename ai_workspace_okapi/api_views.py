@@ -464,7 +464,7 @@ class DocumentViewByDocumentId(views.APIView):
                             else:
                                 status = 0
                     except BaseException as e:
-                        print(f"Error : {str(e)}"):
+                        print(f"Error : {str(e)}")
                         print("Inside Task Reassign Except")
                         task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
                         Q(task_assign__assign_to=user))
