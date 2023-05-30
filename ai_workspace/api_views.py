@@ -727,6 +727,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
+        print("Mnagers----------->",self.req)
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency else self.request.user
         print("User------------------>111----->",user)
         # user = self.request.user.team.owner if self.request.user.team else self.request.user
@@ -1427,9 +1428,10 @@ def msg_send(sender,receiver,task):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     #print("Thread--->",thread_id)
-    message = "You have been assigned a new task in "+proj+"."
-    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+    if thread_id:
+        message = "You have been assigned a new task in "+proj+"."
+        msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+        notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
 class TaskAssignUpdateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1577,7 +1579,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             if serializer.is_valid():
                 serializer.save()
                 weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
-                msg_send(sender,Receiver,tasks[0])
+                try:msg_send(sender,Receiver,tasks[0])
+                except:pass
                 # if Receiver in hired_editors:
                 #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
