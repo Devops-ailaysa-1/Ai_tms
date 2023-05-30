@@ -881,7 +881,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
-        user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency else request.user  #####For LSP
+        pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
+        user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
