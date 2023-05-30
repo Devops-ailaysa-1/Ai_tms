@@ -466,8 +466,8 @@ class DocumentViewByDocumentId(views.APIView):
                 if task_assign_another_assign_query:
                     task_assign_another_assign = task_assign_another_assign_query.first().task_assign
                 else:
-                    if task_assign_another_assign_query.first().step_id == 2:
-                        task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=task_assign_another_assign_query.first().reassigned)
+                    if task_assign_ins.step_id == 2:
+                        task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=task_assign_ins.reassigned)
                     else:task_assign_another_assign = None
                 task_assign_reassigns = None 
         task_assign_reassigns_status = task_assign_reassigns.status if task_assign_reassigns else 0
