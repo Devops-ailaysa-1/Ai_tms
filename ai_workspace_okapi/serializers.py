@@ -129,7 +129,7 @@ class SegmentSerializerV2(SegmentSerializer):
             else: step_id = 1
             task_assign_query = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user)
             if task_assign_query.count() == 2:
-                task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).filter(step_id=step_id).first()
+                task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).filter(task_assign__step_id=step_id).first()
             else:
                 task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first()
             print("t_a_o----->",task_assign_obj)         

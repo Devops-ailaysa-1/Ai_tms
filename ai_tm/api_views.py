@@ -773,7 +773,7 @@ def notify_word_count(task_assign,word_count,char_count):
     receivers = []
     receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
     receivers.append(receiver)
-    print("Rece",receiver)
+    print("Rece",receivers)
     sender =  task_assign.task_assign_info.assigned_by
     print("send",sender)
     unit = task_assign.task_assign_info.mtpe_count_unit.id
