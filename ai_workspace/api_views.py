@@ -1669,6 +1669,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     print("Inside IF")
                     obj.task_assign.assign_to = self.request.user.team.owner if self.request.user.team else self.request.user #if unassigned..it is assigned back to LSP 
                     obj.task_assign.status = 1
+                    obj.task_assign.client_response = None
                     obj.task_assign.save()
                     role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
                     assigned_user = obj.task_assign.assign_to
@@ -1681,14 +1682,22 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     if reassigns:
                         try:obj_1 = reassigns.first().task_assign_info
                         except:obj_1=None
+                        print("obj------->",obj_1)
                         if obj_1:
                             self.history(obj_1)
+                            print("Usr------>",user)
                             obj_1.task_assign.assign_to = user
                             obj_1.task_assign.status = 1
                             obj_1.task_assign.client_response = None
                             obj_1.task_assign.save()
+                            print("YYYYYYY-------->",obj_1.task_assign)
                             obj_1.delete()
+                        else:
+                            print("Usr111------>",user)
+                            reassigns.first().assign_to = user
+                            reassigns.first().save()
                     assigned_user = obj.task_assign.assign_to
+                    print("Usrrr------>",user)
                     obj.task_assign.assign_to = user
                     obj.task_assign.status = 1
                     obj.task_assign.client_response = None
