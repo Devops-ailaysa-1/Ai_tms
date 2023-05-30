@@ -425,9 +425,11 @@ class DocumentViewByDocumentId(views.APIView):
         user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency) else self.request.user
         #task_obj = Task.objects.get(document_id=instance.id)
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
+        print("TaskassignedInfo------->",task_assigned_info)
         if not task_assigned_info:
             return True
         assigners = [i.task_assign.assign_to for i in task_assigned_info]
+        print("Assigners----------->",assigners)
         if user not in assigners:
             print("Not in assigners")
             query = task_assigned_info.filter(task_assign__reassigned=False)
