@@ -446,6 +446,7 @@ class DocumentViewByDocumentId(views.APIView):
         else:
             try:
                 print("Inside Try")
+                status = 0
                 task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
                 if task_reassign:
                     print("Inside TaskReassign")
@@ -477,6 +478,8 @@ class DocumentViewByDocumentId(views.APIView):
                                 print("q------------>",q.count(),q.first().task_assign.step_id)
                                 if q.count() == 1 and q.first().task_assign.step_id ==2:
                                     task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+                                # else:
+                                #     status = 0
                             print("Not LSP--------->",task_assign_ins,task_assign_another_assign)
                 else:
                     print("No reassign")
@@ -494,14 +497,18 @@ class DocumentViewByDocumentId(views.APIView):
                             print("q2------------>",q.count(),q.first().task_assign.step_id)
                             if q.count() == 1 and q.first().task_assign.step_id ==2:
                                 task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+                            # else:
+                            #     status = 0
                         print("Not Lsp --------->",task_assign_ins,task_assign_another_assign)
                     #task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
                 print("TaskAssignInsstep-------->",task_assign_ins.step_id)
                 print("TaskAssignInsStatus---------->",task_assign_ins.status)
                 print("TaskAssignAnotherssign--------->",task_assign_another_assign.status)
+                status = task_assign_another_assign.status if task_assign_another_assign else status
+                print("Status-------------->",status)
                 if task_assign_ins.step_id == 1 and (task_assign_ins.status == 3 or task_assign_ins.status == 4) :
                     edit_allowed = False
-                elif task_assign_ins.step_id == 2 and (task_assign_ins.status == 3 or task_assign_ins.status == 4 or task_assign_another_assign.status in [2,1]):
+                elif task_assign_ins.step_id == 2 and (task_assign_ins.status == 3 or task_assign_ins.status == 4 or status in [2,1]):
                     edit_allowed = False
                 else:edit_allowed = True
             except BaseException as e:
