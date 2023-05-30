@@ -470,7 +470,7 @@ class DocumentViewByDocumentId(views.APIView):
                         task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=task_assign_another_assign_query.first().reassigned)
                     else:task_assign_another_assign = None
                 task_assign_reassigns = None 
-        task_assign_reassigns_status = task_assigns_reassigns.status if task_assign_reassigns else 0
+        task_assign_reassigns_status = task_assign_reassigns.status if task_assign_reassigns else 0
         task_assign_another_assign_status = task_assign_another_assign.status if task_assign_another_assign else 0
         print("TaskAssignIns------------->",task_assign_ins)
         print("TaskAssignInsStatus----------->",task_assign_ins.status)
