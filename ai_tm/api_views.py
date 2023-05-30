@@ -312,6 +312,7 @@ def get_word_count(tm_analysis,project,task):
 
 
 
+
 def get_tasks_for_analysis(user,instance):
     if instance.ai_user == user:
         tasks = instance.get_mtpe_tasks
@@ -389,7 +390,8 @@ def get_project_analysis(request,project_id):
         #else:
         #print("Outside If")
         res=[]
-        analysis_tasks = get_tasks_for_analysis(request.user,proj)
+        user = request.user.team.owner if request.user.team and request.user.team.owner.is_agency else request.user  #####For LSP
+        analysis_tasks = get_tasks_for_analysis(user,proj)
 
         for task in  analysis_tasks:
             word_count = task.task_wc_general.last()
