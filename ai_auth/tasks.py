@@ -104,7 +104,7 @@ def sync_invoices_and_charges(days):
     
 @task
 def renewal_list():
-    today = timezone.now()
+    today = timezone.now() + timedelta(1)  
     last_day = calendar.monthrange(today.year,today.month)[1]
     if last_day == today.day:
         cycle_dates = [x for x in range(today.day,32)]
