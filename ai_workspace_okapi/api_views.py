@@ -450,7 +450,7 @@ class DocumentViewByDocumentId(views.APIView):
                 print("Tsq---------->",tsq)
                 if tsq == 2:
                     task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first().task_assign
-                    task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign
+                    task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign if given_step == 1 else None
                     reassigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj,task_assign__step_id = given_step,task_assign__reassigned=True)
                     task_assign_reassigns = reassigns.first().task_assign if reassigns else None
                 else:
