@@ -1694,8 +1694,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                             obj_1.delete()
                         else:
                             print("Usr111------>",user)
-                            reassigns.first().assign_to = user
-                            reassigns.first().save()
+                            rr = reassigns.first()
+                            rr.assign_to = user
+                            rr.save()
+                            print("save")
                     assigned_user = obj.task_assign.assign_to
                     print("Usrrr------>",user)
                     obj.task_assign.assign_to = user
