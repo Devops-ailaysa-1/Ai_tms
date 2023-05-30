@@ -727,7 +727,7 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        print("Mnagers----------->",self.req)
+        #print("Mnagers----------->",self.req)
         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency else self.request.user
         print("User------------------>111----->",user)
         # user = self.request.user.team.owner if self.request.user.team else self.request.user
