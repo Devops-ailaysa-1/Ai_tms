@@ -449,6 +449,7 @@ class DocumentViewByDocumentId(views.APIView):
         else:
             try:
                 print("Inside Try")
+                task_assign_another_assign = None
                 status = 0
                 task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
                 if task_reassign:
