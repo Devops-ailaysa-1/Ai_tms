@@ -437,9 +437,12 @@ class DocumentViewByDocumentId(views.APIView):
             if query.count() == 1 and query.first().task_assign.step_id == 2:
                 edit_allowed = True
             else:
-                status = [i.task_assign.status for i in query]
-                if all(i == 3 or i == 4 for i in status):edit_allowed =True
-                else:edit_allowed = False
+                if query.filter(step_id==1).status in [3,4]:edit_allowed =True
+                else:
+                    status = [i.task_assign.status for i in query]
+                    print("st------>",status)
+                    if all(i == 3 or i == 4 for i in status):edit_allowed =True
+                    else:edit_allowed = False
             print("ED-------->",edit_allowed)
             return edit_allowed
         else:
