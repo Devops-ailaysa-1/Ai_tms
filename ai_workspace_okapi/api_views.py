@@ -521,7 +521,10 @@ class DocumentViewByDocumentId(views.APIView):
                     print("Inside ifif")
                     reassigns = TaskAssignInfo.objects.filter(Q(task_assign__task=task_assign_ins.task) & Q(task_assign__step=task_assign_ins.step) & Q(task_assign__reassigned=True))
                     print("reassigns---------->",reassigns)
-                    if reassigns and user.is_agency:edit_allowed = False
+                    if reassigns and user.is_agency:
+                        if reassigns.first().task_assign.status in [3,4]:
+                            edit_allowed = True
+                        else:edit_allowed = False
                     else: edit_allowed = True
                 else:edit_allowed = True
             except BaseException as e:
