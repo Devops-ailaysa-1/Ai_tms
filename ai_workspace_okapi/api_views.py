@@ -458,9 +458,13 @@ class DocumentViewByDocumentId(views.APIView):
                             task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=True)\
                                                   .filter(~Q(task_assign__assign_to=user)).first().task_assign
                         else:
+                            print("Inside Else")
                             if task_assigned_info.filter(task_assign__reassigned=True).first().task_assign__step_id == 2:
                                 task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=True)
-                    except:
+                            else:
+                                status = 0
+                    except BaseException as e:
+                        print(f"Error : {str(e)}"):
                         print("Inside Task Reassign Except")
                         task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
                         Q(task_assign__assign_to=user))
@@ -513,7 +517,7 @@ class DocumentViewByDocumentId(views.APIView):
                 else:edit_allowed = True
             except BaseException as e:
                 print(f"Error : {str(e)}")
-                edit_allowed = True
+                edit_allowed = False
         return edit_allowed
 
     def get(self, request, document_id):
