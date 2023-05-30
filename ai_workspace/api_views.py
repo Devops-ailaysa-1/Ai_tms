@@ -1668,7 +1668,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 if obj.task_assign.reassigned == True:
                     print("Inside IF")
                     obj.task_assign.assign_to = self.request.user.team.owner if self.request.user.team else self.request.user #if unassigned..it is assigned back to LSP 
-                    #obj.task_assign.status = 1
+                    obj.task_assign.status = 1
                     obj.task_assign.save()
                     role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
                     assigned_user = obj.task_assign.assign_to
