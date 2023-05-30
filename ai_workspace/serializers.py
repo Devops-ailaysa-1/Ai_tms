@@ -1570,7 +1570,7 @@ def notify_client_status(task_assign,response,reason):
     print("Sender------>",sender)
     receiver =  task_assign.assign_to 
     receivers = []
-    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers =  receiver.team.get_project_manager if receiver.team and receiver.team.owner.is_agency  else []
     receivers.append(task_assign.assign_to)
     print("Receivers in client accept--------->",receivers)
     for i in receivers: 
@@ -1668,10 +1668,22 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			# if task_assign_data.get('status') == 4:
 			# 	notify_task_return_request(instance)
 			if task_assign_data.get('assign_to'):
+				if instance.reassigned == False:
+					res = TaskAssign.objects.filter(task = instance.task,step=instance.step,reassigned=True)
+					print("Res--------->",res)
+					if hasattr(res.first(),'task_assign_info'):
+						print("Inside")
+						res_obj = res.first()
+						res_obj.task_assign_info.delete()
+						res_obj.assign_to = instance.task.job.project.ai_user
+						res_obj.status = 1
+						res_obj.save()
+				print("Outer if")
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 				task_assign_data.update({'status':1})
+				print("TAS Data----------->",task_assign_data)
 				po_update.append('assign_to')
 			if task_assign_data.get('client_response'):
 				if task_assign_data.get('client_response') == 2:
