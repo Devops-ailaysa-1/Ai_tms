@@ -422,7 +422,8 @@ class DocumentViewByDocumentId(views.APIView):
         given_step = int(given_step) if given_step else None
         print("GivenStep------>",given_step, type(given_step))
         from ai_workspace.models import Task, TaskAssignInfo
-        user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency) else self.request.user
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers) else self.request.user
         #task_obj = Task.objects.get(document_id=instance.id)
         task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
         print("TaskassignedInfo------->",task_assigned_info)
