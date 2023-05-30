@@ -517,7 +517,7 @@ class DocumentViewByDocumentId(views.APIView):
                 else:edit_allowed = True
             except BaseException as e:
                 print(f"Error : {str(e)}")
-                edit_allowed = False
+                edit_allowed = True
         return edit_allowed
 
     def get(self, request, document_id):
