@@ -1681,14 +1681,18 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                     if reassigns:
                         try:obj_1 = reassigns.first().task_assign_info
                         except:obj_1=None
+                        print("obj------->",obj_1)
                         if obj_1:
                             self.history(obj_1)
+                            print("Usr------>",user)
                             obj_1.task_assign.assign_to = user
                             obj_1.task_assign.status = 1
                             obj_1.task_assign.client_response = None
                             obj_1.task_assign.save()
+                            print("YYYYYYY-------->",obj_1.task_assign)
                             obj_1.delete()
                     assigned_user = obj.task_assign.assign_to
+                    print("Usrrr------>",user)
                     obj.task_assign.assign_to = user
                     obj.task_assign.status = 1
                     obj.task_assign.client_response = None
