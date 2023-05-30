@@ -1677,6 +1677,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 else:
                     print("Inside Else")
                     reassigns = TaskAssign.objects.filter(Q(task=obj.task_assign.task) & Q(step=obj.task_assign.step) & Q(reassigned = True))
+                    print("reassigns in delete---------->",reassigns)
                     if reassigns:
                         try:obj_1 = reassigns.first().task_assign_info
                         except:obj_1=None
@@ -1684,11 +1685,13 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                             self.history(obj_1)
                             obj_1.task_assign.assign_to = user
                             obj_1.task_assign.status = 1
+                            obj_1.task_assign.client_response = None
                             obj_1.task_assign.save()
                             obj_1.delete()
                     assigned_user = obj.task_assign.assign_to
                     obj.task_assign.assign_to = user
                     obj.task_assign.status = 1
+                    obj.task_assign.client_response = None
                     obj.task_assign.save()
                     # role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
                     role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
