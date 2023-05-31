@@ -1154,7 +1154,7 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		project_managers = self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
 		user = self.context.get('request').user.team.owner if self.context.get('request').user.team and self.context.get('request').user in project_managers else self.context.get('request').user
 		if user.is_agency == True:
-			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
+			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(task_assign__user=user) & Q(reassigned=True))
 			if task_assign:
 				task_assign_info=[]
 				for i in task_assign:
@@ -1664,6 +1664,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		if 'task_assign' in data:
 			task_assign_data = data.get('task_assign')
 			if task_assign_data.get('status') == 3 or task_assign_data.get('status') == 4:
+				if task_assign_data.get('status') == 3:
+					task_assign_data.update({'client_response':None})
 				notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
 			# if task_assign_data.get('status') == 4:
 			# 	notify_task_return_request(instance)
