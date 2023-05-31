@@ -65,7 +65,8 @@ class CanvasSourceJsonFilesSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     extra_kwargs = { 
-            'export_file':{'write_only':True}
+            'export_file':{'write_only':True},
+            'undo_hide_src':{'write_only':True}
     }
 
     def to_representation(self, instance):
@@ -94,15 +95,16 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     tar_page = serializers.IntegerField(required=False,write_only=True)
     temp_global_design = serializers.PrimaryKeyRelatedField(queryset=TemplateGlobalDesign.objects.all(),required=False)
     my_temp = serializers.PrimaryKeyRelatedField(queryset=MyTemplateDesign.objects.all(),required=False)
-    target_canvas_json = serializers.JSONField(required=False,write_only=True)
+    target_canvas_json=serializers.JSONField(required=False,write_only=True)
     next_page=serializers.BooleanField(required=False,write_only=True)
+    duplicate=serializers.BooleanField(required=False,write_only=True)
     class Meta:
         model = CanvasDesign
         fields =  ('id','file_name','source_json','width','height','created_at','updated_at',
                     'canvas_translation','canvas_translation_tar_thumb', 'canvas_translation_target',
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
-                    'temp_global_design','my_temp','target_canvas_json','next_page')
+                    'temp_global_design','my_temp','target_canvas_json','next_page','duplicate')
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -112,7 +114,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'src_page':{'write_only':True},
             'thumbnail_src':{'write_only':True},
             'src_lang':{'write_only':True},
-            'next_page':{'write_only':True}
+            'next_page':{'write_only':True},
+            'duplicate':{'write_only':True}
         }
 
 
@@ -127,12 +130,12 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         source_json_file=validated_data.pop('source_json_file',None)
         thumbnail_src=validated_data.pop('thumbnail_src',None)
         export_img_src=validated_data.pop('export_img_src',None)
-        print("**validated_data",validated_data)
+ 
         next_page=validated_data.pop('next_page',None)
+        duplicate=validated_data.pop('duplicate',None)
         user = self.context['request'].user
         data = {**validated_data ,'user':user}
-        print("data--------->>>",data)
-        
+
         instance=CanvasDesign.objects.create(**data)
         self.instance=instance
         if source_json_file:
@@ -163,7 +166,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         target_json_file=validated_data.get('target_json_file',None)
         target_canvas_json=validated_data.get('target_canvas_json',None)
         next_page=validated_data.get('next_page',None)
-
+        duplicate=validated_data.get('duplicate',None)
         if next_page:
             src_json_page=instance.canvas_json_src.last().json
             src_json_page['objects'].clear()
@@ -172,14 +175,19 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
             src_json_page['background']="rgba(255,255,255,0.1)"
             thumbnail=self.thumb_create(json_str=src_json_page,formats='png',multiplierValue=1)
-            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail,
-                                                 )
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail)
             
             for count,src_js in enumerate(instance.canvas_json_src.all()):
                 src_js.json['projectid']['pages']=pages+1
                 src_js.json['projectid']['page']=count+1
                 src_js.save()
 
+        if duplicate and src_page:
+            can_src=CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=can_src.json,thumbnail=can_src.thumbnail,
+                                                 page_no=len(instance.canvas_json_src.all())+1)
+            
+            
         if tar_page and canvas_translation and target_canvas_json:
             canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,formats='png',multiplierValue=1) 
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
