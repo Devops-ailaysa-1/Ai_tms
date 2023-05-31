@@ -1153,8 +1153,10 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 	def get_task_reassign_info(self, obj):
 		project_managers = self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
 		user = self.context.get('request').user.team.owner if self.context.get('request').user.team and self.context.get('request').user in project_managers else self.context.get('request').user
+		project_managers.append(user)
+		print("Pms----------->",project_managers)
 		if user.is_agency == True:
-			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
+			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True) & Q(task_assign_info__assigned_by__in = project_managers))
 			if task_assign:
 				task_assign_info=[]
 				for i in task_assign:
@@ -1401,7 +1403,7 @@ class InternalEditorDetailSerializer(serializers.Serializer):
 class GetAssignToSerializer(serializers.Serializer):
 	internal_editors = serializers.SerializerMethodField()
 	external_editors = serializers.SerializerMethodField()
-	suggestions = serializers.SerializerMethodField()
+	#suggestions = serializers.SerializerMethodField()
 	agencies = serializers.SerializerMethodField()
 
 	def get_internal_editors(self,obj):
@@ -1411,6 +1413,7 @@ class GetAssignToSerializer(serializers.Serializer):
 			return InternalEditorDetailSerializer(team,many=True,context={'request': request}).data
 		else:
 			return []
+
 
 
 	def get_agencies(self,obj):
@@ -1435,34 +1438,41 @@ class GetAssignToSerializer(serializers.Serializer):
 
 	def get_external_editors(self,obj):
 		request = self.context['request']
+		job_id= request.query_params.get('job',None)
+		if job_id:
+			job_obj = Job.objects.get(id=job_id)
+			task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task__in=job_obj.job_tasks_set.all())
+			print("TaskassignedInfo------->",task_assigned_info)
+			assigners = [i.task_assign.assign_to_id for i in task_assigned_info] if task_assigned_info else []
+		else:assigners=[]
 		tt=[]
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
 		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
 		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
 		for i in ser:
-			if i.get("vendor_lang_pair")!=[]:
+			if i.get("vendor_lang_pair")!=[] and i.get('id') not in assigners:
 				tt.append(i)
 		return tt
 
-	def get_suggestions(self,obj):
-		try:
-			default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
-			if self.context.get('request').user == default:
-				tt =[]
-			else:
-				try:profile = default.professional_identity_info.avatar_url
-				except:profile = None
-				tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'is_agency':default.is_agency,'status':'Invite Accepted','avatar':profile}]
-		except:
-			tt=[]
-		request = self.context['request']
-		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
-		qs_ = qs.filter(hired_editor__is_active = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
-		ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
-		for i in ser:
-			if i.get("vendor_lang_pair")!=[]:
-				tt.append(i)
-		return tt
+	# def get_suggestions(self,obj):
+	# 	try:
+	# 		default = AiUser.objects.get(email="ailaysateam@gmail.com")########need to change later##############
+	# 		if self.context.get('request').user == default:
+	# 			tt =[]
+	# 		else:
+	# 			try:profile = default.professional_identity_info.avatar_url
+	# 			except:profile = None
+	# 			tt = [{'name':default.fullname,'email':"ailaysateam@gmail.com",'id':default.id,'is_agency':default.is_agency,'status':'Invite Accepted','avatar':profile}]
+	# 	except:
+	# 		tt=[]
+	# 	request = self.context['request']
+	# 	qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
+	# 	qs_ = qs.filter(hired_editor__is_active = True).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))
+	# 	ser = HiredEditorDetailSerializer(qs_,many=True,context={'request': request}).data
+	# 	for i in ser:
+	# 		if i.get("vendor_lang_pair")!=[]:
+	# 			tt.append(i)
+	# 	return tt
 		# return HiredEditorDetailSerializer(qs,many=True,context={'request': request}).data
 
 
@@ -1664,6 +1674,8 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 		if 'task_assign' in data:
 			task_assign_data = data.get('task_assign')
 			if task_assign_data.get('status') == 3 or task_assign_data.get('status') == 4:
+				if task_assign_data.get('status') == 3:
+					task_assign_data.update({'client_response':None})
 				notify_task_status(instance,task_assign_data.get('status'),task_assign_data.get('return_request_reason'))
 			# if task_assign_data.get('status') == 4:
 			# 	notify_task_return_request(instance)
@@ -1677,6 +1689,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 						res_obj.task_assign_info.delete()
 						res_obj.assign_to = instance.task.job.project.ai_user
 						res_obj.status = 1
+						res_obj.client_response = None
 						res_obj.save()
 				print("Outer if")
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')

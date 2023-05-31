@@ -1668,7 +1668,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 if obj.task_assign.reassigned == True:
                     print("Inside IF")
                     obj.task_assign.assign_to = self.request.user.team.owner if self.request.user.team else self.request.user #if unassigned..it is assigned back to LSP 
-                    #obj.task_assign.status = 1
+                    obj.task_assign.status = 1
+                    obj.task_assign.client_response = None
                     obj.task_assign.save()
                     role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
                     assigned_user = obj.task_assign.assign_to
@@ -1677,18 +1678,31 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 else:
                     print("Inside Else")
                     reassigns = TaskAssign.objects.filter(Q(task=obj.task_assign.task) & Q(step=obj.task_assign.step) & Q(reassigned = True))
+                    print("reassigns in delete---------->",reassigns)
                     if reassigns:
                         try:obj_1 = reassigns.first().task_assign_info
                         except:obj_1=None
+                        print("obj------->",obj_1)
                         if obj_1:
                             self.history(obj_1)
+                            print("Usr------>",user)
                             obj_1.task_assign.assign_to = user
                             obj_1.task_assign.status = 1
+                            obj_1.task_assign.client_response = None
                             obj_1.task_assign.save()
+                            print("YYYYYYY-------->",obj_1.task_assign)
                             obj_1.delete()
+                        else:
+                            print("Usr111------>",user)
+                            rr = reassigns.first()
+                            rr.assign_to = user
+                            rr.save()
+                            print("save")
                     assigned_user = obj.task_assign.assign_to
+                    print("Usrrr------>",user)
                     obj.task_assign.assign_to = user
                     obj.task_assign.status = 1
+                    obj.task_assign.client_response = None
                     obj.task_assign.save()
                     # role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
                     role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)

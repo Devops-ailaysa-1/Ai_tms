@@ -310,15 +310,15 @@ class GetVendorDetailSerializer(serializers.Serializer):
         query = queryset.filter(currency = obj.currency_based_on_country)
 
         if query.exists():
-            if query[0].service.exists() or query[0].servicetype.exists():
-                return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
-            else:return [{'service':[],'servicetype':[]}]
+            #if query[0].service.exists() or query[0].servicetype.exists():
+            return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
+            #else:return [{'service':[],'servicetype':[]}]
         else:
             query = queryset.filter(currency_id=144)
             if query.exists():
-                if query[0].service.exists() or query[0].servicetype.exists():
-                    return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
-                else:return [{'service':[],'servicetype':[]}]
+                #if query[0].service.exists() or query[0].servicetype.exists():
+                return VendorLanguagePairCloneSerializer(query, many=True, read_only=True).data
+                #else:return [{'service':[],'servicetype':[]}]
             else:
                 objs = [data for data in queryset if data.service.exists() or data.servicetype.exists()]
                 if objs:
