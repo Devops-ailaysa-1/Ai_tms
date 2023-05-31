@@ -523,10 +523,10 @@ class TemplateKeywordViewset(viewsets.ViewSet):
         serializer=TemplateKeywordSerializer(query_set ,many =True)
         return Response(serializer.data) 
     
-from ai_canvas.utils import install_font
+
 class FontFileViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
-    def list(self, request):
+    def get(self, request):
         query_set=FontFile.objects.filter(user=request.user.id)
         serializer=FontFileSerializer(query_set ,many =True)
         return Response(serializer.data)

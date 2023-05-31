@@ -91,14 +91,14 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
     temp_global_design = serializers.PrimaryKeyRelatedField(queryset=TemplateGlobalDesign.objects.all(),required=False)
     my_temp = serializers.PrimaryKeyRelatedField(queryset=MyTemplateDesign.objects.all(),required=False)
     target_canvas_json = serializers.JSONField(required=False,write_only=True)
-
+    next_page=serializers.BooleanField(required=False,write_only=True)
     class Meta:
         model = CanvasDesign
         fields =  ('id','file_name','source_json','width','height','created_at','updated_at',
                     'canvas_translation','canvas_translation_tar_thumb', 'canvas_translation_target',
                     'canvas_translation_tar_lang','source_json_file','src_page','thumbnail_src',
                     'export_img_src','src_lang','tar_page','target_json_file','canvas_translation_tar_export',
-                    'temp_global_design','my_temp','target_canvas_json')
+                    'temp_global_design','my_temp','target_canvas_json','next_page')
         
         extra_kwargs = { 
             'canvas_translation_tar_thumb':{'write_only':True},
@@ -142,17 +142,24 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         req_host = self.context.get('request', HttpRequest()).get_host()
         canvas_translation_tar_lang=validated_data.get('canvas_translation_tar_lang')
         canvas_translation_tar_thumb=validated_data.get('canvas_translation_tar_thumb',None)
-        canvas_translation_tar_export = validated_data.get('canvas_translation_tar_export',None)
-        canvas_translation_target = validated_data.get('canvas_translation_target',None)
-        canvas_translation = validated_data.get('canvas_translation',None)
-        source_json_file = validated_data.get('source_json_file',None)
-        thumbnail_src = validated_data.get('thumbnail_src',None)
-        export_img_src = validated_data.get('export_img_src',None)
-        src_page = validated_data.get('src_page',None)
-        src_lang = validated_data.get('src_lang',None)
-        tar_page = validated_data.get('tar_page',None)
-        target_json_file = validated_data.get('target_json_file',None)
-        target_canvas_json = validated_data.get('target_canvas_json',None)
+        canvas_translation_tar_export=validated_data.get('canvas_translation_tar_export',None)
+        canvas_translation_target=validated_data.get('canvas_translation_target',None)
+        canvas_translation=validated_data.get('canvas_translation',None)
+        source_json_file=validated_data.get('source_json_file',None)
+        thumbnail_src=validated_data.get('thumbnail_src',None)
+        export_img_src=validated_data.get('export_img_src',None)
+        src_page=validated_data.get('src_page',None)
+        src_lang=validated_data.get('src_lang',None)
+        tar_page=validated_data.get('tar_page',None)
+        target_json_file=validated_data.get('target_json_file',None)
+        target_canvas_json=validated_data.get('target_canvas_json',None)
+        next_page=validated_data.get('next_page',None)
+        if next_page:
+            src_json_page=instance.canvas_json_src.last().json
+            src_json_page['objects'].clear()
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,
+                                                 page_no=len(instance.canvas_json_src.all())+1)
+
         if tar_page and canvas_translation and target_canvas_json:
 
             canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,formats='png',multiplierValue=1) 
