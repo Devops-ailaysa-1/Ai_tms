@@ -1677,6 +1677,7 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 						res_obj.task_assign_info.delete()
 						res_obj.assign_to = instance.task.job.project.ai_user
 						res_obj.status = 1
+						res_obj.client_response = None
 						res_obj.save()
 				print("Outer if")
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')

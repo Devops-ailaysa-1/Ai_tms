@@ -487,7 +487,7 @@ class DocumentViewByDocumentId(views.APIView):
         print("TaskAssignAnotherAssignStatus--------->",task_assign_another_assign_status)
         print("TaskReassignStatus------------>",task_assign_reassigns_status)
         if task_assign_ins.step_id == 1 and task_assign_ins.status in [1,2]:
-            if (task_assign_reassigns and task_assign_reassigns_status in [1,2]) or task_assign_another_assign_status in [1,2]:#and (task_assign_ins.status in [3,4] or task_assign_reassigns_status in [1,2] or task_assign_another_assign_status in[1,2]):
+            if (task_assign_reassigns and task_assign_reassigns_status in [1,2]) or (user.is_agency and task_assign_another_assign_status in [1,2]):#and (task_assign_ins.status in [3,4] or task_assign_reassigns_status in [1,2] or task_assign_another_assign_status in[1,2]):
                 edit_allowed = False
             else:edit_allowed = True
         elif task_assign_ins.step_id == 1 and task_assign_ins.status in [3,4]:
