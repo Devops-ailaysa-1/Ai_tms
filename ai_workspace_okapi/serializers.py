@@ -122,11 +122,18 @@ class SegmentSerializerV2(SegmentSerializer):
     #         SegmentHistory.objects.filter(seg)
 
 
-    def update_task_assign(self,task_obj,user):
+    def update_task_assign(self,task_obj,user,status_id):
         try:
-            task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first()
+            if status_id in [109,110]:
+                step_id = 2
+            else: step_id = 1
+            task_assign_query = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user)
+            if task_assign_query.count() == 2:
+                task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).filter(task_assign__step_id=step_id).first()
+            else:
+                task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first()
             print("t_a_o----->",task_assign_obj)         
-            obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
+            obj = task_assign_obj.task_assign
             if obj.status != 2:
                 obj.status = 2
                 obj.save()
@@ -143,13 +150,12 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print("VD----------->",validated_data)
         print("Ins-------->",instance)
+        print("St---------->>>",validated_data.get('status').id)
         if validated_data.get('target'):
             validated_data['target'] = self.target_check(instance,validated_data.get('target'))
         if validated_data.get('temp_target'):
             validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
-        manual_confirm_status = TranslationStatus.objects.get(id=106)
-        reviewed_status = TranslationStatus.objects.get(id=110)
-        tm_confirm_status = TranslationStatus.objects.get(id=102)
+        status_id = validated_data.get('status').id
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
@@ -162,9 +168,7 @@ class SegmentSerializerV2(SegmentSerializer):
             if instance.target == '':
                 print("In target empty")
                 if (instance.text_unit.document.job.project.mt_enable == False)\
-                 or (validated_data.get('status') == manual_confirm_status)\
-                 or (validated_data.get('status') == reviewed_status)\
-                 or (validated_data.get('status') == tm_confirm_status):
+                or status_id in [102,106,110]:
                     print("mt dable and manual confirm check")
                     user = instance.text_unit.document.doc_credit_debit_user
                     initial_credit = user.credit_balance.get("total_left")
@@ -178,13 +182,13 @@ class SegmentSerializerV2(SegmentSerializer):
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
-            self.update_task_assign(task_obj,user_1)
+            self.update_task_assign(task_obj,user_1,status_id)
             if seg_his_create:
                 SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
-        self.update_task_assign(task_obj,user_1)
+        self.update_task_assign(task_obj,user_1,status_id)
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only

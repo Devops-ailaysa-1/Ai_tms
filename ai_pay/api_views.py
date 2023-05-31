@@ -887,8 +887,15 @@ class ProjectPOTaskView(viewsets.ViewSet):
 
         project_id = self.request.query_params.get('project_id')
         proj_queryset = Project.objects.filter(id=project_id)
+        
+        if self.request.user.is_internal_member:
+            req_user = self.request.user.team.owner
+        else:
+            req_user = self.request.user
+
         queryset = POTaskDetails.objects.filter(Q(projectid__in=proj_queryset.values_list('ai_project_id',flat=True))&
-                                                Q(po__seller=self.request.user)&~Q(po__po_status="void"))
+                                                Q(po__seller=req_user)&~Q(po__po_status="void"))
+        
         return queryset
     
 

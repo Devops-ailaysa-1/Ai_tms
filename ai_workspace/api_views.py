@@ -727,7 +727,9 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         print(self.request.user)
-        user = self.request.user.team.owner if self.request.user.team and self.request.user.is_agency else self.request.user
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        print("Mnagers----------->",pr_managers)
+        user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
         print("User------------------>111----->",user)
         # user = self.request.user.team.owner if self.request.user.team else self.request.user
         # queryset = Project.objects.filter(Q(project_jobs_set__job_tasks_set__assign_to = self.request.user)|Q(ai_user = self.request.user)|Q(team__owner = self.request.user)).distinct()#.order_by("-id")
@@ -879,7 +881,8 @@ class VendorDashBoardView(viewsets.ModelViewSet):
     def get_tasks_by_projectid(request, pk):
         project = get_object_or_404(Project.objects.all(),
                     id=pk)
-        user_1 = request.user.team.owner if request.user.team and request.user.is_agency else request.user  #####For LSP
+        pr_managers = request.user.team.get_project_manager if request.user.team and request.user.team.owner.is_agency else []
+        user_1 = request.user.team.owner if request.user.team and request.user.team.owner.is_agency and request.user in pr_managers else request.user  #####For LSP
         if project.ai_user == request.user:
             print("Owner")
             return project.get_tasks
@@ -1427,9 +1430,10 @@ def msg_send(sender,receiver,task):
     else:
         thread_id = thread_ser.errors.get('thread_id')
     #print("Thread--->",thread_id)
-    message = "You have been assigned a new task in "+proj+"."
-    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+    if thread_id:
+        message = "You have been assigned a new task in "+proj+"."
+        msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+        notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
 class TaskAssignUpdateView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -1556,10 +1560,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task_assign_detail = json.loads(task_assign_detail)
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
         print("Tasks------->",tasks)
-        # For authorization
-        tsks = Task.objects.filter(id__in=tasks)
-        for tsk in tsks:
-            authorize(request, resource=tsk, actor=request.user, action="read")
+        # # For authorization
+        # tsks = Task.objects.filter(id__in=tasks)
+        # for tsk in tsks:
+        #     authorize(request, resource=tsk, actor=request.user, action="read")
 
         if reassign == 'true':
             print("Inside")
@@ -1577,7 +1581,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             if serializer.is_valid():
                 serializer.save()
                 weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
-                msg_send(sender,Receiver,tasks[0])
+                try:msg_send(sender,Receiver,tasks[0])
+                except:pass
                 # if Receiver in hired_editors:
                 #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)
                 # notify.send(sender, recipient=Receiver, verb='Task Assign', description='You are assigned to new task.check in your project list')
@@ -1663,7 +1668,8 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 if obj.task_assign.reassigned == True:
                     print("Inside IF")
                     obj.task_assign.assign_to = self.request.user.team.owner if self.request.user.team else self.request.user #if unassigned..it is assigned back to LSP 
-                    #obj.task_assign.status = 1
+                    obj.task_assign.status = 1
+                    obj.task_assign.client_response = None
                     obj.task_assign.save()
                     role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)
                     assigned_user = obj.task_assign.assign_to
@@ -1672,18 +1678,31 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
                 else:
                     print("Inside Else")
                     reassigns = TaskAssign.objects.filter(Q(task=obj.task_assign.task) & Q(step=obj.task_assign.step) & Q(reassigned = True))
+                    print("reassigns in delete---------->",reassigns)
                     if reassigns:
                         try:obj_1 = reassigns.first().task_assign_info
                         except:obj_1=None
+                        print("obj------->",obj_1)
                         if obj_1:
                             self.history(obj_1)
+                            print("Usr------>",user)
                             obj_1.task_assign.assign_to = user
                             obj_1.task_assign.status = 1
+                            obj_1.task_assign.client_response = None
                             obj_1.task_assign.save()
+                            print("YYYYYYY-------->",obj_1.task_assign)
                             obj_1.delete()
+                        else:
+                            print("Usr111------>",user)
+                            rr = reassigns.first()
+                            rr.assign_to = user
+                            rr.save()
+                            print("save")
                     assigned_user = obj.task_assign.assign_to
+                    print("Usrrr------>",user)
                     obj.task_assign.assign_to = user
                     obj.task_assign.status = 1
+                    obj.task_assign.client_response = None
                     obj.task_assign.save()
                     # role= AiRoleandStep.objects.get(step=obj.task_assign.step).role.name
                     role = get_assignment_role(obj.task_assign.step,obj.task_assign.reassigned)

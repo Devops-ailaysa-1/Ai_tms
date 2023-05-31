@@ -1151,8 +1151,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 		else: return None
 
 	def get_task_reassign_info(self, obj):
-		user = self.context.get('request').user.team.owner if self.context.get('request').user.team else self.context.get('request').user
 		project_managers = self.context.get('request').user.team.get_project_manager if self.context.get('request').user.team else []
+		user = self.context.get('request').user.team.owner if self.context.get('request').user.team and self.context.get('request').user in project_managers else self.context.get('request').user
 		if user.is_agency == True:
 			task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=True))
 			if task_assign:
@@ -1517,7 +1517,11 @@ def msg_send_vendor_accept(task_assign,input):
     receivers = []
     receiver =  task_assign.task_assign_info.assigned_by
     receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
-    receivers.append( task_assign.task_assign_info.assigned_by)
+    print("AssignedBy--------->",task_assign.task_assign_info.assigned_by)
+    receivers.append(task_assign.task_assign_info.assigned_by)
+    if receiver.team:
+        receivers.append(task_assign.task_assign_info.assigned_by.team.owner)
+    receivers = [*set(receivers)]
     print("Receivers----------->",receivers)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
@@ -1566,9 +1570,9 @@ def notify_client_status(task_assign,response,reason):
     print("Sender------>",sender)
     receiver =  task_assign.assign_to 
     receivers = []
-    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers =  receiver.team.get_project_manager if receiver.team and receiver.team.owner.is_agency  else []
     receivers.append(task_assign.assign_to)
-    print("Receivers--------->",receivers)
+    print("Receivers in client accept--------->",receivers)
     for i in receivers: 
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
         if thread_ser.is_valid():
@@ -1599,7 +1603,10 @@ def notify_task_status(task_assign,status,reason):
             already_assigned = TaskAssign.objects.filter(task=task_assign.task,step=task_assign.step,reassigned=False)
             assigned_user = already_assigned.first().assign_to
             print("AssignedUser--------->",assigned_user)
+            print("team owner------------->",assigned_user.team.owner)
             receivers = assigned_user.team.get_project_manager if assigned_user.team and assigned_user.team.owner.is_agency else []
+            if assigned_user.team:
+                receivers.append(assigned_user.team.owner)
         except:pass
     else:
         try:
@@ -1609,7 +1616,8 @@ def notify_task_status(task_assign,status,reason):
         except:pass
     task_ass_list = TaskAssign.objects.filter(task=task_assign.task,reassigned=task_assign.reassigned).filter(~Q(assign_to=task_assign.assign_to))
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
-    print('Receivers-------------->',receivers)
+    receivers = [*set(receivers)]
+    print('Receivers in task accept or return-------------->',receivers)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
         if thread_ser.is_valid():
@@ -1660,14 +1668,27 @@ class TaskAssignUpdateSerializer(serializers.Serializer):
 			# if task_assign_data.get('status') == 4:
 			# 	notify_task_return_request(instance)
 			if task_assign_data.get('assign_to'):
+				if instance.reassigned == False:
+					res = TaskAssign.objects.filter(task = instance.task,step=instance.step,reassigned=True)
+					print("Res--------->",res)
+					if hasattr(res.first(),'task_assign_info'):
+						print("Inside")
+						res_obj = res.first()
+						res_obj.task_assign_info.delete()
+						res_obj.assign_to = instance.task.job.project.ai_user
+						res_obj.status = 1
+						res_obj.save()
+				print("Outer if")
 				segment_count=0 if instance.task.document == None else instance.task.get_progress.get('confirmed_segments')
 				task_history = TaskAssignHistory.objects.create(task_assign =instance,previous_assign_id=instance.assign_to_id,task_segment_confirmed=segment_count)
 				task_assign_info_serializer.update(instance.task_assign_info,{'task_ven_status':None})
 				task_assign_data.update({'status':1})
+				print("TAS Data----------->",task_assign_data)
 				po_update.append('assign_to')
 			if task_assign_data.get('client_response'):
 				if task_assign_data.get('client_response') == 2:
 					task_assign_data.update({'status':2})
+					TaskAssign.objects.filter(task=instance.task,step=instance.step,reassigned=False).update(status=2)
 				notify_client_status(instance,task_assign_data.get('client_response'),task_assign_data.get('client_reason'))
 				task_assign_data.update({'user_who_approved_or_rejected':self.context.get('request').user})
 			task_assign_serializer.update(instance, task_assign_data)

@@ -408,6 +408,7 @@ class DocumentViewByTask(views.APIView, PageNumberPagination):
                 else:
                     return Response(document,status=400)
 
+
 class DocumentViewByDocumentId(views.APIView):
     @staticmethod
     def get_object(document_id):
@@ -415,12 +416,194 @@ class DocumentViewByDocumentId(views.APIView):
         document = get_object_or_404(docs, id=document_id)
         return  document
 
+
+    def edit_allow_check(self, task_obj, given_step):
+        given_step = int(given_step) if given_step else None
+        print("GivenStep------>",given_step, type(given_step))
+        from ai_workspace.models import Task, TaskAssignInfo
+        pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+        user = self.request.user.team.owner if (self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers) else self.request.user
+        #task_obj = Task.objects.get(document_id=instance.id)
+        task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task=task_obj)
+        print("TaskassignedInfo------->",task_assigned_info)
+        if not task_assigned_info:return True
+        assigners = [i.task_assign.assign_to for i in task_assigned_info]
+        print("Assigners----------->",assigners)
+        if user not in assigners:
+            print("Not in assigners")
+            query = task_assigned_info.filter(task_assign__reassigned=False)
+            reassigns = task_assigned_info.filter(task_assign__reassigned=True)
+            print("QR--------->",query.count(),query.first().task_assign.step_id)
+            if query.count() == 1 and query.first().task_assign.step_id == 2:
+                edit_allowed = True
+            else:
+                if query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:edit_allowed =True
+                else:
+                    status = [i.task_assign.status for i in query]
+                    print("st------>",status)
+                    if all(i == 3 or i == 4 for i in status):edit_allowed =True
+                    else:edit_allowed = False
+            print("ED-------->",edit_allowed)
+            return edit_allowed
+        else:
+            print("In assigners")
+            if user.is_agency:
+                task_assign_query = task_assigned_info.filter(Q(task_assign__assign_to=user)).filter(task_assign__reassigned=False)
+                tsq = task_assign_query.distinct('task_assign__step').count()
+                print("Tsq---------->",tsq)
+                if tsq == 2:
+                    task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first().task_assign
+                    task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign if given_step != 1 else None
+                    reassigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj,task_assign__step_id = given_step,task_assign__reassigned=True)
+                    task_assign_reassigns = reassigns.first().task_assign if reassigns else None
+                else:
+                    task_assign_ins = task_assign_query.first().task_assign
+                    if task_assign_ins.step_id == 2:    
+                        task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+                    else:
+                        task_assign_another_assign = None
+                    reassigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj,task_assign__step = task_assign_ins.step,task_assign__reassigned=True)
+                    task_assign_reassigns = reassigns.first().task_assign if reassigns else None
+            else:
+                task_assign_query = task_assigned_info.filter(Q(task_assign__assign_to=user))
+                task_assign_ins = task_assign_query.first().task_assign
+                task_assign_another_assign_query = task_assigned_info.filter(task_assign__reassigned=task_assign_ins.reassigned)\
+                                            .filter(~Q(task_assign__assign_to=user))
+                print("TASQ--------->",task_assign_another_assign_query)
+                if task_assign_another_assign_query:
+                    task_assign_another_assign = task_assign_another_assign_query.first().task_assign
+                    print("TAS------------>",task_assign_another_assign)
+                else:
+                    if task_assign_ins.step_id == 2:
+                        task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+                    else:task_assign_another_assign = None
+                task_assign_reassigns = None 
+        task_assign_reassigns_status = task_assign_reassigns.status if task_assign_reassigns else 0
+        task_assign_another_assign_status = task_assign_another_assign.status if task_assign_another_assign else 0
+        print("TaskAssignIns------------->",task_assign_ins)
+        print("TaskAssignInsStep----------->",task_assign_ins.step)
+        print("TaskAssignInsStatus----------->",task_assign_ins.status)
+        print("TaskAssignAnotherAssignStatus--------->",task_assign_another_assign_status)
+        print("TaskReassignStatus------------>",task_assign_reassigns_status)
+        if task_assign_ins.step_id == 1 and task_assign_ins.status in [1,2]:
+            if (task_assign_reassigns and task_assign_reassigns_status in [1,2]) or task_assign_another_assign_status in [1,2]:#and (task_assign_ins.status in [3,4] or task_assign_reassigns_status in [1,2] or task_assign_another_assign_status in[1,2]):
+                edit_allowed = False
+            else:edit_allowed = True
+        elif task_assign_ins.step_id == 1 and task_assign_ins.status in [3,4]:
+            edit_allowed =False
+        elif task_assign_ins.step_id == 2 and ((task_assign_ins.status in [3,4]) or task_assign_another_assign_status in [2,1,4]):
+            edit_allowed = False
+        elif task_assign_ins.step_id == 2 and task_assign_ins.status in [1,2]:
+            if task_assign_reassigns and task_assign_reassigns_status in [1,2]:
+                edit_allowed = False
+            else:edit_allowed = True
+        else:edit_allowed = True
+        print("EditAllowed---------->",edit_allowed)
+        return edit_allowed  
+            
+                         
+            # try:
+            #     print("Inside Try")
+            #     task_assign_another_assign = None
+            #     status = 0
+            #     task_reassign = TaskAssignInfo.objects.filter(task_assign__reassigned=True).filter(task_assign__task=task_obj)
+            #     if task_reassign:
+            #         print("Inside TaskReassign")
+            #         try:
+            #             assgn_count = task_assigned_info.filter(task_assign__reassigned=True).count()
+            #             print("tyt----------->",assgn_count)                                     
+            #             task_assign_ins = task_assigned_info.filter(task_assign__reassigned=True).filter(Q(task_assign__assign_to=user)).first().task_assign
+            #             if assgn_count == 2:
+            #                 task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=True)\
+            #                                       .filter(~Q(task_assign__assign_to=user)).first().task_assign
+            #             else:
+            #                 print("Inside Else")
+            #                 if task_assigned_info.filter(task_assign__reassigned=True).first().task_assign.step_id == 2:
+            #                     task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=True)
+            #                 else:
+            #                     status = 0
+            #         except BaseException as e:
+            #             print(f"Error : {str(e)}")
+            #             print("Inside Task Reassign Except")
+            #             task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
+            #             Q(task_assign__assign_to=user))
+            #             print("Query------->",task_assign_query,task_assign_query.count())
+            #             if task_assign_query.count() == 2:
+            #                 task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first().task_assign
+            #                 task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign
+            #                 print("Detail --------->",task_assign_ins,task_assign_another_assign)
+            #             else:
+            #                 print("Tr-------->",task_assign_query.first(),task_assign_query.first().task_assign)
+            #                 task_assign_ins = task_assign_query.first().task_assign
+            #                 try:task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+            #                 except:
+            #                     q = task_assigned_info.filter(task_assign__reassigned=False)
+            #                     print("q------------>",q.count(),q.first().task_assign.step_id)
+            #                     if q.count() == 1 and q.first().task_assign.step_id ==2:
+            #                         task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+            #                     # else:
+            #                     #     status = 0
+            #                 print("Not LSP--------->",task_assign_ins,task_assign_another_assign)
+            #     else:
+            #         print("No reassign")
+            #         task_assign_query = task_assigned_info.filter(task_assign__reassigned=False).filter(
+            #         Q(task_assign__assign_to=user))
+            #         if task_assign_query.count() == 2:
+            #             task_assign_ins = task_assign_query.filter(task_assign__step_id = given_step).first().task_assign
+            #             task_assign_another_assign = task_assign_query.filter(~Q(task_assign__step_id = given_step)).first().task_assign
+            #             print("Detail2 --------->",task_assign_ins,task_assign_another_assign)
+            #         else:
+            #             task_assign_ins = task_assign_query.first().task_assign
+            #             try:task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+            #             except:
+            #                 q = task_assigned_info.filter(task_assign__reassigned=False)
+            #                 print("q2------------>",q.count(),q.first().task_assign.step_id)
+            #                 if q.count() == 1 and q.first().task_assign.step_id ==2:
+            #                     task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+            #                 # else:
+            #                 #     status = 0
+            #             print("Not Lsp --------->",task_assign_ins,task_assign_another_assign)
+            #         #task_assign_another_assign = task_assigned_info.filter(task_assign__reassigned=False).filter(~Q(task_assign__assign_to=user)).first().task_assign
+        #         print("TaskAssignInsstep-------->",task_assign_ins.step_id)
+        #         print("TaskAssignInsStatus---------->",task_assign_ins.status)
+        #         status = task_assign_another_assign.status if task_assign_another_assign else status
+        #         print("TaskAssignAnotherssign--------->",status)
+        #         if task_assign_ins.step_id == 1 and (task_assign_ins.status == 3 or task_assign_ins.status == 4) :
+        #             edit_allowed = False
+        #         elif task_assign_ins.step_id == 2 and (task_assign_ins.status == 3 or task_assign_ins.status == 4 or status in [2,1,4]):
+        #             edit_allowed = False
+        #         elif task_assign_ins.step_id == 1 and task_assign_ins.status not in [3,4]:
+        #             print("Inside ifif")
+        #             reassigns = TaskAssignInfo.objects.filter(Q(task_assign__task=task_assign_ins.task) & Q(task_assign__step=task_assign_ins.step) & Q(task_assign__reassigned=True))
+        #             reassign_review = TaskAssignInfo.objects.filter(Q(task_assign__task=task_assign_ins.task) & Q(task_assign__reassigned=True)).filter(~Q(task_assign__step=task_assign_ins.step))
+        #             print("REE--------->",reassign_review)
+        #             print("reassigns---------->",reassigns)
+        #             if reassigns and user.is_agency:
+        #                 if reassigns.first().task_assign.status in [3,4] and not reassign_review:
+        #                     edit_allowed = True
+        #                 else:edit_allowed = False
+        #             else: edit_allowed = True
+        #         else:edit_allowed = True
+        #     except BaseException as e:
+        #         print(f"Error : {str(e)}")
+        #         edit_allowed = True
+        # return edit_allowed
+
     def get(self, request, document_id):
+        if request.GET:
+            given_step = request.GET.get('step_id',None) 
+        else:
+            given_step = None
         document = self.get_object(document_id)
         mt_enable = document.job.project.mt_enable
-        task_id = Task.objects.get(document=document).id
+        task = Task.objects.get(document=document)
+        edit_allowed = self.edit_allow_check(task,given_step)
         #doc_user = AiUser.objects.get(project__project_jobs_set__file_job_set=document_id).id
         doc_user = AiUser.objects.filter(project__project_jobs_set__file_job_set=document_id).first()
+        assigned_users = [i.assign_to for i in Task.objects.get(document=document).task_info.all() if i.assign_to.is_agency]
+        assigned_users = [*set(assigned_users)]
+        assigned_users.extend([j.team.get_project_manager for j in assigned_users if j.team and j.team.get_project_manager]) 
+        print("Assigned---------->",assigned_users)
         team_members = doc_user.get_team_members if doc_user.get_team_members else []
         hired_editors = doc_user.get_hired_editors if doc_user.get_hired_editors else []
         try :managers = doc_user.team.get_project_manager if doc_user.team.get_project_manager else []
@@ -428,8 +611,8 @@ class DocumentViewByDocumentId(views.APIView):
         assign_enable = True if (request.user == doc_user) or (request.user in managers) else False
         # if (request.user == doc_user) or (request.user in team_members) or (request.user in hired_editors):
         dict = {'download':'enable'} if (request.user == doc_user) else {'download':'disable'}
-        dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) else {'updated_download':'disable'}
-        dict_2 = {'mt_enable':mt_enable,'task_id':task_id,'assign_enable':assign_enable}
+        dict_1 = {'updated_download':'enable'} if (request.user == doc_user) or (request.user in managers) or (request.user in assigned_users) else {'updated_download':'disable'}
+        dict_2 = {'mt_enable':mt_enable,'task_id':task.id,'assign_enable':assign_enable,'edit_allowed':edit_allowed}
         authorize(request, resource=document, actor=request.user, action="read")
         data = DocumentSerializerV2(document).data
         data.update(dict)
