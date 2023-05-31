@@ -437,10 +437,8 @@ class DocumentViewByDocumentId(views.APIView):
             print("QR--------->",query.count(),query.first().task_assign.step_id,query.first().task_assign.status)
             if query.count() == 1 and query.first().task_assign.step_id == 2:
                 editor = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
-                print("EDitor------>",editor)
-                if editor.status == 3 and query.first().task_assign.status in [1,2]:
-                    edit_allowed = False
-                edit_allowed = True
+                if editor.status == 3 and query.first().task_assign.status in [1,2]:edit_allowed = False
+                else:edit_allowed = True
             else:
                 if query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:edit_allowed =True
                 else:
