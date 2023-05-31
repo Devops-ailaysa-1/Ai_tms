@@ -123,12 +123,16 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         return thumbnail_src
 
     def create(self,validated_data):
-        req_host = self.context.get('request', HttpRequest()).get_host()
-        source_json_file = validated_data.pop('source_json_file',None)
-        thumbnail_src = validated_data.pop('thumbnail_src',None)
-        export_img_src = validated_data.pop('export_img_src',None)
+        req_host=self.context.get('request', HttpRequest()).get_host()
+        source_json_file=validated_data.pop('source_json_file',None)
+        thumbnail_src=validated_data.pop('thumbnail_src',None)
+        export_img_src=validated_data.pop('export_img_src',None)
+        print("**validated_data",validated_data)
+        next_page=validated_data.pop('next_page',None)
         user = self.context['request'].user
         data = {**validated_data ,'user':user}
+        print("data--------->>>",data)
+        
         instance=CanvasDesign.objects.create(**data)
         self.instance=instance
         if source_json_file:
