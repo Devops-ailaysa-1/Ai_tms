@@ -1438,11 +1438,13 @@ class GetAssignToSerializer(serializers.Serializer):
 
 	def get_external_editors(self,obj):
 		request = self.context['request']
-		job_id= request.query_params.get('job')
-		job_obj = Job.objects.get(id=job_id)
-		task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task__in=job_obj.job_tasks_set.all())
-		print("TaskassignedInfo------->",task_assigned_info)
-		assigners = [i.task_assign.assign_to_id for i in task_assigned_info] if task_assigned_info else []
+		job_id= request.query_params.get('job',None)
+		if job_id:
+			job_obj = Job.objects.get(id=job_id)
+			task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task__in=job_obj.job_tasks_set.all())
+			print("TaskassignedInfo------->",task_assigned_info)
+			assigners = [i.task_assign.assign_to_id for i in task_assigned_info] if task_assigned_info else []
+		else:assigners=[]
 		tt=[]
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
 		qs_ = qs.filter(hired_editor__is_active = True).filter(hired_editor__is_agency = False).filter(~Q(hired_editor__email = "ailaysateam@gmail.com"))

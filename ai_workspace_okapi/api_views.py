@@ -434,8 +434,11 @@ class DocumentViewByDocumentId(views.APIView):
             print("Not in assigners")
             query = task_assigned_info.filter(task_assign__reassigned=False)
             reassigns = task_assigned_info.filter(task_assign__reassigned=True)
-            print("QR--------->",query.count(),query.first().task_assign.step_id)
+            print("QR--------->",query.count(),query.first().task_assign.step_id,query.first().task_assign.status)
             if query.count() == 1 and query.first().task_assign.step_id == 2:
+                editor = TaskAssign.objects.get(task=task_obj,step=1,reassigned=False)
+                if editor.status == 3 and query.first().task_assign.status in [1,2]:
+                    edit_allowed = False
                 edit_allowed = True
             else:
                 if query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:edit_allowed =True
