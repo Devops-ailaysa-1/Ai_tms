@@ -435,7 +435,13 @@ def generate_client_po(task_assign_info):
         po_total_amt=0.0
         instance = TaskAssignInfo.objects.get(id=task_assign_info[-1])
         assign=POAssignment.objects.get_or_create(assignment_id=instance.assignment_id,step=instance.task_assign.step)[0]
-        insert2={'client':instance.task_assign.task.job.project.ai_user,'seller':instance.task_assign.assign_to,
+        if instance.task_assign.reassigned:
+            client = instance.assigned_by.team.owner
+        else:
+            client = instance.task_assign.task.job.project.ai_user
+
+
+        insert2={'client':client,'seller':instance.task_assign.assign_to,
                 'assignment':assign,'currency':instance.currency,
                 'po_status':'issued','po_total_amount':0}
         # print("insert2",insert2)
