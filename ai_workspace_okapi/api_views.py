@@ -475,7 +475,7 @@ class DocumentViewByDocumentId(views.APIView):
                     print("TAS------------>",task_assign_another_assign)
                 else:
                     if task_assign_ins.step_id == 2:
-                        task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=task_assign_ins.reassigned)
+                        task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
                     else:task_assign_another_assign = None
                 task_assign_reassigns = None 
         task_assign_reassigns_status = task_assign_reassigns.status if task_assign_reassigns else 0
@@ -497,6 +497,7 @@ class DocumentViewByDocumentId(views.APIView):
             if task_assign_reassigns and task_assign_reassigns_status in [1,2]:
                 edit_allowed = False
             else:edit_allowed = True
+        else:edit_allowed = True
         print("EditAllowed---------->",edit_allowed)
         return edit_allowed  
             
