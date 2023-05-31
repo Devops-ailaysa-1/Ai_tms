@@ -109,8 +109,13 @@ def objls_is_allowed(obj_ls,action,user):
 def unassign_task(user,role_name,task):
 	from ai_auth.models import TaskRoles
 	try:
-		obj = TaskRoles.objects.get(user=user,task_pk=task.id,role__role__name=role_name)
-		obj.delete()
+		if role_name in  ["Editor","Reviewer"]:
+			objs = TaskRoles.objects.filter(Q(user=user,task_pk=task.id)&Q(role__role__name=role_name)&Q(role__role__name=f"Agency {role_name}"))
+			objs.delete()
+		else:
+			obj = TaskRoles.objects.get(user=user,task_pk=task.id,role__role__name=role_name)
+			obj.delete()
+
 	except TaskRoles.DoesNotExist:
 		logger.info("User is not related to this Task")
 	
