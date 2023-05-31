@@ -467,10 +467,12 @@ class DocumentViewByDocumentId(views.APIView):
             else:
                 task_assign_query = task_assigned_info.filter(Q(task_assign__assign_to=user))
                 task_assign_ins = task_assign_query.first().task_assign
-                task_assign_another_assign_query = task_assigned_info.filter(task_assign__step_id = task_assign_ins.step,task_assign__reassigned=task_assign_ins.reassigned)\
+                task_assign_another_assign_query = task_assigned_info.filter(task_assign__reassigned=task_assign_ins.reassigned)\
                                             .filter(~Q(task_assign__assign_to=user))
+                print("TASQ--------->",task_assign_another_assign_query)
                 if task_assign_another_assign_query:
                     task_assign_another_assign = task_assign_another_assign_query.first().task_assign
+                    print("TAS------------>",task_assign_another_assign)
                 else:
                     if task_assign_ins.step_id == 2:
                         task_assign_another_assign = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=task_assign_ins.reassigned)
@@ -479,6 +481,7 @@ class DocumentViewByDocumentId(views.APIView):
         task_assign_reassigns_status = task_assign_reassigns.status if task_assign_reassigns else 0
         task_assign_another_assign_status = task_assign_another_assign.status if task_assign_another_assign else 0
         print("TaskAssignIns------------->",task_assign_ins)
+        print("TaskAssignInsStep----------->",task_assign_ins.step)
         print("TaskAssignInsStatus----------->",task_assign_ins.status)
         print("TaskAssignAnotherAssignStatus--------->",task_assign_another_assign_status)
         print("TaskReassignStatus------------>",task_assign_reassigns_status)
