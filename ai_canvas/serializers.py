@@ -64,6 +64,10 @@ class CanvasSourceJsonFilesSerializer(serializers.ModelSerializer):
         model = CanvasSourceJsonFiles
         fields = "__all__"
 
+    extra_kwargs = { 
+            'export_file':{'write_only':True}
+    }
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.thumbnail:
@@ -107,7 +111,8 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             'source_json_file':{'write_only':True},
             'src_page':{'write_only':True},
             'thumbnail_src':{'write_only':True},
-            'src_lang':{'write_only':True}
+            'src_lang':{'write_only':True},
+            'next_page':{'write_only':True}
         }
 
 
@@ -154,6 +159,7 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         target_json_file=validated_data.get('target_json_file',None)
         target_canvas_json=validated_data.get('target_canvas_json',None)
         next_page=validated_data.get('next_page',None)
+
         if next_page:
             src_json_page=instance.canvas_json_src.last().json
             src_json_page['objects'].clear()
@@ -161,14 +167,16 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
             page=pages+1
             src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
             src_json_page['background']="rgba(255,255,255,0.1)"
-            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,
-                                                 page_no=pages+1)
-            for src_js in instance.canvas_json_src.all():
+            thumbnail=self.thumb_create(json_str=src_json_page,formats='png',multiplierValue=1)
+            CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,page_no=pages+1,thumbnail=thumbnail,
+                                                 )
+            
+            for count,src_js in enumerate(instance.canvas_json_src.all()):
                 src_js.json['projectid']['pages']=pages+1
+                src_js.json['projectid']['page']=count+1
                 src_js.save()
 
         if tar_page and canvas_translation and target_canvas_json:
-
             canvas_translation_tar_thumb = self.thumb_create(json_str=target_canvas_json,formats='png',multiplierValue=1) 
             CanvasTargetJsonFiles.objects.create(canvas_trans_json=canvas_translation,json=target_canvas_json ,
                                                  page_no=tar_page,thumbnail=canvas_translation_tar_thumb,export_file=canvas_translation_tar_export)
