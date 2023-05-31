@@ -157,8 +157,15 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         if next_page:
             src_json_page=instance.canvas_json_src.last().json
             src_json_page['objects'].clear()
+            pages=len(instance.canvas_json_src.all())
+            page=pages+1
+            src_json_page['projectid']={"pages": pages+1,'page':page,"langId": None,"langNo": None,"projId": instance.id,"projectType": "design"}
+            src_json_page['background']="rgba(255,255,255,0.1)"
             CanvasSourceJsonFiles.objects.create(canvas_design=instance,json=src_json_page,
-                                                 page_no=len(instance.canvas_json_src.all())+1)
+                                                 page_no=pages+1)
+            for src_js in instance.canvas_json_src.all():
+                src_js.json['projectid']['pages']=pages+1
+                src_js.save()
 
         if tar_page and canvas_translation and target_canvas_json:
 
@@ -211,18 +218,19 @@ class CanvasDesignSerializer(serializers.ModelSerializer):
         # for source json file and thumbnail update
         if source_json_file and src_page:
             canva_source = CanvasSourceJsonFiles.objects.get_or_create(canvas_design=instance,page_no=src_page)[0]
+            if '' not in source_json_file:
+        
+                
+                source_json_file['projectid']={"pages": 1,'page':1,"langId": None,"langNo": None,"projId": instance.id,
+                                               "projectType": "design"}
             source_json_file = json_src_change(source_json_file,req_host,instance)
             canva_source.json = source_json_file
             thumbnail_src = self.thumb_create(json_str=source_json_file,formats='png',multiplierValue=1)
-            # thumbnail_page_path = canva_source.thumbnail.path if canva_source.thumbnail else ""
-            # print("thumbnail_page_path------>",thumbnail_page_path)
-            # print('path exist',os.path.exists(thumbnail_page_path))
+ 
             canva_source.thumbnail = thumbnail_src
             canva_source.export_file = thumbnail_src ###   export_img_src same as thumbnail_src
             canva_source.save()
-            # if thumbnail_page_path and os.path.exists(thumbnail_page_path):
-            #     os.remove(thumbnail_page_path)
-            # print('path exist',os.path.exists(thumbnail_page_path))
+ 
 
         elif thumbnail_src and src_page:
             canva_source = CanvasSourceJsonFiles.objects.get(canvas_design=instance,page_no=src_page)

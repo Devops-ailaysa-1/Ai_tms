@@ -839,8 +839,9 @@ def generate_article(request):
         # completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
         title='#'+title
         if blog_creation.user_language_code== 'en':
+        # if 'en'== 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-            def stream_article_response_en():
+            def stream_article_response_en(title):
                 for chunk in completion:
                     ins=chunk['choices'][0]
                     if ins["finish_reason"]!='stop':
@@ -851,10 +852,10 @@ def generate_article(request):
                                 content=title+'\n'+content
                                 title=''
                             yield '\ndata: {}\n\n'.format({"t":content})
-            return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')
+            return StreamingHttpResponse(stream_article_response_en(title),content_type='text/event-stream')
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-            def stream_article_response_other_lang():
+            def stream_article_response_other_lang(title):
                 # from markdown2 import Markdown
                 # markdowner = Markdown()
                 arr=[]
@@ -870,8 +871,8 @@ def generate_article(request):
                                     new_line_split=word.split("\n")
                                     arr.append(new_line_split[0]+'\n')
                                     text=" ".join(arr)
-                                    blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,
-                                                    user_id=blog_creation.user.id)
+                                    blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
+                                    # blog_article_trans=text
                                     if title:
                                         blog_article_trans=title+'\n'+blog_article_trans
                                         title=''
@@ -888,6 +889,7 @@ def generate_article(request):
                                         sente=sente+'.'
                                         blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,
                                                     user_id=blog_creation.user.id)
+                                        blog_article_trans=sente
                                         if title:
                                             blog_article_trans=title+'\n'+blog_article_trans
                                             title=''
@@ -898,7 +900,7 @@ def generate_article(request):
                                     arr=[]
                             else:
                                 arr.append(word)
-            return StreamingHttpResponse(stream_article_response_other_lang(),content_type='text/event-stream')
+            return StreamingHttpResponse(stream_article_response_other_lang(title),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
 # @api_view(["GET"])
 # def generate_article(request):
