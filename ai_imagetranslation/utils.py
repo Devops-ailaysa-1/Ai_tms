@@ -15,7 +15,7 @@ import cv2,requests,base64,io
 from PIL import Image
 import numpy as np
 from io import BytesIO
-from ai_canvas.serializers import TemplateGlobalDesignSerializer
+# from ai_canvas.serializers import TemplateGlobalDesignSerializer
 
 
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
