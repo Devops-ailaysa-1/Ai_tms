@@ -23,9 +23,9 @@
             <div style="padding:21px 32px; background-color:#fff;">
                 <h1 style="font-size:18px; line-height:20px; font-weight:bold;">Hi {{name}},</h1>
                   {% if task_ven_status == 'task_accepted' %}
-                  <p>Task with task_id: {{task}} assigned to {{assign_to}} in <b>{{project}}</b> has accepted your rates and started working.</p>
+                  <p>Task with task_id: {{task}} assigned to {{assign_to}} for {{step}} in <b>{{project}}</b>  has accepted your rates and started working.</p>
                   {% elif task_ven_status == 'change_request' %}
-                  <p>Task with task_id: {{task}} assigned to {{assign_to}} in <b>{{project}}</b> has submitted change request and waiting for your response.</p>
+                  <p>Task with task_id: {{task}} assigned to {{assign_to}} for {{step}} in <b>{{project}}</b>  has submitted change request and waiting for your response.</p>
                   {% endif %}
                   <p>Log into Ailaysa to know more details</p>
             </div>
