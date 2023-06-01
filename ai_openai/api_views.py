@@ -933,7 +933,8 @@ def generate(request):
         for chunk in title:
  
             yield '\ndata: {}\n\n'.format({"t":chunk})
-    return StreamingHttpResponse(stream,content_type='text/event-stream')
+        return StreamingHttpResponse(stream,content_type='text/event-stream')
+    return JsonResponse({'error':'Method not allowed.'},status=405)
 
 # @api_view(["GET"])
 # def generate_article(request):
