@@ -932,6 +932,7 @@ def generate(request):
         title=title.split(" ")
         def stream():
             for chunk in title:
+                time.sleep(0.09)
                 yield '\ndata: {}\n\n'.format({"t":chunk})
         return StreamingHttpResponse(stream(),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
