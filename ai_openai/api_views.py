@@ -928,12 +928,12 @@ def generate(request):
             The future of machine translation and NLP is poised for significant advancements, with research in artificial intelligence (AI) and deep learning continuing to push the boundaries of what is possible. Innovations in neuromorphic computing, quantum computing, and other areas are expected to further accelerate progress in NLP and decoder technologies.
 
             As these advancements continue, we are likely to see more accurate and natural-sounding translations, with machine translation becoming an increasingly important tool for businesses, researchers, and individuals around the world.""" 
-    title=title.split(" ")
-    def stream():
-        for chunk in title:
- 
-            yield '\ndata: {}\n\n'.format({"t":chunk})
-        return StreamingHttpResponse(stream,content_type='text/event-stream')
+    if request.method=='GET':
+        title=title.split(" ")
+        def stream():
+            for chunk in title:
+                yield '\ndata: {}\n\n'.format({"t":chunk})
+        return StreamingHttpResponse(stream(),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 # @api_view(["GET"])
