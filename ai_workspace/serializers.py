@@ -1548,9 +1548,9 @@ def msg_send_vendor_accept(task_assign,input):
 		#print("Thread--->",thread_id)
         print("Details----------->",task_assign.task.ai_taskid,task_assign.assign_to.fullname,task_assign.task.job.project.project_name)
         if input == 'task_accepted':
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
         elif input == 'change_request':
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has submitted change request and waiting for your response."
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has submitted change request and waiting for your response."
     if thread_id:
         msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
         notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
@@ -1574,7 +1574,7 @@ def msg_send_customer_rate_change(task_assign):
         else:
             thread_id = thread_ser.errors.get('thread_id')
         if thread_id:
-            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has changed rates. please view and accept"
+            message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has changed rates. please view and accept"
             print("Message---------------->",message)
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
@@ -1612,9 +1612,9 @@ def notify_client_status(task_assign,response,reason):
             thread_id = thread_ser.errors.get('thread_id')
         if thread_id:
             if response == 1:
-                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has been approved. you can initiate your payment process."
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has been approved. you can initiate your payment process."
             elif response == 2:
-                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has been set to be reworked for the following reason. "+reason
+                message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +' for '+task_assign.step.name +" in "+task_assign.task.job.project.project_name+" has been set to be reworked for the following reason. "+reason
             print("Message---------------->",message)
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
