@@ -433,9 +433,11 @@ class DocumentViewByDocumentId(views.APIView):
             print("Not in assigners")
             query = task_assigned_info.filter(task_assign__reassigned=False)
             reassigns = task_assigned_info.filter(task_assign__reassigned=True)
-            print("QR--------->",query.count(),query.first().task_assign.step_id)
+            print("QR--------->",query.count(),query.first().task_assign.step_id,query.first().task_assign.status)
             if query.count() == 1 and query.first().task_assign.step_id == 2:
-                edit_allowed = True
+                editor = TaskAssign.objects.get(task=task_obj,step_id=1,reassigned=False)
+                if editor.status == 3 and query.first().task_assign.status in [1,2]:edit_allowed = False
+                else:edit_allowed = True
             else:
                 if query.get(task_assign__step_id = 1).task_assign.status in [3,4] and not reassigns:edit_allowed =True
                 else:
@@ -486,7 +488,7 @@ class DocumentViewByDocumentId(views.APIView):
         print("TaskAssignAnotherAssignStatus--------->",task_assign_another_assign_status)
         print("TaskReassignStatus------------>",task_assign_reassigns_status)
         if task_assign_ins.step_id == 1 and task_assign_ins.status in [1,2]:
-            if (task_assign_reassigns and task_assign_reassigns_status in [1,2]) or task_assign_another_assign_status in [1,2]:#and (task_assign_ins.status in [3,4] or task_assign_reassigns_status in [1,2] or task_assign_another_assign_status in[1,2]):
+            if (task_assign_reassigns and task_assign_reassigns_status in [1,2]) or (user.is_agency and task_assign_another_assign_status in [1,2]):#and (task_assign_ins.status in [3,4] or task_assign_reassigns_status in [1,2] or task_assign_another_assign_status in[1,2]):
                 edit_allowed = False
             else:edit_allowed = True
         elif task_assign_ins.step_id == 1 and task_assign_ins.status in [3,4]:
