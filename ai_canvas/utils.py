@@ -6,6 +6,10 @@ import os
 from django.core.exceptions import ValidationError
 IMAGE_THUMBNAIL_CREATE_URL =  os.getenv("IMAGE_THUMBNAIL_CREATE_URL")
 import json ,base64
+from fontTools.ttLib import TTFont
+import os
+import shutil
+
 
 # from google.cloud import translate_v2 as translate
 
@@ -122,11 +126,12 @@ def export_download(json_str,format,multipliervalue):
 
 
 
+
+
+
 ####font_creation
 
-from fontTools.ttLib import TTFont
-import os
-import shutil
+
 
 def install_font(font_path):
     install_dir="/usr/share/fonts/truetype"

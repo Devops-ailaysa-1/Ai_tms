@@ -1,6 +1,4 @@
 from .models import *
-import cv2,io 
-import numpy as np
 from PIL import Image
 from google.cloud import vision_v1,vision
 from google.oauth2 import service_account
@@ -13,6 +11,13 @@ client = vision.ImageAnnotatorClient(credentials=credentials)
 from django.core.exceptions import ValidationError
 import os 
 import requests
+import cv2,requests,base64,io 
+from PIL import Image
+import numpy as np
+from io import BytesIO
+from ai_canvas.serializers import TemplateGlobalDesignSerializer
+
+
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
  
 
@@ -114,12 +119,6 @@ def inpaint_image(im,msk):
     else:
         return {'result':'error in inpaint prediction','code':response.status_code }
 
-
-
-import cv2,requests,base64
-from PIL import Image
-import numpy as np
-from io import BytesIO
 
 def convert_transparent(img,value):
     img = img.convert("RGBA")
@@ -241,7 +240,25 @@ def inpaint_image_creation(image_details,inpaintparallel=False):
     #     return output,image_text_details
 
 
- 
+
+# def image_inpaint_revert(instance,mask_json):
+#     main_image=cv2.imread(instance.image.path)
+#     mask_image=TemplateGlobalDesignSerializer().thumb_create(json_str=mask_json,formats='mask',multiplierValue=None)
+#     bit_wise_ = cv2.bitwise_and(mask_image,main_image)
+#     tmp = cv2.cvtColor(bit_wise_, cv2.COLOR_BGR2GRAY)
+#     _,alpha = cv2.threshold(tmp,0,255,cv2.THRESH_BINARY)
+#     b, g, r = cv2.split(bit_wise_)
+#     rgba = [b,g,r, alpha]
+#     masked_tr = cv2.merge(rgba,4)
+#     masked_tr=Image.fromarray(masked_tr)
+#     main_image=Image.fromarray(main_image)
+#     masked_tr.paste(main_image, (0, 0), main_image)
+#     instance.inpaint_image=masked_tr
+#     instance.save()
+    
+
+
+
 
 
 # def load_image(fname , mode):

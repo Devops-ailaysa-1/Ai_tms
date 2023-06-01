@@ -902,6 +902,39 @@ def generate_article(request):
                                 arr.append(word)
             return StreamingHttpResponse(stream_article_response_other_lang(title),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
+
+
+@api_view(["GET"])
+def generate(request):
+    title="""Natural Language Processing (NLP) is a critical component of many machine learning applications, particularly in the field of machine translation. NLP involves enabling computer algorithms to understand, interpret, and manipulate human language. With NLP, computer systems can extract meaning from text, identify relevant information, and even generate original written content.
+
+            One important aspect of NLP for translation is the decoder, which is responsible for translating source text into target text. The decoder typically uses a combination of rules and statistical models to produce translations. By turning raw text into a structured representation of language, NLP and decoder systems make it possible for computers to understand and produce language with accuracy and precision.
+            Machine Translation (MT) uses NLP and decoder technologies to automatically translate source text in one language into a target language. MT relies on algorithms and statistical models to analyze and process source text and produce a translation that is grammatically correct and semantically meaningful.
+
+            The basic idea behind MT involves breaking down text into component parts, such as words and phrases, and then mapping those parts onto equivalent structures in the target language. Several different approaches to MT exist, including rule-based, statistical, and neural machine translation, each of which uses different techniques to accomplish machine translation.
+            Despite significant advances in NLP and decoder technologies, MT still faces several significant challenges. One is the complexity of human language, which often contains idiomatic expressions, irregular grammar and syntax, and ambiguities that can pose difficulties for algorithms to understand.
+
+            Another challenge is the variability of language across different contexts and domains. Languages evolve over time, and different communities speak and write in different dialects and jargons, making it difficult to produce a translation that accurately represents the meaning of the original text.
+
+            To overcome these and other challenges, NLP and decoder systems are incorporating machine learning techniques that enable them to automatically adapt and improve with experience.
+
+            NLP techniques are playing an increasingly important role in enhancing the accuracy and effectiveness of machine translation. For example, techniques such as named entity recognition, sentiment analysis, and machine reading comprehension can be used to extract relevant information from source texts and improve the quality of translation output.
+
+            Other NLP techniques, such as language modeling and sequence-to-sequence learning, can be used to enhance the capabilities of decoder systems and enable them to produce more accurate and coherent translations.
+            Neural networks are playing an increasingly important role in enhancing the capabilities of NLP and decoder systems. Deep learning techniques, such as convolutional and recurrent neural networks, can be used to automatically capture the underlying structure and patterns in language, enabling decoder systems to produce more accurate and natural-sounding translations.
+
+            Recent advances in neural machine translation have produced remarkable results, with some models achieving translation quality that is close to human-level performance.
+
+            The future of machine translation and NLP is poised for significant advancements, with research in artificial intelligence (AI) and deep learning continuing to push the boundaries of what is possible. Innovations in neuromorphic computing, quantum computing, and other areas are expected to further accelerate progress in NLP and decoder technologies.
+
+            As these advancements continue, we are likely to see more accurate and natural-sounding translations, with machine translation becoming an increasingly important tool for businesses, researchers, and individuals around the world.""" 
+    title=title.split(" ")
+    def stream():
+        for chunk in title:
+ 
+            yield '\ndata: {}\n\n'.format({"t":chunk})
+    return StreamingHttpResponse(stream,content_type='text/event-stream')
+
 # @api_view(["GET"])
 # def generate_article(request):
 #     if request.method=='GET':
