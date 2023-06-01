@@ -918,21 +918,16 @@ def generate(request):
 
             To overcome these and other challenges, NLP and decoder systems are incorporating machine learning techniques that enable them to automatically adapt and improve with experience.
 
-            NLP techniques are playing an increasingly important role in enhancing the accuracy and effectiveness of machine translation. For example, techniques such as named entity recognition, sentiment analysis, and machine reading comprehension can be used to extract relevant information from source texts and improve the quality of translation output.
 
             Other NLP techniques, such as language modeling and sequence-to-sequence learning, can be used to enhance the capabilities of decoder systems and enable them to produce more accurate and coherent translations.
             Neural networks are playing an increasingly important role in enhancing the capabilities of NLP and decoder systems. Deep learning techniques, such as convolutional and recurrent neural networks, can be used to automatically capture the underlying structure and patterns in language, enabling decoder systems to produce more accurate and natural-sounding translations.
 
-            Recent advances in neural machine translation have produced remarkable results, with some models achieving translation quality that is close to human-level performance.
-
-            The future of machine translation and NLP is poised for significant advancements, with research in artificial intelligence (AI) and deep learning continuing to push the boundaries of what is possible. Innovations in neuromorphic computing, quantum computing, and other areas are expected to further accelerate progress in NLP and decoder technologies.
-
-            As these advancements continue, we are likely to see more accurate and natural-sounding translations, with machine translation becoming an increasingly important tool for businesses, researchers, and individuals around the world.""" 
+            """ 
     if request.method=='GET':
         title=title.split(" ")
         def stream():
             for chunk in title:
-                time.sleep(0.09)
+                time.sleep(0.009)
                 yield '\ndata: {}\n\n'.format({"t":chunk})
         return StreamingHttpResponse(stream(),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
