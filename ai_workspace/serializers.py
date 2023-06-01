@@ -31,7 +31,9 @@ from django.db import transaction
 from notifications.signals import notify
 from ai_auth.utils import obj_is_allowed,authorize_list,objls_is_allowed
 from ai_workspace.utils import task_assing_role_ls
-
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from django.conf import settings
 logger = logging.getLogger('django')
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -1444,6 +1446,7 @@ class GetAssignToSerializer(serializers.Serializer):
 			task_assigned_info = TaskAssignInfo.objects.filter(task_assign__task__in=job_obj.job_tasks_set.all())
 			print("TaskassignedInfo------->",task_assigned_info)
 			assigners = [i.task_assign.assign_to_id for i in task_assigned_info] if task_assigned_info else []
+			print("Assigners----------->",assigners)
 		else:assigners=[]
 		tt=[]
 		qs = obj.team.owner.user_info.filter(role=2) if obj.team else obj.user_info.filter(role=2)
@@ -1520,6 +1523,8 @@ class WorkflowsStepsSerializer(serializers.ModelSerializer):
            [WorkflowSteps.objects.create(workflow = instance,steps_id = i )for i in data.get('steps')]
         return super().update(instance, data)
 
+
+
 def msg_send_vendor_accept(task_assign,input):
     from ai_marketplace.serializers import ThreadSerializer
     from ai_marketplace.models import ChatMessage
@@ -1546,6 +1551,7 @@ def msg_send_vendor_accept(task_assign,input):
             message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has accepted your rates and started working."
         elif input == 'change_request':
             message = "Task with task_id "+task_assign.task.ai_taskid+" assigned to "+ task_assign.assign_to.fullname +" in "+task_assign.task.job.project.project_name+" has submitted change request and waiting for your response."
+    if thread_id:
         msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
         notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
 
@@ -1572,6 +1578,20 @@ def msg_send_customer_rate_change(task_assign):
             print("Message---------------->",message)
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
+    ################Email Notification##################################
+    context = {'message':message}	
+    Receiver_emails = [i.email for i in [*set(receivers)]]	
+    print("Rece-------->",Receiver_emails)		
+    msg_html = render_to_string("assign_notify_mail.html", context)
+    send_mail(
+        "Regarding Assigned Task Rate Change Info",None,
+        settings.DEFAULT_FROM_EMAIL,
+        Receiver_emails,
+        #['thenmozhivijay20@gmail.com',],
+        html_message=msg_html,
+    )
+    print("customer rate change mailsent to vendor>>")	
+
 
 def notify_client_status(task_assign,response,reason):
     from ai_marketplace.serializers import ThreadSerializer
@@ -1598,7 +1618,19 @@ def notify_client_status(task_assign,response,reason):
             print("Message---------------->",message)
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
-
+    ################Email Notification##################################
+    context = {'message':message}	
+    Receiver_emails = [i.email for i in [*set(receivers)]]
+    print("Rece-------->",Receiver_emails)	
+    msg_html = render_to_string("assign_notify_mail.html", context)
+    send_mail(
+        "Regarding Assigned Task Status Info",None,
+        settings.DEFAULT_FROM_EMAIL,
+        Receiver_emails,
+        #['thenmozhivijay20@gmail.com',],
+        html_message=msg_html,
+    )
+    print("customer status mailsent to vendor>>")	
 
 
 def notify_task_status(task_assign,status,reason):
@@ -1628,6 +1660,8 @@ def notify_task_status(task_assign,status,reason):
     if task_ass_list: receivers.append(task_ass_list.first().assign_to)
     receivers = [*set(receivers)]
     print('Receivers in task accept or return-------------->',receivers)
+    Receiver_emails = [i.email for i in receivers]
+    print("REC---------->",Receiver_emails)
     for i in receivers:
         thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
         if thread_ser.is_valid():
@@ -1643,7 +1677,18 @@ def notify_task_status(task_assign,status,reason):
             print("Message---------------->",message)
             msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
             notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))
-			
+    #############Email Notification#############	
+    context = {'message':message}
+    print("Rece-------->",Receiver_emails)				
+    msg_html = render_to_string("assign_notify_mail.html", context)
+    send_mail(
+        "Regarding Assigned Task Status Info",None,
+        settings.DEFAULT_FROM_EMAIL,
+        Receiver_emails,
+        #['thenmozhivijay20@gmail.com',],
+        html_message=msg_html,
+    )
+    print("assign status mailsent from vendor to customer>>")		
 		
 
 class TaskAssignUpdateSerializer(serializers.Serializer):
