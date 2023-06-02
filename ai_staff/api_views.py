@@ -932,32 +932,7 @@ class FontLanguageViewset(viewsets.ViewSet):
         serializer = FontLanguageSerializer(queryset,many=True)
         return Response(serializer.data)
 
-from rest_framework.pagination import PageNumberPagination
-from django.db.models import Q
-class CustomPagination(PageNumberPagination):
-    page_size = 20  # Number of objects per page
-    page_size_query_param = 'page_size'
-     
 
-class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
-    pagination_class = CustomPagination
-    def list(self, request):
-        font_search=request.query_params.get('font_search',None)
-        queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
-        if font_search:
-            queryset=queryset.filter(Q(font_family_name__icontains=font_search)).order_by('font_family_name')
-        pagin_tc = self.paginate_queryset(queryset, request , view=self)
-        serializer = FontFamilySerializer(pagin_tc,many=True)
-        response = self.get_paginated_response(serializer.data)
-        if response.data["next"]:
-            response.data["next"] = response.data["next"].replace(
-                "http://", "https://"
-            )
-        if response.data["previous"]:
-                response.data["previous"] = response.data["previous"].replace(
-                "http://", "https://"
-            )
-        return response
 
     
 class FontDataViewset(viewsets.ViewSet):

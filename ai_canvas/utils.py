@@ -144,3 +144,4 @@ def install_font(font_path):
     shutil.copy(font_path,destination_file_path)
     os.system("fc-cache -f -v")
     print(f"Font '{family_name}' installed successfully!")
+    return family_name

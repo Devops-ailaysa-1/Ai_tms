@@ -550,12 +550,19 @@ class FontFileSerializer(serializers.ModelSerializer):
         rep=super().to_representation(instance)
         if rep.get('font_family',None):
             rep['font_family']=instance.font_family.url
+        if not rep.get('name'):
+            family_name=install_font(instance.font_family.path)
+            rep['name']=family_name
+            instance.name=family_name
+            instance.save()
         return rep
 
     def create(self, validated_data):
  
         instance=FontFile.objects.create(**validated_data)
         if instance.font_family:
-            install_font(instance.font_family.path)
+            family_name=install_font(instance.font_family.path)
+            instance.name=family_name
+            instance.save()
         return instance
     

@@ -560,3 +560,58 @@ class FontFileViewset(viewsets.ViewSet):
         query_set=FontFile.objects.get(id=pk)
         query_set.delete()
         return Response(status=204)
+
+
+
+
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
+from itertools import chain
+from ai_canvas.models import FontFile
+from ai_staff.models import FontFamily
+from django.db.models import F
+from ai_staff.serializer import FontFamilySerializer
+from ai_staff.models import FontFamily,FontLanguage,FontData
+
+class CustomPagination(PageNumberPagination):
+    page_size = 20  # Number of objects per page
+    page_size_query_param = 'page_size'
+     
+
+class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
+    pagination_class = CustomPagination
+    page_size = 20
+    
+    def list(self, request):
+        font_search=request.query_params.get('font_search',None)
+        language=request.query_params.get('language',None)
+        queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
+        if font_search:
+            queryset=queryset.filter(Q(font_family_name__icontains=font_search)).order_by('font_family_name')
+        
+        elif language:
+            f_lang=FontLanguage.objects.get(id=language)
+            f_d=FontData.objects.filter(font_lang=f_lang)
+            queryset=f_d.annotate(font_family_name=F('font_family__font_family_name')).values("font_family_name")
+        
+        else:
+            font_file=FontFile.objects.filter(user=request.user)
+            if font_file:
+                font_file=font_file.annotate(font_family_name=F("name")).values("font_family_name")
+                queryset=queryset.values("font_family_name")
+                queryset=list(chain(font_file, queryset))
+             
+                # queryset=sorted(queryset,key=itemgetter('font_family_name'))
+ 
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = FontFamilySerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace(
+                "http://", "https://"
+            )
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace(
+                "http://", "https://"
+            )
+        return response
