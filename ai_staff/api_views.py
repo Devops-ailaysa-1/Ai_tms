@@ -932,13 +932,22 @@ class FontLanguageViewset(viewsets.ViewSet):
         serializer = FontLanguageSerializer(queryset,many=True)
         return Response(serializer.data)
 
-class  FontFamilyViewset(viewsets.ViewSet):
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
+class CustomPagination(PageNumberPagination):
+    page_size = 10  # Number of objects per page
+    page_size_query_param = 'page_size'
+     
+
+class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
+    pagination_class = CustomPagination
     def list(self, request):
-        queryset = FontFamily.objects.all()
-        serializer = FontFamilySerializer(queryset,many=True)
-        font_fam_list = [i['font_family_name'] for i in serializer.data]
-        font_fam_list.sort()
-        return Response({'font_family_name' : font_fam_list})
+        queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material') |Q(font_family_name__icontains='barcode')).order_by('font_family_name')
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = FontFamilySerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        return response
+
     
 class FontDataViewset(viewsets.ViewSet):
     def list(self, request):
