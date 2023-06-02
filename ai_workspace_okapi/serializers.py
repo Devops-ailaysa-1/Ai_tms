@@ -778,9 +778,10 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
             return None
 
 
-
-
-
+from ai_workspace_okapi.models import SelflearningAsset
+class SelflearningAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SelflearningAsset
 
 
 

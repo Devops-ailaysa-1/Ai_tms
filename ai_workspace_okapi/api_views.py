@@ -2700,50 +2700,59 @@ from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDi
 from ai_workspace_okapi.utils import do_compare_sentence
 from django.db.models.signals import post_save 
 
-from ai_workspace_okapi.serializers import SegmentDiffSerializer
+from ai_workspace_okapi.serializers import SegmentDiffSerializer , SelflearningAssetSerializer
 from django.http import Http404
 from ai_staff.models import Languages
 from ai_workspace_okapi.models import SelflearningAsset,SegmentHistory,SegmentDiff
 from ai_workspace_okapi.utils import do_compare_sentence
 from django.db.models.signals import post_save 
 
-# class SelflearningAssetViewset(viewsets.ViewSet):
-#     permission_classes = [IsAuthenticated,]
-#     def get_object(self, pk):
-#         try:
-#             return SelflearningAsset.objects.get(id=pk)
-#         except SelflearningAsset.DoesNotExist:
-#             raise Http404
+class SelflearningAssetViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def get_object(self, pk):
+        try:
+            return SelflearningAsset.objects.get(id=pk)
+        except SelflearningAsset.DoesNotExist:
+            raise Http404
 
-#     def create(self,request):
-#         serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors)
+    def create(self,request):
+        serializer = SelflearningAssetSerializer(data=request.data,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
     
-#     def list(self, request):
-#         target_language=request.query_params.get('target_language', None)
-#         if target_language:
-#             target_language=Languages.objects.get(id=target_language)
-#             queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
-#         else:
-#             queryset = SelflearningAsset.objects.filter(user=request.user.id)
-#         serializer=SelflearningAssetSerializer(queryset,many=True)
-#         return Response(serializer.data)
+    def list(self, request):
+        target_language=request.query_params.get('target_language', None)
+        if target_language:
+            target_language=Languages.objects.get(id=target_language)
+            queryset = SelflearningAsset.objects.filter(user=request.user.id,target_language=target_language)
+        else:
+            queryset = SelflearningAsset.objects.filter(user=request.user.id)
+        serializer=SelflearningAssetSerializer(queryset,many=True)
+        return Response(serializer.data)
 
-#     def retrieve(self,request,pk):
-#         obj =self.get_object(pk)
-#         serializer=SelflearningAssetSerializer(obj)
-#         return Response(serializer.data)
+    def retrieve(self,request,pk):
+        obj =self.get_object(pk)
+        serializer=SelflearningAssetSerializer(obj)
+        return Response(serializer.data)
 
-#     def update(self,request,pk):
-#         obj =self.get_object(pk)
-#         serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors,status=400)
+    def update(self,request,pk):
+        obj =self.get_object(pk)
+        serializer=SelflearningAssetSerializer(obj,data=request.data,partial=True,context={'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=400)
+    
+    def destroy(self,request,pk):
+        obj=SelflearningAsset.objects.get(id=pk)
+        if obj:
+            obj.delete()
+            return Response({'msg':'deleted successfully'},status=200)
+        else:
+            return Response({'msg':'no record found'},status=400)
+        
 
 class SegmentDiffViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]

@@ -946,6 +946,14 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = FontFamilySerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace(
+                "http://", "https://"
+            )
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace(
+                "http://", "https://"
+            )
         return response
 
     
