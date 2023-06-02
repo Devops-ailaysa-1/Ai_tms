@@ -1420,8 +1420,9 @@ class ProjectAnalysis(APIView):
 
 
 
-def msg_send(sender,receiver,task):
+def msg_send(sender,receiver,task,step):
     obj = Task.objects.get(id=task)
+    work = "Post Editing" if int(step) == 1 else "Reviewing"
     proj = obj.job.project.project_name
     thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
     if thread_ser.is_valid():
@@ -1431,7 +1432,7 @@ def msg_send(sender,receiver,task):
         thread_id = thread_ser.errors.get('thread_id')
     #print("Thread--->",thread_id)
     if thread_id:
-        message = "You have been assigned a new task in "+proj+"."
+        message = "You have been assigned a new task in "+proj+ " for "+ work +"."
         msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
         notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
 
@@ -1581,7 +1582,7 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
             if serializer.is_valid():
                 serializer.save()
                 weighted_count_update.apply_async((receiver,sender.id,assignment_id),)
-                try:msg_send(sender,Receiver,tasks[0])
+                try:msg_send(sender,Receiver,tasks[0],step)
                 except:pass
                 # if Receiver in hired_editors:
                 #     ws_forms.task_assign_detail_mail(Receiver,assignment_id)

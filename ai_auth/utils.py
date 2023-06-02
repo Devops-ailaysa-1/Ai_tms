@@ -154,7 +154,8 @@ company_members_list = [
 'quiet.lifeafter',
 'kdinesh2911',
 'dinesh',
-'acilangoven'
+'acilangoven',
+'ailaysag1'
 ]
 
 
