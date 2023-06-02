@@ -26,11 +26,11 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     client_country = serializers.CharField(source='client.country.name')
     seller_country = serializers.CharField(source='seller.country.name')
     assignment = POAssignmentSerializer()
-    tasks = POTaskSerializer(many=True,source='po_task')
+    # tasks = POTaskSerializer(many=True,source='po_task')
     class Meta:
         model = PurchaseOrder
-        fields = ('poid','client','seller','client_name','seller_name','client_country','seller_country','po_status',
-                'currency','currency_code','created_at','po_total_amount','assignment','tasks')
+        fields = ('poid','client','seller','client_name','seller_name','client_country','seller_country','po_status','po_file',
+                'currency','currency_code','created_at','po_total_amount','assignment')
         extra_kwargs = {
 		 	"currency_name": {"read_only": True},
              "currency":{"write_only":True},
@@ -38,6 +38,7 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             "seller_name":{"read_only": True},
             "client_country":{"read_only": True},
             "seller_country":{"read_only": True},
+            "po_file":{"read_only": True}
              #"created_at":{"write_only":True}
             }
 
@@ -63,7 +64,25 @@ class PurchaseOrderListSerializer(serializers.Serializer):
         return PurchaseOrderSerializer(query,many=True).data
 
 
+class PurchaseOrderTaskListSerializer(serializers.Serializer):
+    payable=serializers.SerializerMethodField()
+    receivable=serializers.SerializerMethodField()
 
+
+    def _get_request(self):
+        request = self.context
+        if not isinstance(request, HttpRequest):
+            request = request._request
+        return request
+
+    def get_payable(self,obj):
+        query = obj.filter(client = self._get_request().user).order_by('-created_at')
+        return PurchaseOrderSerializer(query,many=True).data
+
+
+    def get_receivable(self,obj):
+        query = obj.filter(seller = self._get_request().user).order_by('-created_at')
+        return PurchaseOrderSerializer(query,many=True).data
 
     
 class AilaysaGeneratedInvoiceSerializer(serializers.ModelSerializer):
