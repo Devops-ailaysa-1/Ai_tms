@@ -33,5 +33,6 @@ urlpatterns+= [
     # path('vendorexpertiseinfo/',views.VendorExpertiseListCreate.as_view({'get': 'list'})),
     # path('vendorexpertiseinfo/update/',views.VendorExpertiseListCreate.as_view({'put':'update'})),
     # path('vendor_service_update/<int:pk>',views.VendorServiceUpdateDeleteView.as_view(),name='vendor-servicepdate'),
-    path('vendor_lang_template/',views.vendor_lang_pair_template,name='vendor-lang-pair-template')
+    path('vendor_lang_template/',views.vendor_lang_pair_template,name='vendor-lang-pair-template'),
+    path('vendor_lang_pair/',views.vendor_language_pair,name='language_pair'),
     ]

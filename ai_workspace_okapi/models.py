@@ -550,8 +550,8 @@ class Document(models.Model):
         from ai_workspace.models import Task,TaskAssign
         task = Task.objects.filter(document=self).first().id
         if TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False):
-            rr = TaskAssign.objects.filter(task_id = task)
-            return [{'assign_to_id':i.assign_to.id,'step_id':i.step.id,'task':i.task_id,'status':i.status} for i in rr]
+            rr = TaskAssign.objects.filter(task_id = task).filter(task_assign_info__isnull=False)
+            return [{'assign_to_id':i.assign_to.id,'step_id':i.step.id,'task':i.task_id,'status':i.status,'reassigned':i.reassigned} for i in rr]
         else:
             return []
 
@@ -586,7 +586,8 @@ class FontSize(models.Model):
     @property
     def owner_pk(self):
         return self.ai_user.id
-    
+
+
 class SegmentHistory(models.Model):
     segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
     target=models.TextField(null=True, blank=True)
@@ -596,7 +597,6 @@ class SegmentHistory(models.Model):
     
     # sentense_diff_result=models.CharField(max_length=1000,null=True,blank=True)
     # save_type=models.CharField(max_length=100,blank=True,null=True)
-
 
 class SelflearningAsset(models.Model):
     user=models.ForeignKey(AiUser, on_delete=models.CASCADE)

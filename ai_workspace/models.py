@@ -1317,10 +1317,20 @@ class TaskAssign(models.Model):
     YET_TO_START = 1
     IN_PROGRESS = 2
     COMPLETED = 3
+    RETURN_REQUEST = 4
     STATUS_CHOICES = [
         (YET_TO_START,'Yet to start'),
         (IN_PROGRESS, 'In Progress'),
         (COMPLETED, 'Completed'),
+        (RETURN_REQUEST, 'Return Request')
+    ]
+    APPROVED = 1
+    REWORK = 2
+    CLOSE = 3
+    RESPONSE_CHOICES = [
+        (APPROVED, 'Approved'),
+        (REWORK, 'Rework'),
+        (CLOSE, 'Close'),
     ]
     task = models.ForeignKey(Task,on_delete=models.CASCADE, null=False, blank=False,
             related_name="task_info")
@@ -1335,6 +1345,10 @@ class TaskAssign(models.Model):
     copy_paste_enable = models.BooleanField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES,default=1)
     reassigned = models.BooleanField(default=False)
+    client_response = models.IntegerField(choices=RESPONSE_CHOICES, blank=True, null=True)
+    client_reason = models.TextField(null=True, blank=True)
+    return_request_reason = models.TextField(null=True, blank=True)
+    user_who_approved_or_rejected = models.ForeignKey(AiUser, on_delete=models.SET_NULL, null=True, blank=True)
 
     objects = TaskAssignManager()
 
@@ -1376,6 +1390,7 @@ class TaskAssignInfo(models.Model):
     billable_char_count = models.IntegerField(blank=True,null=True)
     billable_word_count = models.IntegerField(blank=True,null=True)
     account_raw_count = models.BooleanField(default=True)
+    change_request_reason = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.assignment_id:
@@ -1737,6 +1752,7 @@ class WorkflowSteps(models.Model):
 
 
 class AiRoleandStep(models.Model):
+    """maps which role responsible for which task"""
     role = models.ForeignKey(AiRoles,related_name='step_role',
         on_delete=models.CASCADE,blank=True, null=True)
     step = models.ForeignKey(Steps, on_delete=models.CASCADE,

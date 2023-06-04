@@ -66,10 +66,13 @@ class PurchaseOrder(models.Model):
         return self.po_file.url
 
 class POTaskDetails(models.Model):
+    ACCEPT_STATUS =[("task_accepted","task_accepted"),
+                    ("change_request","change_request")]
+    
     task_id = models.CharField(max_length=191)
     po = models.ForeignKey(PurchaseOrder,related_name="po_task",on_delete=models.CASCADE,null=True)
     assignment = models.ForeignKey(POAssignment,related_name='assignment_po',on_delete=models.PROTECT)
-    #step = models.ForeignKey(Steps,on_delete=models.PROTECT, null=False, blank=False,
+    # step = models.ForeignKey(Steps,on_delete=models.PROTECT, null=False, blank=False,
     #        related_name="po_step")
     source_language = models.ForeignKey(Languages, null=False, blank=False, on_delete=models.PROTECT,\
         related_name="po_source_lang")
@@ -84,6 +87,8 @@ class POTaskDetails(models.Model):
     unit_type = models.ForeignKey(Billingunits,related_name="po_unit",on_delete=models.PROTECT)
     total_amount = models.DecimalField(max_digits=12, decimal_places=4)
     tsk_accepted = models.BooleanField(default=False)
+    assign_status = models.CharField(max_length=20,choices=ACCEPT_STATUS,null=True,blank=True)
+    reassigned = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.total_amount:

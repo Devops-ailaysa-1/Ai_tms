@@ -932,13 +932,8 @@ class FontLanguageViewset(viewsets.ViewSet):
         serializer = FontLanguageSerializer(queryset,many=True)
         return Response(serializer.data)
 
-class  FontFamilyViewset(viewsets.ViewSet):
-    def list(self, request):
-        queryset = FontFamily.objects.all()
-        serializer = FontFamilySerializer(queryset,many=True)
-        font_fam_list = [i['font_family_name'] for i in serializer.data]
-        font_fam_list.sort()
-        return Response({'font_family_name' : font_fam_list})
+
+
     
 class FontDataViewset(viewsets.ViewSet):
     def list(self, request):

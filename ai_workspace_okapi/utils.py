@@ -459,6 +459,8 @@ def split_check(segment_id):
     else:
         return True
 
+import difflib
+
 def do_compare_sentence(source_segment,edited_segment,sentense_diff=False):
     diff_words=[]
     pair_words=[]

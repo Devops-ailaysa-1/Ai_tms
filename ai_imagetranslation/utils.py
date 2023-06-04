@@ -1,18 +1,23 @@
 from .models import *
-import cv2 ,io 
-import numpy as np
 from PIL import Image
-from google.cloud import vision_v1 , vision
+from google.cloud import vision_v1,vision
 from google.oauth2 import service_account
 import extcolors 
 from django import core
 # from torch.utils.data._utils.collate import default_collate
 from django.conf import settings
-credentials = service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
+credentials=service_account.Credentials.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS_OCR)
 client = vision.ImageAnnotatorClient(credentials=credentials)
 from django.core.exceptions import ValidationError
 import os 
 import requests
+import cv2,requests,base64,io 
+from PIL import Image
+import numpy as np
+from io import BytesIO
+# from ai_canvas.serializers import TemplateGlobalDesignSerializer
+
+
 IMAGE_TRANSLATE_URL = os.getenv('IMAGE_TRANSLATE_URL')
  
 
@@ -26,28 +31,52 @@ def image_ocr_google_cloud_vision(image_path , inpaint):
         return texts
 
 def color_extract_from_text( x,y,w,h ,pillow_image_to_extract_color):
-    if w<x:x,w = w,x
-    if h<y:h,y = y,h
+    if w<x:x,w=w,x
+    if h<y:h,y=y,h
     t= 15
     x = x-t
     y = y-t
     w = w+t
     h = h+t
-    cropped_img = pillow_image_to_extract_color.crop([x,y,w,h])
-    extracted_color = extcolors.extract_from_image(cropped_img ,limit=2)
+    cropped_img=pillow_image_to_extract_color.crop([x,y,w,h])
+    extracted_color=extcolors.extract_from_image(cropped_img ,limit=2)
     # final_color = extracted_color[0][1][0] if len(extracted_color[0]) >=2  else (extracted_color[0][0][0] if len(extracted_color[0]) <=1 else 0)
-    return [i[0] for i in extracted_color[0]][::-1]
+    return [i[0] for i in extracted_color[0]][::-1] #if i[0]!=(0,0,0)
 
-def creating_image_bounding_box(image_path):
+from ai_canvas.template_json import textbox_json
+import copy
+import uuid,math
+def creating_image_bounding_box(image_path,color_find_image_diff):
     poly_line = []
+<<<<<<< HEAD
     pillow_image_to_extract_color=Image.open(image_path) 
+=======
+    # pillow_image_to_extract_color=Image.open(image_path)  #color_find_image_diff
+    pillow_image_to_extract_color=Image.fromarray(color_find_image_diff)
+>>>>>>> origin/canvas_staging
     texts=image_ocr_google_cloud_vision(image_path,inpaint=True)  
-    text_and_bounding_results = {}
-    no_of_segments = 0
-    text_list = []
+    text_and_bounding_results={}
+    no_of_segments=0
+    text_list=[]
+    text_box_list=[]
     for i in  texts.pages:
         for j in i.blocks:
+            count=0
+            text_uuid=uuid.uuid4()
+            textbox_=copy.deepcopy(textbox_json)
+            name="Textbox_"+(str(text_uuid))
+            textbox_['id']="text_"+(str(text_uuid))
+            count+=1
+            textbox_['name']=name
             x,y,w,h=j.bounding_box.vertices[0].x ,j.bounding_box.vertices[1].y,j.bounding_box.vertices[2].x,j.bounding_box.vertices[3].y 
+            textbox_['left']=x
+            textbox_['top']=y
+            textbox_['width']=w-x
+            textbox_['height']=h
+            dx = j.bounding_box.vertices[1].x - j.bounding_box.vertices[0].x
+            dy = j.bounding_box.vertices[1].y- j.bounding_box.vertices[0].y
+            arrival_angle=math.degrees(math.atan2(dy, dx))
+            arrival_angle=(arrival_angle + 360) % 360
             vertex=j.bounding_box.vertices
             poly_line.append([[vertex[0].x ,vertex[0].y],[vertex[1].x,vertex[1].y],[vertex[2].x ,vertex[2].y] ,[vertex[3].x,vertex[3].y]])
             final_color=color_extract_from_text(x,y,w,h,pillow_image_to_extract_color)
@@ -61,13 +90,17 @@ def creating_image_bounding_box(image_path):
                         fx,fy,fw,fh=b.bounding_box.vertices[0].x,b.bounding_box.vertices[1].y,b.bounding_box.vertices[2].x,b.bounding_box.vertices[3].y
                         font_size.append(fh-fy)  
                         font_size2.append(fw-fx)
-            text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],
-                                                         "fontsize":sum(font_size)//len(font_size),
-                                                         "fontsize2":sum(font_size2)//len(font_size2),
-                                                         "color1":final_color ,"poly_line":poly_line}
+            text_and_bounding_results[no_of_segments]={"text":"".join(text_list),"bbox":[x,y,w,h],"fontsize":sum(font_size)//len(font_size),
+                                                    "fontsize2":sum(font_size2)//len(font_size2),"color1":final_color,"poly_line":poly_line}
+            textbox_['text']="".join(text_list).strip()
+            textbox_['fill']="rgb{}".format(tuple(final_color[0]))
+            # textbox_['angle']=arrival_angle
+            font=max([sum(font_size)//len(font_size),sum(font_size2)//len(font_size2)])+5
+            textbox_['fontSize']=font
             no_of_segments+=1
-            text_list = []
-    return text_and_bounding_results 
+            text_list=[]
+            text_box_list.append(textbox_)
+    return text_and_bounding_results,text_box_list
  
 
 def image_content(image_numpy):
@@ -84,20 +117,12 @@ def inpaint_image(im,msk):
     ('image',('',open(im,'rb'),'image/jpeg')),
     ('mask',('',open(msk,'rb'),'image/png'))]
     response = requests.request("POST",IMAGE_TRANSLATE_URL, headers=headers, data=data, files=files)
-    
     if response.status_code==200:
         arr = np.frombuffer(response.content, dtype=np.uint8)
-        
         return {'result':arr,'code':response.status_code }
     else:
         return {'result':'error in inpaint prediction','code':response.status_code }
 
-
-
-import cv2,requests,base64
-from PIL import Image
-import numpy as np
-from io import BytesIO
 
 def convert_transparent(img,value):
     img = img.convert("RGBA")
@@ -112,7 +137,6 @@ def convert_transparent(img,value):
     return img
 
 def layer_blend(lama_result,img_transparent):
-
     lama_result=lama_result.convert('RGBA')
     img_transparent=img_transparent.convert('RGBA')
     lama_result.alpha_composite(img_transparent)
@@ -130,51 +154,69 @@ def lama_inpaint_optimize(image_diff,lama_result,original):
     img_gen='https://apinodestaging.ailaysa.com/ai_canvas_mask_generate'
     resized_image = image_diff.resize((256,256))
     resized_image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue())
-    resized_width,resized_image_heigth= resized_image.size
+    img_str=base64.b64encode(buffered.getvalue())
+    resized_width,resized_heigth= resized_image.size
     output=img_str.decode()
     ima_str='data:image/png;base64,'+str(output)
-    data = {'maskimage':ima_str , 'width':resized_width,'height':resized_image_heigth}
+    data = {'maskimage':ima_str , 'width':resized_width,'height':resized_heigth}
     thumb_image = requests.request('POST',url=img_gen,data=data ,headers={},files=[])
     ###convert thumb to black and white
     black_and_white=Image.open(BytesIO(base64.b64decode(thumb_image.content.decode().split(',')[-1])))
     black_and_white=black_and_white.resize(image_diff.size)
     img_arr=np.asarray(black_and_white)
     img_arr_copy=np.copy(img_arr)
-    img_arr_copy[img_arr_copy!= 0] = 255
+    img_arr_copy[img_arr_copy!= 0]=255
 
     ###morphing
-    SE = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
-    res = cv2.morphologyEx(img_arr_copy, cv2.MORPH_DILATE, SE)
-    img_transparent = Image.fromarray(res)
+    SE=cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
+    res=cv2.morphologyEx(img_arr_copy, cv2.MORPH_DILATE, SE)
+    img_transparent=Image.fromarray(res)
     img_transparent=convert_transparent(img_transparent,255)
-    lama_transparent=layer_blend( lama_result=lama_result ,img_transparent=img_transparent)
+    lama_transparent=layer_blend(lama_result=lama_result,img_transparent=img_transparent)
     lama_convert_transparent=convert_transparent(lama_transparent,0)
     result=layer_blend(original,lama_convert_transparent)
-    return result
+    return result,black_and_white
 
 
 # from celery import shared_task
 # @shared_task(serializer='json')
 from rest_framework import serializers
+<<<<<<< HEAD
 def inpaint_image_creation(image_details,dynamic):
     if dynamic:
         img_path=image_details.inpaint_creation.source_image.image.path
     else:
         img_path=image_details.image.path
+=======
+def inpaint_image_creation(image_details,inpaintparallel=False):
+    # if hasattr(image_details,'image'):
+    #     img_path=image_details.image.path
+    # else:
+    #     img_path=image_details.inpaint_image.path
+    
+    if inpaintparallel:
+        img_path=image_details.inpaint_image.path
+    else:
+        img_path=image_details.image.path
+
+>>>>>>> origin/canvas_staging
     mask_path=image_details.mask.path
-    mask = cv2.imread(mask_path)
-    img = cv2.imread(img_path)
+    mask=cv2.imread(mask_path)
+    img=cv2.imread(img_path)
     if image_details.mask:
-        image_to_extract_text = np.bitwise_and(mask ,img)
-        content = image_content(image_to_extract_text)
-        inpaint_image_file= core.files.File(core.files.base.ContentFile(content),"file.png")
+        image_to_extract_text=np.bitwise_and(mask ,img)
+        content=image_content(image_to_extract_text)
+        inpaint_image_file=core.files.File(core.files.base.ContentFile(content),"file.png")
         image_details.create_inpaint_pixel_location=inpaint_image_file
         image_details.save()
+<<<<<<< HEAD
         # if dynamic:
         #     image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
         # else:
         image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
+=======
+        # image_text_details=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path)
+>>>>>>> origin/canvas_staging
 
         output=inpaint_image(img_path, mask_path)
         if output['code']==200:
@@ -182,16 +224,24 @@ def inpaint_image_creation(image_details,dynamic):
                 res=np.reshape(output['result'],img.shape)  
                 diff=cv2.absdiff(img,res)
                 diff=lama_diff(mask,diff)
-                diff=cv2.cvtColor(diff, cv2.COLOR_BGR2RGB)
-                res=cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
+                diff=cv2.cvtColor(diff,cv2.COLOR_BGR2RGB)
+                res=cv2.cvtColor(res,cv2.COLOR_BGR2RGB)
                 diff=Image.fromarray(diff)
                 lama_result=Image.fromarray(res)
                 original=Image.open(img_path)
-                dst=lama_inpaint_optimize(image_diff=diff,lama_result=lama_result,original=original)
+                dst,black_and_white=lama_inpaint_optimize(image_diff=diff,lama_result=lama_result,original=original)
                 dst=np.asarray(dst)
                 dst_final=np.copy(dst)
                 dst_final=cv2.cvtColor(dst_final,cv2.COLOR_BGR2RGB)
-                return dst_final,image_text_details
+                image_color_change=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+                black_and_white=np.asarray(black_and_white)
+                black_and_white=black_and_white[:, :, :3]
+                image_color_change=image_color_change[:, :, :3]
+ 
+                image_to_ext_color=np.bitwise_and(black_and_white ,image_color_change)
+                image_text_details,text_box_list=creating_image_bounding_box(image_details.create_inpaint_pixel_location.path,image_to_ext_color)
+                
+                return dst_final,image_text_details,text_box_list
             else:return serializers.ValidationError({'shape_error':'pred_output_shape is dissimilar to user_image'})
                 
         else:
@@ -209,7 +259,25 @@ def inpaint_image_creation(image_details,dynamic):
     #     return output,image_text_details
 
 
- 
+
+# def image_inpaint_revert(instance,mask_json):
+#     main_image=cv2.imread(instance.image.path)
+#     mask_image=TemplateGlobalDesignSerializer().thumb_create(json_str=mask_json,formats='mask',multiplierValue=None)
+#     bit_wise_ = cv2.bitwise_and(mask_image,main_image)
+#     tmp = cv2.cvtColor(bit_wise_, cv2.COLOR_BGR2GRAY)
+#     _,alpha = cv2.threshold(tmp,0,255,cv2.THRESH_BINARY)
+#     b, g, r = cv2.split(bit_wise_)
+#     rgba = [b,g,r, alpha]
+#     masked_tr = cv2.merge(rgba,4)
+#     masked_tr=Image.fromarray(masked_tr)
+#     main_image=Image.fromarray(main_image)
+#     masked_tr.paste(main_image, (0, 0), main_image)
+#     instance.inpaint_image=masked_tr
+#     instance.save()
+    
+
+
+
 
 
 # def load_image(fname , mode):

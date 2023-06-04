@@ -115,18 +115,32 @@ class SegmentSerializerV2(SegmentSerializer):
         else:
             return target
 
+    # def his_check(self,instance,temp_target,content,user):
+    #     if temp_target != content:
+    #         return True
+    #     else:
+    #         SegmentHistory.objects.filter(seg)
 
-    def update_task_assign(self,task_obj,user):
+
+    def update_task_assign(self,task_obj,user,status_id):
         try:
-            task_assign_obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first()
+            if status_id in [109,110]:step_id = 2
+            else: step_id = 1
+            task_assign_query = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user)
+            if task_assign_query.count() == 2:
+                task_assign_obj = task_assign_query.filter(task_assign__step_id=step_id).first()
+            else:
+                task_assign_obj = task_assign_query.first()
             print("t_a_o----->",task_assign_obj)         
-            obj = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__assign_to = user).first().task_assign
+            obj = task_assign_obj.task_assign
             if obj.status != 2:
                 obj.status = 2
                 obj.save()
-            if task_assign_obj.task.reassigned == True:
+            if task_assign_obj.task_assign.reassigned == True:
                 assigns = TaskAssignInfo.objects.filter(task_assign__task = task_obj).filter(task_assign__step=obj.step).filter(task_assign__reassigned=False)
+                print("Assigns---------->",assigns)
                 for i in assigns:
+                    print(i.task_assign)
                     if i.task_assign.status != 2:
                         i.task_assign.status = 2
                         i.task_assign.save()
@@ -135,31 +149,25 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print("VD----------->",validated_data)
         print("Ins-------->",instance)
+        print("St---------->>>",validated_data.get('status').id)
         if validated_data.get('target'):
             validated_data['target'] = self.target_check(instance,validated_data.get('target'))
         if validated_data.get('temp_target'):
             validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
-        manual_confirm_status = TranslationStatus.objects.get(id=106)
-        reviewed_status = TranslationStatus.objects.get(id=110)
-        tm_confirm_status = TranslationStatus.objects.get(id=102)
+        status_id = validated_data.get('status').id
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        output_list = True if instance.temp_target != content else False 
-        print('output_list',output_list)
-        print('instance.target',instance.target)
-        print('content',content)
+        seg_his_create = True if instance.temp_target!=content else False #self.his_check(instance,instance.temp_target,content,user_1)
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
                 print("In target empty")
                 if (instance.text_unit.document.job.project.mt_enable == False)\
-                 or (validated_data.get('status') == manual_confirm_status)\
-                 or (validated_data.get('status') == reviewed_status)\
-                 or (validated_data.get('status') == tm_confirm_status):
+                or status_id in [102,106,110]:
                     print("mt dable and manual confirm check")
                     user = instance.text_unit.document.doc_credit_debit_user
                     initial_credit = user.credit_balance.get("total_left")
@@ -173,13 +181,13 @@ class SegmentSerializerV2(SegmentSerializer):
             res = super().update(instance, validated_data)
             instance.temp_target = instance.target
             instance.save()
-            self.update_task_assign(task_obj,user_1)
-            if output_list:
-                SegmentHistory.objects.create(segment_id=seg_id,user=self.context.get('request').user, target= content, status= validated_data.get('status') )
+            self.update_task_assign(task_obj,user_1,status_id)
+            if seg_his_create:
+                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
             return res
-        if output_list:
+        if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
-        self.update_task_assign(task_obj,user_1)
+        self.update_task_assign(task_obj,user_1,status_id)
         return super().update(instance, validated_data)
 
 class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
@@ -192,7 +200,7 @@ class SegmentSerializerV3(serializers.ModelSerializer):# For Read only
 
     class Meta:
         # pass
-        model = Segment
+        model=Segment
         fields = ['source', 'target','mt_raw_target', 'coded_source', 'coded_brace_pattern',
             'coded_ids_sequence', "random_tag_ids", 'merge_segment_count']
         read_only_fields = ['source', 'target', 'coded_source', 'coded_brace_pattern',
@@ -690,6 +698,48 @@ class TextUnitIntgerationUpdateSerializer(serializers.ModelSerializer):
         return text_unit
 
 
+from ai_workspace_okapi.models import SegmentDiff
+
+class SegmentDiffSerializer(serializers.ModelSerializer):
+    # seg_history= serializers.PrimaryKeyRelatedField(queryset=SegmentHistory.objects.all(),required=False)
+    class Meta:
+        model=SegmentDiff
+        fields=('id','sentense_diff_result','save_type')
+
+class SegmentHistorySerializer(serializers.ModelSerializer):
+    segment_difference=SegmentDiffSerializer(many=True)
+    step_name=serializers.SerializerMethodField()
+    status_id=serializers.ReadOnlyField(source='status.status_id')
+    user_name=serializers.ReadOnlyField(source='user.fullname')
+    class Meta:
+        model = SegmentHistory
+        fields = ('segment','created_at','user_name','status_id','step_name','segment_difference')
+        # extra_kwargs = {
+        #     "status": {"write_only": True}}
+
+
+    def to_representation(self, instance):
+        from ai_workspace_okapi.api_views import segment_difference
+        s=SegmentDiff.objects.filter(seg_history=instance)
+        if not s:
+            seg_diff=segment_difference(sender=None, instance=instance)
+        return super().to_representation(instance)
+
+    def get_step_name(self,obj):
+        try:
+            step = TaskAssign.objects.filter(
+                Q(task__document__document_text_unit_set__text_unit_segment_set=obj.segment_id) &
+                Q(assign_to = obj.user)).first().step
+            return step.name
+        except:
+            return None
+        
+class VerbSerializer(serializers.Serializer):
+    text_string = serializers.CharField()
+    synonyms_form =serializers.ListField()
+
+
+
 
 from ai_workspace_okapi.models import SegmentDiff
 
@@ -727,16 +777,12 @@ class SegmentHistorySerializer(serializers.ModelSerializer):
         except:
             return None
 
-class VerbSerializer(serializers.Serializer):
-    text_string = serializers.CharField()
-    synonyms_form =serializers.ListField()
-
 
 from ai_workspace_okapi.models import SelflearningAsset
 class SelflearningAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model=SelflearningAsset
-        fields='__all__'
+
 
 
 #For copy_from command

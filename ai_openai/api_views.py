@@ -394,7 +394,7 @@ class BlogCreationViewset(viewsets.ViewSet):
         return Response(serializer.errors)
 
     def update(self,request,pk):
-        selected_keywords_list= request.POST.getlist('selected_keywords_list',None)
+        selected_keywords_list=request.POST.getlist('selected_keywords_list',None)
         unselected_keywords_list=request.POST.getlist('unselected_keywords_list',None)
         query_set = BlogCreation.objects.get(id = pk)
         serializer = BlogCreationSerializer(query_set,data=request.data,partial=True)
@@ -409,8 +409,6 @@ class BlogCreationViewset(viewsets.ViewSet):
         obj.delete()
         return Response(status=204)
 
-
- 
 class BlogKeywordGenerateViewset(viewsets.ViewSet):
  
     def retrieve(self, request,pk=None):
@@ -585,11 +583,15 @@ class BlogArticleViewset(viewsets.ViewSet):
         blog_creation = request.POST.get('blog_creation')
         outline_section_list = list(map(int, outline_list.split(',')))
         print("outline_section_list------------>",outline_section_list)
-        serializer = BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
+        serializer=BlogArticleSerializer(data={'blog_creation':blog_creation,'sub_categories':sub_categories,'outline_section_list':outline_section_list}) 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors)
+
+
+
+
 
 
 # def stream_article_response():
@@ -610,48 +612,43 @@ class BlogArticleViewset(viewsets.ViewSet):
 
  
 
-# from django.http import StreamingHttpResponse,JsonResponse
-# import openai  #blog_cre_id list
-# from ai_staff.models import PromptSubCategories
-# import time
-# @api_view(["POST"])
-# def generate_article(request):
-#     if request.method == 'POST':
-        # blog_available_langs=[17]
-        # sub_categories = 63#64
-        # blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
-        # outline_list = request.POST.get('outline_section_list')
-        # blog_creation = request.POST.get('blog_creation')
-        # blog_creation=BlogCreation.objects.get(id=blog_creation)
-        # outline_section_list = list(map(int, outline_list.split(',')))
-        # outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
-        # if blog_creation.user_language_id not in blog_available_langs:
-        #     title = blog_creation.user_title_mt
-        #     keyword = blog_creation.keywords_mt
-        #     outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
-        # else:
-        #     title = blog_creation.user_title
-        #     keyword = blog_creation.keywords
-        #     outlines=list(outline_section_list.values_list('blog_outline',flat=True))
-        # joined_list = "', '".join(outlines)
-        # tone=blog_creation.tone.tone
 
-        # prompt = blog_article_start_phrase.format(title,joined_list,keyword,tone)
-        # completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",
-        #                                           messages=[{"role": "user", "content": prompt}],stream=True )
-        # def stream_article_response():
-        #     for chunk in text.split(' '):
-                # ins=chunk['choices'][0]
-                # if ins["finish_reason"] != 'stop':
-                #     delta=ins['delta']
-                #     if 'content' in delta.keys():
-                #         content=delta['content']
-                #         print(content)
-    #                     time.sleep(0.2)
-    #                     print(chunk)
-    #                     yield chunk
-    #     return StreamingHttpResponse(stream_article_response(), content_type='text/event-stream')
-    # return JsonResponse({'error': 'Method not allowed.'}, status=405)
+# @api_view(["GET"])
+# def generate_article(request):
+#     if request.method=='GET':
+#         blog_available_langs=[17]
+#         sub_categories=59#63#64
+#         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
+#         outline_list=request.query_params.get('outline_section_list')
+#         blog_creation=request.query_params.get('blog_creation')
+#         blog_creation=BlogCreation.objects.get(id=blog_creation)
+#         outline_section_list=list(map(int,outline_list.split(',')))
+#         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
+#         if blog_creation.user_language_id not in blog_available_langs:
+#             title=blog_creation.user_title_mt
+#             keyword=blog_creation.keywords_mt
+#             outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
+#         else:
+#             title=blog_creation.user_title
+#             keyword=blog_creation.keywords
+#             outlines=list(outline_section_list.values_list('blog_outline',flat=True))
+#         joined_list = "', '".join(outlines)
+#         tone=blog_creation.tone.tone
+#         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
+#         print("pmpt---->",prompt)
+#         completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",
+#                                                 messages=[{"role":"user","content":prompt}],stream=True)
+#         def stream_article_response():
+#             for chunk in completion:
+#                 ins=chunk['choices'][0]
+#                 if ins["finish_reason"]!='stop':
+#                     delta=ins['delta']
+#                     if 'content' in delta.keys():
+#                         content=delta['content']
+#                         t=content+" "
+#                         yield '\ndata: {}\n\n'.format(t)
+#         return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
+#     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 
     # def list(self, request):
@@ -734,10 +731,7 @@ class BlogArticleViewset(viewsets.ViewSet):
             
         # else:
         #     return  Response({'msg':'Insufficient Credits'},status=400)
-        
-        
-        
-        
+         
 
 # class InstantTranslationViewset(viewsets.ViewSet):
 #     model = InstantTranslation
@@ -815,52 +809,190 @@ class BlogArticleViewset(viewsets.ViewSet):
 #     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
  
 #     return Response({'customize_text': txt_generated.strip() ,'lang':lang ,'customize_cat':customize.customize},status=200)
-from django.http import HttpResponse, StreamingHttpResponse
-import time
-@api_view(["POST"])
-def generate_article(request):
-    text="""Introduction to Vanishing Gradient: An Overview of a Common Neural Network Problem
-            Neural networks have revolutionized artificial intelligence by enabling machines to learn from data. But, not all neural network architectures are created equal. One of the key challenges in designing effective neural networks is the problem of vanishing gradient. 
-            Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small. This makes it difficult for the network to update the weights during training, leading to slow convergence or no convergence at all. 
-            Understanding Backpropagation in the Context of Vanishing Gradient
-            Backpropagation is the most popular algorithm for training neural networks. It works by propagating the error backward through the network, updating the weights in a way that reduces the error. However, when the gradient of the error function becomes small, backpropagation cannot update the weights effectively, leading to the problem of vanishing gradient. 
-            The Cause and Effect of Vanishing Gradient on Neural Networks
-            Vanishing gradient occurs when the gradient of the error function with respect to the weights in the network becomes very small due to the activation functions used. Activation functions such as sigmoid and hyperbolic tangent functions have a limited range that they can output which could cause them to saturate at either end of the function. This means that as you propagate through the network, the gradients of this function become smaller, leading to the vanishing gradient. 
-            The Impact of Vanishing Gradient on Deep Learning Performance
-            Vanishing gradient can have a significant impact on the performance of deep learning networks. In a deep neural network with many layers, vanishing gradient can prevent the lower layers from learning effectively, leading to poor performance. Additionally, it can cause the network to get stuck in local optima, resulting in a suboptimal solution.
-            Strategies and Techniques for Mitigating Vanishing Gradient in Neural Networks
-            Several strategies and techniques can help mitigate the problem of vanishing gradient in neural networks. One approach is to use activation functions that are less prone to saturation, such as the Rectified Linear Unit (ReLU) function. Another approach is to use skip connections, allowing for information to flow more easily between layers. Residual connections, popular in ResNets, is an architecture with skip connections between layers. Additionally, weight normalization or gradient clipping can be implemented to manage gradients and weights. 
-            Challenges in Detecting and Diagnosing Vanishing Gradient in Machine Learning
-            Detecting and diagnosing vanishing gradient can be challenging, as it is not always apparent during training. Some common signs of vanishing gradient include slow convergence, instability during training, and poor performance. However, these symptoms can also be caused by other factors, making it difficult to pinpoint the exact issue.
-            Case Studies: Real-world Examples of Vanishing Gradient in Deep Learning Projects
-            Vanishing gradient can manifest in various ways during real-world deep learning projects. One example is image classification, where deep learning models can struggle to distinguish between similar objects, such as different breeds of dogs. Another example is natural language processing, where the neural network can have difficulty predicting the next word in a sentence. In both of these cases, vanishing gradient can lead to poor performance and accuracy.
-            Exploring the Possibilities of Overcoming Vanishing Gradient with Alternative Optimizers
-            Several alternative optimization techniques have been proposed to overcome the problem of vanishing gradient. One such method is to use adaptive optimization methods, such as Adam and RMSprop. These algorithms adjust the learning rate for each weight in the network iteratively, providing better performance on the training set. 
-            The Future of Vanishing Gradient: Opportunities and Emerging Solutions in Neural Networks
-            As research in neural networks continues, we can expect to see new solutions emerge for vanishing gradient. One promising approach is to use more complex network architectures, such as the attention mechanism, to help manage the flow of information through the network. Additionally, transfer learning and pre-training networks on similar tasks can help alleviate problems associated with vanishing gradients.
-            Conclusion and Next Steps in Vanishing Gradient Research and Development for Machine Learning
-            Vanishing gradient is a common problem in neural networks that can have a significant impact on performance. Strategies and techniques can help mitigate this issue, but their effectiveness may vary depending on the specific architecture and application. As research in neural networks evolves, we can expect to see more advanced solutions for vanishing gradient emerge, leading to even more powerful AI technologies."""
-
-    def stream():
-        for chunk in text.split(' '):
-            yield chunk
-            print(chunk)
-            time.sleep(0.2)
-            ##print(chunk)
-
-    response = HttpResponse(stream(),content_type='text/event-stream')
-    response['Cache-Control'] = 'no-cache'
-    response['Connection'] = 'keep-alive'
-    return response
-
-
-
-    # response = StreamingHttpResponse(stream(), status=200, content_type='text/event-stream')
-    # response['Cache-Control'] = 'no-cache'
-    # return response
-    # response.status_code = 200
-    # return response(stream())
-    #return StreamingHttpResponse(stream(), content_type='text/event-stream')
  
-    #return JsonResponse({'error': 'Error'}, status=405)
+from django.http import StreamingHttpResponse,JsonResponse
+import openai  #blog_cre_id list
+from ai_staff.models import PromptSubCategories
+import time
+@api_view(["GET"])
+def generate_article(request):
+    if request.method=='GET':
+        blog_available_langs=[17]
+        sub_categories=64
+        blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
+        outline_list=request.query_params.get('outline_section_list')
+        blog_creation=request.query_params.get('blog_creation')
+        blog_creation=BlogCreation.objects.get(id=blog_creation)
+        outline_section_list=list(map(int,outline_list.split(',')))
+        outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
+        if blog_creation.user_language_id not in blog_available_langs:
+            title=blog_creation.user_title_mt
+            keyword=blog_creation.keywords_mt
+            outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
+        else:
+            title=blog_creation.user_title
+            keyword=blog_creation.keywords
+            outlines=list(outline_section_list.values_list('blog_outline',flat=True))
+        joined_list = "', '".join(outlines)
+        tone=blog_creation.tone.tone
+        prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
+        # completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+        title='#'+title
+        if blog_creation.user_language_code== 'en':
+        # if 'en'== 'en':
+            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            def stream_article_response_en(title):
+                for chunk in completion:
+                    ins=chunk['choices'][0]
+                    if ins["finish_reason"]!='stop':
+                        delta=ins['delta']
+                        if 'content' in delta.keys():
+                            content=delta['content']
+                            if title:
+                                content=title+'\n'+content
+                                title=''
+                            yield '\ndata: {}\n\n'.format({"t":content})
+            return StreamingHttpResponse(stream_article_response_en(title),content_type='text/event-stream')
+        else:
+            completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
+            def stream_article_response_other_lang(title):
+                # from markdown2 import Markdown
+                # markdowner = Markdown()
+                arr=[]
+                for chunk in completion:
+                    ins=chunk['choices'][0]
+                    if ins["finish_reason"]!='stop':
+                        delta=ins['delta']
+                        if 'content' in delta.keys():
+                            content=delta['content']
+                            word=content+' '
+                            if "." in word or "\n" in word:
+                                if "\n" in word:
+                                    new_line_split=word.split("\n")
+                                    arr.append(new_line_split[0]+'\n')
+                                    text=" ".join(arr)
+                                    blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
+                                    # blog_article_trans=text
+                                    if title:
+                                        blog_article_trans=title+'\n'+blog_article_trans
+                                        title=''
+                                    if blog_article_trans.startswith("#"):
+                                        # blog_article_trans=markdowner.convert(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})                        
+                                    else:
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
+                                    arr=[]
+                                    arr.append(new_line_split[-1])
+                                elif "." in word:
+                                    sente=" ".join(arr)
+                                    if sente[-1]!='.':
+                                        sente=sente+'.'
+                                        blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,
+                                                    user_id=blog_creation.user.id)
+                                        blog_article_trans=sente
+                                        if title:
+                                            blog_article_trans=title+'\n'+blog_article_trans
+                                            title=''
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
+                                    else:
+                                    # blog_article_trans=markdowner.convert(blog_article_trans)
+                                        yield '\ndata: {}\n\n'.format({"t":blog_article_trans})
+                                    arr=[]
+                            else:
+                                arr.append(word)
+            return StreamingHttpResponse(stream_article_response_other_lang(title),content_type='text/event-stream')
+    return JsonResponse({'error':'Method not allowed.'},status=405)
+
+
+@api_view(["GET"])
+def generate(request):
+    title="""Natural Language Processing (NLP) is a critical component of many machine learning applications, particularly in the field of machine translation. NLP involves enabling computer algorithms to understand, interpret, and manipulate human language. With NLP, computer systems can extract meaning from text, identify relevant information, and even generate original written content.
+
+            One important aspect of NLP for translation is the decoder, which is responsible for translating source text into target text. The decoder typically uses a combination of rules and statistical models to produce translations. By turning raw text into a structured representation of language, NLP and decoder systems make it possible for computers to understand and produce language with accuracy and precision.
+            Machine Translation (MT) uses NLP and decoder technologies to automatically translate source text in one language into a target language. MT relies on algorithms and statistical models to analyze and process source text and produce a translation that is grammatically correct and semantically meaningful.
+
+            The basic idea behind MT involves breaking down text into component parts, such as words and phrases, and then mapping those parts onto equivalent structures in the target language. Several different approaches to MT exist, including rule-based, statistical, and neural machine translation, each of which uses different techniques to accomplish machine translation.
+            Despite significant advances in NLP and decoder technologies, MT still faces several significant challenges. One is the complexity of human language, which often contains idiomatic expressions, irregular grammar and syntax, and ambiguities that can pose difficulties for algorithms to understand.
+
+            Another challenge is the variability of language across different contexts and domains. Languages evolve over time, and different communities speak and write in different dialects and jargons, making it difficult to produce a translation that accurately represents the meaning of the original text.
+
+            To overcome these and other challenges, NLP and decoder systems are incorporating machine learning techniques that enable them to automatically adapt and improve with experience.
+
+
+            Other NLP techniques, such as language modeling and sequence-to-sequence learning, can be used to enhance the capabilities of decoder systems and enable them to produce more accurate and coherent translations.
+            Neural networks are playing an increasingly important role in enhancing the capabilities of NLP and decoder systems. Deep learning techniques, such as convolutional and recurrent neural networks, can be used to automatically capture the underlying structure and patterns in language, enabling decoder systems to produce more accurate and natural-sounding translations.
+
+            """ 
+    if request.method=='GET':
+        title=title.split(" ")
+        def stream():
+            for chunk in title:
+                time.sleep(0.009)
+                yield '\ndata: {}\n\n'.format({"t":chunk})
+        return StreamingHttpResponse(stream(),content_type='text/event-stream')
+    return JsonResponse({'error':'Method not allowed.'},status=405)
+
+# @api_view(["GET"])
+# def generate_article(request):
+#     if request.method=='GET':
+#         blog_available_langs=[17]
+#         sub_categories=64
+#         blog_article_start_phrase=PromptSubCategories.objects.get(id=sub_categories).prompt_sub_category.first().start_phrase
+#         outline_list=request.query_params.get('outline_section_list')
+#         blog_creation=request.query_params.get('blog_creation')
+#         blog_creation=BlogCreation.objects.get(id=blog_creation)
+#         outline_section_list=list(map(int,outline_list.split(',')))
+#         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
+#         if blog_creation.user_language_id not in blog_available_langs:
+#             title=blog_creation.user_title_mt
+#             keyword=blog_creation.keywords_mt
+#             outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
+#         else:
+#             title=blog_creation.user_title
+#             keyword=blog_creation.keywords
+#             outlines=list(outline_section_list.values_list('blog_outline',flat=True))
+#         joined_list = "', '".join(outlines)
+#         tone=blog_creation.tone.tone
+#         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
+#         print("pmpt---->",prompt)
+#         completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",
+#                                                 messages=[{"role":"user","content":prompt}],
+#                                                 stream=True)
+#         def stream_article_response():
+#             for chunk in completion:
+#                 ins=chunk['choices'][0]
+#                 if ins["finish_reason"]!='stop':
+#                     delta=ins['delta']
+#                     if 'content' in delta.keys():
+#                         content=delta['content']
+#                         t=content+' '
+#                         yield '\ndata: {}\n\n'.format(t.encode('utf-8'))
+#         return StreamingHttpResponse(stream_article_response(),content_type='text/event-stream')
+#     return JsonResponse({'error':'Method not allowed.'},status=405)
+
+# from django.http import StreamingHttpResponse
+# import time,json
+# from django.http import JsonResponse
+# text="Please generate a 700-word blog post titled '{}' with sections: {} Use keywords such as {} and a {} tone. Keep the language simple and concise. Pre-written content for the section headlines is allowed. Please format everything in Markdown and blog post sections should be in ## tag. Please generate the content as quickly as possible.".format('Cost-Saving Strategies',
+#                                                                                                                                                                                                                                                                                                                                                           'Introduction and overview of vanishing gradient and backpropagation ,The problem of vanishing gradients and how it affects neural network training,Explaining backpropagation and its role in solving the vanishing gradient problem,Analyzing the mathematical concepts behind backpropagation and gradient descent',
+#                                                                                                                                                                                                                                                                                                                                                           'machine learning,cost machine gpu',
+#                                                                                                                                                                                                                                                                                                                                                           'professional')
+
+
+# @api_view(["GET"])
+# def generate(request):
+#     if request.method=='GET':
+#         completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":text}],stream=True)
+#         def stream_article_response_en():
+#             for chunk in completion:
+#                 ins=chunk['choices'][0]
+#                 if ins["finish_reason"]!='stop':
+#                     delta=ins['delta']
+#                     if 'content' in delta.keys():
+#                         content=delta['content']
+#                         yield '\ndata: {}\n\n'.format({"t":content})
+#         return StreamingHttpResponse(stream_article_response_en(),content_type='text/event-stream')  #text/event-stream
+#     return JsonResponse({'error':'Method not allowed.'},status=405)
+
+
  

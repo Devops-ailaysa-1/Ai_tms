@@ -312,6 +312,7 @@ def get_word_count(tm_analysis,project,task):
 
 
 
+
 def get_tasks_for_analysis(user,instance):
     if instance.ai_user == user:
         tasks = instance.get_mtpe_tasks
@@ -389,7 +390,8 @@ def get_project_analysis(request,project_id):
         #else:
         #print("Outside If")
         res=[]
-        analysis_tasks = get_tasks_for_analysis(request.user,proj)
+        user = request.user.team.owner if request.user.team and request.user.team.owner.is_agency else request.user  #####For LSP
+        analysis_tasks = get_tasks_for_analysis(user,proj)
 
         for task in  analysis_tasks:
             word_count = task.task_wc_general.last()
@@ -770,38 +772,43 @@ def notify_word_count(task_assign,word_count,char_count):
     from ai_marketplace.models import ChatMessage
     print("$$$$$$$$$$$")
     receiver = task_assign.assign_to
-    print("Rece",receiver)
+    receivers = []
+    receivers =  receiver.team.get_project_manager if (receiver.team and receiver.team.owner.is_agency) or receiver.is_agency else []
+    receivers.append(receiver)
+    print("Rece",receivers)
     sender =  task_assign.task_assign_info.assigned_by
     print("send",sender)
     unit = task_assign.task_assign_info.mtpe_count_unit.id
     obj = task_assign.task
     proj = obj.job.project.project_name
-    thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':receiver.id})
-    if thread_ser.is_valid():
-        thread_ser.save()
-        thread_id = thread_ser.data.get('id')
-    else:
-        thread_id = thread_ser.errors.get('thread_id')
-    message = '''For your kind information,
+    for i in receivers:
+        thread_ser = ThreadSerializer(data={'first_person':sender.id,'second_person':i.id})
+        if thread_ser.is_valid():
+            thread_ser.save()
+            thread_id = thread_ser.data.get('id')
+        else:
+            thread_id = thread_ser.errors.get('thread_id')
+        message = '''For your kind information,
 
-        TMX file(s) for the project ({proj}) have been updated.
-        Weighted word count for the task ({Filename}(Languagepair), {task_id}) will be affected.
-        Payments will be updated accordingly.
+            TMX file(s) for the project ({proj}) have been updated.
+            Weighted word count for the task ({Filename}(Languagepair), {task_id}) will be affected.
+            Payments will be updated accordingly.
 
-        For further assistance or information, please contact the Project Owner.'''.format(proj=proj,Filename=obj.file.filename,Languagepair=obj.job.source_target_pair_names,task_id=obj.ai_taskid)
+            For further assistance or information, please contact the Project Owner.'''.format(proj=proj,Filename=obj.file.filename,Languagepair=obj.job.source_target_pair_names,task_id=obj.ai_taskid)
 
-    # if unit == 1:
-    #     '''For your kind information,
-    #
-    #     TMX file(s) for the project ({{proj}}) have been updated.
-    #     Weighted word count for the task ({{Filename + Language pair}}, task_id) will be affected.
-    #     Payments will be updated accordingly.
-    #
-    #     For further assistance or information, please contact the Project Owner.'''
-    #     message = "Weighted Word Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted word count: "+ str(word_count)+"."
-    # if unit == 2:
-    #     message = "Weighted Char Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted Char count: "+ str(char_count)+"."
-    print("MSG---------->",message)
-    msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
-    print("Chat--------->",msg)
-    notify.send(sender, recipient=receiver, verb='Message', description=message,thread_id=int(thread_id))
+        # if unit == 1:
+        #     '''For your kind information,
+        #
+        #     TMX file(s) for the project ({{proj}}) have been updated.
+        #     Weighted word count for the task ({{Filename + Language pair}}, task_id) will be affected.
+        #     Payments will be updated accordingly.
+        #
+        #     For further assistance or information, please contact the Project Owner.'''
+        #     message = "Weighted Word Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted word count: "+ str(word_count)+"."
+        # if unit == 2:
+        #     message = "Weighted Char Count in Task with task_id "+ obj.ai_taskid +" has changed because of tmx file update.your payment will be changed.New Weighted Char count: "+ str(char_count)+"."
+        print("MSG---------->",message)
+        if thread_id:
+            msg = ChatMessage.objects.create(message=message,user=sender,thread_id=thread_id)
+            print("Chat--------->",msg)
+            notify.send(sender, recipient=i, verb='Message', description=message,thread_id=int(thread_id))

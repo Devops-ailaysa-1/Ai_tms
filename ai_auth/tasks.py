@@ -104,7 +104,7 @@ def sync_invoices_and_charges(days):
     
 @task
 def renewal_list():
-    today = timezone.now()
+    today = timezone.now() + timedelta(1)  
     last_day = calendar.monthrange(today.year,today.month)[1]
     if last_day == today.day:
         cycle_dates = [x for x in range(today.day,32)]
@@ -624,6 +624,7 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
     from ai_workspace.api_views import ProjectAnalysisProperty
     from ai_workspace.models import Project
     proj = Project.objects.get(id=project_id)
+    print("tasks-------->",proj.get_tasks)
     task = proj.get_tasks[0]
     try:
         obj = MTonlytaskCeleryStatus.objects.create(task_id=task.id, project_id=proj.id,status=1,task_name='project_analysis_property',celery_task_id=project_analysis_property.request.id)
@@ -851,10 +852,14 @@ def weighted_count_update(receiver,sender,assignment_id):
         if receiver !=None and sender!=None:
             print("------------------POST-----------------------------------")
             Receiver = AiUser.objects.get(id = receiver)
+            receivers = []
+            receivers =  Receiver.team.get_project_manager if (Receiver.team and Receiver.team.owner.is_agency) or Receiver.is_agency else []
+            receivers.append(Receiver)
             Sender = AiUser.objects.get(id = sender)
             hired_editors = Sender.get_hired_editors if Sender.get_hired_editors else []
-            if Receiver in hired_editors:
-                ws_forms.task_assign_detail_mail(Receiver,assignment_id)
+            for i in [*set(receivers)]:
+                if i in hired_editors:
+                    ws_forms.task_assign_detail_mail(i,assignment_id)
         else:
             print("------------------------PUT------------------------------")
             assigns = task_assgn_objs[0].task_assign

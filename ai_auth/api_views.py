@@ -587,9 +587,9 @@ def subscribe_lsp(user):
             currency ='usd'
     else:
         currency =cust.currency
-    price = Plan.objects.get(product__name="Business - V",currency=currency,interval='month',djstripe_owner_account=default_djstripe_owner)
+    price = Plan.objects.get(product__name="Business - V",currency=currency,interval='month',amount=0,djstripe_owner_account=default_djstripe_owner)
     if plan == 'new':
-        sub=subscribe_trial(price=price,customer=cust)
+        sub=subscribe(price=price,customer=cust)
         return sub
 
 
@@ -1477,8 +1477,8 @@ def account_activation(request):
 def user_delete(user):
     cancel_subscription(user)
     dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
-    os.system("rm -r " +dir)
     user.delete()
+    os.system("rm -r " +dir)
 
 
 @api_view(['POST'])

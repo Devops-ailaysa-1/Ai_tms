@@ -472,6 +472,7 @@ OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL")
 CAMPAIGN = os.getenv("CAMPAIGN")
 
+TEAM_PLANS = ["Business","Pay-As-You-Go","Business - V"]
 
 # FONT_THUMBNAIL_ROOT = os.path.join(STATIC_ROOT, 'canvas-assets/font-thumnail')
 # FONT_THUMBNAIL_URL = '/font-thumnail/'

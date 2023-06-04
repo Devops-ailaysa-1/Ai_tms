@@ -121,15 +121,16 @@ req_ilango.txt
 *.dockerfile
 ai_tms/settings/local.py
 ai_tms/settings/local_settings.py
-lama_model/lama_q_int8_jit.pt
 
-*.zip
-*.xlsx
-*.txt
-*.dockerignore
 okapi_resources
-docker
+okapi_resources/tamil.srx
+*.xlsx
 *.sh
+*.zip
 *.tbx
 *.mp3
-*.log*
+*.save*
+*.txt
+*.dockerignore
+
+

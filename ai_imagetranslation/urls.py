@@ -1,11 +1,14 @@
-from ai_imagetranslation.api_views import ImageloadViewset,ImageTranslateViewset
+from ai_imagetranslation import api_views  
 from rest_framework import routers
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import path
 router = routers.DefaultRouter()
-router.register(r'imageloadlist',ImageloadViewset ,basename= 'imageuploadlist')
-router.register(r'imagetranslate' , ImageTranslateViewset ,basename= 'inpaintimage')
+router.register(r'imageloadlist',api_views.ImageloadViewset ,basename= 'imageuploadlist')
+router.register(r'imagetranslate' , api_views.ImageTranslateViewset ,basename= 'inpaintimage')
 
 urlpatterns =  router.urls
+
+urlpatterns+=[path('imagetranslate-list', api_views.ImageInpaintCreationListView.as_view(),name='imagetranslatelistview'),]
 urlpatterns+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

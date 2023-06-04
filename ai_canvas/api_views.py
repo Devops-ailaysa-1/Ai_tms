@@ -4,13 +4,18 @@ from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate)
+                              TemplateKeyword,TextTemplate,FontFile,ImageListMedium)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
-                                   TextTemplateSerializer,TemplateKeywordSerializer)
+                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,ImageListMediumSerializer)
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
+from django.db.models import Q,F
+from itertools import chain
+from ai_staff.models import FontFamily
+from ai_staff.serializer import FontFamilySerializer
+from ai_staff.models import FontFamily,FontLanguage,FontData
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.decorators import api_view,permission_classes
 from django.conf import settings
@@ -460,8 +465,6 @@ def pixabay_api(request):
 
 #################################################################
 
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def instant_canvas_translation(request):
@@ -474,26 +477,25 @@ def instant_canvas_translation(request):
     text_translation = get_translation(1,text_list,'en',tar_lang_code)
     return Response({'translated_text_list':text_translation})
 
-
 ##################################
 
 
 class TextTemplateViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     def get(self, request):
-        query_set = TextTemplate.objects.all()
-        serializer = TextTemplateSerializer(query_set ,many =True)
+        query_set=TextTemplate.objects.all()
+        serializer=TextTemplateSerializer(query_set ,many =True)
         return Response(serializer.data)
 
     def retrieve(self,request,pk):
-        query_set = TextTemplate.objects.get(id = pk)
-        serializer = TextTemplateSerializer(query_set )
+        query_set=TextTemplate.objects.get(id = pk)
+        serializer=TextTemplateSerializer(query_set )
         return Response(serializer.data)
         
     def create(self,request):
-        text_thumbnail = request.FILES.get('text_thumbnail' ,None)
-        text_keywords= request.POST.getlist('text_keywords' , None)
-        serializer = TextTemplateSerializer(data=request.data)
+        text_thumbnail=request.FILES.get('text_thumbnail',None)
+        text_keywords=request.POST.getlist('text_keywords',None)
+        serializer=TextTemplateSerializer(data=request.data)
                                         
         if serializer.is_valid():
             serializer.save()
@@ -502,10 +504,10 @@ class TextTemplateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
     
     def update(self,request,pk):
-        query_set = self.model.objects.get(id = pk)
-        text_thumbnail = request.FILES.get('text_thumbnail' ,None)
-        text_keywords= request.POST.getlist('text_keywords' , None)
-        serializer = TextTemplateSerializer(query_set, data=request.data ,partial = True)
+        query_set=self.model.objects.get(id = pk)
+        text_thumbnail=request.FILES.get('text_thumbnail',None)
+        text_keywords=request.POST.getlist('text_keywords',None)
+        serializer=TextTemplateSerializer(query_set, data=request.data ,partial = True)
                                 # 'text_keywords':text_keywords , 'text_thumbnail':text_thumbnail },partial = True)
         if serializer.is_valid():
             serializer.save()
@@ -515,15 +517,119 @@ class TextTemplateViewset(viewsets.ViewSet):
             return Response(serializer.errors)
             
     def delete(self,request,pk):
-        query_set = self.model.objects.get(id = pk)
+        query_set=self.model.objects.get(id = pk)
         query_set.delete()
         return Response(status=204)
         
 class TemplateKeywordViewset(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,]
-    def get(self, request):
-        query_set = TemplateKeyword.objects.all()
-        serializer = TemplateKeywordSerializer(query_set ,many =True)
+    permission_classes=[IsAuthenticated,]
+    def get(self,request):
+        query_set=TemplateKeyword.objects.all()
+        serializer=TemplateKeywordSerializer(query_set ,many =True)
         return Response(serializer.data) 
     
 
+class FontFileViewset(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated,]
+    def get(self, request):
+        query_set=FontFile.objects.filter(user=request.user.id)
+        serializer=FontFileSerializer(query_set ,many =True)
+        return Response(serializer.data)
+
+    def retrieve(self,request,pk):
+        query_set=FontFile.objects.get(id = pk)
+        serializer=FontFileSerializer(query_set )
+        return Response(serializer.data)
+        
+    def create(self,request):
+        font_file=request.FILES.get('font_file',None)
+        print({**request.POST.dict(),'font_family':font_file})
+        serializer=FontFileSerializer(data={**request.POST.dict(),'font_family':font_file,'user':request.user.id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
+    def update(self,request,pk):
+        font_file=request.FILES.get('font_file',None)
+        query_set=FontFile.objects.get(id=pk)
+        serializer=FontFileSerializer(query_set,data=request.data,partial=True)                           
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
+        
+    def delete(self,request,pk):
+        query_set=FontFile.objects.get(id=pk)
+        query_set.delete()
+        return Response(status=204)
+
+
+
+class CustomPagination(PageNumberPagination):
+    page_size = 20 
+    page_size_query_param = 'page_size'
+     
+import django_filters
+
+class FontFamilyFilter(django_filters.FilterSet):
+    font_search = django_filters.CharFilter(field_name='font_family_name', label='renamed_field')
+
+    class Meta:
+        model = FontFamily
+        fields= ['font_family_name']
+            
+    def filter_queryset(self,queryset):
+        queryset=queryset.filter(font_family_name__icontains=self.data['font_search'])
+        return queryset
+ 
+ 
+class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
+    pagination_class = CustomPagination
+    page_size = 20
+
+
+    def lang_fil(self,request):
+        f_lang=FontLanguage.objects.get(id=request.GET['language'])
+        f_d=FontData.objects.filter(font_lang=f_lang)
+        queryset=f_d.annotate(font_family_name=F('font_family__font_family_name')).values("font_family_name")
+        return queryset
+    
+    def list(self, request):
+        font_search=request.query_params.get('font_search',None)
+        language=request.query_params.get('language',None)
+        queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
+
+        if font_search and language:            
+            filter = FontFamilyFilter(request.GET, queryset=queryset)
+            queryset = filter.qs
+        
+        elif font_search:
+            queryset=queryset.filter(Q(font_family_name__icontains=font_search)).order_by('font_family_name')
+
+        elif language:
+            queryset=self.lang_fil(request)
+        else:
+            font_file=FontFile.objects.filter(user=request.user)
+            if font_file:
+                font_file=font_file.annotate(font_family_name=F("name")).values("font_family_name")
+                queryset=queryset.values("font_family_name")
+                queryset=list(chain(font_file, queryset))
+ 
+ 
+        pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        serializer = FontFamilySerializer(pagin_tc,many=True)
+        response = self.get_paginated_response(serializer.data)
+        if response.data["next"]:
+            response.data["next"] = response.data["next"].replace("http://", "https://")
+        if response.data["previous"]:
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
+        return response
+    
+
+class ImageListMediumViewset(viewsets.ViewSet):
+
+    def list(self,request):
+        pass
