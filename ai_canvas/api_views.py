@@ -589,30 +589,28 @@ class FontFamilyFilter(django_filters.FilterSet):
 class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     page_size = 20
- 
+
+
+    def lang_fil(self,request):
+        f_lang=FontLanguage.objects.get(id=request.GET['language'])
+        f_d=FontData.objects.filter(font_lang=f_lang)
+        queryset=f_d.annotate(font_family_name=F('font_family__font_family_name')).values("font_family_name")
+        return queryset
     
     def list(self, request):
         font_search=request.query_params.get('font_search',None)
         language=request.query_params.get('language',None)
         queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
 
-        if font_search and language:
-            f_lang=FontLanguage.objects.get(id=language)
-            f_d=FontData.objects.filter(font_lang=f_lang)
-            queryset=f_d.annotate(font_family_name=F('font_family__font_family_name')).values("font_family_name")
+        if font_search and language:            
             filter = FontFamilyFilter(request.GET, queryset=queryset)
             queryset = filter.qs
-            print("query_set",queryset)
         
         elif font_search:
             queryset=queryset.filter(Q(font_family_name__icontains=font_search)).order_by('font_family_name')
 
-
         elif language:
-            f_lang=FontLanguage.objects.get(id=language)
-            f_d=FontData.objects.filter(font_lang=f_lang)
-            queryset=f_d.annotate(font_family_name=F('font_family__font_family_name')).values("font_family_name")
-        
+            queryset=self.lang_fil(request)
         else:
             font_file=FontFile.objects.filter(user=request.user)
             if font_file:
