@@ -4,13 +4,18 @@ from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate,FontFile)
+                              TemplateKeyword,TextTemplate,FontFile,ImageListMedium)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
-                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer)
+                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,ImageListMediumSerializer)
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
+from django.db.models import Q,F
+from itertools import chain
+from ai_staff.models import FontFamily
+from ai_staff.serializer import FontFamilySerializer
+from ai_staff.models import FontFamily,FontLanguage,FontData
 from rest_framework.pagination import PageNumberPagination 
 from rest_framework.decorators import api_view,permission_classes
 from django.conf import settings
@@ -563,32 +568,46 @@ class FontFileViewset(viewsets.ViewSet):
 
 
 
-
-from rest_framework.pagination import PageNumberPagination
-from django.db.models import Q
-from itertools import chain
-from ai_canvas.models import FontFile
-from ai_staff.models import FontFamily
-from django.db.models import F
-from ai_staff.serializer import FontFamilySerializer
-from ai_staff.models import FontFamily,FontLanguage,FontData
-
 class CustomPagination(PageNumberPagination):
-    page_size = 20  # Number of objects per page
+    page_size = 20 
     page_size_query_param = 'page_size'
      
+import django_filters
 
+class FontFamilyFilter(django_filters.FilterSet):
+    font_search = django_filters.CharFilter(field_name='font_family_name', label='renamed_field')
+
+    class Meta:
+        model = FontFamily
+        fields= ['font_family_name']
+            
+    def filter_queryset(self,queryset):
+        queryset=queryset.filter(font_family_name__icontains=self.data['font_search'])
+        return queryset
+ 
+ 
 class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     pagination_class = CustomPagination
     page_size = 20
+ 
     
     def list(self, request):
         font_search=request.query_params.get('font_search',None)
         language=request.query_params.get('language',None)
         queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
-        if font_search:
-            queryset=queryset.filter(Q(font_family_name__icontains=font_search)).order_by('font_family_name')
+
+        if font_search and language:
+            f_lang=FontLanguage.objects.get(id=language)
+            f_d=FontData.objects.filter(font_lang=f_lang)
+            queryset=f_d.annotate(font_family_name=F('font_family__font_family_name')).values("font_family_name")
+            filter = FontFamilyFilter(request.GET, queryset=queryset)
+            queryset = filter.qs
+            print("query_set",queryset)
         
+        elif font_search:
+            queryset=queryset.filter(Q(font_family_name__icontains=font_search)).order_by('font_family_name')
+
+
         elif language:
             f_lang=FontLanguage.objects.get(id=language)
             f_d=FontData.objects.filter(font_lang=f_lang)
@@ -600,18 +619,19 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
                 font_file=font_file.annotate(font_family_name=F("name")).values("font_family_name")
                 queryset=queryset.values("font_family_name")
                 queryset=list(chain(font_file, queryset))
-             
-                # queryset=sorted(queryset,key=itemgetter('font_family_name'))
+ 
  
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
         serializer = FontFamilySerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         if response.data["next"]:
-            response.data["next"] = response.data["next"].replace(
-                "http://", "https://"
-            )
+            response.data["next"] = response.data["next"].replace("http://", "https://")
         if response.data["previous"]:
-                response.data["previous"] = response.data["previous"].replace(
-                "http://", "https://"
-            )
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
         return response
+    
+
+class ImageListMediumViewset(viewsets.ViewSet):
+
+    def list(self,request):
+        pass

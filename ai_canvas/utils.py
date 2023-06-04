@@ -124,14 +124,7 @@ def export_download(json_str,format,multipliervalue):
     else:
         return ValidationError("error in node server")
 
-
-
-
-
-
 ####font_creation
-
-
 
 def install_font(font_path):
     install_dir="/usr/share/fonts/truetype"

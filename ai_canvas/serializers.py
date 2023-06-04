@@ -1,9 +1,9 @@
 from rest_framework import serializers
-from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,
-                            CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
-                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile)
+from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
+                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,ImageListMedium)
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
+from ai_canvas.utils import install_font
 from ai_canvas.utils import json_src_change ,canvas_translate_json_fn,thumbnail_create
 from django import core
 from ai_imagetranslation.utils import image_content
@@ -540,7 +540,7 @@ class TextTemplateSerializer(serializers.ModelSerializer):
 
 
 
-from ai_canvas.utils import install_font
+
 class FontFileSerializer(serializers.ModelSerializer):
     class Meta:
         model=FontFile
@@ -565,4 +565,10 @@ class FontFileSerializer(serializers.ModelSerializer):
             instance.name=family_name
             instance.save()
         return instance
-    
+
+
+
+class ImageListMediumSerializer(serializers.Serializer):
+    class Meta:
+        model=ImageListMedium
+        fields='__all__'
