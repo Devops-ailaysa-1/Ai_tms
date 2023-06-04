@@ -25,7 +25,7 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework import generics
 from ai_pay.models import POTaskDetails,POAssignment,PurchaseOrder
 from ai_pay.serializers import (InvoiceListSerializer, POTaskSerializer,POAssignmentSerializer, PoAssignDetailsSerializer, 
-                PurchaseOrderListSerializer,PurchaseOrderSerializer,AilaysaGeneratedInvoiceSerializer)
+                PurchaseOrderListSerializer,PurchaseOrderSerializer,AilaysaGeneratedInvoiceSerializer, PurchaseOrderTaskListSerializer)
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter,OrderingFilter
@@ -547,8 +547,7 @@ def po_modify(task_assign_info_id,po_update):
         except BaseException as e:
             logger.error(f"error while updating po task status for {task_assign_info_id},ERROR:{str(e)}")
 
-
-    if 'accepted_rate_by_owner' in po_update:
+    if ('accepted_rate_by_owner' in po_update) and ('assign_to' not in po_update):
         try:
             with transaction.atomic():
                 po_task_obj = POTaskDetails.objects.get(Q(assignment__assignment_id=assignment_id,task_id=task)&~Q(po__po_status='void'))
@@ -870,17 +869,24 @@ class PurchaseOrderView(viewsets.ViewSet):
 
         queryset = PurchaseOrder.objects.all()
         participant = self.request.query_params.get('participant')
+        task = self.request.query_params.get('task')
+        step = self.request.query_params.get('step')
         if participant == "seller":
             queryset = queryset.filter(seller=self.request.user)
         elif participant == "buyer":
             queryset = queryset.filter(client=self.request.user)
+        else:
+            queryset = queryset.filter(Q(client=self.request.user)|Q(seller=self.request.user))        
+        queryset= queryset.filter(assignment__step_id=step)
+        queryset = queryset.filter(po_status__in=['issued','open'])
+        queryset = queryset.filter(po_task__task_id =task)
 
         return queryset
     
 
     def list(self, request):
         queryset = self.get_queryset()
-        serializer = PurchaseOrderSerializer(queryset, many=True)
+        serializer = PurchaseOrderTaskListSerializer(queryset,context=request)
         return Response(serializer.data)
 
 

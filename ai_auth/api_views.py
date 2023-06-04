@@ -1477,8 +1477,8 @@ def account_activation(request):
 def user_delete(user):
     cancel_subscription(user)
     dir = UserAttribute.objects.get(user_id=user.id).allocated_dir
-    os.system("rm -r " +dir)
     user.delete()
+    os.system("rm -r " +dir)
 
 
 @api_view(['POST'])
