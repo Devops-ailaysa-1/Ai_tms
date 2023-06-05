@@ -482,6 +482,7 @@ def generate_client_po(task_assign_info):
             po.po_total_amount=po_total_amt
             po.save()
             msg_send_po(po,"po_created")
+        po_generate_pdf(po)
         # print("po2",po)
     return po
 
@@ -509,7 +510,7 @@ def po_modify_weigted_count(task_assign_info_ls):
     po.po_total_amount=po_total
     po.po_file=None
     po.save()
-    msg_send_po(po,"po_updated") 
+    # msg_send_po(po,"po_updated") 
 
 
 def po_modify(task_assign_info_id,po_update):
@@ -877,9 +878,9 @@ class PurchaseOrderView(viewsets.ViewSet):
             queryset = queryset.filter(client=self.request.user)
         else:
             queryset = queryset.filter(Q(client=self.request.user)|Q(seller=self.request.user))        
-        queryset= queryset.filter(assignment__step_id=step)
-        queryset = queryset.filter(po_status__in=['issued','open'])
         queryset = queryset.filter(po_task__task_id =task)
+        # queryset= queryset.filter(assignment__step_id=step)
+        queryset = queryset.filter(po_status__in=['issued','open'])
 
         return queryset
     

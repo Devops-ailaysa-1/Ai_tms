@@ -590,6 +590,7 @@ class FontSize(models.Model):
 
 class SegmentHistory(models.Model):
     segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
+    split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="split_segment_history")
     target=models.TextField(null=True, blank=True)
     status=models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
     user=models.ForeignKey(AiUser, null=True, on_delete=models.SET_NULL,related_name="edited_by")
