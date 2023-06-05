@@ -167,13 +167,17 @@ class FontFile(models.Model):
     
 
 
-def user_directory_path_canvas_image_medium(instance, filename):
-    return '{0}/{1}/{2}'.format(instance.user.uid, "canvas/assets/image_medium/",filename)
+def user_directory_path_canvas_image_medium(filename):
+    return "canvas/assets/image_medium/"+filename
 
 class ImageListMedium(models.Model):
+    
     image_name=models.CharField(max_length=200,blank=True,null=True)
     api_name=models.CharField(max_length=200,blank=True,null=True)
-    image=models.FileField(upload_to=user_directory_path_canvas_image_medium,blank=True,null=True)
-
+    preview_image=models.FileField(upload_to="canvas/assets/image_medium/",blank=True,null=True)
+    image_url=models.URLField()
+    tags=models.CharField(max_length=100,blank=True,null=True)
     def __str__(self) -> str:
         return self.image_name+" "+self.api_name
+
+

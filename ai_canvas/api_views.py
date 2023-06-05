@@ -26,6 +26,13 @@ from ai_workspace_okapi.utils import get_translation
 free_pix_api_key = os.getenv('FREE_PIK_API')
 pixa_bay_api_key =  os.getenv('PIXA_BAY_API')
 
+pixa_bay_url='https://pixabay.com/api/'
+pixa_bay_headers={
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    }
+
 class LanguagesViewset(viewsets.ViewSet):
     permission_classes = [IsAuthenticated,]
     
@@ -449,12 +456,6 @@ def free_pix_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pixabay_api(request):
-    url = 'https://pixabay.com/api/'
-    headers = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    }
     params = {**request.GET.dict(),'key':pixa_bay_api_key}
     response = requests.get(url, params=params,headers=headers)
     if response.status_code == 200:
@@ -583,6 +584,7 @@ class FontFamilyFilter(django_filters.FilterSet):
             
     def filter_queryset(self,queryset):
         queryset=queryset.filter(font_family_name__icontains=self.data['font_search'])
+        print("queryset---->",queryset)
         return queryset
  
  
@@ -602,9 +604,10 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         language=request.query_params.get('language',None)
         queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
 
-        if font_search and language:            
-            filter = FontFamilyFilter(request.GET, queryset=queryset)
-            queryset = filter.qs
+        if font_search and language:
+            queryset=self.lang_fil(request)            
+            filters = FontFamilyFilter(request.GET, queryset=queryset)
+            queryset = filters.qs
         
         elif font_search:
             queryset=queryset.filter(Q(font_family_name__icontains=font_search)).order_by('font_family_name')
@@ -629,7 +632,36 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         return response
     
 
+from ai_canvas.utils import convert_image_url_to_file
+import asyncio
+async def one_iteration(pixa_json):
+    preview_image=convert_image_url_to_file(pixa_json['previewURL'])
+    return {'image_url' :pixa_json['webformatURL'],'tags':pixa_json['tags'],'image_name':pixa_json['type'],
+                                 'preview_image':preview_image}
+
+
+
+async def generate_url(pixa_url_list):
+    coroutines=[]
+    for pixa_url_value in pixa_url_list:
+        coroutines.append(one_iteration(pixa_url_value))
+    return await asyncio.gather(*coroutines)
+
 class ImageListMediumViewset(viewsets.ViewSet):
 
     def list(self,request):
-        pass
+        image_search=request.query_params.get('image_search',None)
+        if image_search:
+            
+            params = {'q':image_search,'key':pixa_bay_api_key,'order':'popular' ,'per_page':10}
+            response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+            if response and 'hits' in response and response['hits']:
+                data = asyncio.run(generate_url(response['hits']))
+                serializer=ImageListMediumSerializer(data=data,many=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
+                else:
+                    return Response(serializer.errors)
+        else:
+            return Response({'image_search':'fill image search field'},status=200)

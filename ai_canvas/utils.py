@@ -138,3 +138,12 @@ def install_font(font_path):
     os.system("fc-cache -f -v")
     print(f"Font '{family_name}' installed successfully!")
     return family_name
+
+
+
+def convert_image_url_to_file(image_url):
+    im=Image.open(requests.get(image_url, stream=True).raw)
+    img_io = io.BytesIO()
+    im.save(img_io, format='PNG')
+    img_byte_arr = img_io.getvalue()
+    return core.files.File(core.files.base.ContentFile(img_byte_arr),image_url.split('/')[-1])

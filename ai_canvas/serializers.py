@@ -568,7 +568,14 @@ class FontFileSerializer(serializers.ModelSerializer):
 
 
 
-class ImageListMediumSerializer(serializers.Serializer):
+class ImageListMediumSerializer(serializers.ModelSerializer):
     class Meta:
         model=ImageListMedium
         fields='__all__'
+        write_only_fields=['api_name','image_url']
+        extra_kwargs = { 
+            'api_name':{'write_only':True},
+            'image_url':{'write_only':True}   }
+
+    def create(self, validated_data):
+        return super().create(validated_data)
