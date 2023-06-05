@@ -877,9 +877,9 @@ class PurchaseOrderView(viewsets.ViewSet):
             queryset = queryset.filter(client=self.request.user)
         else:
             queryset = queryset.filter(Q(client=self.request.user)|Q(seller=self.request.user))        
-        queryset= queryset.filter(assignment__step_id=step)
-        queryset = queryset.filter(po_status__in=['issued','open'])
         queryset = queryset.filter(po_task__task_id =task)
+        # queryset= queryset.filter(assignment__step_id=step)
+        queryset = queryset.filter(po_status__in=['issued','open'])
 
         return queryset
     
