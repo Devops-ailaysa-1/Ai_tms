@@ -3,7 +3,7 @@ from django.db import models
 from ai_auth.models import AiUser
 from ai_staff.models import Billingunits, Currencies, Languages, ServiceTypeunits,Countries
 from ai_workspace.models import Steps
-from ai_pay.signals import change_po_status
+from ai_pay.signals import change_po_status,update_po_file
 from django.db.models.signals import post_save, pre_save
 
 class POAssignment(models.Model):
@@ -105,6 +105,7 @@ class POTaskDetails(models.Model):
         return formatNumber(self.unit_price)
 
 post_save.connect(change_po_status, sender=POTaskDetails)
+post_save.connect(update_po_file, sender=POTaskDetails)
 
 def invoice_dir_path(instance, filename):
     #return '{0}/{1}/{2}/{3}'.format(instance.user.uid, "Reports","PO",filename)

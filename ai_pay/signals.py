@@ -39,3 +39,13 @@ def change_po_status(sender, instance, created, *args, **kwargs):
             po.save()       
     else:
         print(f"instance po is null {instance.id}")
+
+change_po_file= Signal()
+
+@receiver(change_po_file)
+def update_po_file(sender, instance, created, *args, **kwargs):
+    from ai_pay.api_views import po_generate_pdf
+    po = instance.po
+    if not created:
+        po_generate_pdf(po)
+
