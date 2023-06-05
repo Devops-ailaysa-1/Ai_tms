@@ -19,7 +19,7 @@ router.register(r'text-keyword', api_views.TemplateKeywordViewset,basename= 'tex
 router.register(r'text-template', api_views.TextTemplateViewset,basename='texttemplate')
 router.register(r'font-file', api_views.FontFileViewset,basename='fontfile')
 router.register(r'font-family',api_views.FontFamilyViewset ,basename='fontfamily')
-router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
+# router.register(r'image-collections',api_views.ImageListMediumViewset ,basename='imagemedium')
 urlpatterns = router.urls
 urlpatterns += [
     path('template-design-get/<int:id>/', api_views.TemplateGlobalDesignRetrieveViewset.as_view(),name='templatedesignget'),     
@@ -28,8 +28,8 @@ urlpatterns += [
     path('image-term/',api_views.free_pix_api,name='freepixapi'),
     path('instane-translate/',api_views.instant_canvas_translation,name='instant_canvas_translation'),
     path('images/',api_views.pixabay_api,name='pixabayapi'),
-    path('canvas-export',api_views.canvas_export_download,name='canvas_export_download')
-    
+    path('canvas-export',api_views.canvas_export_download,name='canvas_export_download'),
+    path('image-list-category',api_views.image_list,name='image_list')
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

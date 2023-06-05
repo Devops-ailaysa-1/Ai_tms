@@ -4,12 +4,12 @@ from rest_framework.response import Response
 from ai_staff.models import ( Languages,LanguagesLocale)
 from ai_canvas.models import (CanvasTemplates ,CanvasUserImageAssets,CanvasDesign,CanvasSourceJsonFiles,
                               CanvasTargetJsonFiles,TemplateGlobalDesign,TemplatePage,MyTemplateDesign,
-                              TemplateKeyword,TextTemplate,FontFile,ImageListMedium)
+                              TemplateKeyword,TextTemplate,FontFile)
 from ai_canvas.serializers import (CanvasTemplateSerializer ,LanguagesSerializer,LocaleSerializer,
                                    CanvasUserImageAssetsSerializer,CanvasDesignSerializer,CanvasDesignListSerializer,
                                    TemplateGlobalDesignSerializer,MyTemplateDesignRetrieveSerializer,
                                    TemplateGlobalDesignRetrieveSerializer,MyTemplateDesignSerializer ,
-                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer,ImageListMediumSerializer)
+                                   TextTemplateSerializer,TemplateKeywordSerializer,FontFileSerializer)
 from ai_canvas.pagination import (CanvasDesignListViewsetPagination ,TemplateGlobalPagination ,MyTemplateDesignPagination)
 from django.db.models import Q,F
 from itertools import chain
@@ -603,7 +603,7 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
         font_search=request.query_params.get('font_search',None)
         language=request.query_params.get('language',None)
         queryset = FontFamily.objects.all().exclude(Q(font_family_name__icontains='material')|Q(font_family_name__icontains='barcode')).order_by('font_family_name')
-
+        
         if font_search and language:
             queryset=self.lang_fil(request)            
             filters = FontFamilyFilter(request.GET, queryset=queryset)
@@ -616,13 +616,18 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
             queryset=self.lang_fil(request)
         else:
             font_file=FontFile.objects.filter(user=request.user)
+            
+
             if font_file:
-                font_file=font_file.annotate(font_family_name=F("name")).values("font_family_name")
-                queryset=queryset.values("font_family_name")
+                font_file=font_file.annotate(font_family_name=F("name"))#.values("font_family_name")
+                # print([{**item, 'user': True} for item in font_file])
+                # queryset=queryset.values("font_family_name")
+                # print([{**item, 'user': True} for item in queryset])
                 queryset=list(chain(font_file, queryset))
- 
- 
+                
+
         pagin_tc = self.paginate_queryset(queryset, request , view=self)
+        
         serializer = FontFamilySerializer(pagin_tc,many=True)
         response = self.get_paginated_response(serializer.data)
         if response.data["next"]:
@@ -633,35 +638,79 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     
 
 from ai_canvas.utils import convert_image_url_to_file
-import asyncio
-async def one_iteration(pixa_json):
-    preview_image=convert_image_url_to_file(pixa_json['previewURL'])
-    return {'image_url' :pixa_json['webformatURL'],'tags':pixa_json['tags'],'image_name':pixa_json['type'],
-                                 'preview_image':preview_image}
 
 
 
-async def generate_url(pixa_url_list):
-    coroutines=[]
-    for pixa_url_value in pixa_url_list:
-        coroutines.append(one_iteration(pixa_url_value))
-    return await asyncio.gather(*coroutines)
 
-class ImageListMediumViewset(viewsets.ViewSet):
+# import asyncio
+# async def one_iteration(pixa_json):
+#     preview_image=convert_image_url_to_file(pixa_json['previewURL'])
+#     return {'image_url' :pixa_json['webformatURL'],'tags':pixa_json['tags'],'image_name':pixa_json['type'],
+#                                  'preview_image':preview_image}
 
-    def list(self,request):
-        image_search=request.query_params.get('image_search',None)
-        if image_search:
+
+
+# async def generate_url(pixa_url_list):
+#     coroutines=[]
+#     for pixa_url_value in pixa_url_list:
+#         coroutines.append(one_iteration(pixa_url_value))
+#     return await asyncio.gather(*coroutines)
+
+# class ImageListMediumViewset(viewsets.ViewSet):
+
+#     def list(self,request):
+#         image_search=request.query_params.get('image_search',None)
+#         if image_search:
             
-            params = {'q':image_search,'key':pixa_bay_api_key,'order':'popular' ,'per_page':10}
-            response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
-            if response and 'hits' in response and response['hits']:
-                data = asyncio.run(generate_url(response['hits']))
-                serializer=ImageListMediumSerializer(data=data,many=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(serializer.data)
-                else:
-                    return Response(serializer.errors)
-        else:
-            return Response({'image_search':'fill image search field'},status=200)
+#             params = {'q':image_search,'key':pixa_bay_api_key,'order':'popular' ,'per_page':10}
+#             response = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+#             if response and 'hits' in response and response['hits']:
+#                 data = asyncio.run(generate_url(response['hits']))
+#                 serializer=ImageListMediumSerializer(data=data,many=True)
+#                 if serializer.is_valid():
+#                     serializer.save()
+#                     return Response(serializer.data)
+#                 else:
+#                     return Response(serializer.errors)
+#         else:
+#             return Response({'image_search':'fill image search field'},status=200)
+
+
+
+
+params = {
+            'key':pixa_bay_api_key,
+            'order':'popular',
+            'image_type':'photo',
+            'orientation':'all',
+            'per_page':10,
+        }
+
+from ai_staff.models import ImageCategories
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def image_list(request):
+    image_category_id=request.query_params.get('image_category_id')
+    image_cats=list(ImageCategories.objects.all().values('category'))
+    data=[]
+    if image_category_id:
+        cat=ImageCategories.objects.get(id=image_category_id).category
+        
+    for image_cat in image_cats:
+        params['q']=image_cat['category']
+        params['catagory']=image_cat['category']
+        
+        pixa_bay = requests.get(pixa_bay_url, params=params,headers=pixa_bay_headers).json()
+        print('image_cat',image_cat)
+        img_urls=[]
+        for hit in pixa_bay['hits']:
+            img_urls.append({'preview_img':hit['previewURL'],'id':hit['id'] })
+
+        image_cat['images']=img_urls
+        data.append(image_cat)
+    
+    return Response({'image_list':data},status=200)
+
+            
+            
+            

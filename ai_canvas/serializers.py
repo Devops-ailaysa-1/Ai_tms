@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from ai_canvas.models import (CanvasTemplates,CanvasDesign,CanvasUserImageAssets,CanvasTranslatedJson,CanvasSourceJsonFiles,CanvasTargetJsonFiles,
-                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile,ImageListMedium)
+                            TemplateGlobalDesign ,TemplatePage ,MyTemplateDesign,MyTemplateDesignPage,TextTemplate,TemplateKeyword,FontFile)
 from ai_staff.models import Languages,LanguagesLocale  
 from django.http import HttpRequest
 from ai_canvas.utils import install_font
@@ -568,14 +568,14 @@ class FontFileSerializer(serializers.ModelSerializer):
 
 
 
-class ImageListMediumSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=ImageListMedium
-        fields='__all__'
-        write_only_fields=['api_name','image_url']
-        extra_kwargs = { 
-            'api_name':{'write_only':True},
-            'image_url':{'write_only':True}   }
+# class ImageListMediumSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model=ImageListMedium
+#         fields='__all__'
+#         write_only_fields=['api_name','image_url']
+#         extra_kwargs = { 
+#             'api_name':{'write_only':True},
+#             'image_url':{'write_only':True}   }
 
-    def create(self, validated_data):
-        return super().create(validated_data)
+#     def create(self, validated_data):
+#         return super().create(validated_data)

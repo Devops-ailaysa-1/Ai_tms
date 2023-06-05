@@ -634,3 +634,10 @@ class SocialMediaSize(models.Model):
     social_media_name = models.CharField(max_length=200,blank=True ,null=True)
     width = models.CharField(max_length=200,blank=True ,null=True)
     height=models.CharField(max_length=200,blank=True ,null=True)
+
+
+class ImageCategories(models.Model):
+    category= models.CharField(max_length=50,blank=True ,null=True)
+
+    def __str__(self):
+        return self.category

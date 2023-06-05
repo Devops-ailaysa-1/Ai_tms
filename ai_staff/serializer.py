@@ -414,10 +414,18 @@ class FontLanguageSerializer(serializers.ModelSerializer):
         fields = ("id",'name')
 
 class FontFamilySerializer(serializers.ModelSerializer):
+    is_custom=serializers.SerializerMethodField()
     class Meta:
         model = FontFamily
-        fields = ('font_family_name',)
-
+        fields = ('font_family_name','is_custom')
+    
+    
+    def get_is_custom(self,instance):
+        if type(instance) is FontFamily:
+            return False
+        else:
+            return True
+    
 class FontDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = FontData

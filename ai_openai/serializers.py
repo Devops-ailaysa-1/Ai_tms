@@ -96,12 +96,13 @@ class AiPromptSerializer(serializers.ModelSerializer):
             if instance.description:
                 prompt+=' '+instance.description if lang in ai_langs else instance.description_mt
             
-            prompt+=', in {} tone'.format(instance.Tone.tone)
-            print("prompt-->",prompt)
             if instance.keywords:
                 prompt+=' including words '+ instance.keywords if lang in ai_langs else ' including words '+ instance.keywords_mt
+            prompt+=' in {} tone'.format(instance.Tone.tone)
+            
             if start_phrase.punctuation:
                 prompt+=start_phrase.punctuation
+        print("prompt-->",prompt)
         initial_credit = user.credit_balance.get("total_left")
         consumable_credit = get_consumable_credits_for_text(prompt,target_lang=None,source_lang=instance.source_prompt_lang_code)
         if initial_credit < consumable_credit:
