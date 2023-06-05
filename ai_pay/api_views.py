@@ -482,6 +482,7 @@ def generate_client_po(task_assign_info):
             po.po_total_amount=po_total_amt
             po.save()
             msg_send_po(po,"po_created")
+        po_generate_pdf(po)
         # print("po2",po)
     return po
 
@@ -509,7 +510,7 @@ def po_modify_weigted_count(task_assign_info_ls):
     po.po_total_amount=po_total
     po.po_file=None
     po.save()
-    msg_send_po(po,"po_updated") 
+    # msg_send_po(po,"po_updated") 
 
 
 def po_modify(task_assign_info_id,po_update):
