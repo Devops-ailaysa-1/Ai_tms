@@ -796,7 +796,7 @@ def generate_article(request):
         tone=blog_creation.tone.tone
         prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
         # completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-        title='#'+title
+        title='# '+title
         if blog_creation.user_language_code== 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
