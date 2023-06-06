@@ -161,7 +161,8 @@ class SegmentSerializerV2(SegmentSerializer):
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        seg_his_create = True if instance.temp_target!=content else False #self.his_check(instance,instance.temp_target,content,user_1)
+        seg_his_create = True if instance.temp_target!=content and instance.status_id != validated_data.get('status').id else False #self.his_check(instance,instance.temp_target,content,user_1)
+        print("Seg-His-Create--------------->",seg_his_create)
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
