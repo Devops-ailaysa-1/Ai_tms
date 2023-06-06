@@ -801,8 +801,8 @@ class SegmentsUpdateView(viewsets.ViewSet):
         else:
             print("not successfully update")
 
-    def split_update(self, request_data, segment, split_seg_id):
-
+    def split_update(self, request_data, segment):
+        org_segment = SplitSegment.objects.get(id=segment.id).segment_id
         status_obj = TranslationStatus.objects.filter(status_id=request_data["status"]).first()
         segment.status = status_obj
         content = request_data['target'] if "target" in request_data else request_data['temp_target']
@@ -811,7 +811,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
             segment.temp_target = request_data["target"]
         else:
             segment.temp_target = request_data["temp_target"]
-        SegmentHistory.objects.create(segment_id=segment, split_segment_id = split_seg_id, user = self.request.user, target= content, status= status_obj )
+        SegmentHistory.objects.create(segment_id=org_segment, split_segment_id = segment.id, user = self.request.user, target= content, status= status_obj )
         segment.save()
         return Response(SegmentSerializerV2(segment).data, status=201)
 
@@ -842,7 +842,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
 
                 # Segment update for a Split segment
                 if segment.is_split == True:
-                    self.split_update(data, segment,segment_id)
+                    self.split_update(data, segment)
                 segment_serlzr = self.get_update(segment, data, request)
                 if data!={}:
                     success_list.append(item.get('pk'))
@@ -872,7 +872,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
 
         # Segment update for a Split segment
         if segment.is_split == True:
-            return self.split_update(request.data, segment, segment_id)
+            return self.split_update(request.data, segment)
         segment_serlzr = self.get_update(segment, request.data, request)
         # self.update_pentm(segment)  # temporarily commented to solve update pentm issue
         return Response(segment_serlzr.data, status=201)
