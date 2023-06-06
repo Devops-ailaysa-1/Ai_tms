@@ -71,6 +71,7 @@ urlpatterns += [
     # path('timezones/<int:pk>', api_views.TimezonesView.as_view(), name='timezones_pk'),
      #path('insert',views.Bulk_insert)
      path('social-media-size/', api_views.SocialMediaSizeViewset.as_view({'get': 'list'}), name='socialmediasize'),
+     path('image-gen-resolution/',api_views.ImageGeneratorResolutionViewset.as_view({'get':'list'})),
      
      
 

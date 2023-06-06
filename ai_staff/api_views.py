@@ -14,7 +14,7 @@ from .models import (ContentTypes, Countries, Currencies, Languages,
                     SupportFiles, Timezones,Billingunits,ServiceTypeunits,AilaysaSupportedMtpeEngines,
                     SupportType,SubscriptionPricing,SubscriptionFeatures,CreditsAddons,
                     IndianStates,SupportTopics,JobPositions,Role,MTLanguageSupport,AilaysaSupportedMtpeEngines,
-                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize)
+                    ProjectType,ProjectTypeDetail ,PromptCategories,PromptTones,AiCustomize ,FontData,FontFamily,FontLanguage,SocialMediaSize,ImageGeneratorResolution)
 from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSerializer,
                          MtpeEnginesSerializer, ServiceTypesSerializer,CurrenciesSerializer,
                          CountriesSerializer, StripeTaxIdSerializer, SubjectFieldsSerializer, SubscriptionPricingPageSerializer, SupportFilesSerializer,
@@ -23,7 +23,8 @@ from .serializer import (ContentTypesSerializer, LanguagesSerializer, LocaleSeri
                          SubscriptionFeatureSerializer,CreditsAddonSerializer,IndianStatesSerializer,
                          SupportTopicSerializer,JobPositionSerializer,TeamRoleSerializer,MTLanguageSupportSerializer,
                          GetLanguagesSerializer,AiSupportedMtpeEnginesSerializer,ProjectTypeSerializer,ProjectTypeDetailSerializer,LanguagesSerializerNew,PromptCategoriesSerializer,
-                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,SocialMediaSizeSerializer)
+                         PromptTonesSerializer,AiCustomizeSerializer,AiCustomizeGroupingSerializer,FontLanguageSerializer,FontDataSerializer,FontFamilySerializer,
+                         SocialMediaSizeSerializer,ImageGeneratorResolutionSerializer)
 from rest_framework import renderers
 from django.http import FileResponse
 from django.conf import settings
@@ -951,3 +952,10 @@ class FontDataViewset(viewsets.ViewSet):
             queryset = FontData.objects.all()
             serializer = FontDataSerializer(queryset,many=True)
             return Response(serializer.data)
+        
+
+class ImageGeneratorResolutionViewset(viewsets.ViewSet):
+    def list(self,request):
+        queryset=ImageGeneratorResolution.objects.all()
+        serializer=ImageGeneratorResolutionSerializer(queryset,many=True)
+        return Response(serializer.data)
