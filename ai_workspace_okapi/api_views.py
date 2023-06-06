@@ -806,13 +806,15 @@ class SegmentsUpdateView(viewsets.ViewSet):
         status_obj = TranslationStatus.objects.filter(status_id=request_data["status"]).first()
         segment.status = status_obj
         content = request_data['target'] if "target" in request_data else request_data['temp_target']
+        seg_his_create = True if segment.temp_target!=content and segment.status != status_obj else False
         if request_data.get("target", None) != None:
             segment.target = request_data["target"]
             segment.temp_target = request_data["target"]
         else:
             segment.temp_target = request_data["temp_target"]
-        SegmentHistory.objects.create(segment_id=org_segment, split_segment_id = segment.id, user = self.request.user, target= content, status= status_obj )
         segment.save()
+        if seg_his_create:
+            SegmentHistory.objects.create(segment_id=org_segment, split_segment_id = segment.id, user = self.request.user, target= content, status= status_obj )
         return Response(SegmentSerializerV2(segment).data, status=201)
 
     def partial_update(self, request, *args, **kwargs):
