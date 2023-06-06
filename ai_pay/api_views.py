@@ -481,8 +481,8 @@ def generate_client_po(task_assign_info):
             po_total_amt+=float(tot_amount)
             po.po_total_amount=po_total_amt
             po.save()
+            po_generate_pdf(po)
             msg_send_po(po,"po_created")
-        po_generate_pdf(po)
         # print("po2",po)
     return po
 
