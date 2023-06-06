@@ -596,7 +596,7 @@ class  FontFamilyViewset(viewsets.ViewSet,PageNumberPagination):
     def lang_fil(self,request):
         f_lang=FontLanguage.objects.get(id=request.GET['language'])
         f_d=FontData.objects.filter(font_lang=f_lang)
-        queryset=f_d.annotate(font_family_name=F('font_family__font_family_name')).values("font_family_name")
+        queryset=f_d.annotate(font_family_name=F('font_family__font_family_name'))#.values("font_family_name")
         return queryset
     
     def list(self, request):

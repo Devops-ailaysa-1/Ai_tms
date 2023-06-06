@@ -171,8 +171,8 @@ class FontFile(models.Model):
 
 
 
-# def user_directory_path_canvas_image_medium(filename):
-#     return "canvas/assets/image_medium/"+filename
+def user_directory_path_canvas_image_medium(filename):
+    return "canvas/assets/image_medium/"+filename
 
 # class ImageListMedium(models.Model):
     

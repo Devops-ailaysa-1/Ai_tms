@@ -66,10 +66,11 @@ def get_prompt_edit(input_text ,instruction ):
 def get_prompt_image_generations(prompt,size,no_of_image):
     #prompt = "Generate an image based on the following text description: " + prompt
     print("Prompt--------->",prompt)
-    try:
-        response = openai.Image.create(prompt=prompt,n=no_of_image,size=size) 
-    except:
-        response = {'error':"Your requested prompt was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system."}
+    # try:
+    response = openai.Image.create(prompt=prompt,n=no_of_image,size=size) 
+         
+     
+        # response = {'error':"Your requested prompt was rejected as a result of our safety system. Your prompt may contain text that is not allowed by our safety system."}
     return response
 
 

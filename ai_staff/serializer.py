@@ -421,7 +421,7 @@ class FontFamilySerializer(serializers.ModelSerializer):
     
     
     def get_is_custom(self,instance):
-        if type(instance) is FontFamily:
+        if type(instance) is FontFamily or type(instance) is FontData:
             return False
         else:
             return True

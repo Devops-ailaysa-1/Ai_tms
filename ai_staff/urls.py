@@ -72,6 +72,7 @@ urlpatterns += [
      #path('insert',views.Bulk_insert)
      path('social-media-size/', api_views.SocialMediaSizeViewset.as_view({'get': 'list'}), name='socialmediasize'),
      
+     
 
 
 ]
