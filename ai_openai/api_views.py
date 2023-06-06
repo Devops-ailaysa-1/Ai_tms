@@ -814,6 +814,16 @@ from django.http import StreamingHttpResponse,JsonResponse
 import openai  #blog_cre_id list
 from ai_staff.models import PromptSubCategories
 import time
+from rest_framework import serializers
+from ai_openai.serializers import lang_detector
+import tiktoken
+encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
+def num_tokens_from_string(string) -> int:
+    
+    num_tokens = len(encoding.encode(string))
+    token_usage=get_consumable_credits_for_openai_text_generator(num_tokens)
+    return token_usage
+
 @api_view(["GET"])
 def generate_article(request):
     if request.method=='GET':
@@ -825,23 +835,54 @@ def generate_article(request):
         blog_creation=BlogCreation.objects.get(id=blog_creation)
         outline_section_list=list(map(int,outline_list.split(',')))
         outline_section_list=BlogOutlineSession.objects.filter(id__in=outline_section_list)
-        if blog_creation.user_language_id not in blog_available_langs:
-            title=blog_creation.user_title_mt
-            keyword=blog_creation.keywords_mt
-            outlines=list(outline_section_list.values_list('blog_outline_mt',flat=True))
+
+        instance = BlogArticle.objects.create(blog_creation=blog_creation,sub_categories_id=sub_categories)
+
+        initial_credit = instance.blog_creation.user.credit_balance.get("total_left")
+        if instance.blog_creation.user_language_code != 'en':
+            credits_required = 2000
         else:
-            title=blog_creation.user_title
-            keyword=blog_creation.keywords
-            outlines=list(outline_section_list.values_list('blog_outline',flat=True))
+            credits_required = 200
+        if initial_credit < credits_required:
+            raise serializers.ValidationError({'msg':'Insufficient Credits'}, code=400)
+
+        title = instance.blog_creation.user_title
+        detected_lang = lang_detector(title)
+        if detected_lang!='en':
+            title = instance.blog_creation.user_title_mt
+        
+        keyword = instance.blog_creation.keywords 
+        detected_lang = lang_detector(keyword)
+        if detected_lang!='en':
+            keyword = instance.blog_creation.keywords_mt
+
+
+        print("OutlineSelection---------------->",outline_section_list)
+        if outline_section_list:
+            detected_lang = lang_detector(outline_section_list[0].blog_outline)
+        else: raise serializers.ValidationError({'msg':'No Outlines Selected'}, code=400)
+
+
+        if detected_lang!='en':
+            outlines = [i.blog_outline_mt for i in outline_section_list if i.blog_outline_mt ]
+        else:
+            outlines = [i.blog_outline for i in outline_section_list]
+
+
         joined_list = "', '".join(outlines)
-        tone=blog_creation.tone.tone
-        prompt=blog_article_start_phrase.format(title,joined_list,keyword,tone)
-        # completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
-        title='#'+title
+
+        selected_outline_section_list = f"'{joined_list}'"
+
+        print("Selected------------>",selected_outline_section_list)
+        prompt = blog_article_start_phrase.format(title,selected_outline_section_list,keyword,instance.blog_creation.tone.tone)
+
+        print("prompt____article--->>>>",prompt)
+        
+        title='# '+title
         if blog_creation.user_language_code== 'en':
-        # if 'en'== 'en':
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_en(title):
+                str_con=""
                 for chunk in completion:
                     ins=chunk['choices'][0]
                     if ins["finish_reason"]!='stop':
@@ -851,14 +892,18 @@ def generate_article(request):
                             if title:
                                 content=title+'\n'+content
                                 title=''
+                            str_con+=content
                             yield '\ndata: {}\n\n'.format({"t":content})
+                    else:
+                        token_usage=num_tokens_from_string(str_con)
+                        AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
+                 
             return StreamingHttpResponse(stream_article_response_en(title),content_type='text/event-stream')
         else:
             completion=openai.ChatCompletion.create(model="gpt-3.5-turbo",messages=[{"role":"user","content":prompt}],stream=True)
             def stream_article_response_other_lang(title):
-                # from markdown2 import Markdown
-                # markdowner = Markdown()
                 arr=[]
+                str_cont=''
                 for chunk in completion:
                     ins=chunk['choices'][0]
                     if ins["finish_reason"]!='stop':
@@ -870,9 +915,17 @@ def generate_article(request):
                                 if "\n" in word:
                                     new_line_split=word.split("\n")
                                     arr.append(new_line_split[0]+'\n')
+                                    
                                     text=" ".join(arr)
-                                    blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
+                                    consumable_credits_for_article_gen = get_consumable_credits_for_text(text,instance.blog_creation.user_language_code,'en')
+                                    token_usage=num_tokens_from_string(text)
+                                    AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
+                                    if initial_credit >= consumable_credits_for_article_gen:
+                                        blog_article_trans=get_translation(1,text,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
+                                        AiPromptSerializer().customize_token_deduction(instance.blog_creation,consumable_credits_for_article_gen)
                                     # blog_article_trans=text
+
+
                                     if title:
                                         blog_article_trans=title+'\n'+blog_article_trans
                                         title=''
@@ -887,8 +940,10 @@ def generate_article(request):
                                     sente=" ".join(arr)
                                     if sente[-1]!='.':
                                         sente=sente+'.'
-                                        blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,
-                                                    user_id=blog_creation.user.id)
+                                        
+
+
+                                        blog_article_trans=get_translation(1,sente,"en",blog_creation.user_language_code,user_id=blog_creation.user.id)
                                         blog_article_trans=sente
                                         if title:
                                             blog_article_trans=title+'\n'+blog_article_trans
@@ -900,6 +955,8 @@ def generate_article(request):
                                     arr=[]
                             else:
                                 arr.append(word)
+                    else:
+                        print("finished")
             return StreamingHttpResponse(stream_article_response_other_lang(title),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
@@ -908,28 +965,17 @@ def generate_article(request):
 def generate(request):
     title="""Natural Language Processing (NLP) is a critical component of many machine learning applications, particularly in the field of machine translation. NLP involves enabling computer algorithms to understand, interpret, and manipulate human language. With NLP, computer systems can extract meaning from text, identify relevant information, and even generate original written content.
 
-            One important aspect of NLP for translation is the decoder, which is responsible for translating source text into target text. The decoder typically uses a combination of rules and statistical models to produce translations. By turning raw text into a structured representation of language, NLP and decoder systems make it possible for computers to understand and produce language with accuracy and precision.
-            Machine Translation (MT) uses NLP and decoder technologies to automatically translate source text in one language into a target language. MT relies on algorithms and statistical models to analyze and process source text and produce a translation that is grammatically correct and semantically meaningful.
-
-            The basic idea behind MT involves breaking down text into component parts, such as words and phrases, and then mapping those parts onto equivalent structures in the target language. Several different approaches to MT exist, including rule-based, statistical, and neural machine translation, each of which uses different techniques to accomplish machine translation.
-            Despite significant advances in NLP and decoder technologies, MT still faces several significant challenges. One is the complexity of human language, which often contains idiomatic expressions, irregular grammar and syntax, and ambiguities that can pose difficulties for algorithms to understand.
-
-            Another challenge is the variability of language across different contexts and domains. Languages evolve over time, and different communities speak and write in different dialects and jargons, making it difficult to produce a translation that accurately represents the meaning of the original text.
-
-            To overcome these and other challenges, NLP and decoder systems are incorporating machine learning techniques that enable them to automatically adapt and improve with experience.
-
-
-            Other NLP techniques, such as language modeling and sequence-to-sequence learning, can be used to enhance the capabilities of decoder systems and enable them to produce more accurate and coherent translations.
-            Neural networks are playing an increasingly important role in enhancing the capabilities of NLP and decoder systems. Deep learning techniques, such as convolutional and recurrent neural networks, can be used to automatically capture the underlying structure and patterns in language, enabling decoder systems to produce more accurate and natural-sounding translations.
-
             """ 
     if request.method=='GET':
         title=title.split(" ")
         def stream():
             for chunk in title:
-                time.sleep(0.009)
-                yield '\ndata: {}\n\n'.format({"t":chunk})
+                if chunk:
+                    yield '\ndata: {}\n\n'.format({"t":chunk})
+                else:
+                    print("sstream is finished")
         return StreamingHttpResponse(stream(),content_type='text/event-stream')
+    
     return JsonResponse({'error':'Method not allowed.'},status=405)
 
 # @api_view(["GET"])

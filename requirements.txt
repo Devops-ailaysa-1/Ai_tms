@@ -226,4 +226,5 @@ opencv-contrib-python==4.7.0.72
 opencv-python
 markdown2==2.4.8
 fonttools
+tiktoken==0.4.0
 
