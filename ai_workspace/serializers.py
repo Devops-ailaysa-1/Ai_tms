@@ -1138,9 +1138,14 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 
 
 	def get_task_assign_info(self, obj):
-		user = self.context.get('request').user
+		request_user = self.context.get('request').user
+		print("RequestUser----------->",request_user)
+		user = request_user.team.owner if request_user.team and request_user.team.owner.is_agency else request_user
+		print("User-------->",user)
 		task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(assign_to=user))
-		if task_assign:task_assign_final= task_assign
+		print("TaskAssign----------->",task_assign)
+		if task_assign:
+			task_assign_final= task_assign
 		else:
 			task_assign_final = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
 		# task_assign = obj.task_info.filter(Q(task_assign_info__isnull=False) & Q(reassigned=False))
