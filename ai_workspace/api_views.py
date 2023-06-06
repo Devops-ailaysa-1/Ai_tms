@@ -1562,10 +1562,10 @@ class TaskAssignInfoCreateView(viewsets.ViewSet):
         task_assign_detail = json.loads(task_assign_detail)
         tasks = list(itertools.chain(*[d['tasks'] for d in task_assign_detail]))
         print("Tasks------->",tasks)
-        # # For authorization
-        # tsks = Task.objects.filter(id__in=tasks)
-        # for tsk in tsks:
-        #     authorize(request, resource=tsk, actor=request.user, action="read")
+        # For authorization
+        tsks = Task.objects.filter(id__in=tasks)
+        for tsk in tsks:
+            authorize(request, resource=tsk, actor=request.user, action="read")
 
         if reassign == 'true':
             print("Inside")
