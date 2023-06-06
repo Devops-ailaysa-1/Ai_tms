@@ -762,6 +762,11 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
         response = self.get_paginated_response(serializer.data)
         return  response
 
+    
+    def retrieve(self, request, pk):
+        query = Project.objects.get(id=pk)
+        serializer = ProjectQuickSetupSerializer(query, many=False, context={'request': request})
+        return Response(serializer.data)
 
     def create(self, request):
         punctuation='''!"#$%&'``()*+,-./:;<=>?@[\]^`{|}~_'''
