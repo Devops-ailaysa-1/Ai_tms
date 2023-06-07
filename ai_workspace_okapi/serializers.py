@@ -149,19 +149,21 @@ class SegmentSerializerV2(SegmentSerializer):
     def update(self, instance, validated_data):
         print("VD----------->",validated_data)
         print("Ins-------->",instance)
-        print("St---------->>>",validated_data.get('status').id)
+        status = validated_data.get('status',None)
+        print("St---------->>>",validated_data.get('status'))
         if validated_data.get('target'):
             validated_data['target'] = self.target_check(instance,validated_data.get('target'))
         if validated_data.get('temp_target'):
             validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
-        status_id = validated_data.get('status').id
+        status_id = status.id if status else None
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        seg_his_create = True if instance.temp_target!=content else False #self.his_check(instance,instance.temp_target,content,user_1)
+        seg_his_create = True if instance.temp_target!=content and instance.status_id != status_id else False #self.his_check(instance,instance.temp_target,content,user_1)
+        print("Seg-His-Create--------------->",seg_his_create)
         if "target" in validated_data:
             print("Inside if target")
             if instance.target == '':
@@ -183,10 +185,10 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.save()
             self.update_task_assign(task_obj,user_1,status_id)
             if seg_his_create:
-                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status )
             return res
         if seg_his_create:
-            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= validated_data.get('status') )
+            SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
         self.update_task_assign(task_obj,user_1,status_id)
         return super().update(instance, validated_data)
 
