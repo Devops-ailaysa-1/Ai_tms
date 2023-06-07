@@ -3,7 +3,7 @@ from django.db import models
 from ai_auth.models import AiUser
 from ai_staff.models import Billingunits, Currencies, Languages, ServiceTypeunits,Countries
 from ai_workspace.models import Steps
-from ai_pay.signals import change_po_status,update_po_file
+from ai_pay.signals import change_po_status,update_po_file,create_po_file
 from django.db.models.signals import post_save, pre_save
 
 class POAssignment(models.Model):
@@ -64,6 +64,8 @@ class PurchaseOrder(models.Model):
     @property
     def get_pdf(self):
         return self.po_file.url
+    
+post_save.connect(create_po_file, sender=PurchaseOrder)
 
 class POTaskDetails(models.Model):
     ACCEPT_STATUS =[("task_accepted","task_accepted"),

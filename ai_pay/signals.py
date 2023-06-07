@@ -46,6 +46,16 @@ change_po_file= Signal()
 def update_po_file(sender, instance, created, *args, **kwargs):
     from ai_pay.api_views import po_generate_pdf
     po = instance.po
+    print("inside po file update signal create")
     if not created:
+        print("inside po file update signal create")
         po_generate_pdf(po)
 
+
+create_po_file= Signal()
+
+@receiver(create_po_file)
+def create_po_file(sender, instance, created, *args, **kwargs):
+    from ai_pay.api_views import po_generate_pdf
+    if instance.po_file == None:
+        po_generate_pdf(instance)
