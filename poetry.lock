@@ -807,6 +807,21 @@ files = [
 ]
 
 [[package]]
+name = "convcolors"
+version = "2.2.0"
+description = "Convert colors between different color spaces."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "convcolors-2.2.0-py3-none-any.whl", hash = "sha256:aa5dfb9239cddd391df8aff1f6e482b242a212826a6e3427ba2e11db70836a2e"},
+    {file = "convcolors-2.2.0.tar.gz", hash = "sha256:4036848e98ae752abac4a54acb879b6711f8dcf2f768815c85366359a287c1bd"},
+]
+
+[package.extras]
+dev = ["pytest (==5.4.3)", "tox (==3.16.0)", "yapf (==0.30.0)"]
+
+[[package]]
 name = "cryptography"
 version = "38.0.4"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
@@ -1425,6 +1440,25 @@ files = [
 
 [package.extras]
 tests = ["asttokens", "littleutils", "pytest", "rich"]
+
+[[package]]
+name = "extcolors"
+version = "1.0.0"
+description = "Extract colors from an image. Colors are grouped based on visual similarities using the CIE76 formula."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "extcolors-1.0.0-py3-none-any.whl", hash = "sha256:92bfcd137c415ca1a3463feaa75f4189a7607f5bdf78dfd6a3e924be09e5ab14"},
+    {file = "extcolors-1.0.0.tar.gz", hash = "sha256:14e81457f98555ba36c07a5dde677d1d555e8f4b75633a4fad42df30a27c4f27"},
+]
+
+[package.dependencies]
+convcolors = ">=1.0.0"
+Pillow = ">=8.0.0"
+
+[package.extras]
+dev = ["pytest (==5.4.3)", "tox (==3.16.0)", "yapf (==0.30.0)"]
 
 [[package]]
 name = "filesplit"
@@ -2844,6 +2878,33 @@ embeddings = ["matplotlib", "plotly", "scikit-learn (>=1.0.2)", "sklearn", "tena
 wandb = ["wandb"]
 
 [[package]]
+name = "opencv-contrib-python"
+version = "4.7.0.72"
+description = "Wrapper package for OpenCV python bindings."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "opencv-contrib-python-4.7.0.72.tar.gz", hash = "sha256:ab33fa2385ec7e70b9d484293f6f1f3707933045af4d18bb3b0a0290fa44370f"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-macosx_10_16_x86_64.whl", hash = "sha256:698c6b6203831f6573e04258be197e3bfde97fb7279fb614e39d75a8bd5818fb"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:8cad628ea6cc493f6c56140d7edc86f7ed8de528e18e44311e42b390a7d9996e"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d1fef5ae16dfa73022749165e029e85eb0f399503470c0df1f84c95633f4ae52"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b54c2e8bb636e367d29bde48fae2aa52c43b782265cf65838a1fe852006cdd94"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-win32.whl", hash = "sha256:641ca83b34a9d3e8ef2da70533c6e4e3f076ffb0db69b963d82899cc53e9b3c2"},
+    {file = "opencv_contrib_python-4.7.0.72-cp37-abi3-win_amd64.whl", hash = "sha256:fefc5f7f1eef3125f78242afe5c989057b36c2f015619698c741b04f4503f913"},
+]
+
+[package.dependencies]
+numpy = [
+    {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
+    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
+    {version = ">=1.22.0", markers = "python_version >= \"3.11\""},
+    {version = ">=1.19.3", markers = "python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\" or python_version >= \"3.9\""},
+    {version = ">=1.17.0", markers = "python_version >= \"3.7\""},
+    {version = ">=1.17.3", markers = "python_version >= \"3.8\""},
+]
+
+[[package]]
 name = "openpyxl"
 version = "3.0.10"
 description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
@@ -3037,19 +3098,6 @@ files = [
 
 [package.dependencies]
 pillow = "*"
-
-[[package]]
-name = "pdfkit"
-version = "1.0.0"
-description = "Wkhtmltopdf python wrapper to convert html to pdf using the webkit rendering engine and qt"
-category = "dev"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pdfkit-1.0.0-py2-none-any.whl", hash = "sha256:cc122e5aed594198ff7aaa566f2950d2163763576ab891c161bb1f6c630f5a8e"},
-    {file = "pdfkit-1.0.0-py3-none-any.whl", hash = "sha256:a7a4ca0d978e44fa8310c4909f087052430a6e8e0b1dd7ceef657f139789f96f"},
-    {file = "pdfkit-1.0.0.tar.gz", hash = "sha256:992f821e1e18fc8a0e701ecae24b51a2d598296a180caee0a24c0af181da02a9"},
-]
 
 [[package]]
 name = "pdftotext"
@@ -3366,41 +3414,6 @@ files = [
     {file = "psycopg2_binary-2.9.5-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:01ad49d68dd8c5362e4bfb4158f2896dc6e0c02e87b8a3770fc003459f1a4425"},
     {file = "psycopg2_binary-2.9.5-cp39-cp39-win32.whl", hash = "sha256:937880290775033a743f4836aa253087b85e62784b63fd099ee725d567a48aa1"},
     {file = "psycopg2_binary-2.9.5-cp39-cp39-win_amd64.whl", hash = "sha256:484405b883630f3e74ed32041a87456c5e0e63a8e3429aa93e8714c366d62bd1"},
-]
-
-[[package]]
-name = "ptvsd"
-version = "4.3.2"
-description = "Remote debugging server for Python support in Visual Studio and Visual Studio Code"
-category = "main"
-optional = false
-python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*"
-files = [
-    {file = "ptvsd-4.3.2-cp27-cp27m-macosx_10_13_x86_64.whl", hash = "sha256:22b699369a18ff28d4d1aa6a452739e50c7b7790cb16c6312d766e023c12fe27"},
-    {file = "ptvsd-4.3.2-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:3f839fe91d9ddca0d6a3a0afd6a1c824be1768498a737ab9333d084c5c3f3591"},
-    {file = "ptvsd-4.3.2-cp27-cp27m-manylinux1_x86_64.whl", hash = "sha256:70260b4591c07bff95566d49b6a5dc3051d8558035c43c847bad9a954def46bb"},
-    {file = "ptvsd-4.3.2-cp27-cp27mu-manylinux1_i686.whl", hash = "sha256:d2662ec37ee049c0f8f2f9a378abeb7e570d9215c19eaf0a6d7189464195009f"},
-    {file = "ptvsd-4.3.2-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:d9337ebba4d099698982e090b203e85670086c4b29cf1185b2e45cd353a8053e"},
-    {file = "ptvsd-4.3.2-cp34-cp34m-macosx_10_13_x86_64.whl", hash = "sha256:cf09fd4d90c4c42ddd9bf853290f1a80bc2128993a3923bd3b96b68cc1acd03f"},
-    {file = "ptvsd-4.3.2-cp34-cp34m-manylinux1_i686.whl", hash = "sha256:ccc5c533135305709461f545feed5061c608714db38fa0f58e3f848a127b7fde"},
-    {file = "ptvsd-4.3.2-cp34-cp34m-manylinux1_x86_64.whl", hash = "sha256:de5234bec74c47da668e1a1a21bcc9821af0cbb28b5153df78cd5abc744b29a2"},
-    {file = "ptvsd-4.3.2-cp35-cp35m-macosx_10_13_x86_64.whl", hash = "sha256:c893fb9d1c2ef8f980cc00ced3fd90356f86d9f59b58ee97e0e7e622b8860f76"},
-    {file = "ptvsd-4.3.2-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:2bbc121bce3608501998afbe742f02b80e7d26b8fecd38f78b903f22f52a81d9"},
-    {file = "ptvsd-4.3.2-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:fad06de012a78f277318d0c308dd3d7cc1f67167f3b2e1e2f7c6caf04c03440c"},
-    {file = "ptvsd-4.3.2-cp35-cp35m-win32.whl", hash = "sha256:92d26aa7c8f7ffe41cb4b50a00846027027fa17acdf2d9dd8c24de77b25166c6"},
-    {file = "ptvsd-4.3.2-cp35-cp35m-win_amd64.whl", hash = "sha256:eda10ecd43daacc180a6fbe524992be76a877c3559e2b78016b4ada8fec10273"},
-    {file = "ptvsd-4.3.2-cp36-cp36m-macosx_10_13_x86_64.whl", hash = "sha256:c01204e3f025c3f7252c79c1a8a028246d29e3ef339e1a01ddf652999f47bdea"},
-    {file = "ptvsd-4.3.2-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:c97c71835dde7e67fc7b06398bee1c012559a0784ebda9cf8acaf176c7ae766c"},
-    {file = "ptvsd-4.3.2-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:612948a045fcf9c8931cd306972902440278f34de7ca684b49d4caeec9f1ec62"},
-    {file = "ptvsd-4.3.2-cp36-cp36m-win32.whl", hash = "sha256:72d114baa5737baf29c8068d1ccdd93cbb332d2030601c888eed0e3761b588d7"},
-    {file = "ptvsd-4.3.2-cp36-cp36m-win_amd64.whl", hash = "sha256:58508485a1609a495dd45829bd6d219303cf9edef5ca1f01a9ed8ffaa87f390c"},
-    {file = "ptvsd-4.3.2-cp37-cp37m-macosx_10_13_x86_64.whl", hash = "sha256:20f48ffed42a6beb879c250d82662e175ad59cc46a29c95c6a4472ae413199c5"},
-    {file = "ptvsd-4.3.2-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:b9970e3dc987eb2a6001af6c9d2f726dd6455cfc6d47e0f51925cbdee7ea2157"},
-    {file = "ptvsd-4.3.2-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:1d3d82ecc82186d099992a748556e6e54037f5c5e4d3fc9bba3e2302354be0d4"},
-    {file = "ptvsd-4.3.2-cp37-cp37m-win32.whl", hash = "sha256:10745fbb788001959b4de405198d8bd5243611a88fb5a2e2c6800245bc0ddd74"},
-    {file = "ptvsd-4.3.2-cp37-cp37m-win_amd64.whl", hash = "sha256:90cbd082e7a9089664888d0d94aca760202f080133fca8f3fe65c48ed6b9e39d"},
-    {file = "ptvsd-4.3.2-py2.py3-none-any.whl", hash = "sha256:459137736068bb02515040b2ed2738169cb30d69a38e0fd5dffcba255f41e68d"},
-    {file = "ptvsd-4.3.2.zip", hash = "sha256:3b05c06018fdbce5943c50fb0baac695b5c11326f9e21a5266c854306bda28ab"},
 ]
 
 [[package]]
@@ -4765,6 +4778,52 @@ tensorflow = ["tensorflow (>=2.0.0,<2.6.0)"]
 torch = ["torch (>=1.6.0)"]
 
 [[package]]
+name = "tiktoken"
+version = "0.4.0"
+description = "tiktoken is a fast BPE tokeniser for use with OpenAI's models"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "tiktoken-0.4.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:176cad7f053d2cc82ce7e2a7c883ccc6971840a4b5276740d0b732a2b2011f8a"},
+    {file = "tiktoken-0.4.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:450d504892b3ac80207700266ee87c932df8efea54e05cefe8613edc963c1285"},
+    {file = "tiktoken-0.4.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:00d662de1e7986d129139faf15e6a6ee7665ee103440769b8dedf3e7ba6ac37f"},
+    {file = "tiktoken-0.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5727d852ead18b7927b8adf558a6f913a15c7766725b23dbe21d22e243041b28"},
+    {file = "tiktoken-0.4.0-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:c06cd92b09eb0404cedce3702fa866bf0d00e399439dad3f10288ddc31045422"},
+    {file = "tiktoken-0.4.0-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:9ec161e40ed44e4210d3b31e2ff426b4a55e8254f1023e5d2595cb60044f8ea6"},
+    {file = "tiktoken-0.4.0-cp310-cp310-win_amd64.whl", hash = "sha256:1e8fa13cf9889d2c928b9e258e9dbbbf88ab02016e4236aae76e3b4f82dd8288"},
+    {file = "tiktoken-0.4.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:bb2341836b725c60d0ab3c84970b9b5f68d4b733a7bcb80fb25967e5addb9920"},
+    {file = "tiktoken-0.4.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:2ca30367ad750ee7d42fe80079d3092bd35bb266be7882b79c3bd159b39a17b0"},
+    {file = "tiktoken-0.4.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3dc3df19ddec79435bb2a94ee46f4b9560d0299c23520803d851008445671197"},
+    {file = "tiktoken-0.4.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4d980fa066e962ef0f4dad0222e63a484c0c993c7a47c7dafda844ca5aded1f3"},
+    {file = "tiktoken-0.4.0-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:329f548a821a2f339adc9fbcfd9fc12602e4b3f8598df5593cfc09839e9ae5e4"},
+    {file = "tiktoken-0.4.0-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:b1a038cee487931a5caaef0a2e8520e645508cde21717eacc9af3fbda097d8bb"},
+    {file = "tiktoken-0.4.0-cp311-cp311-win_amd64.whl", hash = "sha256:08efa59468dbe23ed038c28893e2a7158d8c211c3dd07f2bbc9a30e012512f1d"},
+    {file = "tiktoken-0.4.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:f3020350685e009053829c1168703c346fb32c70c57d828ca3742558e94827a9"},
+    {file = "tiktoken-0.4.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:ba16698c42aad8190e746cd82f6a06769ac7edd415d62ba027ea1d99d958ed93"},
+    {file = "tiktoken-0.4.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9c15d9955cc18d0d7ffcc9c03dc51167aedae98542238b54a2e659bd25fe77ed"},
+    {file = "tiktoken-0.4.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:64e1091c7103100d5e2c6ea706f0ec9cd6dc313e6fe7775ef777f40d8c20811e"},
+    {file = "tiktoken-0.4.0-cp38-cp38-musllinux_1_1_aarch64.whl", hash = "sha256:e87751b54eb7bca580126353a9cf17a8a8eaadd44edaac0e01123e1513a33281"},
+    {file = "tiktoken-0.4.0-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:e063b988b8ba8b66d6cc2026d937557437e79258095f52eaecfafb18a0a10c03"},
+    {file = "tiktoken-0.4.0-cp38-cp38-win_amd64.whl", hash = "sha256:9c6dd439e878172dc163fced3bc7b19b9ab549c271b257599f55afc3a6a5edef"},
+    {file = "tiktoken-0.4.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:8d1d97f83697ff44466c6bef5d35b6bcdb51e0125829a9c0ed1e6e39fb9a08fb"},
+    {file = "tiktoken-0.4.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:1b6bce7c68aa765f666474c7c11a7aebda3816b58ecafb209afa59c799b0dd2d"},
+    {file = "tiktoken-0.4.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5a73286c35899ca51d8d764bc0b4d60838627ce193acb60cc88aea60bddec4fd"},
+    {file = "tiktoken-0.4.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d0394967d2236a60fd0aacef26646b53636423cc9c70c32f7c5124ebe86f3093"},
+    {file = "tiktoken-0.4.0-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:dae2af6f03ecba5f679449fa66ed96585b2fa6accb7fd57d9649e9e398a94f44"},
+    {file = "tiktoken-0.4.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:55e251b1da3c293432179cf7c452cfa35562da286786be5a8b1ee3405c2b0dd2"},
+    {file = "tiktoken-0.4.0-cp39-cp39-win_amd64.whl", hash = "sha256:c835d0ee1f84a5aa04921717754eadbc0f0a56cf613f78dfc1cf9ad35f6c3fea"},
+    {file = "tiktoken-0.4.0.tar.gz", hash = "sha256:59b20a819969735b48161ced9b92f05dc4519c17be4015cfb73b65270a243620"},
+]
+
+[package.dependencies]
+regex = ">=2022.1.18"
+requests = ">=2.26.0"
+
+[package.extras]
+blobfile = ["blobfile (>=2)"]
+
+[[package]]
 name = "tinycss2"
 version = "1.2.1"
 description = "A tiny CSS parser"
@@ -5227,4 +5286,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "4e1cedb6c5e19b84b53642c9147cd2ac5809d37d15045f99d144ae59dd1d246a"
+content-hash = "b4d55717f8b9c13646ef86b9a4b63221ec5c59c3bd3bfc2908c8d837a85cd382"
