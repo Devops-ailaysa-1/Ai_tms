@@ -801,13 +801,19 @@ class SegmentsUpdateView(viewsets.ViewSet):
             print("not successfully update")
 
     def split_update(self, request_data, segment):
+        print("Seg---------->",segment)
         org_segment = SplitSegment.objects.get(id=segment.id).segment_id
         status = request_data.get("status",None)
         if status:
             status_obj = TranslationStatus.objects.filter(status_id=status).first()
             segment.status = status_obj
         content = request_data['target'] if "target" in request_data else request_data['temp_target']
-        seg_his_create = True if segment.temp_target!=content and segment.status != status_obj else False
+        if status:
+            if status not in [109,110]:step = 1
+            else:step=2
+        else: step = None
+        existing_step = 1 if segment.status_id not in [109,110] else 2 
+        seg_his_create = True if segment.temp_target!=content or existing_step != step else False
         if request_data.get("target", None) != None:
             segment.target = request_data["target"]
             segment.temp_target = request_data["target"]
@@ -816,6 +822,7 @@ class SegmentsUpdateView(viewsets.ViewSet):
         segment.save()
         if not status:
             status_obj = segment.status
+        print("Seg His Create--------------->",seg_his_create)
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=org_segment, split_segment_id = segment.id, user = self.request.user, target= content, status= status_obj )
         return Response(SegmentSerializerV2(segment).data, status=201)
@@ -2819,14 +2826,14 @@ def segment_difference(sender, instance, *args, **kwargs):
     print('edited_segment',edited_segment,'target_segment',target_segment )
     if edited_segment and target_segment:
         print('edited_segment',edited_segment , 'target_segment',target_segment )
-        # edited_segment=remove_tags(edited_segment)
-        # target_segment=remove_tags(target_segment)
-        # if edited_segment != target_segment:
-        diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
-        if diff_sentense:
-            result_sen,save_type=diff_sentense
-            if result_sen.strip()!=edited_segment.strip():
-                SegmentDiff.objects.create(seg_history=instance,sentense_diff_result=result_sen,save_type=save_type)
-                print("seg_diff_created")
+        edited_segment=remove_tags(edited_segment)
+        target_segment=remove_tags(target_segment)
+        if edited_segment != target_segment:
+            diff_sentense=do_compare_sentence(target_segment,edited_segment,sentense_diff=True)
+            if diff_sentense:
+                result_sen,save_type=diff_sentense
+                if result_sen.strip()!=edited_segment.strip():
+                    SegmentDiff.objects.create(seg_history=instance,sentense_diff_result=result_sen,save_type=save_type)
+                    print("seg_diff_created")
 
 post_save.connect(segment_difference, sender=SegmentHistory)

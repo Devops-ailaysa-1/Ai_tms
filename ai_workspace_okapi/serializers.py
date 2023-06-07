@@ -155,14 +155,19 @@ class SegmentSerializerV2(SegmentSerializer):
             validated_data['target'] = self.target_check(instance,validated_data.get('target'))
         if validated_data.get('temp_target'):
             validated_data['temp_target'] = self.target_check(instance,validated_data.get('temp_target'))
-        status_id = status.id if status else None
+        status_id = status.id if status else None 
+        if status_id:
+            if status_id not in [109,110]:step = 1
+            else:step=2
+        else: step = None
+        existing_step = 1 if instance.status_id not in [109,110] else 2 
         from .views import MT_RawAndTM_View
         if split_check(instance.id):seg_id = instance.id
         else:seg_id = SplitSegment.objects.filter(id=instance.id).first().segment_id
         user_1 = self.context.get('request').user
         task_obj = Task.objects.get(document_id = instance.text_unit.document.id)
         content = validated_data.get('target') if "target" in validated_data else validated_data.get('temp_target')
-        seg_his_create = True if instance.temp_target!=content and instance.status_id != status_id else False #self.his_check(instance,instance.temp_target,content,user_1)
+        seg_his_create = True if instance.temp_target!=content or step != existing_step  else False #self.his_check(instance,instance.temp_target,content,user_1)
         print("Seg-His-Create--------------->",seg_his_create)
         if "target" in validated_data:
             print("Inside if target")
@@ -185,7 +190,7 @@ class SegmentSerializerV2(SegmentSerializer):
             instance.save()
             self.update_task_assign(task_obj,user_1,status_id)
             if seg_his_create:
-                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status )
+                SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)
             return res
         if seg_his_create:
             SegmentHistory.objects.create(segment_id=seg_id, user = self.context.get('request').user, target= content, status= status if status else instance.status)

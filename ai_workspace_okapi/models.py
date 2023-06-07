@@ -592,6 +592,7 @@ class SegmentHistory(models.Model):
     segment=models.ForeignKey(Segment, on_delete=models.CASCADE, related_name="segment_history")
     split_segment = models.ForeignKey(SplitSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="split_segment_history")
     target=models.TextField(null=True, blank=True)
+    #step = models.ForeignKey(Steps, on_delete=models.CASCADE,null=True,blank=True,related_name="seg_save_step")
     status=models.ForeignKey(TranslationStatus, null=True, blank=True, on_delete=models.SET_NULL, related_name="segment_status")
     user=models.ForeignKey(AiUser, null=True, on_delete=models.SET_NULL,related_name="edited_by")
     created_at=models.DateTimeField(auto_now_add=True)

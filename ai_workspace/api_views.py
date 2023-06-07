@@ -4112,8 +4112,22 @@ def stop_task(request):
 
 
 
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def project_list(request):
+#         print(self.request.user)
+#         pr_managers = self.request.user.team.get_project_manager if self.request.user.team and self.request.user.team.owner.is_agency else [] 
+#         user = self.request.user.team.owner if self.request.user.team and self.request.user.team.owner.is_agency and self.request.user in pr_managers else self.request.user
+#         queryset = Project.objects.prefetch_related('team','project_jobs_set','team__internal_member_team_info','team__owner','project_jobs_set__job_tasks_set__task_info')\
+#                     .filter(((Q(project_jobs_set__job_tasks_set__task_info__assign_to = user) & ~Q(ai_user = user))\
+#                     | Q(project_jobs_set__job_tasks_set__task_info__assign_to = self.request.user))\
+#                     |Q(ai_user = self.request.user)|Q(team__owner = self.request.user)\
+#                     |Q(team__internal_member_team_info__in = self.request.user.internal_member.filter(role=1))).distinct()
+#         queryset = MyDocuments.objects.filter(Q(ai_user=user)|Q(ai_user__in=project_managers)|Q(ai_user=owner)).distinct()
+#         queryset2 = BlogCreation.objects.filter(Q(user = user)|Q(created_by__in = project_managers)|Q(user=owner)).distinct().filter(blog_article_create__document=None).distinct().annotate(word_count=Value(0,output_field=IntegerField()),document_type__type=Value(None,output_field=CharField()),open_as=Value('BlogWizard', output_field=CharField())).values('id','created_at','user_title','word_count','open_as','document_type__type')
 
-
+#         queryset3 = 
+        
     # @integrity_error
     # def create(self,request):
     #     step = request.POST.get('step')
