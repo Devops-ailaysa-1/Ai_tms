@@ -2353,11 +2353,12 @@ def get_segment_history(request):
     try:
         if split_check(seg_id):
             obj = Segment.objects.get(id=seg_id)
+            history = obj.segment_history.all().order_by('-id') 
         else:
-            obj = SplitSegment.objects.filter(id=seg_id).first().segment
+            obj = SplitSegment.objects.filter(id=seg_id).first()
+            history = obj.split_segment_history.all().order_by('-id') 
         #obj = Segment.objects.get(id=seg_id)
-        print("Obj-------->",obj)
-        history = obj.segment_history.all().order_by('-id') 
+        #history = obj.segment_history.all().order_by('-id') 
         ser = SegmentHistorySerializer(history,many=True)
         data_ser=ser.data
         data=[i for i in data_ser if dict(i)['segment_difference']]
