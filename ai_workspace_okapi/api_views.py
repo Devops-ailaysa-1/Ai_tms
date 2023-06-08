@@ -2351,7 +2351,12 @@ def spellcheck(request):
 def get_segment_history(request):
     seg_id = request.GET.get('segment')
     try:
-        obj = Segment.objects.get(id=seg_id)
+        if split_check(seg_id):
+            obj = Segment.objects.get(id=seg_id)
+        else:
+            obj = SplitSegment.objects.filter(id=seg).first().segment
+        #obj = Segment.objects.get(id=seg_id)
+        print("Obj-------->",obj)
         history = obj.segment_history.all().order_by('-id') 
         ser = SegmentHistorySerializer(history,many=True)
         data_ser=ser.data
