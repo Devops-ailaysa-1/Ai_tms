@@ -591,6 +591,17 @@ class BlogArticleViewset(viewsets.ViewSet):
             return Response(serializer.data)
         return Response(serializer.errors)
     
+    def update(self,request, pk):
+        doc = request.POST.get('document')
+        print("Doc------>",doc)
+        query_set=BlogArticle.objects.filter(blog_creation_id = pk).last()
+        serializer=BlogArticleSerializer(query_set,data = {'document':doc},partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+
     # def list(self, request):
     #     query_set=BlogOutlineSession.objects.all()
     #     serializer=BlogOutlineSessionSerializer(query_set,many=True)
@@ -858,8 +869,9 @@ def generate_article(request):
                             if title:
                                 content=title+'\n'+content
                                 title=''
+                            word=content+' '
                             str_con+=content
-                            yield '\ndata: {}\n\n'.format({"t":content})
+                            yield '\ndata: {}\n\n'.format({"t":word})
                     else:
                         token_usage=num_tokens_from_string(str_con)
                         AiPromptSerializer().customize_token_deduction(instance.blog_creation,token_usage)
@@ -931,6 +943,8 @@ def generate_article(request):
                         print("finished")
             return StreamingHttpResponse(stream_article_response_other_lang(title),content_type='text/event-stream')
     return JsonResponse({'error':'Method not allowed.'},status=405)
+
+
 # @api_view(["GET"])
 # def generate_article(request):
 #     if request.method=='GET':
